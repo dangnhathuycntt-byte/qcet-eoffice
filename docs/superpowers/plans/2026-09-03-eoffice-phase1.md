@@ -41,12 +41,12 @@
 - Consumes: None
 - Produces: Base layout, Tailwind theme tokens matching `inf_quota`, responsive top header & bottom nav.
 
-- [ ] **Step 1: Write test to verify theme tokens and utility functions**
-- [ ] **Step 2: Initialize Next.js project dependencies in package.json**
-- [ ] **Step 3: Setup Tailwind CSS with warm paper palette and typography**
-- [ ] **Step 4: Create base UI components (Button, Card, Badge, Navigation)**
-- [ ] **Step 5: Run tests and verify build / typecheck passes**
-- [ ] **Step 6: Commit**
+- [x] **Step 1: Write test to verify theme tokens and utility functions**
+- [x] **Step 2: Initialize Next.js project dependencies in package.json**
+- [x] **Step 3: Setup Tailwind CSS with warm paper palette and typography**
+- [x] **Step 4: Create base UI components (Button, Card, Badge, Navigation)**
+- [x] **Step 5: Run tests and verify build / typecheck passes**
+- [x] **Step 6: Commit**
 
 ---
 
