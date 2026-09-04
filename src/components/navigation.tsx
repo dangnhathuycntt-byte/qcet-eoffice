@@ -27,6 +27,17 @@ import {
   CreateTaskModal,
   CreateTaskFormData,
 } from "@/components/dashboard/create-task-modal";
+import { useAuth } from "@/lib/auth-context";
+import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
+
+function getInitials(name: string): string {
+  if (!name || !name.trim()) return "QC";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  const first = parts[0].charAt(0);
+  const last = parts[parts.length - 1].charAt(0);
+  return (first + last).toUpperCase();
+}
 
 export const NAVIGATION_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -39,6 +50,7 @@ export const NAVIGATION_ITEMS = [
 export function Navigation() {
   const pathname = usePathname();
   const { resolved, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const [isSyncing, setIsSyncing] = React.useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
 
@@ -93,7 +105,7 @@ export function Navigation() {
           >
             <span className="font-semibold text-foreground">QCET E-Office</span>
             <span className="text-muted-foreground/60 font-light">/</span>
-            <span className="font-medium text-foreground/80">Ban Giám hiệu</span>
+            <span className="font-medium text-foreground/80">{user.department}</span>
             <ChevronDown className="size-3 text-muted-foreground transition-transform group-hover:translate-y-0.5" />
           </button>
         </div>
@@ -129,6 +141,9 @@ export function Navigation() {
             <Plus className="size-3.5" />
             <span>Giao việc</span>
           </Button>
+
+          {/* Role Switcher Pill */}
+          <RoleSwitcherPill />
 
           {/* Live Notion Sync Status Indicator */}
           <button
@@ -189,11 +204,15 @@ export function Navigation() {
           {/* User Avatar + Name */}
           <div className="flex items-center gap-2 pl-1 border-l border-border/60">
             <div className="flex size-7.5 items-center justify-center rounded-full bg-zinc-800 text-[11px] font-bold text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900 shadow-2xs">
-              AQ
+              {getInitials(user.name)}
             </div>
             <div className="hidden text-left lg:block">
-              <p className="text-xs font-semibold leading-tight text-foreground">Admin QCET</p>
-              <p className="text-[10px] text-muted-foreground">BGH QCET</p>
+              <p className="text-xs font-semibold leading-tight text-foreground max-w-[130px] truncate" title={user.name}>
+                {user.name}
+              </p>
+              <p className="text-[10px] text-muted-foreground max-w-[130px] truncate" title={user.roleLabel}>
+                {user.role === "ADMIN" ? "BGH QCET" : user.departmentCode || user.department}
+              </p>
             </div>
           </div>
         </div>

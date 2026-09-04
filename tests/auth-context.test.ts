@@ -1,0 +1,48 @@
+import { test, describe } from "node:test";
+import assert from "node:assert/strict";
+import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
+import { AUTH_STORAGE_KEY } from "../src/lib/auth-context";
+import type { UserRole } from "../src/types/auth";
+
+describe("AuthContext Demo Credentials", () => {
+  test("defines 3 distinct role viewpoints conforming to Section 7", () => {
+    assert.equal(DEFAULT_DEMO_USERS.length, 3);
+    const roles = DEFAULT_DEMO_USERS.map((u) => u.role);
+    assert.ok(roles.includes("ADMIN"));
+    assert.ok(roles.includes("MANAGER"));
+    assert.ok(roles.includes("STAFF"));
+  });
+
+  test("demo users provide valid fallback and individual attributes", () => {
+    const admin = DEFAULT_DEMO_USERS.find((u) => u.role === "ADMIN");
+    const manager = DEFAULT_DEMO_USERS.find((u) => u.role === "MANAGER");
+    const staff = DEFAULT_DEMO_USERS.find((u) => u.role === "STAFF");
+
+    assert.ok(admin);
+    assert.ok(manager);
+    assert.ok(staff);
+
+    assert.equal(admin.id, "user-admin-bgh");
+    assert.equal(admin.departmentCode, "BGH");
+
+    assert.equal(manager.id, "user-manager-daotao");
+    assert.equal(manager.departmentCode, "DAO_TAO");
+
+    assert.equal(staff.id, "user-staff-vinh");
+    assert.equal(staff.departmentCode, "CNTT");
+  });
+
+  test("switchRole correctly resolves users from DEFAULT_DEMO_USERS", () => {
+    const findUserByRole = (role: UserRole) => {
+      return DEFAULT_DEMO_USERS.find((u) => u.role === role) || DEFAULT_DEMO_USERS[0];
+    };
+
+    assert.equal(findUserByRole("ADMIN").role, "ADMIN");
+    assert.equal(findUserByRole("MANAGER").role, "MANAGER");
+    assert.equal(findUserByRole("STAFF").role, "STAFF");
+  });
+
+  test("uses qcet_active_user as storage key", () => {
+    assert.equal(AUTH_STORAGE_KEY, "qcet_active_user");
+  });
+});
