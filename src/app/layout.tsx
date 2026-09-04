@@ -1,17 +1,29 @@
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
 import { Navigation } from "@/components/navigation";
 
+const fontSans = Plus_Jakarta_Sans({
+  variable: "--font-sans",
+  subsets: ["latin", "vietnamese"],
+  fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+  display: "swap",
+});
+
+const fontMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   applicationName: "QCET E-Office",
-  title: {
-    default: "QCET E-Office - Văn phòng Điều hành Điện tử",
-    template: "%s | QCET E-Office",
-  },
+  title: "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn - Hệ thống Quản trị & Điều hành Văn phòng Điện tử (E-Office)",
   description:
-    "Hệ thống Quản trị & Điều hành Văn phòng Điện tử - Trường Cao đẳng Kinh tế - Kỹ thuật Cần Thơ (QCET)",
+    "Hệ thống Quản trị & Điều hành Văn phòng Điện tử - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (QCET)",
 };
 
 export const viewport: Viewport = {
@@ -30,7 +42,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className="light h-full scroll-smooth antialiased" suppressHydrationWarning>
+    <html
+      lang="vi"
+      className={`${fontSans.variable} ${fontMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full overflow-x-hidden bg-background text-foreground font-sans">
         <AuthProvider>
           <ThemeProvider>
@@ -46,7 +62,7 @@ export default function RootLayout({
               className="min-h-[100dvh] py-6 md:py-8"
               tabIndex={-1}
             >
-              <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">{children}</div>
+              <div className="max-w-[1440px] w-full mx-auto px-3.5 sm:px-6">{children}</div>
             </main>
           </ThemeProvider>
         </AuthProvider>
