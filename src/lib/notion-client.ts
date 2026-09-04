@@ -10,8 +10,7 @@ import {
 import { computeSchoolTaskRollup, computeDashboardStats } from "./dashboard-aggregator";
 import { getMockDashboardPayload, CATEGORY_LABELS } from "./mock-dashboard-data";
 
-export const NOTION_TOKEN =
-  process.env.NOTION_TOKEN || "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";
+export const NOTION_TOKEN = process.env.NOTION_TOKEN || "";
 
 export const HOAT_DONG_DB_ID =
   process.env.NOTION_HOAT_DONG_DB_ID || "6e1726a4-e693-45ec-a961-3774c3e9c582";
@@ -106,6 +105,13 @@ export async function fetchNotionDashboardData(): Promise<DashboardPayload> {
   const now = Date.now();
   if (memoryCache && now - memoryCache.timestamp < CACHE_TTL_MS) {
     return memoryCache.data;
+  }
+
+  // If no Notion token is configured, immediately fall back to mock data
+  if (!NOTION_TOKEN) {
+    console.warn("NOTION_TOKEN not set; using mock fallback.");
+    const mock = getMockDashboardPayload();
+    return { ...mock, source: "mock-fallback" };
   }
 
   try {
@@ -216,6 +222,7 @@ export async function fetchNotionDashboardData(): Promise<DashboardPayload> {
     for (const st of schoolTasks.slice(0, 5)) {
       upcoming.push({
         id: `upcoming-st-${st.id}`,
+        taskId: st.id,
         title: st.title,
         dueDate: st.dueDate,
         assigneeName: st.leadAssigneeName,
@@ -230,6 +237,7 @@ export async function fetchNotionDashboardData(): Promise<DashboardPayload> {
     for (const sub of staffTaskList.slice(0, 5)) {
       upcoming.push({
         id: `upcoming-sub-${sub.id}`,
+        taskId: sub.id,
         title: sub.title,
         dueDate: sub.dueDate,
         assigneeName: sub.assigneeName,

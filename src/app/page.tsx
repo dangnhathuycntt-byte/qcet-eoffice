@@ -9,6 +9,7 @@ import {
   TaskStatus,
 } from "@/types/dashboard";
 import { getMockDashboardPayload } from "@/lib/mock-dashboard-data";
+import { computeSchoolTaskRollup, computeDashboardStats } from "@/lib/dashboard-aggregator";
 import { ExecutiveStatStrip } from "@/components/dashboard/executive-stat-strip";
 import { CascadingTaskTable } from "@/components/dashboard/cascading-task-table";
 import { UpcomingDeadlinesWidget } from "@/components/dashboard/upcoming-deadlines-widget";
@@ -75,12 +76,12 @@ export default function DashboardPage() {
   // Find task when an upcoming deadline item is clicked
   const handleSelectUpcoming = (item: UpcomingItem) => {
     for (const schoolTask of dashboardData.tasks) {
-      if (schoolTask.id === item.id) {
+      if (schoolTask.id === item.taskId || schoolTask.title === item.title) {
         setSelectedTask(schoolTask);
         return;
       }
       for (const sub of schoolTask.subTasks) {
-        if (sub.id === item.id) {
+        if (sub.id === item.taskId || sub.title === item.title) {
           setSelectedTask(sub);
           return;
         }
@@ -102,7 +103,9 @@ export default function DashboardPage() {
         );
         return { ...st, subTasks: updatedSubs };
       });
-      return { ...prev, tasks: updatedTasks };
+      // Recompute rollup (progress bar, completedSubTasks) and dashboard stats
+      const rolledUpTasks = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+      return { ...prev, tasks: rolledUpTasks, stats: computeDashboardStats(rolledUpTasks) };
     });
 
     setSelectedTask((prev) => {

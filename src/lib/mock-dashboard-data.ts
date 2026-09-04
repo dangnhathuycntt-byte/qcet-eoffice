@@ -474,6 +474,7 @@ function generateQCETDataset(): {
   const upcoming: UpcomingItem[] = [
     {
       id: "upcoming-1",
+      taskId: "school-task-3",
       title: "Bài viết MỚI VÀO QCET – NHỮNG NGÀY ĐẦU TIÊN SẼ CÓ GÌ?",
       dueDate: "2026-09-04",
       assigneeName: "Mai Đinh Thị Xuân",
@@ -484,6 +485,7 @@ function generateQCETDataset(): {
     },
     {
       id: "upcoming-2",
+      taskId: "school-task-4",
       title: "Rà soát hệ thống mạng và wifi các giảng đường",
       dueDate: "2026-09-05",
       assigneeName: "Trần Hùng",
@@ -494,6 +496,7 @@ function generateQCETDataset(): {
     },
     {
       id: "upcoming-3",
+      taskId: "staff-task-3",
       title: "Cấu hình tường lửa và quy tắc phát hiện xâm nhập IDS/IPS",
       dueDate: "2026-09-01",
       assigneeName: "Trần Hùng",
@@ -504,6 +507,7 @@ function generateQCETDataset(): {
     },
     {
       id: "upcoming-4",
+      taskId: "staff-task-5",
       title: "Theo dõi kênh Hệ thống theo dõi thực hiện chỉ đạo điều hành",
       dueDate: "2026-09-06",
       assigneeName: "Nguyễn Ngọc Vinh",
@@ -514,6 +518,7 @@ function generateQCETDataset(): {
     },
     {
       id: "upcoming-5",
+      taskId: "school-task-6",
       title: "Số hóa tài liệu và giáo trình điện tử phục vụ năm học mới",
       dueDate: "2026-09-08",
       assigneeName: "Phạm Thị Thu",
@@ -524,6 +529,7 @@ function generateQCETDataset(): {
     },
     {
       id: "upcoming-6",
+      taskId: "staff-task-30",
       title: "Tập hợp minh chứng hồ sơ môn học và bài giảng thực hành",
       dueDate: "2026-09-10",
       assigneeName: "Đặng Văn Hậu",
@@ -534,6 +540,7 @@ function generateQCETDataset(): {
     },
     {
       id: "upcoming-7",
+      taskId: "school-task-5",
       title: "Triển khai phần mềm quản lý văn bản điều hành E-Office phiên bản mới",
       dueDate: "2026-09-11",
       assigneeName: "Nguyễn Ngọc Vinh",

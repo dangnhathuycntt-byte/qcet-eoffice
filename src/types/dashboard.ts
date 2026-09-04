@@ -67,6 +67,8 @@ export interface UpcomingItem {
   level: 'Trường' | 'Đơn vị';
   category?: TaskCategory;
   isOverdue?: boolean;
+  /** The real task/subtask ID this item corresponds to, for side-sheet lookup */
+  taskId?: string;
 }
 
 export interface DashboardPayload {
