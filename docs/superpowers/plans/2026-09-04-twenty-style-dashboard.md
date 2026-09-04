@@ -778,12 +778,12 @@ describe("Dashboard Assembly Integration", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify initial state**
+- [x] **Step 2: Run test to verify initial state**
 
 Run: `npx tsx --test tests/dashboard-integration.test.ts`
 Expected: PASS
 
-- [ ] **Step 3: Update `src/components/navigation.tsx` to Twenty Topbar style**
+- [x] **Step 3: Update `src/components/navigation.tsx` to Twenty Topbar style**
 
 Transform navigation into Twenty's sleek top header:
 - Left: QCET Logo + Workspace dropdown pill ("QCET E-Office / Ban Giám hiệu").
@@ -791,7 +791,7 @@ Transform navigation into Twenty's sleek top header:
 - Right: Live Notion Sync status indicator (Green dot "Đã đồng bộ"), Notifications bell, User Avatar ("Admin QCET").
 - Sub-bar / Navigation links: `Dashboard`, `Nhiệm vụ cấp Trường`, `Công việc Đơn vị`, `Lịch công tác`, `Cơ cấu tổ chức`.
 
-- [ ] **Step 4: Rebuild `src/app/page.tsx` with full Executive Operational Layout**
+- [x] **Step 4: Rebuild `src/app/page.tsx` with full Executive Operational Layout**
 
 Assemble:
 1. `ExecutiveStatStrip` across the top.
@@ -801,11 +801,11 @@ Assemble:
 3. Render `TaskDetailSideSheet` controlled by `selectedTask` state.
 4. Support Client-side live data fetching from `/api/dashboard/overview` with optimistic fallback so there is 0ms blank screen.
 
-- [ ] **Step 5: Update `src/app/layout.tsx`**
+- [x] **Step 5: Update `src/app/layout.tsx`**
 
 Ensure `class="light"` on `html` tag by default, with smooth dark mode capability preserved.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/components/navigation.tsx src/app/page.tsx src/app/layout.tsx tests/dashboard-integration.test.ts
@@ -824,27 +824,27 @@ git commit -m "feat(dashboard): assemble complete Twenty-style Executive Operati
 - Consumes: All project files.
 - Produces: Clean zero-error production build.
 
-- [ ] **Step 1: Run complete test suite**
+- [x] **Step 1: Run complete test suite**
 
 Run: `npm run test`
 Expected: PASS (All test suites passing)
 
-- [ ] **Step 2: Run TypeScript typecheck**
+- [x] **Step 2: Run TypeScript typecheck**
 
 Run: `npm run typecheck`
 Expected: Exit code 0 with no diagnostic errors
 
-- [ ] **Step 3: Run Next.js production build**
+- [x] **Step 3: Run Next.js production build**
 
 Run: `npm run build`
 Expected: Build successfully completes with static/dynamic route generation
 
-- [ ] **Step 4: Start local dev server and test live dashboard rendering**
+- [x] **Step 4: Start local dev server and test live dashboard rendering**
 
 Run: `curl -I http://localhost:3000` (or preview server)
 Expected: HTTP 200 OK
 
-- [ ] **Step 5: Final commit**
+- [x] **Step 5: Final commit**
 
 ```bash
 git add .
