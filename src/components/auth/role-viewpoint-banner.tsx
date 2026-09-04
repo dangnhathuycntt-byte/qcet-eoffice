@@ -32,7 +32,7 @@ export function RoleViewpointBanner({ className }: { className?: string }) {
     <div
       data-slot="role-viewpoint-banner"
       className={cn(
-        "flex flex-col gap-2.5 rounded-lg border border-border/80 bg-card p-3 shadow-2xs sm:flex-row sm:items-center sm:justify-between transition-colors",
+        "flex flex-col gap-2.5 rounded-xl border border-border/60 bg-card/80 backdrop-blur-xl p-3 shadow-card sm:flex-row sm:items-center sm:justify-between transition-colors",
         className
       )}
     >
@@ -44,13 +44,13 @@ export function RoleViewpointBanner({ className }: { className?: string }) {
           <Badge
             variant="outline"
             className={cn(
-              "text-[11px] font-semibold px-2 py-0.5 shrink-0",
+              "text-[11px] font-bold px-2.5 py-0.5 rounded-lg shrink-0",
               user.role === "ADMIN" &&
-                "border-amber-300 bg-amber-50/70 text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-300",
+                "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
               user.role === "MANAGER" &&
-                "border-blue-300 bg-blue-50/70 text-blue-800 dark:border-blue-700/60 dark:bg-blue-950/40 dark:text-blue-300",
+                "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300",
               user.role === "STAFF" &&
-                "border-slate-300 bg-slate-50/70 text-slate-800 dark:border-slate-700/60 dark:bg-slate-900/40 dark:text-slate-300"
+                "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
             )}
           >
             {user.role === "ADMIN"
@@ -59,14 +59,14 @@ export function RoleViewpointBanner({ className }: { className?: string }) {
               ? "Lãnh đạo Đơn vị"
               : "Cá nhân"}
           </Badge>
-          <span className="text-xs font-medium text-foreground">
+          <span className="text-xs font-semibold text-foreground">
             {viewpointText}
           </span>
         </div>
       </div>
 
       <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-        <span className="text-[11px] text-muted-foreground hidden md:inline">
+        <span className="text-[11px] text-muted-foreground hidden md:inline font-medium">
           Chuyển góc nhìn:
         </span>
         <RoleSwitcherPill />

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -9,15 +10,9 @@ import {
   Briefcase,
   Calendar,
   Network,
-  Bell,
+  Clock,
   Sun,
   Moon,
-  Building2,
-  ChevronDown,
-  Search,
-  CheckCircle2,
-  RefreshCw,
-  Command,
   Plus,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
@@ -30,7 +25,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
 
-function getInitials(name: string): string {
+export function getInitials(name: string): string {
   if (!name || !name.trim()) return "QC";
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -47,27 +42,129 @@ export const NAVIGATION_ITEMS = [
   { href: "/org", label: "Cơ cấu tổ chức", icon: Network },
 ];
 
+export function LiveClock() {
+  const [timeStr, setTimeStr] = React.useState<string>("");
+
+  React.useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setTimeStr(
+        now.toLocaleTimeString("vi-VN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        })
+      );
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  if (!timeStr) return null;
+
+  return (
+    <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card/60 border border-border/50 text-xs font-mono font-bold text-foreground/90 shadow-xs">
+      <Clock size={13} className="text-primary" />
+      <span className="tabular-nums">{timeStr}</span>
+    </div>
+  );
+}
+
+export function ZoomToggle() {
+  const [zoomLevel, setZoomLevel] = React.useState<number>(1.2);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+    const saved = localStorage.getItem("qcet_ui_zoom");
+    if (saved) {
+      const z = parseFloat(saved);
+      if (!isNaN(z)) {
+        setZoomLevel(z);
+        document.documentElement.style.zoom = String(z);
+      }
+    } else {
+      document.documentElement.style.zoom = "1.2";
+    }
+  }, []);
+
+  const toggleZoom = () => {
+    const nextZoom = zoomLevel === 1.2 ? 1.0 : 1.2;
+    setZoomLevel(nextZoom);
+    document.documentElement.style.zoom = String(nextZoom);
+    localStorage.setItem("qcet_ui_zoom", String(nextZoom));
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggleZoom}
+      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-card/80 hover:bg-card border border-border/60 text-xs font-black text-foreground shadow-xs transition-all cursor-pointer hover:border-primary/40 active:scale-95"
+      title="Bật / Tắt chế độ Zoom 1.2 (Chữ lớn BGH)"
+    >
+      <span className="text-[10.5px] text-muted-foreground font-bold">Zoom:</span>
+      <span className="font-mono text-primary font-black">
+        {mounted ? `${Math.round(zoomLevel * 100)}%` : "120%"}
+      </span>
+    </button>
+  );
+}
+
+export function MobileNav({ pathname }: { pathname: string }) {
+  return (
+    <nav
+      data-slot="mobile-nav"
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/90 backdrop-blur-lg border-t border-border/60 px-2 py-1.5 shadow-lg"
+      aria-label="Điều hướng di động"
+    >
+      <div className="flex items-center justify-around">
+        {NAVIGATION_ITEMS.map((item) => {
+          const active =
+            pathname === item.href ||
+            (item.href !== "/" &&
+              (pathname === item.href || pathname.startsWith(item.href + "/")));
+          const Icon = item.icon;
+          const shortLabel =
+            item.label === "Nhiệm vụ cấp Trường"
+              ? "Cấp Trường"
+              : item.label === "Công việc Đơn vị"
+              ? "Đơn vị"
+              : item.label === "Cơ cấu tổ chức"
+              ? "Tổ chức"
+              : item.label;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-medium transition-colors",
+                active
+                  ? "text-primary font-bold bg-primary/10"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon
+                className={cn(
+                  "size-4 mb-0.5",
+                  active ? "text-primary" : "text-muted-foreground"
+                )}
+              />
+              <span className="truncate max-w-[68px]">{shortLabel}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 export function Navigation() {
   const pathname = usePathname();
   const { resolved, toggleTheme } = useTheme();
   const { user } = useAuth();
-  const [isSyncing, setIsSyncing] = React.useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
-
-  // Trigger search focus across the page on ⌘K button click
-  const triggerQuickSearch = () => {
-    const event = new KeyboardEvent("keydown", {
-      key: "k",
-      metaKey: true,
-      bubbles: true,
-    });
-    window.dispatchEvent(event);
-  };
-
-  const simulateSync = () => {
-    setIsSyncing(true);
-    setTimeout(() => setIsSyncing(false), 1200);
-  };
 
   const handleCreateTaskFromTopbar = (data: CreateTaskFormData) => {
     window.dispatchEvent(
@@ -78,95 +175,66 @@ export function Navigation() {
 
   return (
     <header
-      data-slot="twenty-topbar"
-      className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/95 backdrop-blur-md"
+      data-slot="executive-header"
+      className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl transition-all duration-200 shadow-xs"
     >
       {/* ========================================================================= */}
-      {/* 1. Main Top Bar: Workspace | Quick Search | Sync & Profile               */}
+      {/* 1. Main Top Bar: Branding | LiveClock | Zoom | Role | Actions             */}
       {/* ========================================================================= */}
-      <div className="mx-auto flex h-13 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        {/* Left: QCET Logo + Workspace Dropdown Pill */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 transition-opacity hover:opacity-90"
-            aria-label="Về trang chủ QCET E-Office"
-          >
-            <span className="flex size-7.5 items-center justify-center rounded-lg bg-foreground text-background shadow-xs">
-              <Building2 className="size-4" aria-hidden="true" />
-            </span>
-          </Link>
-
-          {/* Workspace Switcher Pill */}
-          <button
-            type="button"
-            className="group flex items-center gap-2 rounded-md border border-border/80 bg-secondary/50 px-2.5 py-1 text-xs font-medium text-foreground transition-all hover:bg-secondary hover:border-border cursor-pointer"
-            title="Không gian làm việc hiện tại"
-          >
-            <span className="font-semibold text-foreground">QCET E-Office</span>
-            <span className="text-muted-foreground/60 font-light">/</span>
-            <span className="font-medium text-foreground/80">{user.department}</span>
-            <ChevronDown className="size-3 text-muted-foreground transition-transform group-hover:translate-y-0.5" />
-          </button>
-        </div>
-
-        {/* Center: Quick Search Command Trigger */}
-        <div className="hidden flex-1 max-w-md md:flex justify-center">
-          <button
-            type="button"
-            onClick={triggerQuickSearch}
-            className="flex h-8 w-full max-w-xs items-center justify-between rounded-md border border-border/80 bg-secondary/40 px-3 text-xs text-muted-foreground transition-all hover:bg-secondary/80 hover:border-border hover:text-foreground cursor-pointer"
-            aria-label="Tìm kiếm nhanh toàn hệ thống"
-          >
+      <div className="max-w-[1440px] w-full mx-auto px-3.5 sm:px-6 py-2.5 flex items-center justify-between gap-3 relative">
+        {/* Left: QCET School Logo and College Name with Green Ping Badge */}
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 sm:gap-3 min-w-0 group"
+          aria-label="Về trang chủ QCET E-Office"
+        >
+          <div className="relative flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-card p-1 shadow-card border border-border/60 shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:border-primary/40 group-hover:shadow-glow-primary">
+            <Image
+              src="/logo-qcet.png"
+              alt="Logo Quy Nhon"
+              width={44}
+              height={44}
+              priority
+              unoptimized
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <Search className="size-3.5 text-muted-foreground" />
-              <span>Tìm kiếm nhanh...</span>
+              <span className="text-[9.5px] sm:text-xs font-bold tracking-[0.16em] sm:tracking-[0.2em] text-muted-foreground/80 uppercase leading-none select-none">
+                TRƯỜNG CAO ĐẲNG KỸ THUẬT CÔNG NGHỆ QUY NHƠN
+              </span>
+              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                VĂN PHÒNG ĐIỆN TỬ (E-OFFICE)
+              </span>
             </div>
-            <kbd className="pointer-events-none inline-flex h-4.5 items-center gap-0.5 rounded border border-border/80 bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-2xs">
-              <Command className="size-2.5" />K
-            </kbd>
-          </button>
-        </div>
+            <h1 className="text-xs sm:text-base font-extrabold tracking-tight text-foreground leading-tight mt-0.5 truncate font-heading group-hover:text-primary transition-colors">
+              HỆ THỐNG QUẢN TRỊ & ĐIỀU HÀNH TẬP TRUNG
+            </h1>
+          </div>
+        </Link>
 
-        {/* Right: Live Notion Sync status | Notifications | Theme | User Avatar */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        {/* Right: LiveClock | ZoomToggle | RoleSwitcherPill | Quick Task | Theme | Avatar */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <LiveClock />
+          <ZoomToggle />
+          <RoleSwitcherPill />
+
           {/* Quick Create Task Action Button */}
           <Button
             type="button"
             size="sm"
             onClick={() => setIsCreateModalOpen(true)}
-            className="hidden sm:inline-flex h-7.5 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium bg-[#18181B] text-white hover:bg-[#27272A] dark:bg-[#FAFAFA] dark:text-[#18181B] dark:hover:bg-[#E4E4E7] shadow-2xs"
+            className="hidden sm:inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-hover transition-all cursor-pointer"
             title="Giao việc nhanh toàn hệ thống"
           >
             <Plus className="size-3.5" />
             <span>Giao việc</span>
           </Button>
-
-          {/* Role Switcher Pill */}
-          <RoleSwitcherPill />
-
-          {/* Live Notion Sync Status Indicator */}
-          <button
-            type="button"
-            onClick={simulateSync}
-            className="hidden items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/70 px-2.5 py-1 text-[11px] font-medium text-emerald-800 transition-colors hover:bg-emerald-100/70 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300 sm:inline-flex cursor-pointer"
-            title="Đồng bộ hóa trực tiếp với Notion Database QCET"
-          >
-            {isSyncing ? (
-              <>
-                <RefreshCw className="size-3 animate-spin text-emerald-600 dark:text-emerald-400" />
-                <span className="font-semibold">Đang đồng bộ...</span>
-              </>
-            ) : (
-              <>
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
-                </span>
-                <span className="font-semibold">Đã đồng bộ</span>
-              </>
-            )}
-          </button>
 
           {/* Theme Switcher Button */}
           <Button
@@ -175,7 +243,7 @@ export function Navigation() {
             size="icon-sm"
             onClick={toggleTheme}
             aria-label="Chuyển đổi giao diện sáng/tối"
-            className="size-8 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+            className="size-8 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent hover:border-border/50"
           >
             {resolved === "dark" ? (
               <Sun className="size-4 text-amber-400 transition-transform" />
@@ -184,38 +252,29 @@ export function Navigation() {
             )}
           </Button>
 
-          {/* Notifications Bell */}
-          <Link href="/notifications">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Xem thông báo"
-              className="relative size-8 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              <Bell className="size-4" />
-              <span className="absolute top-1.5 right-1.5 flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex size-2 rounded-full bg-primary"></span>
-              </span>
-            </Button>
-          </Link>
-
-          {/* User Avatar + Name - Links to /login for authentication & account switching */}
+          {/* User Avatar + Profile */}
           <Link
             href="/login"
             className="flex items-center gap-2 pl-1 border-l border-border/60 transition-opacity hover:opacity-85 group cursor-pointer"
             title={`Đổi tài khoản / Đăng nhập (Hiện tại: ${user.name})`}
           >
-            <div className="flex size-7.5 items-center justify-center rounded-full bg-zinc-800 text-[11px] font-bold text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900 shadow-2xs group-hover:ring-2 group-hover:ring-primary/20">
+            <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 text-xs font-bold shadow-xs group-hover:ring-2 group-hover:ring-primary/30">
               {getInitials(user.name)}
             </div>
-            <div className="hidden text-left lg:block">
-              <p className="text-xs font-semibold leading-tight text-foreground max-w-[130px] truncate" title={user.name}>
+            <div className="hidden text-left xl:block">
+              <p
+                className="text-xs font-bold leading-tight text-foreground max-w-[130px] truncate"
+                title={user.name}
+              >
                 {user.name}
               </p>
-              <p className="text-[10px] text-muted-foreground max-w-[130px] truncate" title={user.roleLabel}>
-                {user.role === "ADMIN" ? "BGH QCET" : user.departmentCode || user.department}
+              <p
+                className="text-[10.5px] text-muted-foreground font-medium max-w-[130px] truncate"
+                title={user.roleLabel}
+              >
+                {user.role === "ADMIN"
+                  ? "BGH QCET"
+                  : user.departmentCode || user.department}
               </p>
             </div>
           </Link>
@@ -223,10 +282,10 @@ export function Navigation() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. Sub-Bar: Clean Twenty-Style Horizontal Navigation Links                */}
+      {/* 2. SubNav: Horizontal Scrolling Pill Bar with Glassmorphism                */}
       {/* ========================================================================= */}
-      <div className="border-t border-border/50 bg-background/50 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto flex h-9.5 w-full max-w-7xl items-center gap-1 overflow-x-auto scrollbar-none">
+      <div className="border-t border-border/50 bg-background/70 backdrop-blur-xl px-3.5 sm:px-6">
+        <div className="mx-auto flex h-10 w-full max-w-[1440px] items-center gap-1.5 overflow-x-auto scrollbar-none">
           {NAVIGATION_ITEMS.map((item) => {
             const active =
               pathname === item.href ||
@@ -239,19 +298,29 @@ export function Navigation() {
                 href={item.href}
                 data-active={active}
                 className={cn(
-                  "relative inline-flex h-7.5 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors whitespace-nowrap",
+                  "relative inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-all whitespace-nowrap",
                   active
-                    ? "bg-secondary text-foreground font-semibold shadow-2xs"
+                    ? "bg-primary/10 text-primary font-bold border border-primary/20 shadow-xs"
                     : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                 )}
               >
-                <Icon className={cn("size-3.5", active ? "text-foreground" : "text-muted-foreground")} />
+                <Icon
+                  className={cn(
+                    "size-3.5",
+                    active ? "text-primary" : "text-muted-foreground"
+                  )}
+                />
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* 3. Mobile Bottom Navigation for Small Screens (< 768px)                   */}
+      {/* ========================================================================= */}
+      <MobileNav pathname={pathname} />
 
       {/* CreateTaskModal Dialog from Topbar */}
       <CreateTaskModal

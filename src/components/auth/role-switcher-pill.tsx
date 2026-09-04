@@ -77,19 +77,22 @@ export function RoleSwitcherPill({ className }: { className?: string }) {
   const ActiveIcon = activeConfig.icon;
 
   return (
-    <div ref={containerRef} className={cn("relative inline-block text-left", className)}>
-      {/* Twenty CRM Dropdown Trigger Pill */}
+    <div
+      ref={containerRef}
+      className={cn("relative inline-block text-left", className)}
+    >
+      {/* Role Dropdown Trigger Pill */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         aria-haspopup="true"
         aria-expanded={isOpen}
         title={`Chuyển vai trò xem: ${activeConfig.label}`}
-        className="group inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-secondary/50 px-2 text-xs font-medium text-foreground transition-all hover:bg-secondary hover:border-border cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="group inline-flex h-8 items-center gap-1.5 rounded-xl border border-border/60 bg-card/80 backdrop-blur-xl px-2.5 text-xs font-semibold text-foreground shadow-xs transition-all hover:bg-card hover:border-border cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-95"
       >
-        <ActiveIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
-        <span className="hidden sm:inline font-medium">{activeConfig.label}</span>
-        <span className="inline sm:hidden font-medium">{activeConfig.shortLabel}</span>
+        <ActiveIcon className="size-3.5 text-primary transition-colors" />
+        <span className="hidden sm:inline font-semibold">{activeConfig.label}</span>
+        <span className="inline sm:hidden font-semibold">{activeConfig.shortLabel}</span>
         <ChevronDown
           className={cn(
             "size-3 text-muted-foreground transition-transform duration-150 group-hover:text-foreground",
@@ -98,18 +101,18 @@ export function RoleSwitcherPill({ className }: { className?: string }) {
         />
       </button>
 
-      {/* Twenty CRM Styled Dropdown Menu */}
+      {/* Glassmorphic Role Dropdown Menu */}
       {isOpen && (
         <div
           role="menu"
           aria-orientation="vertical"
-          className="absolute right-0 top-full mt-1.5 w-72 rounded-lg border border-border bg-popover/95 p-1 text-popover-foreground shadow-lg backdrop-blur-md z-50 animate-in fade-in-0 zoom-in-95 focus:outline-none"
+          className="absolute right-0 top-full mt-1.5 w-72 rounded-xl border border-border/60 bg-card/95 p-1.5 text-popover-foreground shadow-card backdrop-blur-xl z-50 animate-in fade-in-0 zoom-in-95 focus:outline-none"
         >
-          <div className="px-2 py-1.5 text-[11px] font-semibold text-muted-foreground border-b border-border/50 mb-1">
+          <div className="px-2.5 py-1.5 text-[11px] font-bold text-muted-foreground border-b border-border/50 mb-1">
             Góc nhìn vai trò (RBAC Demo)
           </div>
 
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {ROLE_ORDER.map((roleKey) => {
               const item = ROLE_CONFIGS[roleKey];
               const Icon = item.icon;
@@ -125,10 +128,10 @@ export function RoleSwitcherPill({ className }: { className?: string }) {
                     setIsOpen(false);
                   }}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-xs transition-colors cursor-pointer text-left",
+                    "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors cursor-pointer text-left",
                     isActive
-                      ? "bg-secondary text-foreground font-semibold"
-                      : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
+                      ? "bg-primary/10 text-primary font-bold border border-primary/20"
+                      : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground border border-transparent"
                   )}
                 >
                   <div className="flex items-start gap-2.5 min-w-0">
@@ -136,20 +139,27 @@ export function RoleSwitcherPill({ className }: { className?: string }) {
                       className={cn(
                         "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border text-[11px]",
                         isActive
-                          ? "border-primary/40 bg-primary/10 text-primary"
+                          ? "border-primary/40 bg-primary/20 text-primary"
                           : "border-border/60 bg-background text-muted-foreground"
                       )}
                     >
                       <Icon className="size-3" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground truncate">{item.label}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{item.description}</p>
+                      <p className="font-semibold text-foreground truncate">
+                        {item.label}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {item.description}
+                      </p>
                     </div>
                   </div>
 
                   {isActive && (
-                    <Check className="size-3.5 shrink-0 text-primary" aria-label="Đang chọn" />
+                    <Check
+                      className="size-3.5 shrink-0 text-primary"
+                      aria-label="Đang chọn"
+                    />
                   )}
                 </button>
               );
