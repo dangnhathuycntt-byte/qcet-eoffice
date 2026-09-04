@@ -141,11 +141,20 @@ export function UpcomingDeadlinesWidget({
             return (
               <div
                 key={item.id}
+                tabIndex={onSelectTask ? 0 : undefined}
                 onClick={() => onSelectTask?.(item)}
+                onKeyDown={(e) => {
+                  if (onSelectTask && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onSelectTask(item);
+                  }
+                }}
                 className={cn(
-                  "group flex flex-col gap-1.5 py-3 transition-colors first:pt-2.5 last:pb-1",
+                  "group flex flex-col gap-1.5 py-3 transition-colors first:pt-2.5 last:pb-1 focus-visible:outline-hidden focus-visible:bg-muted/50",
                   onSelectTask && "cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-md"
                 )}
+                role={onSelectTask ? "button" : undefined}
+                aria-label={onSelectTask ? `Chi tiết hạn chót: ${item.title}` : undefined}
               >
                 {/* Top row: Badges & metadata */}
                 <div className="flex items-center justify-between gap-2">
@@ -217,6 +226,9 @@ export function UpcomingDeadlinesWidget({
                       <img
                         src={item.assigneeAvatar}
                         alt={item.assigneeName}
+                        width={16}
+                        height={16}
+                        loading="lazy"
                         className="size-4 rounded-full object-cover shrink-0 ring-1 ring-border/50"
                       />
                     ) : (

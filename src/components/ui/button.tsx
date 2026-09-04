@@ -3,21 +3,21 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all duration-150 active:scale-[0.98] outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer",
   {
     variants: {
       variant: {
         default:
-          "border-primary bg-primary text-primary-foreground hover:bg-[#27272A] shadow-xs",
+          "border-primary bg-primary text-primary-foreground hover:opacity-90 shadow-xs",
         outline:
-          "border-border bg-card text-foreground hover:bg-secondary hover:text-foreground hover:border-[#D4D4D8]",
+          "border-border bg-card text-foreground hover:bg-secondary hover:text-foreground hover:border-border",
         secondary:
-          "border-border bg-secondary text-secondary-foreground hover:bg-[#E4E4E7]",
+          "border-border bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:
           "border-transparent text-foreground/80 hover:bg-secondary hover:text-foreground",
         destructive:
           "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15",
-        link: "rounded-md text-primary underline-offset-4 hover:underline",
+        link: "rounded-md text-primary underline-offset-4 hover:underline active:scale-100",
       },
       size: {
         default: "h-9 gap-2 px-3.5 text-sm rounded-md",

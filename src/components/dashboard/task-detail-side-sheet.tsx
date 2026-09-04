@@ -481,7 +481,7 @@ export function TaskDetailSideSheet({
                     placeholder="Nhập tiêu đề việc con cần giao..."
                     value={newSubtaskTitle}
                     onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    className="flex-1 bg-transparent px-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden"
+                    className="flex-1 bg-transparent px-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
                     autoFocus
                   />
                   <Button type="submit" size="sm" className="h-7 text-xs px-2.5">
@@ -513,8 +513,17 @@ export function TaskDetailSideSheet({
                     return (
                       <div
                         key={sub.id}
+                        tabIndex={0}
                         onClick={() => onSelectSubTask?.(sub)}
-                        className="group flex items-center justify-between gap-3 p-3 transition-colors hover:bg-muted/40 cursor-pointer"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onSelectSubTask?.(sub);
+                          }
+                        }}
+                        className="group flex items-center justify-between gap-3 p-3 transition-colors hover:bg-muted/40 focus-visible:outline-hidden focus-visible:bg-muted/60 cursor-pointer"
+                        role="button"
+                        aria-label={`Chi tiết việc con: ${sub.title}`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {isDone ? (
@@ -580,7 +589,7 @@ export function TaskDetailSideSheet({
                 onChange={(e) => setNewNote(e.target.value)}
                 rows={2}
                 placeholder="Thêm ý kiến chỉ đạo, phản hồi tiến độ hoặc ghi chú..."
-                className="w-full resize-none rounded-md border border-border bg-muted/20 p-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-ring"
+                className="w-full resize-none rounded-md border border-border bg-muted/20 p-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <div className="flex justify-end">
                 <Button

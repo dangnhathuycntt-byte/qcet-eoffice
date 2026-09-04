@@ -298,7 +298,7 @@ export function CascadingTaskTable({
           <Button
             type="button"
             onClick={onAddTask}
-            className="h-8 rounded-md bg-[#18181B] px-3 text-xs font-medium text-white shadow-xs hover:bg-[#27272A] cursor-pointer dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            className="h-8 rounded-md px-3 text-xs font-medium shadow-xs"
           >
             <Plus className="size-3.5" />
             <span>Giao việc</span>
@@ -349,9 +349,16 @@ export function CascadingTaskTable({
                     <React.Fragment key={task.id}>
                       {/* Tier 1 Parent Row */}
                       <tr
+                        tabIndex={0}
                         onClick={() => onSelectTask?.(task)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onSelectTask?.(task);
+                          }
+                        }}
                         className={cn(
-                          "group cursor-pointer transition-colors hover:bg-secondary/40",
+                          "group cursor-pointer transition-colors hover:bg-secondary/40 focus-visible:outline-hidden focus-visible:bg-secondary/50",
                           isExpanded && "bg-muted/20"
                         )}
                         data-task-id={task.id}
@@ -411,6 +418,9 @@ export function CascadingTaskTable({
                               <img
                                 src={task.leadAssigneeAvatar}
                                 alt={task.leadAssigneeName}
+                                width={20}
+                                height={20}
+                                loading="lazy"
                                 className="size-5 rounded-full object-cover shrink-0"
                               />
                             ) : (
@@ -469,8 +479,15 @@ export function CascadingTaskTable({
                                   return (
                                     <div
                                       key={subTask.id}
+                                      tabIndex={0}
                                       onClick={() => onSelectTask?.(subTask)}
-                                      className="flex items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-xs transition-colors hover:bg-secondary/60 cursor-pointer"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                          e.preventDefault();
+                                          onSelectTask?.(subTask);
+                                        }
+                                      }}
+                                      className="flex items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-xs transition-colors hover:bg-secondary/60 focus-visible:outline-hidden focus-visible:bg-secondary/70 cursor-pointer"
                                       data-subtask-id={subTask.id}
                                     >
                                       {/* Subtask Status Badge & Title */}
@@ -496,6 +513,9 @@ export function CascadingTaskTable({
                                             <img
                                               src={subTask.assigneeAvatar}
                                               alt={subTask.assigneeName}
+                                              width={16}
+                                              height={16}
+                                              loading="lazy"
                                               className="size-4 rounded-full object-cover shrink-0"
                                             />
                                           ) : (
