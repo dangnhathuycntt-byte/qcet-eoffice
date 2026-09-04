@@ -25,8 +25,13 @@ import {
 import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
 import { Button } from "@/components/ui/button";
 import { Clock, RefreshCw, CheckCircle2, Plus } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { filterTasksByRole, filterUpcomingByRole } from "@/lib/role-task-filter";
+import { RoleViewpointBanner } from "@/components/auth/role-viewpoint-banner";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+
   // 1. Synchronous optimistic initial state from getMockDashboardPayload (0ms blank screen)
   const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(
     () => getMockDashboardPayload()
@@ -36,6 +41,22 @@ export default function DashboardPage() {
   >(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+
+  // Filter tasks and stats dynamically by active role viewpoint
+  const visibleTasks = React.useMemo(
+    () => filterTasksByRole(dashboardData.tasks, user),
+    [dashboardData.tasks, user]
+  );
+
+  const visibleStats = React.useMemo(
+    () => computeDashboardStats(visibleTasks),
+    [visibleTasks]
+  );
+
+  const visibleUpcoming = React.useMemo(
+    () => filterUpcomingByRole(dashboardData.upcoming, user, visibleTasks),
+    [dashboardData.upcoming, user, visibleTasks]
+  );
 
   // 2. Client-side background sync fetching live overview from /api/dashboard/overview
   React.useEffect(() => {
@@ -266,20 +287,27 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. ExecutiveStatStrip across the top                                      */}
+      {/* 2. Role Viewpoint Banner (RBAC Real-time Scope Indicator)                */}
       {/* ========================================================================= */}
-      <section aria-label="Chỉ số hiệu suất toàn trường">
-        <ExecutiveStatStrip stats={dashboardData.stats} />
+      <section aria-label="Góc nhìn vai trò">
+        <RoleViewpointBanner />
       </section>
 
       {/* ========================================================================= */}
-      {/* 3. Two-Column Grid: 8 Cols (~65%) Left | 4 Cols (~35%) Right              */}
+      {/* 3. ExecutiveStatStrip across the top                                      */}
+      {/* ========================================================================= */}
+      <section aria-label="Chỉ số hiệu suất toàn trường">
+        <ExecutiveStatStrip stats={visibleStats} />
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 4. Two-Column Grid: 8 Cols (~65%) Left | 4 Cols (~35%) Right              */}
       {/* ========================================================================= */}
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column (8 cols): Cascading 2-Tier Task Table */}
         <div className="lg:col-span-8 space-y-4">
           <CascadingTaskTable
-            tasks={dashboardData.tasks}
+            tasks={visibleTasks}
             onSelectTask={(task) => setSelectedTask(task)}
             onAddTask={() => setIsCreateModalOpen(true)}
           />
@@ -288,7 +316,7 @@ export default function DashboardPage() {
         {/* Right Column (4 cols): Upcoming Deadlines & Activity Feed */}
         <div className="lg:col-span-4 space-y-6">
           <UpcomingDeadlinesWidget
-            items={dashboardData.upcoming}
+            items={visibleUpcoming}
             onSelectTask={handleSelectUpcoming}
           />
           <ActivityFeedWidget activities={dashboardData.activities} />
@@ -296,7 +324,7 @@ export default function DashboardPage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 4. TaskDetailSideSheet Slide-Over                                        */}
+      {/* 5. TaskDetailSideSheet Slide-Over                                        */}
       {/* ========================================================================= */}
       <TaskDetailSideSheet
         task={selectedTask}
@@ -306,13 +334,13 @@ export default function DashboardPage() {
       />
 
       {/* ========================================================================= */}
-      {/* 5. CreateTaskModal Dialog                                                */}
+      {/* 6. CreateTaskModal Dialog                                                */}
       {/* ========================================================================= */}
       <CreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateTask}
-        schoolTasks={dashboardData.tasks}
+        schoolTasks={visibleTasks}
       />
     </div>
   );

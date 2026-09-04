@@ -31,6 +31,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import { filterTasksByRole } from "@/lib/role-task-filter";
+import { RoleViewpointBanner } from "@/components/auth/role-viewpoint-banner";
 import {
   LayoutGrid,
   List,
@@ -42,11 +45,14 @@ import {
   Users,
   CheckCircle2,
   Layers,
+  X,
 } from "lucide-react";
 
 export type ViewMode = "table" | "kanban";
 
 export default function TasksPage() {
+  const { user } = useAuth();
+
   // 1. Synchronous optimistic initial state
   const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(
     () => getMockDashboardPayload()
@@ -55,6 +61,12 @@ export default function TasksPage() {
     SchoolTask | StaffTask | null
   >(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  // Filter tasks dynamically by active role viewpoint
+  const visibleTasks = React.useMemo(
+    () => filterTasksByRole(dashboardData.tasks, user),
+    [dashboardData.tasks, user]
+  );
 
   // 2. View Mode & Filtering States
   const [viewMode, setViewMode] = React.useState<ViewMode>("kanban");
@@ -212,9 +224,9 @@ export default function TasksPage() {
     setIsCreateModalOpen(true);
   };
 
-  // Summary counts
-  const totalSchoolTasksCount = dashboardData.tasks.length;
-  const totalSubTasksCount = dashboardData.tasks.reduce(
+  // Summary counts based on active role viewpoint
+  const totalSchoolTasksCount = visibleTasks.length;
+  const totalSubTasksCount = visibleTasks.reduce(
     (acc, st) => acc + (st.subTasks?.length || 0),
     0
   );
@@ -300,7 +312,14 @@ export default function TasksPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. Global Filter & Search Toolbar                                        */}
+      {/* 2. Role Viewpoint Banner (RBAC Real-time Scope Indicator)                */}
+      {/* ========================================================================= */}
+      <section aria-label="Góc nhìn vai trò">
+        <RoleViewpointBanner />
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 3. Global Filter & Search Toolbar                                        */}
       {/* ========================================================================= */}
       <div className="flex flex-col gap-3 rounded-lg border border-border/80 bg-card p-3 shadow-2xs">
         {/* Category Tabs */}
@@ -382,9 +401,10 @@ export default function TasksPage() {
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-2 text-xs text-muted-foreground hover:text-foreground"
+                className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Xóa tìm kiếm"
               >
-                ✕
+                <X className="size-3.5" />
               </button>
             )}
           </div>
@@ -392,17 +412,17 @@ export default function TasksPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. Main Content: Cascading Table OR Kanban Board                         */}
+      {/* 4. Main Content: Cascading Table OR Kanban Board                         */}
       {/* ========================================================================= */}
       {viewMode === "table" ? (
         <CascadingTaskTable
-          tasks={dashboardData.tasks}
+          tasks={visibleTasks}
           onSelectTask={(task) => setSelectedTask(task)}
           onAddTask={() => openCreateModal("TRUONG")}
         />
       ) : (
         <TaskKanbanBoard
-          tasks={dashboardData.tasks}
+          tasks={visibleTasks}
           onSelectTask={(task) => setSelectedTask(task)}
           onStatusChange={handleStatusChange}
           onAddTask={(level, parentId) => openCreateModal(level || "TRUONG", parentId)}
@@ -413,7 +433,7 @@ export default function TasksPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* 4. TaskDetailSideSheet Slide-Over                                        */}
+      {/* 5. TaskDetailSideSheet Slide-Over                                        */}
       {/* ========================================================================= */}
       <TaskDetailSideSheet
         task={selectedTask}
@@ -423,13 +443,13 @@ export default function TasksPage() {
       />
 
       {/* ========================================================================= */}
-      {/* 5. CreateTaskModal                                                       */}
+      {/* 6. CreateTaskModal                                                       */}
       {/* ========================================================================= */}
       <CreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateTask}
-        schoolTasks={dashboardData.tasks}
+        schoolTasks={visibleTasks}
         initialLevel={createInitialLevel}
         initialParentTaskId={createInitialParentId}
       />

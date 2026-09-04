@@ -1,4 +1,4 @@
-import { SchoolTask } from "../types/dashboard";
+import { SchoolTask, UpcomingItem } from "../types/dashboard";
 import { AuthUser, UserRole } from "../types/auth";
 
 export { type AuthUser, type UserRole } from "../types/auth";
@@ -99,4 +99,34 @@ export function filterTasksByRole(tasks: SchoolTask[], user: AuthUser): SchoolTa
   }
 
   return result;
+}
+
+export function filterUpcomingByRole(
+  items: UpcomingItem[],
+  user: AuthUser,
+  visibleTasks?: SchoolTask[]
+): UpcomingItem[] {
+  if (user.role === "ADMIN") {
+    return [...items];
+  }
+
+  if (user.role === "MANAGER") {
+    const visibleTaskIds = visibleTasks
+      ? new Set(
+          visibleTasks.flatMap((t) => [
+            t.id,
+            ...t.subTasks.map((st) => st.id),
+          ])
+        )
+      : null;
+
+    return items.filter((item) => {
+      if (matchesUser(item.assigneeName, user)) return true;
+      if (visibleTaskIds && item.taskId && visibleTaskIds.has(item.taskId)) return true;
+      return false;
+    });
+  }
+
+  // STAFF sees only items assigned directly to them
+  return items.filter((item) => matchesUser(item.assigneeName, user));
 }

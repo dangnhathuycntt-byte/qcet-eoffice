@@ -25,8 +25,13 @@ import {
 import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
 import { RefreshCw, Calendar as CalendarIcon, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
+import { filterTasksByRole } from "@/lib/role-task-filter";
+import { RoleViewpointBanner } from "@/components/auth/role-viewpoint-banner";
 
 export default function CalendarPage() {
+  const { user } = useAuth();
+
   // 1. Synchronous optimistic initial state (0ms blank screen)
   const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(
     () => getMockDashboardPayload()
@@ -35,6 +40,12 @@ export default function CalendarPage() {
     SchoolTask | StaffTask | null
   >(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  // Filter tasks dynamically by active role viewpoint
+  const visibleTasks = React.useMemo(
+    () => filterTasksByRole(dashboardData.tasks, user),
+    [dashboardData.tasks, user]
+  );
 
   // 2. Create Task Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
@@ -239,10 +250,17 @@ export default function CalendarPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. Calendar Month View Component                                         */}
+      {/* 2. Role Viewpoint Banner (RBAC Real-time Scope Indicator)                */}
+      {/* ========================================================================= */}
+      <section aria-label="Góc nhìn vai trò">
+        <RoleViewpointBanner />
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 3. Calendar Month View Component                                         */}
       {/* ========================================================================= */}
       <CalendarMonthView
-        tasks={dashboardData.tasks}
+        tasks={visibleTasks}
         onSelectTask={(task) => setSelectedTask(task)}
         onAddTask={handleOpenAddTask}
         initialYear={2026}
@@ -250,7 +268,7 @@ export default function CalendarPage() {
       />
 
       {/* ========================================================================= */}
-      {/* 3. TaskDetailSideSheet Slide-Over                                        */}
+      {/* 4. TaskDetailSideSheet Slide-Over                                        */}
       {/* ========================================================================= */}
       <TaskDetailSideSheet
         task={selectedTask}
@@ -260,13 +278,13 @@ export default function CalendarPage() {
       />
 
       {/* ========================================================================= */}
-      {/* 4. CreateTaskModal                                                       */}
+      {/* 5. CreateTaskModal                                                       */}
       {/* ========================================================================= */}
       <CreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateTask}
-        schoolTasks={dashboardData.tasks}
+        schoolTasks={visibleTasks}
         initialDueDate={createInitialDate}
         initialLevel="TRUONG"
       />
