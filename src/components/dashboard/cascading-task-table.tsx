@@ -110,8 +110,8 @@ export function getStatusBadgeConfig(
       return {
         label: "Mới 🆕",
         className:
-          "border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-        variant: "secondary",
+          "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300",
+        variant: "destructive",
       };
     case "IN_PROGRESS":
       return {

@@ -37,7 +37,8 @@ describe("CascadingTaskTable Helpers", () => {
   test("provides status badge config with Vietnamese labels and indicator emojis", () => {
     const sNew = getStatusBadgeConfig("NEW");
     assert.equal(sNew.label, "Mới 🆕");
-    assert.ok(sNew.className.includes("text-"));
+    assert.ok(sNew.className.includes("text-red-"));
+    assert.equal(sNew.variant, "destructive");
 
     const sInProgress = getStatusBadgeConfig("IN_PROGRESS");
     assert.equal(sInProgress.label, "Đang thực hiện 🔨");
