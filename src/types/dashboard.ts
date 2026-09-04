@@ -57,3 +57,23 @@ export interface ActivityEvent {
   timestamp: string;
   category: TaskCategory;
 }
+
+export interface UpcomingItem {
+  id: string;
+  title: string;
+  dueDate: string;
+  assigneeName: string;
+  assigneeAvatar?: string;
+  level: 'Trường' | 'Đơn vị';
+  category?: TaskCategory;
+  isOverdue?: boolean;
+}
+
+export interface DashboardPayload {
+  stats: DashboardStats;
+  tasks: SchoolTask[];
+  upcoming: UpcomingItem[];
+  activities: ActivityEvent[];
+  source?: 'notion-live' | 'mock-fallback' | 'mock';
+}
+
