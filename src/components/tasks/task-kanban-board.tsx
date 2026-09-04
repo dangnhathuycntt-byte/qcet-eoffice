@@ -15,6 +15,8 @@ import {
   FolderTree,
   Search,
   Filter,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -39,6 +41,8 @@ export interface KanbanColumnConfig {
   label: string;
   emoji: string;
   dotColor: string;
+  accentBorder: string;
+  headerAccent: string;
   badgeClass: string;
   bgClass: string;
 }
@@ -46,12 +50,14 @@ export interface KanbanColumnConfig {
 export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "NEW",
-    title: "Mới",
-    label: "Mới",
+    title: "Mới tiếp nhận",
+    label: "Mới tiếp nhận",
     emoji: "",
-    dotColor: "bg-red-500",
-    badgeClass: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300",
-    bgClass: "bg-red-50/20 dark:bg-red-950/10",
+    dotColor: "bg-violet-500",
+    accentBorder: "border-t-violet-500",
+    headerAccent: "border-t-2 border-t-violet-500",
+    badgeClass: "border-violet-500/20 bg-violet-500/10 text-violet-600 dark:text-violet-400",
+    bgClass: "bg-violet-500/[0.02] dark:bg-violet-500/[0.03]",
   },
   {
     id: "IN_PROGRESS",
@@ -59,17 +65,21 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Đang thực hiện",
     emoji: "",
     dotColor: "bg-blue-500",
-    badgeClass: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300",
-    bgClass: "bg-blue-50/20 dark:bg-blue-950/10",
+    accentBorder: "border-t-blue-500",
+    headerAccent: "border-t-2 border-t-blue-500",
+    badgeClass: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    bgClass: "bg-blue-500/[0.02] dark:bg-blue-500/[0.03]",
   },
   {
     id: "NEEDS_REVIEW",
-    title: "Cần chỉnh sửa",
+    title: "Chờ duyệt / Cần sửa",
     label: "Cần chỉnh sửa",
     emoji: "",
     dotColor: "bg-amber-500",
-    badgeClass: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300",
-    bgClass: "bg-amber-50/20 dark:bg-amber-950/10",
+    accentBorder: "border-t-amber-500",
+    headerAccent: "border-t-2 border-t-amber-500",
+    badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    bgClass: "bg-amber-500/[0.02] dark:bg-amber-500/[0.03]",
   },
   {
     id: "COMPLETED",
@@ -77,8 +87,10 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Hoàn thành",
     emoji: "",
     dotColor: "bg-emerald-500",
-    badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300",
-    bgClass: "bg-emerald-50/20 dark:bg-emerald-950/10",
+    accentBorder: "border-t-emerald-500",
+    headerAccent: "border-t-2 border-t-emerald-500",
+    badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    bgClass: "bg-emerald-500/[0.02] dark:bg-emerald-500/[0.03]",
   },
 ];
 
@@ -297,13 +309,21 @@ export function TaskKanbanBoard({
           return (
             <div
               key={col.id}
-              className="flex flex-col rounded-xl border border-border/75 bg-[#FAFAFA] dark:bg-muted/10 p-3.5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)]"
+              className={cn(
+                "flex flex-col rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs p-3.5 shadow-card transition-all",
+                col.bgClass
+              )}
             >
-              {/* Column Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-border/60">
+              {/* Column Header with Colored Accent Border */}
+              <div
+                className={cn(
+                  "flex items-center justify-between pb-3 border-b border-border/50 pt-1.5 px-0.5",
+                  col.headerAccent
+                )}
+              >
                 <div className="flex items-center gap-2">
                   <span className={cn("size-2 rounded-full ring-2 ring-background", col.dotColor)} />
-                  <h3 className="text-xs font-semibold text-foreground tracking-tight">
+                  <h3 className="text-xs font-bold text-foreground tracking-tight">
                     {col.title}
                   </h3>
                   <span
@@ -329,9 +349,9 @@ export function TaskKanbanBoard({
               </div>
 
               {/* Column Task Cards */}
-              <div className="flex-1 space-y-2.5 pt-3 overflow-y-auto max-h-[calc(100vh-280px)] min-h-[150px]">
+              <div className="flex-1 space-y-2.5 pt-3 overflow-y-auto max-h-[calc(100vh-280px)] min-h-[160px] thin-scrollbar pr-0.5">
                 {colTasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground/60 border border-dashed border-border/60 rounded-md">
+                  <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground/60 border border-dashed border-border/60 rounded-xl bg-muted/20">
                     <span className="text-xs">Không có nhiệm vụ</span>
                   </div>
                 ) : (
@@ -346,7 +366,7 @@ export function TaskKanbanBoard({
                         key={item.id}
                         onClick={() => onSelectTask?.(item.rawTask)}
                         className={cn(
-                          "group relative flex flex-col gap-2.5 rounded-lg border border-border/80 bg-card p-3.5 shadow-2xs transition-all duration-150 hover:border-border hover:shadow-xs active:scale-[0.98] cursor-pointer text-card-foreground",
+                          "group relative flex flex-col gap-2.5 rounded-xl border border-border/50 shadow-xs hover:shadow-card bg-card p-3.5 transition-all cursor-pointer text-card-foreground hover:border-border/80 active:scale-[0.99]",
                           item.level === "TRUONG"
                             ? "border-l-[3px] border-l-blue-600 dark:border-l-blue-400"
                             : "border-l-[3px] border-l-indigo-500 dark:border-l-indigo-400"
@@ -356,12 +376,12 @@ export function TaskKanbanBoard({
                         <div className="flex items-center justify-between gap-1.5 flex-wrap">
                           <div className="flex items-center gap-1.5">
                             {item.level === "TRUONG" ? (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
                                 <Building2 className="size-2.5" />
                                 <span>Cấp Trường</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800">
                                 <Users className="size-2.5" />
                                 <span>Đơn vị</span>
                               </span>
@@ -369,7 +389,7 @@ export function TaskKanbanBoard({
 
                             <span
                               className={cn(
-                                "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                                "inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium border",
                                 categoryConfig.className
                               )}
                             >
@@ -386,7 +406,7 @@ export function TaskKanbanBoard({
                               <span className="truncate">{item.parentSchoolTaskTitle}</span>
                             </div>
                           )}
-                          <h4 className="text-xs font-semibold text-foreground line-clamp-2 group-hover:text-foreground leading-snug">
+                          <h4 className="text-xs font-semibold text-foreground line-clamp-2 group-hover:text-primary leading-snug transition-colors">
                             {item.title}
                           </h4>
                         </div>
@@ -419,7 +439,7 @@ export function TaskKanbanBoard({
                         )}
 
                         {/* Footer Info: Assignee, Due Date & Quick Status Move Buttons */}
-                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
+                        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/50">
                           {/* Assignee & Due Date */}
                           <div className="flex items-center gap-2 min-w-0">
                             <div
@@ -430,7 +450,7 @@ export function TaskKanbanBoard({
                             </div>
                             <div className="flex items-center gap-1 text-[11px] truncate text-muted-foreground">
                               <Calendar className={cn("size-3 shrink-0", overdue ? "text-destructive" : "")} />
-                              <span className={cn("truncate", overdue ? "text-destructive font-semibold" : "")}>
+                              <span className={cn("truncate font-mono", overdue ? "text-destructive font-semibold" : "")}>
                                 {formatDate(item.dueDate)}
                               </span>
                             </div>

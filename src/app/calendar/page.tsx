@@ -23,7 +23,7 @@ import {
   TaskLevel,
 } from "@/components/dashboard/create-task-modal";
 import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
-import { RefreshCw, Calendar as CalendarIcon, Plus } from "lucide-react";
+import { RefreshCw, Calendar as CalendarIcon, Plus, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { filterTasksByRole } from "@/lib/role-task-filter";
@@ -200,17 +200,22 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="space-y-6 pb-12" data-slot="twenty-calendar-page">
+    <div
+      className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10"
+      data-slot="twenty-calendar-page"
+    >
       {/* ========================================================================= */}
-      {/* 1. Breadcrumbs & Header                                                   */}
+      {/* 1. Page Header with QCET Badge, Bold Title, and Actions                   */}
       {/* ========================================================================= */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mb-1">
-            <span>Văn phòng Điều hành</span>
-            <span className="text-muted-foreground/50">/</span>
-            <span className="text-foreground font-semibold">
-              Lịch công tác & Hạn chót toàn trường
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+              <CalendarIcon className="size-3" />
+              <span>LỊCH CÔNG TÁC & TIẾN ĐỘ QCET</span>
+            </span>
+            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
+              • Hạn chót toàn trường
             </span>
           </div>
           <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl flex items-center gap-2">
@@ -227,7 +232,7 @@ export default function CalendarPage() {
             type="button"
             onClick={handleManualRefresh}
             disabled={isRefreshing}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60"
+            className="inline-flex h-8.5 items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60 shadow-2xs"
             title="Làm mới dữ liệu"
           >
             <RefreshCw
@@ -241,7 +246,7 @@ export default function CalendarPage() {
           <Button
             type="button"
             onClick={() => handleOpenAddTask()}
-            className="h-8 gap-1.5 px-3 text-xs font-semibold bg-[#18181B] text-white hover:bg-[#27272A] dark:bg-[#FAFAFA] dark:text-[#18181B] dark:hover:bg-[#E4E4E7] shadow-2xs cursor-pointer"
+            className="h-8.5 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-card-hover transition-all cursor-pointer rounded-lg"
           >
             <Plus className="size-3.5" />
             <span>+ Giao việc</span>

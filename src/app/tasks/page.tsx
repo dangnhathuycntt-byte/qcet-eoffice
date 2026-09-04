@@ -46,6 +46,7 @@ import {
   CheckCircle2,
   Layers,
   X,
+  Sparkles,
 } from "lucide-react";
 
 export type ViewMode = "table" | "kanban";
@@ -232,16 +233,23 @@ export default function TasksPage() {
   );
 
   return (
-    <div className="space-y-6 pb-12" data-slot="twenty-tasks-page">
+    <div
+      className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10"
+      data-slot="twenty-tasks-page"
+    >
       {/* ========================================================================= */}
-      {/* 1. Header & Quick Actions                                                */}
+      {/* 1. Page Header with QCET Badge, Bold Title, and Actions                   */}
       {/* ========================================================================= */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mb-1">
-            <span>Văn phòng Điều hành</span>
-            <span className="text-muted-foreground/50">/</span>
-            <span className="text-foreground font-semibold">Quản lý Nhiệm vụ</span>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+              <Building2 className="size-3" />
+              <span>VĂN PHÒNG ĐIỀU HÀNH QCET</span>
+            </span>
+            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
+              • Quản lý Nhiệm vụ cấp Trường
+            </span>
           </div>
           <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl flex items-center gap-2">
             <span>Danh mục & Bảng điều phối nhiệm vụ</span>
@@ -254,12 +262,12 @@ export default function TasksPage() {
         {/* Action Controls: View Switcher, Refresh & + Giao việc */}
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
           {/* View Mode Toggle */}
-          <div className="inline-flex items-center rounded-lg border border-border/80 bg-muted/50 p-0.5 shadow-2xs">
+          <div className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs">
             <button
               type="button"
               onClick={() => setViewMode("table")}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
                 viewMode === "table"
                   ? "bg-card text-foreground shadow-xs font-semibold"
                   : "text-muted-foreground hover:text-foreground"
@@ -273,7 +281,7 @@ export default function TasksPage() {
               type="button"
               onClick={() => setViewMode("kanban")}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
                 viewMode === "kanban"
                   ? "bg-card text-foreground shadow-xs font-semibold"
                   : "text-muted-foreground hover:text-foreground"
@@ -290,7 +298,7 @@ export default function TasksPage() {
             type="button"
             onClick={handleManualRefresh}
             disabled={isRefreshing}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60"
+            className="inline-flex h-8.5 items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60 shadow-2xs"
             title="Làm mới dữ liệu"
           >
             <RefreshCw
@@ -303,7 +311,7 @@ export default function TasksPage() {
           <Button
             type="button"
             onClick={() => openCreateModal("TRUONG")}
-            className="h-8 gap-1.5 px-3 text-xs font-semibold bg-[#18181B] text-white hover:bg-[#27272A] dark:bg-[#FAFAFA] dark:text-[#18181B] dark:hover:bg-[#E4E4E7] shadow-2xs cursor-pointer"
+            className="h-8.5 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-card-hover transition-all cursor-pointer rounded-lg"
           >
             <Plus className="size-3.5" />
             <span>+ Giao việc</span>
@@ -321,8 +329,8 @@ export default function TasksPage() {
       {/* ========================================================================= */}
       {/* 3. Global Filter & Search Toolbar                                        */}
       {/* ========================================================================= */}
-      <div className="flex flex-col gap-3 rounded-lg border border-border/80 bg-card p-3 shadow-2xs">
-        {/* Category Tabs */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs p-3.5 shadow-card">
+        {/* Category Tabs / Pills */}
         <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           <div className="flex items-center gap-1.5">
             {CATEGORY_TABS.map((tab) => {
@@ -333,10 +341,10 @@ export default function TasksPage() {
                   type="button"
                   onClick={() => setActiveCategory(tab.id)}
                   className={cn(
-                    "whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                    "whitespace-nowrap rounded-lg px-3 py-1 text-xs font-medium transition-all cursor-pointer",
                     isActive
-                      ? "bg-secondary text-foreground font-semibold border border-border/70"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                   )}
                 >
                   {tab.label}
@@ -351,7 +359,7 @@ export default function TasksPage() {
               type="button"
               onClick={() => setLevelFilter("ALL")}
               className={cn(
-                "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
+                "px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
                 levelFilter === "ALL"
                   ? "bg-secondary text-foreground font-semibold"
                   : "text-muted-foreground hover:text-foreground"
@@ -363,9 +371,9 @@ export default function TasksPage() {
               type="button"
               onClick={() => setLevelFilter("TRUONG")}
               className={cn(
-                "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
+                "px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
                 levelFilter === "TRUONG"
-                  ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold"
+                  ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -375,9 +383,9 @@ export default function TasksPage() {
               type="button"
               onClick={() => setLevelFilter("DON_VI")}
               className={cn(
-                "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
+                "px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
                 levelFilter === "DON_VI"
-                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold"
+                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -395,7 +403,7 @@ export default function TasksPage() {
               placeholder="Tìm kiếm theo tiêu đề, người thực hiện hoặc công việc đơn vị (⌘K)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-8 pl-9 pr-3 rounded-md border border-border/80 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring transition-all"
+              className="w-full h-8.5 pl-9 pr-8 rounded-xl border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
             {searchQuery && (
               <button

@@ -15,6 +15,8 @@ import {
   Layers,
   Search,
   Filter,
+  Sparkles,
+  Tag,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -252,6 +254,25 @@ export function getCategoryDotClass(category?: TaskCategory): string {
   }
 }
 
+export function getCategoryChipClass(category?: TaskCategory): string {
+  switch (category) {
+    case "CHUYEN_DOI_SO":
+      return "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300";
+    case "TRUYEN_THONG":
+      return "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300";
+    case "CNTT":
+      return "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300";
+    case "ATTT":
+      return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
+    case "THU_VIEN":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+    case "BAO_CAO":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+    default:
+      return "border-border/60 bg-muted/60 text-muted-foreground";
+  }
+}
+
 function getInitials(name: string): string {
   if (!name) return "QC";
   const parts = name.trim().split(/\s+/);
@@ -318,8 +339,6 @@ export function CalendarMonthView({
   };
 
   const handleToday = () => {
-    const now = new Date();
-    // Default to Sept 2026 if current mock context or live today
     setCurrentYear(2026);
     setCurrentMonth(8);
     setSelectedDate("2026-09-04");
@@ -407,13 +426,13 @@ export function CalendarMonthView({
 
   return (
     <div
-      className={cn("flex flex-col gap-5", className)}
+      className={cn("flex flex-col gap-6", className)}
       data-slot="twenty-calendar-view"
     >
       {/* ========================================================================= */}
       {/* 1. Header Toolbar: Month Navigation, Today, Filters, and New Task         */}
       {/* ========================================================================= */}
-      <div className="flex flex-col gap-3 rounded-lg border border-border/80 bg-card p-3.5 shadow-2xs">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs p-4 shadow-card">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {/* Left: Month Selector & Navigation Controls */}
           <div className="flex items-center gap-2">
@@ -426,7 +445,7 @@ export function CalendarMonthView({
                 type="button"
                 onClick={handlePrevMonth}
                 aria-label="Tháng trước"
-                className="inline-flex size-7.5 items-center justify-center rounded-md border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer"
+                className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer shadow-xs"
               >
                 <ChevronLeft className="size-4" />
               </button>
@@ -434,7 +453,7 @@ export function CalendarMonthView({
                 type="button"
                 onClick={handleNextMonth}
                 aria-label="Tháng sau"
-                className="inline-flex size-7.5 items-center justify-center rounded-md border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer"
+                className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer shadow-xs"
               >
                 <ChevronRight className="size-4" />
               </button>
@@ -442,34 +461,34 @@ export function CalendarMonthView({
               <button
                 type="button"
                 onClick={handleToday}
-                className="inline-flex h-7.5 items-center rounded-md border border-border/70 bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary cursor-pointer"
+                className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-secondary cursor-pointer shadow-xs"
               >
                 Hôm nay
               </button>
             </div>
 
-            <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-secondary/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-[11px] font-semibold">
               {currentMonthTaskCount} hạn chót trong tháng
             </span>
           </div>
 
           {/* Right: Quick Search & + Giao việc */}
           <div className="flex items-center gap-2">
-            <div className="relative min-w-[180px] max-w-xs">
-              <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-2" />
+            <div className="relative min-w-[200px] max-w-xs">
+              <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-2.5" />
               <input
                 type="text"
                 placeholder="Lọc lịch công tác..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-7.5 pl-8 pr-2.5 rounded-md border border-border/80 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full h-8.5 pl-9 pr-3 rounded-xl border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
 
             <Button
               type="button"
               onClick={() => onAddTask?.(selectedDate)}
-              className="h-7.5 gap-1 px-3 text-xs font-semibold bg-[#18181B] text-white hover:bg-[#27272A] dark:bg-[#FAFAFA] dark:text-[#18181B] dark:hover:bg-[#E4E4E7] shadow-2xs cursor-pointer"
+              className="h-8.5 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-card-hover transition-all cursor-pointer rounded-lg"
             >
               <Plus className="size-3.5" />
               <span>Giao việc</span>
@@ -478,7 +497,7 @@ export function CalendarMonthView({
         </div>
 
         {/* Category & Level Sub-filters */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-border/50">
           {/* Category Tabs */}
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
             {CATEGORY_TABS.map((tab) => {
@@ -489,10 +508,10 @@ export function CalendarMonthView({
                   type="button"
                   onClick={() => setActiveCategory(tab.id)}
                   className={cn(
-                    "whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors cursor-pointer",
+                    "whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all cursor-pointer",
                     isActive
-                      ? "bg-secondary text-foreground font-semibold border border-border/70"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                   )}
                 >
                   {tab.label}
@@ -507,7 +526,7 @@ export function CalendarMonthView({
               type="button"
               onClick={() => setLevelFilter("ALL")}
               className={cn(
-                "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
+                "px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
                 levelFilter === "ALL"
                   ? "bg-secondary text-foreground font-semibold"
                   : "text-muted-foreground hover:text-foreground"
@@ -519,9 +538,9 @@ export function CalendarMonthView({
               type="button"
               onClick={() => setLevelFilter("TRUONG")}
               className={cn(
-                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer",
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
                 levelFilter === "TRUONG"
-                  ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold"
+                  ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -532,9 +551,9 @@ export function CalendarMonthView({
               type="button"
               onClick={() => setLevelFilter("DON_VI")}
               className={cn(
-                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer",
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
                 levelFilter === "DON_VI"
-                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold"
+                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -548,16 +567,16 @@ export function CalendarMonthView({
       {/* ========================================================================= */}
       {/* 2. Main 2-Column Grid: 8 Cols (Calendar Grid) & 4 Cols (Selected Day Panel) */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        {/* Left Column (8 cols on desktop): 7-Column Calendar Grid */}
-        <div className="lg:col-span-8 flex flex-col rounded-xl border border-border/75 bg-card shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] overflow-hidden">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Left Column: Rounded-2xl Container with Month Grid & Subtle Borders */}
+        <div className="lg:col-span-8 flex flex-col rounded-2xl border border-border/40 bg-card shadow-card overflow-hidden transition-all">
           {/* Weekday Header (T2 - CN) */}
-          <div className="grid grid-cols-7 border-b border-border/80 bg-muted/30 text-center">
+          <div className="grid grid-cols-7 border-b border-border/40 bg-muted/40 text-center">
             {WEEK_DAYS.map((w, idx) => (
               <div
                 key={w.label}
                 className={cn(
-                  "py-2 text-xs font-semibold text-muted-foreground border-r border-border/40 last:border-r-0",
+                  "py-2.5 text-xs font-bold text-muted-foreground border-r border-border/40 last:border-r-0",
                   idx >= 5 && "text-muted-foreground/70 bg-muted/20"
                 )}
                 title={w.fullName}
@@ -567,8 +586,8 @@ export function CalendarMonthView({
             ))}
           </div>
 
-          {/* Days Grid */}
-          <div className="grid grid-cols-7 divide-x divide-y divide-border/60">
+          {/* Days Grid with subtle border-border/40 */}
+          <div className="grid grid-cols-7 divide-x divide-y divide-border/40">
             {gridCells.map((cell) => {
               const dayTasks = tasksByDate.get(cell.dateString) || [];
               const isSelected = selectedDate === cell.dateString;
@@ -588,40 +607,41 @@ export function CalendarMonthView({
                     }
                   }}
                   className={cn(
-                    "group relative min-h-[96px] p-1.5 transition-all cursor-pointer flex flex-col focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
-                    !cell.isCurrentMonth && "bg-muted/15 text-muted-foreground/40",
+                    "group relative min-h-[104px] p-2 transition-all cursor-pointer flex flex-col focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+                    !cell.isCurrentMonth && "bg-muted/10 text-muted-foreground/40",
                     cell.isCurrentMonth && "bg-card hover:bg-secondary/30",
-                    cell.isWeekend && cell.isCurrentMonth && "bg-muted/10",
+                    cell.isWeekend && cell.isCurrentMonth && "bg-muted/5",
+                    cell.isToday && "bg-primary/5 font-bold border-primary/40 text-primary",
                     isSelected &&
-                      "ring-2 ring-primary/80 ring-inset bg-secondary/50 font-medium z-10 shadow-2xs"
+                      "ring-2 ring-primary ring-inset bg-primary/[0.08] font-medium z-10 shadow-xs"
                   )}
                   data-date={cell.dateString}
                   aria-label={`${cell.dateString}: ${dayTasks.length} nhiệm vụ`}
                 >
                   {/* Top Day Header: Day number + Today pill + Task count badge */}
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span
                       className={cn(
-                        "inline-flex size-5.5 items-center justify-center rounded-full text-xs font-medium",
+                        "inline-flex size-6 items-center justify-center rounded-full text-xs font-semibold",
                         cell.isToday
                           ? "bg-primary text-primary-foreground font-bold shadow-xs"
                           : cell.isCurrentMonth
                           ? "text-foreground"
                           : "text-muted-foreground/50",
-                        isSelected && !cell.isToday && "font-bold text-foreground"
+                        isSelected && !cell.isToday && "font-bold text-primary"
                       )}
                     >
                       {cell.dayNumber}
                     </span>
 
                     {dayTasks.length > 0 && (
-                      <span className="text-[10px] font-mono text-muted-foreground/70 font-semibold">
+                      <span className="text-[10px] font-mono font-bold text-muted-foreground bg-secondary/80 px-1.5 py-0.2 rounded-full">
                         {dayTasks.length}
                       </span>
                     )}
                   </div>
 
-                  {/* Event Chips List */}
+                  {/* Event Chips List with Category and Status Colors */}
                   <div className="flex-1 space-y-1 overflow-hidden">
                     {displayedTasks.map((item) => {
                       const dotClass = getCategoryDotClass(item.category);
@@ -643,17 +663,17 @@ export function CalendarMonthView({
                             }
                           }}
                           className={cn(
-                            "flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors border truncate cursor-pointer",
+                            "flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium transition-colors border truncate cursor-pointer shadow-2xs",
                             item.level === "Trường"
-                              ? "bg-background/95 border-border/90 text-foreground hover:border-primary/50 shadow-2xs"
-                              : "bg-muted/50 border-border/60 text-muted-foreground hover:text-foreground",
-                            isDone && "opacity-60 line-through"
+                              ? "bg-card border-border text-foreground hover:border-primary/50"
+                              : "bg-muted/40 border-border/60 text-muted-foreground hover:text-foreground",
+                            isDone && "opacity-60 line-through bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
                           )}
                           title={`${item.level === "Trường" ? "[Cấp Trường]" : "[Đơn vị]"} ${item.title} (${item.assigneeName})`}
                         >
                           <span
                             className={cn(
-                              "size-1.5 shrink-0 rounded-full",
+                              "size-1.5 shrink-0 rounded-full ring-1 ring-background",
                               dotClass
                             )}
                           />
@@ -665,7 +685,7 @@ export function CalendarMonthView({
                     })}
 
                     {hasMore && (
-                      <div className="pt-0.5 text-center text-[10px] font-medium text-muted-foreground hover:text-foreground">
+                      <div className="pt-0.5 text-center text-[10px] font-semibold text-primary hover:underline">
                         +{dayTasks.length - maxDisplay} việc nữa
                       </div>
                     )}
@@ -676,13 +696,13 @@ export function CalendarMonthView({
           </div>
         </div>
 
-        {/* Right Column (4 cols on desktop): Selected Date Detail Panel */}
-        <div className="lg:col-span-4 flex flex-col rounded-xl border border-border/75 bg-card p-4.5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] space-y-4">
+        {/* Right Column: Selected Date Detail Panel */}
+        <div className="lg:col-span-4 flex flex-col rounded-2xl border border-border/60 bg-card p-5 shadow-card space-y-4">
           {/* Date Header */}
-          <div className="flex items-start justify-between border-b border-border/70 pb-3">
+          <div className="flex items-start justify-between border-b border-border/70 pb-3.5">
             <div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mb-0.5">
-                <CalendarIcon className="size-3.5 text-primary" />
+              <div className="flex items-center gap-1.5 text-xs text-primary font-semibold mb-0.5">
+                <CalendarIcon className="size-3.5" />
                 <span>Chi tiết lịch công tác</span>
               </div>
               <h3 className="text-sm font-bold text-foreground">
@@ -695,7 +715,7 @@ export function CalendarMonthView({
               size="sm"
               variant="outline"
               onClick={() => onAddTask?.(selectedDate)}
-              className="h-7 text-xs gap-1 border-dashed px-2"
+              className="h-7.5 text-xs gap-1 border-dashed px-2.5 rounded-lg font-semibold"
             >
               <Plus className="size-3" />
               Thêm việc
@@ -713,14 +733,14 @@ export function CalendarMonthView({
           </div>
 
           {/* Task List on Selected Date */}
-          <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[500px] pr-0.5">
+          <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[520px] thin-scrollbar pr-0.5">
             {selectedDateTasks.length === 0 ? (
-              <div className="py-12 text-center text-xs text-muted-foreground space-y-1.5 border border-dashed border-border/70 rounded-lg p-4 bg-muted/10">
-                <CalendarIcon className="mx-auto size-7 text-muted-foreground/40 mb-1" />
+              <div className="py-14 text-center text-xs text-muted-foreground space-y-2 border border-dashed border-border/70 rounded-xl p-5 bg-muted/10">
+                <CalendarIcon className="mx-auto size-8 text-muted-foreground/30 mb-1" />
                 <p className="font-semibold text-foreground">
                   Không có hạn chót công việc
                 </p>
-                <p className="text-[11px]">
+                <p className="text-[11px] leading-relaxed">
                   Không có nhiệm vụ nào đến hạn vào ngày này. Nhấn &ldquo;Thêm việc&rdquo; để phân công nhiệm vụ mới.
                 </p>
               </div>
@@ -741,19 +761,19 @@ export function CalendarMonthView({
                         onSelectTask?.(item.originalTask);
                       }
                     }}
-                    className="group flex flex-col gap-2 rounded-lg border border-border/80 bg-background p-3 transition-all hover:border-border hover:shadow-2xs hover:bg-secondary/20 cursor-pointer focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+                    className="group flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 transition-all hover:border-primary/40 hover:shadow-card cursor-pointer focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.99]"
                     role="button"
                     aria-label={`Xem chi tiết ${item.title}`}
                   >
                     {/* Top row: Level Badge + Category + Status */}
-                    <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center justify-between gap-1.5 flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <span
                           className={cn(
-                            "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold border",
+                            "inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold border",
                             isSchool
                               ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800"
-                              : "bg-muted text-muted-foreground border-border"
+                              : "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800"
                           )}
                         >
                           {isSchool ? "Cấp Trường" : "Đơn vị"}
@@ -762,7 +782,7 @@ export function CalendarMonthView({
                         <Badge
                           variant="outline"
                           className={cn(
-                            "text-[10px] px-1.5 py-0 h-4.5 font-medium",
+                            "text-[10px] px-1.5 py-0 h-4.5 font-medium rounded-md",
                             catConfig.className
                           )}
                         >
@@ -773,7 +793,7 @@ export function CalendarMonthView({
                       <Badge
                         variant={statusConfig.variant}
                         className={cn(
-                          "text-[10px] px-1.5 py-0 h-4.5 font-medium",
+                          "text-[10px] px-1.5 py-0 h-4.5 font-semibold rounded-md",
                           statusConfig.className
                         )}
                       >
@@ -788,26 +808,27 @@ export function CalendarMonthView({
 
                     {/* Parent task if Subtask */}
                     {!isSchool && item.parentSchoolTaskTitle && (
-                      <div className="text-[11px] text-muted-foreground truncate">
-                        Thuộc: {item.parentSchoolTaskTitle}
+                      <div className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                        <Layers className="size-3 text-muted-foreground/70 shrink-0" />
+                        <span className="truncate">Thuộc: {item.parentSchoolTaskTitle}</span>
                       </div>
                     )}
 
                     {/* Footer: Assignee avatar & name */}
-                    <div className="flex items-center justify-between pt-1 border-t border-border/50 text-[11px]">
+                    <div className="flex items-center justify-between pt-1.5 border-t border-border/50 text-[11px]">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         {item.assigneeAvatar ? (
                           <img
                             src={item.assigneeAvatar}
                             alt={item.assigneeName}
-                            className="size-4 rounded-full object-cover shrink-0"
+                            className="size-4.5 rounded-full object-cover shrink-0 border border-border"
                           />
                         ) : (
-                          <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-secondary text-[8px] font-bold text-secondary-foreground border border-border">
+                          <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary text-[8px] font-bold text-secondary-foreground border border-border">
                             {getInitials(item.assigneeName)}
                           </span>
                         )}
-                        <span className="font-medium text-foreground/80">
+                        <span className="font-medium text-foreground">
                           {item.assigneeName}
                         </span>
                       </div>
