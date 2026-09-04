@@ -52,14 +52,14 @@ export function formatDetailDate(dateStr?: string): string {
 export function getTaskLevelBadge(isSchool: boolean) {
   if (isSchool) {
     return {
-      label: "🏛️ Nhiệm vụ cấp Trường",
+      label: "Nhiệm vụ cấp Trường",
       variant: "secondary" as const,
       className:
         "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-200 font-medium px-2.5 py-1",
     };
   }
   return {
-    label: "📋 Công việc Đơn vị",
+    label: "Công việc Đơn vị",
     variant: "outline" as const,
     className:
       "border-border bg-muted/60 text-muted-foreground font-medium px-2.5 py-1",
@@ -70,28 +70,28 @@ export function getDetailStatusConfig(status: TaskStatus | string) {
   switch (status) {
     case "NEW":
       return {
-        label: "Mới 🆕",
+        label: "Mới",
         className:
           "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300",
         variant: "destructive" as const,
       };
     case "IN_PROGRESS":
       return {
-        label: "Đang thực hiện 🔨",
+        label: "Đang thực hiện",
         className:
           "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
         variant: "progress" as const,
       };
     case "NEEDS_REVIEW":
       return {
-        label: "Cần chỉnh sửa ⚠️",
+        label: "Cần chỉnh sửa",
         className:
           "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
         variant: "warning" as const,
       };
     case "COMPLETED":
       return {
-        label: "Hoàn thành 👍",
+        label: "Hoàn thành",
         className:
           "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
         variant: "success" as const,
@@ -305,10 +305,10 @@ export function TaskDetailSideSheet({
                   }
                   className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground shadow-2xs hover:bg-muted/50 focus:outline-hidden focus:ring-1 focus:ring-ring"
                 >
-                  <option value="NEW">Mới 🆕</option>
-                  <option value="IN_PROGRESS">Đang thực hiện 🔨</option>
-                  <option value="NEEDS_REVIEW">Cần chỉnh sửa ⚠️</option>
-                  <option value="COMPLETED">Hoàn thành 👍</option>
+                  <option value="NEW">Mới</option>
+                  <option value="IN_PROGRESS">Đang thực hiện</option>
+                  <option value="NEEDS_REVIEW">Cần chỉnh sửa</option>
+                  <option value="COMPLETED">Hoàn thành</option>
                 </select>
               </div>
             </div>

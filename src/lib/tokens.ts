@@ -28,10 +28,10 @@ export const twentyTokens = {
     },
   },
   statusColors: {
-    completed: { bg: "#ECFDF5", text: "#047857", border: "#A7F3D0", label: "Hoàn thành 👍" },
-    inProgress: { bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE", label: "Đang thực hiện 🔨" },
-    needsReview: { bg: "#FFFBEB", text: "#B45309", border: "#FDE68A", label: "Cần chỉnh sửa ⚠️" },
-    new: { bg: "#FEF2F2", text: "#B91C1C", border: "#FECACA", label: "Mới 🆕" },
+    completed: { bg: "#ECFDF5", text: "#047857", border: "#A7F3D0", label: "Hoàn thành" },
+    inProgress: { bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE", label: "Đang thực hiện" },
+    needsReview: { bg: "#FFFBEB", text: "#B45309", border: "#FDE68A", label: "Cần chỉnh sửa" },
+    new: { bg: "#FEF2F2", text: "#B91C1C", border: "#FECACA", label: "Mới" },
   },
   radius: {
     card: "0.5rem",     // 8px
@@ -39,8 +39,8 @@ export const twentyTokens = {
     full: "9999px",
   },
   typography: {
-    fontSans: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    fontMono: "'JetBrains Mono', monospace",
+    fontSans: "Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontMono: "'Geist Mono', 'JetBrains Mono', monospace",
   },
 } as const;
 

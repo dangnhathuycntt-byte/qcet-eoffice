@@ -34,20 +34,20 @@ describe("CascadingTaskTable Helpers", () => {
     assert.equal(khac.label, "Khác");
   });
 
-  test("provides status badge config with Vietnamese labels and indicator emojis", () => {
+  test("provides status badge config with Vietnamese labels", () => {
     const sNew = getStatusBadgeConfig("NEW");
-    assert.equal(sNew.label, "Mới 🆕");
+    assert.equal(sNew.label, "Mới");
     assert.ok(sNew.className.includes("text-red-"));
     assert.equal(sNew.variant, "destructive");
 
     const sInProgress = getStatusBadgeConfig("IN_PROGRESS");
-    assert.equal(sInProgress.label, "Đang thực hiện 🔨");
+    assert.equal(sInProgress.label, "Đang thực hiện");
 
     const sReview = getStatusBadgeConfig("NEEDS_REVIEW");
-    assert.equal(sReview.label, "Cần chỉnh sửa ⚠️");
+    assert.equal(sReview.label, "Cần chỉnh sửa");
 
     const sDone = getStatusBadgeConfig("COMPLETED");
-    assert.equal(sDone.label, "Hoàn thành 👍");
+    assert.equal(sDone.label, "Hoàn thành");
   });
 
   test("CATEGORY_TABS defines all required category filters in proper order", () => {

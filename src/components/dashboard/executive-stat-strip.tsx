@@ -121,7 +121,7 @@ export function ExecutiveStatStrip({ stats, className }: ExecutiveStatStripProps
         return (
           <div
             key={card.id}
-            className="group flex flex-col justify-between rounded-lg border border-border/80 bg-card p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.04)] transition-all hover:border-border hover:shadow-[0_2px_4px_0_rgba(0,0,0,0.06)]"
+            className="group relative flex flex-col justify-between rounded-xl border border-border/75 bg-card p-4.5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] transition-all duration-200 hover:border-border hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.06)]"
             data-slot="stat-card"
             data-card-id={card.id}
           >
@@ -140,14 +140,14 @@ export function ExecutiveStatStrip({ stats, className }: ExecutiveStatStripProps
                   </Badge>
                 )}
                 {IconComponent && (
-                  <IconComponent className="size-4 text-muted-foreground/70 shrink-0" />
+                  <IconComponent className="size-4 text-muted-foreground/60 shrink-0 transition-colors group-hover:text-foreground" />
                 )}
               </div>
             </div>
 
             {/* Metric Value */}
             <div className="my-2.5 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground font-sans tabular-nums">
+              <span className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground font-mono tabular-nums">
                 {card.value}
               </span>
             </div>

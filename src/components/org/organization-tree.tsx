@@ -1227,7 +1227,7 @@ export function OrganizationTree({
         {/* Left Column: Department Tree Navigation (4 cols)                    */}
         {/* ------------------------------------------------------------------- */}
         <div className="lg:col-span-4 space-y-4">
-          <div className="rounded-lg border border-border/80 bg-card p-3 shadow-2xs">
+          <div className="rounded-xl border border-border/75 bg-card p-3.5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)]">
             <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-border/60">
               <div className="flex items-center gap-1.5">
                 <Building2 className="size-4 text-foreground/80" />
@@ -1363,7 +1363,7 @@ export function OrganizationTree({
         <div className="lg:col-span-8 space-y-4">
           {/* Department Information Banner */}
           {selectedDepartment && !searchQuery && selectedDeptCode !== "ALL" ? (
-            <div className="rounded-lg border border-border/80 bg-card p-4 shadow-2xs space-y-3">
+            <div className="rounded-xl border border-border/75 bg-card p-4.5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] space-y-3.5">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -1485,7 +1485,7 @@ export function OrganizationTree({
                 <div
                   key={member.id}
                   onClick={() => handleOpenStaff(member)}
-                  className="group relative flex flex-col justify-between rounded-lg border border-border/80 bg-card p-4 shadow-2xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-all cursor-pointer"
+                  className="group relative flex flex-col justify-between rounded-xl border border-border/75 bg-card p-4.5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-[0_8px_24px_-4px_rgba(0,0,0,0.06)] active:scale-[0.99] transition-all cursor-pointer"
                 >
                   {/* Top card: Avatar & Status & Task Pill */}
                   <div className="flex items-start gap-3">

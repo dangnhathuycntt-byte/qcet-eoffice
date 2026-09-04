@@ -96,7 +96,7 @@ export function ActivityFeedWidget({
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden rounded-lg border border-border/80 bg-card p-4 text-card-foreground shadow-[0_1px_2px_0_rgba(0,0,0,0.04)]",
+        "flex flex-col overflow-hidden rounded-xl border border-border/75 bg-card p-4.5 text-card-foreground shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:border-border transition-all duration-200",
         className
       )}
     >

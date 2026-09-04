@@ -42,26 +42,26 @@ describe("TaskDetailSideSheet Type Guard", () => {
     assert.equal(isSchoolTask(undefined), false);
   });
 
-  test("provides correct Task Level badge labels and emojis", () => {
+  test("provides correct Task Level badge labels", () => {
     const schoolLevel = getTaskLevelBadge(true);
-    assert.equal(schoolLevel.label, "🏛️ Nhiệm vụ cấp Trường");
+    assert.equal(schoolLevel.label, "Nhiệm vụ cấp Trường");
 
     const staffLevel = getTaskLevelBadge(false);
-    assert.equal(staffLevel.label, "📋 Công việc Đơn vị");
+    assert.equal(staffLevel.label, "Công việc Đơn vị");
   });
 
   test("provides status configuration for quick selector and badge", () => {
     const newConfig = getDetailStatusConfig("NEW");
-    assert.equal(newConfig.label, "Mới 🆕");
+    assert.equal(newConfig.label, "Mới");
 
     const inProgressConfig = getDetailStatusConfig("IN_PROGRESS");
-    assert.equal(inProgressConfig.label, "Đang thực hiện 🔨");
+    assert.equal(inProgressConfig.label, "Đang thực hiện");
 
     const needsReviewConfig = getDetailStatusConfig("NEEDS_REVIEW");
-    assert.equal(needsReviewConfig.label, "Cần chỉnh sửa ⚠️");
+    assert.equal(needsReviewConfig.label, "Cần chỉnh sửa");
 
     const completedConfig = getDetailStatusConfig("COMPLETED");
-    assert.equal(completedConfig.label, "Hoàn thành 👍");
+    assert.equal(completedConfig.label, "Hoàn thành");
   });
 
   test("formats detail dates safely", () => {

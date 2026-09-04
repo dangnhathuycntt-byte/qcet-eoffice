@@ -519,25 +519,27 @@ export function CalendarMonthView({
               type="button"
               onClick={() => setLevelFilter("TRUONG")}
               className={cn(
-                "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer",
                 levelFilter === "TRUONG"
                   ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              🏛️ Cấp Trường
+              <Building2 className="size-3" />
+              <span>Cấp Trường</span>
             </button>
             <button
               type="button"
               onClick={() => setLevelFilter("DON_VI")}
               className={cn(
-                "px-2 py-0.5 rounded text-[11px] font-medium transition-colors",
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer",
                 levelFilter === "DON_VI"
                   ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              📋 Đơn vị
+              <Briefcase className="size-3" />
+              <span>Đơn vị</span>
             </button>
           </div>
         </div>
@@ -548,7 +550,7 @@ export function CalendarMonthView({
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         {/* Left Column (8 cols on desktop): 7-Column Calendar Grid */}
-        <div className="lg:col-span-8 flex flex-col rounded-lg border border-border/80 bg-card shadow-2xs overflow-hidden">
+        <div className="lg:col-span-8 flex flex-col rounded-xl border border-border/75 bg-card shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] overflow-hidden">
           {/* Weekday Header (T2 - CN) */}
           <div className="grid grid-cols-7 border-b border-border/80 bg-muted/30 text-center">
             {WEEK_DAYS.map((w, idx) => (
@@ -656,7 +658,6 @@ export function CalendarMonthView({
                             )}
                           />
                           <span className="truncate">
-                            {item.level === "Trường" ? "🏛️ " : "📋 "}
                             {item.title}
                           </span>
                         </div>
@@ -676,7 +677,7 @@ export function CalendarMonthView({
         </div>
 
         {/* Right Column (4 cols on desktop): Selected Date Detail Panel */}
-        <div className="lg:col-span-4 flex flex-col rounded-lg border border-border/80 bg-card p-4 shadow-2xs space-y-4">
+        <div className="lg:col-span-4 flex flex-col rounded-xl border border-border/75 bg-card p-4.5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] space-y-4">
           {/* Date Header */}
           <div className="flex items-start justify-between border-b border-border/70 pb-3">
             <div>
@@ -755,7 +756,7 @@ export function CalendarMonthView({
                               : "bg-muted text-muted-foreground border-border"
                           )}
                         >
-                          {isSchool ? "🏛️ Cấp Trường" : "📋 Đơn vị"}
+                          {isSchool ? "Cấp Trường" : "Đơn vị"}
                         </span>
 
                         <Badge

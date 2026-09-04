@@ -47,8 +47,8 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "NEW",
     title: "Mới",
-    label: "Mới 🆕",
-    emoji: "🆕",
+    label: "Mới",
+    emoji: "",
     dotColor: "bg-red-500",
     badgeClass: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300",
     bgClass: "bg-red-50/20 dark:bg-red-950/10",
@@ -56,8 +56,8 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "IN_PROGRESS",
     title: "Đang thực hiện",
-    label: "Đang thực hiện 🔨",
-    emoji: "🔨",
+    label: "Đang thực hiện",
+    emoji: "",
     dotColor: "bg-blue-500",
     badgeClass: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300",
     bgClass: "bg-blue-50/20 dark:bg-blue-950/10",
@@ -65,8 +65,8 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "NEEDS_REVIEW",
     title: "Cần chỉnh sửa",
-    label: "Cần chỉnh sửa ⚠️",
-    emoji: "⚠️",
+    label: "Cần chỉnh sửa",
+    emoji: "",
     dotColor: "bg-amber-500",
     badgeClass: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300",
     bgClass: "bg-amber-50/20 dark:bg-amber-950/10",
@@ -74,8 +74,8 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "COMPLETED",
     title: "Hoàn thành",
-    label: "Hoàn thành 👍",
-    emoji: "👍",
+    label: "Hoàn thành",
+    emoji: "",
     dotColor: "bg-emerald-500",
     badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300",
     bgClass: "bg-emerald-50/20 dark:bg-emerald-950/10",
@@ -297,14 +297,12 @@ export function TaskKanbanBoard({
           return (
             <div
               key={col.id}
-              className="flex flex-col rounded-lg border border-border/70 bg-[#FAFAFA] dark:bg-muted/10 p-3 shadow-2xs"
+              className="flex flex-col rounded-xl border border-border/75 bg-[#FAFAFA] dark:bg-muted/10 p-3.5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)]"
             >
               {/* Column Header */}
               <div className="flex items-center justify-between pb-3 border-b border-border/60">
                 <div className="flex items-center gap-2">
-                  <span className="text-base" role="img" aria-label={col.title}>
-                    {col.emoji}
-                  </span>
+                  <span className={cn("size-2 rounded-full ring-2 ring-background", col.dotColor)} />
                   <h3 className="text-xs font-semibold text-foreground tracking-tight">
                     {col.title}
                   </h3>
@@ -348,7 +346,7 @@ export function TaskKanbanBoard({
                         key={item.id}
                         onClick={() => onSelectTask?.(item.rawTask)}
                         className={cn(
-                          "group relative flex flex-col gap-2.5 rounded-lg border border-border/80 bg-card p-3.5 shadow-2xs transition-all duration-150 hover:border-border hover:shadow-xs cursor-pointer text-card-foreground",
+                          "group relative flex flex-col gap-2.5 rounded-lg border border-border/80 bg-card p-3.5 shadow-2xs transition-all duration-150 hover:border-border hover:shadow-xs active:scale-[0.98] cursor-pointer text-card-foreground",
                           item.level === "TRUONG"
                             ? "border-l-[3px] border-l-blue-600 dark:border-l-blue-400"
                             : "border-l-[3px] border-l-indigo-500 dark:border-l-indigo-400"

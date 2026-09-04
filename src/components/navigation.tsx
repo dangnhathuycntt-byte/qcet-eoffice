@@ -201,9 +201,13 @@ export function Navigation() {
             </Button>
           </Link>
 
-          {/* User Avatar + Name */}
-          <div className="flex items-center gap-2 pl-1 border-l border-border/60">
-            <div className="flex size-7.5 items-center justify-center rounded-full bg-zinc-800 text-[11px] font-bold text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900 shadow-2xs">
+          {/* User Avatar + Name - Links to /login for authentication & account switching */}
+          <Link
+            href="/login"
+            className="flex items-center gap-2 pl-1 border-l border-border/60 transition-opacity hover:opacity-85 group cursor-pointer"
+            title={`Đổi tài khoản / Đăng nhập (Hiện tại: ${user.name})`}
+          >
+            <div className="flex size-7.5 items-center justify-center rounded-full bg-zinc-800 text-[11px] font-bold text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900 shadow-2xs group-hover:ring-2 group-hover:ring-primary/20">
               {getInitials(user.name)}
             </div>
             <div className="hidden text-left lg:block">
@@ -214,7 +218,7 @@ export function Navigation() {
                 {user.role === "ADMIN" ? "BGH QCET" : user.departmentCode || user.department}
               </p>
             </div>
-          </div>
+          </Link>
         </div>
       </div>
 
