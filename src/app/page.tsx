@@ -18,7 +18,13 @@ import {
   TaskDetailSideSheet,
   isSchoolTask,
 } from "@/components/dashboard/task-detail-side-sheet";
-import { Clock, RefreshCw, CheckCircle2 } from "lucide-react";
+import {
+  CreateTaskModal,
+  CreateTaskFormData,
+} from "@/components/dashboard/create-task-modal";
+import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
+import { Button } from "@/components/ui/button";
+import { Clock, RefreshCw, CheckCircle2, Plus } from "lucide-react";
 
 export default function DashboardPage() {
   // 1. Synchronous optimistic initial state from getMockDashboardPayload (0ms blank screen)
@@ -29,6 +35,7 @@ export default function DashboardPage() {
     SchoolTask | StaffTask | null
   >(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
 
   // 2. Client-side background sync fetching live overview from /api/dashboard/overview
   React.useEffect(() => {
@@ -119,6 +126,89 @@ export default function DashboardPage() {
     });
   };
 
+  // Task creation handler with full rollup recalculation
+  const handleCreateTask = (data: CreateTaskFormData) => {
+    const todayStr = "2026-09-04";
+
+    setDashboardData((prev) => {
+      let updatedTasks = [...prev.tasks];
+
+      if (data.level === "TRUONG") {
+        const newTask: SchoolTask = {
+          id: `task-${Date.now()}`,
+          title: data.title,
+          category: data.category,
+          categoryLabel:
+            CATEGORY_TABS.find((c) => c.id === data.category)?.label || data.category,
+          leadAssigneeName: data.leadAssigneeName,
+          coAssignees: data.coAssignees,
+          assignedDate: todayStr,
+          dueDate: data.dueDate,
+          status: "IN_PROGRESS",
+          subTasks: [],
+          totalSubTasks: 0,
+          completedSubTasks: 0,
+          progressPercent: 0,
+        };
+        updatedTasks.unshift(newTask);
+      } else {
+        const newSubTask: StaffTask = {
+          id: `sub-${Date.now()}`,
+          title: data.title,
+          assigneeName: data.leadAssigneeName,
+          status: "NEW",
+          dueDate: data.dueDate,
+          parentSchoolTaskId: data.parentTaskId || updatedTasks[0]?.id || "task-1",
+          updatedAt: todayStr,
+        };
+
+        if (data.parentTaskId) {
+          updatedTasks = updatedTasks.map((st) => {
+            if (st.id === data.parentTaskId) {
+              return {
+                ...st,
+                subTasks: [newSubTask, ...st.subTasks],
+              };
+            }
+            return st;
+          });
+        } else if (updatedTasks.length > 0) {
+          updatedTasks[0] = {
+            ...updatedTasks[0],
+            subTasks: [newSubTask, ...updatedTasks[0].subTasks],
+          };
+        }
+      }
+
+      const rolledUp = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+      return {
+        ...prev,
+        tasks: rolledUp,
+        stats: computeDashboardStats(rolledUp),
+      };
+    });
+  };
+
+  // Listen to global task created or open modal events
+  React.useEffect(() => {
+    const handleGlobalTaskCreated = (e: Event) => {
+      const customEvent = e as CustomEvent<CreateTaskFormData>;
+      if (customEvent.detail) {
+        handleCreateTask(customEvent.detail);
+      }
+    };
+    const handleGlobalOpenCreate = () => {
+      setIsCreateModalOpen(true);
+    };
+
+    window.addEventListener("qcet:task-created", handleGlobalTaskCreated);
+    window.addEventListener("qcet:open-create-task", handleGlobalOpenCreate);
+    return () => {
+      window.removeEventListener("qcet:task-created", handleGlobalTaskCreated);
+      window.removeEventListener("qcet:open-create-task", handleGlobalOpenCreate);
+    };
+  }, []);
+
   return (
     <div className="space-y-6 pb-12" data-slot="twenty-dashboard">
       {/* ========================================================================= */}
@@ -143,6 +233,15 @@ export default function DashboardPage() {
 
         {/* Right Actions: Live Sync Tag & Manual Refresh */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="h-8 gap-1.5 px-3 text-xs font-medium shadow-xs bg-[#18181B] text-white hover:bg-[#27272A] dark:bg-[#FAFAFA] dark:text-[#18181B] dark:hover:bg-[#E4E4E7]"
+          >
+            <Plus className="size-3.5" />
+            <span>Giao việc</span>
+          </Button>
+
           <button
             type="button"
             onClick={handleManualRefresh}
@@ -182,6 +281,7 @@ export default function DashboardPage() {
           <CascadingTaskTable
             tasks={dashboardData.tasks}
             onSelectTask={(task) => setSelectedTask(task)}
+            onAddTask={() => setIsCreateModalOpen(true)}
           />
         </div>
 
@@ -203,6 +303,16 @@ export default function DashboardPage() {
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         onStatusChange={handleStatusChange}
+      />
+
+      {/* ========================================================================= */}
+      {/* 5. CreateTaskModal Dialog                                                */}
+      {/* ========================================================================= */}
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateTask}
+        schoolTasks={dashboardData.tasks}
       />
     </div>
   );

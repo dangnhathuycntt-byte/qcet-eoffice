@@ -18,10 +18,15 @@ import {
   CheckCircle2,
   RefreshCw,
   Command,
+  Plus,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  CreateTaskModal,
+  CreateTaskFormData,
+} from "@/components/dashboard/create-task-modal";
 
 export const NAVIGATION_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +40,7 @@ export function Navigation() {
   const pathname = usePathname();
   const { resolved, toggleTheme } = useTheme();
   const [isSyncing, setIsSyncing] = React.useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
 
   // Trigger search focus across the page on ⌘K button click
   const triggerQuickSearch = () => {
@@ -49,6 +55,13 @@ export function Navigation() {
   const simulateSync = () => {
     setIsSyncing(true);
     setTimeout(() => setIsSyncing(false), 1200);
+  };
+
+  const handleCreateTaskFromTopbar = (data: CreateTaskFormData) => {
+    window.dispatchEvent(
+      new CustomEvent("qcet:task-created", { detail: data })
+    );
+    setIsCreateModalOpen(false);
   };
 
   return (
@@ -105,6 +118,18 @@ export function Navigation() {
 
         {/* Right: Live Notion Sync status | Notifications | Theme | User Avatar */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Quick Create Task Action Button */}
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="hidden sm:inline-flex h-7.5 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium bg-[#18181B] text-white hover:bg-[#27272A] dark:bg-[#FAFAFA] dark:text-[#18181B] dark:hover:bg-[#E4E4E7] shadow-2xs"
+            title="Giao việc nhanh toàn hệ thống"
+          >
+            <Plus className="size-3.5" />
+            <span>Giao việc</span>
+          </Button>
+
           {/* Live Notion Sync Status Indicator */}
           <button
             type="button"
@@ -180,7 +205,10 @@ export function Navigation() {
       <div className="border-t border-border/50 bg-background/50 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex h-9.5 w-full max-w-7xl items-center gap-1 overflow-x-auto scrollbar-none">
           {NAVIGATION_ITEMS.map((item) => {
-            const active = pathname === item.href;
+            const active =
+              pathname === item.href ||
+              (item.href !== "/" &&
+                (pathname === item.href || pathname.startsWith(item.href + "/")));
             const Icon = item.icon;
             return (
               <Link
@@ -201,6 +229,13 @@ export function Navigation() {
           })}
         </div>
       </div>
+
+      {/* CreateTaskModal Dialog from Topbar */}
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateTaskFromTopbar}
+      />
     </header>
   );
 }
