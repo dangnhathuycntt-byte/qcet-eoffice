@@ -73,6 +73,8 @@ export function formatDeadlineDistance(dateStr: string, referenceDate?: Date | s
   return dateStr;
 }
 
+export const formatRelativeDueDate = formatDeadlineDistance;
+
 export function getInitials(name: string): string {
   if (!name || !name.trim()) return "QC";
   const parts = name.trim().split(/\s+/);
@@ -102,18 +104,18 @@ export function UpcomingDeadlinesWidget({
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden rounded-xl border border-border/75 bg-card p-4.5 text-card-foreground shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:border-border transition-all duration-200",
+        "flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-card p-4 sm:p-5 text-card-foreground shadow-card hover:shadow-card-hover transition-all duration-300",
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-border/60">
-        <div className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground border border-border/50">
-            <Calendar className="size-4 text-foreground/80" />
+      <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <Calendar className="size-4" />
           </div>
           <div>
-            <h3 className="font-sans text-sm font-semibold text-foreground tracking-tight">
+            <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
               Hạn chót 7 ngày tới
             </h3>
             <p className="text-[11px] text-muted-foreground">
@@ -121,7 +123,7 @@ export function UpcomingDeadlinesWidget({
             </p>
           </div>
         </div>
-        <Badge variant="secondary" className="font-mono text-xs font-semibold px-2 py-0.5">
+        <Badge variant="secondary" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full">
           {items.length}
         </Badge>
       </div>
@@ -137,6 +139,10 @@ export function UpcomingDeadlinesWidget({
             const overdue = item.isOverdue || isDateOverdue(item.dueDate);
             const relativeDistance = formatDeadlineDistance(item.dueDate);
             const displayDate = formatDisplayDate(item.dueDate);
+            const isSchool = item.level === "Trường";
+            const levelBg = isSchool
+              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+              : "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20";
 
             return (
               <div
@@ -151,7 +157,7 @@ export function UpcomingDeadlinesWidget({
                 }}
                 className={cn(
                   "group flex flex-col gap-1.5 py-3 transition-colors first:pt-2.5 last:pb-1 focus-visible:outline-hidden focus-visible:bg-muted/50",
-                  onSelectTask && "cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-md"
+                  onSelectTask && "cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-xl"
                 )}
                 role={onSelectTask ? "button" : undefined}
                 aria-label={onSelectTask ? `Chi tiết hạn chót: ${item.title}` : undefined}
@@ -159,31 +165,29 @@ export function UpcomingDeadlinesWidget({
                 {/* Top row: Badges & metadata */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {/* Level Badge */}
+                    {/* Level Badge with soft colored icon background */}
                     <Badge
-                      variant={item.level === "Trường" ? "default" : "secondary"}
+                      variant="outline"
                       className={cn(
-                        "text-[10px] px-1.5 py-0 font-medium h-4.5 rounded",
-                        item.level === "Trường"
-                          ? "bg-zinc-900 text-zinc-50 dark:bg-zinc-100 dark:text-zinc-900"
-                          : "border-border/80 bg-zinc-100 text-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300"
+                        "text-[10px] px-2 py-0.5 font-semibold h-5 rounded-md border gap-1",
+                        levelBg
                       )}
                     >
-                      {item.level === "Trường" ? (
-                        <Building2 className="size-2.5 mr-0.5" />
+                      {isSchool ? (
+                        <Building2 className="size-3" />
                       ) : (
-                        <Layers className="size-2.5 mr-0.5" />
+                        <Layers className="size-3" />
                       )}
                       {item.level}
                     </Badge>
 
-                    {/* Overdue Alert or Date Distance Badge */}
+                    {/* Overdue Alert or Relative Due Date Badge */}
                     {overdue ? (
                       <Badge
-                        variant="destructive"
-                        className="text-[10px] px-1.5 py-0 font-medium h-4.5 rounded gap-1"
+                        variant="rose"
+                        className="text-[10px] px-2 py-0.5 font-semibold h-5 rounded-md gap-1"
                       >
-                        <AlertTriangle className="size-2.5" />
+                        <AlertTriangle className="size-3" />
                         {relativeDistance.startsWith("Quá hạn")
                           ? relativeDistance
                           : `Quá hạn · ${relativeDistance}`}
@@ -191,29 +195,28 @@ export function UpcomingDeadlinesWidget({
                     ) : (
                       <Badge
                         variant={
-                          relativeDistance === "Hôm nay"
-                            ? "warning"
-                            : relativeDistance === "Ngày mai"
-                            ? "progress"
+                          relativeDistance === "Hôm nay" ||
+                          relativeDistance === "Ngày mai"
+                            ? "amber"
                             : "outline"
                         }
-                        className="text-[10px] px-1.5 py-0 font-medium h-4.5 rounded"
+                        className="text-[10px] px-2 py-0.5 font-medium h-5 rounded-md gap-1"
                       >
-                        <Clock className="size-2.5 mr-0.5 opacity-70" />
+                        <Clock className="size-3 opacity-75" />
                         {relativeDistance}
                       </Badge>
                     )}
                   </div>
 
                   {/* Absolute date */}
-                  <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                  <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap font-medium">
                     {displayDate}
                   </span>
                 </div>
 
                 {/* Title */}
                 <h4
-                  className="text-xs font-medium text-foreground leading-snug line-clamp-2 group-hover:text-foreground/90 transition-colors"
+                  className="text-xs font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors"
                   title={item.title}
                 >
                   {item.title}
@@ -226,17 +229,17 @@ export function UpcomingDeadlinesWidget({
                       <img
                         src={item.assigneeAvatar}
                         alt={item.assigneeName}
-                        width={16}
-                        height={16}
+                        width={18}
+                        height={18}
                         loading="lazy"
-                        className="size-4 rounded-full object-cover shrink-0 ring-1 ring-border/50"
+                        className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/50"
                       />
                     ) : (
-                      <div className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-[9px] font-medium text-foreground ring-1 ring-border/50">
+                      <div className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-[9px] font-semibold text-secondary-foreground ring-1 ring-border/50">
                         {getInitials(item.assigneeName)}
                       </div>
                     )}
-                    <span className="truncate text-foreground/80 font-normal">
+                    <span className="truncate text-foreground/80 font-medium">
                       {item.assigneeName}
                     </span>
                   </div>

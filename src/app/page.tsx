@@ -231,7 +231,10 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-6 pb-12" data-slot="twenty-dashboard">
+    <div
+      className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10"
+      data-slot="twenty-dashboard"
+    >
       {/* ========================================================================= */}
       {/* 1. Header Greeting & Breadcrumbs                                         */}
       {/* ========================================================================= */}
@@ -257,7 +260,7 @@ export default function DashboardPage() {
           <Button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="h-8 gap-1.5 px-3 text-xs font-medium shadow-xs bg-[#18181B] text-white hover:bg-[#27272A] dark:bg-[#FAFAFA] dark:text-[#18181B] dark:hover:bg-[#E4E4E7]"
+            className="h-8.5 gap-1.5 rounded-xl px-3.5 text-xs font-semibold shadow-xs"
           >
             <Plus className="size-3.5" />
             <span>Giao việc</span>
@@ -267,7 +270,7 @@ export default function DashboardPage() {
             type="button"
             onClick={handleManualRefresh}
             disabled={isRefreshing}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60"
+            className="inline-flex h-8.5 items-center gap-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-xs px-3 text-xs font-medium text-muted-foreground transition-all hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60"
             title="Làm mới dữ liệu từ máy chủ"
           >
             <RefreshCw
@@ -276,10 +279,10 @@ export default function DashboardPage() {
             <span className="hidden sm:inline">Làm mới</span>
           </button>
 
-          <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-emerald-200/80 bg-emerald-50/70 px-2.5 text-xs font-medium text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
-            <span className="relative flex size-2">
+          <span className="inline-flex h-8.5 items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="relative flex size-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
+              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500"></span>
             </span>
             <span>Trực tuyến</span>
           </span>

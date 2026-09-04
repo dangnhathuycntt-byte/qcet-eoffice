@@ -96,18 +96,18 @@ export function ActivityFeedWidget({
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden rounded-xl border border-border/75 bg-card p-4.5 text-card-foreground shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] hover:border-border transition-all duration-200",
+        "flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-card p-4 sm:p-5 text-card-foreground shadow-card hover:shadow-card-hover transition-all duration-300",
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-border/60">
-        <div className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground border border-border/50">
-            <Zap className="size-4 text-amber-500 fill-amber-500/20" />
+      <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <Zap className="size-4 fill-amber-500/20" />
           </div>
           <div>
-            <h3 className="font-sans text-sm font-semibold text-foreground tracking-tight">
+            <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
               Hoạt động vừa cập nhật
             </h3>
             <p className="text-[11px] text-muted-foreground">
@@ -115,12 +115,12 @@ export function ActivityFeedWidget({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="relative flex size-2">
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold">
+          <span className="relative flex size-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+            <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
           </span>
-          <span className="text-[11px] text-muted-foreground font-medium">Live</span>
+          <span>Live</span>
         </div>
       </div>
 
@@ -143,19 +143,26 @@ export function ActivityFeedWidget({
               >
                 {/* Actor Avatar / Initials with action micro-badge */}
                 <div className="relative shrink-0 mt-0.5">
-                  <div className="flex size-7 items-center justify-center rounded-full bg-muted font-sans text-[11px] font-semibold text-foreground ring-1 ring-border/60">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-secondary font-sans text-xs font-bold text-secondary-foreground ring-1 ring-border/50">
                     {initials}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-card ring-1 ring-border shadow-xs">
-                    <ActionIcon className="size-2 text-foreground/80" />
+                  <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-card ring-1 ring-border/60 shadow-xs">
+                    <ActionIcon className="size-2.5 text-foreground/80" />
                   </div>
                 </div>
 
                 {/* Event details */}
                 <div className="flex flex-col min-w-0 flex-1 gap-0.5">
-                  <div className="text-xs leading-snug">
-                    <span className="font-semibold text-foreground">{item.actorName}</span>{" "}
-                    <span className="text-muted-foreground font-normal">{item.action}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs leading-snug">
+                      <span className="font-semibold text-foreground">{item.actorName}</span>{" "}
+                      <span className="text-muted-foreground font-normal">{item.action}</span>
+                    </div>
+                    {item.category && (
+                      <span className="shrink-0 inline-flex items-center rounded-md bg-secondary/80 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                        {item.category}
+                      </span>
+                    )}
                   </div>
 
                   {/* Target title */}
@@ -167,7 +174,7 @@ export function ActivityFeedWidget({
                   </div>
 
                   {/* Timestamp */}
-                  <div className="flex items-center gap-1 pt-0.5 text-[10px] text-muted-foreground">
+                  <div className="flex items-center gap-1 pt-0.5 text-[10px] text-muted-foreground font-mono">
                     <Clock className="size-2.5 opacity-70" />
                     <span>{item.timestamp}</span>
                   </div>

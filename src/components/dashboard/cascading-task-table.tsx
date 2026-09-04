@@ -36,7 +36,12 @@ export interface StatusBadgeConfig {
     | "ghost"
     | "success"
     | "progress"
-    | "warning";
+    | "warning"
+    | "sapphire"
+    | "emerald"
+    | "amber"
+    | "rose"
+    | "violet";
 }
 
 export interface CategoryTab {
@@ -52,6 +57,15 @@ export const CATEGORY_TABS: CategoryTab[] = [
   { id: "ATTT", label: "An toàn thông tin" },
   { id: "THU_VIEN", label: "Thư viện" },
   { id: "BAO_CAO", label: "Báo cáo" },
+];
+
+export const DEPARTMENT_OPTIONS = [
+  { id: "ALL", label: "Tất cả đơn vị" },
+  { id: "CNTT", label: "Khoa CNTT" },
+  { id: "DAO_TAO", label: "Phòng Đào tạo & QLKH" },
+  { id: "TRUYEN_THONG", label: "Tổ Truyền thông" },
+  { id: "THU_VIEN", label: "Thư viện & Học liệu" },
+  { id: "HANH_CHINH", label: "Phòng Hành chính - Quản trị" },
 ];
 
 export function getCategoryBadgeConfig(
@@ -119,22 +133,22 @@ export function getStatusBadgeConfig(
       return {
         label: "Đang thực hiện",
         className:
-          "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
-        variant: "progress",
+          "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+        variant: "sapphire",
       };
     case "NEEDS_REVIEW":
       return {
         label: "Cần chỉnh sửa",
         className:
-          "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
-        variant: "warning",
+          "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+        variant: "amber",
       };
     case "COMPLETED":
       return {
         label: "Hoàn thành",
         className:
-          "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
-        variant: "success",
+          "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+        variant: "emerald",
       };
     default:
       return {
@@ -149,13 +163,41 @@ export function getStatusBadgeConfig(
 export function filterTasksForTable(
   tasks: SchoolTask[],
   category: TaskCategory | "ALL",
-  searchQuery: string
+  searchQuery: string,
+  department?: string
 ): SchoolTask[] {
   const query = searchQuery.trim().toLowerCase();
 
   return tasks.filter((task) => {
     if (category !== "ALL" && task.category !== category) {
       return false;
+    }
+
+    if (department && department !== "ALL") {
+      const deptQuery = department.toLowerCase();
+      const isDeptMatch =
+        (department === "CNTT" &&
+          (task.category === "CNTT" ||
+            task.category === "ATTT" ||
+            task.category === "CHUYEN_DOI_SO" ||
+            task.leadAssigneeName.includes("Vinh") ||
+            task.leadAssigneeName.includes("Hùng"))) ||
+        (department === "TRUYEN_THONG" &&
+          (task.category === "TRUYEN_THONG" ||
+            task.leadAssigneeName.includes("Xuân"))) ||
+        (department === "THU_VIEN" &&
+          (task.category === "THU_VIEN" ||
+            task.leadAssigneeName.includes("Thu"))) ||
+        (department === "DAO_TAO" &&
+          (task.leadAssigneeName.includes("Hùng") ||
+            task.category === "BAO_CAO")) ||
+        (department === "HANH_CHINH" && task.leadAssigneeName.includes("Nam")) ||
+        task.leadAssigneeName.toLowerCase().includes(deptQuery) ||
+        task.subTasks?.some((st) =>
+          st.assigneeName.toLowerCase().includes(deptQuery)
+        );
+
+      if (!isDeptMatch) return false;
     }
 
     if (!query) {
@@ -213,6 +255,7 @@ export function CascadingTaskTable({
   const [selectedCategory, setSelectedCategory] = React.useState<
     TaskCategory | "ALL"
   >("ALL");
+  const [selectedDepartment, setSelectedDepartment] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [expandedTaskIds, setExpandedTaskIds] = React.useState<Set<string>>(
     () => new Set()
@@ -245,8 +288,14 @@ export function CascadingTaskTable({
   };
 
   const filteredTasks = React.useMemo(
-    () => filterTasksForTable(tasks, selectedCategory, searchQuery),
-    [tasks, selectedCategory, searchQuery]
+    () =>
+      filterTasksForTable(
+        tasks,
+        selectedCategory,
+        searchQuery,
+        selectedDepartment
+      ),
+    [tasks, selectedCategory, searchQuery, selectedDepartment]
   );
 
   return (
@@ -256,10 +305,10 @@ export function CascadingTaskTable({
     >
       {/* Top Filter Bar */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        {/* Left side: Search & Category Tabs */}
-        <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center">
+        {/* Left side: Search & Department selector */}
+        <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center flex-wrap">
           {/* Search Input with ⌘K indicator */}
-          <div className="relative min-w-[220px] max-w-sm">
+          <div className="relative min-w-[220px] max-w-sm flex-1">
             <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
               ref={searchInputRef}
@@ -267,38 +316,37 @@ export function CascadingTaskTable({
               placeholder="Tìm kiếm nhiệm vụ, phụ trách..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 w-full rounded-md border border-border/80 bg-background pl-8 pr-12 text-xs text-foreground placeholder:text-muted-foreground transition-colors focus:border-border focus:outline-none focus:ring-1 focus:ring-ring"
+              className="h-8.5 w-full rounded-xl border border-border/60 bg-background/80 backdrop-blur-xs pl-8.5 pr-12 text-xs text-foreground placeholder:text-muted-foreground transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15"
             />
-            <kbd className="pointer-events-none absolute right-2 top-1/2 inline-flex h-4 -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/80 bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            <kbd className="pointer-events-none absolute right-2.5 top-1/2 inline-flex h-4.5 -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/80 bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
               ⌘K
             </kbd>
           </div>
 
-          {/* Category Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-            {CATEGORY_TABS.map((tab) => {
-              const isActive = selectedCategory === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(tab.id)}
-                  className={cn(
-                    "inline-flex h-7 shrink-0 items-center rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap",
-                    isActive
-                      ? "bg-foreground text-background font-semibold shadow-xs"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  )}
+          {/* Department Selector */}
+          <div className="relative min-w-[160px]">
+            <select
+              aria-label="Lọc theo đơn vị"
+              value={selectedDepartment}
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+              className="h-8.5 w-full rounded-xl border border-border/60 bg-background/80 backdrop-blur-xs px-3 py-1 text-xs text-foreground transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 cursor-pointer appearance-none pr-8"
+            >
+              {DEPARTMENT_OPTIONS.map((dept) => (
+                <option
+                  key={dept.id}
+                  value={dept.id}
+                  className="bg-popover text-foreground"
                 >
-                  {tab.label}
-                </button>
-              );
-            })}
+                  {dept.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           </div>
         </div>
 
         {/* Right side: + Giao việc primary button */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
           <Button
             type="button"
             onClick={canAssign ? onAddTask : undefined}
@@ -309,7 +357,7 @@ export function CascadingTaskTable({
                 : undefined
             }
             className={cn(
-              "h-8 rounded-md px-3 text-xs font-medium shadow-xs",
+              "h-8.5 rounded-xl px-3.5 text-xs font-semibold shadow-xs",
               canAssign
                 ? "cursor-pointer"
                 : "opacity-50 cursor-not-allowed"
@@ -321,21 +369,43 @@ export function CascadingTaskTable({
         </div>
       </div>
 
+      {/* Category Tabs Strip */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+        {CATEGORY_TABS.map((tab) => {
+          const isActive = selectedCategory === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setSelectedCategory(tab.id)}
+              className={cn(
+                "inline-flex h-7.5 shrink-0 items-center rounded-lg px-3 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
+                isActive
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+              )}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Main Table Container */}
-      <div className="overflow-hidden rounded-xl border border-border/75 bg-card shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)]">
+      <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-card">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             {/* Table Header */}
             <thead>
-              <tr className="border-b border-border/70 bg-muted/40 text-[11px] font-medium text-muted-foreground">
-                <th className="w-8 px-3 py-2 text-center">
+              <tr className="border-b border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground">
+                <th className="w-9 px-3.5 py-2.5 text-center">
                   <span className="sr-only">Mở rộng</span>
                 </th>
-                <th className="px-3 py-2 font-medium">Nhiệm vụ cấp Trường</th>
-                <th className="px-3 py-2 font-medium">Danh mục</th>
-                <th className="px-3 py-2 font-medium">Chủ trì</th>
-                <th className="px-3 py-2 font-medium">Hạn chót</th>
-                <th className="w-36 px-3 py-2 font-medium text-right">Tiến độ</th>
+                <th className="px-3.5 py-2.5 font-semibold">Nhiệm vụ cấp Trường</th>
+                <th className="px-3.5 py-2.5 font-semibold">Danh mục</th>
+                <th className="px-3.5 py-2.5 font-semibold">Chủ trì</th>
+                <th className="px-3.5 py-2.5 font-semibold">Hạn chót</th>
+                <th className="w-40 px-3.5 py-2.5 font-semibold text-right">Tiến độ</th>
               </tr>
             </thead>
 
@@ -373,19 +443,19 @@ export function CascadingTaskTable({
                           }
                         }}
                         className={cn(
-                          "group cursor-pointer transition-colors hover:bg-secondary/40 focus-visible:outline-hidden focus-visible:bg-secondary/50",
+                          "group cursor-pointer transition-all duration-200 hover:bg-secondary/40 focus-visible:outline-hidden focus-visible:bg-secondary/50",
                           isExpanded && "bg-muted/20"
                         )}
                         data-task-id={task.id}
                         data-task-tier="1"
                       >
                         {/* Expand / Collapse Caret */}
-                        <td className="px-3 py-3 text-center align-middle">
+                        <td className="px-3.5 py-3.5 text-center align-middle">
                           {hasSubtasks ? (
                             <button
                               type="button"
                               onClick={(e) => toggleExpand(task.id, e)}
-                              className="inline-flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
+                              className="inline-flex size-6 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-secondary hover:text-foreground cursor-pointer"
                               aria-label={
                                 isExpanded ? "Thu gọn việc con" : "Mở rộng việc con"
                               }
@@ -402,11 +472,11 @@ export function CascadingTaskTable({
                         </td>
 
                         {/* Task Title */}
-                        <td className="px-3 py-3 align-middle font-medium text-foreground">
+                        <td className="px-3.5 py-3.5 align-middle font-medium text-foreground">
                           <div className="flex items-center gap-2">
-                            <span className="line-clamp-1">{task.title}</span>
+                            <span className="line-clamp-1 font-semibold">{task.title}</span>
                             {hasSubtasks && (
-                              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
+                              <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                                 {task.completedSubTasks}/{task.totalSubTasks}
                               </span>
                             )}
@@ -414,11 +484,11 @@ export function CascadingTaskTable({
                         </td>
 
                         {/* Category Badge */}
-                        <td className="px-3 py-3 align-middle whitespace-nowrap">
+                        <td className="px-3.5 py-3.5 align-middle whitespace-nowrap">
                           <Badge
                             variant="outline"
                             className={cn(
-                              "h-5 px-1.5 text-[10px] font-medium leading-none",
+                              "h-5 px-2 text-[10px] font-medium leading-none",
                               catConfig.className
                             )}
                           >
@@ -427,39 +497,39 @@ export function CascadingTaskTable({
                         </td>
 
                         {/* Lead Assignee */}
-                        <td className="px-3 py-3 align-middle whitespace-nowrap">
+                        <td className="px-3.5 py-3.5 align-middle whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             {task.leadAssigneeAvatar ? (
                               <img
                                 src={task.leadAssigneeAvatar}
                                 alt={task.leadAssigneeName}
-                                width={20}
-                                height={20}
+                                width={22}
+                                height={22}
                                 loading="lazy"
-                                className="size-5 rounded-full object-cover shrink-0"
+                                className="size-5.5 rounded-full object-cover shrink-0"
                               />
                             ) : (
-                              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-medium text-secondary-foreground">
+                              <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground">
                                 {getInitials(task.leadAssigneeName)}
                               </span>
                             )}
-                            <span className="text-xs text-foreground/90">
+                            <span className="text-xs font-medium text-foreground/90">
                               {task.leadAssigneeName}
                             </span>
                           </div>
                         </td>
 
                         {/* Due Date */}
-                        <td className="px-3 py-3 align-middle whitespace-nowrap text-muted-foreground tabular-nums">
+                        <td className="px-3.5 py-3.5 align-middle whitespace-nowrap text-muted-foreground tabular-nums">
                           {formatDate(task.dueDate)}
                         </td>
 
-                        {/* Progress Bar & Metric */}
-                        <td className="px-3 py-3 align-middle text-right whitespace-nowrap">
+                        {/* Progress Bar & Metric with Segmented Emerald/Sapphire Track */}
+                        <td className="px-3.5 py-3.5 align-middle text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2.5">
-                            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-secondary">
+                            <div className="relative flex h-2 w-20 overflow-hidden rounded-full bg-secondary/80">
                               <div
-                                className="h-full rounded-full bg-emerald-500 transition-all duration-300 ease-out"
+                                className="h-full bg-emerald-500 transition-all duration-500 ease-out"
                                 style={{
                                   width: `${Math.min(
                                     100,
@@ -467,8 +537,22 @@ export function CascadingTaskTable({
                                   )}%`,
                                 }}
                               />
+                              {task.progressPercent > 0 && task.progressPercent < 100 && (
+                                <div
+                                  className="h-full bg-blue-500/30 dark:bg-blue-400/30 transition-all duration-500 ease-out"
+                                  style={{
+                                    width: `${
+                                      100 -
+                                      Math.min(
+                                        100,
+                                        Math.max(0, task.progressPercent)
+                                      )
+                                    }%`,
+                                  }}
+                                />
+                              )}
                             </div>
-                            <span className="text-[11px] font-medium tabular-nums text-foreground">
+                            <span className="text-[11px] font-bold tabular-nums text-foreground">
                               {task.progressPercent}%
                             </span>
                           </div>
@@ -484,8 +568,8 @@ export function CascadingTaskTable({
                             data-parent-id={task.id}
                             data-task-tier="2"
                           >
-                            <div className="py-2 pr-4 pl-[28px]">
-                              <div className="border-l border-border/80 pl-4 space-y-1.5">
+                            <div className="py-2.5 pr-4 pl-[34px]">
+                              <div className="border-l-2 border-primary/30 pl-4 space-y-1.5">
                                 {task.subTasks.map((subTask) => {
                                   const statusConfig = getStatusBadgeConfig(
                                     subTask.status
@@ -502,7 +586,7 @@ export function CascadingTaskTable({
                                           onSelectTask?.(subTask);
                                         }
                                       }}
-                                      className="flex items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-xs transition-colors hover:bg-secondary/60 focus-visible:outline-hidden focus-visible:bg-secondary/70 cursor-pointer"
+                                      className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs transition-colors hover:bg-secondary/60 focus-visible:outline-hidden focus-visible:bg-secondary/70 cursor-pointer"
                                       data-subtask-id={subTask.id}
                                     >
                                       {/* Subtask Status Badge & Title */}
@@ -510,7 +594,7 @@ export function CascadingTaskTable({
                                         <Badge
                                           variant={statusConfig.variant}
                                           className={cn(
-                                            "h-5 px-1.5 text-[10px] font-medium leading-none shrink-0",
+                                            "h-5 px-2 text-[10px] font-semibold leading-none shrink-0",
                                             statusConfig.className
                                           )}
                                         >
@@ -528,21 +612,21 @@ export function CascadingTaskTable({
                                             <img
                                               src={subTask.assigneeAvatar}
                                               alt={subTask.assigneeName}
-                                              width={16}
-                                              height={16}
+                                              width={18}
+                                              height={18}
                                               loading="lazy"
-                                              className="size-4 rounded-full object-cover shrink-0"
+                                              className="size-4.5 rounded-full object-cover shrink-0"
                                             />
                                           ) : (
-                                            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-secondary text-[9px] font-medium text-secondary-foreground">
+                                            <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary text-[9px] font-semibold text-secondary-foreground">
                                               {getInitials(subTask.assigneeName)}
                                             </span>
                                           )}
-                                          <span className="text-[11px] text-muted-foreground">
+                                          <span className="text-[11px] font-medium text-muted-foreground">
                                             {subTask.assigneeName}
                                           </span>
                                         </div>
-                                        <span className="text-[11px] text-muted-foreground/80 tabular-nums">
+                                        <span className="text-[11px] text-muted-foreground/80 tabular-nums font-mono">
                                           {formatDate(subTask.dueDate)}
                                         </span>
                                       </div>
