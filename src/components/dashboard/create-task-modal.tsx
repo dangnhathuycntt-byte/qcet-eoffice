@@ -84,6 +84,7 @@ export interface CreateTaskModalProps {
   schoolTasks?: SchoolTask[];
   initialLevel?: TaskLevel;
   initialParentTaskId?: string;
+  initialDueDate?: string;
 }
 
 export function CreateTaskModal({
@@ -93,10 +94,12 @@ export function CreateTaskModal({
   schoolTasks = [],
   initialLevel = "TRUONG",
   initialParentTaskId,
+  initialDueDate,
 }: CreateTaskModalProps) {
   const [formData, setFormData] = React.useState<CreateTaskFormData>(() => ({
     ...getInitialTaskFormData(initialLevel),
     parentTaskId: initialParentTaskId,
+    dueDate: initialDueDate || "",
   }));
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [coAssigneeInput, setCoAssigneeInput] = React.useState("");
@@ -107,11 +110,12 @@ export function CreateTaskModal({
       setFormData({
         ...getInitialTaskFormData(initialLevel),
         parentTaskId: initialParentTaskId,
+        dueDate: initialDueDate || "",
       });
       setErrors({});
       setCoAssigneeInput("");
     }
-  }, [isOpen, initialLevel, initialParentTaskId]);
+  }, [isOpen, initialLevel, initialParentTaskId, initialDueDate]);
 
   // Handle escape key
   React.useEffect(() => {
