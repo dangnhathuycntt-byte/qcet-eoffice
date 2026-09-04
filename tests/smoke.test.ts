@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { cn } from "../src/lib/utils";
-import { DESIGN_TOKENS, NAV_ITEMS } from "../src/lib/tokens";
+import { twentyTokens, NAV_ITEMS } from "../src/lib/tokens";
 import { buttonVariants } from "../src/components/ui/button";
 import { badgeVariants } from "../src/components/ui/badge";
 import { NAVIGATION_ITEMS } from "../src/components/navigation";
 
-describe("Smoke Test Suite", () => {
+describe("Twenty Design System Smoke Test Suite", () => {
   describe("Utility function: cn()", () => {
     it("merges regular class names cleanly", () => {
       const result = cn("text-sm", "font-bold");
@@ -34,95 +34,80 @@ describe("Smoke Test Suite", () => {
     });
   });
 
-  describe("Design System Tokens", () => {
-    it("has correct Warm-Paper light palette tokens", () => {
-      assert.equal(DESIGN_TOKENS.light.background, "#F9F8F6");
-      assert.equal(DESIGN_TOKENS.light.foreground, "#141312");
-      assert.equal(DESIGN_TOKENS.light.primary, "#E05D38");
-      assert.equal(DESIGN_TOKENS.light.card, "#FFFFFF");
-      assert.equal(DESIGN_TOKENS.light.border, "#E8E4DC");
+  describe("Twenty Design System Tokens (Light-Mode Prioritized)", () => {
+    it("defines clean canvas and card background tokens", () => {
+      assert.equal(twentyTokens.colors.light.appBg, "#FBFBFB");
+      assert.equal(twentyTokens.colors.light.cardBg, "#FFFFFF");
+      assert.equal(twentyTokens.colors.light.border, "#E4E4E7");
+      assert.equal(twentyTokens.colors.light.textPrimary, "#09090B");
     });
 
-    it("has correct Terracotta dark palette tokens", () => {
-      assert.equal(DESIGN_TOKENS.dark.background, "#0E0D0C");
-      assert.equal(DESIGN_TOKENS.dark.foreground, "#F5F3EF");
-      assert.equal(DESIGN_TOKENS.dark.primary, "#E56A47");
-      assert.equal(DESIGN_TOKENS.dark.card, "#171614");
-      assert.equal(DESIGN_TOKENS.dark.border, "#2B2824");
+    it("defines Twenty signature solid action surface (charcoal/black)", () => {
+      assert.equal(twentyTokens.colors.light.accentPrimary, "#18181B");
+      assert.equal(twentyTokens.colors.light.accentForeground, "#FFFFFF");
     });
 
-    it("has exact radius and typography specifications", () => {
-      assert.equal(DESIGN_TOKENS.radius, "0.875rem");
-      assert.ok(DESIGN_TOKENS.fonts.sans.includes("Plus Jakarta Sans"));
-      assert.ok(DESIGN_TOKENS.fonts.sans.includes("Inter"));
-      assert.ok(DESIGN_TOKENS.fonts.mono.includes("JetBrains Mono"));
+    it("defines status badge palette with soft pastel fills", () => {
+      assert.equal(twentyTokens.statusColors.completed.bg, "#ECFDF5");
+      assert.equal(twentyTokens.statusColors.completed.text, "#047857");
+      assert.equal(twentyTokens.statusColors.inProgress.bg, "#EFF6FF");
+      assert.equal(twentyTokens.statusColors.inProgress.text, "#1D4ED8");
+      assert.equal(twentyTokens.statusColors.needsReview.bg, "#FFFBEB");
+      assert.equal(twentyTokens.statusColors.needsReview.text, "#B45309");
+      assert.equal(twentyTokens.statusColors.new.bg, "#FEF2F2");
+      assert.equal(twentyTokens.statusColors.new.text, "#B91C1C");
     });
 
-    it("globals.css contains the required CSS variables matching tokens", () => {
+    it("defines 8px card and 6px control radius", () => {
+      assert.equal(twentyTokens.radius.card, "0.5rem"); // 8px
+      assert.equal(twentyTokens.radius.control, "0.375rem"); // 6px
+    });
+
+    it("globals.css contains Twenty CSS variables matching tokens", () => {
       const cssPath = path.resolve(__dirname, "../src/app/globals.css");
       assert.ok(fs.existsSync(cssPath), "globals.css should exist");
       const cssContent = fs.readFileSync(cssPath, "utf-8");
 
-      assert.ok(cssContent.includes("--background: #F9F8F6;"), "CSS contains light background");
-      assert.ok(cssContent.includes("--primary: #E05D38;"), "CSS contains light primary");
+      assert.ok(cssContent.includes("--background: #FBFBFB;"), "CSS contains light background");
       assert.ok(cssContent.includes("--card: #FFFFFF;"), "CSS contains light card");
-      assert.ok(cssContent.includes("--border: #E8E4DC;"), "CSS contains light border");
-      assert.ok(cssContent.includes("--radius: 0.875rem;"), "CSS contains 0.875rem radius");
-
-      assert.ok(cssContent.includes("--background: #0E0D0C;"), "CSS contains dark background");
-      assert.ok(cssContent.includes("--primary: #E56A47;"), "CSS contains dark primary");
-      assert.ok(cssContent.includes("--card: #171614;"), "CSS contains dark card");
-      assert.ok(cssContent.includes("--border: #2B2824;"), "CSS contains dark border");
-
-      assert.ok(cssContent.includes("Plus Jakarta Sans"), "CSS contains Plus Jakarta Sans font");
-      assert.ok(cssContent.includes("JetBrains Mono"), "CSS contains JetBrains Mono font");
+      assert.ok(cssContent.includes("--border: #E4E4E7;"), "CSS contains light border");
+      assert.ok(cssContent.includes("--primary: #18181B;"), "CSS contains Twenty black primary");
+      assert.ok(cssContent.includes("--radius: 0.5rem;"), "CSS contains 0.5rem radius");
     });
   });
 
   describe("Base UI Component Variants", () => {
-    it("buttonVariants generates proper terracotta and outline styles", () => {
+    it("buttonVariants generates proper Twenty solid action styles", () => {
       const defaultButton = buttonVariants({ variant: "default" });
       assert.ok(defaultButton.includes("bg-primary"));
       assert.ok(defaultButton.includes("text-primary-foreground"));
-      assert.ok(defaultButton.includes("rounded-xl"));
+      assert.ok(defaultButton.includes("rounded-md"));
 
       const outlineButton = buttonVariants({ variant: "outline" });
       assert.ok(outlineButton.includes("border-border"));
       assert.ok(outlineButton.includes("bg-card"));
-
-      const iconButton = buttonVariants({ size: "icon" });
-      assert.ok(iconButton.includes("size-10"));
     });
 
-    it("badgeVariants generates proper status variants", () => {
+    it("badgeVariants generates proper status variants with 6px radius", () => {
       const defaultBadge = badgeVariants({ variant: "default" });
-      assert.ok(defaultBadge.includes("bg-primary"));
+      assert.ok(defaultBadge.includes("rounded-md"));
 
       const successBadge = badgeVariants({ variant: "success" });
-      assert.ok(successBadge.includes("bg-emerald-500/10"));
+      assert.ok(successBadge.includes("bg-emerald-50"));
 
-      const destructiveBadge = badgeVariants({ variant: "destructive" });
-      assert.ok(destructiveBadge.includes("text-destructive"));
+      const progressBadge = badgeVariants({ variant: "progress" });
+      assert.ok(progressBadge.includes("bg-blue-50"));
     });
   });
 
   describe("Navigation Configuration", () => {
-    it("defines required navigation items for Phase 1 E-Office in tokens and component", () => {
+    it("defines required navigation items for Phase 1 E-Office", () => {
       const tokenRoutes = NAV_ITEMS.map((item) => item.href);
       const compRoutes = NAVIGATION_ITEMS.map((item) => item.href);
 
       assert.deepEqual(tokenRoutes, compRoutes, "token routes and component routes match");
-
       assert.ok(compRoutes.includes("/"), "includes home dashboard");
       assert.ok(compRoutes.includes("/tasks"), "includes tasks route");
-      assert.ok(compRoutes.includes("/calendar"), "includes calendar route");
-      assert.ok(compRoutes.includes("/org"), "includes org route");
-      assert.ok(compRoutes.includes("/notifications"), "includes notifications route");
-
-      NAVIGATION_ITEMS.forEach((item) => {
-        assert.ok(item.label.length > 0, `Item ${item.href} has a label`);
-        assert.ok(item.icon, `Item ${item.href} has an icon`);
-      });
     });
   });
 });

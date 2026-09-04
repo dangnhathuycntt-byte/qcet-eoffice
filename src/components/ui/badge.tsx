@@ -3,23 +3,22 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 py-0.5 text-xs font-medium tracking-wide whitespace-nowrap transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 [&>svg]:pointer-events-none [&>svg]:size-3",
+  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-md border border-transparent px-2 py-0.5 text-xs font-medium tracking-tight whitespace-nowrap transition-colors focus-visible:border-ring [&>svg]:pointer-events-none [&>svg]:size-3",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground border-transparent",
-        secondary:
-          "border-border/60 bg-secondary text-secondary-foreground",
+        default: "border-transparent bg-primary text-primary-foreground",
+        secondary: "border-border/80 bg-secondary text-secondary-foreground",
         destructive:
-          "border-destructive/20 bg-destructive/10 text-destructive",
-        outline:
-          "border-border bg-background text-foreground/80",
-        ghost:
-          "text-muted-foreground hover:bg-muted",
+          "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300",
+        outline: "border-border bg-card text-foreground/80",
+        ghost: "border-transparent text-muted-foreground hover:bg-muted",
         success:
-          "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+          "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
+        progress:
+          "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
         warning:
-          "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+          "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
       },
     },
     defaultVariants: {
