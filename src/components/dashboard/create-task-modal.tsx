@@ -15,11 +15,30 @@ import {
   ChevronDown,
 } from "lucide-react";
 import type { TaskCategory, SchoolTask } from "@/types/dashboard";
+import type { UserRole } from "@/types/auth";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export type TaskLevel = "TRUONG" | "DON_VI";
+
+export function getAllowedTaskLevelsForRole(role: UserRole): TaskLevel[] {
+  if (role === "ADMIN") {
+    return ["TRUONG", "DON_VI"];
+  }
+  if (role === "MANAGER") {
+    return ["DON_VI"];
+  }
+  return [];
+}
+
+export function getDefaultTaskLevelForRole(role: UserRole): TaskLevel {
+  if (role === "ADMIN") {
+    return "TRUONG";
+  }
+  return "DON_VI";
+}
 
 export interface CreateTaskFormData {
   level: TaskLevel;
@@ -96,8 +115,22 @@ export function CreateTaskModal({
   initialParentTaskId,
   initialDueDate,
 }: CreateTaskModalProps) {
+  const { user } = useAuth();
+  const allowedLevels = getAllowedTaskLevelsForRole(user?.role ?? "ADMIN");
+  const isStaff = user?.role === "STAFF";
+  const isManager = user?.role === "MANAGER";
+
+  const getEffectiveLevel = React.useCallback(
+    (requestedLevel: TaskLevel): TaskLevel => {
+      if (isManager) return "DON_VI";
+      if (allowedLevels.includes(requestedLevel)) return requestedLevel;
+      return getDefaultTaskLevelForRole(user?.role ?? "ADMIN");
+    },
+    [isManager, allowedLevels, user?.role]
+  );
+
   const [formData, setFormData] = React.useState<CreateTaskFormData>(() => ({
-    ...getInitialTaskFormData(initialLevel),
+    ...getInitialTaskFormData(getEffectiveLevel(initialLevel)),
     parentTaskId: initialParentTaskId,
     dueDate: initialDueDate || "",
   }));
@@ -107,15 +140,16 @@ export function CreateTaskModal({
   // Reset form when modal opens with initial values
   React.useEffect(() => {
     if (isOpen) {
+      const effectiveLevel = getEffectiveLevel(initialLevel);
       setFormData({
-        ...getInitialTaskFormData(initialLevel),
+        ...getInitialTaskFormData(effectiveLevel),
         parentTaskId: initialParentTaskId,
         dueDate: initialDueDate || "",
       });
       setErrors({});
       setCoAssigneeInput("");
     }
-  }, [isOpen, initialLevel, initialParentTaskId, initialDueDate]);
+  }, [isOpen, initialLevel, initialParentTaskId, initialDueDate, getEffectiveLevel]);
 
   // Handle escape key
   React.useEffect(() => {
@@ -131,6 +165,7 @@ export function CreateTaskModal({
   if (!isOpen) return null;
 
   const handleLevelChange = (level: TaskLevel) => {
+    if (isManager && level === "TRUONG") return;
     setFormData((prev) => ({
       ...prev,
       level,
@@ -160,6 +195,9 @@ export function CreateTaskModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isStaff || allowedLevels.length === 0) {
+      return;
+    }
     const validationErrors = validateTaskForm(formData);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -191,17 +229,21 @@ export function CreateTaskModal({
               id="modal-title"
               className="text-lg font-semibold tracking-tight text-foreground"
             >
-              Giao nhiệm vụ mới
+              {isManager
+                ? `Giao việc đơn vị - ${user.department || "Đơn vị"}`
+                : "Giao nhiệm vụ mới"}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Khởi tạo và phân công nhiệm vụ theo cấp quản lý Twenty E-Office
+              {isManager
+                ? `Phân công nhiệm vụ nội bộ thuộc ${user.department || "đơn vị quản lý"}`
+                : "Khởi tạo và phân công nhiệm vụ theo cấp quản lý Twenty E-Office"}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Đóng"
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
           >
             <X className="size-4" />
           </button>
@@ -209,40 +251,83 @@ export function CreateTaskModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
-          {/* Level Toggle */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Cấp độ nhiệm vụ
-            </label>
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-muted/60 border border-border/60">
-              <button
-                type="button"
-                onClick={() => handleLevelChange("TRUONG")}
-                className={cn(
-                  "flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-medium transition-all",
-                  formData.level === "TRUONG"
-                    ? "bg-card text-foreground shadow-xs border border-border/80 font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Building2 className="size-3.5 text-blue-600 dark:text-blue-400" />
-                <span>Nhiệm vụ cấp Trường</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLevelChange("DON_VI")}
-                className={cn(
-                  "flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-medium transition-all",
-                  formData.level === "DON_VI"
-                    ? "bg-card text-foreground shadow-xs border border-border/80 font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Users className="size-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span>Công việc Đơn vị</span>
-              </button>
+          {/* Permission Notice for STAFF */}
+          {isStaff && (
+            <div
+              role="alert"
+              className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50/90 p-3.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300"
+            >
+              <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+              <div>
+                <p className="font-semibold">Giới hạn phân quyền giao việc</p>
+                <p className="mt-0.5">
+                  Bạn không có quyền giao nhiệm vụ mới. Vui lòng liên hệ Trưởng đơn vị.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Level Toggle / Context */}
+          {isManager ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Cấp độ nhiệm vụ
+                </label>
+                <Badge
+                  variant="outline"
+                  className="text-[11px] font-medium border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300"
+                >
+                  Giao việc đơn vị - {user.department || "Đơn vị"}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/60 border border-border/60">
+                <div className="flex items-center gap-2">
+                  <Users className="size-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span className="text-xs font-semibold text-foreground">
+                    Công việc Đơn vị ({user.department || "Đơn vị"})
+                  </span>
+                </div>
+                <Badge variant="secondary" className="text-[10px]">
+                  Đã khóa cấp độ
+                </Badge>
+              </div>
+            </div>
+          ) : isStaff ? null : (
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Cấp độ nhiệm vụ
+              </label>
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-muted/60 border border-border/60">
+                <button
+                  type="button"
+                  onClick={() => handleLevelChange("TRUONG")}
+                  className={cn(
+                    "flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-medium transition-all cursor-pointer",
+                    formData.level === "TRUONG"
+                      ? "bg-card text-foreground shadow-xs border border-border/80 font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Building2 className="size-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Nhiệm vụ cấp Trường</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleLevelChange("DON_VI")}
+                  className={cn(
+                    "flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-medium transition-all cursor-pointer",
+                    formData.level === "DON_VI"
+                      ? "bg-card text-foreground shadow-xs border border-border/80 font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Users className="size-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>Công việc Đơn vị</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Parent School Task (If Level is DON_VI) */}
           {formData.level === "DON_VI" && schoolTasks.length > 0 && (
@@ -530,13 +615,23 @@ export function CreateTaskModal({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="h-9 px-4 text-xs font-medium"
+              className="h-9 px-4 text-xs font-medium cursor-pointer"
             >
               Hủy
             </Button>
             <Button
               type="submit"
-              className="h-9 px-4 text-xs font-medium bg-[#18181B] text-white hover:bg-[#27272A] dark:bg-[#FAFAFA] dark:text-[#18181B] dark:hover:bg-[#E4E4E7]"
+              disabled={isStaff || allowedLevels.length === 0}
+              title={
+                isStaff
+                  ? "Bạn không có quyền giao nhiệm vụ mới. Vui lòng liên hệ Trưởng đơn vị."
+                  : undefined
+              }
+              className={cn(
+                "h-9 px-4 text-xs font-medium bg-[#18181B] text-white hover:bg-[#27272A] dark:bg-[#FAFAFA] dark:text-[#18181B] dark:hover:bg-[#E4E4E7] cursor-pointer",
+                (isStaff || allowedLevels.length === 0) &&
+                  "opacity-50 cursor-not-allowed hover:bg-[#18181B] dark:hover:bg-[#FAFAFA]"
+              )}
             >
               <CheckCircle2 className="size-3.5" />
               <span>Tạo nhiệm vụ</span>

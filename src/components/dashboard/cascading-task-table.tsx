@@ -14,6 +14,8 @@ import type {
   TaskCategory,
   TaskStatus,
 } from "@/types/dashboard";
+import { useAuth } from "@/lib/auth-context";
+import { canAssignUnitTask } from "@/lib/role-task-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -108,28 +110,28 @@ export function getStatusBadgeConfig(
   switch (status) {
     case "NEW":
       return {
-        label: "Mới 🆕",
+        label: "Mới",
         className:
           "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300",
         variant: "destructive",
       };
     case "IN_PROGRESS":
       return {
-        label: "Đang thực hiện 🔨",
+        label: "Đang thực hiện",
         className:
           "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300",
         variant: "progress",
       };
     case "NEEDS_REVIEW":
       return {
-        label: "Cần chỉnh sửa ⚠️",
+        label: "Cần chỉnh sửa",
         className:
           "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
         variant: "warning",
       };
     case "COMPLETED":
       return {
-        label: "Hoàn thành 👍",
+        label: "Hoàn thành",
         className:
           "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
         variant: "success",
@@ -206,6 +208,8 @@ export function CascadingTaskTable({
   onAddTask,
   className,
 }: CascadingTaskTableProps) {
+  const { user } = useAuth();
+  const canAssign = canAssignUnitTask(user?.role ?? "ADMIN");
   const [selectedCategory, setSelectedCategory] = React.useState<
     TaskCategory | "ALL"
   >("ALL");
@@ -297,8 +301,19 @@ export function CascadingTaskTable({
         <div className="flex items-center gap-2 self-end sm:self-auto">
           <Button
             type="button"
-            onClick={onAddTask}
-            className="h-8 rounded-md px-3 text-xs font-medium shadow-xs"
+            onClick={canAssign ? onAddTask : undefined}
+            disabled={!canAssign}
+            title={
+              !canAssign
+                ? "Chỉ BGH và Trưởng đơn vị mới có quyền giao việc"
+                : undefined
+            }
+            className={cn(
+              "h-8 rounded-md px-3 text-xs font-medium shadow-xs",
+              canAssign
+                ? "cursor-pointer"
+                : "opacity-50 cursor-not-allowed"
+            )}
           >
             <Plus className="size-3.5" />
             <span>Giao việc</span>
@@ -307,7 +322,7 @@ export function CascadingTaskTable({
       </div>
 
       {/* Main Table Container */}
-      <div className="overflow-hidden rounded-lg border border-border/80 bg-card shadow-[0_1px_2px_0_rgba(0,0,0,0.04)]">
+      <div className="overflow-hidden rounded-xl border border-border/75 bg-card shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             {/* Table Header */}
