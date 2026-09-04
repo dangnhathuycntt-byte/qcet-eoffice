@@ -4,8 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { cn } from "../src/lib/utils";
 import { QCET_TOKENS, qcetTokens, twentyTokens, NAV_ITEMS } from "../src/lib/tokens";
-import { buttonVariants } from "../src/components/ui/button";
-import { badgeVariants } from "../src/components/ui/badge";
+import { buttonVariants, Button } from "../src/components/ui/button";
+import { badgeVariants, Badge } from "../src/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from "../src/components/ui/card";
+import { Drawer } from "../src/components/ui/drawer";
+import { Progress, ProgressTrack, ProgressIndicator } from "../src/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants } from "../src/components/ui/tabs";
 import { NAVIGATION_ITEMS } from "../src/components/navigation";
 
 describe("QCET Design System Smoke Test Suite", () => {
@@ -154,6 +158,13 @@ describe("QCET Design System Smoke Test Suite", () => {
       const outlineButton = buttonVariants({ variant: "outline" });
       assert.ok(outlineButton.includes("border-border"));
       assert.ok(outlineButton.includes("bg-card"));
+
+      const premiumButton = buttonVariants({ variant: "premium" });
+      assert.ok(premiumButton.includes("bg-gradient-to-r"));
+      assert.ok(premiumButton.includes("shadow-card"));
+
+      const iconSmButton = buttonVariants({ size: "icon-sm" });
+      assert.ok(iconSmButton.includes("size-8"));
     });
 
     it("badgeVariants generates proper status variants", () => {
@@ -165,6 +176,47 @@ describe("QCET Design System Smoke Test Suite", () => {
 
       const progressBadge = badgeVariants({ variant: "progress" });
       assert.ok(progressBadge.includes("bg-blue-50"));
+
+      const sapphireBadge = badgeVariants({ variant: "sapphire" });
+      assert.ok(sapphireBadge.includes("bg-blue-500/10"));
+      assert.ok(sapphireBadge.includes("text-blue-600"));
+
+      const emeraldBadge = badgeVariants({ variant: "emerald" });
+      assert.ok(emeraldBadge.includes("bg-emerald-500/10"));
+      assert.ok(emeraldBadge.includes("text-emerald-600"));
+
+      const amberBadge = badgeVariants({ variant: "amber" });
+      assert.ok(amberBadge.includes("bg-amber-500/10"));
+      assert.ok(amberBadge.includes("text-amber-600"));
+
+      const roseBadge = badgeVariants({ variant: "rose" });
+      assert.ok(roseBadge.includes("bg-rose-500/10"));
+      assert.ok(roseBadge.includes("text-rose-600"));
+
+      const violetBadge = badgeVariants({ variant: "violet" });
+      assert.ok(violetBadge.includes("bg-violet-500/10"));
+      assert.ok(violetBadge.includes("text-violet-600"));
+    });
+
+    it("exports all new and overhauled Base UI components cleanly", () => {
+      assert.equal(typeof Card, "function");
+      assert.equal(typeof CardHeader, "function");
+      assert.equal(typeof CardTitle, "function");
+      assert.equal(typeof CardDescription, "function");
+      assert.equal(typeof CardAction, "function");
+      assert.equal(typeof CardContent, "function");
+      assert.equal(typeof CardFooter, "function");
+      assert.equal(typeof Badge, "function");
+      assert.ok(typeof Button === "function" || typeof Button === "object");
+      assert.equal(typeof Drawer, "function");
+      assert.equal(typeof Progress, "function");
+      assert.equal(typeof ProgressTrack, "function");
+      assert.equal(typeof ProgressIndicator, "function");
+      assert.equal(typeof Tabs, "function");
+      assert.equal(typeof TabsList, "function");
+      assert.equal(typeof TabsTrigger, "function");
+      assert.equal(typeof TabsContent, "function");
+      assert.equal(typeof tabsListVariants, "function");
     });
   });
 
