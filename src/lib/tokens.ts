@@ -98,9 +98,9 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Trang chủ", icon: "LayoutDashboard" },
-  { href: "/tasks", label: "Công việc", icon: "CheckSquare" },
-  { href: "/calendar", label: "Lịch biểu", icon: "Calendar" },
+  { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
+  { href: "/tasks", label: "Nhiệm vụ cấp Trường", icon: "CheckSquare" },
+  { href: "/unit-tasks", label: "Công việc Đơn vị", icon: "Briefcase" },
+  { href: "/calendar", label: "Lịch công tác", icon: "Calendar" },
   { href: "/org", label: "Cơ cấu tổ chức", icon: "Network" },
-  { href: "/notifications", label: "Thông báo", icon: "Bell" },
 ];

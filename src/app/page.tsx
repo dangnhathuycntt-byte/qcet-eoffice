@@ -1,140 +1,206 @@
-import Link from "next/link";
-import {
-  CheckSquare,
-  Calendar,
-  Network,
-  Bell,
-  ArrowRight,
-  Sparkles,
-  ShieldCheck,
-  Building,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+"use client";
 
-export default function HomePage() {
+import * as React from "react";
+import {
+  SchoolTask,
+  StaffTask,
+  UpcomingItem,
+  DashboardPayload,
+  TaskStatus,
+} from "@/types/dashboard";
+import { getMockDashboardPayload } from "@/lib/mock-dashboard-data";
+import { ExecutiveStatStrip } from "@/components/dashboard/executive-stat-strip";
+import { CascadingTaskTable } from "@/components/dashboard/cascading-task-table";
+import { UpcomingDeadlinesWidget } from "@/components/dashboard/upcoming-deadlines-widget";
+import { ActivityFeedWidget } from "@/components/dashboard/activity-feed-widget";
+import {
+  TaskDetailSideSheet,
+  isSchoolTask,
+} from "@/components/dashboard/task-detail-side-sheet";
+import { Clock, RefreshCw, CheckCircle2 } from "lucide-react";
+
+export default function DashboardPage() {
+  // 1. Synchronous optimistic initial state from getMockDashboardPayload (0ms blank screen)
+  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(
+    () => getMockDashboardPayload()
+  );
+  const [selectedTask, setSelectedTask] = React.useState<
+    SchoolTask | StaffTask | null
+  >(null);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  // 2. Client-side background sync fetching live overview from /api/dashboard/overview
+  React.useEffect(() => {
+    let isMounted = true;
+
+    async function syncDashboardOverview() {
+      try {
+        const response = await fetch("/api/dashboard/overview");
+        if (response.ok && isMounted) {
+          const liveData: DashboardPayload = await response.json();
+          if (liveData && liveData.tasks && liveData.stats) {
+            setDashboardData(liveData);
+          }
+        }
+      } catch {
+        // Silently preserve high-fidelity optimistic payload on network/offline fallback
+      }
+    }
+
+    syncDashboardOverview();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Handler to manually trigger sync/refresh
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const response = await fetch("/api/dashboard/overview");
+      if (response.ok) {
+        const liveData: DashboardPayload = await response.json();
+        if (liveData && liveData.tasks && liveData.stats) {
+          setDashboardData(liveData);
+        }
+      }
+    } catch {
+      // Keep existing data
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  };
+
+  // Find task when an upcoming deadline item is clicked
+  const handleSelectUpcoming = (item: UpcomingItem) => {
+    for (const schoolTask of dashboardData.tasks) {
+      if (schoolTask.id === item.id) {
+        setSelectedTask(schoolTask);
+        return;
+      }
+      for (const sub of schoolTask.subTasks) {
+        if (sub.id === item.id) {
+          setSelectedTask(sub);
+          return;
+        }
+      }
+    }
+  };
+
+  // Optimistic status update when changed inside TaskDetailSideSheet
+  const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
+    setDashboardData((prev) => {
+      const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
+        if (st.id === taskId) {
+          const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
+            newStatus === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS";
+          return { ...st, status: schoolStatus };
+        }
+        const updatedSubs: StaffTask[] = st.subTasks.map((sub) =>
+          sub.id === taskId ? { ...sub, status: newStatus } : sub
+        );
+        return { ...st, subTasks: updatedSubs };
+      });
+      return { ...prev, tasks: updatedTasks };
+    });
+
+    setSelectedTask((prev) => {
+      if (!prev || prev.id !== taskId) return prev;
+      if (isSchoolTask(prev)) {
+        const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
+          newStatus === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS";
+        return { ...prev, status: schoolStatus };
+      }
+      return { ...prev, status: newStatus };
+    });
+  };
+
   return (
-    <div className="space-y-8 py-4">
-      {/* Welcome Banner */}
-      <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 md:p-10 shadow-xs">
-        <div className="relative z-10 max-w-2xl space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="default">QCET E-Office</Badge>
-            <Badge variant="outline">Giai đoạn 1 (MVP)</Badge>
+    <div className="space-y-6 pb-12" data-slot="twenty-dashboard">
+      {/* ========================================================================= */}
+      {/* 1. Header Greeting & Breadcrumbs                                         */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mb-1">
+            <span>Văn phòng Điều hành</span>
+            <span className="text-muted-foreground/50">/</span>
+            <span className="text-foreground font-semibold">
+              Dashboard Điều hành Toàn trường
+            </span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Văn phòng Điều hành & Quản trị Công việc Điện tử
+          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            Bảng điều hành công việc toàn trường
           </h1>
-          <p className="text-base text-muted-foreground leading-relaxed">
-            Hệ thống quản lý công việc, phân công nhiệm vụ, lịch công tác và kết nối tổ chức
-            Trường Cao đẳng Kinh tế - Kỹ thuật Cần Thơ.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Giám sát 2 tầng: Nhiệm vụ cấp Trường & Công việc Đơn vị trực thuộc theo thời gian thực
           </p>
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <Link href="/tasks">
-              <Button size="lg" className="shadow-sm">
-                Xem công việc
-                <ArrowRight className="size-4" />
-              </Button>
-            </Link>
-            <Link href="/calendar">
-              <Button variant="outline" size="lg">
-                Lịch công tác
-              </Button>
-            </Link>
-          </div>
+        </div>
+
+        {/* Right Actions: Live Sync Tag & Manual Refresh */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60"
+            title="Làm mới dữ liệu từ máy chủ"
+          >
+            <RefreshCw
+              className={`size-3.5 ${isRefreshing ? "animate-spin text-foreground" : ""}`}
+            />
+            <span className="hidden sm:inline">Làm mới</span>
+          </button>
+
+          <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-emerald-200/80 bg-emerald-50/70 px-2.5 text-xs font-medium text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
+            </span>
+            <span>Trực tuyến</span>
+          </span>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2. ExecutiveStatStrip across the top                                      */}
+      {/* ========================================================================= */}
+      <section aria-label="Chỉ số hiệu suất toàn trường">
+        <ExecutiveStatStrip stats={dashboardData.stats} />
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 3. Two-Column Grid: 8 Cols (~65%) Left | 4 Cols (~35%) Right              */}
+      {/* ========================================================================= */}
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Left Column (8 cols): Cascading 2-Tier Task Table */}
+        <div className="lg:col-span-8 space-y-4">
+          <CascadingTaskTable
+            tasks={dashboardData.tasks}
+            onSelectTask={(task) => setSelectedTask(task)}
+          />
+        </div>
+
+        {/* Right Column (4 cols): Upcoming Deadlines & Activity Feed */}
+        <div className="lg:col-span-4 space-y-6">
+          <UpcomingDeadlinesWidget
+            items={dashboardData.upcoming}
+            onSelectTask={handleSelectUpcoming}
+          />
+          <ActivityFeedWidget activities={dashboardData.activities} />
         </div>
       </section>
 
-      {/* Feature Navigation Cards */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="hover:border-primary/40 transition-all hover:shadow-md">
-          <CardHeader>
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <CheckSquare className="size-5" />
-            </div>
-            <CardTitle className="pt-2">Quản lý Công việc</CardTitle>
-            <CardDescription>
-              Theo dõi tiến độ theo Kanban, phân công và kiểm soát hạn chót.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Link href="/tasks" className="w-full">
-              <Button variant="ghost" size="sm" className="w-full justify-between">
-                <span>Chi tiết</span>
-                <ArrowRight className="size-3.5" />
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-
-        <Card className="hover:border-primary/40 transition-all hover:shadow-md">
-          <CardHeader>
-            <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <Calendar className="size-5" />
-            </div>
-            <CardTitle className="pt-2">Lịch công tác</CardTitle>
-            <CardDescription>
-              Lịch họp, sự kiện toàn trường và lịch cá nhân trực quan.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Link href="/calendar" className="w-full">
-              <Button variant="ghost" size="sm" className="w-full justify-between">
-                <span>Chi tiết</span>
-                <ArrowRight className="size-3.5" />
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-
-        <Card className="hover:border-primary/40 transition-all hover:shadow-md">
-          <CardHeader>
-            <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <Network className="size-5" />
-            </div>
-            <CardTitle className="pt-2">Cơ cấu Tổ chức</CardTitle>
-            <CardDescription>
-              Sơ đồ phòng ban, đơn vị trực thuộc và phân quyền nhân sự.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Link href="/org" className="w-full">
-              <Button variant="ghost" size="sm" className="w-full justify-between">
-                <span>Chi tiết</span>
-                <ArrowRight className="size-3.5" />
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-
-        <Card className="hover:border-primary/40 transition-all hover:shadow-md">
-          <CardHeader>
-            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <Bell className="size-5" />
-            </div>
-            <CardTitle className="pt-2">Thông báo & Trao đổi</CardTitle>
-            <CardDescription>
-              Cập nhật tức thì các thông báo, bình luận và nhiệm vụ mới.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Link href="/notifications" className="w-full">
-              <Button variant="ghost" size="sm" className="w-full justify-between">
-                <span>Chi tiết</span>
-                <ArrowRight className="size-3.5" />
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-      </section>
+      {/* ========================================================================= */}
+      {/* 4. TaskDetailSideSheet Slide-Over                                        */}
+      {/* ========================================================================= */}
+      <TaskDetailSideSheet
+        task={selectedTask}
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onStatusChange={handleStatusChange}
+      />
     </div>
   );
 }

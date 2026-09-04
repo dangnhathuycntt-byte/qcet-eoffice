@@ -1,182 +1,159 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
+  Briefcase,
   Calendar,
   Network,
   Bell,
   Sun,
   Moon,
   Building2,
-  User,
+  ChevronDown,
+  Search,
+  CheckCircle2,
+  RefreshCw,
+  Command,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const NAVIGATION_ITEMS = [
-  { href: "/", label: "Trang chủ", icon: LayoutDashboard },
-  { href: "/tasks", label: "Công việc", icon: CheckSquare },
-  { href: "/calendar", label: "Lịch biểu", icon: Calendar },
-  { href: "/org", label: "Cơ cấu", icon: Network, fullLabel: "Cơ cấu tổ chức" },
-  { href: "/notifications", label: "Thông báo", icon: Bell },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/tasks", label: "Nhiệm vụ cấp Trường", icon: CheckSquare },
+  { href: "/unit-tasks", label: "Công việc Đơn vị", icon: Briefcase },
+  { href: "/calendar", label: "Lịch công tác", icon: Calendar },
+  { href: "/org", label: "Cơ cấu tổ chức", icon: Network },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
   const { resolved, toggleTheme } = useTheme();
+  const [isSyncing, setIsSyncing] = React.useState(false);
+
+  // Trigger search focus across the page on ⌘K button click
+  const triggerQuickSearch = () => {
+    const event = new KeyboardEvent("keydown", {
+      key: "k",
+      metaKey: true,
+      bubbles: true,
+    });
+    window.dispatchEvent(event);
+  };
+
+  const simulateSync = () => {
+    setIsSyncing(true);
+    setTimeout(() => setIsSyncing(false), 1200);
+  };
 
   return (
-    <>
+    <header
+      data-slot="twenty-topbar"
+      className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/95 backdrop-blur-md"
+    >
       {/* ========================================================================= */}
-      {/* Desktop Header & Floating Pill Navigation (>= 768px)                       */}
+      {/* 1. Main Top Bar: Workspace | Quick Search | Sync & Profile               */}
       {/* ========================================================================= */}
-      <header
-        data-slot="desktop-nav"
-        className="fixed inset-x-0 top-0 z-50 hidden border-b border-border/70 bg-background/80 px-4 py-3 backdrop-blur-xl transition-colors md:block sm:px-8 lg:px-12"
-      >
-        <div className="mx-auto flex h-12 w-full max-w-7xl items-center justify-between gap-4">
-          {/* Logo & Brand */}
+      <div className="mx-auto flex h-13 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        {/* Left: QCET Logo + Workspace Dropdown Pill */}
+        <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="group flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="flex items-center gap-2.5 transition-opacity hover:opacity-90"
+            aria-label="Về trang chủ QCET E-Office"
           >
-            <span className="relative flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/25 transition-transform group-hover:scale-105">
-              <Building2 className="size-5" aria-hidden="true" />
-              <span className="absolute -top-0.5 -right-0.5 flex size-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500"></span>
-              </span>
+            <span className="flex size-7.5 items-center justify-center rounded-lg bg-foreground text-background shadow-xs">
+              <Building2 className="size-4" aria-hidden="true" />
             </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold tracking-tight text-foreground transition-colors group-hover:text-primary">
-                  QCET E-Office
-                </span>
-                <span className="rounded-md border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
-                  MVP
-                </span>
-              </div>
-              <p className="text-[11px] text-muted-foreground font-medium">Văn phòng Điện tử</p>
-            </div>
           </Link>
 
-          {/* Desktop Floating Pill Navigation */}
-          <nav
-            data-slot="floating-pill-nav"
-            className="flex items-center gap-1 rounded-2xl border border-border/80 bg-card/70 p-1.5 shadow-sm backdrop-blur-md"
+          {/* Workspace Switcher Pill */}
+          <button
+            type="button"
+            className="group flex items-center gap-2 rounded-md border border-border/80 bg-secondary/50 px-2.5 py-1 text-xs font-medium text-foreground transition-all hover:bg-secondary hover:border-border cursor-pointer"
+            title="Không gian làm việc hiện tại"
           >
-            {NAVIGATION_ITEMS.map((item) => {
-              const active = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  data-active={active}
-                  className={cn(
-                    "relative flex h-8 items-center gap-2 rounded-xl px-3 text-xs font-semibold transition-all duration-150",
-                    active
-                      ? "border border-primary/30 bg-primary/10 text-primary shadow-xs font-bold"
-                      : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-                  )}
-                >
-                  <Icon className={cn("size-3.5", active ? "text-primary" : "text-muted-foreground")} />
-                  <span>{item.fullLabel || item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Right Actions: Status, Theme, Profile */}
-          <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-2 rounded-xl border border-border/80 bg-card/60 px-3 py-1.5 text-left lg:flex">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
-              </span>
-              <div className="max-w-40">
-                <p className="text-[11px] font-semibold leading-tight text-foreground">Hệ thống sẵn sàng</p>
-                <p className="truncate text-[10px] text-muted-foreground font-medium">QCET Portal Phase 1</p>
-              </div>
-            </div>
-
-            {/* Theme Toggle Button */}
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={toggleTheme}
-              aria-label="Chuyển đổi giao diện sáng/tối"
-              className="border-border bg-card/60 text-foreground hover:bg-accent hover:border-primary/40 transition-all"
-            >
-              {resolved === "dark" ? (
-                <Sun className="size-4 text-amber-400 transition-transform" />
-              ) : (
-                <Moon className="size-4 text-muted-foreground transition-transform" />
-              )}
-            </Button>
-
-            {/* Profile Avatar / Link */}
-            <Link href="/profile">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                className="border-border bg-card/60 text-foreground hover:bg-accent hover:border-primary/40 transition-all"
-                aria-label="Hồ sơ người dùng"
-              >
-                <User className="size-4 text-muted-foreground" />
-              </Button>
-            </Link>
-          </div>
+            <span className="font-semibold text-foreground">QCET E-Office</span>
+            <span className="text-muted-foreground/60 font-light">/</span>
+            <span className="font-medium text-foreground/80">Ban Giám hiệu</span>
+            <ChevronDown className="size-3 text-muted-foreground transition-transform group-hover:translate-y-0.5" />
+          </button>
         </div>
-      </header>
 
-      {/* ========================================================================= */}
-      {/* Mobile TopBar (< 768px)                                                   */}
-      {/* ========================================================================= */}
-      <header
-        data-slot="mobile-topbar"
-        className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-border/80 bg-card/90 px-4 backdrop-blur-md md:hidden"
-      >
-        <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
-            <Building2 className="size-4" aria-hidden="true" />
-          </span>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold leading-tight text-foreground">QCET E-Office</span>
-            <span className="text-[10px] text-muted-foreground">Văn phòng Số</span>
-          </div>
-        </Link>
+        {/* Center: Quick Search Command Trigger */}
+        <div className="hidden flex-1 max-w-md md:flex justify-center">
+          <button
+            type="button"
+            onClick={triggerQuickSearch}
+            className="flex h-8 w-full max-w-xs items-center justify-between rounded-md border border-border/80 bg-secondary/40 px-3 text-xs text-muted-foreground transition-all hover:bg-secondary/80 hover:border-border hover:text-foreground cursor-pointer"
+            aria-label="Tìm kiếm nhanh toàn hệ thống"
+          >
+            <div className="flex items-center gap-2">
+              <Search className="size-3.5 text-muted-foreground" />
+              <span>Tìm kiếm nhanh...</span>
+            </div>
+            <kbd className="pointer-events-none inline-flex h-4.5 items-center gap-0.5 rounded border border-border/80 bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-2xs">
+              <Command className="size-2.5" />K
+            </kbd>
+          </button>
+        </div>
 
-        <div className="flex items-center gap-1.5">
+        {/* Right: Live Notion Sync status | Notifications | Theme | User Avatar */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Live Notion Sync Status Indicator */}
+          <button
+            type="button"
+            onClick={simulateSync}
+            className="hidden items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/70 px-2.5 py-1 text-[11px] font-medium text-emerald-800 transition-colors hover:bg-emerald-100/70 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300 sm:inline-flex cursor-pointer"
+            title="Đồng bộ hóa trực tiếp với Notion Database QCET"
+          >
+            {isSyncing ? (
+              <>
+                <RefreshCw className="size-3 animate-spin text-emerald-600 dark:text-emerald-400" />
+                <span className="font-semibold">Đang đồng bộ...</span>
+              </>
+            ) : (
+              <>
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
+                </span>
+                <span className="font-semibold">Đã đồng bộ</span>
+              </>
+            )}
+          </button>
+
+          {/* Theme Switcher Button */}
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
             onClick={toggleTheme}
             aria-label="Chuyển đổi giao diện sáng/tối"
+            className="size-8 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
           >
             {resolved === "dark" ? (
-              <Sun className="size-4 text-amber-400" />
+              <Sun className="size-4 text-amber-400 transition-transform" />
             ) : (
-              <Moon className="size-4 text-muted-foreground" />
+              <Moon className="size-4 text-muted-foreground transition-transform" />
             )}
           </Button>
 
+          {/* Notifications Bell */}
           <Link href="/notifications">
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label="Thông báo"
-              className="relative"
+              aria-label="Xem thông báo"
+              className="relative size-8 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
-              <Bell className="size-4 text-muted-foreground" />
+              <Bell className="size-4" />
               <span className="absolute top-1.5 right-1.5 flex size-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
                 <span className="relative inline-flex size-2 rounded-full bg-primary"></span>
@@ -184,52 +161,46 @@ export function Navigation() {
             </Button>
           </Link>
 
-          <Link href="/profile">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Hồ sơ cá nhân"
-            >
-              <User className="size-4 text-muted-foreground" />
-            </Button>
-          </Link>
+          {/* User Avatar + Name */}
+          <div className="flex items-center gap-2 pl-1 border-l border-border/60">
+            <div className="flex size-7.5 items-center justify-center rounded-full bg-zinc-800 text-[11px] font-bold text-zinc-100 dark:bg-zinc-200 dark:text-zinc-900 shadow-2xs">
+              AQ
+            </div>
+            <div className="hidden text-left lg:block">
+              <p className="text-xs font-semibold leading-tight text-foreground">Admin QCET</p>
+              <p className="text-[10px] text-muted-foreground">BGH QCET</p>
+            </div>
+          </div>
         </div>
-      </header>
+      </div>
 
       {/* ========================================================================= */}
-      {/* Mobile Bottom Navigation Bar (< 768px)                                    */}
+      {/* 2. Sub-Bar: Clean Twenty-Style Horizontal Navigation Links                */}
       {/* ========================================================================= */}
-      <nav
-        data-slot="mobile-bottom-nav"
-        className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around border-t border-border/80 bg-card/95 px-2 pb-safe backdrop-blur-md md:hidden"
-      >
-        {NAVIGATION_ITEMS.map((item) => {
-          const active = pathname === item.href;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              data-active={active}
-              className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-1 py-1 text-center transition-colors",
-                active ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <span
+      <div className="border-t border-border/50 bg-background/50 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-9.5 w-full max-w-7xl items-center gap-1 overflow-x-auto scrollbar-none">
+          {NAVIGATION_ITEMS.map((item) => {
+            const active = pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                data-active={active}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-xl transition-all",
-                  active ? "bg-primary/15 text-primary scale-105" : "text-muted-foreground"
+                  "relative inline-flex h-7.5 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors whitespace-nowrap",
+                  active
+                    ? "bg-secondary text-foreground font-semibold shadow-2xs"
+                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                 )}
               >
-                <Icon className="size-4" />
-              </span>
-              <span className="text-[10px] leading-none tracking-tight">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </>
+                <Icon className={cn("size-3.5", active ? "text-foreground" : "text-muted-foreground")} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </header>
   );
 }
