@@ -20,27 +20,33 @@ The dashboard integrates directly with existing live data from Notion via Notion
 
 ---
 
-## 2. Twenty CRM Design System & Visual Language
+## 2. Twenty CRM Design System & Visual Language (Light-Mode Priority)
 
-### 2.1 Color Tokens & Theming (Clean Slate / Zinc)
+### 2.1 First-Class Light Mode & Color Tokens (Clean Slate / Zinc)
 
-The design adopts Twenty's signature monochromatic, clean-cut aesthetic:
+The design strictly prioritizes **Light Mode** as the primary operating interface, adopting Twenty CRM's signature crisp, high-contrast, paper-weight aesthetic:
+- **Canvas Base:** High-clarity white `#FFFFFF` card/sheet surfaces over a whisper-subtle background `#FBFBFB` / `#F8F9FA`.
+- **Dividers & Outlines:** 1px hairline borders (`#E4E4E7` Zinc-200 / `#E5E7EB` Gray-200), providing structure without visual clutter.
+- **Micro-elevation:** Soft ambient shadows (`0 1px 2px 0 rgba(0, 0, 0, 0.04), 0 1px 1px 0 rgba(0, 0, 0, 0.02)`), avoiding heavy drop shadows.
+- **Default Theme:** Locked to `light` by default with smooth dark mode capability preserved.
 
-| Token | Light Mode Value | Dark Mode Value | Usage |
+| Token | Light Mode Value (Priority) | Dark Mode Value | Usage |
 | :--- | :--- | :--- | :--- |
-| **`bg-app`** | `#FFFFFF` | `#0B0C0E` | Root application background |
-| **`bg-surface`** | `#FAFAFA` / `#F4F4F6` | `#16181D` | Sidebar, Card backgrounds, Panel surfaces |
-| **`border-subtle`** | `#E5E7EB` / `#E2E4E9` | `#22252B` | 1px clean hairline dividers & card borders |
-| **`text-primary`** | `#18181B` (Zinc-900) | `#F4F4F5` (Zinc-100) | Main headings, primary values |
-| **`text-secondary`** | `#71717A` (Zinc-500) | `#A1A1AA` (Zinc-400) | Subtitles, labels, metadata |
-| **`accent-primary`** | `#18181B` (Dark charcoal) | `#FFFFFF` | Primary action buttons |
-| **`badge-success`** | `#ECFDF5` text `#047857` | `#064E3B` text `#6EE7B7` | Hoàn thành 👍 |
-| **`badge-progress`** | `#EFF6FF` text `#1D4ED8` | `#1E3A8A` text `#93C5FD` | Đang thực hiện 🔨 |
-| **`badge-warning`** | `#FFFBEB` text `#B45309` | `#78350F` text `#FCD34D` | Cần chỉnh sửa ⚠️ |
-| **`badge-new`** | `#FEF2F2` text `#B91C1C` | `#7F1D1D` text `#FCA5A5` | Mới 🆕 |
+| **`bg-app`** | `#FBFBFB` (Ultra-clean canvas) | `#0B0C0E` | Root application background |
+| **`bg-card`** | `#FFFFFF` (Pure white) | `#16181D` | Cards, Table containers, Side sheet |
+| **`bg-hover`** | `#F4F4F5` (Zinc-100) | `#22252B` | Table row hover, menu item hover |
+| **`border-subtle`** | `#E4E4E7` (Zinc-200) | `#27272A` | 1px clean hairline dividers & card borders |
+| **`text-primary`** | `#09090B` (Zinc-950) | `#F4F4F5` (Zinc-100) | Main headings, primary values, task titles |
+| **`text-secondary`** | `#52525B` (Zinc-600) | `#A1A1AA` (Zinc-400) | Subtitles, labels, metadata |
+| **`text-muted`** | `#A1A1AA` (Zinc-400) | `#71717A` (Zinc-500) | Timestamps, placeholder text, hints |
+| **`accent-primary`** | `#18181B` (Zinc-900 solid) | `#FFFFFF` | Primary action buttons (high contrast) |
+| **`badge-success`** | `#ECFDF5` text `#047857` border `#A7F3D0` | `#064E3B` text `#6EE7B7` | Hoàn thành 👍 |
+| **`badge-progress`** | `#EFF6FF` text `#1D4ED8` border `#BFDBFE` | `#1E3A8A` text `#93C5FD` | Đang thực hiện 🔨 |
+| **`badge-warning`** | `#FFFBEB` text `#B45309` border `#FDE68A` | `#78350F` text `#FCD34D` | Cần chỉnh sửa ⚠️ |
+| **`badge-new`** | `#FEF2F2` text `#B91C1C` border `#FECACA` | `#7F1D1D` text `#FCA5A5` | Mới 🆕 |
 
 ### 2.2 Geometry & Typography
-- **Border Radius:** `rounded-lg` (8px) for cards, `rounded-md` (6px) for table cells, buttons, and popovers (shifting away from pill-shaped rounded-2xl).
+- **Border Radius:** `rounded-lg` (8px) for cards and modals, `rounded-md` (6px) for table cells, badges, and buttons.
 - **Typography Hierarchy:**
   - Font family: `Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`.
   - Metrics / Big numbers: `text-2xl` or `text-3xl` font-semibold tracking-tight.
