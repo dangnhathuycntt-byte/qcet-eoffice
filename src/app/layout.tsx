@@ -3,7 +3,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
-import { Navigation } from "@/components/navigation";
+import { AppShell } from "@/components/layout/app-shell";
 
 const fontSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -56,14 +56,7 @@ export default function RootLayout({
             >
               Chuyển đến nội dung chính
             </a>
-            <Navigation />
-            <main
-              id="main-content"
-              className="min-h-[100dvh] py-6 md:py-8"
-              tabIndex={-1}
-            >
-              <div className="max-w-[1440px] w-full mx-auto px-3.5 sm:px-6">{children}</div>
-            </main>
+            <AppShell>{children}</AppShell>
           </ThemeProvider>
         </AuthProvider>
       </body>

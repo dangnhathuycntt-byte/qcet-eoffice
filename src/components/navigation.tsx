@@ -39,12 +39,8 @@ export function getInitials(name: string): string {
   return (first + last).toUpperCase();
 }
 
-export const NAVIGATION_ITEMS = [
-  { href: "/", label: "Quản lý công việc", icon: CheckSquare },
-  { href: "/org", label: "Cơ cấu & Danh bạ", icon: Network },
-  { href: "/dashboard", label: "Báo cáo KPI", icon: LayoutDashboard },
-  { href: "/notifications", label: "Thông báo", icon: Bell },
-];
+export { NAVIGATION_ITEMS } from "@/components/layout/sidebar-context";
+import { NAVIGATION_ITEMS } from "@/components/layout/sidebar-context";
 
 export function LiveClock() {
   const [timeStr, setTimeStr] = React.useState<string>("");

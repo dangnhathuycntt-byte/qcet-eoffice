@@ -137,3 +137,65 @@ describe("AppTopbar Component Contracts", () => {
   });
 });
 
+describe("AppShell Layout Container & Root Integration", () => {
+  const appShellPath = path.resolve(__dirname, "../src/components/layout/app-shell.tsx");
+  const layoutPath = path.resolve(__dirname, "../src/app/layout.tsx");
+  const navPath = path.resolve(__dirname, "../src/components/navigation.tsx");
+
+  it("creates app-shell.tsx with exported AppShell component", () => {
+    assert.ok(fs.existsSync(appShellPath), "app-shell.tsx must exist");
+    const content = fs.readFileSync(appShellPath, "utf-8");
+    assert.ok(content.includes("export function AppShell("), "Must export AppShell component");
+  });
+
+  it("anti-slop rule: 0% emojis in app-shell.tsx source file", () => {
+    const content = fs.readFileSync(appShellPath, "utf-8");
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+    const matches = [...content.matchAll(emojiRegex)];
+    assert.strictEqual(matches.length, 0, `Found emojis in app-shell.tsx: ${matches.map((m) => m[0]).join(", ")}`);
+  });
+
+  it("bypasses sidebar/topbar shell for login route (/login)", () => {
+    const content = fs.readFileSync(appShellPath, "utf-8");
+    assert.ok(content.includes('pathname === "/login"'), "Must check pathname for /login");
+    assert.ok(content.includes("return <>{children}</>;"), "Must render children directly on login route");
+  });
+
+  it("implements adaptive margins/padding conforming to collapsed (md:pl-16) and expanded (md:pl-60)", () => {
+    const content = fs.readFileSync(appShellPath, "utf-8");
+    assert.ok(content.includes('isCollapsed ? "md:pl-16" : "md:pl-60"'), "Must apply adaptive md:pl-16 / md:pl-60");
+    assert.ok(content.includes("transition-all duration-200 ease-in-out"), "Must animate transition smoothly");
+    assert.ok(content.includes("max-w-[1440px]"), "Must constrain content width to 1440px max");
+    assert.ok(content.includes('id="main-content"'), "Must contain id main-content for skip link target");
+  });
+
+  it("wraps inner layout in SidebarProvider context", () => {
+    const content = fs.readFileSync(appShellPath, "utf-8");
+    assert.ok(content.includes("<SidebarProvider>"), "Must wrap with SidebarProvider");
+    assert.ok(content.includes("<AppSidebar />"), "Must render AppSidebar");
+    assert.ok(content.includes("<AppTopbar />"), "Must render AppTopbar");
+  });
+
+  it("re-exports NAVIGATION_ITEMS and maintains backwards compatibility in navigation.tsx", () => {
+    const content = fs.readFileSync(navPath, "utf-8");
+    assert.ok(
+      content.includes('export { NAVIGATION_ITEMS } from "@/components/layout/sidebar-context"'),
+      "Must re-export NAVIGATION_ITEMS from sidebar-context"
+    );
+    assert.ok(content.includes("export function getInitials("), "Must preserve getInitials");
+    assert.ok(content.includes("export function LiveClock("), "Must preserve LiveClock");
+    assert.ok(content.includes("export function ZoomToggle("), "Must preserve ZoomToggle");
+    assert.ok(content.includes("export function MobileNav("), "Must preserve MobileNav");
+    assert.ok(content.includes("export function Navigation("), "Must preserve Navigation");
+  });
+
+  it("wires AppShell into root layout (src/app/layout.tsx)", () => {
+    const content = fs.readFileSync(layoutPath, "utf-8");
+    assert.ok(content.includes('import { AppShell } from "@/components/layout/app-shell"'), "Must import AppShell");
+    assert.ok(content.includes("<AppShell>{children}</AppShell>"), "Must render <AppShell>{children}</AppShell>");
+    assert.ok(!content.includes("<Navigation />"), "Must no longer render legacy standalone <Navigation /> in root");
+    assert.ok(content.includes('href="#main-content"'), "Must preserve skip to main content accessibility link");
+  });
+});
+
+
