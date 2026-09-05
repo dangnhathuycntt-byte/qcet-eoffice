@@ -82,6 +82,14 @@ describe("ExecutiveStatStrip Helpers", () => {
     assert.equal(cards[3].iconName, "CheckCircle2");
   });
 
+  test("stat cards provide consistent unique IDs for executive workboxes", () => {
+    const cards = getStatCardData(mockStats);
+    assert.deepEqual(
+      cards.map((c) => c.id),
+      ["school-tasks", "unit-tasks", "urgent-tasks", "overall-progress"]
+    );
+  });
+
   test("formatNumber formats integers correctly", () => {
     assert.equal(formatNumber(0), "0");
     assert.equal(formatNumber(304), "304");
