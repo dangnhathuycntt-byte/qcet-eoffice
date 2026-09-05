@@ -1,4 +1,4 @@
-export type TaskStatus = 'NEW' | 'IN_PROGRESS' | 'NEEDS_REVIEW' | 'COMPLETED';
+export type TaskStatus = 'NEW' | 'IN_PROGRESS' | 'BLOCKED' | 'NEEDS_REVIEW' | 'COMPLETED';
 
 export type TaskCategory =
   | 'CHUYEN_DOI_SO'
@@ -9,6 +9,14 @@ export type TaskCategory =
   | 'BAO_CAO'
   | 'KHAC';
 
+export interface DeliverableItem {
+  id: string;
+  name: string;
+  url?: string;
+  fileType?: string;
+  submittedAt?: string;
+}
+
 export interface StaffTask {
   id: string;
   title: string;
@@ -16,8 +24,14 @@ export interface StaffTask {
   assigneeAvatar?: string;
   status: TaskStatus;
   dueDate: string;
+  internalDueDate?: string;
   parentSchoolTaskId: string;
   updatedAt: string;
+  deliverables?: DeliverableItem[];
+  deliverableDescription?: string;
+  vtvlRole?: string;
+  blockedReason?: string;
+  rejectionReason?: string;
 }
 
 export interface SchoolTask {
@@ -27,14 +41,42 @@ export interface SchoolTask {
   categoryLabel: string;
   leadAssigneeName: string;
   leadAssigneeAvatar?: string;
+  leadDepartment?: string;
+  leadDepartmentCode?: string;
   coAssignees: string[];
+  coDepartments?: string[];
+  coDepartmentCodes?: string[];
   assignedDate: string;
   dueDate: string;
-  status: 'IN_PROGRESS' | 'COMPLETED';
+  status: 'IN_PROGRESS' | 'PENDING_EXECUTIVE_APPROVAL' | 'COMPLETED';
   subTasks: StaffTask[];
   totalSubTasks: number;
   completedSubTasks: number;
   progressPercent: number;
+  executiveCriteria?: string;
+  completionReport?: {
+    summary: string;
+    submittedBy: string;
+    submittedAt: string;
+    reportUrl?: string;
+  };
+}
+
+export interface CollaborationRequest {
+  id: string;
+  schoolTaskId: string;
+  schoolTaskTitle: string;
+  fromDeptCode: string;
+  fromDeptName: string;
+  toDeptCode: string;
+  toDeptName: string;
+  requestedBy: string;
+  description: string;
+  requiredDeliverables: string;
+  dueDate: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  assignedStaffIds?: string[];
+  createdAt: string;
 }
 
 export interface DashboardStats {
