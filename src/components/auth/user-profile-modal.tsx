@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   User,
   Building2,
@@ -29,6 +30,11 @@ export function UserProfileModal() {
   const [phone, setPhone] = React.useState(user.phone || "");
   const [role, setRole] = React.useState<UserRole>(user.role || "STAFF");
   const [savedSuccess, setSavedSuccess] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync state with current user when modal opens
   React.useEffect(() => {
@@ -80,16 +86,16 @@ export function UserProfileModal() {
     }, 800);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto !m-0">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in !m-0"
         onClick={() => setIsProfileModalOpen(false)}
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto my-auto">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-border/60 pb-4">
           <div className="flex items-center gap-3">
@@ -327,4 +333,10 @@ export function UserProfileModal() {
       </div>
     </div>
   );
+
+  if (mounted && typeof document !== "undefined") {
+    return createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 }

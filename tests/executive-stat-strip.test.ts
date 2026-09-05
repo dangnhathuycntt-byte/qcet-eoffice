@@ -39,12 +39,12 @@ describe("ExecutiveStatStrip Helpers", () => {
     // Card 1: Nhiệm vụ cấp Trường
     assert.equal(cards[0].title, "Nhiệm vụ cấp Trường");
     assert.ok(cards[0].subtext?.includes("212 đang làm"));
-    assert.ok(cards[0].subtext?.includes("92 xong"));
+    assert.ok(cards[0].subtext?.includes("92 hoàn thiện"));
 
     // Card 2: Công việc Đơn vị
     assert.equal(cards[1].title, "Công việc Đơn vị");
     assert.ok(cards[1].subtext?.includes("580 đang làm"));
-    assert.ok(cards[1].subtext?.includes("290 xong"));
+    assert.ok(cards[1].subtext?.includes("290 hoàn thiện"));
 
     // Card 3: Cần xử lý & Trễ hạn
     assert.equal(cards[2].title, "Cần xử lý & Trễ hạn");

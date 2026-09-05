@@ -1334,16 +1334,16 @@ export function OrganizationTree({
                                 className={cn(
                                   "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer text-left",
                                   isSelected
-                                    ? "bg-secondary text-foreground font-medium border-l-2 border-primary"
+                                    ? "bg-primary/10 text-primary font-semibold shadow-xs"
                                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                                 )}
                               >
                                 <div className="flex items-center gap-1.5 min-w-0 pr-1">
                                   <span
                                     className={cn(
-                                      "size-1.5 rounded-full shrink-0",
+                                      "size-1.5 rounded-full shrink-0 transition-all",
                                       isSelected
-                                        ? "bg-primary"
+                                        ? "bg-primary ring-2 ring-primary/20"
                                         : "bg-muted-foreground/40"
                                     )}
                                   />
@@ -1354,9 +1354,9 @@ export function OrganizationTree({
                                 <Badge
                                   variant={isSelected ? "default" : "outline"}
                                   className={cn(
-                                    "text-[10px] h-4 px-1.5 shrink-0 rounded-md font-mono tabular-nums",
+                                    "text-[10px] h-4 px-1.5 shrink-0 rounded-md font-mono tabular-nums transition-colors",
                                     isSelected
-                                      ? "bg-primary text-primary-foreground border-transparent"
+                                      ? "bg-primary/20 text-primary border border-primary/30"
                                       : "text-muted-foreground"
                                   )}
                                 >

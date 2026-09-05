@@ -112,8 +112,16 @@ export function transitionStaffTaskStatus(
 
   // Rule 2: Submitting to NEEDS_REVIEW requires deliverables
   if (newStatus === "NEEDS_REVIEW") {
-    const deliverables = payload?.deliverables || task.deliverables || [];
-    const notes = payload?.notes || task.deliverableDescription;
+    const deliverables =
+      payload?.deliverables !== undefined
+        ? payload.deliverables
+        : task.deliverables || [];
+    const notes =
+      payload?.notes !== undefined
+        ? payload.notes
+        : task.deliverables && task.deliverables.length > 0
+        ? task.deliverableDescription
+        : "";
     const check = validateDeliverableSubmission(task, deliverables, notes);
     if (!check.valid) {
       return { success: false, error: check.error };

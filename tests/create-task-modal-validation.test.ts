@@ -162,6 +162,8 @@ describe("Create Task Modal Constraints & Helpers", () => {
       progressPercent: 50,
       totalSubTasks: 2,
       completedSubTasks: 1,
+      coAssignees: [],
+      subTasks: [],
     };
 
     const invalidForm = {
