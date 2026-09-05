@@ -313,6 +313,30 @@ export function CascadingTaskTable({
     const userName = user?.name?.toLowerCase() || "";
     const today = new Date("2026-09-04T00:00:00");
 
+    // ADMIN (BGH) sees all tasks in "Việc tôi giao/nhận" context
+    if (user?.role === "ADMIN") {
+      if (activeWorkbox === "MY_RECEIVED" || activeWorkbox === "MY_ASSIGNED") {
+        return tasks;
+      }
+      if (activeWorkbox === "URGENT") {
+        return tasks.filter((t) => {
+          const isPastDue =
+            t.dueDate &&
+            new Date(t.dueDate.split("T")[0] + "T00:00:00") < today &&
+            t.status !== "COMPLETED";
+          const hasSubUrgent = t.subTasks?.some((s) => {
+            const sPast =
+              s.dueDate &&
+              new Date(s.dueDate.split("T")[0] + "T00:00:00") < today &&
+              s.status !== "COMPLETED";
+            return sPast || s.status === "NEEDS_REVIEW";
+          });
+          return isPastDue || hasSubUrgent;
+        });
+      }
+      return tasks;
+    }
+
     if (activeWorkbox === "MY_RECEIVED") {
       return tasks.filter((t) => {
         const isLead = t.leadAssigneeName.toLowerCase().includes(userName);
@@ -327,7 +351,6 @@ export function CascadingTaskTable({
     }
 
     if (activeWorkbox === "MY_ASSIGNED") {
-      if (user?.role === "ADMIN") return tasks;
       return tasks.filter((t) =>
         t.leadAssigneeName.toLowerCase().includes(userName)
       );
@@ -357,6 +380,7 @@ export function CascadingTaskTable({
   const workboxCounts = React.useMemo(() => {
     const userName = user?.name?.toLowerCase() || "";
     const today = new Date("2026-09-04T00:00:00");
+    const isAdmin = user?.role === "ADMIN";
 
     let received = 0;
     let assigned = 0;
@@ -370,9 +394,9 @@ export function CascadingTaskTable({
       const hasSub = t.subTasks?.some((s) =>
         s.assigneeName.toLowerCase().includes(userName)
       );
-      if (isLead || isCo || hasSub) received++;
-
-      if (user?.role === "ADMIN" || isLead) assigned++;
+      // ADMIN sees all tasks in their "received" box
+      if (isAdmin || isLead || isCo || hasSub) received++;
+      if (isAdmin || isLead) assigned++;
 
       const isPastDue =
         t.dueDate &&

@@ -248,17 +248,17 @@ export function Navigation() {
           <ZoomToggle />
           <RoleSwitcherPill />
 
-          {/* Quick Create Task Action Button */}
+          {/* Quick Create Task Action Button — always visible on sm+ */}
           <Button
             type="button"
             size="sm"
             onClick={() => setIsCreateModalOpen(true)}
-            className="hidden sm:inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-hover transition-all cursor-pointer"
-            title="Giao việc nhanh toàn hệ thống"
+            className="inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-hover transition-all cursor-pointer"
+            title="Giao việc nhanh toàn hệ thống (phím N)"
           >
             <Plus className="size-3.5" />
-            <span>Giao việc</span>
-            <kbd className="ml-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/20 px-1 py-0.5 text-[9.5px] font-mono leading-none opacity-90">
+            <span className="hidden sm:inline">Giao việc</span>
+            <kbd className="ml-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/20 px-1 py-0.5 text-[9.5px] font-mono leading-none opacity-90 hidden sm:inline">
               N
             </kbd>
           </Button>
