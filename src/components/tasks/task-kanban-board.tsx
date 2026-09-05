@@ -6,17 +6,13 @@ import {
   ChevronRight,
   Plus,
   Calendar,
-  User,
-  Users,
   Building2,
+  Users,
   CheckCircle2,
   Clock,
   AlertCircle,
+  Circle,
   FolderTree,
-  Search,
-  Filter,
-  Layers,
-  Sparkles,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -26,11 +22,8 @@ import type {
 } from "@/types/dashboard";
 import {
   getCategoryBadgeConfig,
-  getStatusBadgeConfig,
   CATEGORY_TABS,
 } from "@/components/dashboard/cascading-task-table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type TaskLevelFilter = "ALL" | "TRUONG" | "DON_VI";
@@ -41,6 +34,7 @@ export interface KanbanColumnConfig {
   label: string;
   emoji: string;
   dotColor: string;
+  iconColor: string;
   accentBorder: string;
   headerAccent: string;
   badgeClass: string;
@@ -50,14 +44,15 @@ export interface KanbanColumnConfig {
 export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
     id: "NEW",
-    title: "Mới tiếp nhận",
-    label: "Mới tiếp nhận",
+    title: "Mới / Tiếp nhận",
+    label: "Mới / Tiếp nhận",
     emoji: "",
-    dotColor: "bg-violet-500",
-    accentBorder: "border-t-violet-500",
-    headerAccent: "border-t-2 border-t-violet-500",
-    badgeClass: "border-violet-500/20 bg-violet-500/10 text-violet-600 dark:text-violet-400",
-    bgClass: "bg-violet-500/[0.02] dark:bg-violet-500/[0.03]",
+    dotColor: "bg-slate-500",
+    iconColor: "text-slate-500 dark:text-slate-400",
+    accentBorder: "border-t-slate-500",
+    headerAccent: "border-t-2 border-t-slate-500",
+    badgeClass: "border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+    bgClass: "bg-muted/10",
   },
   {
     id: "IN_PROGRESS",
@@ -65,21 +60,23 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Đang thực hiện",
     emoji: "",
     dotColor: "bg-blue-500",
+    iconColor: "text-blue-500 dark:text-blue-400",
     accentBorder: "border-t-blue-500",
     headerAccent: "border-t-2 border-t-blue-500",
     badgeClass: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
-    bgClass: "bg-blue-500/[0.02] dark:bg-blue-500/[0.03]",
+    bgClass: "bg-muted/10",
   },
   {
     id: "NEEDS_REVIEW",
-    title: "Chờ duyệt / Cần sửa",
+    title: "Cần chỉnh sửa",
     label: "Cần chỉnh sửa",
     emoji: "",
     dotColor: "bg-amber-500",
+    iconColor: "text-amber-500 dark:text-amber-400",
     accentBorder: "border-t-amber-500",
     headerAccent: "border-t-2 border-t-amber-500",
     badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-    bgClass: "bg-amber-500/[0.02] dark:bg-amber-500/[0.03]",
+    bgClass: "bg-muted/10",
   },
   {
     id: "COMPLETED",
@@ -87,12 +84,23 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Hoàn thành",
     emoji: "",
     dotColor: "bg-emerald-500",
+    iconColor: "text-emerald-500 dark:text-emerald-400",
     accentBorder: "border-t-emerald-500",
     headerAccent: "border-t-2 border-t-emerald-500",
     badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    bgClass: "bg-emerald-500/[0.02] dark:bg-emerald-500/[0.03]",
+    bgClass: "bg-muted/10",
   },
 ];
+
+const COLUMN_ICONS: Record<
+  TaskStatus,
+  React.ComponentType<{ className?: string; strokeWidth?: number }>
+> = {
+  NEW: Circle,
+  IN_PROGRESS: Clock,
+  NEEDS_REVIEW: AlertCircle,
+  COMPLETED: CheckCircle2,
+};
 
 export interface KanbanItem {
   id: string;
@@ -114,7 +122,12 @@ export interface KanbanItem {
   rawTask: SchoolTask | StaffTask;
 }
 
-const STATUS_ORDER: TaskStatus[] = ["NEW", "IN_PROGRESS", "NEEDS_REVIEW", "COMPLETED"];
+const STATUS_ORDER: TaskStatus[] = [
+  "NEW",
+  "IN_PROGRESS",
+  "NEEDS_REVIEW",
+  "COMPLETED",
+];
 
 export function getNextStatus(status: TaskStatus): TaskStatus | null {
   const index = STATUS_ORDER.indexOf(status);
@@ -202,7 +215,9 @@ export function filterKanbanItems(
     if (query) {
       const matchTitle = item.title.toLowerCase().includes(query);
       const matchAssignee = item.assigneeName.toLowerCase().includes(query);
-      const matchParent = item.parentSchoolTaskTitle?.toLowerCase().includes(query);
+      const matchParent = item.parentSchoolTaskTitle
+        ?.toLowerCase()
+        .includes(query);
       if (!matchTitle && !matchAssignee && !matchParent) {
         return false;
       }
@@ -218,7 +233,12 @@ export function groupTasksByStatus(
   categoryFilter: TaskCategory | "ALL" = "ALL",
   searchQuery: string = ""
 ): Record<TaskStatus, KanbanItem[]> {
-  const filtered = filterKanbanItems(tasks, levelFilter, categoryFilter, searchQuery);
+  const filtered = filterKanbanItems(
+    tasks,
+    levelFilter,
+    categoryFilter,
+    searchQuery
+  );
 
   const grouped: Record<TaskStatus, KanbanItem[]> = {
     NEW: [],
@@ -270,7 +290,10 @@ export interface TaskKanbanBoardProps {
   tasks: SchoolTask[];
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
-  onAddTask?: (initialLevel?: "TRUONG" | "DON_VI", initialParentTaskId?: string) => void;
+  onAddTask?: (
+    initialLevel?: "TRUONG" | "DON_VI",
+    initialParentTaskId?: string
+  ) => void;
   levelFilter?: TaskLevelFilter;
   categoryFilter?: TaskCategory | "ALL";
   searchQuery?: string;
@@ -296,7 +319,12 @@ export function TaskKanbanBoard({
   });
 
   const groupedTasks = React.useMemo(() => {
-    return groupTasksByStatus(tasks, levelFilter, categoryFilter, deferredSearchQuery);
+    return groupTasksByStatus(
+      tasks,
+      levelFilter,
+      categoryFilter,
+      deferredSearchQuery
+    );
   }, [tasks, levelFilter, categoryFilter, deferredSearchQuery]);
 
   return (
@@ -310,33 +338,32 @@ export function TaskKanbanBoard({
           const count = colTasks.length;
           const limit = colLimits[col.id] || 30;
           const displayedTasks = colTasks.slice(0, limit);
+          const IconComponent = COLUMN_ICONS[col.id];
 
           return (
             <div
               key={col.id}
               className={cn(
-                "flex flex-col rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xs p-3.5 shadow-card transition-all",
+                "flex flex-col rounded-xl border border-border/60 bg-muted/20 backdrop-blur-xs p-3.5 transition-all",
                 col.bgClass
               )}
             >
-              {/* Column Header with Colored Accent Border */}
+              {/* Column Header with Lucide icon and Micro-Pill Counter */}
               <div
                 className={cn(
-                  "flex items-center justify-between pb-3 border-b border-border/50 pt-1.5 px-0.5",
+                  "flex items-center justify-between pb-3 border-b border-border/50 pt-1 px-0.5",
                   col.headerAccent
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <span className={cn("size-2 rounded-full ring-2 ring-background", col.dotColor)} />
-                  <h3 className="text-xs font-bold text-foreground tracking-tight">
+                  <IconComponent
+                    strokeWidth={1.5}
+                    className={cn("size-3.5 shrink-0", col.iconColor)}
+                  />
+                  <h3 className="text-xs font-semibold text-foreground tracking-tight">
                     {col.title}
                   </h3>
-                  <span
-                    className={cn(
-                      "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold",
-                      col.badgeClass
-                    )}
-                  >
+                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-mono tabular-nums text-muted-foreground bg-muted/60 border border-border/40">
                     {count}
                   </span>
                 </div>
@@ -348,7 +375,7 @@ export function TaskKanbanBoard({
                     title={`Thêm công việc vào mục ${col.title}`}
                     className="size-6 flex items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
                   >
-                    <Plus className="size-3.5" />
+                    <Plus strokeWidth={1.5} className="size-3.5" />
                   </button>
                 )}
               </div>
@@ -356,169 +383,221 @@ export function TaskKanbanBoard({
               {/* Column Task Cards */}
               <div className="flex-1 space-y-2.5 pt-3 overflow-y-auto max-h-[calc(100vh-280px)] min-h-[160px] thin-scrollbar pr-0.5">
                 {colTasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground/60 border border-dashed border-border/60 rounded-xl bg-muted/20">
-                    <span className="text-xs">Không có nhiệm vụ</span>
+                  <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground/60 border border-dashed border-border/60 rounded-lg bg-card/40">
+                    <span className="text-xs font-medium">Không có nhiệm vụ</span>
                   </div>
                 ) : (
                   <>
                     {displayedTasks.map((item) => {
-                    const categoryConfig = getCategoryBadgeConfig(item.category);
-                    const overdue = isOverdue(item.dueDate, item.status);
-                    const prevStatus = getPrevStatus(item.status);
-                    const nextStatus = getNextStatus(item.status);
+                      const categoryConfig = getCategoryBadgeConfig(
+                        item.category
+                      );
+                      const overdue = isOverdue(item.dueDate, item.status);
+                      const prevStatus = getPrevStatus(item.status);
+                      const nextStatus = getNextStatus(item.status);
 
-                    return (
-                      <div
-                        key={item.id}
-                        onClick={() => onSelectTask?.(item.rawTask)}
-                        className={cn(
-                          "group relative flex flex-col gap-2.5 rounded-xl border border-border/50 shadow-xs hover:shadow-card bg-card p-3.5 transition-all cursor-pointer text-card-foreground hover:border-border/80 active:scale-[0.99]",
-                          item.level === "TRUONG"
-                            ? "border-l-[3px] border-l-blue-600 dark:border-l-blue-400"
-                            : "border-l-[3px] border-l-indigo-500 dark:border-l-indigo-400"
-                        )}
-                      >
-                        {/* Top Row: Level Indicator & Category Badge */}
-                        <div className="flex items-center justify-between gap-1.5 flex-wrap">
-                          <div className="flex items-center gap-1.5">
-                            {item.level === "TRUONG" ? (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
-                                <Building2 className="size-2.5" />
-                                <span>Cấp Trường</span>
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800">
-                                <Users className="size-2.5" />
-                                <span>Đơn vị</span>
-                              </span>
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => onSelectTask?.(item.rawTask)}
+                          className={cn(
+                            "group relative flex flex-col justify-between rounded-lg border border-border/60 bg-card p-3.5 text-card-foreground transition-all duration-150 cursor-pointer shadow-2xs",
+                            "hover:border-primary/40 hover:shadow-subtle hover:-translate-y-[1px] active:translate-y-0",
+                            item.level === "TRUONG"
+                              ? "border-l-2 border-l-blue-500/70"
+                              : "border-l-2 border-l-indigo-500/70"
+                          )}
+                        >
+                          <div className="space-y-2">
+                            {/* Top Row: Level Indicator & Category Badge */}
+                            <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                              <div className="flex items-center gap-1.5">
+                                {item.level === "TRUONG" ? (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                    <Building2
+                                      strokeWidth={1.5}
+                                      className="size-3"
+                                    />
+                                    <span>Cấp Trường</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                    <Users
+                                      strokeWidth={1.5}
+                                      className="size-3"
+                                    />
+                                    <span>Đơn vị</span>
+                                  </span>
+                                )}
+
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border border-border/50",
+                                    categoryConfig.className
+                                  )}
+                                >
+                                  {categoryConfig.label}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Title & Parent School Task */}
+                            <div>
+                              {item.parentSchoolTaskTitle && (
+                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1 line-clamp-1">
+                                  <FolderTree
+                                    strokeWidth={1.5}
+                                    className="size-3 shrink-0 text-muted-foreground/70"
+                                  />
+                                  <span className="truncate">
+                                    {item.parentSchoolTaskTitle}
+                                  </span>
+                                </div>
+                              )}
+                              <h4 className="text-xs font-semibold text-foreground line-clamp-2 group-hover:text-primary leading-snug transition-colors">
+                                {item.title}
+                              </h4>
+                            </div>
+                          </div>
+
+                          {/* Bottom Area: Micro Progress Bar (for School Tasks) & Footer */}
+                          <div className="mt-2.5 space-y-2">
+                            {/* 2px Micro Progress Bar (h-1) */}
+                            {item.level === "TRUONG" && (
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono tabular-nums">
+                                  <span className="text-muted-foreground/70">
+                                    Tiến độ
+                                  </span>
+                                  <span>{item.progressPercent ?? 0}%</span>
+                                </div>
+                                <div className="h-1 w-full overflow-hidden rounded-full bg-muted/60">
+                                  <div
+                                    className={cn(
+                                      "h-full rounded-full transition-all duration-300",
+                                      (item.progressPercent ?? 0) === 100
+                                        ? "bg-emerald-500"
+                                        : (item.progressPercent ?? 0) >= 50
+                                        ? "bg-blue-500"
+                                        : "bg-amber-500"
+                                    )}
+                                    style={{
+                                      width: `${Math.min(
+                                        100,
+                                        Math.max(0, item.progressPercent ?? 0)
+                                      )}%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
                             )}
 
-                            <span
-                              className={cn(
-                                "inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium border",
-                                categoryConfig.className
-                              )}
-                            >
-                              {categoryConfig.label}
-                            </span>
+                            {/* Footer Info: Assignee, Due Date & Quick Status Move Buttons */}
+                            <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/40">
+                              {/* Assignee & Due Date */}
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div
+                                  className="size-[22px] rounded-full bg-secondary text-foreground border border-border/80 flex items-center justify-center text-[10px] font-semibold font-mono shrink-0"
+                                  title={item.assigneeName}
+                                >
+                                  {getInitials(item.assigneeName)}
+                                </div>
+                                <div className="flex items-center gap-1 text-[11px] truncate text-muted-foreground">
+                                  <Calendar
+                                    strokeWidth={1.5}
+                                    className={cn(
+                                      "size-3 shrink-0",
+                                      overdue ? "text-destructive" : ""
+                                    )}
+                                  />
+                                  <span
+                                    className={cn(
+                                      "truncate font-mono tabular-nums text-[11px]",
+                                      overdue
+                                        ? "text-destructive font-semibold"
+                                        : ""
+                                    )}
+                                  >
+                                    {formatDate(item.dueDate)}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Quick Move Buttons */}
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  disabled={!prevStatus}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (prevStatus && onStatusChange) {
+                                      onStatusChange(item.id, prevStatus);
+                                    }
+                                  }}
+                                  title={
+                                    prevStatus
+                                      ? `Chuyển về ${prevStatus}`
+                                      : "Không thể lùi"
+                                  }
+                                  className={cn(
+                                    "size-6 flex items-center justify-center rounded border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer",
+                                    !prevStatus &&
+                                      "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
+                                  )}
+                                >
+                                  <ChevronLeft
+                                    strokeWidth={1.5}
+                                    className="size-3.5"
+                                  />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={!nextStatus}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (nextStatus && onStatusChange) {
+                                      onStatusChange(item.id, nextStatus);
+                                    }
+                                  }}
+                                  title={
+                                    nextStatus
+                                      ? `Chuyển sang ${nextStatus}`
+                                      : "Không thể tiến"
+                                  }
+                                  className={cn(
+                                    "size-6 flex items-center justify-center rounded border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer",
+                                    !nextStatus &&
+                                      "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
+                                  )}
+                                >
+                                  <ChevronRight
+                                    strokeWidth={1.5}
+                                    className="size-3.5"
+                                  />
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </div>
-
-                        {/* Title */}
-                        <div>
-                          {item.parentSchoolTaskTitle && (
-                            <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1 line-clamp-1">
-                              <FolderTree className="size-3 shrink-0 text-muted-foreground/70" />
-                              <span className="truncate">{item.parentSchoolTaskTitle}</span>
-                            </div>
-                          )}
-                          <h4 className="text-xs font-semibold text-foreground line-clamp-2 group-hover:text-primary leading-snug transition-colors">
-                            {item.title}
-                          </h4>
-                        </div>
-
-                        {/* Progress Bar (for School Tasks) */}
-                        {item.level === "TRUONG" && (
-                          <div className="space-y-1 pt-0.5">
-                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                              <span>
-                                {item.completedSubTasks ?? 0}/{item.totalSubTasks ?? 0} đơn vị xong
-                              </span>
-                              <span className="font-semibold text-foreground">
-                                {item.progressPercent ?? 0}%
-                              </span>
-                            </div>
-                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary/80">
-                              <div
-                                className={cn(
-                                  "h-full rounded-full transition-all duration-300",
-                                  (item.progressPercent ?? 0) === 100
-                                    ? "bg-emerald-600"
-                                    : (item.progressPercent ?? 0) >= 50
-                                    ? "bg-blue-600"
-                                    : "bg-amber-500"
-                                )}
-                                style={{ width: `${Math.min(100, Math.max(0, item.progressPercent ?? 0))}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Footer Info: Assignee, Due Date & Quick Status Move Buttons */}
-                        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/50">
-                          {/* Assignee & Due Date */}
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div
-                              className="size-5 rounded-full bg-secondary text-foreground border border-border/80 flex items-center justify-center text-[9px] font-bold shrink-0"
-                              title={item.assigneeName}
-                            >
-                              {getInitials(item.assigneeName)}
-                            </div>
-                            <div className="flex items-center gap-1 text-[11px] truncate text-muted-foreground">
-                              <Calendar className={cn("size-3 shrink-0", overdue ? "text-destructive" : "")} />
-                              <span className={cn("truncate font-mono", overdue ? "text-destructive font-semibold" : "")}>
-                                {formatDate(item.dueDate)}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Quick Move Buttons (◀ / ▶) */}
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              disabled={!prevStatus}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (prevStatus && onStatusChange) {
-                                  onStatusChange(item.id, prevStatus);
-                                }
-                              }}
-                              title={prevStatus ? `Chuyển về ${prevStatus}` : "Không thể lùi"}
-                              className={cn(
-                                "size-6 flex items-center justify-center rounded-md border border-border/80 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer",
-                                !prevStatus && "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
-                              )}
-                            >
-                              <ChevronLeft className="size-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={!nextStatus}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (nextStatus && onStatusChange) {
-                                  onStatusChange(item.id, nextStatus);
-                                }
-                              }}
-                              title={nextStatus ? `Chuyển sang ${nextStatus}` : "Không thể tiến"}
-                              className={cn(
-                                "size-6 flex items-center justify-center rounded-md border border-border/80 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer",
-                                !nextStatus && "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
-                              )}
-                            >
-                              <ChevronRight className="size-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {colTasks.length > limit && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setColLimits((prev) => ({
-                          ...prev,
-                          [col.id]: (prev[col.id] || 30) + 30,
-                        }))
-                      }
-                      className="w-full py-2 px-3 text-xs font-semibold rounded-xl border border-border/70 bg-card hover:bg-secondary/70 text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-2xs"
-                    >
-                      Hiển thị thêm {Math.min(30, colTasks.length - limit)} việc (còn {colTasks.length - limit})
-                    </button>
-                  )}
-                </>
+                      );
+                    })}
+                    {colTasks.length > limit && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setColLimits((prev) => ({
+                            ...prev,
+                            [col.id]: (prev[col.id] || 30) + 30,
+                          }))
+                        }
+                        className="w-full py-2 px-3 text-xs font-semibold font-mono tabular-nums rounded-lg border border-border/70 bg-card hover:bg-secondary/70 text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-2xs"
+                      >
+                        Hiển thị thêm {Math.min(30, colTasks.length - limit)}{" "}
+                        việc (còn {colTasks.length - limit})
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
