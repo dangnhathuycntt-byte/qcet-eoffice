@@ -32,7 +32,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { filterTasksByRole } from "@/lib/role-task-filter";
-import { RoleViewpointBanner } from "@/components/auth/role-viewpoint-banner";
 import {
   LayoutGrid,
   List,
@@ -66,6 +65,14 @@ export default function UnitTasksPage() {
     () => filterTasksByRole(dashboardData.tasks, user),
     [dashboardData.tasks, user]
   );
+
+  const parentSchoolTaskTitle = React.useMemo(() => {
+    if (!selectedTask || isSchoolTask(selectedTask)) return undefined;
+    const parent = dashboardData.tasks.find(
+      (t) => t.id === selectedTask.parentSchoolTaskId
+    );
+    return parent?.title;
+  }, [selectedTask, dashboardData.tasks]);
 
   // 2. View Mode & Filtering States (default level filter to DON_VI)
   const [viewMode, setViewMode] = React.useState<ViewMode>("kanban");
@@ -235,25 +242,14 @@ export default function UnitTasksPage() {
       className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10"
       data-slot="twenty-unit-tasks-page"
     >
-      {/* ========================================================================= */}
-      {/* 1. Page Header with QCET Badge, Bold Title, and Actions                   */}
-      {/* ========================================================================= */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Clean Page Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-              <Briefcase className="size-3" />
-              <span>CÔNG VIỆC ĐƠN VỊ & PHÒNG BAN</span>
-            </span>
-            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
-              • Quản lý Nhiệm vụ cấp Đơn vị
-            </span>
-          </div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl flex items-center gap-2">
-            <span>Nhiệm vụ & Công việc cấp Đơn vị</span>
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading">
+            Công việc cấp Đơn vị
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Chi tiết các công việc, phân công nội bộ và tiến độ xử lý của từng phòng ban, khoa chuyên môn
+            Tiến độ triển khai và phân công thực hiện theo đơn vị
           </p>
         </div>
 
@@ -304,25 +300,8 @@ export default function UnitTasksPage() {
             />
             <span className="hidden sm:inline">Làm mới</span>
           </button>
-
-          {/* + Giao việc Button */}
-          <Button
-            type="button"
-            onClick={() => openCreateModal("DON_VI")}
-            className="h-8.5 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-card-hover transition-all cursor-pointer rounded-lg"
-          >
-            <Plus className="size-3.5" />
-            <span>+ Phân công</span>
-          </Button>
         </div>
       </div>
-
-      {/* ========================================================================= */}
-      {/* 2. Role Viewpoint Banner (RBAC Real-time Scope Indicator)                */}
-      {/* ========================================================================= */}
-      <section aria-label="Góc nhìn vai trò">
-        <RoleViewpointBanner />
-      </section>
 
       {/* ========================================================================= */}
       {/* 3. Global Filter & Search Toolbar                                        */}
@@ -434,6 +413,7 @@ export default function UnitTasksPage() {
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         onStatusChange={handleStatusChange}
+        parentSchoolTaskTitle={parentSchoolTaskTitle}
       />
 
       {/* ========================================================================= */}

@@ -302,6 +302,112 @@ const TEMPLATE_TITLES: { title: string; category: TaskCategory }[] = [
   { title: "Khảo sát sự hài lòng của doanh nghiệp về chất lượng sinh viên tốt nghiệp", category: "BAO_CAO" },
 ];
 
+const REALISTIC_SUFFIXES = [
+  " - Học kỳ I (2026-2027)",
+  " - Khu giảng đường A",
+  " - Khu xưởng thực hành B",
+  " - Khoa CNTT & Tự động hóa",
+  " - Khoa Cơ khí chế tạo",
+  " - Khoa Điện - Điện tử",
+  " - Quý III/2026",
+  " - Tháng 9/2026",
+  " - Phòng Đào tạo & QLKH",
+  " - Phòng Công tác sinh viên",
+  " - Thư viện trung tâm",
+  " - Cơ sở đào tạo Quy Nhơn",
+  " - Đợt đầu năm học",
+  " - Khối các phòng ban chức năng",
+  " - Trung tâm đào tạo lái xe & nghề",
+  " - Phòng Khảo thí & ĐBCL",
+];
+
+const CATEGORY_SUBTASK_TEMPLATES: Record<TaskCategory, string[]> = {
+  ATTT: [
+    "Rà soát chính sách bảo mật và phân quyền hệ thống máy chủ",
+    "Sao lưu dữ liệu định kỳ và kiểm tra tính toàn vẹn CSDL",
+    "Quét và vá lỗ hổng bảo mật cổng thông tin đào tạo",
+    "Giám sát lưu lượng mạng và nhật ký tường lửa trung tâm",
+    "Kiểm tra nhật ký đăng nhập và phát hiện bất thường",
+    "Cập nhật chứng chỉ số SSL và mã hóa đường truyền nội bộ",
+    "Diễn tập phương án ứng cứu sự cố an toàn thông tin",
+    "Đánh giá rủi ro an ninh mạng định kỳ tháng",
+    "Cấu hình hệ thống phát hiện xâm nhập IDS/IPS",
+    "Kiểm tra tính an toàn các bản sao lưu lưu trữ ngoại vi",
+  ],
+  CNTT: [
+    "Khảo sát và bảo trì hệ thống cáp mạng các phòng học",
+    "Cấu hình và tối ưu hóa thiết bị wifi phòng thực hành",
+    "Cài đặt phần mềm chuyên ngành cho các phòng lab máy tính",
+    "Kiểm tra và thay thế thiết bị chuyển mạch switch bị suy hao",
+    "Bảo dưỡng định kỳ hệ thống máy chủ và lưu điện UPS",
+    "Hỗ trợ kỹ thuật phần cứng CNTT cho các đơn vị phòng ban",
+    "Nâng cấp băng thông và đường truyền Internet nội bộ",
+    "Lập kế hoạch bảo trì máy tính phục vụ kỳ thi tốt nghiệp",
+    "Kiểm tra kết nối mạng giữa các tòa nhà khu hiệu bộ",
+    "Cập nhật danh mục tài sản thiết bị tin học năm 2026",
+  ],
+  CHUYEN_DOI_SO: [
+    "Số hóa hồ sơ cán bộ viên chức và học sinh sinh viên",
+    "Chuẩn hóa quy trình liên thông văn bản điện tử nội bộ",
+    "Tập huấn cán bộ sử dụng chữ ký số và văn phòng số",
+    "Đồng bộ cơ sở dữ liệu với cổng dịch vụ công trực tuyến",
+    "Kiểm thử tính năng mới trên phần mềm quản lý đào tạo",
+    "Tích hợp cổng thanh toán học phí trực tuyến liên ngân hàng",
+    "Khảo sát mức độ hài lòng về dịch vụ hành chính số",
+    "Dự thảo báo cáo đánh giá chỉ số chuyển đổi số DTI",
+    "Kiểm tra đồng bộ danh mục mã định danh sinh viên",
+    "Tối ưu hóa giao diện biểu mẫu khảo sát trực tuyến",
+  ],
+  TRUYEN_THONG: [
+    "Biên tập tin bài và xử lý hình ảnh đăng website nhà trường",
+    "Thiết kế ấn phẩm truyền thông và banner thông báo tuyển sinh",
+    "Sản xuất video clip phóng sự giới thiệu các ngành đào tạo",
+    "Cập nhật thông tin tuyển sinh và tư vấn trên mạng xã hội",
+    "Ghi hình và đưa tin sự kiện hội nghị cán bộ viên chức",
+    "Phát hành bản tin nội bộ điện tử chào đón tân sinh viên",
+    "Phối hợp với cơ quan báo đài địa phương đưa tin tuyên truyền",
+    "Khảo sát nhu cầu thông tin của học sinh và phụ huynh",
+    "Thiết kế backdrop và tài liệu phục vụ lễ bế giảng",
+    "Tổng hợp số liệu tương tác truyền thông số các kênh",
+  ],
+  THU_VIEN: [
+    "Phân loại, lập danh mục và dán mã vạch sách giáo trình mới",
+    "Cập nhật cơ sở dữ liệu tài liệu và giáo trình điện tử",
+    "Bố trí và sắp xếp lại không gian phòng đọc mở sinh viên",
+    "Kiểm kê và thanh lý ấn phẩm hư hỏng, giáo trình lạc hậu",
+    "Phục vụ bạn đọc mượn trả sách và tài liệu nghiên cứu",
+    "Kết nối liên thông dữ liệu thư viện với các trường đối tác",
+    "Khảo sát nhu cầu tài liệu học tập của các khoa chuyên môn",
+    "Bảo quản và số hóa các công trình nghiên cứu khoa học",
+    "Hướng dẫn tân sinh viên tra cứu tài liệu thư viện số",
+    "Kiểm tra hệ thống cửa từ an ninh và máy quét mã vạch",
+  ],
+  BAO_CAO: [
+    "Thu thập số liệu thống kê từ các khoa và phòng ban trực thuộc",
+    "Tổng hợp và phân tích dữ liệu tuyển sinh, đào tạo đợt 1",
+    "Dự thảo báo cáo sơ kết công tác gửi UBND Tỉnh",
+    "Rà soát bảng biểu và hoàn thiện số liệu báo cáo quý",
+    "Cập nhật hệ thống chỉ số KPI cán bộ quản lý tháng 9",
+    "Tập hợp hồ sơ minh chứng phục vụ kiểm định chất lượng",
+    "Lập báo cáo tình hình sử dụng ngân sách và tiến độ giải ngân",
+    "Hoàn thiện báo cáo định kỳ gửi Tổng cục Giáo dục nghề nghiệp",
+    "Kiểm tra tính nhất quán của số liệu thống kê sinh viên tốt nghiệp",
+    "Dự thảo báo cáo đánh giá công tác thi đua khen thưởng",
+  ],
+  KHAC: [
+    "Kiểm tra điều kiện cơ sở vật chất và an toàn lao động các xưởng",
+    "Phối hợp chuẩn bị hội trường và âm thanh hội nghị cán bộ",
+    "Lập danh sách học sinh sinh viên diện chính sách miễn giảm học phí",
+    "Kiểm tra công tác vệ sinh môi trường và cảnh quan sư phạm",
+    "Rà soát nội quy, quy chế hoạt động của đơn vị đầu năm học",
+    "Tổ chức phong trào thi đua dạy tốt học tốt chào mừng năm học mới",
+    "Chuẩn bị tài liệu và công tác hậu cần cho đoàn kiểm tra",
+    "Đánh giá kết quả công tác chuyên môn tháng và đề xuất giải pháp",
+    "Bảo dưỡng hệ thống điện chiếu sáng và máy phát điện dự phòng",
+    "Kiểm tra hạn sử dụng các bình chữa cháy tại các khu giảng đường",
+  ],
+};
+
 function generateQCETDataset(): {
   tasks: SchoolTask[];
   stats: DashboardStats;
@@ -342,7 +448,8 @@ function generateQCETDataset(): {
       const template = TEMPLATE_TITLES[i % TEMPLATE_TITLES.length];
       const person = QCET_PERSONNEL[i % QCET_PERSONNEL.length];
       const partner = QCET_PERSONNEL[(i + 1) % QCET_PERSONNEL.length];
-      title = `${template.title} (Đợt ${Math.floor(i / TEMPLATE_TITLES.length) + 1})`;
+      const suffix = REALISTIC_SUFFIXES[i % REALISTIC_SUFFIXES.length];
+      title = `${template.title}${suffix}`;
       category = template.category;
       leadName = person.name;
       coAssignees = [partner.name];
@@ -445,7 +552,11 @@ function generateQCETDataset(): {
       if (i < SEED_SCHOOL_TASKS.length && s < SEED_SCHOOL_TASKS[i].subTaskTitles.length) {
         subTitle = SEED_SCHOOL_TASKS[i].subTaskTitles[s].title;
       } else {
-        subTitle = `Công việc chi tiết ${s + 1}: ${parentTask.title}`;
+        const templates =
+          CATEGORY_SUBTASK_TEMPLATES[parentTask.category] ||
+          CATEGORY_SUBTASK_TEMPLATES.KHAC;
+        const templateIdx = (i * 3 + s) % templates.length;
+        subTitle = templates[templateIdx];
       }
 
       const staffTask: StaffTask = {
