@@ -19,7 +19,6 @@ import {
   RotateCcw,
   History,
   TrendingUp,
-  FileText,
 } from "lucide-react";
 import type {
   SchoolTask,

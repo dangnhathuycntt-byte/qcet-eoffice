@@ -350,57 +350,83 @@ export function CalendarMonthView({
     [currentYear, currentMonth]
   );
 
-  // Group all filtered tasks by date for calendar display
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
+
+  // Group all filtered tasks by date for calendar display in a single O(N) pass
   const tasksByDate = React.useMemo(() => {
     const map = new Map<string, CalendarTaskItem[]>();
+    const q = deferredSearchQuery.trim().toLowerCase();
 
-    // First collect all tasks
-    for (const cell of gridCells) {
-      let items = getTasksForDate(tasks, cell.dateString);
-
-      // Apply category filter
-      if (activeCategory !== "ALL") {
-        items = items.filter((item) => item.category === activeCategory);
+    for (const st of tasks) {
+      // 1. Process School Task
+      if (levelFilter !== "DON_VI") {
+        if (activeCategory === "ALL" || st.category === activeCategory) {
+          const matchQuery =
+            !q ||
+            st.title.toLowerCase().includes(q) ||
+            st.leadAssigneeName.toLowerCase().includes(q);
+          if (matchQuery && st.dueDate) {
+            const dateKey = st.dueDate.length > 10 ? st.dueDate.slice(0, 10) : st.dueDate;
+            const item: CalendarTaskItem = {
+              id: st.id,
+              title: st.title,
+              level: "Trường",
+              category: st.category,
+              categoryLabel: st.categoryLabel,
+              assigneeName: st.leadAssigneeName,
+              assigneeAvatar: st.leadAssigneeAvatar,
+              dueDate: st.dueDate,
+              status: st.status,
+              progressPercent: st.progressPercent,
+              originalTask: st,
+            };
+            const existing = map.get(dateKey);
+            if (existing) existing.push(item);
+            else map.set(dateKey, [item]);
+          }
+        }
       }
 
-      // Apply level filter
-      if (levelFilter === "TRUONG") {
-        items = items.filter((item) => item.level === "Trường");
-      } else if (levelFilter === "DON_VI") {
-        items = items.filter((item) => item.level === "Đơn vị");
-      }
-
-      // Apply search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        items = items.filter(
-          (item) =>
-            item.title.toLowerCase().includes(q) ||
-            item.assigneeName.toLowerCase().includes(q)
-        );
-      }
-
-      if (items.length > 0) {
-        map.set(cell.dateString, items);
+      // 2. Process Staff Tasks
+      if (levelFilter !== "TRUONG" && st.subTasks) {
+        for (const sub of st.subTasks) {
+          if (activeCategory === "ALL" || st.category === activeCategory) {
+            const matchQuery =
+              !q ||
+              sub.title.toLowerCase().includes(q) ||
+              sub.assigneeName.toLowerCase().includes(q);
+            if (matchQuery && sub.dueDate) {
+              const dateKey = sub.dueDate.length > 10 ? sub.dueDate.slice(0, 10) : sub.dueDate;
+              const item: CalendarTaskItem = {
+                id: sub.id,
+                title: sub.title,
+                level: "Đơn vị",
+                category: st.category,
+                categoryLabel: st.categoryLabel,
+                assigneeName: sub.assigneeName,
+                assigneeAvatar: sub.assigneeAvatar,
+                dueDate: sub.dueDate,
+                status: sub.status,
+                parentSchoolTaskId: st.id,
+                parentSchoolTaskTitle: st.title,
+                originalTask: sub,
+              };
+              const existing = map.get(dateKey);
+              if (existing) existing.push(item);
+              else map.set(dateKey, [item]);
+            }
+          }
+        }
       }
     }
 
     return map;
-  }, [tasks, gridCells, activeCategory, levelFilter, searchQuery]);
+  }, [tasks, activeCategory, levelFilter, deferredSearchQuery]);
 
-  // Selected date tasks for side panel
+  // Selected date tasks for side panel: instant O(1) map lookup
   const selectedDateTasks = React.useMemo(() => {
-    let items = getTasksForDate(tasks, selectedDate);
-    if (activeCategory !== "ALL") {
-      items = items.filter((item) => item.category === activeCategory);
-    }
-    if (levelFilter === "TRUONG") {
-      items = items.filter((item) => item.level === "Trường");
-    } else if (levelFilter === "DON_VI") {
-      items = items.filter((item) => item.level === "Đơn vị");
-    }
-    return items;
-  }, [tasks, selectedDate, activeCategory, levelFilter]);
+    return tasksByDate.get(selectedDate) || [];
+  }, [tasksByDate, selectedDate]);
 
   // Count total tasks in current view
   const currentMonthTaskCount = React.useMemo(() => {

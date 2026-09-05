@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
 import {
   Building2,
@@ -21,12 +20,12 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { UserRole } from "@/types/auth";
 import { DEMO_LOGIN_CARDS, validateLoginForm } from "@/lib/login-helpers";
-import { Button } from "@/components/ui/button";
+import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, switchRole } = useAuth();
+  const { user, switchRole, loginWithGoogle } = useAuth();
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -46,9 +45,11 @@ export default function LoginPage() {
 
     setLoadingRole("custom");
 
-    // Resolve role or match demo user
-    const targetRole = validation.user?.role || "ADMIN";
-    switchRole(targetRole);
+    // Auto-provision or login via normalized auth provider
+    loginWithGoogle({
+      email: email.trim().toLowerCase(),
+      name: validation.user?.name || email.split("@")[0],
+    });
 
     setTimeout(() => {
       router.push("/");
@@ -72,7 +73,7 @@ export default function LoginPage() {
     <div className="flex min-h-[calc(100vh-140px)] w-full items-center justify-center py-6 sm:py-10 px-4">
       <div className="w-full max-w-lg space-y-6">
         {/* ========================================================================= */}
-        {/* 1. Institutional Header with QCET Crest & Identity                         */}
+        {/* 1. Institutional Header with QCET Identity                                */}
         {/* ========================================================================= */}
         <div className="text-center space-y-3">
           {/* Logo Card with shadow-glow-primary */}
@@ -85,7 +86,6 @@ export default function LoginPage() {
                 height={48}
                 className="object-contain"
                 onError={(e) => {
-                  // Fallback to icon if image fails
                   e.currentTarget.style.display = "none";
                 }}
               />
@@ -101,21 +101,21 @@ export default function LoginPage() {
               Văn phòng Điều hành & Quản trị Công việc Điện tử
             </p>
             <p className="text-xs text-muted-foreground">
-              Trường Cao đẳng Kinh tế - Kỹ thuật Cần Thơ
+              Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
             </p>
           </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* 2. Main Login Card: Modern QCET Styling                                   */}
+        {/* 2. Main Login Card                                                        */}
         {/* ========================================================================= */}
         <div className="rounded-2xl border border-border/60 bg-card/90 backdrop-blur-md p-6 shadow-card dark:border-border/40 sm:p-8">
-          <div className="mb-6 space-y-1 border-b border-border/60 pb-4">
+          <div className="mb-5 space-y-1 border-b border-border/60 pb-4">
             <h2 className="text-base font-bold text-foreground">
-              Đăng nhập tài khoản
+              Đăng nhập tài khoản công vụ
             </h2>
             <p className="text-xs text-muted-foreground">
-              Nhập email công vụ hoặc lựa chọn tài khoản mẫu 1 chạm bên dưới
+              Sử dụng tài khoản Google trường hoặc email công vụ (@cdktcnqn.edu.vn)
             </p>
           </div>
 
@@ -123,21 +123,41 @@ export default function LoginPage() {
           {errorMessage && (
             <div
               role="alert"
-              className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 animate-fade-in"
+              className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 animate-in fade-in"
             >
               <AlertCircle className="size-4 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
               <div className="flex-1 leading-relaxed">{errorMessage}</div>
             </div>
           )}
 
-          {/* Email & Password Form */}
-          <form onSubmit={handleStandardLogin} className="space-y-4">
+          {/* SECTION A: Primary Google Workspace SSO Button */}
+          <div className="space-y-2">
+            <GoogleLoginButton />
+            <p className="text-center text-[11px] text-muted-foreground">
+              Tài khoản mới sẽ tự động đăng ký và được cấp quyền ngay lần đầu
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="relative my-5">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border/60" />
+            </div>
+            <div className="relative flex justify-center text-[10.5px] uppercase tracking-wider font-semibold">
+              <span className="bg-card px-3 text-muted-foreground">
+                Hoặc nhập mật khẩu email công vụ
+              </span>
+            </div>
+          </div>
+
+          {/* SECTION B: Email & Password Form */}
+          <form onSubmit={handleStandardLogin} className="space-y-3.5">
             <div className="space-y-1.5">
               <label
                 htmlFor="email"
                 className="block text-xs font-semibold text-foreground"
               >
-                Địa chỉ Email công vụ
+                Địa chỉ Email công vụ trường
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -148,9 +168,9 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="vidu: bgh@cdktcnqn.edu.vn"
+                  placeholder="vidu: dangnhathuy@cdktcnqn.edu.vn"
                   autoComplete="email"
-                  className="block w-full rounded-xl border border-border/70 bg-background py-2.5 pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                  className="block w-full rounded-xl border border-border/70 bg-background py-2.5 pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors font-mono"
                 />
               </div>
             </div>
@@ -198,13 +218,13 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loadingRole !== null}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 px-4 text-xs font-semibold text-primary-foreground shadow-card hover:shadow-card-hover transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 px-4 text-xs font-semibold text-primary-foreground shadow-card hover:shadow-card-hover transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
             >
               {loadingRole === "custom" ? (
                 <span>Đang xử lý đăng nhập...</span>
               ) : (
                 <>
-                  <span>Đăng nhập vào hệ thống</span>
+                  <span>Đăng nhập / Tự kích hoạt tài khoản</span>
                   <ArrowRight className="size-3.5" />
                 </>
               )}
@@ -212,23 +232,21 @@ export default function LoginPage() {
           </form>
 
           {/* Divider */}
-          <div className="relative my-6">
+          <div className="relative my-5">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border/60" />
             </div>
-            <div className="relative flex justify-center text-[11px] uppercase tracking-wider font-semibold">
+            <div className="relative flex justify-center text-[10.5px] uppercase tracking-wider font-semibold">
               <span className="bg-card px-3 text-muted-foreground">
-                Hoặc 1-Click Truy Cập Nhanh Demo
+                Hoặc 1-Click tài khoản Demo phân quyền
               </span>
             </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* 3. 1-Click Demo Quick Access Cards with Glassmorphism                     */}
-          {/* ========================================================================= */}
-          <div className="space-y-2.5">
+          {/* SECTION C: 1-Click Demo Quick Access Cards */}
+          <div className="space-y-2">
             {DEMO_LOGIN_CARDS.map((card) => {
-              const isSelected = user.role === card.role;
+              const isSelected = user.role === card.role && user.email === card.email;
               const isLoadingThis = loadingRole === card.role;
 
               const getRoleIcon = () => {
@@ -245,16 +263,16 @@ export default function LoginPage() {
                   onClick={() => handleDemoLogin(card.role, card.email)}
                   disabled={loadingRole !== null}
                   className={cn(
-                    "group relative flex w-full items-center justify-between rounded-xl border p-3.5 text-left transition-all cursor-pointer glass-card",
+                    "group relative flex w-full items-center justify-between rounded-xl border p-2.5 text-left transition-all cursor-pointer glass-card",
                     isSelected
                       ? "border-primary bg-primary/[0.06] shadow-card ring-1 ring-primary/30"
                       : "border-border/60 hover:border-primary/40 hover:shadow-card active:scale-[0.99]"
                   )}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <div
                       className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-xl text-xs font-semibold shadow-xs",
+                        "flex size-8 shrink-0 items-center justify-center rounded-xl text-xs font-semibold shadow-xs",
                         card.role === "ADMIN"
                           ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
                           : card.role === "MANAGER"
@@ -262,32 +280,32 @@ export default function LoginPage() {
                           : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                       )}
                     >
-                      <RoleIcon className="size-4.5" />
+                      <RoleIcon className="size-4" />
                     </div>
 
                     <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-foreground">
                           {card.title}
                         </span>
-                        <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground border border-border/70">
+                        <span className="rounded bg-secondary px-1.5 py-0.2 text-[9.5px] font-semibold text-muted-foreground border border-border/70">
                           {card.badge}
                         </span>
                         {isSelected && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <span className="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-emerald-600 dark:text-emerald-400">
                             <CheckCircle2 className="size-3" />
-                            Đang hoạt động
+                            Hiện tại
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground leading-snug">
+                      <p className="text-[10.5px] text-muted-foreground leading-tight">
                         {card.subtitle}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center pl-2">
-                    <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-xs">
+                    <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-xs">
                       {isLoadingThis ? "Đang vào..." : "Chọn"}
                       <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
                     </span>
@@ -297,9 +315,9 @@ export default function LoginPage() {
             })}
           </div>
 
-          <div className="mt-6 flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+          <div className="mt-5 flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
             <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Xác thực an toàn đa quyền (BGH / Trưởng phòng / Viên chức)</span>
+            <span>Xác thực an toàn đa quyền (BGH / Trưởng đơn vị / Giảng viên)</span>
           </div>
         </div>
 
@@ -309,7 +327,7 @@ export default function LoginPage() {
             Hệ thống Quản trị & Điều hành Văn phòng Điện tử QCET
           </p>
           <p className="text-[11px]">
-            Phát triển & Vận hành bởi Trung tâm CNTT - Trường Cao đẳng Kinh tế - Kỹ thuật Cần Thơ
+            Phát triển & Vận hành bởi Trung tâm CNTT - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
           </p>
         </div>
       </div>

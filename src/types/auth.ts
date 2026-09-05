@@ -9,6 +9,11 @@ export interface AuthUser {
   department: string;
   departmentCode: string;
   avatar?: string;
+  phone?: string;
+  title?: string;
+  isFirstLogin?: boolean;
+  emailVerified?: boolean;
+  provider?: 'google' | 'demo' | 'system';
 }
 
 export type PermissionChecker = (roleOrUser: UserRole | AuthUser) => boolean;

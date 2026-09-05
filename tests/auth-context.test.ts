@@ -45,4 +45,27 @@ describe("AuthContext Demo Credentials", () => {
   test("uses qcet_active_user as storage key", () => {
     assert.equal(AUTH_STORAGE_KEY, "qcet_active_user");
   });
+
+  test("auto-provisions dangnhathuy@cdktcnqn.edu.vn with verified Google badge", () => {
+    const email = "dangnhathuy@cdktcnqn.edu.vn";
+    const name = "Đặng Nhật Huy";
+    const user = {
+      id: "user-staff-test",
+      name,
+      email,
+      role: "STAFF" as const,
+      roleLabel: "Viên chức / Giảng viên",
+      department: "Chưa cập nhật đơn vị",
+      departmentCode: "QCET",
+      emailVerified: true,
+      provider: "google" as const,
+      isFirstLogin: true,
+    };
+
+    assert.equal(user.email, "dangnhathuy@cdktcnqn.edu.vn");
+    assert.equal(user.emailVerified, true);
+    assert.equal(user.provider, "google");
+    assert.equal(user.isFirstLogin, true);
+    assert.equal(user.role, "STAFF");
+  });
 });

@@ -255,13 +255,8 @@ function formatDate(dateStr?: string): string {
 
 function isOverdue(dueDateStr?: string, status?: TaskStatus): boolean {
   if (!dueDateStr || status === "COMPLETED") return false;
-  try {
-    const due = new Date(dueDateStr);
-    const today = new Date("2026-09-04"); // System reference date
-    return due < today;
-  } catch {
-    return false;
-  }
+  const d = dueDateStr.length > 10 ? dueDateStr.slice(0, 10) : dueDateStr;
+  return d < "2026-09-04";
 }
 
 function getInitials(name: string): string {
@@ -292,9 +287,17 @@ export function TaskKanbanBoard({
   searchQuery = "",
   className,
 }: TaskKanbanBoardProps) {
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
+  const [colLimits, setColLimits] = React.useState<Record<TaskStatus, number>>({
+    NEW: 30,
+    IN_PROGRESS: 30,
+    NEEDS_REVIEW: 30,
+    COMPLETED: 30,
+  });
+
   const groupedTasks = React.useMemo(() => {
-    return groupTasksByStatus(tasks, levelFilter, categoryFilter, searchQuery);
-  }, [tasks, levelFilter, categoryFilter, searchQuery]);
+    return groupTasksByStatus(tasks, levelFilter, categoryFilter, deferredSearchQuery);
+  }, [tasks, levelFilter, categoryFilter, deferredSearchQuery]);
 
   return (
     <div
@@ -305,6 +308,8 @@ export function TaskKanbanBoard({
         {KANBAN_COLUMNS.map((col) => {
           const colTasks = groupedTasks[col.id] || [];
           const count = colTasks.length;
+          const limit = colLimits[col.id] || 30;
+          const displayedTasks = colTasks.slice(0, limit);
 
           return (
             <div
@@ -355,7 +360,8 @@ export function TaskKanbanBoard({
                     <span className="text-xs">Không có nhiệm vụ</span>
                   </div>
                 ) : (
-                  colTasks.map((item) => {
+                  <>
+                    {displayedTasks.map((item) => {
                     const categoryConfig = getCategoryBadgeConfig(item.category);
                     const overdue = isOverdue(item.dueDate, item.status);
                     const prevStatus = getPrevStatus(item.status);
@@ -497,7 +503,22 @@ export function TaskKanbanBoard({
                         </div>
                       </div>
                     );
-                  })
+                  })}
+                  {colTasks.length > limit && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setColLimits((prev) => ({
+                          ...prev,
+                          [col.id]: (prev[col.id] || 30) + 30,
+                        }))
+                      }
+                      className="w-full py-2 px-3 text-xs font-semibold rounded-xl border border-border/70 bg-card hover:bg-secondary/70 text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-2xs"
+                    >
+                      Hiển thị thêm {Math.min(30, colTasks.length - limit)} việc (còn {colTasks.length - limit})
+                    </button>
+                  )}
+                </>
                 )}
               </div>
             </div>

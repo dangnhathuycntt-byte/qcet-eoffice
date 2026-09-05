@@ -88,7 +88,7 @@ export function validateLoginForm(email: string, password?: string): LoginValida
       email: trimmedEmail,
       role: trimmedEmail.includes("bgh") ? "ADMIN" : trimmedEmail.includes("daotao") ? "MANAGER" : "STAFF",
       roleLabel: "Người dùng hệ thống",
-      department: "Trường Cao đẳng Kinh tế - Kỹ thuật Cần Thơ",
+      department: "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
       departmentCode: "QCET",
     },
   };
