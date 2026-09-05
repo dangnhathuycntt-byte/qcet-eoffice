@@ -38,6 +38,9 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --shadow-subtle: var(--shadow-subtle);
+  --shadow-card: var(--shadow-card);
+  --shadow-dropdown: var(--shadow-dropdown);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,7 +51,6 @@
 }
 
 :root {
-  zoom: 1.2;
   --background: oklch(0.985 0.003 250);
   --foreground: oklch(0.145 0.015 250);
   --card: oklch(1 0 0);
@@ -67,6 +69,11 @@
   --border: oklch(0.915 0.006 250);
   --input: oklch(0.915 0.006 250);
   --ring: oklch(0.45 0.12 250);
+
+  /* Executive diffuse elevation tokens */
+  --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 3px 1px rgba(0, 0, 0, 0.02);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 12px 0 rgba(0, 0, 0, 0.03);
+  --shadow-dropdown: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 24px -3px rgba(0, 0, 0, 0.06);
 
   /* Distinct chart colors for data visualization */
   --chart-1: oklch(0.68 0.17 150); /* Emerald */
@@ -106,6 +113,11 @@
   --input: oklch(0.24 0.015 250);
   --ring: oklch(0.75 0.12 250);
 
+  /* Executive diffuse elevation tokens (dark mode) */
+  --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.25), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.30), 0 4px 12px 0 rgba(0, 0, 0, 0.20);
+  --shadow-dropdown: 0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 10px 24px -3px rgba(0, 0, 0, 0.40);
+
   --chart-1: oklch(0.72 0.16 150);
   --chart-2: oklch(0.68 0.17 250);
   --chart-3: oklch(0.78 0.16 75);
@@ -128,18 +140,25 @@
   }
   body {
     @apply bg-background text-foreground tracking-normal selection:bg-primary/20 selection:text-primary relative min-h-screen font-sans;
-    background-image:
-      radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 40%),
-      radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.04) 0px, transparent 40%),
-      radial-gradient(at 50% 100%, rgba(99, 102, 241, 0.03) 0px, transparent 50%);
-    background-attachment: fixed;
   }
 
-  .dark body {
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-image:
-      radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.10) 0px, transparent 45%),
-      radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.07) 0px, transparent 45%),
-      radial-gradient(at 50% 100%, rgba(99, 102, 241, 0.05) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.03) 0px, transparent 40%),
+      radial-gradient(at 100% 100%, rgba(37, 99, 235, 0.02) 0px, transparent 40%);
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .dark body::before {
+    background-image:
+      radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.06) 0px, transparent 45%),
+      radial-gradient(at 100% 100%, rgba(37, 99, 235, 0.04) 0px, transparent 45%);
   }
 
   html {
@@ -233,47 +252,53 @@
   .shadow-xs {
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
   }
+  .shadow-subtle {
+    box-shadow: var(--shadow-subtle);
+  }
   .shadow-card {
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-dropdown {
+    box-shadow: var(--shadow-dropdown);
   }
   .shadow-card-hover {
-    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.10), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
   }
   .shadow-premium {
-    box-shadow: 0 16px 38px -6px rgba(0, 0, 0, 0.12), 0 6px 16px -3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 3px 8px -2px rgba(0, 0, 0, 0.04);
   }
   .shadow-glow-primary {
-    box-shadow: 0 0 25px -2px rgba(59, 130, 246, 0.30);
+    box-shadow: 0 0 20px -3px rgba(37, 99, 235, 0.20);
   }
   .shadow-glow-emerald {
-    box-shadow: 0 0 25px -2px rgba(16, 185, 129, 0.30);
+    box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.20);
   }
   .shadow-glow-amber {
-    box-shadow: 0 0 25px -2px rgba(245, 158, 11, 0.30);
+    box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.20);
   }
   .glass-panel {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 100%);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-subtle), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
   }
   .dark .glass-panel {
-    background: linear-gradient(135deg, rgba(22, 28, 44, 0.92) 0%, rgba(16, 20, 32, 0.82) 100%);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+    background: rgba(22, 28, 44, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-subtle), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
   }
   .glass-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.88) 100%);
+    background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
+    box-shadow: var(--shadow-card), inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
   }
   .dark .glass-card {
-    background: linear-gradient(135deg, rgba(26, 33, 50, 0.96) 0%, rgba(18, 23, 36, 0.88) 100%);
+    background: rgba(26, 33, 50, 0.94);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+    box-shadow: var(--shadow-card), inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
   }
 }
 

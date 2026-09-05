@@ -138,6 +138,15 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.ok(cssContent.includes(".glass-card"), "contains .glass-card");
       assert.ok(cssContent.includes(".glass-panel"), "contains .glass-panel");
     });
+
+    it("globals.css defines diffuse executive elevation tokens and no purple AI slop gradients", () => {
+      const cssPath = path.resolve(__dirname, "../src/app/globals.css");
+      const css = fs.readFileSync(cssPath, "utf-8");
+      assert.ok(css.includes("--shadow-card"), "Must define --shadow-card");
+      assert.ok(css.includes("--shadow-subtle"), "Must define --shadow-subtle");
+      assert.ok(css.includes("--shadow-dropdown"), "Must define --shadow-dropdown");
+      assert.ok(!css.includes("linear-gradient(135deg, #a855f7"), "Must not contain purple AI slop gradients");
+    });
   });
 
   describe("Brand Asset Verification", () => {
