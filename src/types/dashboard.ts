@@ -76,6 +76,7 @@ export interface CollaborationRequest {
   dueDate: string;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   assignedStaffIds?: string[];
+  rejectionReason?: string;
   createdAt: string;
 }
 
