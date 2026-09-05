@@ -45,7 +45,7 @@ export interface CalendarTaskItem {
   assigneeName: string;
   assigneeAvatar?: string;
   dueDate: string;
-  status: TaskStatus | "IN_PROGRESS" | "COMPLETED";
+  status: TaskStatus | "PENDING_EXECUTIVE_APPROVAL";
   progressPercent?: number;
   parentSchoolTaskId?: string;
   parentSchoolTaskTitle?: string;
@@ -92,7 +92,7 @@ export function getNextMonth(
  * - Amber: Needs Review / New / Chờ xử lý
  */
 export function getStatusDotClass(
-  status: TaskStatus | "IN_PROGRESS" | "COMPLETED",
+  status: TaskStatus | "PENDING_EXECUTIVE_APPROVAL",
   dueDate?: string
 ): string {
   if (status === "COMPLETED") {
@@ -111,7 +111,7 @@ export function getStatusDotClass(
     return "bg-blue-500";
   }
 
-  if (status === "NEEDS_REVIEW") {
+  if (status === "NEEDS_REVIEW" || status === "PENDING_EXECUTIVE_APPROVAL") {
     return "bg-amber-500";
   }
 
@@ -122,11 +122,12 @@ export function getStatusDotClass(
  * Returns concise Vietnamese status label without emojis.
  */
 export function getStatusLabel(
-  status: TaskStatus | "IN_PROGRESS" | "COMPLETED",
+  status: TaskStatus | "PENDING_EXECUTIVE_APPROVAL",
   dueDate?: string
 ): string {
   if (status === "COMPLETED") return "Đã hoàn thành";
   if (dueDate && dueDate.split("T")[0] < "2026-09-04") return "Quá hạn";
+  if (status === "PENDING_EXECUTIVE_APPROVAL") return "Chờ BGH phê duyệt";
   if (status === "IN_PROGRESS") return "Đang thực hiện";
   if (status === "NEEDS_REVIEW") return "Chờ xét duyệt";
   return "Chờ thực hiện";

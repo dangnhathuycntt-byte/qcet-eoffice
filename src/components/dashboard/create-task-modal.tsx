@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   User,
@@ -13,11 +14,17 @@ import {
   AlertCircle,
   ChevronDown,
   Sparkles,
+  Briefcase,
+  FileCheck,
+  Clock,
+  ArrowRight,
+  ShieldAlert,
 } from "lucide-react";
 import type { TaskCategory, SchoolTask } from "@/types/dashboard";
-import type { UserRole } from "@/types/auth";
+import type { UserRole, AuthUser } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
 import { QCET_PERSONNEL } from "@/lib/mock-dashboard-data";
+import { canAssignStaffTask, validateDueDate } from "@/lib/dacum-workflow-engine";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -41,8 +48,12 @@ export interface CreateTaskFormData {
   leadAssigneeName: string;
   coAssignees: string[];
   dueDate: string;
+  internalDueDate?: string;
   description: string;
   parentTaskId?: string;
+  requiredDeliverables?: string;
+  vtvlRole?: string;
+  isBypassWarning?: boolean;
 }
 
 export function getInitialTaskFormData(
@@ -55,25 +66,13 @@ export function getInitialTaskFormData(
     leadAssigneeName: "",
     coAssignees: [],
     dueDate: "",
+    internalDueDate: "",
     description: "",
     parentTaskId: undefined,
+    requiredDeliverables: "",
+    vtvlRole: "",
+    isBypassWarning: false,
   };
-}
-
-export function validateTaskForm(
-  data: CreateTaskFormData
-): Record<string, string> {
-  const errors: Record<string, string> = {};
-  if (!data.title || data.title.trim().length === 0) {
-    errors.title = "Vui lòng nhập tên công việc";
-  }
-  if (!data.leadAssigneeName || data.leadAssigneeName.trim().length === 0) {
-    errors.leadAssigneeName = "Vui lòng chọn người chủ trì";
-  }
-  if (!data.dueDate || data.dueDate.trim().length === 0) {
-    errors.dueDate = "Vui lòng chọn hạn hoàn thành";
-  }
-  return errors;
 }
 
 export const CATEGORY_OPTIONS: { id: TaskCategory; label: string; color: string }[] = [
@@ -206,10 +205,81 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   },
 ];
 
+export function getDepartmentForMember(
+  memberName: string
+): DepartmentPersonnelGroup | undefined {
+  return QCET_DEPARTMENT_GROUPS.find((group) =>
+    group.members.some((m) => m.name === memberName)
+  );
+}
+
+export function canRoleSelectAssignee(
+  user: AuthUser,
+  targetDeptCode: string,
+  isEmergencyBypass?: boolean
+): { allowed: boolean; message?: string; isBypassWarning?: boolean } {
+  const isDirectToOtherDept =
+    user.role === "ADMIN" &&
+    targetDeptCode !== "BGH" &&
+    targetDeptCode !== user.departmentCode;
+  const bypass = isEmergencyBypass ?? isDirectToOtherDept;
+  const result = canAssignStaffTask(user, targetDeptCode, bypass);
+  return {
+    allowed: result.allowed,
+    message: result.reason,
+    isBypassWarning: result.isBypassWarning,
+  };
+}
+
+export function validateTaskForm(
+  data: CreateTaskFormData,
+  parentSchoolTask?: SchoolTask,
+  currentUser?: AuthUser
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (!data.title || data.title.trim().length === 0) {
+    errors.title = "Vui lòng nhập tên công việc";
+  }
+  if (!data.leadAssigneeName || data.leadAssigneeName.trim().length === 0) {
+    errors.leadAssigneeName = "Vui lòng chọn người chủ trì";
+  } else if (currentUser) {
+    const dept = getDepartmentForMember(data.leadAssigneeName);
+    if (dept) {
+      const check = canRoleSelectAssignee(currentUser, dept.code);
+      if (!check.allowed) {
+        errors.leadAssigneeName =
+          check.message || "Không có thẩm quyền giao việc cho nhân sự này";
+      }
+    }
+  }
+  if (!data.dueDate || data.dueDate.trim().length === 0) {
+    errors.dueDate = "Vui lòng chọn hạn hoàn thành";
+  }
+  if (parentSchoolTask && parentSchoolTask.dueDate) {
+    if (data.internalDueDate) {
+      const internalCheck = validateDueDate(
+        data.internalDueDate,
+        parentSchoolTask.dueDate
+      );
+      if (!internalCheck.valid && internalCheck.error) {
+        errors.internalDueDate = internalCheck.error;
+      }
+    }
+    if (data.dueDate) {
+      const dueCheck = validateDueDate(data.dueDate, parentSchoolTask.dueDate);
+      if (!dueCheck.valid && dueCheck.error) {
+        errors.dueDate = dueCheck.error;
+      }
+    }
+  }
+  return errors;
+}
+
 export interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: CreateTaskFormData) => void;
+  onOpenCollaborationRequest?: (targetDeptCode?: string) => void;
   schoolTasks?: SchoolTask[];
   initialLevel?: TaskLevel;
   initialParentTaskId?: string;
@@ -221,6 +291,7 @@ export function CreateTaskModal({
   isOpen,
   onClose,
   onSubmit,
+  onOpenCollaborationRequest,
   schoolTasks = [],
   initialLevel = "TRUONG",
   initialParentTaskId,
@@ -250,13 +321,67 @@ export function CreateTaskModal({
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [isCustomAssignee, setIsCustomAssignee] = React.useState(false);
   const [deptFilter, setDeptFilter] = React.useState<string>("ALL");
+  const [mounted, setMounted] = React.useState(false);
   const titleInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Filter department groups based on deptFilter
   const filteredGroups = React.useMemo(() => {
     if (deptFilter === "ALL") return QCET_DEPARTMENT_GROUPS;
     return QCET_DEPARTMENT_GROUPS.filter((g) => g.code === deptFilter);
   }, [deptFilter]);
+
+  // Selected assignee department & delegation checks
+  const selectedAssigneeDept = React.useMemo(() => {
+    return getDepartmentForMember(formData.leadAssigneeName);
+  }, [formData.leadAssigneeName]);
+
+  const isExternalDeptBlocked = React.useMemo(() => {
+    if (!isManager || !selectedAssigneeDept || !user) return false;
+    return selectedAssigneeDept.code !== user.departmentCode;
+  }, [isManager, selectedAssigneeDept, user]);
+
+  const isAdminBypassActive = React.useMemo(() => {
+    if (user?.role !== "ADMIN" || !selectedAssigneeDept) return false;
+    return selectedAssigneeDept.code !== "BGH";
+  }, [user?.role, selectedAssigneeDept]);
+
+  const handleAssigneeSelect = React.useCallback(
+    (assigneeName: string) => {
+      const targetDept = getDepartmentForMember(assigneeName);
+      let autoVtvl = formData.vtvlRole;
+      if (targetDept) {
+        const member = targetDept.members.find((m) => m.name === assigneeName);
+        if (member && (!formData.vtvlRole || formData.vtvlRole.trim().length === 0)) {
+          autoVtvl = member.role;
+        }
+      }
+
+      const isAdminBypass =
+        user?.role === "ADMIN" &&
+        targetDept !== undefined &&
+        targetDept.code !== "BGH";
+
+      setFormData((prev) => ({
+        ...prev,
+        leadAssigneeName: assigneeName,
+        vtvlRole: autoVtvl,
+        isBypassWarning: isAdminBypass,
+      }));
+
+      if (errors.leadAssigneeName) {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next.leadAssigneeName;
+          return next;
+        });
+      }
+    },
+    [formData.vtvlRole, user?.role, errors.leadAssigneeName]
+  );
 
   // Sync state on open
   const prevIsOpen = React.useRef(false);
@@ -305,19 +430,32 @@ export function CreateTaskModal({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, formData, isStaff, allowedLevels]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, formData, isStaff, allowedLevels, isExternalDeptBlocked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen) return null;
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (isStaff || allowedLevels.length === 0) return;
-    const validationErrors = validateTaskForm(formData);
+    if (isStaff || allowedLevels.length === 0 || isExternalDeptBlocked) return;
+
+    const parentTask = schoolTasks.find((t) => t.id === formData.parentTaskId);
+    const validationErrors = validateTaskForm(formData, parentTask, user || undefined);
+
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    onSubmit(formData);
+
+    const targetDept = getDepartmentForMember(formData.leadAssigneeName);
+    const isAdminBypass =
+      user?.role === "ADMIN" &&
+      targetDept !== undefined &&
+      targetDept.code !== "BGH";
+
+    onSubmit({
+      ...formData,
+      isBypassWarning: formData.isBypassWarning || isAdminBypass,
+    });
     onClose();
   };
 
@@ -351,21 +489,26 @@ export function CreateTaskModal({
 
   const activeCategory = CATEGORY_OPTIONS.find((c) => c.id === formData.category);
 
-  return (
-    <>
-      {/* Backdrop */}
+  if (!isOpen) return null;
+
+  const modalContent = (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-200 !m-0"
+    >
+      {/* Full-screen Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity !m-0"
         aria-hidden="true"
       />
 
-      {/* Slide-over Drawer Panel - Right Side Full Height */}
-      <aside
-        className="fixed inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-xl md:max-w-2xl flex-col border-l border-border/60 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-right duration-300 overflow-hidden"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
+      {/* Centered Modal Card Container */}
+      <div
+        className="relative z-10 w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-border/70 bg-card/98 backdrop-blur-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 my-auto"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header Bar */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-border/50 bg-card/90 backdrop-blur-xl gap-3 shrink-0">
@@ -514,15 +657,14 @@ export function CreateTaskModal({
                         onChange={(e) => {
                           if (e.target.value === "__CUSTOM__") {
                             setIsCustomAssignee(true);
-                            setFormData((p) => ({ ...p, leadAssigneeName: "" }));
+                            handleAssigneeSelect("");
                           } else {
-                            setFormData((p) => ({ ...p, leadAssigneeName: e.target.value }));
+                            handleAssigneeSelect(e.target.value);
                           }
-                          if (errors.leadAssigneeName) clearError("leadAssigneeName");
                         }}
                         className={cn(
                           "w-full h-8.5 pl-2.5 pr-7 rounded-lg border bg-card text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate",
-                          errors.leadAssigneeName ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
+                          errors.leadAssigneeName || isExternalDeptBlocked ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
                         )}
                       >
                         <option value="">-- Chọn cán bộ chủ trì (Họ tên & Chức vụ) --</option>
@@ -545,24 +687,84 @@ export function CreateTaskModal({
                         type="text"
                         placeholder="Họ và tên cán bộ (VD: Nguyễn Văn Tuấn)..."
                         value={formData.leadAssigneeName}
-                        onChange={(e) => {
-                          setFormData((p) => ({ ...p, leadAssigneeName: e.target.value }));
-                          if (errors.leadAssigneeName) clearError("leadAssigneeName");
-                        }}
+                        onChange={(e) => handleAssigneeSelect(e.target.value)}
                         className="w-full h-8.5 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       />
                       <button
                         type="button"
                         onClick={() => {
                           setIsCustomAssignee(false);
-                          setFormData((p) => ({ ...p, leadAssigneeName: "" }));
+                          handleAssigneeSelect("");
                         }}
-                        className="text-[11px] font-medium text-muted-foreground hover:text-foreground shrink-0 underline"
+                        className="text-[11px] font-medium text-muted-foreground hover:text-foreground shrink-0 underline cursor-pointer"
                       >
                         Chọn từ danh mục
                       </button>
                     </div>
                   )}
+                </div>
+
+                {/* Manager Cross-Department Guard Banner */}
+                {isExternalDeptBlocked && selectedAssigneeDept && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50/90 dark:border-amber-700/60 dark:bg-amber-950/40 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" strokeWidth={1.5} />
+                      <div className="space-y-1 leading-relaxed">
+                        <p className="font-bold">Không thể giao việc trực tiếp ngoài đơn vị</p>
+                        <p className="text-[11.5px] opacity-90">
+                          Theo Nghị định 232/2026/NĐ-CP và quy chế điều hành, Trưởng phòng không được giao việc trực tiếp cho nhân sự thuộc {selectedAssigneeDept.department}.
+                        </p>
+                        <p className="text-[11.5px] opacity-90">
+                          Vui lòng tạo Phiếu yêu cầu phối hợp để Lãnh đạo đơn vị tương ứng tiếp nhận và phân công.
+                        </p>
+                      </div>
+                    </div>
+                    {onOpenCollaborationRequest && (
+                      <div className="pt-1 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            onOpenCollaborationRequest(selectedAssigneeDept.code);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors cursor-pointer active:scale-95"
+                        >
+                          <span>Tạo phiếu phối hợp</span>
+                          <ArrowRight className="size-3.5" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Admin Direct Assignment Bypass Notification */}
+                {isAdminBypassActive && selectedAssigneeDept && (
+                  <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50/80 dark:border-blue-800 dark:bg-blue-950/40 p-2.5 text-xs text-blue-900 dark:text-blue-200">
+                    <ShieldAlert className="size-4 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" strokeWidth={1.5} />
+                    <p className="text-[11.5px] leading-relaxed">
+                      <span className="font-bold">Chỉ đạo trực tiếp Ban Giám hiệu:</span> Hệ thống sẽ tự động gửi thông báo gắn cờ [CHỈ ĐẠO BGH] tới Lãnh đạo {selectedAssigneeDept.department} để phối hợp quản lý nhân sự.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Row: Vị trí việc làm (VTVL - NĐ 232) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs pt-1 border-t border-border/40">
+                <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[130px]">
+                  <Briefcase className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  Vị trí việc làm (VTVL)
+                </span>
+
+                <div className="relative flex-1 sm:max-w-[280px]">
+                  <input
+                    type="text"
+                    placeholder="VD: Chuyên viên Quản lý Đào tạo, Giảng viên CNTT..."
+                    value={formData.vtvlRole || ""}
+                    onChange={(e) =>
+                      setFormData((p) => ({ ...p, vtvlRole: e.target.value }))
+                    }
+                    className="w-full h-8 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
                 </div>
               </div>
 
@@ -587,6 +789,27 @@ export function CreateTaskModal({
                   </select>
                   <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2 top-2.5" strokeWidth={1.5} />
                 </div>
+              </div>
+
+              {/* Row: Sản phẩm đầu ra đo lường được (Nghị định 232/DACUM) */}
+              <div className="flex flex-col gap-1.5 text-xs pt-1 border-t border-border/40">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
+                    <FileCheck className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    Sản phẩm đầu ra đo lường được (DACUM)
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">Nghị định 232/2026/NĐ-CP</span>
+                </div>
+
+                <textarea
+                  rows={2}
+                  placeholder="Mô tả kết quả/minh chứng cụ thể (VD: Dự thảo Quy chế (PDF), Báo cáo kỹ thuật, Bộ tiêu chí đánh giá...)"
+                  value={formData.requiredDeliverables || ""}
+                  onChange={(e) =>
+                    setFormData((p) => ({ ...p, requiredDeliverables: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-border/70 bg-card p-2 text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed"
+                />
               </div>
 
               {/* Row C: Hạn hoàn thành (Due Date + Quick Presets) */}
@@ -645,6 +868,38 @@ export function CreateTaskModal({
                 </div>
               </div>
 
+              {/* Row: Hạn chót nội bộ (Internal Due Date) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs pt-1 border-t border-border/40">
+                <div className="flex flex-col">
+                  <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[130px]">
+                    <Clock className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    Hạn chót nội bộ
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">Nghiệm thu cấp 1 trước khi trình BGH</span>
+                </div>
+
+                <div className="flex items-center gap-2 justify-end flex-1 font-mono tabular-nums">
+                  <input
+                    type="date"
+                    value={formData.internalDueDate || ""}
+                    onChange={(e) => {
+                      setFormData((p) => ({ ...p, internalDueDate: e.target.value }));
+                      if (errors.internalDueDate) clearError("internalDueDate");
+                    }}
+                    className={cn(
+                      "h-8 px-2 rounded-lg border bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono tabular-nums",
+                      errors.internalDueDate ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
+                    )}
+                  />
+                </div>
+              </div>
+              {errors.internalDueDate && (
+                <p className="text-[11px] font-medium text-destructive flex items-center gap-1">
+                  <AlertCircle className="size-3 shrink-0" strokeWidth={1.5} />
+                  <span>{errors.internalDueDate}</span>
+                </p>
+              )}
+
               {/* Row D: Thuộc nhiệm vụ cấp Trường (nếu là việc Đơn vị) */}
               {formData.level === "DON_VI" && schoolTasks.length > 0 && (
                 <div className="flex items-center justify-between gap-3 text-xs pt-1 border-t border-border/40">
@@ -675,10 +930,11 @@ export function CreateTaskModal({
             </div>
 
             {/* Validation Errors Summary (if any) */}
-            {(errors.leadAssigneeName || errors.dueDate) && (
+            {(errors.leadAssigneeName || errors.dueDate || errors.internalDueDate) && (
               <div className="text-[11px] text-destructive space-y-0.5">
                 {errors.leadAssigneeName && <p>• {errors.leadAssigneeName}</p>}
                 {errors.dueDate && <p>• {errors.dueDate}</p>}
+                {errors.internalDueDate && <p>• {errors.internalDueDate}</p>}
               </div>
             )}
           </div>
@@ -711,10 +967,10 @@ export function CreateTaskModal({
               <Button
                 type="submit"
                 size="sm"
-                disabled={isStaff || allowedLevels.length === 0}
+                disabled={isStaff || allowedLevels.length === 0 || isExternalDeptBlocked}
                 className={cn(
                   "h-8.5 rounded-xl px-4 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs active:scale-[0.98] transition-all cursor-pointer inline-flex items-center gap-1.5",
-                  (isStaff || allowedLevels.length === 0) && "opacity-50 cursor-not-allowed"
+                  (isStaff || allowedLevels.length === 0 || isExternalDeptBlocked) && "opacity-50 cursor-not-allowed"
                 )}
               >
                 <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
@@ -723,7 +979,13 @@ export function CreateTaskModal({
             </div>
           </div>
         </form>
-      </aside>
-    </>
+      </div>
+    </div>
   );
+
+  if (mounted && typeof document !== "undefined") {
+    return createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Calendar,
@@ -99,6 +100,12 @@ export const TASK_STATUS_CONFIG: Record<
     className:
       "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     variant: "success",
+  },
+  BLOCKED: {
+    label: "Bị nghẽn / Phối hợp",
+    className:
+      "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+    variant: "destructive",
   },
 };
 
@@ -276,6 +283,11 @@ export function TaskDetailSideSheet({
   const visible = isOpen !== undefined ? isOpen : task !== null;
   const [newSubtaskTitle, setNewSubtaskTitle] = React.useState("");
   const [isAddingSubtask, setIsAddingSubtask] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Handle ESC key and scroll lock
   React.useEffect(() => {
@@ -324,11 +336,11 @@ export function TaskDetailSideSheet({
     setNewSubtaskTitle("");
   };
 
-  return (
+  const sheetContent = (
     <>
       {/* Backdrop overlay */}
       <div
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in !m-0"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -336,7 +348,7 @@ export function TaskDetailSideSheet({
       {/* Slide-over Drawer Panel */}
       <aside
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-lg md:max-w-xl flex-col border-l border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-right duration-300",
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-lg md:max-w-xl flex-col border-l border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-right duration-300 !m-0",
           className
         )}
         role="dialog"
@@ -809,6 +821,12 @@ export function TaskDetailSideSheet({
       </aside>
     </>
   );
+
+  if (mounted && typeof document !== "undefined") {
+    return createPortal(sheetContent, document.body);
+  }
+
+  return sheetContent;
 }
 
 export default TaskDetailSideSheet;

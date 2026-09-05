@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  AlertTriangle,
   Circle,
   FolderTree,
 } from "lucide-react";
@@ -99,6 +100,7 @@ const COLUMN_ICONS: Record<
   NEW: Circle,
   IN_PROGRESS: Clock,
   NEEDS_REVIEW: AlertCircle,
+  BLOCKED: AlertTriangle,
   COMPLETED: CheckCircle2,
 };
 
@@ -244,6 +246,7 @@ export function groupTasksByStatus(
     NEW: [],
     IN_PROGRESS: [],
     NEEDS_REVIEW: [],
+    BLOCKED: [],
     COMPLETED: [],
   };
 
@@ -315,6 +318,7 @@ export function TaskKanbanBoard({
     NEW: 30,
     IN_PROGRESS: 30,
     NEEDS_REVIEW: 30,
+    BLOCKED: 30,
     COMPLETED: 30,
   });
 
