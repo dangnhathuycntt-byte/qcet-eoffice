@@ -55,6 +55,10 @@ export function validateDueDate(
   const internalTime = new Date(internalDueDate).getTime();
   const schoolTime = new Date(schoolTaskDueDate).getTime();
 
+  if (Number.isNaN(internalTime) || Number.isNaN(schoolTime)) {
+    return { valid: false, error: "Định dạng ngày tháng không hợp lệ." };
+  }
+
   if (internalTime > schoolTime) {
     return {
       valid: false,
@@ -122,6 +126,12 @@ export function transitionStaffTaskStatus(
       return {
         success: false,
         error: "Chỉ người quản lý mới có quyền trả lại công việc yêu cầu sửa đổi.",
+      };
+    }
+    if (!payload?.rejectionReason || !payload.rejectionReason.trim()) {
+      return {
+        success: false,
+        error: "Lý do trả lại yêu cầu chỉnh sửa bắt buộc phải được ghi rõ.",
       };
     }
   }

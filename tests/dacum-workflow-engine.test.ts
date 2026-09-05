@@ -84,6 +84,16 @@ describe("DACUM Workflow & RBAC Engine", () => {
       assert.equal(check.valid, false);
       assert.ok(check.error?.includes("không được vượt quá"));
     });
+
+    test("Internal due date or school task due date with invalid format is rejected", () => {
+      const check1 = validateDueDate("invalid-date", "2026-09-30");
+      assert.equal(check1.valid, false);
+      assert.equal(check1.error, "Định dạng ngày tháng không hợp lệ.");
+
+      const check2 = validateDueDate("2026-09-25", "invalid-date");
+      assert.equal(check2.valid, false);
+      assert.equal(check2.error, "Định dạng ngày tháng không hợp lệ.");
+    });
   });
 
   describe("Deliverable Submission Rules (Chống hoàn thành hình thức)", () => {
@@ -146,6 +156,28 @@ describe("DACUM Workflow & RBAC Engine", () => {
       assert.equal(res.success, true);
       assert.equal(res.updatedTask?.status, "IN_PROGRESS");
       assert.equal(res.updatedTask?.rejectionReason, "Hình ảnh mờ, cần thay đổi logo chuẩn trường");
+    });
+
+    test("Manager cannot reject NEEDS_REVIEW task without non-empty rejectionReason", () => {
+      const reviewTask: StaffTask = { ...task, status: "NEEDS_REVIEW" };
+      const resNoReason = transitionStaffTaskStatus(reviewTask, "IN_PROGRESS", managerDaoTao);
+      assert.equal(resNoReason.success, false);
+      assert.equal(
+        resNoReason.error,
+        "Lý do trả lại yêu cầu chỉnh sửa bắt buộc phải được ghi rõ."
+      );
+
+      const resWhitespaceReason = transitionStaffTaskStatus(
+        reviewTask,
+        "IN_PROGRESS",
+        managerDaoTao,
+        { rejectionReason: "   " }
+      );
+      assert.equal(resWhitespaceReason.success, false);
+      assert.equal(
+        resWhitespaceReason.error,
+        "Lý do trả lại yêu cầu chỉnh sửa bắt buộc phải được ghi rõ."
+      );
     });
 
     test("Staff can flag task as BLOCKED with reason", () => {
