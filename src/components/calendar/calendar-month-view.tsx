@@ -5,18 +5,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
-  Clock,
-  User,
   Plus,
   Building2,
   Briefcase,
-  CheckCircle2,
-  AlertCircle,
   Layers,
   Search,
-  Filter,
-  Sparkles,
-  Tag,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -89,6 +82,54 @@ export function getNextMonth(
     return { year: year + 1, month: 0 };
   }
   return { year, month: month + 1 };
+}
+
+/**
+ * Returns 6px status dot color class according to precision design rules:
+ * - Emerald: Completed / Đã hoàn thành
+ * - Rose: Overdue / Quá hạn
+ * - Blue: In Progress / Đang thực hiện
+ * - Amber: Needs Review / New / Chờ xử lý
+ */
+export function getStatusDotClass(
+  status: TaskStatus | "IN_PROGRESS" | "COMPLETED",
+  dueDate?: string
+): string {
+  if (status === "COMPLETED") {
+    return "bg-emerald-500";
+  }
+
+  // Anchor date for system demo is 2026-09-04
+  if (dueDate) {
+    const cleanDue = dueDate.split("T")[0];
+    if (cleanDue < "2026-09-04") {
+      return "bg-rose-500";
+    }
+  }
+
+  if (status === "IN_PROGRESS") {
+    return "bg-blue-500";
+  }
+
+  if (status === "NEEDS_REVIEW") {
+    return "bg-amber-500";
+  }
+
+  return "bg-amber-500";
+}
+
+/**
+ * Returns concise Vietnamese status label without emojis.
+ */
+export function getStatusLabel(
+  status: TaskStatus | "IN_PROGRESS" | "COMPLETED",
+  dueDate?: string
+): string {
+  if (status === "COMPLETED") return "Đã hoàn thành";
+  if (dueDate && dueDate.split("T")[0] < "2026-09-04") return "Quá hạn";
+  if (status === "IN_PROGRESS") return "Đang thực hiện";
+  if (status === "NEEDS_REVIEW") return "Chờ xét duyệt";
+  return "Chờ thực hiện";
 }
 
 /**
@@ -473,7 +514,7 @@ export function CalendarMonthView({
                 aria-label="Tháng trước"
                 className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer shadow-xs"
               >
-                <ChevronLeft className="size-4" />
+                <ChevronLeft strokeWidth={1.5} className="size-4" />
               </button>
               <button
                 type="button"
@@ -481,7 +522,7 @@ export function CalendarMonthView({
                 aria-label="Tháng sau"
                 className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer shadow-xs"
               >
-                <ChevronRight className="size-4" />
+                <ChevronRight strokeWidth={1.5} className="size-4" />
               </button>
 
               <button
@@ -493,7 +534,7 @@ export function CalendarMonthView({
               </button>
             </div>
 
-            <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-[11px] font-semibold">
+            <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-[11px] font-semibold font-mono tabular-nums">
               {currentMonthTaskCount} hạn chót trong tháng
             </span>
           </div>
@@ -501,7 +542,10 @@ export function CalendarMonthView({
           {/* Right: Quick Search & + Giao việc */}
           <div className="flex items-center gap-2">
             <div className="relative min-w-[200px] max-w-xs">
-              <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-2.5" />
+              <Search
+                strokeWidth={1.5}
+                className="size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-2.5"
+              />
               <input
                 type="text"
                 placeholder="Lọc lịch công tác..."
@@ -516,7 +560,7 @@ export function CalendarMonthView({
               onClick={() => onAddTask?.(selectedDate)}
               className="h-8.5 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-card-hover transition-all cursor-pointer rounded-lg"
             >
-              <Plus className="size-3.5" />
+              <Plus strokeWidth={1.5} className="size-3.5" />
               <span>Giao việc</span>
             </Button>
           </div>
@@ -570,7 +614,7 @@ export function CalendarMonthView({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Building2 className="size-3" />
+              <Building2 strokeWidth={1.5} className="size-3" />
               <span>Cấp Trường</span>
             </button>
             <button
@@ -583,7 +627,7 @@ export function CalendarMonthView({
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Briefcase className="size-3" />
+              <Briefcase strokeWidth={1.5} className="size-3" />
               <span>Đơn vị</span>
             </button>
           </div>
@@ -591,7 +635,7 @@ export function CalendarMonthView({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. Main 2-Column Grid: 8 Cols (Calendar Grid) & 4 Cols (Selected Day Panel) */}
+      {/* 2. Main Body: 7-Column Calendar Grid + Selected Date Side Panel           */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column: Rounded-2xl Container with Month Grid & Subtle Borders */}
@@ -602,7 +646,7 @@ export function CalendarMonthView({
               <div
                 key={w.label}
                 className={cn(
-                  "py-2.5 text-xs font-bold text-muted-foreground border-r border-border/40 last:border-r-0",
+                  "py-2.5 text-xs font-semibold text-muted-foreground border-r border-border/40 last:border-r-0",
                   idx >= 5 && "text-muted-foreground/70 bg-muted/20"
                 )}
                 title={w.fullName}
@@ -633,44 +677,47 @@ export function CalendarMonthView({
                     }
                   }}
                   className={cn(
-                    "group relative min-h-[104px] p-2 transition-all cursor-pointer flex flex-col focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
-                    !cell.isCurrentMonth && "bg-muted/10 text-muted-foreground/40",
-                    cell.isCurrentMonth && "bg-card hover:bg-secondary/30",
-                    cell.isWeekend && cell.isCurrentMonth && "bg-muted/5",
-                    cell.isToday && "bg-primary/5 font-bold border-primary/40 text-primary",
+                    "group relative min-h-[108px] p-2 transition-all cursor-pointer flex flex-col focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+                    !cell.isCurrentMonth && "bg-muted/15 text-muted-foreground/40",
+                    cell.isCurrentMonth && "bg-card hover:bg-muted/30",
+                    cell.isWeekend && cell.isCurrentMonth && "bg-muted/[0.04]",
+                    cell.isToday && "bg-primary/[0.04] font-medium border-primary/30",
                     isSelected &&
-                      "ring-2 ring-primary ring-inset bg-primary/[0.08] font-medium z-10 shadow-xs"
+                      "ring-1.5 ring-primary ring-inset bg-primary/[0.06] z-10 shadow-xs"
                   )}
                   data-date={cell.dateString}
                   aria-label={`${cell.dateString}: ${dayTasks.length} nhiệm vụ`}
                 >
-                  {/* Top Day Header: Day number + Today pill + Task count badge */}
+                  {/* Top Day Header: Task count badge (left) + Day number (top right) */}
                   <div className="flex items-center justify-between mb-1.5">
+                    {dayTasks.length > 0 ? (
+                      <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-mono font-medium tabular-nums bg-secondary/80 text-muted-foreground border border-border/40">
+                        {dayTasks.length}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+
                     <span
                       className={cn(
-                        "inline-flex size-6 items-center justify-center rounded-full text-xs font-semibold",
+                        "inline-flex size-6 items-center justify-center rounded-full font-mono text-xs font-medium tabular-nums transition-colors",
                         cell.isToday
                           ? "bg-primary text-primary-foreground font-bold shadow-xs"
                           : cell.isCurrentMonth
                           ? "text-foreground"
-                          : "text-muted-foreground/50",
+                          : "text-muted-foreground/40",
                         isSelected && !cell.isToday && "font-bold text-primary"
                       )}
                     >
                       {cell.dayNumber}
                     </span>
-
-                    {dayTasks.length > 0 && (
-                      <span className="text-[10px] font-mono font-bold text-muted-foreground bg-secondary/80 px-1.5 py-0.2 rounded-full">
-                        {dayTasks.length}
-                      </span>
-                    )}
                   </div>
 
-                  {/* Event Chips List with Category and Status Colors */}
+                  {/* Event Pills List with 6px Status Dots & Subtle Styling */}
                   <div className="flex-1 space-y-1 overflow-hidden">
                     {displayedTasks.map((item) => {
-                      const dotClass = getCategoryDotClass(item.category);
+                      const dotClass = getStatusDotClass(item.status, item.dueDate);
+                      const statusLabel = getStatusLabel(item.status, item.dueDate);
                       const isDone = item.status === "COMPLETED";
 
                       return (
@@ -689,21 +736,21 @@ export function CalendarMonthView({
                             }
                           }}
                           className={cn(
-                            "flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium transition-colors border truncate cursor-pointer shadow-2xs",
+                            "flex items-center gap-1.5 rounded-[4px] px-1.5 py-0.5 text-[10px] font-medium transition-colors border truncate cursor-pointer shadow-2xs",
                             item.level === "Trường"
-                              ? "bg-card border-border text-foreground hover:border-primary/50"
-                              : "bg-muted/40 border-border/60 text-muted-foreground hover:text-foreground",
-                            isDone && "opacity-60 line-through bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                              ? "bg-background/90 border-border/70 text-foreground hover:border-primary/50 hover:bg-accent"
+                              : "bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent",
+                            isDone && "opacity-60 line-through bg-emerald-500/5 border-emerald-500/20 text-muted-foreground"
                           )}
-                          title={`${item.level === "Trường" ? "[Cấp Trường]" : "[Đơn vị]"} ${item.title} (${item.assigneeName})`}
+                          title={`${item.level === "Trường" ? "[Cấp Trường]" : "[Đơn vị]"} ${item.title} • Phụ trách: ${item.assigneeName} • Hạn: ${item.dueDate.split("T")[0]} • Trạng thái: ${statusLabel}`}
                         >
                           <span
                             className={cn(
-                              "size-1.5 shrink-0 rounded-full ring-1 ring-background",
+                              "size-1.5 shrink-0 rounded-full ring-1 ring-background/80",
                               dotClass
                             )}
                           />
-                          <span className="truncate">
+                          <span className="truncate font-sans text-[10px] leading-tight">
                             {item.title}
                           </span>
                         </div>
@@ -711,14 +758,50 @@ export function CalendarMonthView({
                     })}
 
                     {hasMore && (
-                      <div className="pt-0.5 text-center text-[10px] font-semibold text-primary hover:underline">
-                        +{dayTasks.length - maxDisplay} việc nữa
-                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedDate(cell.dateString);
+                        }}
+                        className="w-full text-center py-0.5 rounded text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                        title="Nhấn để xem toàn bộ danh sách nhiệm vụ của ngày này"
+                      >
+                        +{dayTasks.length - maxDisplay} nhiệm vụ
+                      </button>
                     )}
                   </div>
                 </div>
               );
             })}
+          </div>
+
+          {/* Bottom Legend with status dots and concise Vietnamese labels */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-t border-border/40 bg-muted/20 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-2 font-medium text-foreground">
+              <span>Trạng thái:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <span className="size-1.5 rounded-full bg-emerald-500 ring-1 ring-background" />
+                <span>Hoàn thành</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="size-1.5 rounded-full bg-blue-500 ring-1 ring-background" />
+                <span>Đang thực hiện</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="size-1.5 rounded-full bg-amber-500 ring-1 ring-background" />
+                <span>Chờ thực hiện</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="size-1.5 rounded-full bg-rose-500 ring-1 ring-background" />
+                <span>Quá hạn / Chậm tiến độ</span>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-3 text-muted-foreground/80 font-mono text-[10px] tabular-nums">
+              <span>Hôm nay: 04/09/2026</span>
+            </div>
           </div>
         </div>
 
@@ -728,7 +811,7 @@ export function CalendarMonthView({
           <div className="flex items-start justify-between border-b border-border/70 pb-3.5">
             <div>
               <div className="flex items-center gap-1.5 text-xs text-primary font-semibold mb-0.5">
-                <CalendarIcon className="size-3.5" />
+                <CalendarIcon strokeWidth={1.5} className="size-3.5" />
                 <span>Chi tiết lịch công tác</span>
               </div>
               <h3 className="text-sm font-bold text-foreground">
@@ -741,9 +824,9 @@ export function CalendarMonthView({
               size="sm"
               variant="outline"
               onClick={() => onAddTask?.(selectedDate)}
-              className="h-7.5 text-xs gap-1 border-dashed px-2.5 rounded-lg font-semibold"
+              className="h-7.5 text-xs gap-1 border-dashed px-2.5 rounded-lg font-semibold cursor-pointer"
             >
-              <Plus className="size-3" />
+              <Plus strokeWidth={1.5} className="size-3" />
               Thêm việc
             </Button>
           </div>
@@ -752,7 +835,7 @@ export function CalendarMonthView({
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
               Tổng số nhiệm vụ hạn chót:{" "}
-              <strong className="text-foreground font-semibold">
+              <strong className="text-foreground font-semibold font-mono tabular-nums">
                 {selectedDateTasks.length}
               </strong>
             </span>
@@ -762,7 +845,7 @@ export function CalendarMonthView({
           <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[520px] thin-scrollbar pr-0.5">
             {selectedDateTasks.length === 0 ? (
               <div className="py-14 text-center text-xs text-muted-foreground space-y-2 border border-dashed border-border/70 rounded-xl p-5 bg-muted/10">
-                <CalendarIcon className="mx-auto size-8 text-muted-foreground/30 mb-1" />
+                <CalendarIcon strokeWidth={1.5} className="mx-auto size-8 text-muted-foreground/30 mb-1" />
                 <p className="font-semibold text-foreground">
                   Không có hạn chót công việc
                 </p>
@@ -835,7 +918,7 @@ export function CalendarMonthView({
                     {/* Parent task if Subtask */}
                     {!isSchool && item.parentSchoolTaskTitle && (
                       <div className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
-                        <Layers className="size-3 text-muted-foreground/70 shrink-0" />
+                        <Layers strokeWidth={1.5} className="size-3 text-muted-foreground/70 shrink-0" />
                         <span className="truncate">Thuộc: {item.parentSchoolTaskTitle}</span>
                       </div>
                     )}
@@ -859,7 +942,7 @@ export function CalendarMonthView({
                         </span>
                       </div>
 
-                      <span className="text-muted-foreground text-[10px] font-mono">
+                      <span className="text-muted-foreground text-[10px] font-mono tabular-nums">
                         Hạn: {item.dueDate.split("T")[0]}
                       </span>
                     </div>
