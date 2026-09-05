@@ -1568,7 +1568,7 @@ export function OrganizationTree({
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground/80">
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground/80 pt-0.5">
                       <a
                         href={`tel:${member.phone}`}
                         onClick={(e) => e.stopPropagation()}
@@ -1578,12 +1578,22 @@ export function OrganizationTree({
                         <span>{member.phone}</span>
                       </a>
 
-                      {member.room && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="size-3 shrink-0" />
-                          <span>{member.room}</span>
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.dispatchEvent(
+                            new CustomEvent("qcet:open-create-task", {
+                              detail: { leadAssigneeName: member.name },
+                            })
+                          );
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline hover:text-primary/80 cursor-pointer"
+                        title={`Giao việc nhanh cho ${member.name}`}
+                      >
+                        <Plus className="size-3" />
+                        <span>Giao việc</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1655,18 +1665,37 @@ export function OrganizationTree({
                           </Badge>
                         </td>
                         <td className="py-3 px-3.5 text-right">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-[11px] font-semibold"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenStaff(member);
-                            }}
-                          >
-                            Xem
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2 text-[11px] font-bold text-primary border-primary/30 hover:bg-primary/10 cursor-pointer"
+                              title={`Giao việc nhanh cho ${member.name}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.dispatchEvent(
+                                  new CustomEvent("qcet:open-create-task", {
+                                    detail: { leadAssigneeName: member.name },
+                                  })
+                                );
+                              }}
+                            >
+                              Giao việc
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenStaff(member);
+                              }}
+                            >
+                              Xem
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1804,9 +1833,25 @@ export function OrganizationTree({
               >
                 Đóng
               </Button>
+              <Button
+                type="button"
+                className="h-8 px-3.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold shadow-card gap-1.5 cursor-pointer"
+                onClick={() => {
+                  const staffName = activeProfileStaff.name;
+                  setActiveProfileStaff(null);
+                  window.dispatchEvent(
+                    new CustomEvent("qcet:open-create-task", {
+                      detail: { leadAssigneeName: staffName },
+                    })
+                  );
+                }}
+              >
+                <Plus className="size-3.5" />
+                <span>Giao việc ngay</span>
+              </Button>
               <a
                 href={`mailto:${activeProfileStaff.email}?subject=[QCET-E-Office]%20Liên%20hệ%20công%20việc`}
-                className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold transition-all shadow-card"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border/80 bg-card text-foreground hover:bg-secondary text-xs font-semibold transition-all shadow-xs"
               >
                 <Mail className="size-3.5" />
                 <span>Gửi email công tác</span>

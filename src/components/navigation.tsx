@@ -73,7 +73,7 @@ export function LiveClock() {
 }
 
 export function ZoomToggle() {
-  const [zoomLevel, setZoomLevel] = React.useState<number>(1.2);
+  const [zoomLevel, setZoomLevel] = React.useState<number>(1.0);
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -86,7 +86,7 @@ export function ZoomToggle() {
         document.documentElement.style.zoom = String(z);
       }
     } else {
-      document.documentElement.style.zoom = "1.2";
+      document.documentElement.style.zoom = "1.0";
     }
   }, []);
 
@@ -102,11 +102,11 @@ export function ZoomToggle() {
       type="button"
       onClick={toggleZoom}
       className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-card/80 hover:bg-card border border-border/60 text-xs font-black text-foreground shadow-xs transition-all cursor-pointer hover:border-primary/40 active:scale-95"
-      title="Bật / Tắt chế độ Zoom 1.2 (Chữ lớn BGH)"
+      title="Bật / Tắt chế độ Zoom (100% / 120%)"
     >
       <span className="text-[10.5px] text-muted-foreground font-bold">Zoom:</span>
       <span className="font-mono text-primary font-black">
-        {mounted ? `${Math.round(zoomLevel * 100)}%` : "120%"}
+        {mounted ? `${Math.round(zoomLevel * 100)}%` : "100%"}
       </span>
     </button>
   );
@@ -167,6 +167,22 @@ export function Navigation() {
   const { resolved, toggleTheme } = useTheme();
   const { user } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
+
+  // Global event listener for opening create modal with pre-selected assignee (e.g. from /org)
+  React.useEffect(() => {
+    const handleOpenCreateTask = (e: Event) => {
+      const customEvent = e as CustomEvent<{ leadAssigneeName?: string }>;
+      if (customEvent?.detail?.leadAssigneeName) {
+        setInitialAssigneeName(customEvent.detail.leadAssigneeName);
+      } else {
+        setInitialAssigneeName(undefined);
+      }
+      setIsCreateModalOpen(true);
+    };
+    window.addEventListener("qcet:open-create-task", handleOpenCreateTask);
+    return () => window.removeEventListener("qcet:open-create-task", handleOpenCreateTask);
+  }, []);
 
   // Global keyboard shortcut: Press 'N' anywhere (outside form inputs) to quick-create task
   React.useEffect(() => {
@@ -354,8 +370,12 @@ export function Navigation() {
       {/* CreateTaskModal Dialog from Topbar */}
       <CreateTaskModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setInitialAssigneeName(undefined);
+        }}
         onSubmit={handleCreateTaskFromTopbar}
+        initialLeadAssigneeName={initialAssigneeName}
       />
     </header>
   );

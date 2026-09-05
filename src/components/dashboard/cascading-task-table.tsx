@@ -61,12 +61,18 @@ export const CATEGORY_TABS: CategoryTab[] = [
 ];
 
 export const DEPARTMENT_OPTIONS = [
-  { id: "ALL", label: "Tất cả đơn vị" },
-  { id: "CNTT", label: "Khoa CNTT" },
+  { id: "ALL", label: "Tất cả đơn vị (Toàn trường)" },
+  { id: "BGH", label: "Ban Giám hiệu" },
+  { id: "CNTT", label: "Khoa Công nghệ thông tin" },
   { id: "DAO_TAO", label: "Phòng Đào tạo & QLKH" },
-  { id: "TRUYEN_THONG", label: "Tổ Truyền thông" },
-  { id: "THU_VIEN", label: "Thư viện & Học liệu" },
+  { id: "TRUYEN_THONG", label: "TT Truyền thông & Số hóa" },
   { id: "HANH_CHINH", label: "Phòng Hành chính - Quản trị" },
+  { id: "KHAO_THI", label: "Phòng Khảo thí & ĐBCL" },
+  { id: "THU_VIEN", label: "TT Ngoại ngữ - TH & Thư viện" },
+  { id: "KINH_TE", label: "Khoa Kinh tế - Quản trị" },
+  { id: "KY_THUAT", label: "Khoa Kỹ thuật - Công nghệ" },
+  { id: "TAI_CHINH", label: "Phòng Kế hoạch - Tài chính" },
+  { id: "CTHSSV", label: "Phòng Công tác HSSV" },
 ];
 
 export function getCategoryBadgeConfig(
@@ -177,22 +183,58 @@ export function filterTasksForTable(
     if (department && department !== "ALL") {
       const deptQuery = department.toLowerCase();
       const isDeptMatch =
+        (department === "BGH" &&
+          (task.leadAssigneeName.includes("Tuấn") ||
+            task.leadAssigneeName.includes("Đạt") ||
+            task.leadAssigneeName.includes("Cúc") ||
+            task.leadAssigneeName.toLowerCase().includes("bgh") ||
+            task.leadAssigneeName.toLowerCase().includes("hiệu trưởng"))) ||
         (department === "CNTT" &&
           (task.category === "CNTT" ||
             task.category === "ATTT" ||
             task.category === "CHUYEN_DOI_SO" ||
             task.leadAssigneeName.includes("Vinh") ||
-            task.leadAssigneeName.includes("Hùng"))) ||
+            task.leadAssigneeName.includes("Hùng") ||
+            task.leadAssigneeName.includes("Khôi"))) ||
+        (department === "DAO_TAO" &&
+          (task.category === "BAO_CAO" ||
+            task.leadAssigneeName.includes("Trung") ||
+            task.leadAssigneeName.includes("Trí") ||
+            task.leadAssigneeName.includes("Thủy"))) ||
         (department === "TRUYEN_THONG" &&
           (task.category === "TRUYEN_THONG" ||
-            task.leadAssigneeName.includes("Xuân"))) ||
+            task.leadAssigneeName.includes("Xuân") ||
+            task.leadAssigneeName.includes("Huy") ||
+            task.leadAssigneeName.includes("Linh"))) ||
+        (department === "HANH_CHINH" &&
+          (task.leadAssigneeName.includes("Thanh") ||
+            task.leadAssigneeName.includes("Nam") ||
+            task.leadAssigneeName.includes("Nhung"))) ||
+        (department === "KHAO_THI" &&
+          (task.leadAssigneeName.includes("Minh") ||
+            task.leadAssigneeName.includes("Hậu") ||
+            task.leadAssigneeName.includes("My"))) ||
         (department === "THU_VIEN" &&
           (task.category === "THU_VIEN" ||
-            task.leadAssigneeName.includes("Thu"))) ||
-        (department === "DAO_TAO" &&
-          (task.leadAssigneeName.includes("Hùng") ||
-            task.category === "BAO_CAO")) ||
-        (department === "HANH_CHINH" && task.leadAssigneeName.includes("Nam")) ||
+            task.leadAssigneeName.includes("Thắng") ||
+            task.leadAssigneeName.includes("Thu") ||
+            task.leadAssigneeName.includes("Ngọc"))) ||
+        (department === "KINH_TE" &&
+          (task.leadAssigneeName.includes("Tuyết") ||
+            task.leadAssigneeName.includes("Sơn") ||
+            task.leadAssigneeName.includes("Phượng"))) ||
+        (department === "KY_THUAT" &&
+          (task.leadAssigneeName.includes("Cường") ||
+            task.leadAssigneeName.includes("Vũ") ||
+            task.leadAssigneeName.includes("Lộc"))) ||
+        (department === "TAI_CHINH" &&
+          (task.leadAssigneeName.includes("Loan") ||
+            task.leadAssigneeName.includes("Vân") ||
+            task.leadAssigneeName.includes("Hào"))) ||
+        (department === "CTHSSV" &&
+          (task.leadAssigneeName.includes("Tuấn") ||
+            task.leadAssigneeName.includes("Hà") ||
+            task.leadAssigneeName.includes("Phúc"))) ||
         task.leadAssigneeName.toLowerCase().includes(deptQuery) ||
         task.subTasks?.some((st) =>
           st.assigneeName.toLowerCase().includes(deptQuery)
@@ -251,6 +293,14 @@ function getPageNumbers(current: number, total: number): (number | string)[] {
   return [1, "...", current - 1, current, current + 1, "...", total];
 }
 
+const TODAY_ISO = "2026-09-04";
+
+function isPastDueDate(dateStr?: string): boolean {
+  if (!dateStr) return false;
+  const d = dateStr.length > 10 ? dateStr.slice(0, 10) : dateStr;
+  return d < TODAY_ISO;
+}
+
 export type WorkboxFilter = "ALL" | "MY_RECEIVED" | "MY_ASSIGNED" | "URGENT";
 
 export interface CascadingTaskTableProps {
@@ -275,6 +325,7 @@ export function CascadingTaskTable({
   >("ALL");
   const [selectedDepartment, setSelectedDepartment] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
   const [expandedTaskIds, setExpandedTaskIds] = React.useState<Set<string>>(
     () => new Set()
   );
@@ -311,7 +362,6 @@ export function CascadingTaskTable({
   const workboxTasks = React.useMemo(() => {
     if (activeWorkbox === "ALL") return tasks;
     const userName = user?.name?.toLowerCase() || "";
-    const today = new Date("2026-09-04T00:00:00");
 
     // ADMIN (BGH) sees all tasks in "Việc tôi giao/nhận" context
     if (user?.role === "ADMIN") {
@@ -320,16 +370,9 @@ export function CascadingTaskTable({
       }
       if (activeWorkbox === "URGENT") {
         return tasks.filter((t) => {
-          const isPastDue =
-            t.dueDate &&
-            new Date(t.dueDate.split("T")[0] + "T00:00:00") < today &&
-            t.status !== "COMPLETED";
+          const isPastDue = isPastDueDate(t.dueDate) && t.status !== "COMPLETED";
           const hasSubUrgent = t.subTasks?.some((s) => {
-            const sPast =
-              s.dueDate &&
-              new Date(s.dueDate.split("T")[0] + "T00:00:00") < today &&
-              s.status !== "COMPLETED";
-            return sPast || s.status === "NEEDS_REVIEW";
+            return (isPastDueDate(s.dueDate) && s.status !== "COMPLETED") || s.status === "NEEDS_REVIEW";
           });
           return isPastDue || hasSubUrgent;
         });
@@ -358,16 +401,9 @@ export function CascadingTaskTable({
 
     if (activeWorkbox === "URGENT") {
       return tasks.filter((t) => {
-        const isPastDue =
-          t.dueDate &&
-          new Date(t.dueDate.split("T")[0] + "T00:00:00") < today &&
-          t.status !== "COMPLETED";
+        const isPastDue = isPastDueDate(t.dueDate) && t.status !== "COMPLETED";
         const hasSubUrgent = t.subTasks?.some((s) => {
-          const sPast =
-            s.dueDate &&
-            new Date(s.dueDate.split("T")[0] + "T00:00:00") < today &&
-            s.status !== "COMPLETED";
-          return sPast || s.status === "NEEDS_REVIEW";
+          return (isPastDueDate(s.dueDate) && s.status !== "COMPLETED") || s.status === "NEEDS_REVIEW";
         });
         return isPastDue || hasSubUrgent;
       });
@@ -379,7 +415,6 @@ export function CascadingTaskTable({
   // Compute workbox counts for badge numbers
   const workboxCounts = React.useMemo(() => {
     const userName = user?.name?.toLowerCase() || "";
-    const today = new Date("2026-09-04T00:00:00");
     const isAdmin = user?.role === "ADMIN";
 
     let received = 0;
@@ -398,16 +433,9 @@ export function CascadingTaskTable({
       if (isAdmin || isLead || isCo || hasSub) received++;
       if (isAdmin || isLead) assigned++;
 
-      const isPastDue =
-        t.dueDate &&
-        new Date(t.dueDate.split("T")[0] + "T00:00:00") < today &&
-        t.status !== "COMPLETED";
+      const isPastDue = isPastDueDate(t.dueDate) && t.status !== "COMPLETED";
       const hasSubUrgent = t.subTasks?.some((s) => {
-        const sPast =
-          s.dueDate &&
-          new Date(s.dueDate.split("T")[0] + "T00:00:00") < today &&
-          s.status !== "COMPLETED";
-        return sPast || s.status === "NEEDS_REVIEW";
+        return (isPastDueDate(s.dueDate) && s.status !== "COMPLETED") || s.status === "NEEDS_REVIEW";
       });
       if (isPastDue || hasSubUrgent) urgent++;
     }
@@ -425,10 +453,10 @@ export function CascadingTaskTable({
       filterTasksForTable(
         workboxTasks,
         selectedCategory,
-        searchQuery,
+        deferredSearchQuery,
         selectedDepartment
       ),
-    [workboxTasks, selectedCategory, searchQuery, selectedDepartment]
+    [workboxTasks, selectedCategory, deferredSearchQuery, selectedDepartment]
   );
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -437,7 +465,7 @@ export function CascadingTaskTable({
   // Reset to page 1 whenever workbox, search, department or category filter changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [activeWorkbox, selectedCategory, searchQuery, selectedDepartment]);
+  }, [activeWorkbox, selectedCategory, deferredSearchQuery, selectedDepartment]);
 
   const totalTasks = filteredTasks.length;
   const totalPages = Math.max(1, Math.ceil(totalTasks / pageSize));

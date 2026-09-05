@@ -86,6 +86,126 @@ export const CATEGORY_OPTIONS: { id: TaskCategory; label: string; color: string 
   { id: "KHAC", label: "Khác", color: "bg-slate-500" },
 ];
 
+export interface DepartmentPersonnelGroup {
+  department: string;
+  code: string;
+  icon: string;
+  members: { name: string; title: string; role: string }[];
+}
+
+export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
+  {
+    department: "Ban Giám hiệu",
+    code: "BGH",
+    icon: "🏛️",
+    members: [
+      { name: "Nguyễn Minh Tuấn", title: "TS. Nguyễn Minh Tuấn", role: "Hiệu trưởng" },
+      { name: "Lê Thành Đạt", title: "ThS. Lê Thành Đạt", role: "Phó Hiệu trưởng" },
+      { name: "Hoàng Thị Kim Cúc", title: "ThS. Hoàng Thị Kim Cúc", role: "Phó Hiệu trưởng" },
+    ],
+  },
+  {
+    department: "Khoa Công nghệ thông tin",
+    code: "CNTT",
+    icon: "💻",
+    members: [
+      { name: "Nguyễn Ngọc Vinh", title: "TS. Nguyễn Ngọc Vinh", role: "Trưởng khoa (CĐS)" },
+      { name: "Trần Hùng", title: "ThS. Trần Hùng", role: "Phó Trưởng khoa (ATTT)" },
+      { name: "Phan Đình Khôi", title: "ThS. Phan Đình Khôi", role: "Giảng viên CNTT" },
+    ],
+  },
+  {
+    department: "Phòng Đào tạo & Quản lý Khoa học",
+    code: "DAO_TAO",
+    icon: "📚",
+    members: [
+      { name: "Đỗ Quang Trung", title: "ThS. Đỗ Quang Trung", role: "Trưởng phòng" },
+      { name: "Võ Minh Trí", title: "ThS. Võ Minh Trí", role: "Phó Trưởng phòng" },
+      { name: "Nguyễn Thị Bích Thủy", title: "CN. Nguyễn Thị Bích Thủy", role: "Chuyên viên" },
+    ],
+  },
+  {
+    department: "Trung tâm Truyền thông & Số hóa (DCC)",
+    code: "TRUYEN_THONG",
+    icon: "📢",
+    members: [
+      { name: "Mai Đinh Thị Xuân", title: "ThS. Mai Đinh Thị Xuân", role: "Giám đốc TT" },
+      { name: "Dương Quang Huy", title: "CN. Dương Quang Huy", role: "Chuyên viên CNTT" },
+      { name: "Hoàng Thùy Linh", title: "CN. Hoàng Thùy Linh", role: "Chuyên viên nội dung" },
+    ],
+  },
+  {
+    department: "Phòng Hành chính - Quản trị",
+    code: "HANH_CHINH",
+    icon: "🏢",
+    members: [
+      { name: "Phan Văn Thanh", title: "ThS. Phan Văn Thanh", role: "Trưởng phòng" },
+      { name: "Lê Hoàng Nam", title: "ThS. Lê Hoàng Nam", role: "Phó Trưởng phòng" },
+      { name: "Trương Thị Hồng Nhung", title: "CN. Trương Thị Hồng Nhung", role: "Văn thư" },
+    ],
+  },
+  {
+    department: "Phòng Khảo thí & Đảm bảo chất lượng",
+    code: "KHAO_THI",
+    icon: "🎯",
+    members: [
+      { name: "Nguyễn Công Minh", title: "ThS. Nguyễn Công Minh", role: "Trưởng phòng" },
+      { name: "Đặng Văn Hậu", title: "ThS. Đặng Văn Hậu", role: "Phó Trưởng phòng" },
+      { name: "Lê Thị Diễm My", title: "ThS. Lê Thị Diễm My", role: "Chuyên viên" },
+    ],
+  },
+  {
+    department: "Trung tâm Ngoại ngữ - Tin học & Thư viện",
+    code: "THU_VIEN",
+    icon: "📖",
+    members: [
+      { name: "Chu Đình Thắng", title: "ThS. Chu Đình Thắng", role: "Giám đốc TT" },
+      { name: "Phạm Thị Thu", title: "CN. Phạm Thị Thu", role: "Phụ trách Thư viện" },
+      { name: "Trần Bảo Ngọc", title: "ThS. Trần Bảo Ngọc", role: "Giảng viên" },
+    ],
+  },
+  {
+    department: "Khoa Kinh tế - Quản trị",
+    code: "KINH_TE",
+    icon: "📊",
+    members: [
+      { name: "Lê Thị Ánh Tuyết", title: "ThS. Lê Thị Ánh Tuyết", role: "Trưởng khoa" },
+      { name: "Đỗ Hoàng Sơn", title: "ThS. Đỗ Hoàng Sơn", role: "Phó Trưởng khoa" },
+      { name: "Nguyễn Hồng Phượng", title: "ThS. Nguyễn Hồng Phượng", role: "Giảng viên" },
+    ],
+  },
+  {
+    department: "Khoa Kỹ thuật - Công nghệ",
+    code: "KY_THUAT",
+    icon: "⚙️",
+    members: [
+      { name: "Đinh Quốc Cường", title: "TS. Đinh Quốc Cường", role: "Trưởng khoa" },
+      { name: "Vũ Mạnh Hùng", title: "ThS. Vũ Mạnh Hùng", role: "Phó Trưởng khoa" },
+      { name: "Trần Bá Lộc", title: "ThS. Trần Bá Lộc", role: "Giảng viên" },
+    ],
+  },
+  {
+    department: "Phòng Kế hoạch - Tài chính",
+    code: "TAI_CHINH",
+    icon: "💰",
+    members: [
+      { name: "Trần Thị Mai Loan", title: "ThS. Trần Thị Mai Loan", role: "Trưởng ph��ng" },
+      { name: "Hà Thanh Vân", title: "ThS. Hà Thanh Vân", role: "Kế toán trưởng" },
+      { name: "Bùi Văn Hào", title: "CN. Bùi Văn Hào", role: "Kế toán viên" },
+    ],
+  },
+  {
+    department: "Phòng Công tác học sinh sinh viên",
+    code: "CTHSSV",
+    icon: "🎓",
+    members: [
+      { name: "Huỳnh Công Tuấn", title: "ThS. Huỳnh Công Tuấn", role: "Trưởng phòng" },
+      { name: "Nguyễn Thị Thanh Hà", title: "ThS. Nguyễn Thị Thanh Hà", role: "Phó Trưởng phòng" },
+      { name: "Lâm Vĩnh Phúc", title: "CN. Lâm Vĩnh Phúc", role: "Chuyên viên" },
+    ],
+  },
+];
+
 export interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -94,6 +214,7 @@ export interface CreateTaskModalProps {
   initialLevel?: TaskLevel;
   initialParentTaskId?: string;
   initialDueDate?: string;
+  initialLeadAssigneeName?: string;
 }
 
 export function CreateTaskModal({
@@ -104,6 +225,7 @@ export function CreateTaskModal({
   initialLevel = "TRUONG",
   initialParentTaskId,
   initialDueDate,
+  initialLeadAssigneeName,
 }: CreateTaskModalProps) {
   const { user } = useAuth();
   const allowedLevels = getAllowedTaskLevelsForRole(user?.role ?? "ADMIN");
@@ -123,10 +245,18 @@ export function CreateTaskModal({
     ...getInitialTaskFormData(getEffectiveLevel(initialLevel)),
     parentTaskId: initialParentTaskId,
     dueDate: initialDueDate || "",
+    leadAssigneeName: initialLeadAssigneeName || "",
   }));
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [isCustomAssignee, setIsCustomAssignee] = React.useState(false);
+  const [deptFilter, setDeptFilter] = React.useState<string>("ALL");
   const titleInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Filter department groups based on deptFilter
+  const filteredGroups = React.useMemo(() => {
+    if (deptFilter === "ALL") return QCET_DEPARTMENT_GROUPS;
+    return QCET_DEPARTMENT_GROUPS.filter((g) => g.code === deptFilter);
+  }, [deptFilter]);
 
   // Sync state on open
   const prevIsOpen = React.useRef(false);
@@ -142,13 +272,15 @@ export function CreateTaskModal({
         ...getInitialTaskFormData(effectiveLevel),
         parentTaskId: initialParentTaskId,
         dueDate: initialDueDate || "",
+        leadAssigneeName: initialLeadAssigneeName || "",
       });
       setErrors({});
       setIsCustomAssignee(false);
+      setDeptFilter("ALL");
       setTimeout(() => titleInputRef.current?.focus(), 80);
     }
     prevIsOpen.current = isOpen;
-  }, [isOpen, initialLevel, initialParentTaskId, initialDueDate, isManager, allowedLevels, user?.role]);
+  }, [isOpen, initialLevel, initialParentTaskId, initialDueDate, initialLeadAssigneeName, isManager, allowedLevels, user?.role]);
 
   // Keyboard shortcuts: ESC to close, Ctrl+Enter or Cmd+Enter to submit
   React.useEffect(() => {
@@ -330,15 +462,34 @@ export function CreateTaskModal({
           {/* 3. Metadata Property Panel (Linear / Raycast Styled Card) */}
           <div className="rounded-xl border border-border/60 bg-muted/40 p-3 space-y-2.5">
             {/* Row A: Người chủ trì (Lead Assignee) */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3 text-xs">
-              <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[110px]">
-                <User className="size-3.5 text-primary" />
-                Người chủ trì
-              </span>
+            <div className="flex flex-col gap-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
+                  <User className="size-3.5 text-primary" />
+                  Người chủ trì <span className="text-destructive">*</span>
+                </span>
+                {/* Quick Department Filter to narrow down within 300 staff */}
+                <div className="flex items-center gap-1">
+                  <span className="text-[10.5px] text-muted-foreground">Khoa/Phòng:</span>
+                  <select
+                    aria-label="Lọc nhanh theo đơn vị"
+                    value={deptFilter}
+                    onChange={(e) => setDeptFilter(e.target.value)}
+                    className="h-6 rounded-md border border-border/60 bg-background px-1.5 py-0 text-[11px] font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="ALL">Toàn trường (11 đơn vị)</option>
+                    {QCET_DEPARTMENT_GROUPS.map((g) => (
+                      <option key={g.code} value={g.code}>
+                        {g.icon} {g.department}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-              <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+              <div className="flex items-center gap-2">
                 {!isCustomAssignee ? (
-                  <div className="relative flex-1 sm:max-w-[280px]">
+                  <div className="relative flex-1">
                     <select
                       value={formData.leadAssigneeName}
                       onChange={(e) => {
@@ -351,41 +502,45 @@ export function CreateTaskModal({
                         if (errors.leadAssigneeName) clearError("leadAssigneeName");
                       }}
                       className={cn(
-                        "w-full h-8 pl-2.5 pr-7 rounded-lg border bg-card text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate",
+                        "w-full h-8.5 pl-2.5 pr-7 rounded-lg border bg-card text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate",
                         errors.leadAssigneeName ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
                       )}
                     >
-                      <option value="">-- Chọn cán bộ chủ trì --</option>
-                      {QCET_PERSONNEL.map((p) => (
-                        <option key={p.name} value={p.name}>
-                          {p.name} ({p.dept})
-                        </option>
+                      <option value="">-- Chọn cán bộ chủ trì (Họ tên & Chức vụ) --</option>
+                      {filteredGroups.map((group) => (
+                        <optgroup key={group.code} label={`${group.icon} ${group.department}`}>
+                          {group.members.map((member) => (
+                            <option key={member.name} value={member.name}>
+                              {member.title} — {member.role}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
-                      <option value="__CUSTOM__">+ Nhập cán bộ khác...</option>
+                      <option value="__CUSTOM__">➕ Nhập cán bộ khác ngoài danh mục...</option>
                     </select>
-                    <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2 top-2.5" />
+                    <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2.5 top-2.5" />
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 flex-1 sm:max-w-[280px]">
+                  <div className="flex items-center gap-2 flex-1">
                     <input
                       type="text"
-                      placeholder="Họ và tên cán bộ..."
+                      placeholder="Họ và tên cán bộ (VD: Nguyễn Văn Tuấn)..."
                       value={formData.leadAssigneeName}
                       onChange={(e) => {
                         setFormData((p) => ({ ...p, leadAssigneeName: e.target.value }));
                         if (errors.leadAssigneeName) clearError("leadAssigneeName");
                       }}
-                      className="w-full h-8 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full h-8.5 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                     <button
                       type="button"
                       onClick={() => {
                         setIsCustomAssignee(false);
-                        setFormData((p) => ({ ...p, leadAssigneeName: QCET_PERSONNEL[0].name }));
+                        setFormData((p) => ({ ...p, leadAssigneeName: "" }));
                       }}
-                      className="text-[11px] text-muted-foreground hover:text-foreground shrink-0 underline"
+                      className="text-[11px] font-medium text-muted-foreground hover:text-foreground shrink-0 underline"
                     >
-                      Chọn lại
+                      Chọn từ danh mục
                     </button>
                   </div>
                 )}

@@ -41,6 +41,7 @@ export default function DashboardPage() {
   >(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
 
   // Feature flag: đặt thành true để mở lại Dashboard thống kê phân tích sau này khi cần
   const SHOW_DASHBOARD_ANALYTICS = false;
@@ -230,7 +231,13 @@ export default function DashboardPage() {
         handleCreateTask(customEvent.detail);
       }
     };
-    const handleGlobalOpenCreate = () => {
+    const handleGlobalOpenCreate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ leadAssigneeName?: string }>;
+      if (customEvent?.detail?.leadAssigneeName) {
+        setInitialAssigneeName(customEvent.detail.leadAssigneeName);
+      } else {
+        setInitialAssigneeName(undefined);
+      }
       setIsCreateModalOpen(true);
     };
 
@@ -353,9 +360,13 @@ export default function DashboardPage() {
       {/* CreateTaskModal Dialog */}
       <CreateTaskModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setInitialAssigneeName(undefined);
+        }}
         onSubmit={handleCreateTask}
         schoolTasks={visibleTasks}
+        initialLeadAssigneeName={initialAssigneeName}
       />
     </div>
   );
