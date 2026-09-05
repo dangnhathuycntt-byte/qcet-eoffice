@@ -85,3 +85,55 @@ describe("AppSidebar Component Contracts", () => {
   });
 });
 
+describe("AppTopbar Component Contracts", () => {
+  const topbarPath = path.resolve(__dirname, "../src/components/layout/app-topbar.tsx");
+
+  it("creates app-topbar.tsx with exported AppTopbar component", () => {
+    assert.ok(fs.existsSync(topbarPath), "app-topbar.tsx must exist");
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(content.includes("export function AppTopbar()"), "Must export AppTopbar component");
+  });
+
+  it("anti-slop rule: 0% emojis in AppTopbar source file", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+    const matches = [...content.matchAll(emojiRegex)];
+    assert.strictEqual(matches.length, 0, `Found emojis in app-topbar.tsx: ${matches.map((m) => m[0]).join(", ")}`);
+  });
+
+  it("conforms to 52px height and slot specifications", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(content.includes('data-slot="app-topbar"'), "Must define data-slot app-topbar");
+    assert.ok(content.includes("h-[52px]"), "Must set height to exactly 52px (h-[52px])");
+    assert.ok(content.includes("sticky top-0"), "Must be sticky top-0");
+  });
+
+  it("includes mobile menu toggle and desktop collapse toggle buttons", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(content.includes("toggleMobile"), "Must wire toggleMobile on mobile trigger");
+    assert.ok(content.includes("toggleCollapse"), "Must wire toggleCollapse on desktop trigger");
+    assert.ok(content.includes("PanelLeftOpen"), "Must render PanelLeftOpen when collapsed");
+    assert.ok(content.includes("PanelLeftClose"), "Must render PanelLeftClose when expanded");
+  });
+
+  it("wires dynamic breadcrumbs trail with resolveBreadcrumb", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(content.includes("resolveBreadcrumb"), "Must call resolveBreadcrumb");
+    assert.ok(content.includes("rootTitle"), "Must render rootTitle");
+    assert.ok(content.includes("pageTitle"), "Must render pageTitle");
+  });
+
+  it("integrates primary action controls and modals", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(content.includes("CreateTaskModal"), "Must render CreateTaskModal");
+    assert.ok(content.includes("RoleSwitcherPill"), "Must render RoleSwitcherPill");
+    assert.ok(content.includes("UserProfileModal"), "Must render UserProfileModal");
+    assert.ok(content.includes("LiveClock"), "Must render LiveClock");
+    assert.ok(content.includes("ZoomToggle"), "Must render ZoomToggle");
+    assert.ok(content.includes("toggleTheme"), "Must wire theme toggle");
+    assert.ok(content.includes("⌘K"), "Must display ⌘K keyboard shortcut badge");
+    assert.ok(content.includes("qcet:open-create-task"), "Must listen to qcet:open-create-task event");
+    assert.ok(content.includes("qcet:task-created"), "Must dispatch qcet:task-created event");
+  });
+});
+
