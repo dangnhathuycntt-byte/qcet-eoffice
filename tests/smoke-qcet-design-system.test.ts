@@ -236,10 +236,19 @@ describe("QCET Design System Smoke Test Suite", () => {
 
       assert.deepEqual(tokenRoutes, compRoutes, "token routes and component routes match");
       assert.ok(compRoutes.includes("/"), "includes home dashboard");
-      assert.ok(compRoutes.includes("/tasks"), "includes tasks route");
-      assert.ok(compRoutes.includes("/unit-tasks"), "includes unit-tasks route");
-      assert.ok(compRoutes.includes("/calendar"), "includes calendar route");
       assert.ok(compRoutes.includes("/org"), "includes org route");
+      assert.ok(compRoutes.includes("/dashboard"), "includes dashboard route");
+      assert.ok(compRoutes.includes("/notifications"), "includes notifications route");
+    });
+
+    it("navigation items have no decorative emojis", () => {
+      NAVIGATION_ITEMS.forEach((item) => {
+        assert.match(
+          item.label,
+          /^[\p{L}\p{N}\s\-\/&]+$/u,
+          `Item label ${item.label} must not contain emojis`
+        );
+      });
     });
   });
 });

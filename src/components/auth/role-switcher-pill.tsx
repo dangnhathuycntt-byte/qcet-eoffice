@@ -17,23 +17,23 @@ export interface RoleConfigItem {
 export const ROLE_CONFIGS: Record<UserRole, RoleConfigItem> = {
   ADMIN: {
     role: "ADMIN",
-    label: "BGH (Toàn quyền)",
+    label: "Ban Giám hiệu",
     shortLabel: "BGH",
-    description: "Ban Giám hiệu (Hiệu trưởng)",
+    description: "Ban Giám hiệu (Toàn quyền)",
     icon: Landmark,
   },
   MANAGER: {
     role: "MANAGER",
-    label: "Trưởng đơn vị (Đào tạo/CNTT)",
+    label: "Trưởng đơn vị",
     shortLabel: "Trưởng đơn vị",
-    description: "Trưởng phòng Đào tạo & QLKH (Trần Hùng)",
+    description: "Lãnh đạo Phòng / Khoa / Trung tâm",
     icon: Building2,
   },
   STAFF: {
     role: "STAFF",
-    label: "Viên chức (Cá nhân)",
-    shortLabel: "Viên chức",
-    description: "Chuyên viên CNTT (Nguyễn Ngọc Vinh)",
+    label: "Chuyên viên",
+    shortLabel: "Chuyên viên",
+    description: "Giảng viên / Chuyên viên thực hiện",
     icon: User,
   },
 };
@@ -45,7 +45,7 @@ export function RoleSwitcherPill({ className }: { className?: string }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Close on outside click
+  // Close on outside click or Escape
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -88,31 +88,37 @@ export function RoleSwitcherPill({ className }: { className?: string }) {
         aria-haspopup="true"
         aria-expanded={isOpen}
         title={`Chuyển vai trò xem: ${activeConfig.label}`}
-        className="group inline-flex h-8 items-center gap-1.5 rounded-xl border border-border/60 bg-card/80 backdrop-blur-xl px-2.5 text-xs font-semibold text-foreground shadow-xs transition-all hover:bg-card hover:border-border cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-95"
+        className="group inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary/80 px-2.5 text-xs font-medium text-foreground transition-all cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.98]"
       >
-        <ActiveIcon className="size-3.5 text-primary transition-colors" />
-        <span className="hidden sm:inline font-semibold">{activeConfig.label}</span>
-        <span className="inline sm:hidden font-semibold">{activeConfig.shortLabel}</span>
+        <ActiveIcon
+          size={14}
+          strokeWidth={1.5}
+          className="text-muted-foreground group-hover:text-foreground transition-colors shrink-0"
+        />
+        <span className="hidden sm:inline font-medium">{activeConfig.label}</span>
+        <span className="inline sm:hidden font-medium">{activeConfig.shortLabel}</span>
         <ChevronDown
+          size={12}
+          strokeWidth={1.5}
           className={cn(
-            "size-3 text-muted-foreground transition-transform duration-150 group-hover:text-foreground",
+            "text-muted-foreground transition-transform duration-150 group-hover:text-foreground shrink-0",
             isOpen && "rotate-180"
           )}
         />
       </button>
 
-      {/* Glassmorphic Role Dropdown Menu */}
+      {/* Subtle Glassmorphic Role Dropdown Menu */}
       {isOpen && (
         <div
           role="menu"
           aria-orientation="vertical"
-          className="absolute right-0 top-full mt-1.5 w-72 rounded-xl border border-border/60 bg-card/95 p-1.5 text-popover-foreground shadow-card backdrop-blur-xl z-50 animate-in fade-in-0 zoom-in-95 focus:outline-none"
+          className="absolute right-0 top-full mt-1.5 w-64 rounded-xl border border-border/60 bg-card/95 p-1 text-popover-foreground shadow-dropdown backdrop-blur-md z-50 animate-in fade-in-0 zoom-in-95 focus:outline-none"
         >
-          <div className="px-2.5 py-1.5 text-[11px] font-bold text-muted-foreground border-b border-border/50 mb-1">
-            Góc nhìn vai trò (RBAC Demo)
+          <div className="px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground border-b border-border/40 mb-1">
+            Vai trò điều hành
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {ROLE_ORDER.map((roleKey) => {
               const item = ROLE_CONFIGS[roleKey];
               const Icon = item.icon;
@@ -128,28 +134,28 @@ export function RoleSwitcherPill({ className }: { className?: string }) {
                     setIsOpen(false);
                   }}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors cursor-pointer text-left",
+                    "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors cursor-pointer text-left active:scale-[0.98]",
                     isActive
-                      ? "bg-primary/10 text-primary font-bold border border-primary/20"
-                      : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground border border-transparent"
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                   )}
                 >
                   <div className="flex items-start gap-2.5 min-w-0">
                     <span
                       className={cn(
-                        "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border text-[11px]",
+                        "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border",
                         isActive
-                          ? "border-primary/40 bg-primary/20 text-primary"
+                          ? "border-primary/40 bg-primary/10 text-primary"
                           : "border-border/60 bg-background text-muted-foreground"
                       )}
                     >
-                      <Icon className="size-3" />
+                      <Icon size={13} strokeWidth={1.5} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-foreground truncate">
+                      <p className="font-medium text-foreground truncate">
                         {item.label}
                       </p>
-                      <p className="text-[10px] text-muted-foreground truncate">
+                      <p className="text-[10.5px] text-muted-foreground truncate">
                         {item.description}
                       </p>
                     </div>
@@ -157,7 +163,9 @@ export function RoleSwitcherPill({ className }: { className?: string }) {
 
                   {isActive && (
                     <Check
-                      className="size-3.5 shrink-0 text-primary"
+                      size={14}
+                      strokeWidth={1.5}
+                      className="shrink-0 text-primary"
                       aria-label="Đang chọn"
                     />
                   )}

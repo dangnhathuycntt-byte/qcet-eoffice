@@ -160,8 +160,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Quản lý công việc", icon: "CheckSquare" },
-  { href: "/tasks", label: "Nhiệm vụ cấp Trường", icon: "CheckSquare" },
-  { href: "/unit-tasks", label: "Công việc Đơn vị", icon: "Briefcase" },
-  { href: "/calendar", label: "Lịch công tác", icon: "Calendar" },
-  { href: "/org", label: "Cơ cấu tổ chức", icon: "Network" },
+  { href: "/org", label: "Cơ cấu & Danh bạ", icon: "Network" },
+  { href: "/dashboard", label: "Báo cáo KPI", icon: "LayoutDashboard" },
+  { href: "/notifications", label: "Thông báo", icon: "Bell" },
 ];

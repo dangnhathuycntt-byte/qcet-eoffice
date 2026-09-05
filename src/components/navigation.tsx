@@ -7,13 +7,17 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
-  Briefcase,
-  Calendar,
   Network,
+  Bell,
   Clock,
   Sun,
   Moon,
   Plus,
+  User,
+  CheckCircle2,
+  ChevronDown,
+  LogOut,
+  Settings,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -24,6 +28,7 @@ import {
 } from "@/components/dashboard/create-task-modal";
 import { useAuth } from "@/lib/auth-context";
 import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
+import { UserProfileModal } from "@/components/auth/user-profile-modal";
 
 export function getInitials(name: string): string {
   if (!name || !name.trim()) return "QC";
@@ -36,10 +41,9 @@ export function getInitials(name: string): string {
 
 export const NAVIGATION_ITEMS = [
   { href: "/", label: "Quản lý công việc", icon: CheckSquare },
-  { href: "/tasks", label: "Nhiệm vụ cấp Trường", icon: CheckSquare },
-  { href: "/unit-tasks", label: "Công việc Đơn vị", icon: Briefcase },
-  { href: "/calendar", label: "Lịch công tác", icon: Calendar },
-  { href: "/org", label: "Cơ cấu tổ chức", icon: Network },
+  { href: "/org", label: "Cơ cấu & Danh bạ", icon: Network },
+  { href: "/dashboard", label: "Báo cáo KPI", icon: LayoutDashboard },
+  { href: "/notifications", label: "Thông báo", icon: Bell },
 ];
 
 export function LiveClock() {
@@ -65,9 +69,9 @@ export function LiveClock() {
   if (!timeStr) return null;
 
   return (
-    <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card/60 border border-border/50 text-xs font-mono font-bold text-foreground/90 shadow-xs">
-      <Clock size={13} className="text-primary" />
-      <span className="tabular-nums">{timeStr}</span>
+    <div className="hidden xl:flex items-center gap-1.5 text-xs font-mono tabular-nums text-muted-foreground select-none">
+      <Clock size={13} strokeWidth={1.5} className="text-muted-foreground/80 shrink-0" />
+      <span>{timeStr}</span>
     </div>
   );
 }
@@ -101,11 +105,11 @@ export function ZoomToggle() {
     <button
       type="button"
       onClick={toggleZoom}
-      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-card/80 hover:bg-card border border-border/60 text-xs font-black text-foreground shadow-xs transition-all cursor-pointer hover:border-primary/40 active:scale-95"
-      title="Bật / Tắt chế độ Zoom (100% / 120%)"
+      className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary/80 text-xs font-medium text-foreground transition-colors cursor-pointer active:scale-[0.98]"
+      title="Bật / Tắt phóng to giao diện (100% / 120%)"
     >
-      <span className="text-[10.5px] text-muted-foreground font-bold">Zoom:</span>
-      <span className="font-mono text-primary font-black">
+      <span className="text-[10px] text-muted-foreground font-normal">Zoom</span>
+      <span className="font-mono text-[11px] text-foreground font-semibold tabular-nums">
         {mounted ? `${Math.round(zoomLevel * 100)}%` : "100%"}
       </span>
     </button>
@@ -116,7 +120,7 @@ export function MobileNav({ pathname }: { pathname: string }) {
   return (
     <nav
       data-slot="mobile-nav"
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/90 backdrop-blur-lg border-t border-border/60 px-2 py-1.5 shadow-lg"
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/90 backdrop-blur-md border-t border-border/50 px-2 py-1.5 shadow-lg"
       aria-label="Điều hướng di động"
     >
       <div className="flex items-center justify-around">
@@ -129,27 +133,29 @@ export function MobileNav({ pathname }: { pathname: string }) {
           const shortLabel =
             item.label === "Quản lý công việc"
               ? "Công việc"
-              : item.label === "Nhiệm vụ cấp Trường"
-              ? "Cấp Trường"
-              : item.label === "Công việc Đơn vị"
-              ? "Đơn vị"
-              : item.label === "Cơ cấu tổ chức"
+              : item.label === "Cơ cấu & Danh bạ" || item.label === "Cơ cấu tổ chức"
               ? "Tổ chức"
+              : item.label === "Báo cáo KPI"
+              ? "KPI"
+              : item.label === "Thông báo"
+              ? "Thông báo"
               : item.label;
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center py-1 px-2 rounded-xl text-[10px] font-medium transition-colors",
+                "flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium transition-colors",
                 active
-                  ? "text-primary font-bold bg-primary/10"
+                  ? "text-primary font-semibold bg-primary/10"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Icon
+                size={16}
+                strokeWidth={1.5}
                 className={cn(
-                  "size-4 mb-0.5",
+                  "mb-0.5",
                   active ? "text-primary" : "text-muted-foreground"
                 )}
               />
@@ -165,9 +171,29 @@ export function MobileNav({ pathname }: { pathname: string }) {
 export function Navigation() {
   const pathname = usePathname();
   const { resolved, toggleTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, logout, setIsProfileModalOpen } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
+  const profileDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    if (isProfileDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isProfileDropdownOpen]);
 
   // Global event listener for opening create modal with pre-selected assignee (e.g. from /org)
   React.useEffect(() => {
@@ -184,7 +210,7 @@ export function Navigation() {
     return () => window.removeEventListener("qcet:open-create-task", handleOpenCreateTask);
   }, []);
 
-  // Global keyboard shortcut: Press 'N' anywhere (outside form inputs) to quick-create task
+  // Global keyboard shortcuts: '⌘K' / 'Ctrl+K' or 'N' (outside form inputs) to quick-create task
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -198,10 +224,8 @@ export function Navigation() {
         return;
       }
       if (
-        (e.key === "n" || e.key === "N") &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey
+        ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) ||
+        ((e.key === "n" || e.key === "N") && !e.metaKey && !e.ctrlKey && !e.altKey)
       ) {
         e.preventDefault();
         setIsCreateModalOpen(true);
@@ -221,63 +245,90 @@ export function Navigation() {
   return (
     <header
       data-slot="executive-header"
-      className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl transition-all duration-200 shadow-xs"
+      className="sticky top-0 z-50 w-full h-14 border-b border-border/50 bg-background/85 backdrop-blur-md transition-colors"
     >
-      {/* ========================================================================= */}
-      {/* 1. Main Top Bar: Branding | LiveClock | Zoom | Role | Actions             */}
-      {/* ========================================================================= */}
-      <div className="max-w-[1440px] w-full mx-auto px-3.5 sm:px-6 py-2.5 flex items-center justify-between gap-3 relative">
-        {/* Left: QCET School Logo and College Name with Green Ping Badge */}
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 sm:gap-3 min-w-0 group"
-          aria-label="Về trang chủ QCET E-Office"
-        >
-          <div className="relative flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-card p-1 shadow-card border border-border/60 shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:border-primary/40 group-hover:shadow-glow-primary">
-            <Image
-              src="/logo-qcet.png"
-              alt="Logo Quy Nhon"
-              width={44}
-              height={44}
-              priority
-              unoptimized
-              className="h-full w-full object-contain"
-            />
-          </div>
-          <div className="min-w-0">
+      <div className="max-w-[1440px] h-full w-full mx-auto px-3.5 sm:px-6 flex items-center justify-between gap-3">
+        {/* Left: Brand & Desktop Navigation */}
+        <div className="flex items-center gap-4 lg:gap-6 min-w-0">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 shrink-0 group"
+            aria-label="Về trang chủ QCET E-Office"
+          >
+            <div className="relative flex items-center justify-center size-8 rounded-lg bg-card p-0.5 border border-border/60 shrink-0 transition-colors group-hover:border-primary/40">
+              <Image
+                src="/logo-qcet.png"
+                alt="QCET Logo"
+                width={32}
+                height={32}
+                priority
+                unoptimized
+                className="h-full w-full object-contain"
+              />
+            </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm sm:text-base font-extrabold tracking-tight text-foreground font-heading group-hover:text-primary transition-colors">
+              <span className="text-sm font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">
                 QCET E-Office
               </span>
-              <span className="relative flex h-2 w-2" title="Hệ thống trực tuyến">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-muted-foreground bg-muted border border-border/50 select-none">
+                v1.2 Enterprise
               </span>
             </div>
-            <p className="text-[11px] text-muted-foreground font-medium leading-none select-none mt-0.5 truncate">
-              Trường CĐ Kỹ thuật Công nghệ Quy Nhơn
-            </p>
-          </div>
-        </Link>
+          </Link>
 
-        {/* Right: LiveClock | ZoomToggle | RoleSwitcherPill | Quick Task | Theme | Avatar */}
+          {/* Desktop Navigation Links */}
+          <nav className="hidden md:flex items-center gap-1" aria-label="Thanh điều hướng chính">
+            {NAVIGATION_ITEMS.map((item) => {
+              const active =
+                pathname === item.href ||
+                (item.href !== "/" &&
+                  (pathname === item.href || pathname.startsWith(item.href + "/")));
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  data-active={active}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors whitespace-nowrap",
+                    active
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  )}
+                >
+                  <Icon
+                    size={14}
+                    strokeWidth={1.5}
+                    className={cn(
+                      "shrink-0",
+                      active ? "text-primary" : "text-muted-foreground"
+                    )}
+                  />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Right: LiveClock | ZoomToggle | RoleSwitcherPill | Quick Create Task | Theme | Avatar */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           <LiveClock />
           <ZoomToggle />
           <RoleSwitcherPill />
 
-          {/* Quick Create Task Action Button — always visible on sm+ */}
+          {/* Sleek Linear-style Quick Create Task Button */}
           <Button
             type="button"
             size="sm"
             onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-hover transition-all cursor-pointer"
-            title="Giao việc nhanh toàn hệ thống (phím N)"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all cursor-pointer active:scale-[0.98]"
+            title="Giao việc mới (phím ⌘K hoặc N)"
           >
-            <Plus className="size-3.5" />
-            <span className="hidden sm:inline">Giao việc</span>
-            <kbd className="ml-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/20 px-1 py-0.5 text-[9.5px] font-mono leading-none opacity-90 hidden sm:inline">
-              N
+            <Plus size={14} strokeWidth={1.5} className="shrink-0" />
+            <span className="hidden sm:inline font-medium">Giao việc</span>
+            <kbd className="ml-0.5 hidden items-center gap-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1 py-0.5 text-[10px] font-mono leading-none sm:inline-flex opacity-90">
+              ⌘K
             </kbd>
           </Button>
 
@@ -288,83 +339,129 @@ export function Navigation() {
             size="icon-sm"
             onClick={toggleTheme}
             aria-label="Chuyển đổi giao diện sáng/tối"
-            className="size-8 rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent hover:border-border/50"
+            className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
           >
             {resolved === "dark" ? (
-              <Sun className="size-4 text-amber-400 transition-transform" />
+              <Sun size={15} strokeWidth={1.5} className="text-amber-400" />
             ) : (
-              <Moon className="size-4 text-muted-foreground transition-transform" />
+              <Moon size={15} strokeWidth={1.5} className="text-muted-foreground" />
             )}
           </Button>
 
-          {/* User Avatar + Profile */}
-          <Link
-            href="/login"
-            className="flex items-center gap-2 pl-1 border-l border-border/60 transition-opacity hover:opacity-85 group cursor-pointer"
-            title={`Đổi tài khoản / Đăng nhập (Hiện tại: ${user.name})`}
-          >
-            <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 text-xs font-bold shadow-xs group-hover:ring-2 group-hover:ring-primary/30">
-              {getInitials(user.name)}
-            </div>
-            <div className="hidden text-left xl:block">
-              <p
-                className="text-xs font-bold leading-tight text-foreground max-w-[130px] truncate"
-                title={user.name}
-              >
-                {user.name}
-              </p>
-              <p
-                className="text-[10.5px] text-muted-foreground font-medium max-w-[130px] truncate"
-                title={user.roleLabel}
-              >
-                {user.role === "ADMIN"
-                  ? "BGH QCET"
-                  : user.departmentCode || user.department}
-              </p>
-            </div>
-          </Link>
+          {/* User Avatar + Profile Dropdown */}
+          <div className="relative" ref={profileDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
+              className="flex items-center gap-2 pl-2 border-l border-border/50 transition-opacity hover:opacity-90 group cursor-pointer focus:outline-none"
+              title={`Hồ sơ cá nhân: ${user.name}`}
+              aria-expanded={isProfileDropdownOpen}
+            >
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-xs group-hover:ring-1 group-hover:ring-primary/40 transition-all">
+                {getInitials(user.name)}
+              </div>
+              <div className="hidden text-left xl:block">
+                <p
+                  className="text-xs font-semibold leading-tight text-foreground max-w-[130px] truncate"
+                  title={user.name}
+                >
+                  {user.name}
+                </p>
+                <p
+                  className="text-[10.5px] text-muted-foreground font-medium max-w-[130px] truncate"
+                  title={user.roleLabel}
+                >
+                  {user.role === "ADMIN"
+                    ? "BGH QCET"
+                    : user.departmentCode || user.department}
+                </p>
+              </div>
+              <ChevronDown
+                size={12}
+                strokeWidth={1.5}
+                className="text-muted-foreground transition-transform group-hover:text-foreground hidden sm:block"
+              />
+            </button>
+
+            {/* Profile Dropdown Menu */}
+            {isProfileDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border/60 bg-card/95 backdrop-blur-md p-3 shadow-dropdown z-50 animate-in fade-in zoom-in-95 duration-150">
+                {/* User Summary Card */}
+                <div className="flex items-start gap-3 border-b border-border/50 pb-3">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-sm font-semibold shadow-xs shrink-0">
+                    {getInitials(user.name)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-semibold text-foreground truncate" title={user.name}>
+                        {user.name}
+                      </p>
+                      {user.emailVerified && (
+                        <span title="Đã xác thực Google Workspace" className="shrink-0 text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 size={13} strokeWidth={1.5} />
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-mono text-muted-foreground truncate" title={user.email}>
+                      {user.email}
+                    </p>
+                    <div className="mt-1 flex items-center gap-1 flex-wrap">
+                      <span className="rounded bg-secondary px-1.5 py-0.5 text-[9.5px] font-medium text-foreground border border-border/50">
+                        {user.role === "ADMIN"
+                          ? "Ban Giám hiệu"
+                          : user.role === "MANAGER"
+                          ? "Trưởng đơn vị"
+                          : "Chuyên viên"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground truncate">
+                        {user.departmentCode || "QCET"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-2 space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      setIsProfileModalOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
+                  >
+                    <Settings size={14} strokeWidth={1.5} className="text-muted-foreground" />
+                    <span>Cập nhật hồ sơ cán bộ</span>
+                  </button>
+
+                  <Link
+                    href="/login"
+                    onClick={() => setIsProfileDropdownOpen(false)}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
+                  >
+                    <User size={14} strokeWidth={1.5} className="text-muted-foreground" />
+                    <span>Đổi tài khoản / Đăng nhập khác</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      logout();
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer text-left active:scale-[0.98]"
+                  >
+                    <LogOut size={14} strokeWidth={1.5} />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 2. SubNav: Horizontal Scrolling Pill Bar with Glassmorphism                */}
-      {/* ========================================================================= */}
-      <div className="border-t border-border/50 bg-background/70 backdrop-blur-xl px-3.5 sm:px-6">
-        <div className="mx-auto flex h-10 w-full max-w-[1440px] items-center gap-1.5 overflow-x-auto scrollbar-none">
-          {NAVIGATION_ITEMS.map((item) => {
-            const active =
-              pathname === item.href ||
-              (item.href !== "/" &&
-                (pathname === item.href || pathname.startsWith(item.href + "/")));
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                data-active={active}
-                className={cn(
-                  "relative inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-all whitespace-nowrap",
-                  active
-                    ? "bg-primary/10 text-primary font-bold border border-primary/20 shadow-xs"
-                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "size-3.5",
-                    active ? "text-primary" : "text-muted-foreground"
-                  )}
-                />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 3. Mobile Bottom Navigation for Small Screens (< 768px)                   */}
-      {/* ========================================================================= */}
+      {/* Mobile Bottom Navigation for Small Screens (< 768px) */}
       <MobileNav pathname={pathname} />
 
       {/* CreateTaskModal Dialog from Topbar */}
@@ -377,6 +474,9 @@ export function Navigation() {
         onSubmit={handleCreateTaskFromTopbar}
         initialLeadAssigneeName={initialAssigneeName}
       />
+
+      {/* User Profile Modal */}
+      <UserProfileModal />
     </header>
   );
 }
