@@ -19,10 +19,10 @@ import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 describe("Sprint 2 Integration & Navigation", () => {
   test("NAV_ITEMS routes match all implemented pages", () => {
     const paths = NAV_ITEMS.map((item) => item.href);
-    assert.ok(paths.includes("/"), "contains root dashboard route");
-    assert.ok(paths.includes("/tasks"), "contains tasks route");
-    assert.ok(paths.includes("/calendar"), "contains calendar route");
+    assert.ok(paths.includes("/"), "contains root task management route");
     assert.ok(paths.includes("/org"), "contains org hierarchy route");
+    assert.ok(paths.includes("/dashboard"), "contains dashboard route");
+    assert.ok(paths.includes("/notifications"), "contains notifications route");
   });
 
   test("NAVIGATION_ITEMS and NAV_ITEMS stay synchronized", () => {
@@ -35,10 +35,10 @@ describe("Sprint 2 Integration & Navigation", () => {
     );
 
     const labels = NAVIGATION_ITEMS.map((item) => item.label);
-    assert.ok(labels.includes("Quản lý công việc") || labels.includes("Dashboard"));
-    assert.ok(labels.includes("Nhiệm vụ cấp Trường"));
-    assert.ok(labels.includes("Lịch công tác"));
-    assert.ok(labels.includes("Cơ cấu tổ chức"));
+    assert.ok(labels.includes("Quản lý công việc"));
+    assert.ok(labels.includes("Cơ cấu & Danh bạ") || labels.includes("Cơ cấu tổ chức"));
+    assert.ok(labels.includes("Báo cáo KPI"));
+    assert.ok(labels.includes("Thông báo"));
   });
 
   test("Route files exist in app router directory", () => {
@@ -57,6 +57,32 @@ describe("Sprint 2 Integration & Navigation", () => {
         `Route file ${file} must exist in src/app`
       );
     }
+  });
+
+  test("next.config.ts configures backwards-compatible redirects for legacy routes", async () => {
+    const { default: nextConfig } = await import("../next.config");
+    assert.ok(typeof nextConfig.redirects === "function", "redirects function exists");
+    const redirects = await nextConfig.redirects();
+    assert.deepEqual(
+      redirects,
+      [
+        {
+          source: "/tasks",
+          destination: "/?scope=school",
+          permanent: false,
+        },
+        {
+          source: "/unit-tasks",
+          destination: "/?scope=unit",
+          permanent: false,
+        },
+        {
+          source: "/calendar",
+          destination: "/?view=calendar",
+          permanent: false,
+        },
+      ]
+    );
   });
 
   test("Task creation integration: new SchoolTask updates dashboard stats and rollup", () => {

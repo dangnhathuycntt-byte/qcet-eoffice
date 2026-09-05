@@ -16,9 +16,8 @@ describe("Dashboard Assembly Integration", () => {
   test("navigation items include Twenty Executive Dashboard links", () => {
     const labels = NAVIGATION_ITEMS.map((item) => item.label);
     assert.ok(labels.includes("Quản lý công việc") || labels.includes("Dashboard"), "includes Quản lý công việc or Dashboard");
-    assert.ok(labels.includes("Nhiệm vụ cấp Trường"), "includes Nhiệm vụ cấp Trường");
-    assert.ok(labels.includes("Công việc Đơn vị"), "includes Công việc Đơn vị");
-    assert.ok(labels.includes("Lịch công tác"), "includes Lịch công tác");
-    assert.ok(labels.includes("Cơ cấu tổ chức"), "includes Cơ cấu tổ chức");
+    assert.ok(labels.includes("Cơ cấu & Danh bạ") || labels.includes("Cơ cấu tổ chức"), "includes Cơ cấu & Danh bạ");
+    assert.ok(labels.includes("Báo cáo KPI"), "includes Báo cáo KPI");
+    assert.ok(labels.includes("Thông báo"), "includes Thông báo");
   });
 });

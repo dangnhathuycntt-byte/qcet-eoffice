@@ -6,6 +6,25 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  async redirects() {
+    return [
+      {
+        source: "/tasks",
+        destination: "/?scope=school",
+        permanent: false,
+      },
+      {
+        source: "/unit-tasks",
+        destination: "/?scope=unit",
+        permanent: false,
+      },
+      {
+        source: "/calendar",
+        destination: "/?view=calendar",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
