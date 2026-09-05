@@ -189,7 +189,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
     code: "TAI_CHINH",
     icon: "",
     members: [
-      { name: "Trần Thị Mai Loan", title: "ThS. Trần Thị Mai Loan", role: "Trưởng ph��ng" },
+      { name: "Trần Thị Mai Loan", title: "ThS. Trần Thị Mai Loan", role: "Trưởng phòng" },
       { name: "Hà Thanh Vân", title: "ThS. Hà Thanh Vân", role: "Kế toán trưởng" },
       { name: "Bùi Văn Hào", title: "CN. Bùi Văn Hào", role: "Kế toán viên" },
     ],

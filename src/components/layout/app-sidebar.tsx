@@ -54,7 +54,7 @@ export function AppSidebar() {
         data-slot="app-sidebar"
         aria-label="Thanh điều hướng bên"
         className={cn(
-          "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col border-r border-border/60 bg-card/95 backdrop-blur-md transition-all duration-200 ease-in-out select-none",
+          "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col border-r border-border/60 bg-card/95 backdrop-blur-md transition-all duration-200 ease-in-out select-none overflow-x-hidden",
           isCollapsed ? "w-16" : "w-60"
         )}
       >
@@ -86,7 +86,7 @@ export function AppSidebar() {
                 title="Mở rộng sidebar (Ctrl+B)"
                 aria-label="Mở rộng sidebar"
               >
-                <ChevronRight size={12} strokeWidth={2} />
+                <ChevronRight size={12} strokeWidth={1.5} />
               </button>
             </div>
           ) : (
@@ -123,7 +123,7 @@ export function AppSidebar() {
                 title="Thu gọn sidebar (Ctrl+B)"
                 aria-label="Thu gọn sidebar"
               >
-                <ChevronLeft size={15} strokeWidth={1.75} />
+                <ChevronLeft size={15} strokeWidth={1.5} />
               </button>
             </div>
           )}
@@ -158,7 +158,7 @@ export function AppSidebar() {
                   )}
                   <Icon
                     size={18}
-                    strokeWidth={active ? 2 : 1.75}
+                    strokeWidth={1.5}
                     className={cn(
                       "shrink-0 transition-colors",
                       active
@@ -187,7 +187,7 @@ export function AppSidebar() {
                 )}
                 <Icon
                   size={17}
-                  strokeWidth={active ? 2 : 1.75}
+                  strokeWidth={1.5}
                   className={cn(
                     "shrink-0 transition-colors",
                     active
@@ -224,7 +224,7 @@ export function AppSidebar() {
                 title="Mở rộng sidebar (Ctrl+B)"
                 aria-label="Mở rộng sidebar"
               >
-                <ChevronRight size={15} strokeWidth={1.75} />
+                <ChevronRight size={15} strokeWidth={1.5} />
               </button>
             </div>
           ) : (
@@ -240,7 +240,7 @@ export function AppSidebar() {
                 title="Thu gọn sidebar (Ctrl+B)"
                 aria-label="Thu gọn sidebar"
               >
-                <ChevronLeft size={14} strokeWidth={1.75} />
+                <ChevronLeft size={14} strokeWidth={1.5} />
               </button>
             </div>
           )}
@@ -306,7 +306,7 @@ export function AppSidebar() {
               aria-label="Đóng menu"
               title="Đóng menu"
             >
-              <X size={16} strokeWidth={1.75} />
+              <X size={16} strokeWidth={1.5} />
             </button>
           </div>
 
@@ -336,7 +336,7 @@ export function AppSidebar() {
                   )}
                   <Icon
                     size={18}
-                    strokeWidth={active ? 2 : 1.75}
+                    strokeWidth={1.5}
                     className={cn(
                       "shrink-0 transition-colors",
                       active

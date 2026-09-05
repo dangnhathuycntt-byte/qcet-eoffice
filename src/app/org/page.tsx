@@ -115,7 +115,7 @@ export default function OrgPage() {
                 ),
               ];
               const csvContent =
-                "data:text/csv;charset=utf-8,﻿" +
+                "data:text/csv;charset=utf-8," +
                 rows.map((e) => e.map((val) => `"${val}"`).join(",")).join("\n");
               const encodedUri = encodeURI(csvContent);
               const link = document.createElement("a");

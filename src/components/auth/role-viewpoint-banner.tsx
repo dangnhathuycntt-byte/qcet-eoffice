@@ -6,6 +6,7 @@ import { AuthUser } from "@/types/auth";
 import { Badge } from "@/components/ui/badge";
 import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
 import { cn } from "@/lib/utils";
+import { Landmark, Building2, User } from "lucide-react";
 
 export function getViewpointText(user: AuthUser): string {
   if (user.role === "ADMIN") {
@@ -17,15 +18,22 @@ export function getViewpointText(user: AuthUser): string {
   return `Góc nhìn Cá nhân: Nhiệm vụ & Công việc được phân công cho ${user.name}`;
 }
 
+export function getViewpointIcon(role: string) {
+  if (role === "ADMIN") return Landmark;
+  if (role === "MANAGER") return Building2;
+  return User;
+}
+
+/**
+ * @deprecated Anti-slop rule: decorative emojis removed across codebase. Returns empty string.
+ */
 export function getViewpointEmoji(role: string): string {
-  if (role === "ADMIN") return "🏛️";
-  if (role === "MANAGER") return "🏢";
-  return "👤";
+  return "";
 }
 
 export function RoleViewpointBanner({ className }: { className?: string }) {
   const { user } = useAuth();
-  const emoji = getViewpointEmoji(user.role);
+  const Icon = getViewpointIcon(user.role);
   const viewpointText = getViewpointText(user);
 
   return (
@@ -37,9 +45,7 @@ export function RoleViewpointBanner({ className }: { className?: string }) {
       )}
     >
       <div className="flex items-center gap-2.5 min-w-0">
-        <span className="text-base shrink-0 select-none" aria-hidden="true">
-          {emoji}
-        </span>
+        <Icon className="size-4 shrink-0 text-muted-foreground select-none" strokeWidth={1.5} aria-hidden="true" />
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           <Badge
             variant="outline"

@@ -10,7 +10,9 @@ import { computeDashboardStats } from "../src/lib/dashboard-aggregator";
 import {
   getViewpointText,
   getViewpointEmoji,
+  getViewpointIcon,
 } from "../src/components/auth/role-viewpoint-banner";
+import { Landmark, Building2, User } from "lucide-react";
 
 describe("Role Pages Filtering Integration", () => {
   test("switching roles dynamically recomputes stats and task count", () => {
@@ -33,7 +35,8 @@ describe("Role Pages Filtering Integration", () => {
     assert.equal(adminStats.totalStaffTasks, 920);
     assert.equal(adminUpcoming.length, payload.upcoming.length);
 
-    assert.equal(getViewpointEmoji(admin.role), "🏛️");
+    assert.equal(getViewpointEmoji(admin.role), "");
+    assert.equal(getViewpointIcon(admin.role), Landmark);
     assert.equal(
       getViewpointText(admin),
       "Góc nhìn Ban Giám hiệu: Giám sát toàn trường (11 đơn vị trực thuộc)"
@@ -54,7 +57,8 @@ describe("Role Pages Filtering Integration", () => {
     assert.ok(managerStats.totalSchoolTasks > 0);
     assert.ok(managerUpcoming.length > 0);
 
-    assert.equal(getViewpointEmoji(manager.role), "🏢");
+    assert.equal(getViewpointEmoji(manager.role), "");
+    assert.equal(getViewpointIcon(manager.role), Building2);
     assert.equal(
       getViewpointText(manager),
       `Góc nhìn Lãnh đạo Đơn vị: ${manager.department} — Phụ trách: ${manager.name}`
@@ -92,7 +96,8 @@ describe("Role Pages Filtering Integration", () => {
       );
     }
 
-    assert.equal(getViewpointEmoji(staff.role), "👤");
+    assert.equal(getViewpointEmoji(staff.role), "");
+    assert.equal(getViewpointIcon(staff.role), User);
     assert.equal(
       getViewpointText(staff),
       `Góc nhìn Cá nhân: Nhiệm vụ & Công việc được phân công cho ${staff.name}`
