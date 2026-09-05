@@ -97,7 +97,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Ban Giám hiệu",
     code: "BGH",
-    icon: "🏛️",
+    icon: "",
     members: [
       { name: "Nguyễn Minh Tuấn", title: "TS. Nguyễn Minh Tuấn", role: "Hiệu trưởng" },
       { name: "Lê Thành Đạt", title: "ThS. Lê Thành Đạt", role: "Phó Hiệu trưởng" },
@@ -107,7 +107,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Khoa Công nghệ thông tin",
     code: "CNTT",
-    icon: "💻",
+    icon: "",
     members: [
       { name: "Nguyễn Ngọc Vinh", title: "TS. Nguyễn Ngọc Vinh", role: "Trưởng khoa (CĐS)" },
       { name: "Trần Hùng", title: "ThS. Trần Hùng", role: "Phó Trưởng khoa (ATTT)" },
@@ -117,7 +117,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Phòng Đào tạo & Quản lý Khoa học",
     code: "DAO_TAO",
-    icon: "📚",
+    icon: "",
     members: [
       { name: "Đỗ Quang Trung", title: "ThS. Đỗ Quang Trung", role: "Trưởng phòng" },
       { name: "Võ Minh Trí", title: "ThS. Võ Minh Trí", role: "Phó Trưởng phòng" },
@@ -127,7 +127,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Trung tâm Truyền thông & Số hóa (DCC)",
     code: "TRUYEN_THONG",
-    icon: "📢",
+    icon: "",
     members: [
       { name: "Mai Đinh Thị Xuân", title: "ThS. Mai Đinh Thị Xuân", role: "Giám đốc TT" },
       { name: "Dương Quang Huy", title: "CN. Dương Quang Huy", role: "Chuyên viên CNTT" },
@@ -137,7 +137,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Phòng Hành chính - Quản trị",
     code: "HANH_CHINH",
-    icon: "🏢",
+    icon: "",
     members: [
       { name: "Phan Văn Thanh", title: "ThS. Phan Văn Thanh", role: "Trưởng phòng" },
       { name: "Lê Hoàng Nam", title: "ThS. Lê Hoàng Nam", role: "Phó Trưởng phòng" },
@@ -147,7 +147,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Phòng Khảo thí & Đảm bảo chất lượng",
     code: "KHAO_THI",
-    icon: "🎯",
+    icon: "",
     members: [
       { name: "Nguyễn Công Minh", title: "ThS. Nguyễn Công Minh", role: "Trưởng phòng" },
       { name: "Đặng Văn Hậu", title: "ThS. Đặng Văn Hậu", role: "Phó Trưởng phòng" },
@@ -157,7 +157,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Trung tâm Ngoại ngữ - Tin học & Thư viện",
     code: "THU_VIEN",
-    icon: "📖",
+    icon: "",
     members: [
       { name: "Chu Đình Thắng", title: "ThS. Chu Đình Thắng", role: "Giám đốc TT" },
       { name: "Phạm Thị Thu", title: "CN. Phạm Thị Thu", role: "Phụ trách Thư viện" },
@@ -167,7 +167,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Khoa Kinh tế - Quản trị",
     code: "KINH_TE",
-    icon: "📊",
+    icon: "",
     members: [
       { name: "Lê Thị Ánh Tuyết", title: "ThS. Lê Thị Ánh Tuyết", role: "Trưởng khoa" },
       { name: "Đỗ Hoàng Sơn", title: "ThS. Đỗ Hoàng Sơn", role: "Phó Trưởng khoa" },
@@ -177,7 +177,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Khoa Kỹ thuật - Công nghệ",
     code: "KY_THUAT",
-    icon: "⚙️",
+    icon: "",
     members: [
       { name: "Đinh Quốc Cường", title: "TS. Đinh Quốc Cường", role: "Trưởng khoa" },
       { name: "Vũ Mạnh Hùng", title: "ThS. Vũ Mạnh Hùng", role: "Phó Trưởng khoa" },
@@ -187,7 +187,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Phòng Kế hoạch - Tài chính",
     code: "TAI_CHINH",
-    icon: "💰",
+    icon: "",
     members: [
       { name: "Trần Thị Mai Loan", title: "ThS. Trần Thị Mai Loan", role: "Trưởng ph��ng" },
       { name: "Hà Thanh Vân", title: "ThS. Hà Thanh Vân", role: "Kế toán trưởng" },
@@ -197,7 +197,7 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   {
     department: "Phòng Công tác học sinh sinh viên",
     code: "CTHSSV",
-    icon: "🎓",
+    icon: "",
     members: [
       { name: "Huỳnh Công Tuấn", title: "ThS. Huỳnh Công Tuấn", role: "Trưởng phòng" },
       { name: "Nguyễn Thị Thanh Hà", title: "ThS. Nguyễn Thị Thanh Hà", role: "Phó Trưởng phòng" },
@@ -282,6 +282,16 @@ export function CreateTaskModal({
     prevIsOpen.current = isOpen;
   }, [isOpen, initialLevel, initialParentTaskId, initialDueDate, initialLeadAssigneeName, isManager, allowedLevels, user?.role]);
 
+  // Body scroll lock when drawer is open
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
   // Keyboard shortcuts: ESC to close, Ctrl+Enter or Cmd+Enter to submit
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -342,32 +352,39 @@ export function CreateTaskModal({
   const activeCategory = CATEGORY_OPTIONS.find((c) => c.id === formData.category);
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5"
-    >
+    <>
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity duration-200"
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
+        aria-hidden="true"
       />
 
-      {/* Modal Box - Sleek Linear / Raycast Style */}
-      <div className="relative w-full max-w-xl rounded-2xl border border-border/80 bg-card/95 text-card-foreground shadow-2xl backdrop-blur-xl z-10 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-
+      {/* Slide-over Drawer Panel - Right Side Full Height */}
+      <aside
+        className="fixed inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-xl md:max-w-2xl flex-col border-l border-border/60 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-right duration-300 overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border/50 bg-muted/20">
-          <div className="flex items-center gap-2">
-            <span className="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Sparkles className="size-3.5" />
+        <div className="sticky top-0 z-10 flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-border/50 bg-card/90 backdrop-blur-xl gap-3 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+              <Sparkles className="size-3.5" strokeWidth={1.5} />
             </span>
-            <span id="modal-title" className="text-xs font-bold uppercase tracking-wider text-foreground">
-              {isManager
-                ? `Giao việc — ${user.department || "Đơn vị"}`
-                : "Giao nhiệm vụ mới"}
-            </span>
+            <div>
+              <span id="modal-title" className="text-xs font-bold uppercase tracking-wider text-foreground font-heading">
+                {isManager
+                  ? `Giao việc — ${user?.department || "Đơn vị"}`
+                  : "Giao nhiệm vụ mới"}
+              </span>
+              <p className="text-[11px] text-muted-foreground font-medium">
+                {formData.level === "TRUONG"
+                  ? "Nhiệm vụ trọng tâm toàn trường"
+                  : "Công việc phân công nội bộ đơn vị"}
+              </p>
+            </div>
           </div>
 
           {/* Right: Level Switcher Pill (BGH only) or Close */}
@@ -378,26 +395,26 @@ export function CreateTaskModal({
                   type="button"
                   onClick={() => setFormData((p) => ({ ...p, level: "TRUONG", parentTaskId: undefined }))}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-medium transition-all cursor-pointer",
+                    "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all cursor-pointer active:scale-95",
                     formData.level === "TRUONG"
-                      ? "bg-card text-primary font-bold shadow-xs border border-border/50"
+                      ? "bg-card text-foreground font-semibold shadow-xs border border-border/50"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <Building2 className="size-3 text-blue-500" />
+                  <Building2 className="size-3 text-muted-foreground" strokeWidth={1.5} />
                   Cấp Trường
                 </button>
                 <button
                   type="button"
                   onClick={() => setFormData((p) => ({ ...p, level: "DON_VI" }))}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-medium transition-all cursor-pointer",
+                    "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-all cursor-pointer active:scale-95",
                     formData.level === "DON_VI"
-                      ? "bg-card text-primary font-bold shadow-xs border border-border/50"
+                      ? "bg-card text-foreground font-semibold shadow-xs border border-border/50"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <Users className="size-3 text-indigo-500" />
+                  <Users className="size-3 text-muted-foreground" strokeWidth={1.5} />
                   Cấp Đơn vị
                 </button>
               </div>
@@ -407,264 +424,267 @@ export function CreateTaskModal({
               type="button"
               onClick={onClose}
               aria-label="Đóng"
-              className="rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+              className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
             >
-              <X className="size-4" />
+              <X className="size-4" strokeWidth={1.5} />
             </button>
           </div>
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Permission warning for STAFF */}
-          {isStaff && (
-            <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-              <AlertCircle className="size-4 shrink-0 text-amber-600" />
-              <span>Chuyên viên không có quyền giao nhiệm vụ. Vui lòng liên hệ Trưởng đơn vị.</span>
-            </div>
-          )}
-
-          {/* 1. Title Input (Large, Prominent, Auto-focused) */}
-          <div className="space-y-1">
-            <input
-              ref={titleInputRef}
-              type="text"
-              placeholder="Tiêu đề nhiệm vụ cần giao..."
-              value={formData.title}
-              onChange={(e) => {
-                setFormData((prev) => ({ ...prev, title: e.target.value }));
-                if (errors.title) clearError("title");
-              }}
-              className={cn(
-                "w-full bg-transparent text-base sm:text-lg font-bold text-foreground placeholder:text-muted-foreground/40 placeholder:font-normal focus:outline-none transition-all",
-                errors.title && "text-destructive"
-              )}
-            />
-            {errors.title && (
-              <p className="text-[11px] font-medium text-destructive flex items-center gap-1">
-                <AlertCircle className="size-3" />
-                {errors.title}
-              </p>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+            {/* Permission warning for STAFF */}
+            {isStaff && (
+              <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                <AlertCircle className="size-4 shrink-0 text-amber-600" strokeWidth={1.5} />
+                <span>Chuyên viên không có quyền giao nhiệm vụ. Vui lòng liên hệ Trưởng đơn vị.</span>
+              </div>
             )}
-          </div>
 
-          {/* 2. Description Textarea (Subtle, Clean) */}
-          <div>
-            <textarea
-              rows={2}
-              placeholder="Yêu cầu chi tiết, kết quả mong đợi, hoặc ghi chú thực hiện (tùy chọn)..."
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              className="w-full bg-transparent text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none resize-none leading-relaxed"
-            />
-          </div>
-
-          {/* 3. Metadata Property Panel (Linear / Raycast Styled Card) */}
-          <div className="rounded-xl border border-border/60 bg-muted/40 p-3 space-y-2.5">
-            {/* Row A: Người chủ trì (Lead Assignee) */}
-            <div className="flex flex-col gap-1.5 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
-                  <User className="size-3.5 text-primary" />
-                  Người chủ trì <span className="text-destructive">*</span>
-                </span>
-                {/* Quick Department Filter to narrow down within 300 staff */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[10.5px] text-muted-foreground">Khoa/Phòng:</span>
-                  <select
-                    aria-label="Lọc nhanh theo đơn vị"
-                    value={deptFilter}
-                    onChange={(e) => setDeptFilter(e.target.value)}
-                    className="h-6 rounded-md border border-border/60 bg-background px-1.5 py-0 text-[11px] font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
-                  >
-                    <option value="ALL">Toàn trường (11 đơn vị)</option>
-                    {QCET_DEPARTMENT_GROUPS.map((g) => (
-                      <option key={g.code} value={g.code}>
-                        {g.icon} {g.department}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {!isCustomAssignee ? (
-                  <div className="relative flex-1">
-                    <select
-                      value={formData.leadAssigneeName}
-                      onChange={(e) => {
-                        if (e.target.value === "__CUSTOM__") {
-                          setIsCustomAssignee(true);
-                          setFormData((p) => ({ ...p, leadAssigneeName: "" }));
-                        } else {
-                          setFormData((p) => ({ ...p, leadAssigneeName: e.target.value }));
-                        }
-                        if (errors.leadAssigneeName) clearError("leadAssigneeName");
-                      }}
-                      className={cn(
-                        "w-full h-8.5 pl-2.5 pr-7 rounded-lg border bg-card text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate",
-                        errors.leadAssigneeName ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
-                      )}
-                    >
-                      <option value="">-- Chọn cán bộ chủ trì (Họ tên & Chức vụ) --</option>
-                      {filteredGroups.map((group) => (
-                        <optgroup key={group.code} label={`${group.icon} ${group.department}`}>
-                          {group.members.map((member) => (
-                            <option key={member.name} value={member.name}>
-                              {member.title} — {member.role}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                      <option value="__CUSTOM__">➕ Nhập cán bộ khác ngoài danh mục...</option>
-                    </select>
-                    <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2.5 top-2.5" />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 flex-1">
-                    <input
-                      type="text"
-                      placeholder="Họ và tên cán bộ (VD: Nguyễn Văn Tuấn)..."
-                      value={formData.leadAssigneeName}
-                      onChange={(e) => {
-                        setFormData((p) => ({ ...p, leadAssigneeName: e.target.value }));
-                        if (errors.leadAssigneeName) clearError("leadAssigneeName");
-                      }}
-                      className="w-full h-8.5 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomAssignee(false);
-                        setFormData((p) => ({ ...p, leadAssigneeName: "" }));
-                      }}
-                      className="text-[11px] font-medium text-muted-foreground hover:text-foreground shrink-0 underline"
-                    >
-                      Chọn từ danh mục
-                    </button>
-                  </div>
+            {/* 1. Title Input (Large, Prominent, Auto-focused) */}
+            <div className="space-y-1">
+              <input
+                ref={titleInputRef}
+                type="text"
+                placeholder="Tiêu đề nhiệm vụ cần giao..."
+                value={formData.title}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, title: e.target.value }));
+                  if (errors.title) clearError("title");
+                }}
+                className={cn(
+                  "w-full bg-transparent text-base sm:text-lg font-bold text-foreground placeholder:text-muted-foreground/40 placeholder:font-normal focus:outline-none transition-all",
+                  errors.title && "text-destructive"
                 )}
-              </div>
+              />
+              {errors.title && (
+                <p className="text-[11px] font-medium text-destructive flex items-center gap-1">
+                  <AlertCircle className="size-3" strokeWidth={1.5} />
+                  {errors.title}
+                </p>
+              )}
             </div>
 
-            {/* Row B: Lĩnh vực công tác (Category) */}
-            <div className="flex items-center justify-between gap-3 text-xs">
-              <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[110px]">
-                <Tag className="size-3.5 text-primary" />
-                Lĩnh vực
-              </span>
-
-              <div className="relative flex-1 sm:max-w-[280px]">
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value as TaskCategory }))}
-                  className="w-full h-8 pl-2.5 pr-7 rounded-lg border border-border/70 bg-card text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
-                >
-                  {CATEGORY_OPTIONS.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2 top-2.5" />
-              </div>
+            {/* 2. Description Textarea (Subtle, Clean) */}
+            <div>
+              <textarea
+                rows={3}
+                placeholder="Yêu cầu chi tiết, kết quả mong đợi, hoặc ghi chú thực hiện (tùy chọn)..."
+                value={formData.description}
+                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                className="w-full bg-transparent text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none resize-none leading-relaxed"
+              />
             </div>
 
-            {/* Row C: Hạn hoàn thành (Due Date + Quick Presets) */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[110px]">
-                <Calendar className="size-3.5 text-primary" />
-                Hạn chót <span className="text-destructive">*</span>
-              </span>
+            {/* 3. Metadata Property Panel (Linear / Raycast Styled Card) */}
+            <div className="rounded-xl border border-border/60 bg-muted/40 p-3.5 space-y-3">
+              {/* Row A: Người chủ trì (Lead Assignee) */}
+              <div className="flex flex-col gap-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
+                    <User className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    Người chủ trì <span className="text-destructive">*</span>
+                  </span>
+                  {/* Quick Department Filter to narrow down within 300 staff */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10.5px] text-muted-foreground">Khoa/Phòng:</span>
+                    <select
+                      aria-label="Lọc nhanh theo đơn vị"
+                      value={deptFilter}
+                      onChange={(e) => setDeptFilter(e.target.value)}
+                      className="h-6 rounded-md border border-border/60 bg-background px-1.5 py-0 text-[11px] font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="ALL">Toàn trường (11 đơn vị)</option>
+                      {QCET_DEPARTMENT_GROUPS.map((g) => (
+                        <option key={g.code} value={g.code}>
+                          {g.department}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end flex-1">
-                {/* Date Input */}
-                <input
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={(e) => {
-                    setFormData((p) => ({ ...p, dueDate: e.target.value }));
-                    if (errors.dueDate) clearError("dueDate");
-                  }}
-                  className={cn(
-                    "h-8 px-2 rounded-lg border bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary",
-                    errors.dueDate ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
+                <div className="flex items-center gap-2">
+                  {!isCustomAssignee ? (
+                    <div className="relative flex-1">
+                      <select
+                        value={formData.leadAssigneeName}
+                        onChange={(e) => {
+                          if (e.target.value === "__CUSTOM__") {
+                            setIsCustomAssignee(true);
+                            setFormData((p) => ({ ...p, leadAssigneeName: "" }));
+                          } else {
+                            setFormData((p) => ({ ...p, leadAssigneeName: e.target.value }));
+                          }
+                          if (errors.leadAssigneeName) clearError("leadAssigneeName");
+                        }}
+                        className={cn(
+                          "w-full h-8.5 pl-2.5 pr-7 rounded-lg border bg-card text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate",
+                          errors.leadAssigneeName ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
+                        )}
+                      >
+                        <option value="">-- Chọn cán bộ chủ trì (Họ tên & Chức vụ) --</option>
+                        {filteredGroups.map((group) => (
+                          <optgroup key={group.code} label={group.department}>
+                            {group.members.map((member) => (
+                              <option key={member.name} value={member.name}>
+                                {member.title} — {member.role}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                        <option value="__CUSTOM__">+ Nhập cán bộ khác ngoài danh mục...</option>
+                      </select>
+                      <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2.5 top-2.5" strokeWidth={1.5} />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="text"
+                        placeholder="Họ và tên cán bộ (VD: Nguyễn Văn Tuấn)..."
+                        value={formData.leadAssigneeName}
+                        onChange={(e) => {
+                          setFormData((p) => ({ ...p, leadAssigneeName: e.target.value }));
+                          if (errors.leadAssigneeName) clearError("leadAssigneeName");
+                        }}
+                        className="w-full h-8.5 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomAssignee(false);
+                          setFormData((p) => ({ ...p, leadAssigneeName: "" }));
+                        }}
+                        className="text-[11px] font-medium text-muted-foreground hover:text-foreground shrink-0 underline"
+                      >
+                        Chọn từ danh mục
+                      </button>
+                    </div>
                   )}
-                />
-
-                {/* Inline Quick Presets */}
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => handleDatePreset(0)}
-                    className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-primary/40 cursor-pointer transition-all active:scale-95"
-                  >
-                    Hôm nay
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDatePreset(3)}
-                    className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-primary/40 cursor-pointer transition-all active:scale-95"
-                  >
-                    +3 ngày
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDatePreset(7)}
-                    className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-primary/40 cursor-pointer transition-all active:scale-95"
-                  >
-                    +1 tuần
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDatePreset(-1)}
-                    className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-primary/40 cursor-pointer transition-all active:scale-95"
-                  >
-                    Cuối tháng
-                  </button>
                 </div>
               </div>
-            </div>
 
-            {/* Row D: Thuộc nhiệm vụ cấp Trường (nếu là việc Đơn vị) */}
-            {formData.level === "DON_VI" && schoolTasks.length > 0 && (
-              <div className="flex items-center justify-between gap-3 text-xs pt-1 border-t border-border/40">
+              {/* Row B: Lĩnh vực công tác (Category) */}
+              <div className="flex items-center justify-between gap-3 text-xs">
                 <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[110px]">
-                  <Link2 className="size-3.5 text-primary" />
-                  Nhiệm vụ cha
+                  <Tag className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  Lĩnh vực
                 </span>
 
                 <div className="relative flex-1 sm:max-w-[280px]">
                   <select
-                    value={formData.parentTaskId || ""}
-                    onChange={(e) =>
-                      setFormData((p) => ({ ...p, parentTaskId: e.target.value || undefined }))
-                    }
-                    className="w-full h-8 pl-2.5 pr-7 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
+                    value={formData.category}
+                    onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value as TaskCategory }))}
+                    className="w-full h-8 pl-2.5 pr-7 rounded-lg border border-border/70 bg-card text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
                   >
-                    <option value="">— Độc lập (Không liên kết) —</option>
-                    {schoolTasks.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title}
+                    {CATEGORY_OPTIONS.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2 top-2.5" />
+                  <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2 top-2.5" strokeWidth={1.5} />
                 </div>
+              </div>
+
+              {/* Row C: Hạn hoàn thành (Due Date + Quick Presets) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[110px]">
+                  <Calendar className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                  Hạn chót <span className="text-destructive">*</span>
+                </span>
+
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end flex-1 font-mono tabular-nums">
+                  {/* Date Input */}
+                  <input
+                    type="date"
+                    value={formData.dueDate}
+                    onChange={(e) => {
+                      setFormData((p) => ({ ...p, dueDate: e.target.value }));
+                      if (errors.dueDate) clearError("dueDate");
+                    }}
+                    className={cn(
+                      "h-8 px-2 rounded-lg border bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono tabular-nums",
+                      errors.dueDate ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
+                    )}
+                  />
+
+                  {/* Inline Quick Presets */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleDatePreset(0)}
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                    >
+                      Hôm nay
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDatePreset(3)}
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                    >
+                      +3 ngày
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDatePreset(7)}
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                    >
+                      +1 tuần
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDatePreset(-1)}
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                    >
+                      Cuối tháng
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row D: Thuộc nhiệm vụ cấp Trường (nếu là việc Đơn vị) */}
+              {formData.level === "DON_VI" && schoolTasks.length > 0 && (
+                <div className="flex items-center justify-between gap-3 text-xs pt-1 border-t border-border/40">
+                  <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[110px]">
+                    <Link2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    Nhiệm vụ cha
+                  </span>
+
+                  <div className="relative flex-1 sm:max-w-[280px]">
+                    <select
+                      value={formData.parentTaskId || ""}
+                      onChange={(e) =>
+                        setFormData((p) => ({ ...p, parentTaskId: e.target.value || undefined }))
+                      }
+                      className="w-full h-8 pl-2.5 pr-7 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
+                    >
+                      <option value="">— Độc lập (Không liên kết) —</option>
+                      {schoolTasks.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.title}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2 top-2.5" strokeWidth={1.5} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Validation Errors Summary (if any) */}
+            {(errors.leadAssigneeName || errors.dueDate) && (
+              <div className="text-[11px] text-destructive space-y-0.5">
+                {errors.leadAssigneeName && <p>• {errors.leadAssigneeName}</p>}
+                {errors.dueDate && <p>• {errors.dueDate}</p>}
               </div>
             )}
           </div>
 
-          {/* Validation Errors Summary (if any) */}
-          {(errors.leadAssigneeName || errors.dueDate) && (
-            <div className="text-[11px] text-destructive space-y-0.5">
-              {errors.leadAssigneeName && <p>• {errors.leadAssigneeName}</p>}
-              {errors.dueDate && <p>• {errors.dueDate}</p>}
-            </div>
-          )}
-
-          {/* Footer Bar */}
-          <div className="flex items-center justify-between pt-3 border-t border-border/50">
+          {/* Sticky Bottom Actions Bar */}
+          <div className="sticky bottom-0 z-10 flex items-center justify-between px-5 sm:px-6 py-3.5 border-t border-border/50 bg-card/95 backdrop-blur-md shrink-0">
             {/* Keyboard hint */}
             <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[10px] font-bold">
@@ -684,7 +704,7 @@ export function CreateTaskModal({
                 variant="outline"
                 size="sm"
                 onClick={onClose}
-                className="h-8 rounded-xl px-3 text-xs cursor-pointer"
+                className="h-8.5 rounded-xl px-3.5 text-xs font-medium cursor-pointer active:scale-95 transition-all"
               >
                 Hủy
               </Button>
@@ -693,17 +713,17 @@ export function CreateTaskModal({
                 size="sm"
                 disabled={isStaff || allowedLevels.length === 0}
                 className={cn(
-                  "h-8 rounded-xl px-4 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-hover transition-all cursor-pointer inline-flex items-center gap-1.5",
+                  "h-8.5 rounded-xl px-4 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs active:scale-[0.98] transition-all cursor-pointer inline-flex items-center gap-1.5",
                   (isStaff || allowedLevels.length === 0) && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <CheckCircle2 className="size-3.5" />
+                <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
                 <span>Giao việc</span>
               </Button>
             </div>
           </div>
         </form>
-      </div>
-    </div>
+      </aside>
+    </>
   );
 }

@@ -15,6 +15,11 @@ import {
   Building2,
   Briefcase,
   AlertTriangle,
+  Play,
+  RotateCcw,
+  History,
+  TrendingUp,
+  FileText,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -75,8 +80,8 @@ export const TASK_STATUS_CONFIG: Record<
   NEW: {
     label: "Mới",
     className:
-      "border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300",
-    variant: "destructive",
+      "border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+    variant: "outline",
   },
   IN_PROGRESS: {
     label: "Đang thực hiện",
@@ -108,8 +113,7 @@ export function getDetailStatusConfig(status: TaskStatus | string) {
   }
   return {
     label: status || "Chưa rõ",
-    className:
-      "border-border/60 bg-muted/40 text-muted-foreground",
+    className: "border-border/60 bg-muted/40 text-muted-foreground",
     variant: "outline" as const,
   };
 }
@@ -165,6 +169,81 @@ function getRelativeTimeString(
   } catch {
     return null;
   }
+}
+
+export interface AuditTimelineEvent {
+  id: string;
+  label: string;
+  timestamp: string;
+  actor?: string;
+  description?: string;
+  type: "assigned" | "due" | "progress" | "status" | "updated";
+}
+
+export function getTaskAuditTimeline(
+  task: SchoolTask | StaffTask
+): AuditTimelineEvent[] {
+  const events: AuditTimelineEvent[] = [];
+  const isSchool = isSchoolTask(task);
+
+  // 1. Initial assignment / creation
+  const assignedDate = isSchool
+    ? task.assignedDate
+    : (task.updatedAt || task.dueDate);
+  events.push({
+    id: "event-init",
+    label: isSchool ? "Giao nhiệm vụ cấp Trường" : "Khởi tạo công việc đơn vị",
+    timestamp: formatDetailDate(assignedDate),
+    actor: isSchool ? "Ban Giám hiệu QCET" : (task.assigneeName || "Trưởng đơn vị"),
+    description: isSchool
+      ? `Giao cho cán bộ chủ trì: ${task.leadAssigneeName}`
+      : `Phân công thực hiện: ${task.assigneeName}`,
+    type: "assigned",
+  });
+
+  // 2. Progress milestone (for SchoolTask with subtasks)
+  if (isSchool && task.totalSubTasks > 0) {
+    events.push({
+      id: "event-progress",
+      label: "Tiến độ công việc trực thuộc",
+      timestamp: formatDetailDate(task.assignedDate),
+      actor: `${task.completedSubTasks}/${task.totalSubTasks} việc con`,
+      description: `Đạt ${task.progressPercent}% tổng khối lượng công việc được giao`,
+      type: "progress",
+    });
+  }
+
+  // 3. Status checkpoint
+  const statusCfg = getDetailStatusConfig(task.status);
+  events.push({
+    id: "event-status",
+    label: `Trạng thái: ${statusCfg.label}`,
+    timestamp: formatDetailDate(isSchool ? task.dueDate : task.updatedAt),
+    actor: isSchool ? task.leadAssigneeName : task.assigneeName,
+    description:
+      task.status === "COMPLETED"
+        ? "Công việc đã được nghiệm thu hoàn thành"
+        : task.status === "NEEDS_REVIEW"
+        ? "Yêu cầu rà soát và hiệu chỉnh nội dung"
+        : task.status === "IN_PROGRESS"
+        ? "Đang triển khai thực hiện theo kế hoạch"
+        : "Tiếp nhận vào danh sách công việc cần xử lý",
+    type: "status",
+  });
+
+  // 4. Due date milestone
+  if (task.dueDate) {
+    events.push({
+      id: "event-due",
+      label: "Hạn chót hoàn thành",
+      timestamp: formatDetailDate(task.dueDate),
+      actor: isSchool ? task.leadAssigneeName : task.assigneeName,
+      description: "Thời hạn báo cáo kết quả và kết thúc công việc",
+      type: "due",
+    });
+  }
+
+  return events;
 }
 
 export interface ActivityNote {
@@ -234,6 +313,7 @@ export function TaskDetailSideSheet({
     Boolean(task.dueDate) &&
     new Date(task.dueDate.split("T")[0] + "T00:00:00") <
       new Date("2026-09-04T00:00:00");
+  const auditTimeline = getTaskAuditTimeline(task);
 
   const handleCreateSubtask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,7 +329,7 @@ export function TaskDetailSideSheet({
     <>
       {/* Backdrop overlay */}
       <div
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -257,7 +337,7 @@ export function TaskDetailSideSheet({
       {/* Slide-over Drawer Panel */}
       <aside
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-lg md:max-w-xl flex-col border-l border-border/60 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-right duration-300",
+          "fixed inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-lg md:max-w-xl flex-col border-l border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-right duration-300",
           className
         )}
         role="dialog"
@@ -270,7 +350,7 @@ export function TaskDetailSideSheet({
           <div className="flex items-center gap-2 min-w-0">
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shrink-0",
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0",
                 isOverdue
                   ? "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400"
                   : statusConfig.className
@@ -278,23 +358,23 @@ export function TaskDetailSideSheet({
             >
               <span
                 className={cn(
-                  "size-2 rounded-full shrink-0",
+                  "size-1.5 rounded-full shrink-0",
                   isDone
                     ? "bg-emerald-500"
                     : isOverdue
-                    ? "bg-rose-500 animate-ping"
+                    ? "bg-rose-500"
                     : "bg-primary"
                 )}
               />
               <span>
-                {isOverdue ? "Cảnh báo quá hạn ⚠️" : statusConfig.label}
+                {isOverdue ? "Quá hạn" : statusConfig.label}
               </span>
             </span>
 
             {relativeTime && !isOverdue && (
               <span
                 className={cn(
-                  "text-[11px] px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden sm:inline",
+                  "text-[11px] px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden sm:inline font-mono",
                   relativeTime.color
                 )}
               >
@@ -312,7 +392,7 @@ export function TaskDetailSideSheet({
                 onChange={(e) =>
                   onStatusChange(task.id, e.target.value as TaskStatus)
                 }
-                className="h-7.5 rounded-lg border border-border/60 bg-card px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-all cursor-pointer outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                className="h-8 rounded-lg border border-border/60 bg-background px-2.5 text-xs font-medium text-foreground hover:border-border transition-all cursor-pointer outline-none focus:border-ring focus:ring-1 focus:ring-ring"
                 aria-label="Cập nhật trạng thái nhiệm vụ"
               >
                 <option value="NEW">Mới</option>
@@ -325,19 +405,22 @@ export function TaskDetailSideSheet({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+              className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95"
               aria-label="Đóng bảng chi tiết"
             >
-              <X className="size-4" />
+              <X className="size-4" strokeWidth={1.5} />
             </button>
           </div>
         </div>
 
         {/* Scrollable Content Body */}
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-6 thin-scrollbar">
-          {/* Header Block: Level Badge + Title */}
+          {/* Header Block: Code + Level Badge + Title */}
           <div>
             <div className="flex items-center gap-2 mb-2">
+              <span className="font-mono text-[11px] font-semibold text-muted-foreground bg-muted/60 border border-border/50 px-2 py-0.5 rounded-md tabular-nums">
+                NV-{task.id.slice(0, 8).toUpperCase()}
+              </span>
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-md border text-[11px] font-semibold px-2 py-0.5 shadow-2xs",
@@ -345,9 +428,9 @@ export function TaskDetailSideSheet({
                 )}
               >
                 {isSchool ? (
-                  <Building2 className="size-3" />
+                  <Building2 className="size-3.5" strokeWidth={1.5} />
                 ) : (
-                  <Briefcase className="size-3" />
+                  <Briefcase className="size-3.5" strokeWidth={1.5} />
                 )}
                 <span>{levelBadge.label}</span>
               </span>
@@ -355,15 +438,15 @@ export function TaskDetailSideSheet({
 
             <h2
               id="task-detail-title"
-              className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading leading-snug"
+              className="text-lg sm:text-xl font-semibold tracking-tight text-foreground font-heading leading-snug"
             >
               {task.title}
             </h2>
 
-            {/* Parent Task reference (clean title, no raw UUID) */}
+            {/* Parent Task reference */}
             {!isSchool && parentSchoolTaskTitle && (
               <div className="mt-2.5 flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/30 border border-border/40 rounded-xl px-3 py-2">
-                <Layers className="size-3.5 text-primary shrink-0" />
+                <Layers className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
                 <span className="shrink-0">Nhiệm vụ cha:</span>
                 <span className="font-semibold text-foreground truncate">
                   {parentSchoolTaskTitle}
@@ -371,16 +454,17 @@ export function TaskDetailSideSheet({
               </div>
             )}
 
-            {/* Quick 1-Click Action Bar for Direct Workflow */}
+            {/* Quick 1-Click Action Bar */}
             {onStatusChange && (
               <div className="mt-3.5 flex items-center gap-2">
                 {task.status === "NEW" && (
                   <Button
                     type="button"
                     onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
-                    className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                    className="flex-1 h-8.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
                   >
-                    <span>📥 Tiếp nhận công việc</span>
+                    <Play className="size-3.5" strokeWidth={1.5} />
+                    <span>Tiếp nhận công việc</span>
                   </Button>
                 )}
                 {task.status === "IN_PROGRESS" && (
@@ -388,17 +472,19 @@ export function TaskDetailSideSheet({
                     <Button
                       type="button"
                       onClick={() => onStatusChange(task.id, "COMPLETED")}
-                      className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                      className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
                     >
-                      <span>👍 Báo cáo hoàn thành</span>
+                      <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                      <span>Báo cáo hoàn thành</span>
                     </Button>
                     <button
                       type="button"
                       onClick={() => onStatusChange(task.id, "NEEDS_REVIEW")}
-                      className="h-8.5 px-3 text-xs font-medium border border-amber-500/40 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 rounded-xl transition-colors cursor-pointer"
+                      className="h-8.5 px-3 text-xs font-medium border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                       title="Chuyển sang trạng thái cần chỉnh sửa"
                     >
-                      Cần sửa ⚠️
+                      <AlertTriangle className="size-3.5" strokeWidth={1.5} />
+                      <span>Yêu cầu sửa</span>
                     </button>
                   </>
                 )}
@@ -406,59 +492,107 @@ export function TaskDetailSideSheet({
                   <Button
                     type="button"
                     onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
-                    className="flex-1 h-8.5 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                    className="flex-1 h-8.5 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
                   >
-                    <span>✏️ Tiếp nhận chỉnh sửa</span>
+                    <RotateCcw className="size-3.5" strokeWidth={1.5} />
+                    <span>Tiếp nhận chỉnh sửa</span>
                   </Button>
                 )}
                 {task.status === "COMPLETED" && (
                   <button
                     type="button"
                     onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
-                    className="h-8 px-3 text-xs font-medium border border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground rounded-xl transition-colors cursor-pointer"
+                    className="h-8.5 px-3 text-xs font-medium border border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                     title="Mở lại công việc để tiếp tục xử lý"
                   >
-                    ↩️ Mở lại công việc
+                    <RotateCcw className="size-3.5" strokeWidth={1.5} />
+                    <span>Mở lại công việc</span>
                   </button>
                 )}
               </div>
             )}
           </div>
 
-          {/* Properties List (Structured like dashboard-chamcong PropertyItem) */}
-          <div className="rounded-2xl border border-border/50 bg-card/60 p-4 divide-y divide-border/30 text-xs shadow-xs">
-            {/* Delegator / Giao việc */}
-            <div className="flex items-center justify-between py-2.5 first:pt-0">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Building2 className="size-4 text-muted-foreground/70" />
-                <span>Người giao việc</span>
-              </div>
-              <div className="font-semibold text-foreground">
-                {isSchool ? "Ban Giám hiệu QCET" : "Trưởng đơn vị quản lý"}
-              </div>
-            </div>
-
-            {/* Lead / Assignee */}
-            <div className="flex items-center justify-between py-2.5">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <User className="size-4 text-muted-foreground/70" />
-                <span>Cán bộ chủ trì</span>
-              </div>
-              <div className="flex items-center gap-2 font-semibold text-foreground">
-                <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary border border-primary/20">
+          {/* 2-Column Metadata Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-border/50 bg-card/60 shadow-xs text-xs">
+            {/* Cell 1: Lead / Assignee */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                <User className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                Cán bộ chủ trì
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary border border-primary/20">
                   {getInitials(assigneeName)}
                 </span>
-                <span>{assigneeName}</span>
+                <span className="font-semibold text-foreground truncate">
+                  {assigneeName}
+                </span>
               </div>
             </div>
 
-            {/* Category (if SchoolTask) */}
+            {/* Cell 2: Delegator */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                Người giao việc
+              </span>
+              <span className="font-semibold text-foreground truncate">
+                {isSchool ? "Ban Giám hiệu QCET" : "Trưởng đơn vị quản lý"}
+              </span>
+            </div>
+
+            {/* Cell 3: Due Date */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                Hạn hoàn thành
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono font-semibold text-foreground tabular-nums">
+                  {formatDetailDate(task.dueDate)}
+                </span>
+                {relativeTime && (
+                  <span
+                    className={cn(
+                      "text-[10px] px-2 py-0.5 rounded-full border font-sans font-medium",
+                      relativeTime.color
+                    )}
+                  >
+                    {relativeTime.text}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Cell 4: Progress / Last Update */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                {isSchool ? (
+                  <TrendingUp className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                ) : (
+                  <Clock className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                )}
+                {isSchool ? "Tiến độ công việc" : "Cập nhật lần cuối"}
+              </span>
+              {isSchool ? (
+                <span className="font-mono font-semibold text-foreground tabular-nums">
+                  {task.completedSubTasks}/{task.totalSubTasks} việc ({task.progressPercent}%)
+                </span>
+              ) : (
+                <span className="font-mono font-semibold text-foreground tabular-nums">
+                  {formatDetailDate(task.updatedAt)}
+                </span>
+              )}
+            </div>
+
+            {/* Cell 5: Category (SchoolTask only) */}
             {isSchool && (
-              <div className="flex items-center justify-between py-2.5">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Tag className="size-4 text-muted-foreground/70" />
-                  <span>Danh mục chuyên môn</span>
-                </div>
+              <div className="flex flex-col gap-1 col-span-1 sm:col-span-2 pt-2 border-t border-border/30">
+                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Tag className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  Danh mục chuyên môn
+                </span>
                 <div>
                   <span
                     className={cn(
@@ -473,54 +607,18 @@ export function TaskDetailSideSheet({
               </div>
             )}
 
-            {/* Due Date */}
-            <div className="flex items-center justify-between py-2.5">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="size-4 text-muted-foreground/70" />
-                <span>Hạn hoàn thành</span>
-              </div>
-              <div className="flex items-center gap-2 font-mono font-semibold text-foreground tabular-nums">
-                <span>{formatDetailDate(task.dueDate)}</span>
-                {relativeTime && (
-                  <span
-                    className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full border font-sans",
-                      relativeTime.color
-                    )}
-                  >
-                    {relativeTime.text}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Assigned / Updated Date */}
-            <div className="flex items-center justify-between py-2.5 last:pb-0">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Clock className="size-4 text-muted-foreground/70" />
-                <span>
-                  {isSchool ? "Ngày giao nhiệm vụ" : "Cập nhật lần cuối"}
-                </span>
-              </div>
-              <div className="font-mono text-muted-foreground tabular-nums">
-                {formatDetailDate(
-                  isSchool ? task.assignedDate : task.updatedAt
-                )}
-              </div>
-            </div>
-
-            {/* Co-assignees (SchoolTask only) */}
+            {/* Cell 6: Co-assignees (SchoolTask only) */}
             {isSchool && task.coAssignees && task.coAssignees.length > 0 && (
-              <div className="flex items-center justify-between py-2.5">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Users className="size-4 text-muted-foreground/70" />
-                  <span>Phối hợp</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 justify-end">
+              <div className="flex flex-col gap-1 col-span-1 sm:col-span-2 pt-2 border-t border-border/30">
+                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Users className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  Đơn vị phối hợp
+                </span>
+                <div className="flex flex-wrap gap-1.5">
                   {task.coAssignees.map((partner) => (
                     <span
                       key={partner}
-                      className="inline-flex items-center rounded-md bg-secondary/80 px-2 py-0.5 text-[11px] font-medium text-foreground"
+                      className="inline-flex items-center rounded-md bg-secondary/80 px-2 py-0.5 text-[11px] font-medium text-foreground border border-border/40"
                     >
                       {partner}
                     </span>
@@ -535,10 +633,10 @@ export function TaskDetailSideSheet({
             <div className="space-y-3.5">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
+                  <h3 className="font-sans text-sm font-semibold text-foreground tracking-tight">
                     Tiến độ công việc trực thuộc
                   </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5 font-mono tabular-nums">
                     Đã hoàn thành {task.completedSubTasks} / {task.totalSubTasks}{" "}
                     việc con ({task.progressPercent}%)
                   </p>
@@ -547,9 +645,9 @@ export function TaskDetailSideSheet({
                   size="sm"
                   variant="outline"
                   onClick={() => setIsAddingSubtask((v) => !v)}
-                  className="h-7.5 gap-1 text-xs border-dashed rounded-lg"
+                  className="h-7.5 gap-1 text-xs border-dashed rounded-lg cursor-pointer active:scale-[0.98] transition-all duration-150"
                 >
-                  <Plus className="size-3.5" />
+                  <Plus className="size-3.5" strokeWidth={1.5} />
                   <span>Thêm việc</span>
                 </Button>
               </div>
@@ -571,20 +669,20 @@ export function TaskDetailSideSheet({
               {isAddingSubtask && (
                 <form
                   onSubmit={handleCreateSubtask}
-                  className="flex items-center gap-2 rounded-xl border border-border/80 bg-muted/40 p-2 animate-in fade-in"
+                  className="flex items-center gap-2 rounded-xl border border-input/80 bg-muted/40 p-2 animate-in fade-in"
                 >
                   <input
                     type="text"
                     placeholder="Nhập tiêu đề công việc đơn vị..."
                     value={newSubtaskTitle}
                     onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    className="flex-1 bg-transparent px-2 text-xs text-foreground placeholder:text-muted-foreground outline-none"
+                    className="flex-1 bg-transparent px-2 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none"
                     autoFocus
                   />
                   <Button
                     type="submit"
                     size="sm"
-                    className="h-7 text-xs px-2.5 rounded-lg font-semibold"
+                    className="h-7 text-xs px-2.5 rounded-lg font-semibold active:scale-[0.98] transition-all duration-150 cursor-pointer"
                   >
                     Giao việc
                   </Button>
@@ -593,7 +691,7 @@ export function TaskDetailSideSheet({
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsAddingSubtask(false)}
-                    className="h-7 text-xs px-2 text-muted-foreground rounded-lg"
+                    className="h-7 text-xs px-2 text-muted-foreground rounded-lg cursor-pointer"
                   >
                     Hủy
                   </Button>
@@ -628,9 +726,9 @@ export function TaskDetailSideSheet({
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {subDone ? (
-                            <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                            <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" strokeWidth={1.5} />
                           ) : (
-                            <Circle className="size-4 shrink-0 text-muted-foreground/50" />
+                            <Circle className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.5} />
                           )}
                           <span
                             className={cn(
@@ -663,6 +761,51 @@ export function TaskDetailSideSheet({
               </div>
             </div>
           )}
+
+          {/* Audit Timeline Section */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <History className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                Nhật ký hoạt động & tiến độ
+              </h3>
+              <span className="text-[11px] font-mono text-muted-foreground tabular-nums">
+                {auditTimeline.length} sự kiện
+              </span>
+            </div>
+
+            <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/60">
+              {auditTimeline.map((item) => (
+                <div key={item.id} className="relative flex flex-col gap-0.5">
+                  {/* Flat round node */}
+                  <span className="absolute -left-5 top-1 flex size-4 items-center justify-center rounded-full border border-border/80 bg-card">
+                    <span className="size-1.5 rounded-full bg-primary/70" />
+                  </span>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-foreground">
+                      {item.label}
+                    </span>
+                    <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                      {item.timestamp}
+                    </span>
+                  </div>
+
+                  {item.description && (
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      {item.description}
+                    </p>
+                  )}
+
+                  {item.actor && (
+                    <span className="text-[10.5px] font-medium text-muted-foreground/80">
+                      Chủ thể: {item.actor}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </aside>
     </>

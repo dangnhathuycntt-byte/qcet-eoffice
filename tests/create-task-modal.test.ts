@@ -1,8 +1,12 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import {
   validateTaskForm,
   getInitialTaskFormData,
+  CATEGORY_OPTIONS,
+  QCET_DEPARTMENT_GROUPS,
   type CreateTaskFormData,
 } from "../src/components/dashboard/create-task-modal";
 
@@ -58,11 +62,57 @@ describe("CreateTaskModal Helpers", () => {
       coAssignees: [],
       parentTaskId: "",
     };
-    // If unit task allows optional or required parent task:
-    // Let's test standard validation: title, leadAssigneeName, dueDate are always required
     const errors = validateTaskForm(unitTaskWithoutParent);
     assert.equal(errors.title, undefined);
     assert.equal(errors.leadAssigneeName, undefined);
     assert.equal(errors.dueDate, undefined);
+  });
+
+  test("Anti-slop: zero emojis in create task modal department groups and category options", () => {
+    const hasEmoji = (str: string) =>
+      /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F680}-\u{1F6C5}\u{1F6CB}-\u{1F6D0}\u{1F6E0}-\u{1F6E5}\u{1F6F0}-\u{1F6F3}]/u.test(str);
+
+    for (const group of QCET_DEPARTMENT_GROUPS) {
+      assert.equal(hasEmoji(group.department), false, `Emoji found in department: ${group.department}`);
+      if (group.icon) {
+        assert.equal(hasEmoji(group.icon), false, `Emoji found in group icon: ${group.icon}`);
+      }
+      for (const member of group.members) {
+        assert.equal(hasEmoji(member.name), false, `Emoji found in member name: ${member.name}`);
+        assert.equal(hasEmoji(member.title), false, `Emoji found in member title: ${member.title}`);
+        assert.equal(hasEmoji(member.role), false, `Emoji found in member role: ${member.role}`);
+      }
+    }
+
+    for (const cat of CATEGORY_OPTIONS) {
+      assert.equal(hasEmoji(cat.label), false, `Emoji found in category: ${cat.label}`);
+    }
+
+    const filePath = path.resolve(__dirname, "../src/components/dashboard/create-task-modal.tsx");
+    const content = fs.readFileSync(filePath, "utf-8");
+    const emojiRegex = /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F680}-\u{1F6C5}\u{1F6CB}-\u{1F6D0}\u{1F6E0}-\u{1F6E5}\u{1F6F0}-\u{1F6F3}]/gu;
+    const matches = [...content.matchAll(emojiRegex)];
+    assert.equal(matches.length, 0, `Found ${matches.length} emojis in create-task-modal.tsx: ${matches.map(m => m[0]).join(", ")}`);
+  });
+
+  test("Linear styling contract: hairline borders, zero purple gradients, physical active press", () => {
+    const filePath = path.resolve(__dirname, "../src/components/dashboard/create-task-modal.tsx");
+    const content = fs.readFileSync(filePath, "utf-8");
+
+    // Zero purple gradients
+    assert.equal(/bg-gradient-to-[a-z]+.*purple/i.test(content), false, "Found purple gradient in modal");
+    assert.equal(/from-purple/i.test(content), false, "Found from-purple in modal");
+
+    // Hairline borders and subtle focus ring
+    assert.ok(
+      content.includes("border-border/60") || content.includes("border-input/80") || content.includes("border-border/70"),
+      "Modal should use refined hairline borders"
+    );
+
+    // Physical active press effect on buttons
+    assert.ok(
+      content.includes("active:scale-95") || content.includes("active:scale-[0.98]"),
+      "Buttons should provide tactile physical press feedback"
+    );
   });
 });
