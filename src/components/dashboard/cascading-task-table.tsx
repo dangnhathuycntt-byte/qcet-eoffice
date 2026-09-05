@@ -251,6 +251,8 @@ function getPageNumbers(current: number, total: number): (number | string)[] {
   return [1, "...", current - 1, current, current + 1, "...", total];
 }
 
+export type WorkboxFilter = "ALL" | "MY_RECEIVED" | "MY_ASSIGNED" | "URGENT";
+
 export interface CascadingTaskTableProps {
   tasks: SchoolTask[];
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
@@ -303,24 +305,115 @@ export function CascadingTaskTable({
     });
   };
 
+  const [activeWorkbox, setActiveWorkbox] = React.useState<WorkboxFilter>("ALL");
+
+  // Filter tasks by active E-Office Workbox (Việc tôi nhận, Việc tôi giao, v.v.)
+  const workboxTasks = React.useMemo(() => {
+    if (activeWorkbox === "ALL") return tasks;
+    const userName = user?.name?.toLowerCase() || "";
+    const today = new Date("2026-09-04T00:00:00");
+
+    if (activeWorkbox === "MY_RECEIVED") {
+      return tasks.filter((t) => {
+        const isLead = t.leadAssigneeName.toLowerCase().includes(userName);
+        const isCo = t.coAssignees?.some((c) =>
+          c.toLowerCase().includes(userName)
+        );
+        const hasSub = t.subTasks?.some((s) =>
+          s.assigneeName.toLowerCase().includes(userName)
+        );
+        return isLead || isCo || hasSub;
+      });
+    }
+
+    if (activeWorkbox === "MY_ASSIGNED") {
+      if (user?.role === "ADMIN") return tasks;
+      return tasks.filter((t) =>
+        t.leadAssigneeName.toLowerCase().includes(userName)
+      );
+    }
+
+    if (activeWorkbox === "URGENT") {
+      return tasks.filter((t) => {
+        const isPastDue =
+          t.dueDate &&
+          new Date(t.dueDate.split("T")[0] + "T00:00:00") < today &&
+          t.status !== "COMPLETED";
+        const hasSubUrgent = t.subTasks?.some((s) => {
+          const sPast =
+            s.dueDate &&
+            new Date(s.dueDate.split("T")[0] + "T00:00:00") < today &&
+            s.status !== "COMPLETED";
+          return sPast || s.status === "NEEDS_REVIEW";
+        });
+        return isPastDue || hasSubUrgent;
+      });
+    }
+
+    return tasks;
+  }, [tasks, activeWorkbox, user]);
+
+  // Compute workbox counts for badge numbers
+  const workboxCounts = React.useMemo(() => {
+    const userName = user?.name?.toLowerCase() || "";
+    const today = new Date("2026-09-04T00:00:00");
+
+    let received = 0;
+    let assigned = 0;
+    let urgent = 0;
+
+    for (const t of tasks) {
+      const isLead = t.leadAssigneeName.toLowerCase().includes(userName);
+      const isCo = t.coAssignees?.some((c) =>
+        c.toLowerCase().includes(userName)
+      );
+      const hasSub = t.subTasks?.some((s) =>
+        s.assigneeName.toLowerCase().includes(userName)
+      );
+      if (isLead || isCo || hasSub) received++;
+
+      if (user?.role === "ADMIN" || isLead) assigned++;
+
+      const isPastDue =
+        t.dueDate &&
+        new Date(t.dueDate.split("T")[0] + "T00:00:00") < today &&
+        t.status !== "COMPLETED";
+      const hasSubUrgent = t.subTasks?.some((s) => {
+        const sPast =
+          s.dueDate &&
+          new Date(s.dueDate.split("T")[0] + "T00:00:00") < today &&
+          s.status !== "COMPLETED";
+        return sPast || s.status === "NEEDS_REVIEW";
+      });
+      if (isPastDue || hasSubUrgent) urgent++;
+    }
+
+    return {
+      all: tasks.length,
+      received,
+      assigned,
+      urgent,
+    };
+  }, [tasks, user]);
+
   const filteredTasks = React.useMemo(
     () =>
       filterTasksForTable(
-        tasks,
+        workboxTasks,
         selectedCategory,
         searchQuery,
         selectedDepartment
       ),
-    [tasks, selectedCategory, searchQuery, selectedDepartment]
+    [workboxTasks, selectedCategory, searchQuery, selectedDepartment]
   );
 
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
 
-  // Reset to page 1 whenever search, department or category filter changes
+  // Reset to page 1 whenever workbox, search, department or category filter changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, searchQuery, selectedDepartment]);
+  }, [activeWorkbox, selectedCategory, searchQuery, selectedDepartment]);
 
   const totalTasks = filteredTasks.length;
   const totalPages = Math.max(1, Math.ceil(totalTasks / pageSize));
@@ -335,6 +428,75 @@ export function CascadingTaskTable({
       className={cn("flex flex-col gap-3.5", className)}
       data-slot="cascading-task-table"
     >
+      {/* 4 E-Office Workboxes (Hộp việc chuẩn cơ quan) */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <button
+          type="button"
+          onClick={() => setActiveWorkbox("ALL")}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap",
+            activeWorkbox === "ALL"
+              ? "bg-primary text-primary-foreground border-primary shadow-xs"
+              : "border-border/60 bg-card/70 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}
+        >
+          <span>📋 Tất cả công việc</span>
+          <span className="rounded-md bg-muted px-1.5 py-0.2 text-[10px] font-mono tabular-nums text-foreground/80">
+            {workboxCounts.all}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveWorkbox("MY_RECEIVED")}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap",
+            activeWorkbox === "MY_RECEIVED"
+              ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+              : "border-border/60 bg-card/70 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}
+        >
+          <span>📥 Việc tôi nhận</span>
+          <span className="rounded-md bg-blue-500/15 px-1.5 py-0.2 text-[10px] font-mono tabular-nums text-blue-600 dark:text-blue-400 font-bold">
+            {workboxCounts.received}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveWorkbox("MY_ASSIGNED")}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap",
+            activeWorkbox === "MY_ASSIGNED"
+              ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+              : "border-border/60 bg-card/70 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}
+        >
+          <span>📤 Việc tôi giao</span>
+          <span className="rounded-md bg-indigo-500/15 px-1.5 py-0.2 text-[10px] font-mono tabular-nums text-indigo-600 dark:text-indigo-400 font-bold">
+            {workboxCounts.assigned}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveWorkbox("URGENT")}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap",
+            activeWorkbox === "URGENT"
+              ? "bg-rose-600 text-white border-rose-600 shadow-xs"
+              : "border-border/60 bg-card/70 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}
+        >
+          <span>⚠️ Cần xử lý gấp & Quá hạn</span>
+          {workboxCounts.urgent > 0 && (
+            <span className="rounded-md bg-rose-500/20 px-1.5 py-0.2 text-[10px] font-mono tabular-nums text-rose-600 dark:text-rose-400 font-bold">
+              {workboxCounts.urgent}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Top Filter Bar */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         {/* Left side: Search & Department selector */}
@@ -576,6 +738,22 @@ export function CascadingTaskTable({
                             <span className="text-[11px] font-bold tabular-nums text-foreground">
                               {task.progressPercent}%
                             </span>
+
+                            {/* 1-Click Fast Workflow Action Button */}
+                            {onStatusChange && task.status === "IN_PROGRESS" && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onStatusChange(task.id, "COMPLETED");
+                                }}
+                                className="hidden sm:inline-flex h-6 px-2 items-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-[10.5px] font-semibold border border-emerald-500/20 cursor-pointer transition-colors"
+                                title="Báo cáo hoàn thành nhiệm vụ"
+                              >
+                                Báo cáo xong ✓
+                              </button>
+                            )}
+
                             <Badge
                               variant={task.status === "COMPLETED" ? "emerald" : "sapphire"}
                               onClick={(e) => {
@@ -662,6 +840,51 @@ export function CascadingTaskTable({
                                         <span className="truncate text-foreground/90 font-medium">
                                           {subTask.title}
                                         </span>
+
+                                        {/* 1-Click Fast Workflow Action for Subtask */}
+                                        {onStatusChange && (
+                                          <div className="shrink-0">
+                                            {subTask.status === "NEW" && (
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  onStatusChange(subTask.id, "IN_PROGRESS");
+                                                }}
+                                                className="h-5 px-1.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 text-[10px] font-semibold border border-blue-500/20 cursor-pointer"
+                                                title="Tiếp nhận việc này"
+                                              >
+                                                Nhận 📥
+                                              </button>
+                                            )}
+                                            {subTask.status === "IN_PROGRESS" && (
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  onStatusChange(subTask.id, "COMPLETED");
+                                                }}
+                                                className="h-5 px-1.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-semibold border border-emerald-500/20 cursor-pointer"
+                                                title="Báo cáo hoàn thành"
+                                              >
+                                                Xong ✓
+                                              </button>
+                                            )}
+                                            {subTask.status === "NEEDS_REVIEW" && (
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  onStatusChange(subTask.id, "IN_PROGRESS");
+                                                }}
+                                                className="h-5 px-1.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 text-[10px] font-semibold border border-amber-500/20 cursor-pointer"
+                                                title="Tiếp nhận sửa lại"
+                                              >
+                                                Sửa ✏️
+                                              </button>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
 
                                       {/* Subtask Assignee & Due Date */}

@@ -370,15 +370,79 @@ export function TaskDetailSideSheet({
                 </span>
               </div>
             )}
+
+            {/* Quick 1-Click Action Bar for Direct Workflow */}
+            {onStatusChange && (
+              <div className="mt-3.5 flex items-center gap-2">
+                {task.status === "NEW" && (
+                  <Button
+                    type="button"
+                    onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
+                    className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                  >
+                    <span>📥 Tiếp nhận công việc</span>
+                  </Button>
+                )}
+                {task.status === "IN_PROGRESS" && (
+                  <>
+                    <Button
+                      type="button"
+                      onClick={() => onStatusChange(task.id, "COMPLETED")}
+                      className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                    >
+                      <span>👍 Báo cáo hoàn thành</span>
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => onStatusChange(task.id, "NEEDS_REVIEW")}
+                      className="h-8.5 px-3 text-xs font-medium border border-amber-500/40 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 rounded-xl transition-colors cursor-pointer"
+                      title="Chuyển sang trạng thái cần chỉnh sửa"
+                    >
+                      Cần sửa ⚠️
+                    </button>
+                  </>
+                )}
+                {task.status === "NEEDS_REVIEW" && (
+                  <Button
+                    type="button"
+                    onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
+                    className="flex-1 h-8.5 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs gap-1.5 cursor-pointer"
+                  >
+                    <span>✏️ Tiếp nhận chỉnh sửa</span>
+                  </Button>
+                )}
+                {task.status === "COMPLETED" && (
+                  <button
+                    type="button"
+                    onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
+                    className="h-8 px-3 text-xs font-medium border border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground rounded-xl transition-colors cursor-pointer"
+                    title="Mở lại công việc để tiếp tục xử lý"
+                  >
+                    ↩️ Mở lại công việc
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Properties List (Structured like dashboard-chamcong PropertyItem) */}
           <div className="rounded-2xl border border-border/50 bg-card/60 p-4 divide-y divide-border/30 text-xs shadow-xs">
-            {/* Lead / Assignee */}
+            {/* Delegator / Giao việc */}
             <div className="flex items-center justify-between py-2.5 first:pt-0">
               <div className="flex items-center gap-2 text-muted-foreground">
+                <Building2 className="size-4 text-muted-foreground/70" />
+                <span>Người giao việc</span>
+              </div>
+              <div className="font-semibold text-foreground">
+                {isSchool ? "Ban Giám hiệu QCET" : "Trưởng đơn vị quản lý"}
+              </div>
+            </div>
+
+            {/* Lead / Assignee */}
+            <div className="flex items-center justify-between py-2.5">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <User className="size-4 text-muted-foreground/70" />
-                <span>Cán bộ phụ trách</span>
+                <span>Cán bộ chủ trì</span>
               </div>
               <div className="flex items-center gap-2 font-semibold text-foreground">
                 <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary border border-primary/20">

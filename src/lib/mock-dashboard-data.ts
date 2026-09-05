@@ -20,13 +20,13 @@ export const CATEGORY_LABELS: Record<TaskCategory, string> = {
   KHAC: "Khác",
 };
 
-interface Personnel {
+export interface Personnel {
   name: string;
   avatar: string;
   dept: string;
 }
 
-const QCET_PERSONNEL: Personnel[] = [
+export const QCET_PERSONNEL: Personnel[] = [
   {
     name: "Trần Hùng",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",

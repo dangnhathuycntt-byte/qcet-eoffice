@@ -17,6 +17,7 @@ import {
 import type { TaskCategory, SchoolTask } from "@/types/dashboard";
 import type { UserRole } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
+import { QCET_PERSONNEL } from "@/lib/mock-dashboard-data";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -540,11 +541,51 @@ export function CreateTaskModal({
           <div className="space-y-1.5">
             <label
               htmlFor="leadAssignee"
-              className="text-xs font-semibold text-foreground"
+              className="text-xs font-semibold text-foreground flex items-center justify-between"
             >
-              Người chủ trì / Chịu trách nhiệm chính{" "}
-              <span className="text-destructive">*</span>
+              <span>
+                Người chủ trì / Chịu trách nhiệm chính{" "}
+                <span className="text-destructive">*</span>
+              </span>
+              <span className="text-[11px] text-muted-foreground font-normal">
+                (Chọn nhanh cán bộ hoặc nhập tên)
+              </span>
             </label>
+
+            {/* Quick Personnel Selection Chips */}
+            <div className="flex items-center gap-1.5 flex-wrap pb-1">
+              {QCET_PERSONNEL.map((person) => {
+                const isSelected = formData.leadAssigneeName === person.name;
+                return (
+                  <button
+                    key={person.name}
+                    type="button"
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        leadAssigneeName: person.name,
+                      }));
+                      if (errors.leadAssigneeName) {
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.leadAssigneeName;
+                          return next;
+                        });
+                      }
+                    }}
+                    className={cn(
+                      "rounded-lg border px-2 py-0.5 text-xs font-medium transition-all cursor-pointer",
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
+                        : "border-border/60 bg-muted/40 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    )}
+                  >
+                    {person.name}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="relative">
               <input
                 id="leadAssignee"
