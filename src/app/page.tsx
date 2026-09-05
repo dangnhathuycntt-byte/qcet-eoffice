@@ -257,11 +257,19 @@ export default function DashboardPage() {
       {/* Header: Focused on Task Management */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs">
+              Năm học 2025 - 2026
+            </span>
+            <span className="text-[11px] text-muted-foreground font-medium">
+              Học kỳ I
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground font-heading">
             Quản lý Giao việc & Nhiệm vụ
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Danh mục nhiệm vụ cấp Trường, công việc Đơn vị và theo dõi tiến độ thực hiện
+          <p className="text-xs text-muted-foreground mt-1 text-balance">
+            Danh mục nhiệm vụ cấp Trường, phân công Đơn vị và giám sát tiến độ thực thi điện tử
           </p>
         </div>
 
@@ -315,6 +323,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Executive Stat Strip / Workboxes */}
+      <section aria-label="Chỉ số điều hành toàn trường">
+        <ExecutiveStatStrip stats={visibleStats} />
+      </section>
+
       {/* Mode 1: Tasks View (Default, Spacious, Paginated, Focused on Work) */}
       {(!SHOW_DASHBOARD_ANALYTICS || activeView === "tasks") && (
         <section aria-label="Bảng nhiệm vụ phân cấp toàn trường">
@@ -330,10 +343,6 @@ export default function DashboardPage() {
       {/* DORMANT Mode 2: Dashboard & Thống kê View (Executive Bento Cards + Widgets) — mở lại sau này với SHOW_DASHBOARD_ANALYTICS = true */}
       {SHOW_DASHBOARD_ANALYTICS && activeView === "dashboard" && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          <section aria-label="Chỉ số hiệu suất toàn trường">
-            <ExecutiveStatStrip stats={visibleStats} />
-          </section>
-
           <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
             <div className="lg:col-span-6 space-y-4">
               <UpcomingDeadlinesWidget

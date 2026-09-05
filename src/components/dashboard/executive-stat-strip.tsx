@@ -1,12 +1,14 @@
 import * as React from "react";
 import {
+  Layers,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
   Building2,
   CheckSquare,
-  AlertTriangle,
   TrendingUp,
 } from "lucide-react";
 import type { DashboardStats } from "@/types/dashboard";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export interface StatCardBadge {
@@ -34,7 +36,14 @@ export interface StatCardData {
   subtext: string;
   badge?: StatCardBadge;
   progress?: number;
-  iconName: "Building2" | "CheckSquare" | "AlertTriangle" | "TrendingUp";
+  iconName:
+    | "Layers"
+    | "Clock"
+    | "AlertTriangle"
+    | "CheckCircle2"
+    | "Building2"
+    | "CheckSquare"
+    | "TrendingUp";
 }
 
 export interface ExecutiveStatStripProps {
@@ -43,9 +52,12 @@ export interface ExecutiveStatStripProps {
 }
 
 const iconMap = {
+  Layers,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
   Building2,
   CheckSquare,
-  AlertTriangle,
   TrendingUp,
 };
 
@@ -76,14 +88,14 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
       title: "Nhiệm vụ cấp Trường",
       value: formatNumber(stats.totalSchoolTasks),
       subtext: `${formatNumber(stats.schoolTasksInProgress)} đang làm · ${formatNumber(stats.schoolTasksCompleted)} xong`,
-      iconName: "Building2",
+      iconName: "Layers",
     },
     {
       id: "unit-tasks",
       title: "Công việc Đơn vị",
       value: formatNumber(stats.totalStaffTasks),
       subtext: `${formatNumber(stats.staffTasksInProgress)} đang làm · ${formatNumber(stats.staffTasksCompleted)} xong`,
-      iconName: "CheckSquare",
+      iconName: "Clock",
     },
     {
       id: "urgent-tasks",
@@ -112,7 +124,7 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
       value: `${stats.averageSchoolProgressPercent}%`,
       subtext: "Tiến độ trung bình",
       progress: stats.averageSchoolProgressPercent,
-      iconName: "TrendingUp",
+      iconName: "CheckCircle2",
     },
   ];
 }
@@ -123,91 +135,101 @@ export function ExecutiveStatStrip({ stats, className }: ExecutiveStatStripProps
   return (
     <div
       className={cn(
-        "grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4",
+        "grid grid-cols-2 lg:grid-cols-4 rounded-xl border border-border/50 bg-card shadow-card overflow-hidden divide-border/40 lg:divide-x",
         className
       )}
       data-slot="executive-stat-strip"
     >
-      {cards.map((card) => {
+      {cards.map((card, idx) => {
         const IconComponent = iconMap[card.iconName];
         const isUrgentCard = card.id === "urgent-tasks";
         const isOverdueAlert = isUrgentCard && (stats?.overdueTasksCount ?? 0) > 0;
 
-        // Accent container styles for the soft rounded icon box
-        let iconContainerClass = "bg-primary/10 text-primary";
+        // Subtle accent line colors
+        let accentLineColor = "bg-primary/40";
+        let dotColor = "bg-primary/70";
+
         if (card.id === "school-tasks") {
-          iconContainerClass = "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+          accentLineColor = "bg-blue-500/50";
+          dotColor = "bg-blue-500";
         } else if (card.id === "unit-tasks") {
-          iconContainerClass = "bg-violet-500/10 text-violet-600 dark:text-violet-400";
+          accentLineColor = "bg-indigo-500/50";
+          dotColor = "bg-indigo-500";
         } else if (card.id === "urgent-tasks") {
-          iconContainerClass = isOverdueAlert
-            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
-            : "bg-amber-500/10 text-amber-600 dark:text-amber-400";
+          accentLineColor = isOverdueAlert
+            ? "bg-rose-500"
+            : (stats?.needsReviewTasksCount ?? 0) > 0
+              ? "bg-amber-500"
+              : "bg-emerald-500/50";
+          dotColor = isOverdueAlert
+            ? "bg-rose-500"
+            : (stats?.needsReviewTasksCount ?? 0) > 0
+              ? "bg-amber-500"
+              : "bg-emerald-500";
         } else if (card.id === "overall-progress") {
-          iconContainerClass = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+          accentLineColor = "bg-emerald-500/60";
+          dotColor = "bg-emerald-500";
         }
 
         return (
           <div
             key={card.id}
             className={cn(
-              "group relative flex flex-col justify-between rounded-2xl border border-border/50 bg-card p-4 sm:p-5 shadow-card hover:shadow-card-hover transition-all duration-300",
-              isOverdueAlert && "border-rose-500/40 bg-rose-500/[0.03] shadow-rose-500/5 hover:border-rose-500/60"
+              "group relative flex flex-col justify-between p-4 sm:p-5 transition-colors duration-150 hover:bg-muted/15",
+              // Responsive hairline dividers for 2-column mode on mobile/tablet
+              idx % 2 === 0 ? "border-r border-border/40 lg:border-r-0" : "",
+              idx < 2 ? "border-b border-border/40 lg:border-b-0" : "",
+              // Subtle background tint only on active overdue alert
+              isOverdueAlert && "bg-rose-500/[0.02]"
             )}
             data-slot="stat-card"
             data-card-id={card.id}
           >
-            {/* Top header row: Icon in soft rounded container & Title + Badge */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                {IconComponent && (
-                  <div
-                    className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-xl p-2.5 transition-transform duration-300 group-hover:scale-105",
-                      iconContainerClass
-                    )}
-                  >
-                    <IconComponent className="size-5 shrink-0" />
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <span className="text-xs font-semibold text-muted-foreground tracking-tight line-clamp-1">
-                    {card.title}
-                  </span>
+            {/* Subtle top accent line */}
+            <div className={cn("absolute inset-x-0 top-0 h-[2px]", accentLineColor)} />
+
+            {/* Top row: Icon + Title + Micro-badge */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors group-hover:text-foreground">
+                  {IconComponent && (
+                    <IconComponent className="size-4 shrink-0" strokeWidth={1.5} />
+                  )}
                 </div>
+                <span className="text-xs font-medium text-muted-foreground tracking-tight truncate">
+                  {card.title}
+                </span>
               </div>
 
               {card.badge && (
-                <Badge
-                  variant={card.badge.variant}
+                <span
                   className={cn(
-                    "h-5 px-1.5 text-[10px] font-medium leading-none shrink-0",
-                    isOverdueAlert && "gap-1 font-semibold"
+                    "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-medium font-mono shrink-0",
+                    isOverdueAlert
+                      ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
+                      : (stats?.needsReviewTasksCount ?? 0) > 0
+                        ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                        : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
                   )}
                 >
-                  {isOverdueAlert && (
-                    <span className="relative flex size-1.5 shrink-0">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75" />
-                      <span className="relative inline-flex size-1.5 rounded-full bg-rose-500" />
-                    </span>
-                  )}
-                  {card.badge.label}
-                </Badge>
+                  <span className={cn("size-1.5 rounded-full shrink-0", dotColor)} />
+                  <span>{card.badge.label}</span>
+                </span>
               )}
             </div>
 
             {/* Metric Value */}
-            <div className="my-3 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground font-mono tabular-nums">
+            <div className="my-2.5 flex items-baseline justify-between">
+              <span className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground font-mono tabular-nums">
                 {card.value}
               </span>
             </div>
 
-            {/* Bottom section: Progress bar or Subtext */}
+            {/* Bottom section: Progress bar or Subtext with subtle status dot */}
             <div className="pt-0.5">
               {card.progress !== undefined ? (
                 <div className="space-y-1.5">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary/80">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                     <div
                       className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
                       style={{
@@ -216,17 +238,15 @@ export function ExecutiveStatStrip({ stats, className }: ExecutiveStatStripProps
                     />
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>{card.subtext}</span>
-                    <span className="font-semibold text-foreground tabular-nums">
+                    <span className="truncate">{card.subtext}</span>
+                    <span className="font-mono font-semibold text-foreground tabular-nums ml-1 shrink-0">
                       {card.progress}%
                     </span>
                   </div>
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5 leading-snug">
-                  {isUrgentCard && isOverdueAlert ? (
-                    <span className="inline-block size-1.5 rounded-full bg-rose-500 shrink-0" />
-                  ) : null}
+                  <span className={cn("size-1.5 rounded-full shrink-0", dotColor)} />
                   <span className="truncate">{card.subtext}</span>
                 </p>
               )}

@@ -49,6 +49,39 @@ describe("ExecutiveStatStrip Helpers", () => {
     assert.equal(cards[3].progress, 74);
   });
 
+  test("stat cards contain zero decorative emojis in titles, subtexts, and badges", () => {
+    const cards = getStatCardData(mockStats);
+    const emojiRegex = /\p{Extended_Pictographic}/u;
+
+    cards.forEach((card) => {
+      assert.equal(
+        emojiRegex.test(card.title),
+        false,
+        `Card title "${card.title}" must not contain emojis`
+      );
+      assert.equal(
+        emojiRegex.test(card.subtext),
+        false,
+        `Card subtext "${card.subtext}" must not contain emojis`
+      );
+      if (card.badge) {
+        assert.equal(
+          emojiRegex.test(card.badge.label),
+          false,
+          `Card badge "${card.badge.label}" must not contain emojis`
+        );
+      }
+    });
+  });
+
+  test("stat cards use standardized executive Lucide icon names", () => {
+    const cards = getStatCardData(mockStats);
+    assert.equal(cards[0].iconName, "Layers");
+    assert.equal(cards[1].iconName, "Clock");
+    assert.equal(cards[2].iconName, "AlertTriangle");
+    assert.equal(cards[3].iconName, "CheckCircle2");
+  });
+
   test("formatNumber formats integers correctly", () => {
     assert.equal(formatNumber(0), "0");
     assert.equal(formatNumber(304), "304");
