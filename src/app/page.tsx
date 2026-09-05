@@ -24,7 +24,8 @@ import {
 } from "@/components/dashboard/create-task-modal";
 import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, CheckSquare, LayoutDashboard } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { filterTasksByRole, filterUpcomingByRole } from "@/lib/role-task-filter";
 
@@ -40,12 +41,21 @@ export default function DashboardPage() {
   >(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [activeView, setActiveView] = React.useState<"tasks" | "dashboard">("tasks");
 
   // Filter tasks and stats dynamically by active role viewpoint
   const visibleTasks = React.useMemo(
     () => filterTasksByRole(dashboardData.tasks, user),
     [dashboardData.tasks, user]
   );
+
+  const parentSchoolTaskTitle = React.useMemo(() => {
+    if (!selectedTask || isSchoolTask(selectedTask)) return undefined;
+    const parent = dashboardData.tasks.find(
+      (t) => t.id === selectedTask.parentSchoolTaskId
+    );
+    return parent?.title;
+  }, [selectedTask, dashboardData.tasks]);
 
   const visibleStats = React.useMemo(
     () => computeDashboardStats(visibleTasks),
@@ -234,74 +244,107 @@ export default function DashboardPage() {
       className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10"
       data-slot="twenty-dashboard"
     >
-      {/* Clean Executive Page Header */}
-      <div className="flex items-center justify-between">
+      {/* Executive Mode Switcher: Tasks (Main) vs Thống kê (Analytics) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading">
-            Tổng quan điều hành
+            {activeView === "tasks" ? "Quản lý Giao việc & Nhiệm vụ" : "Bảng điều hành & Thống kê"}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Nhiệm vụ trọng tâm và chỉ số tiến độ toàn trường
+            {activeView === "tasks"
+              ? "Danh mục nhiệm vụ trường, công việc đơn vị và theo dõi tiến độ"
+              : "Tổng hợp chỉ số KPI, tiến độ toàn trường và nhật ký hoạt động"}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleManualRefresh}
-          disabled={isRefreshing}
-          className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-border/60 bg-card/60 px-2.5 text-xs font-medium text-muted-foreground transition-all hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60"
-          title="Làm mới dữ liệu từ máy chủ"
-        >
-          <RefreshCw
-            className={`size-3.5 ${isRefreshing ? "animate-spin text-foreground" : ""}`}
-          />
-          <span className="hidden sm:inline">Làm mới</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {/* Segmented Mode Toggle */}
+          <div className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setActiveView("tasks")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                activeView === "tasks"
+                  ? "bg-card text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Danh sách nhiệm vụ & giao việc"
+            >
+              <CheckSquare className="size-3.5" />
+              <span>Nhiệm vụ & Giao việc</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView("dashboard")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                activeView === "dashboard"
+                  ? "bg-card text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Thống kê điều hành BGH"
+            >
+              <LayoutDashboard className="size-3.5" />
+              <span>Thống kê & Báo cáo</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="inline-flex h-8.5 items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60 shadow-2xs"
+            title="Làm mới dữ liệu từ máy chủ"
+          >
+            <RefreshCw
+              className={`size-3.5 ${isRefreshing ? "animate-spin text-foreground" : ""}`}
+            />
+            <span className="hidden sm:inline">Làm mới</span>
+          </button>
+        </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 3. ExecutiveStatStrip across the top                                      */}
-      {/* ========================================================================= */}
-      <section aria-label="Chỉ số hiệu suất toàn trường">
-        <ExecutiveStatStrip stats={visibleStats} />
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 4. Two-Column Grid: 8 Cols (~65%) Left | 4 Cols (~35%) Right              */}
-      {/* ========================================================================= */}
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left Column (8 cols): Cascading 2-Tier Task Table */}
-        <div className="lg:col-span-8 space-y-4">
+      {/* Mode 1: Tasks View (Default, Spacious, Paginated, Focused) */}
+      {activeView === "tasks" ? (
+        <section aria-label="Bảng nhiệm vụ phân cấp toàn trường">
           <CascadingTaskTable
             tasks={visibleTasks}
             onSelectTask={(task) => setSelectedTask(task)}
             onAddTask={() => setIsCreateModalOpen(true)}
           />
-        </div>
+        </section>
+      ) : (
+        /* Mode 2: Dashboard & Thống kê View (Executive Bento Cards + Widgets) */
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <section aria-label="Chỉ số hiệu suất toàn trường">
+            <ExecutiveStatStrip stats={visibleStats} />
+          </section>
 
-        {/* Right Column (4 cols): Upcoming Deadlines & Activity Feed */}
-        <div className="lg:col-span-4 space-y-6">
-          <UpcomingDeadlinesWidget
-            items={visibleUpcoming}
-            onSelectTask={handleSelectUpcoming}
-          />
-          <ActivityFeedWidget activities={dashboardData.activities} />
+          <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="lg:col-span-6 space-y-4">
+              <UpcomingDeadlinesWidget
+                items={visibleUpcoming}
+                onSelectTask={handleSelectUpcoming}
+              />
+            </div>
+            <div className="lg:col-span-6 space-y-4">
+              <ActivityFeedWidget activities={dashboardData.activities} />
+            </div>
+          </section>
         </div>
-      </section>
+      )}
 
-      {/* ========================================================================= */}
-      {/* 5. TaskDetailSideSheet Slide-Over                                        */}
-      {/* ========================================================================= */}
+      {/* TaskDetailSideSheet Slide-Over */}
       <TaskDetailSideSheet
         task={selectedTask}
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         onStatusChange={handleStatusChange}
+        parentSchoolTaskTitle={parentSchoolTaskTitle}
       />
 
-      {/* ========================================================================= */}
-      {/* 6. CreateTaskModal Dialog                                                */}
-      {/* ========================================================================= */}
+      {/* CreateTaskModal Dialog */}
       <CreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}

@@ -2,6 +2,7 @@ import * as React from "react";
 import {
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Search,
   Plus,
   Calendar,
@@ -237,6 +238,19 @@ function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+function getPageNumbers(current: number, total: number): (number | string)[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
+
 export interface CascadingTaskTableProps {
   tasks: SchoolTask[];
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
@@ -297,6 +311,22 @@ export function CascadingTaskTable({
       ),
     [tasks, selectedCategory, searchQuery, selectedDepartment]
   );
+
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
+
+  // Reset to page 1 whenever search, department or category filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery, selectedDepartment]);
+
+  const totalTasks = filteredTasks.length;
+  const totalPages = Math.max(1, Math.ceil(totalTasks / pageSize));
+
+  const paginatedTasks = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTasks.slice(start, start + pageSize);
+  }, [filteredTasks, currentPage, pageSize]);
 
   return (
     <div
@@ -401,7 +431,7 @@ export function CascadingTaskTable({
                   </td>
                 </tr>
               ) : (
-                filteredTasks.map((task) => {
+                paginatedTasks.map((task) => {
                   const isExpanded = expandedTaskIds.has(task.id);
                   const hasSubtasks =
                     task.subTasks && task.subTasks.length > 0;
@@ -624,6 +654,99 @@ export function CascadingTaskTable({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Toolbar */}
+        {totalTasks > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 bg-muted/20 border-t border-border/50 text-xs text-muted-foreground">
+            {/* Left: Range and Page Size selector */}
+            <div className="flex items-center gap-3">
+              <span>
+                Hiển thị{" "}
+                <strong className="text-foreground font-semibold">
+                  {Math.min(totalTasks, (currentPage - 1) * pageSize + 1)} -{" "}
+                  {Math.min(totalTasks, currentPage * pageSize)}
+                </strong>{" "}
+                trong số{" "}
+                <strong className="text-foreground font-semibold">{totalTasks}</strong>{" "}
+                nhiệm vụ
+              </span>
+
+              <div className="flex items-center gap-1.5 pl-2 border-l border-border/50">
+                <span>Số hàng:</span>
+                <select
+                  aria-label="Số lượng mục trên mỗi trang"
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="h-7 rounded-lg border border-border/60 bg-card px-2 text-xs font-medium text-foreground outline-none cursor-pointer"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Right: Page Navigation Buttons */}
+            <div className="flex items-center gap-1 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="inline-flex h-7 px-2 items-center gap-1 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                title="Trang trước"
+              >
+                <ChevronLeft className="size-3.5" />
+                <span className="hidden sm:inline">Trước</span>
+              </button>
+
+              {/* Page Number Buttons */}
+              <div className="flex items-center gap-1">
+                {getPageNumbers(currentPage, totalPages).map((p, idx) => {
+                  if (p === "...") {
+                    return (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="px-1 text-muted-foreground"
+                      >
+                        ...
+                      </span>
+                    );
+                  }
+                  const isCurrent = p === currentPage;
+                  return (
+                    <button
+                      key={`page-${p}`}
+                      type="button"
+                      onClick={() => setCurrentPage(Number(p))}
+                      className={cn(
+                        "size-7 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                        isCurrent
+                          ? "bg-primary text-primary-foreground shadow-xs"
+                          : "border border-border/60 bg-card text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      )}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="inline-flex h-7 px-2 items-center gap-1 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                title="Trang kế tiếp"
+              >
+                <span className="hidden sm:inline">Sau</span>
+                <ChevronRight className="size-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
