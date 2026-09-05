@@ -11,6 +11,13 @@ import {
 import type { DashboardStats } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 
+export type WorkboxFilter =
+  | "ALL"
+  | "URGENT_OVERDUE"
+  | "MY_ACTION"
+  | "ASSIGNED_BY_ME"
+  | "COMPLETED";
+
 export interface StatCardBadge {
   label: string;
   variant:
@@ -34,6 +41,7 @@ export interface StatCardData {
   title: string;
   value: string;
   subtext: string;
+  filterKey?: WorkboxFilter;
   badge?: StatCardBadge;
   progress?: number;
   iconName:
@@ -48,6 +56,8 @@ export interface StatCardData {
 
 export interface ExecutiveStatStripProps {
   stats: DashboardStats;
+  activeFilter?: WorkboxFilter;
+  onFilterChange?: (filter: WorkboxFilter) => void;
   className?: string;
 }
 
@@ -88,6 +98,7 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
       title: "Nhiệm vụ cấp Trường",
       value: formatNumber(stats.totalSchoolTasks),
       subtext: `${formatNumber(stats.schoolTasksInProgress)} đang làm · ${formatNumber(stats.schoolTasksCompleted)} xong`,
+      filterKey: "URGENT_OVERDUE",
       iconName: "Layers",
     },
     {
@@ -95,6 +106,7 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
       title: "Công việc Đơn vị",
       value: formatNumber(stats.totalStaffTasks),
       subtext: `${formatNumber(stats.staffTasksInProgress)} đang làm · ${formatNumber(stats.staffTasksCompleted)} xong`,
+      filterKey: "MY_ACTION",
       iconName: "Clock",
     },
     {
@@ -102,6 +114,7 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
       title: "Cần xử lý & Trễ hạn",
       value: formatNumber(urgentCount),
       subtext: `${formatNumber(stats.needsReviewTasksCount)} cần xử lý · ${formatNumber(stats.overdueTasksCount)} trễ hạn`,
+      filterKey: "ASSIGNED_BY_ME",
       badge: {
         label:
           stats.overdueTasksCount > 0
@@ -123,13 +136,19 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
       title: "Tỷ lệ hoàn thành toàn trường",
       value: `${stats.averageSchoolProgressPercent}%`,
       subtext: "Tiến độ trung bình",
+      filterKey: "COMPLETED",
       progress: stats.averageSchoolProgressPercent,
       iconName: "CheckCircle2",
     },
   ];
 }
 
-export function ExecutiveStatStrip({ stats, className }: ExecutiveStatStripProps) {
+export function ExecutiveStatStrip({
+  stats,
+  activeFilter,
+  onFilterChange,
+  className,
+}: ExecutiveStatStripProps) {
   const cards = getStatCardData(stats);
 
   return (
@@ -144,6 +163,8 @@ export function ExecutiveStatStrip({ stats, className }: ExecutiveStatStripProps
         const IconComponent = iconMap[card.iconName];
         const isUrgentCard = card.id === "urgent-tasks";
         const isOverdueAlert = isUrgentCard && (stats?.overdueTasksCount ?? 0) > 0;
+        const isActive = Boolean(card.filterKey && activeFilter === card.filterKey);
+        const isClickable = Boolean(onFilterChange && card.filterKey);
 
         // Subtle accent line colors
         let accentLineColor = "bg-primary/40";
@@ -174,19 +195,44 @@ export function ExecutiveStatStrip({ stats, className }: ExecutiveStatStripProps
         return (
           <div
             key={card.id}
+            role={isClickable ? "button" : undefined}
+            tabIndex={isClickable ? 0 : undefined}
+            aria-pressed={isClickable ? isActive : undefined}
+            onClick={() => {
+              if (card.filterKey) {
+                onFilterChange?.(activeFilter === card.filterKey ? "ALL" : card.filterKey);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (isClickable && card.filterKey && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                onFilterChange?.(activeFilter === card.filterKey ? "ALL" : card.filterKey);
+              }
+            }}
             className={cn(
-              "group relative flex flex-col justify-between p-4 sm:p-5 transition-colors duration-150 hover:bg-muted/15",
+              "group relative flex flex-col justify-between p-4 sm:p-5 transition-all duration-150 text-left",
+              isClickable &&
+                "cursor-pointer select-none hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+              !isClickable && "hover:bg-muted/15",
+              isActive && "ring-2 ring-primary ring-inset bg-primary/[0.04] shadow-sm z-10",
               // Responsive hairline dividers for 2-column mode on mobile/tablet
               idx % 2 === 0 ? "border-r border-border/40 lg:border-r-0" : "",
               idx < 2 ? "border-b border-border/40 lg:border-b-0" : "",
-              // Subtle background tint only on active overdue alert
-              isOverdueAlert && "bg-rose-500/[0.02]"
+              // Subtle background tint only on active overdue alert when not active
+              isOverdueAlert && !isActive && "bg-rose-500/[0.02]"
             )}
             data-slot="stat-card"
             data-card-id={card.id}
+            data-filter-key={card.filterKey}
+            data-active={isActive ? "true" : "false"}
           >
             {/* Subtle top accent line */}
-            <div className={cn("absolute inset-x-0 top-0 h-[2px]", accentLineColor)} />
+            <div
+              className={cn(
+                "absolute inset-x-0 top-0 transition-all",
+                isActive ? "h-[3px] bg-primary" : cn("h-[2px]", accentLineColor)
+              )}
+            />
 
             {/* Top row: Icon + Title + Micro-badge */}
             <div className="flex items-center justify-between gap-2">

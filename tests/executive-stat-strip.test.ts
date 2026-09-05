@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { formatNumber, getStatCardData } from "../src/components/dashboard/executive-stat-strip";
+import { formatNumber, getStatCardData, type WorkboxFilter } from "../src/components/dashboard/executive-stat-strip";
 import type { DashboardStats } from "../src/types/dashboard";
 
 describe("ExecutiveStatStrip Helpers", () => {
@@ -23,6 +23,14 @@ describe("ExecutiveStatStrip Helpers", () => {
     assert.equal(cards[1].value, "920");
     assert.equal(cards[2].value, "47"); // 42 needs review + 5 overdue
     assert.equal(cards[3].value, "74%");
+  });
+
+  test("getStatCardData assigns matching WorkboxFilter key to each card", () => {
+    const cards = getStatCardData(mockStats);
+    assert.equal(cards[0].filterKey, "URGENT_OVERDUE");
+    assert.equal(cards[1].filterKey, "MY_ACTION");
+    assert.equal(cards[2].filterKey, "ASSIGNED_BY_ME");
+    assert.equal(cards[3].filterKey, "COMPLETED");
   });
 
   test("getStatCardData provides accurate titles and breakdown subtexts in Vietnamese", () => {
@@ -117,5 +125,20 @@ describe("ExecutiveStatStrip Helpers", () => {
     assert.equal(cards[2].value, "0");
     assert.equal(cards[3].value, "0%");
     assert.equal(cards[3].progress, 0);
+  });
+
+  test("toggle logic switches between selected filterKey and ALL", () => {
+    const cards = getStatCardData(mockStats);
+    const getNextFilter = (active: WorkboxFilter | undefined, target: WorkboxFilter): WorkboxFilter =>
+      active === target ? "ALL" : target;
+
+    // Initially ALL, click card 0 (URGENT_OVERDUE) -> URGENT_OVERDUE
+    assert.equal(getNextFilter("ALL", cards[0].filterKey!), "URGENT_OVERDUE");
+
+    // Already URGENT_OVERDUE, click card 0 again -> toggles back to ALL
+    assert.equal(getNextFilter("URGENT_OVERDUE", cards[0].filterKey!), "ALL");
+
+    // From URGENT_OVERDUE, click card 1 (MY_ACTION) -> switches to MY_ACTION
+    assert.equal(getNextFilter("URGENT_OVERDUE", cards[1].filterKey!), "MY_ACTION");
   });
 });
