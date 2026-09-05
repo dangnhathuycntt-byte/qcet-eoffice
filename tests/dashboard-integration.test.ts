@@ -15,7 +15,7 @@ describe("Dashboard Assembly Integration", () => {
 
   test("navigation items include Twenty Executive Dashboard links", () => {
     const labels = NAVIGATION_ITEMS.map((item) => item.label);
-    assert.ok(labels.includes("Dashboard"), "includes Dashboard");
+    assert.ok(labels.includes("Quản lý công việc") || labels.includes("Dashboard"), "includes Quản lý công việc or Dashboard");
     assert.ok(labels.includes("Nhiệm vụ cấp Trường"), "includes Nhiệm vụ cấp Trường");
     assert.ok(labels.includes("Công việc Đơn vị"), "includes Công việc Đơn vị");
     assert.ok(labels.includes("Lịch công tác"), "includes Lịch công tác");

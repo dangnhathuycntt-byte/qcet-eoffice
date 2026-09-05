@@ -35,7 +35,7 @@ describe("Sprint 2 Integration & Navigation", () => {
     );
 
     const labels = NAVIGATION_ITEMS.map((item) => item.label);
-    assert.ok(labels.includes("Dashboard"));
+    assert.ok(labels.includes("Quản lý công việc") || labels.includes("Dashboard"));
     assert.ok(labels.includes("Nhiệm vụ cấp Trường"));
     assert.ok(labels.includes("Lịch công tác"));
     assert.ok(labels.includes("Cơ cấu tổ chức"));

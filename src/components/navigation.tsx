@@ -35,7 +35,7 @@ export function getInitials(name: string): string {
 }
 
 export const NAVIGATION_ITEMS = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "Quản lý công việc", icon: CheckSquare },
   { href: "/tasks", label: "Nhiệm vụ cấp Trường", icon: CheckSquare },
   { href: "/unit-tasks", label: "Công việc Đơn vị", icon: Briefcase },
   { href: "/calendar", label: "Lịch công tác", icon: Calendar },
@@ -127,7 +127,9 @@ export function MobileNav({ pathname }: { pathname: string }) {
               (pathname === item.href || pathname.startsWith(item.href + "/")));
           const Icon = item.icon;
           const shortLabel =
-            item.label === "Nhiệm vụ cấp Trường"
+            item.label === "Quản lý công việc"
+              ? "Công việc"
+              : item.label === "Nhiệm vụ cấp Trường"
               ? "Cấp Trường"
               : item.label === "Công việc Đơn vị"
               ? "Đơn vị"

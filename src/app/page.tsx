@@ -41,6 +41,9 @@ export default function DashboardPage() {
   >(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+
+  // Feature flag: đặt thành true để mở lại Dashboard thống kê phân tích sau này khi cần
+  const SHOW_DASHBOARD_ANALYTICS = false;
   const [activeView, setActiveView] = React.useState<"tasks" | "dashboard">("tasks");
 
   // Filter tasks and stats dynamically by active role viewpoint
@@ -244,51 +247,51 @@ export default function DashboardPage() {
       className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10"
       data-slot="twenty-dashboard"
     >
-      {/* Executive Mode Switcher: Tasks (Main) vs Thống kê (Analytics) */}
+      {/* Header: Focused on Task Management */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading">
-            {activeView === "tasks" ? "Quản lý Giao việc & Nhiệm vụ" : "Bảng điều hành & Thống kê"}
+            Quản lý Giao việc & Nhiệm vụ
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {activeView === "tasks"
-              ? "Danh mục nhiệm vụ trường, công việc đơn vị và theo dõi tiến độ"
-              : "Tổng hợp chỉ số KPI, tiến độ toàn trường và nhật ký hoạt động"}
+            Danh mục nhiệm vụ cấp Trường, công việc Đơn vị và theo dõi tiến độ thực hiện
           </p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {/* Segmented Mode Toggle */}
-          <div className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setActiveView("tasks")}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
-                activeView === "tasks"
-                  ? "bg-card text-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-              title="Danh sách nhiệm vụ & giao việc"
-            >
-              <CheckSquare className="size-3.5" />
-              <span>Nhiệm vụ & Giao việc</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveView("dashboard")}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
-                activeView === "dashboard"
-                  ? "bg-card text-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-              title="Thống kê điều hành BGH"
-            >
-              <LayoutDashboard className="size-3.5" />
-              <span>Thống kê & Báo cáo</span>
-            </button>
-          </div>
+          {/* DORMANT: Segmented Mode Toggle — Đặt SHOW_DASHBOARD_ANALYTICS = true để mở lại sau này */}
+          {SHOW_DASHBOARD_ANALYTICS && (
+            <div className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setActiveView("tasks")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                  activeView === "tasks"
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Danh sách nhiệm vụ & giao việc"
+              >
+                <CheckSquare className="size-3.5" />
+                <span>Nhiệm vụ & Giao việc</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView("dashboard")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                  activeView === "dashboard"
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Thống kê điều hành BGH"
+              >
+                <LayoutDashboard className="size-3.5" />
+                <span>Thống kê & Báo cáo</span>
+              </button>
+            </div>
+          )}
 
           <button
             type="button"
@@ -300,13 +303,13 @@ export default function DashboardPage() {
             <RefreshCw
               className={`size-3.5 ${isRefreshing ? "animate-spin text-foreground" : ""}`}
             />
-            <span className="hidden sm:inline">Làm mới</span>
+            <span className="hidden sm:inline">Làm mới dữ liệu</span>
           </button>
         </div>
       </div>
 
-      {/* Mode 1: Tasks View (Default, Spacious, Paginated, Focused) */}
-      {activeView === "tasks" ? (
+      {/* Mode 1: Tasks View (Default, Spacious, Paginated, Focused on Work) */}
+      {(!SHOW_DASHBOARD_ANALYTICS || activeView === "tasks") && (
         <section aria-label="Bảng nhiệm vụ phân cấp toàn trường">
           <CascadingTaskTable
             tasks={visibleTasks}
@@ -315,8 +318,10 @@ export default function DashboardPage() {
             onStatusChange={handleStatusChange}
           />
         </section>
-      ) : (
-        /* Mode 2: Dashboard & Thống kê View (Executive Bento Cards + Widgets) */
+      )}
+
+      {/* DORMANT Mode 2: Dashboard & Thống kê View (Executive Bento Cards + Widgets) — mở lại sau này với SHOW_DASHBOARD_ANALYTICS = true */}
+      {SHOW_DASHBOARD_ANALYTICS && activeView === "dashboard" && (
         <div className="space-y-6 animate-in fade-in duration-200">
           <section aria-label="Chỉ số hiệu suất toàn trường">
             <ExecutiveStatStrip stats={visibleStats} />
