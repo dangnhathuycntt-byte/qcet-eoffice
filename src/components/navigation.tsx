@@ -166,6 +166,33 @@ export function Navigation() {
   const { user } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
 
+  // Global keyboard shortcut: Press 'N' anywhere (outside form inputs) to quick-create task
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (
+        (e.key === "n" || e.key === "N") &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
+        e.preventDefault();
+        setIsCreateModalOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleCreateTaskFromTopbar = (data: CreateTaskFormData) => {
     window.dispatchEvent(
       new CustomEvent("qcet:task-created", { detail: data })
@@ -231,6 +258,9 @@ export function Navigation() {
           >
             <Plus className="size-3.5" />
             <span>Giao việc</span>
+            <kbd className="ml-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/20 px-1 py-0.5 text-[9.5px] font-mono leading-none opacity-90">
+              N
+            </kbd>
           </Button>
 
           {/* Theme Switcher Button */}

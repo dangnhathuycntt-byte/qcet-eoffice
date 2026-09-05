@@ -312,6 +312,7 @@ export default function DashboardPage() {
             tasks={visibleTasks}
             onSelectTask={(task) => setSelectedTask(task)}
             onAddTask={() => setIsCreateModalOpen(true)}
+            onStatusChange={handleStatusChange}
           />
         </section>
       ) : (

@@ -392,6 +392,7 @@ export default function UnitTasksPage() {
           tasks={visibleTasks}
           onSelectTask={(task) => setSelectedTask(task)}
           onAddTask={() => openCreateModal("DON_VI")}
+          onStatusChange={handleStatusChange}
         />
       ) : (
         <TaskKanbanBoard

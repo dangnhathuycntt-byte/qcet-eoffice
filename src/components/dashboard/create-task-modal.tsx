@@ -207,6 +207,20 @@ export function CreateTaskModal({
     onClose();
   };
 
+  const handleQuickPreset = (daysAhead: number) => {
+    const base = new Date();
+    base.setDate(base.getDate() + daysAhead);
+    const dateStr = base.toISOString().split("T")[0];
+    setFormData((prev) => ({ ...prev, dueDate: dateStr }));
+    if (errors.dueDate) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.dueDate;
+        return next;
+      });
+    }
+  };
+
   return (
     <div
       role="dialog"
@@ -236,7 +250,7 @@ export function CreateTaskModal({
             <p className="text-xs text-muted-foreground mt-0.5">
               {isManager
                 ? `Phân công nhiệm vụ nội bộ thuộc ${user.department || "đơn vị quản lý"}`
-                : "Khởi tạo và phân công nhiệm vụ theo cấp quản lý Twenty E-Office"}
+                : "Khởi tạo và phân công nhiệm vụ - QCET E-Office"}
             </p>
           </div>
           <button
@@ -468,6 +482,50 @@ export function CreateTaskModal({
                       : "border-border focus:border-ring"
                   )}
                 />
+              </div>
+              {/* Quick Due Date Presets */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <span className="text-[10.5px] text-muted-foreground font-medium">Nhanh:</span>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPreset(0)}
+                  className="rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-secondary cursor-pointer transition-colors"
+                >
+                  Hôm nay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPreset(3)}
+                  className="rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-secondary cursor-pointer transition-colors"
+                >
+                  +3 ngày
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPreset(7)}
+                  className="rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-secondary cursor-pointer transition-colors"
+                >
+                  +1 tuần
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const base = new Date();
+                    const endOfMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0);
+                    const dateStr = endOfMonth.toISOString().split("T")[0];
+                    setFormData((prev) => ({ ...prev, dueDate: dateStr }));
+                    if (errors.dueDate) {
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.dueDate;
+                        return next;
+                      });
+                    }
+                  }}
+                  className="rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-secondary cursor-pointer transition-colors"
+                >
+                  Cuối tháng
+                </button>
               </div>
               {errors.dueDate && (
                 <p className="text-[11px] font-medium text-destructive flex items-center gap-1 mt-1">

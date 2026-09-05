@@ -255,6 +255,7 @@ export interface CascadingTaskTableProps {
   tasks: SchoolTask[];
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onAddTask?: () => void;
+  onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
   className?: string;
 }
 
@@ -262,6 +263,7 @@ export function CascadingTaskTable({
   tasks,
   onSelectTask,
   onAddTask,
+  onStatusChange,
   className,
 }: CascadingTaskTableProps) {
   const { user } = useAuth();
@@ -428,6 +430,17 @@ export function CascadingTaskTable({
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Thử thay đổi từ khóa tìm kiếm hoặc chọn danh mục khác.
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory("ALL");
+                        setSelectedDepartment("ALL");
+                        setSearchQuery("");
+                      }}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                    >
+                      Xóa bộ lọc & Xem tất cả
+                    </button>
                   </td>
                 </tr>
               ) : (
@@ -563,6 +576,25 @@ export function CascadingTaskTable({
                             <span className="text-[11px] font-bold tabular-nums text-foreground">
                               {task.progressPercent}%
                             </span>
+                            <Badge
+                              variant={task.status === "COMPLETED" ? "emerald" : "sapphire"}
+                              onClick={(e) => {
+                                if (onStatusChange) {
+                                  e.stopPropagation();
+                                  onStatusChange(
+                                    task.id,
+                                    task.status === "COMPLETED" ? "IN_PROGRESS" : "COMPLETED"
+                                  );
+                                }
+                              }}
+                              title={onStatusChange ? "Click để chuyển đổi trạng thái" : undefined}
+                              className={cn(
+                                "h-5 px-2 text-[10px] font-semibold leading-none shrink-0",
+                                onStatusChange && "cursor-pointer transition-transform hover:scale-105 active:scale-95"
+                              )}
+                            >
+                              {task.status === "COMPLETED" ? "Hoàn thành" : "Đang làm"}
+                            </Badge>
                           </div>
                         </td>
                       </tr>
@@ -601,8 +633,27 @@ export function CascadingTaskTable({
                                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                         <Badge
                                           variant={statusConfig.variant}
+                                          onClick={(e) => {
+                                            if (onStatusChange) {
+                                              e.stopPropagation();
+                                              const nextStatus: TaskStatus =
+                                                subTask.status === "COMPLETED"
+                                                  ? "IN_PROGRESS"
+                                                  : subTask.status === "IN_PROGRESS"
+                                                  ? "COMPLETED"
+                                                  : "IN_PROGRESS";
+                                              onStatusChange(subTask.id, nextStatus);
+                                            }
+                                          }}
+                                          title={
+                                            onStatusChange
+                                              ? "Click để chuyển đổi trạng thái"
+                                              : undefined
+                                          }
                                           className={cn(
                                             "h-5 px-2 text-[10px] font-semibold leading-none shrink-0",
+                                            onStatusChange &&
+                                              "cursor-pointer transition-transform hover:scale-105 active:scale-95",
                                             statusConfig.className
                                           )}
                                         >

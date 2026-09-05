@@ -406,6 +406,7 @@ export default function TasksPage() {
           tasks={visibleTasks}
           onSelectTask={(task) => setSelectedTask(task)}
           onAddTask={() => openCreateModal("TRUONG")}
+          onStatusChange={handleStatusChange}
         />
       ) : (
         <TaskKanbanBoard
