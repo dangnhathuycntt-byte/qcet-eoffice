@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   SchoolTask,
   StaffTask,
@@ -9,11 +10,23 @@ import {
   TaskStatus,
 } from "@/types/dashboard";
 import { getMockDashboardPayload } from "@/lib/mock-dashboard-data";
-import { computeSchoolTaskRollup, computeDashboardStats } from "@/lib/dashboard-aggregator";
-import { ExecutiveStatStrip } from "@/components/dashboard/executive-stat-strip";
+import {
+  computeSchoolTaskRollup,
+  computeDashboardStats,
+} from "@/lib/dashboard-aggregator";
+import {
+  ExecutiveStatStrip,
+  type WorkboxFilter,
+} from "@/components/dashboard/executive-stat-strip";
 import { CascadingTaskTable } from "@/components/dashboard/cascading-task-table";
-import { UpcomingDeadlinesWidget } from "@/components/dashboard/upcoming-deadlines-widget";
-import { ActivityFeedWidget } from "@/components/dashboard/activity-feed-widget";
+import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
+import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
+import {
+  UnifiedTaskToolbar,
+  type TaskScope,
+  type TaskViewMode,
+  filterTasksByScope,
+} from "@/components/dashboard/unified-task-toolbar";
 import {
   TaskDetailSideSheet,
   isSchoolTask,
@@ -23,55 +36,128 @@ import {
   CreateTaskFormData,
 } from "@/components/dashboard/create-task-modal";
 import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
-import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckSquare, LayoutDashboard } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { filterTasksByRole, filterUpcomingByRole } from "@/lib/role-task-filter";
+import {
+  getDefaultScopeForRole,
+  parseScopeParam,
+  scopeToParam,
+  parseViewModeParam,
+  filterTasksHub,
+} from "@/lib/unified-task-hub";
 
-export default function DashboardPage() {
+function DashboardLoadingFallback() {
+  return (
+    <div className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10 animate-pulse">
+      <div className="h-16 rounded-2xl bg-muted/40" />
+      <div className="h-28 rounded-2xl bg-muted/40" />
+      <div className="h-14 rounded-2xl bg-muted/40" />
+      <div className="h-96 rounded-2xl bg-muted/40" />
+    </div>
+  );
+}
+
+function UnifiedTaskHubContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
 
-  // 1. Synchronous optimistic initial state from getMockDashboardPayload (0ms blank screen)
-  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(
-    () => getMockDashboardPayload()
+  // 1. URL Query Parameter sync for scope, view, and department
+  const scopeQuery = searchParams.get("scope");
+  const viewQuery = searchParams.get("view");
+  const deptQuery = searchParams.get("dept");
+
+  const defaultScope = React.useMemo(
+    () => getDefaultScopeForRole(user?.role),
+    [user?.role]
+  );
+
+  const [scope, setScope] = React.useState<TaskScope>(() =>
+    parseScopeParam(scopeQuery, defaultScope)
+  );
+  const [viewMode, setViewMode] = React.useState<TaskViewMode>(() =>
+    parseViewModeParam(viewQuery, "table")
+  );
+  const [selectedDepartment, setSelectedDepartment] = React.useState<string>(
+    deptQuery || "ALL"
+  );
+  const [selectedCategory, setSelectedCategory] = React.useState<string>("ALL");
+  const [selectedPriority, setSelectedPriority] = React.useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = React.useState<string>("");
+  const [activeWorkbox, setActiveWorkbox] = React.useState<WorkboxFilter>("ALL");
+
+  // Keep state in sync with URL query changes
+  React.useEffect(() => {
+    if (scopeQuery) {
+      setScope(parseScopeParam(scopeQuery, defaultScope));
+    } else {
+      setScope(defaultScope);
+    }
+  }, [scopeQuery, defaultScope]);
+
+  React.useEffect(() => {
+    if (viewQuery) {
+      setViewMode(parseViewModeParam(viewQuery, "table"));
+    }
+  }, [viewQuery]);
+
+  React.useEffect(() => {
+    if (deptQuery !== null) {
+      setSelectedDepartment(deptQuery);
+    }
+  }, [deptQuery]);
+
+  // URL updating helper
+  const updateUrlParams = React.useCallback(
+    (updates: { scope?: TaskScope; view?: TaskViewMode; dept?: string }) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (updates.scope !== undefined) {
+        params.set("scope", scopeToParam(updates.scope));
+      }
+      if (updates.view !== undefined) {
+        params.set("view", updates.view);
+      }
+      if (updates.dept !== undefined) {
+        if (updates.dept && updates.dept !== "ALL") {
+          params.set("dept", updates.dept);
+        } else {
+          params.delete("dept");
+        }
+      }
+      router.replace(`/?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
+
+  const handleScopeChange = (newScope: TaskScope) => {
+    setScope(newScope);
+    updateUrlParams({ scope: newScope });
+  };
+
+  const handleViewModeChange = (newMode: TaskViewMode) => {
+    setViewMode(newMode);
+    updateUrlParams({ view: newMode });
+  };
+
+  const handleDepartmentChange = (newDept: string) => {
+    setSelectedDepartment(newDept);
+    updateUrlParams({ dept: newDept });
+  };
+
+  // 2. Synchronous optimistic initial state from getMockDashboardPayload (0ms blank screen)
+  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(() =>
+    getMockDashboardPayload()
   );
   const [selectedTask, setSelectedTask] = React.useState<
     SchoolTask | StaffTask | null
   >(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
-  const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
+  const [initialAssigneeName, setInitialAssigneeName] = React.useState<
+    string | undefined
+  >(undefined);
 
-  // Feature flag: đặt thành true để mở lại Dashboard thống kê phân tích sau này khi cần
-  const SHOW_DASHBOARD_ANALYTICS = false;
-  const [activeView, setActiveView] = React.useState<"tasks" | "dashboard">("tasks");
-
-  // Filter tasks and stats dynamically by active role viewpoint
-  const visibleTasks = React.useMemo(
-    () => filterTasksByRole(dashboardData.tasks, user),
-    [dashboardData.tasks, user]
-  );
-
-  const parentSchoolTaskTitle = React.useMemo(() => {
-    if (!selectedTask || isSchoolTask(selectedTask)) return undefined;
-    const parent = dashboardData.tasks.find(
-      (t) => t.id === selectedTask.parentSchoolTaskId
-    );
-    return parent?.title;
-  }, [selectedTask, dashboardData.tasks]);
-
-  const visibleStats = React.useMemo(
-    () => computeDashboardStats(visibleTasks),
-    [visibleTasks]
-  );
-
-  const visibleUpcoming = React.useMemo(
-    () => filterUpcomingByRole(dashboardData.upcoming, user, visibleTasks),
-    [dashboardData.upcoming, user, visibleTasks]
-  );
-
-  // 2. Client-side background sync fetching live overview from /api/dashboard/overview
+  // Background sync with /api/dashboard/overview
   React.useEffect(() => {
     let isMounted = true;
 
@@ -114,23 +200,49 @@ export default function DashboardPage() {
     }
   };
 
-  // Find task when an upcoming deadline item is clicked
-  const handleSelectUpcoming = (item: UpcomingItem) => {
-    for (const schoolTask of dashboardData.tasks) {
-      if (schoolTask.id === item.taskId || schoolTask.title === item.title) {
-        setSelectedTask(schoolTask);
-        return;
-      }
-      for (const sub of schoolTask.subTasks) {
-        if (sub.id === item.taskId || sub.title === item.title) {
-          setSelectedTask(sub);
-          return;
-        }
-      }
-    }
-  };
+  // Scoped tasks for Executive Stat Strip
+  const scopedBaseTasks = React.useMemo(
+    () => filterTasksByScope(dashboardData.tasks, scope, user, selectedDepartment),
+    [dashboardData.tasks, scope, user, selectedDepartment]
+  );
 
-  // Optimistic status update when changed inside TaskDetailSideSheet
+  const displayedStats = React.useMemo(() => {
+    if (scopedBaseTasks.length > 0) return computeDashboardStats(scopedBaseTasks);
+    return computeDashboardStats(dashboardData.tasks);
+  }, [scopedBaseTasks, dashboardData.tasks]);
+
+  // Master filtered tasks feeding Work Canvas
+  const filteredTasks = React.useMemo(() => {
+    return filterTasksHub({
+      tasks: dashboardData.tasks,
+      scope,
+      workboxFilter: activeWorkbox,
+      category: selectedCategory,
+      priority: selectedPriority,
+      department: selectedDepartment,
+      searchQuery,
+      user,
+    });
+  }, [
+    dashboardData.tasks,
+    scope,
+    activeWorkbox,
+    selectedCategory,
+    selectedPriority,
+    selectedDepartment,
+    searchQuery,
+    user,
+  ]);
+
+  const parentSchoolTaskTitle = React.useMemo(() => {
+    if (!selectedTask || isSchoolTask(selectedTask)) return undefined;
+    const parent = dashboardData.tasks.find(
+      (t) => t.id === selectedTask.parentSchoolTaskId
+    );
+    return parent?.title;
+  }, [selectedTask, dashboardData.tasks]);
+
+  // Optimistic status update when changed inside TaskDetailSideSheet or Kanban
   const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
     setDashboardData((prev) => {
       const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
@@ -144,9 +256,12 @@ export default function DashboardPage() {
         );
         return { ...st, subTasks: updatedSubs };
       });
-      // Recompute rollup (progress bar, completedSubTasks) and dashboard stats
       const rolledUpTasks = updatedTasks.map((t) => computeSchoolTaskRollup(t));
-      return { ...prev, tasks: rolledUpTasks, stats: computeDashboardStats(rolledUpTasks) };
+      return {
+        ...prev,
+        tasks: rolledUpTasks,
+        stats: computeDashboardStats(rolledUpTasks),
+      };
     });
 
     setSelectedTask((prev) => {
@@ -223,7 +338,7 @@ export default function DashboardPage() {
     });
   };
 
-  // Listen to global task created or open modal events
+  // Listen to global task events
   React.useEffect(() => {
     const handleGlobalTaskCreated = (e: Event) => {
       const customEvent = e as CustomEvent<CreateTaskFormData>;
@@ -231,6 +346,7 @@ export default function DashboardPage() {
         handleCreateTask(customEvent.detail);
       }
     };
+
     const handleGlobalOpenCreate = (e: Event) => {
       const customEvent = e as CustomEvent<{ leadAssigneeName?: string }>;
       if (customEvent?.detail?.leadAssigneeName) {
@@ -253,12 +369,13 @@ export default function DashboardPage() {
     <div
       className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10"
       data-slot="twenty-dashboard"
+      data-hub="unified-task-hub"
     >
-      {/* Header: Focused on Task Management */}
+      {/* Header: Focused on Executive Task Management */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
               Năm học 2025 - 2026
             </span>
             <span className="text-[11px] text-muted-foreground font-medium">
@@ -269,45 +386,11 @@ export default function DashboardPage() {
             Quản lý Giao việc & Nhiệm vụ
           </h1>
           <p className="text-xs text-muted-foreground mt-1 text-balance">
-            Danh mục nhiệm vụ cấp Trường, phân công Đơn vị và giám sát tiến độ thực thi điện tử
+            Trung tâm điều hành và giao việc hợp nhất: Phân cấp nhiệm vụ toàn trường, khoa phòng và cá nhân
           </p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {/* DORMANT: Segmented Mode Toggle — Đặt SHOW_DASHBOARD_ANALYTICS = true để mở lại sau này */}
-          {SHOW_DASHBOARD_ANALYTICS && (
-            <div className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setActiveView("tasks")}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
-                  activeView === "tasks"
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                title="Danh sách nhiệm vụ & giao việc"
-              >
-                <CheckSquare className="size-3.5" />
-                <span>Nhiệm vụ & Giao việc</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveView("dashboard")}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
-                  activeView === "dashboard"
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                title="Thống kê điều hành BGH"
-              >
-                <LayoutDashboard className="size-3.5" />
-                <span>Thống kê & Báo cáo</span>
-              </button>
-            </div>
-          )}
-
           <button
             type="button"
             onClick={handleManualRefresh}
@@ -316,6 +399,7 @@ export default function DashboardPage() {
             title="Làm mới dữ liệu từ máy chủ"
           >
             <RefreshCw
+              strokeWidth={1.5}
               className={`size-3.5 ${isRefreshing ? "animate-spin text-foreground" : ""}`}
             />
             <span className="hidden sm:inline">Làm mới dữ liệu</span>
@@ -323,39 +407,69 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Executive Stat Strip / Workboxes */}
+      {/* Executive Stat Strip / Interactive Workbox Filter */}
       <section aria-label="Chỉ số điều hành toàn trường">
-        <ExecutiveStatStrip stats={visibleStats} />
+        <ExecutiveStatStrip
+          stats={displayedStats}
+          activeFilter={activeWorkbox}
+          onFilterChange={(filter) => setActiveWorkbox(filter)}
+        />
       </section>
 
-      {/* Mode 1: Tasks View (Default, Spacious, Paginated, Focused on Work) */}
-      {(!SHOW_DASHBOARD_ANALYTICS || activeView === "tasks") && (
-        <section aria-label="Bảng nhiệm vụ phân cấp toàn trường">
+      {/* Unified Task Toolbar */}
+      <section aria-label="Thanh công cụ điều khiển nhiệm vụ">
+        <UnifiedTaskToolbar
+          scope={scope}
+          onScopeChange={handleScopeChange}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          selectedDepartment={selectedDepartment}
+          onDepartmentChange={handleDepartmentChange}
+          selectedPriority={selectedPriority}
+          onPriorityChange={setSelectedPriority}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onNewTaskClick={() => setIsCreateModalOpen(true)}
+          totalTasksCount={filteredTasks.length}
+        />
+      </section>
+
+      {/* Dynamic Work Canvas */}
+      <section
+        aria-label="Không gian làm việc nhiệm vụ"
+        className="min-h-[420px]"
+        data-slot="work-canvas"
+      >
+        {viewMode === "table" && (
           <CascadingTaskTable
-            tasks={visibleTasks}
+            tasks={filteredTasks}
             onSelectTask={(task) => setSelectedTask(task)}
             onAddTask={() => setIsCreateModalOpen(true)}
             onStatusChange={handleStatusChange}
+            hideWorkbox={true}
+            hideToolbar={true}
           />
-        </section>
-      )}
+        )}
 
-      {/* DORMANT Mode 2: Dashboard & Thống kê View (Executive Bento Cards + Widgets) — mở lại sau này với SHOW_DASHBOARD_ANALYTICS = true */}
-      {SHOW_DASHBOARD_ANALYTICS && activeView === "dashboard" && (
-        <div className="space-y-6 animate-in fade-in duration-200">
-          <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            <div className="lg:col-span-6 space-y-4">
-              <UpcomingDeadlinesWidget
-                items={visibleUpcoming}
-                onSelectTask={handleSelectUpcoming}
-              />
-            </div>
-            <div className="lg:col-span-6 space-y-4">
-              <ActivityFeedWidget activities={dashboardData.activities} />
-            </div>
-          </section>
-        </div>
-      )}
+        {viewMode === "kanban" && (
+          <TaskKanbanBoard
+            tasks={filteredTasks}
+            onSelectTask={(task) => setSelectedTask(task)}
+            onStatusChange={handleStatusChange}
+            onAddTask={() => setIsCreateModalOpen(true)}
+          />
+        )}
+
+        {viewMode === "calendar" && (
+          <CalendarMonthView
+            tasks={filteredTasks}
+            onSelectTask={(task) => setSelectedTask(task)}
+            onAddTask={() => setIsCreateModalOpen(true)}
+          />
+        )}
+      </section>
 
       {/* TaskDetailSideSheet Slide-Over */}
       <TaskDetailSideSheet
@@ -374,9 +488,17 @@ export default function DashboardPage() {
           setInitialAssigneeName(undefined);
         }}
         onSubmit={handleCreateTask}
-        schoolTasks={visibleTasks}
+        schoolTasks={dashboardData.tasks}
         initialLeadAssigneeName={initialAssigneeName}
       />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <React.Suspense fallback={<DashboardLoadingFallback />}>
+      <UnifiedTaskHubContent />
+    </React.Suspense>
   );
 }

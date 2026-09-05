@@ -331,6 +331,8 @@ export interface CascadingTaskTableProps {
   onAddTask?: () => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
   className?: string;
+  hideWorkbox?: boolean;
+  hideToolbar?: boolean;
 }
 
 export function CascadingTaskTable({
@@ -339,6 +341,8 @@ export function CascadingTaskTable({
   onAddTask,
   onStatusChange,
   className,
+  hideWorkbox = false,
+  hideToolbar = false,
 }: CascadingTaskTableProps) {
   const { user } = useAuth();
   const canAssign = canAssignUnitTask(user?.role ?? "ADMIN");
@@ -382,7 +386,7 @@ export function CascadingTaskTable({
 
   // Filter tasks by active E-Office Workbox (Việc tôi nhận, Việc tôi giao, v.v.)
   const workboxTasks = React.useMemo(() => {
-    if (activeWorkbox === "ALL") return tasks;
+    if (hideWorkbox || activeWorkbox === "ALL") return tasks;
     const userName = user?.name?.toLowerCase() || "";
 
     // ADMIN (BGH) sees all tasks in "Việc tôi giao/nhận" context
@@ -472,13 +476,15 @@ export function CascadingTaskTable({
 
   const filteredTasks = React.useMemo(
     () =>
-      filterTasksForTable(
-        workboxTasks,
-        selectedCategory,
-        deferredSearchQuery,
-        selectedDepartment
-      ),
-    [workboxTasks, selectedCategory, deferredSearchQuery, selectedDepartment]
+      hideToolbar
+        ? workboxTasks
+        : filterTasksForTable(
+            workboxTasks,
+            selectedCategory,
+            deferredSearchQuery,
+            selectedDepartment
+          ),
+    [hideToolbar, workboxTasks, selectedCategory, deferredSearchQuery, selectedDepartment]
   );
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -503,152 +509,158 @@ export function CascadingTaskTable({
       data-slot="cascading-task-table"
     >
       {/* 4 E-Office Workboxes (Hộp việc chuẩn cơ quan với thiết kế Executive Precision) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto p-1 rounded-2xl bg-muted/40 border border-border/50 backdrop-blur-xs scrollbar-none">
-        <button
-          type="button"
-          onClick={() => setActiveWorkbox("ALL")}
-          className={cn(
-            "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
-            activeWorkbox === "ALL"
-              ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
-              : "text-muted-foreground hover:text-foreground hover:bg-card/40"
-          )}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-primary" />
-            Tất cả nhiệm vụ
-          </span>
-          <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-primary font-bold border border-primary/20">
-            {workboxCounts.all}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveWorkbox("MY_RECEIVED")}
-          className={cn(
-            "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
-            activeWorkbox === "MY_RECEIVED"
-              ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
-              : "text-muted-foreground hover:text-foreground hover:bg-card/40"
-          )}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-emerald-500" />
-            Việc tôi nhận
-          </span>
-          <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/20">
-            {workboxCounts.received}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveWorkbox("MY_ASSIGNED")}
-          className={cn(
-            "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
-            activeWorkbox === "MY_ASSIGNED"
-              ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
-              : "text-muted-foreground hover:text-foreground hover:bg-card/40"
-          )}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-blue-500" />
-            Việc tôi giao
-          </span>
-          <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-blue-700 dark:text-blue-400 font-bold border border-blue-500/20">
-            {workboxCounts.assigned}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveWorkbox("URGENT")}
-          className={cn(
-            "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
-            activeWorkbox === "URGENT"
-              ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
-              : "text-muted-foreground hover:text-foreground hover:bg-card/40"
-          )}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-rose-500 animate-pulse" />
-            Cần xử lý gấp & Quá hạn
-          </span>
-          {workboxCounts.urgent > 0 && (
-            <span className="rounded-md bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-rose-700 dark:text-rose-400 font-bold border border-rose-500/20">
-              {workboxCounts.urgent}
+      {!hideWorkbox && (
+        <div className="flex items-center gap-1.5 overflow-x-auto p-1 rounded-2xl bg-muted/40 border border-border/50 backdrop-blur-xs scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setActiveWorkbox("ALL")}
+            className={cn(
+              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
+              activeWorkbox === "ALL"
+                ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
+                : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+            )}
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-primary" />
+              Tất cả nhiệm vụ
             </span>
-          )}
-        </button>
-      </div>
+            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-primary font-bold border border-primary/20">
+              {workboxCounts.all}
+            </span>
+          </button>
 
-      {/* Top Filter Bar */}
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        {/* Left side: Search & Department selector */}
-        <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center flex-wrap">
-          {/* Search Input with ⌘K indicator */}
-          <div className="relative min-w-[220px] max-w-sm flex-1">
-            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Tìm kiếm nhiệm vụ, phụ trách..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8.5 w-full rounded-xl border border-border/70 bg-card/80 backdrop-blur-xs pl-8.5 pr-12 text-xs text-foreground placeholder:text-muted-foreground shadow-2xs transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15"
-            />
-            <kbd className="pointer-events-none absolute right-2.5 top-1/2 inline-flex h-4.5 -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/80 bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-              ⌘K
-            </kbd>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveWorkbox("MY_RECEIVED")}
+            className={cn(
+              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
+              activeWorkbox === "MY_RECEIVED"
+                ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
+                : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+            )}
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-emerald-500" />
+              Việc tôi nhận
+            </span>
+            <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/20">
+              {workboxCounts.received}
+            </span>
+          </button>
 
-          {/* Department Selector */}
-          <div className="relative min-w-[170px]">
-            <select
-              aria-label="Lọc theo đơn vị"
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="h-8.5 w-full rounded-xl border border-border/70 bg-card/80 backdrop-blur-xs px-3 text-xs text-foreground shadow-2xs transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 cursor-pointer appearance-none pr-8"
-            >
-              {DEPARTMENT_OPTIONS.map((dept) => (
-                <option
-                  key={dept.id}
-                  value={dept.id}
-                  className="bg-popover text-foreground"
-                >
-                  {dept.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveWorkbox("MY_ASSIGNED")}
+            className={cn(
+              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
+              activeWorkbox === "MY_ASSIGNED"
+                ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
+                : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+            )}
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-blue-500" />
+              Việc tôi giao
+            </span>
+            <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-blue-700 dark:text-blue-400 font-bold border border-blue-500/20">
+              {workboxCounts.assigned}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveWorkbox("URGENT")}
+            className={cn(
+              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
+              activeWorkbox === "URGENT"
+                ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
+                : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+            )}
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-rose-500 animate-pulse" />
+              Cần xử lý gấp & Quá hạn
+            </span>
+            {workboxCounts.urgent > 0 && (
+              <span className="rounded-md bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-rose-700 dark:text-rose-400 font-bold border border-rose-500/20">
+                {workboxCounts.urgent}
+              </span>
+            )}
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Category Tabs Strip */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-        {CATEGORY_TABS.map((tab) => {
-          const isActive = selectedCategory === tab.id;
-          const TabIcon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setSelectedCategory(tab.id)}
-              className={cn(
-                "inline-flex h-7.5 shrink-0 items-center gap-1.5 rounded-lg px-2.5 sm:px-3 text-xs font-medium transition-all cursor-pointer whitespace-nowrap active:scale-95",
-                isActive
-                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                  : "bg-card/60 border border-border/50 text-muted-foreground hover:bg-secondary hover:text-foreground"
-              )}
-            >
-              {TabIcon && <TabIcon className="size-3.5" strokeWidth={1.5} />}
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {!hideToolbar && (
+        <>
+          {/* Top Filter Bar */}
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+            {/* Left side: Search & Department selector */}
+            <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center flex-wrap">
+              {/* Search Input with ⌘K indicator */}
+              <div className="relative min-w-[220px] max-w-sm flex-1">
+                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Tìm kiếm nhiệm vụ, phụ trách..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8.5 w-full rounded-xl border border-border/70 bg-card/80 backdrop-blur-xs pl-8.5 pr-12 text-xs text-foreground placeholder:text-muted-foreground shadow-2xs transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                />
+                <kbd className="pointer-events-none absolute right-2.5 top-1/2 inline-flex h-4.5 -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/80 bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                  ⌘K
+                </kbd>
+              </div>
+
+              {/* Department Selector */}
+              <div className="relative min-w-[170px]">
+                <select
+                  aria-label="Lọc theo đơn vị"
+                  value={selectedDepartment}
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
+                  className="h-8.5 w-full rounded-xl border border-border/70 bg-card/80 backdrop-blur-xs px-3 text-xs text-foreground shadow-2xs transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 cursor-pointer appearance-none pr-8"
+                >
+                  {DEPARTMENT_OPTIONS.map((dept) => (
+                    <option
+                      key={dept.id}
+                      value={dept.id}
+                      className="bg-popover text-foreground"
+                    >
+                      {dept.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
+              </div>
+            </div>
+          </div>
+
+          {/* Category Tabs Strip */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+            {CATEGORY_TABS.map((tab) => {
+              const isActive = selectedCategory === tab.id;
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setSelectedCategory(tab.id)}
+                  className={cn(
+                    "inline-flex h-7.5 shrink-0 items-center gap-1.5 rounded-lg px-2.5 sm:px-3 text-xs font-medium transition-all cursor-pointer whitespace-nowrap active:scale-95",
+                    isActive
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "bg-card/60 border border-border/50 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                >
+                  {TabIcon && <TabIcon className="size-3.5" strokeWidth={1.5} />}
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Main Table Container */}
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-card">

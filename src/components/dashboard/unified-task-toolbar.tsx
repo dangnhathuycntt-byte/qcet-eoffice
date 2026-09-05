@@ -41,7 +41,7 @@ export interface UnifiedTaskToolbarProps {
   onViewModeChange: (mode: TaskViewMode) => void;
   selectedDepartment: string; // "ALL" or department code
   onDepartmentChange: (dept: string) => void;
-  availableDepartments: { code: string; name: string }[];
+  availableDepartments?: { code: string; name: string }[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
   selectedCategory: string; // "ALL" or TaskCategory
@@ -49,7 +49,7 @@ export interface UnifiedTaskToolbarProps {
   selectedPriority: string; // "ALL" | "URGENT" | "HIGH" | "NORMAL"
   onPriorityChange: (prio: string) => void;
   onNewTaskClick: () => void;
-  canCreateTask: boolean;
+  canCreateTask?: boolean;
   totalTasksCount?: number;
 }
 
@@ -166,7 +166,7 @@ export function UnifiedTaskToolbar({
   selectedPriority,
   onPriorityChange,
   onNewTaskClick,
-  canCreateTask,
+  canCreateTask = true,
   totalTasksCount,
 }: UnifiedTaskToolbarProps) {
   const isUnitScope = scope === "UNIT_TASKS";
