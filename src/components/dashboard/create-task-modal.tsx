@@ -255,6 +255,19 @@ export function validateTaskForm(
   if (!data.dueDate || data.dueDate.trim().length === 0) {
     errors.dueDate = "Vui lòng chọn hạn hoàn thành";
   }
+  if (
+    data.level === "DON_VI" &&
+    (!data.requiredDeliverables || data.requiredDeliverables.trim().length === 0)
+  ) {
+    errors.requiredDeliverables =
+      "Sản phẩm đầu ra đo lường được bắt buộc đối với nhiệm vụ cấp đơn vị (theo Nghị định 232/DACUM).";
+  }
+  if (data.internalDueDate && data.dueDate) {
+    if (new Date(data.internalDueDate).getTime() > new Date(data.dueDate).getTime()) {
+      errors.internalDueDate =
+        "Hạn chót nội bộ cấp 1 không được muộn hơn hạn chót hoàn thành của nhiệm vụ.";
+    }
+  }
   if (parentSchoolTask && parentSchoolTask.dueDate) {
     if (data.internalDueDate) {
       const internalCheck = validateDueDate(
@@ -797,6 +810,9 @@ export function CreateTaskModal({
                   <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
                     <FileCheck className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                     Sản phẩm đầu ra đo lường được (DACUM)
+                    {formData.level === "DON_VI" && (
+                      <span className="text-destructive">*</span>
+                    )}
                   </span>
                   <span className="text-[10px] text-muted-foreground">Nghị định 232/2026/NĐ-CP</span>
                 </div>
@@ -805,11 +821,21 @@ export function CreateTaskModal({
                   rows={2}
                   placeholder="Mô tả kết quả/minh chứng cụ thể (VD: Dự thảo Quy chế (PDF), Báo cáo kỹ thuật, Bộ tiêu chí đánh giá...)"
                   value={formData.requiredDeliverables || ""}
-                  onChange={(e) =>
-                    setFormData((p) => ({ ...p, requiredDeliverables: e.target.value }))
-                  }
-                  className="w-full rounded-lg border border-border/70 bg-card p-2 text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed"
+                  onChange={(e) => {
+                    setFormData((p) => ({ ...p, requiredDeliverables: e.target.value }));
+                    if (errors.requiredDeliverables) clearError("requiredDeliverables");
+                  }}
+                  className={cn(
+                    "w-full rounded-lg border bg-card p-2 text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed",
+                    errors.requiredDeliverables ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
+                  )}
                 />
+                {errors.requiredDeliverables && (
+                  <p className="text-[11px] font-medium text-destructive flex items-center gap-1">
+                    <AlertCircle className="size-3 shrink-0" strokeWidth={1.5} />
+                    <span>{errors.requiredDeliverables}</span>
+                  </p>
+                )}
               </div>
 
               {/* Row C: Hạn hoàn thành (Due Date + Quick Presets) */}
@@ -930,11 +956,12 @@ export function CreateTaskModal({
             </div>
 
             {/* Validation Errors Summary (if any) */}
-            {(errors.leadAssigneeName || errors.dueDate || errors.internalDueDate) && (
+            {(errors.leadAssigneeName || errors.dueDate || errors.internalDueDate || errors.requiredDeliverables) && (
               <div className="text-[11px] text-destructive space-y-0.5">
                 {errors.leadAssigneeName && <p>• {errors.leadAssigneeName}</p>}
                 {errors.dueDate && <p>• {errors.dueDate}</p>}
                 {errors.internalDueDate && <p>• {errors.internalDueDate}</p>}
+                {errors.requiredDeliverables && <p>• {errors.requiredDeliverables}</p>}
               </div>
             )}
           </div>

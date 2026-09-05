@@ -90,12 +90,61 @@ describe("Create Task Modal Constraints & Helpers", () => {
   });
 
   test("validateTaskForm enforces required fields and DACUM deliverables", () => {
-    const emptyForm = getInitialTaskFormData("DON_VI");
-    const errors = validateTaskForm(emptyForm);
+    const emptyUnitForm = getInitialTaskFormData("DON_VI");
+    const errors = validateTaskForm(emptyUnitForm);
 
     assert.ok(errors.title);
     assert.ok(errors.leadAssigneeName);
     assert.ok(errors.dueDate);
+    assert.equal(
+      errors.requiredDeliverables,
+      "Sản phẩm đầu ra đo lường được bắt buộc đối với nhiệm vụ cấp đơn vị (theo Nghị định 232/DACUM)."
+    );
+
+    // School level does not strictly enforce requiredDeliverables
+    const schoolForm = {
+      ...getInitialTaskFormData("TRUONG"),
+      title: "Nhiệm vụ trường",
+      leadAssigneeName: "Trần Hùng",
+      dueDate: "2026-09-30",
+    };
+    const schoolErrors = validateTaskForm(schoolForm);
+    assert.equal(schoolErrors.requiredDeliverables, undefined);
+
+    // Unit level with requiredDeliverables passes
+    const validUnitForm = {
+      ...emptyUnitForm,
+      title: "Công việc khoa",
+      leadAssigneeName: "Trần Hùng",
+      dueDate: "2026-09-20",
+      requiredDeliverables: "Báo cáo chuyên đề (PDF)",
+    };
+    const validUnitErrors = validateTaskForm(validUnitForm);
+    assert.equal(validUnitErrors.requiredDeliverables, undefined);
+  });
+
+  test("validateTaskForm validates internalDueDate against task dueDate", () => {
+    const formWithLateInternalDue = {
+      ...getInitialTaskFormData("DON_VI"),
+      title: "Rà soát đề cương môn học",
+      leadAssigneeName: "Nguyễn Thị Bích Thủy",
+      dueDate: "2026-09-15",
+      internalDueDate: "2026-09-18", // internalDueDate > dueDate
+      requiredDeliverables: "Đề cương chi tiết đã thẩm định",
+    };
+
+    const errors = validateTaskForm(formWithLateInternalDue);
+    assert.equal(
+      errors.internalDueDate,
+      "Hạn chót nội bộ cấp 1 không được muộn hơn hạn chót hoàn thành của nhiệm vụ."
+    );
+
+    const validForm = {
+      ...formWithLateInternalDue,
+      internalDueDate: "2026-09-12",
+    };
+    const validErrors = validateTaskForm(validForm);
+    assert.equal(validErrors.internalDueDate, undefined);
   });
 
   test("validateTaskForm validates internalDueDate against parent school task dueDate", () => {
@@ -121,6 +170,7 @@ describe("Create Task Modal Constraints & Helpers", () => {
       leadAssigneeName: "Nguyễn Thị Bích Thủy",
       dueDate: "2026-09-25",
       internalDueDate: "2026-09-25", // Later than parent schoolTask dueDate (2026-09-20)
+      requiredDeliverables: "Tài liệu hướng dẫn (PDF)",
       parentTaskId: "school-task-1",
     };
 
@@ -146,6 +196,7 @@ describe("Create Task Modal Constraints & Helpers", () => {
       title: "Cấu hình hạ tầng bảo mật",
       leadAssigneeName: "Nguyễn Ngọc Vinh", // Belongs to CNTT
       dueDate: "2026-09-20",
+      requiredDeliverables: "Báo cáo bảo mật",
     };
 
     const errors = validateTaskForm(externalAssignForm, undefined, managerDaoTao);
