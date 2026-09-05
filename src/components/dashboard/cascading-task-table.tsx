@@ -344,29 +344,6 @@ export function CascadingTaskTable({
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           </div>
         </div>
-
-        {/* Right side: + Giao việc primary button */}
-        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-          <Button
-            type="button"
-            onClick={canAssign ? onAddTask : undefined}
-            disabled={!canAssign}
-            title={
-              !canAssign
-                ? "Chỉ BGH và Trưởng đơn vị mới có quyền giao việc"
-                : undefined
-            }
-            className={cn(
-              "h-8.5 rounded-xl px-3.5 text-xs font-semibold shadow-xs",
-              canAssign
-                ? "cursor-pointer"
-                : "opacity-50 cursor-not-allowed"
-            )}
-          >
-            <Plus className="size-3.5" />
-            <span>Giao việc</span>
-          </Button>
-        </div>
       </div>
 
       {/* Category Tabs Strip */}
@@ -502,7 +479,8 @@ export function CascadingTaskTable({
                             {task.leadAssigneeAvatar ? (
                               <img
                                 src={task.leadAssigneeAvatar}
-                                alt={task.leadAssigneeName}
+                                alt=""
+                                aria-hidden="true"
                                 width={22}
                                 height={22}
                                 loading="lazy"
@@ -611,7 +589,8 @@ export function CascadingTaskTable({
                                           {subTask.assigneeAvatar ? (
                                             <img
                                               src={subTask.assigneeAvatar}
-                                              alt={subTask.assigneeName}
+                                              alt=""
+                                              aria-hidden="true"
                                               width={18}
                                               height={18}
                                               loading="lazy"

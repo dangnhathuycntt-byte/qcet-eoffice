@@ -24,10 +24,9 @@ import {
 } from "@/components/dashboard/create-task-modal";
 import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
 import { Button } from "@/components/ui/button";
-import { Clock, RefreshCw, CheckCircle2, Plus } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { filterTasksByRole, filterUpcomingByRole } from "@/lib/role-task-filter";
-import { RoleViewpointBanner } from "@/components/auth/role-viewpoint-banner";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -235,66 +234,30 @@ export default function DashboardPage() {
       className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10"
       data-slot="twenty-dashboard"
     >
-      {/* ========================================================================= */}
-      {/* 1. Header Greeting & Breadcrumbs                                         */}
-      {/* ========================================================================= */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Clean Executive Page Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mb-1">
-            <span>Văn phòng Điều hành</span>
-            <span className="text-muted-foreground/50">/</span>
-            <span className="text-foreground font-semibold">
-              Dashboard Điều hành Toàn trường
-            </span>
-          </div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-            Bảng điều hành công việc toàn trường
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading">
+            Tổng quan điều hành
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Giám sát 2 tầng: Nhiệm vụ cấp Trường & Công việc Đơn vị trực thuộc theo thời gian thực
+            Nhiệm vụ trọng tâm và chỉ số tiến độ toàn trường
           </p>
         </div>
 
-        {/* Right Actions: Live Sync Tag & Manual Refresh */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Button
-            type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="h-8.5 gap-1.5 rounded-xl px-3.5 text-xs font-semibold shadow-xs"
-          >
-            <Plus className="size-3.5" />
-            <span>Giao việc</span>
-          </Button>
-
-          <button
-            type="button"
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            className="inline-flex h-8.5 items-center gap-1.5 rounded-xl border border-border/60 bg-background/80 backdrop-blur-xs px-3 text-xs font-medium text-muted-foreground transition-all hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60"
-            title="Làm mới dữ liệu từ máy chủ"
-          >
-            <RefreshCw
-              className={`size-3.5 ${isRefreshing ? "animate-spin text-foreground" : ""}`}
-            />
-            <span className="hidden sm:inline">Làm mới</span>
-          </button>
-
-          <span className="inline-flex h-8.5 items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-            <span className="relative flex size-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500"></span>
-            </span>
-            <span>Trực tuyến</span>
-          </span>
-        </div>
+        <button
+          type="button"
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-border/60 bg-card/60 px-2.5 text-xs font-medium text-muted-foreground transition-all hover:bg-secondary hover:text-foreground cursor-pointer disabled:opacity-60"
+          title="Làm mới dữ liệu từ máy chủ"
+        >
+          <RefreshCw
+            className={`size-3.5 ${isRefreshing ? "animate-spin text-foreground" : ""}`}
+          />
+          <span className="hidden sm:inline">Làm mới</span>
+        </button>
       </div>
-
-      {/* ========================================================================= */}
-      {/* 2. Role Viewpoint Banner (RBAC Real-time Scope Indicator)                */}
-      {/* ========================================================================= */}
-      <section aria-label="Góc nhìn vai trò">
-        <RoleViewpointBanner />
-      </section>
 
       {/* ========================================================================= */}
       {/* 3. ExecutiveStatStrip across the top                                      */}
