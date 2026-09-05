@@ -338,6 +338,8 @@ export function TaskDetailSideSheet({
   onUpdateStaffTask,
   onCloseSchoolTask,
 }: TaskDetailSideSheetProps) {
+  const auth = useAuth();
+  const user = currentUser ?? auth.user;
   const visible = isOpen !== undefined ? isOpen : task !== null;
   const [newSubtaskTitle, setNewSubtaskTitle] = React.useState("");
   const [isAddingSubtask, setIsAddingSubtask] = React.useState(false);
@@ -399,17 +401,6 @@ export function TaskDetailSideSheet({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [visible, onClose, isRejectionModalOpen]);
-
-  // Attempt to read user from auth context, fallback gracefully if outside provider
-  let contextUser: AuthUser | undefined;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const auth = useAuth();
-    contextUser = auth?.user;
-  } catch {
-    // ignore
-  }
-  const user = currentUser || contextUser;
 
   if (!visible || !task) {
     return null;
