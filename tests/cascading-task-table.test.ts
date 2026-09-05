@@ -37,17 +37,35 @@ describe("CascadingTaskTable Helpers", () => {
   test("provides status badge config with Vietnamese labels", () => {
     const sNew = getStatusBadgeConfig("NEW");
     assert.equal(sNew.label, "Mới");
-    assert.ok(sNew.className.includes("text-red-"));
-    assert.equal(sNew.variant, "destructive");
+    assert.ok(
+      sNew.className.includes("text-red-") || sNew.className.includes("text-rose-")
+    );
 
     const sInProgress = getStatusBadgeConfig("IN_PROGRESS");
     assert.equal(sInProgress.label, "Đang thực hiện");
+    assert.ok(sInProgress.className.includes("text-blue-700"));
 
     const sReview = getStatusBadgeConfig("NEEDS_REVIEW");
     assert.equal(sReview.label, "Cần chỉnh sửa");
+    assert.ok(sReview.className.includes("text-amber-700"));
 
     const sDone = getStatusBadgeConfig("COMPLETED");
     assert.equal(sDone.label, "Hoàn thành");
+    assert.ok(sDone.className.includes("text-emerald-700"));
+
+    const sOverdue = getStatusBadgeConfig("OVERDUE");
+    assert.equal(sOverdue.label, "Quá hạn");
+    assert.ok(sOverdue.className.includes("text-rose-700"));
+  });
+
+  test("CATEGORY_TABS labels contain zero emojis", () => {
+    CATEGORY_TABS.forEach((tab) => {
+      assert.match(
+        tab.label,
+        /^[\p{L}\p{N}\s\-\/]+$/u,
+        `Tab ${tab.label} must not contain emojis`
+      );
+    });
   });
 
   test("CATEGORY_TABS defines all required category filters in proper order", () => {

@@ -8,6 +8,20 @@ import {
   Calendar,
   User,
   ListTodo,
+  Inbox,
+  SearchX,
+  Sparkles,
+  CheckCircle2,
+  ArrowRight,
+  FilterX,
+  Layers,
+  Building2,
+  GraduationCap,
+  Briefcase,
+  Check,
+  Bell,
+  UserCheck,
+  RotateCcw,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -16,7 +30,7 @@ import type {
   TaskStatus,
 } from "@/types/dashboard";
 import { useAuth } from "@/lib/auth-context";
-import { canAssignUnitTask } from "@/lib/role-task-filter";
+import { canAssignUnitTask, matchesUser } from "@/lib/role-task-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -48,16 +62,17 @@ export interface StatusBadgeConfig {
 export interface CategoryTab {
   id: TaskCategory | "ALL";
   label: string;
+  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 }
 
 export const CATEGORY_TABS: CategoryTab[] = [
-  { id: "ALL", label: "Tất cả" },
-  { id: "CHUYEN_DOI_SO", label: "Chuyển đổi số" },
-  { id: "TRUYEN_THONG", label: "Truyền thông" },
-  { id: "CNTT", label: "CNTT" },
-  { id: "ATTT", label: "An toàn thông tin" },
-  { id: "THU_VIEN", label: "Thư viện" },
-  { id: "BAO_CAO", label: "Báo cáo" },
+  { id: "ALL", label: "Tất cả", icon: Layers },
+  { id: "CHUYEN_DOI_SO", label: "Chuyển đổi số", icon: Building2 },
+  { id: "TRUYEN_THONG", label: "Truyền thông", icon: Briefcase },
+  { id: "CNTT", label: "CNTT", icon: Layers },
+  { id: "ATTT", label: "An toàn thông tin", icon: Briefcase },
+  { id: "THU_VIEN", label: "Thư viện", icon: GraduationCap },
+  { id: "BAO_CAO", label: "Báo cáo", icon: Calendar },
 ];
 
 export const DEPARTMENT_OPTIONS = [
@@ -133,29 +148,36 @@ export function getStatusBadgeConfig(
       return {
         label: "Mới",
         className:
-          "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300",
+          "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-400",
         variant: "destructive",
       };
     case "IN_PROGRESS":
       return {
         label: "Đang thực hiện",
         className:
-          "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+          "border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-400",
         variant: "sapphire",
       };
     case "NEEDS_REVIEW":
       return {
         label: "Cần chỉnh sửa",
         className:
-          "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+          "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400",
         variant: "amber",
       };
     case "COMPLETED":
       return {
         label: "Hoàn thành",
         className:
-          "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+          "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
         variant: "emerald",
+      };
+    case "OVERDUE":
+      return {
+        label: "Quá hạn",
+        className:
+          "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-400",
+        variant: "rose",
       };
     default:
       return {
@@ -382,12 +404,12 @@ export function CascadingTaskTable({
 
     if (activeWorkbox === "MY_RECEIVED") {
       return tasks.filter((t) => {
-        const isLead = t.leadAssigneeName.toLowerCase().includes(userName);
+        const isLead = matchesUser(t.leadAssigneeName, user) || (userName && t.leadAssigneeName.toLowerCase().includes(userName));
         const isCo = t.coAssignees?.some((c) =>
-          c.toLowerCase().includes(userName)
+          matchesUser(c, user) || (userName && c.toLowerCase().includes(userName))
         );
         const hasSub = t.subTasks?.some((s) =>
-          s.assigneeName.toLowerCase().includes(userName)
+          matchesUser(s.assigneeName, user) || (userName && s.assigneeName.toLowerCase().includes(userName))
         );
         return isLead || isCo || hasSub;
       });
@@ -395,7 +417,7 @@ export function CascadingTaskTable({
 
     if (activeWorkbox === "MY_ASSIGNED") {
       return tasks.filter((t) =>
-        t.leadAssigneeName.toLowerCase().includes(userName)
+        matchesUser(t.leadAssigneeName, user) || (userName && t.leadAssigneeName.toLowerCase().includes(userName))
       );
     }
 
@@ -422,12 +444,12 @@ export function CascadingTaskTable({
     let urgent = 0;
 
     for (const t of tasks) {
-      const isLead = t.leadAssigneeName.toLowerCase().includes(userName);
+      const isLead = matchesUser(t.leadAssigneeName, user) || (userName && t.leadAssigneeName.toLowerCase().includes(userName));
       const isCo = t.coAssignees?.some((c) =>
-        c.toLowerCase().includes(userName)
+        matchesUser(c, user) || (userName && c.toLowerCase().includes(userName))
       );
       const hasSub = t.subTasks?.some((s) =>
-        s.assigneeName.toLowerCase().includes(userName)
+        matchesUser(s.assigneeName, user) || (userName && s.assigneeName.toLowerCase().includes(userName))
       );
       // ADMIN sees all tasks in their "received" box
       if (isAdmin || isLead || isCo || hasSub) received++;
@@ -480,20 +502,23 @@ export function CascadingTaskTable({
       className={cn("flex flex-col gap-3.5", className)}
       data-slot="cascading-task-table"
     >
-      {/* 4 E-Office Workboxes (Hộp việc chuẩn cơ quan) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+      {/* 4 E-Office Workboxes (Hộp việc chuẩn cơ quan với thiết kế Executive Precision) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto p-1 rounded-2xl bg-muted/40 border border-border/50 backdrop-blur-xs scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveWorkbox("ALL")}
           className={cn(
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap",
+            "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
             activeWorkbox === "ALL"
-              ? "bg-primary text-primary-foreground border-primary shadow-xs"
-              : "border-border/60 bg-card/70 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
+              : "text-muted-foreground hover:text-foreground hover:bg-card/40"
           )}
         >
-          <span>📋 Tất cả công việc</span>
-          <span className="rounded-md bg-muted px-1.5 py-0.2 text-[10px] font-mono tabular-nums text-foreground/80">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-primary" />
+            Tất cả nhiệm vụ
+          </span>
+          <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-primary font-bold border border-primary/20">
             {workboxCounts.all}
           </span>
         </button>
@@ -502,14 +527,17 @@ export function CascadingTaskTable({
           type="button"
           onClick={() => setActiveWorkbox("MY_RECEIVED")}
           className={cn(
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap",
+            "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
             activeWorkbox === "MY_RECEIVED"
-              ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-              : "border-border/60 bg-card/70 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
+              : "text-muted-foreground hover:text-foreground hover:bg-card/40"
           )}
         >
-          <span>📥 Việc tôi nhận</span>
-          <span className="rounded-md bg-blue-500/15 px-1.5 py-0.2 text-[10px] font-mono tabular-nums text-blue-600 dark:text-blue-400 font-bold">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-emerald-500" />
+            Việc tôi nhận
+          </span>
+          <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/20">
             {workboxCounts.received}
           </span>
         </button>
@@ -518,14 +546,17 @@ export function CascadingTaskTable({
           type="button"
           onClick={() => setActiveWorkbox("MY_ASSIGNED")}
           className={cn(
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap",
+            "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
             activeWorkbox === "MY_ASSIGNED"
-              ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
-              : "border-border/60 bg-card/70 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
+              : "text-muted-foreground hover:text-foreground hover:bg-card/40"
           )}
         >
-          <span>📤 Việc tôi giao</span>
-          <span className="rounded-md bg-indigo-500/15 px-1.5 py-0.2 text-[10px] font-mono tabular-nums text-indigo-600 dark:text-indigo-400 font-bold">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-blue-500" />
+            Việc tôi giao
+          </span>
+          <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-blue-700 dark:text-blue-400 font-bold border border-blue-500/20">
             {workboxCounts.assigned}
           </span>
         </button>
@@ -534,15 +565,18 @@ export function CascadingTaskTable({
           type="button"
           onClick={() => setActiveWorkbox("URGENT")}
           className={cn(
-            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap",
+            "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
             activeWorkbox === "URGENT"
-              ? "bg-rose-600 text-white border-rose-600 shadow-xs"
-              : "border-border/60 bg-card/70 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
+              : "text-muted-foreground hover:text-foreground hover:bg-card/40"
           )}
         >
-          <span>⚠️ Cần xử lý gấp & Quá hạn</span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-rose-500 animate-pulse" />
+            Cần xử lý gấp & Quá hạn
+          </span>
           {workboxCounts.urgent > 0 && (
-            <span className="rounded-md bg-rose-500/20 px-1.5 py-0.2 text-[10px] font-mono tabular-nums text-rose-600 dark:text-rose-400 font-bold">
+            <span className="rounded-md bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-rose-700 dark:text-rose-400 font-bold border border-rose-500/20">
               {workboxCounts.urgent}
             </span>
           )}
@@ -555,14 +589,14 @@ export function CascadingTaskTable({
         <div className="flex flex-1 flex-col gap-2 md:flex-row md:items-center flex-wrap">
           {/* Search Input with ⌘K indicator */}
           <div className="relative min-w-[220px] max-w-sm flex-1">
-            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
             <input
               ref={searchInputRef}
               type="text"
               placeholder="Tìm kiếm nhiệm vụ, phụ trách..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8.5 w-full rounded-xl border border-border/60 bg-background/80 backdrop-blur-xs pl-8.5 pr-12 text-xs text-foreground placeholder:text-muted-foreground transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="h-8.5 w-full rounded-xl border border-border/70 bg-card/80 backdrop-blur-xs pl-8.5 pr-12 text-xs text-foreground placeholder:text-muted-foreground shadow-2xs transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15"
             />
             <kbd className="pointer-events-none absolute right-2.5 top-1/2 inline-flex h-4.5 -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/80 bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
               ⌘K
@@ -570,12 +604,12 @@ export function CascadingTaskTable({
           </div>
 
           {/* Department Selector */}
-          <div className="relative min-w-[160px]">
+          <div className="relative min-w-[170px]">
             <select
               aria-label="Lọc theo đơn vị"
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="h-8.5 w-full rounded-xl border border-border/60 bg-background/80 backdrop-blur-xs px-3 py-1 text-xs text-foreground transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 cursor-pointer appearance-none pr-8"
+              className="h-8.5 w-full rounded-xl border border-border/70 bg-card/80 backdrop-blur-xs px-3 text-xs text-foreground shadow-2xs transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 cursor-pointer appearance-none pr-8"
             >
               {DEPARTMENT_OPTIONS.map((dept) => (
                 <option
@@ -587,7 +621,7 @@ export function CascadingTaskTable({
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
           </div>
         </div>
       </div>
@@ -596,19 +630,21 @@ export function CascadingTaskTable({
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
         {CATEGORY_TABS.map((tab) => {
           const isActive = selectedCategory === tab.id;
+          const TabIcon = tab.icon;
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => setSelectedCategory(tab.id)}
               className={cn(
-                "inline-flex h-7.5 shrink-0 items-center rounded-lg px-3 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
+                "inline-flex h-7.5 shrink-0 items-center gap-1.5 rounded-lg px-2.5 sm:px-3 text-xs font-medium transition-all cursor-pointer whitespace-nowrap active:scale-95",
                 isActive
                   ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  : "bg-card/60 border border-border/50 text-muted-foreground hover:bg-secondary hover:text-foreground"
               )}
             >
-              {tab.label}
+              {TabIcon && <TabIcon className="size-3.5" strokeWidth={1.5} />}
+              <span>{tab.label}</span>
             </button>
           );
         })}
@@ -624,11 +660,12 @@ export function CascadingTaskTable({
                 <th className="w-9 px-3.5 py-2.5 text-center">
                   <span className="sr-only">Mở rộng</span>
                 </th>
+                <th className="w-24 px-3.5 py-2.5 font-semibold">Mã NV</th>
                 <th className="px-3.5 py-2.5 font-semibold">Nhiệm vụ cấp Trường</th>
                 <th className="px-3.5 py-2.5 font-semibold">Danh mục</th>
                 <th className="px-3.5 py-2.5 font-semibold">Chủ trì</th>
                 <th className="px-3.5 py-2.5 font-semibold">Hạn chót</th>
-                <th className="w-40 px-3.5 py-2.5 font-semibold text-right">Tiến độ</th>
+                <th className="w-56 px-3.5 py-2.5 font-semibold text-right">Tiến độ &amp; Thao tác</th>
               </tr>
             </thead>
 
@@ -636,25 +673,80 @@ export function CascadingTaskTable({
             <tbody className="divide-y divide-border/50">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                    <ListTodo className="mx-auto size-8 text-muted-foreground/40 mb-2" />
-                    <p className="font-medium text-foreground text-sm">
-                      Không tìm thấy nhiệm vụ nào
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Thử thay đổi từ khóa tìm kiếm hoặc chọn danh mục khác.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCategory("ALL");
-                        setSelectedDepartment("ALL");
-                        setSearchQuery("");
-                      }}
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors cursor-pointer"
-                    >
-                      Xóa bộ lọc & Xem tất cả
-                    </button>
+                  <td colSpan={7} className="px-4 py-16 text-center">
+                    {activeWorkbox === "MY_RECEIVED" || activeWorkbox === "MY_ASSIGNED" ? (
+                      <div className="max-w-md mx-auto space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="inline-flex p-3.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-glow-primary ring-1 ring-primary/20">
+                          <Inbox className="size-8" strokeWidth={1.25} />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-sm sm:text-base font-bold text-foreground">
+                            {activeWorkbox === "MY_RECEIVED"
+                              ? "Hòm việc cá nhân chưa có nhiệm vụ"
+                              : "Bạn chưa tạo hoặc giao nhiệm vụ nào"}
+                          </h3>
+                          <p className="text-xs text-muted-foreground leading-relaxed text-balance">
+                            {activeWorkbox === "MY_RECEIVED"
+                              ? `Tài khoản cán bộ ${user?.name ? user.name : ""} đã sẵn sàng. Hiện chưa có công việc nào được phân công riêng cho bạn trong hòm này. Bạn có thể xem toàn bộ nhiệm vụ của Trường hoặc chủ động nhận việc.`
+                              : "Khi bạn chủ trì hoặc tạo các nhiệm vụ cấp Trường/Đơn vị, danh mục công việc do bạn giao sẽ xuất hiện tại đây để theo dõi tiến độ."}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveWorkbox("ALL");
+                              setSelectedCategory("ALL");
+                              setSelectedDepartment("ALL");
+                              setSearchQuery("");
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all cursor-pointer active:scale-95"
+                          >
+                            <Layers className="size-3.5" strokeWidth={1.5} />
+                            <span>Xem tất cả nhiệm vụ toàn trường</span>
+                            <ArrowRight className="size-3.5" strokeWidth={1.5} />
+                          </button>
+                          {onAddTask && (
+                            <button
+                              type="button"
+                              onClick={onAddTask}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-card px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                            >
+                              <Plus className="size-3.5 text-primary" strokeWidth={1.5} />
+                              <span>Tạo công việc mới</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="max-w-sm mx-auto space-y-2.5 animate-in fade-in duration-150">
+                        <div className="inline-flex p-3 rounded-2xl bg-muted/60 text-muted-foreground border border-border/60">
+                          <Inbox className="size-8" strokeWidth={1.25} />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-foreground">
+                            Không tìm thấy nhiệm vụ phù hợp
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {searchQuery
+                              ? `Không có kết quả nào khớp với từ khóa "${searchQuery}".`
+                              : "Thử thay đổi bộ lọc đơn vị hoặc chọn danh mục công việc khác."}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategory("ALL");
+                            setSelectedDepartment("ALL");
+                            setSearchQuery("");
+                          }}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors cursor-pointer shadow-2xs"
+                        >
+                          <FilterX className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                          <span>Đặt lại bộ lọc &amp; Xem tất cả</span>
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -695,9 +787,9 @@ export function CascadingTaskTable({
                               }
                             >
                               {isExpanded ? (
-                                <ChevronDown className="size-3.5" />
+                                <ChevronDown className="size-3.5" strokeWidth={1.5} />
                               ) : (
-                                <ChevronRight className="size-3.5" />
+                                <ChevronRight className="size-3.5" strokeWidth={1.5} />
                               )}
                             </button>
                           ) : (
@@ -705,12 +797,17 @@ export function CascadingTaskTable({
                           )}
                         </td>
 
+                        {/* Task Code */}
+                        <td className="w-24 px-3.5 py-3.5 align-middle whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
+                          {task.id.toUpperCase()}
+                        </td>
+
                         {/* Task Title */}
                         <td className="px-3.5 py-3.5 align-middle font-medium text-foreground">
                           <div className="flex items-center gap-2">
                             <span className="line-clamp-1 font-semibold">{task.title}</span>
                             {hasSubtasks && (
-                              <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              <span className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-muted-foreground">
                                 {task.completedSubTasks}/{task.totalSubTasks}
                               </span>
                             )}
@@ -755,14 +852,61 @@ export function CascadingTaskTable({
                         </td>
 
                         {/* Due Date */}
-                        <td className="px-3.5 py-3.5 align-middle whitespace-nowrap text-muted-foreground tabular-nums">
+                        <td className="px-3.5 py-3.5 align-middle whitespace-nowrap text-muted-foreground font-mono tabular-nums text-xs">
                           {formatDate(task.dueDate)}
                         </td>
 
-                        {/* Progress Bar & Metric with Segmented Emerald/Sapphire Track */}
+                        {/* Progress Bar & Metric with Quick Actions */}
                         <td className="px-3.5 py-3.5 align-middle text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-2.5">
-                            <div className="relative flex h-2 w-20 overflow-hidden rounded-full bg-secondary/80">
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Micro-ghost Quick Actions revealed on row hover */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                              {onStatusChange && task.status === "IN_PROGRESS" && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onStatusChange(task.id, "COMPLETED");
+                                  }}
+                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 text-[10.5px] font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                  title="Duyệt nhanh hoàn thành nhiệm vụ"
+                                >
+                                  <Check className="size-3" strokeWidth={1.5} />
+                                  <span>Duyệt nhanh</span>
+                                </button>
+                              )}
+
+                              {task.status !== "COMPLETED" && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                  }}
+                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 text-[10.5px] font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                  title="Đôn đốc tiến độ thực hiện"
+                                >
+                                  <Bell className="size-3" strokeWidth={1.5} />
+                                  <span>Đôn đốc</span>
+                                </button>
+                              )}
+
+                              {canAssign && onAddTask && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAddTask();
+                                  }}
+                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-border/60 bg-secondary/60 px-2 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:text-foreground cursor-pointer active:scale-[0.98] transition-colors"
+                                  title="Phân công thêm việc con"
+                                >
+                                  <UserCheck className="size-3" strokeWidth={1.5} />
+                                  <span>Phân công</span>
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="relative flex h-2 w-16 overflow-hidden rounded-full bg-secondary/80">
                               <div
                                 className="h-full bg-emerald-500 transition-all duration-500 ease-out"
                                 style={{
@@ -787,24 +931,9 @@ export function CascadingTaskTable({
                                 />
                               )}
                             </div>
-                            <span className="text-[11px] font-bold tabular-nums text-foreground">
+                            <span className="font-mono text-[11px] font-bold tabular-nums text-foreground">
                               {task.progressPercent}%
                             </span>
-
-                            {/* 1-Click Fast Workflow Action Button */}
-                            {onStatusChange && task.status === "IN_PROGRESS" && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onStatusChange(task.id, "COMPLETED");
-                                }}
-                                className="hidden sm:inline-flex h-6 px-2 items-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-[10.5px] font-semibold border border-emerald-500/20 cursor-pointer transition-colors"
-                                title="Báo cáo hoàn thành nhiệm vụ"
-                              >
-                                Báo cáo xong ✓
-                              </button>
-                            )}
 
                             <Badge
                               variant={task.status === "COMPLETED" ? "emerald" : "sapphire"}
@@ -820,6 +949,9 @@ export function CascadingTaskTable({
                               title={onStatusChange ? "Click để chuyển đổi trạng thái" : undefined}
                               className={cn(
                                 "h-5 px-2 text-[10px] font-semibold leading-none shrink-0",
+                                task.status === "COMPLETED"
+                                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+                                  : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
                                 onStatusChange && "cursor-pointer transition-transform hover:scale-105 active:scale-95"
                               )}
                             >
@@ -833,7 +965,7 @@ export function CascadingTaskTable({
                       {isExpanded && hasSubtasks && (
                         <tr>
                           <td
-                            colSpan={6}
+                            colSpan={7}
                             className="bg-muted/15 p-0"
                             data-parent-id={task.id}
                             data-task-tier="2"
@@ -856,10 +988,10 @@ export function CascadingTaskTable({
                                           onSelectTask?.(subTask);
                                         }
                                       }}
-                                      className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs transition-colors hover:bg-secondary/60 focus-visible:outline-hidden focus-visible:bg-secondary/70 cursor-pointer"
+                                      className="group/sub flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs transition-colors hover:bg-secondary/60 focus-visible:outline-hidden focus-visible:bg-secondary/70 cursor-pointer"
                                       data-subtask-id={subTask.id}
                                     >
-                                      {/* Subtask Status Badge & Title */}
+                                      {/* Subtask Status Badge & ID & Title */}
                                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                         <Badge
                                           variant={statusConfig.variant}
@@ -889,13 +1021,16 @@ export function CascadingTaskTable({
                                         >
                                           {statusConfig.label}
                                         </Badge>
+                                        <span className="font-mono text-[10.5px] text-muted-foreground/70 tabular-nums shrink-0">
+                                          {subTask.id.toUpperCase()}
+                                        </span>
                                         <span className="truncate text-foreground/90 font-medium">
                                           {subTask.title}
                                         </span>
 
                                         {/* 1-Click Fast Workflow Action for Subtask */}
                                         {onStatusChange && (
-                                          <div className="shrink-0">
+                                          <div className="shrink-0 opacity-0 group-hover/sub:opacity-100 transition-opacity duration-150">
                                             {subTask.status === "NEW" && (
                                               <button
                                                 type="button"
@@ -903,10 +1038,11 @@ export function CascadingTaskTable({
                                                   e.stopPropagation();
                                                   onStatusChange(subTask.id, "IN_PROGRESS");
                                                 }}
-                                                className="h-5 px-1.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 text-[10px] font-semibold border border-blue-500/20 cursor-pointer"
+                                                className="inline-flex items-center gap-1 h-5 px-1.5 rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 text-[10px] font-medium border border-blue-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                                 title="Tiếp nhận việc này"
                                               >
-                                                Nhận 📥
+                                                <ArrowRight className="size-3" strokeWidth={1.5} />
+                                                <span>Nhận việc</span>
                                               </button>
                                             )}
                                             {subTask.status === "IN_PROGRESS" && (
@@ -916,10 +1052,11 @@ export function CascadingTaskTable({
                                                   e.stopPropagation();
                                                   onStatusChange(subTask.id, "COMPLETED");
                                                 }}
-                                                className="h-5 px-1.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-semibold border border-emerald-500/20 cursor-pointer"
+                                                className="inline-flex items-center gap-1 h-5 px-1.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-medium border border-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                                 title="Báo cáo hoàn thành"
                                               >
-                                                Xong ✓
+                                                <Check className="size-3" strokeWidth={1.5} />
+                                                <span>Hoàn thành</span>
                                               </button>
                                             )}
                                             {subTask.status === "NEEDS_REVIEW" && (
@@ -929,10 +1066,11 @@ export function CascadingTaskTable({
                                                   e.stopPropagation();
                                                   onStatusChange(subTask.id, "IN_PROGRESS");
                                                 }}
-                                                className="h-5 px-1.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 text-[10px] font-semibold border border-amber-500/20 cursor-pointer"
+                                                className="inline-flex items-center gap-1 h-5 px-1.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 text-[10px] font-medium border border-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                                 title="Tiếp nhận sửa lại"
                                               >
-                                                Sửa ✏️
+                                                <RotateCcw className="size-3" strokeWidth={1.5} />
+                                                <span>Sửa lại</span>
                                               </button>
                                             )}
                                           </div>
@@ -1024,7 +1162,7 @@ export function CascadingTaskTable({
                 className="inline-flex h-7 px-2 items-center gap-1 rounded-lg border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 title="Trang trước"
               >
-                <ChevronLeft className="size-3.5" />
+                <ChevronLeft className="size-3.5" strokeWidth={1.5} />
                 <span className="hidden sm:inline">Trước</span>
               </button>
 
@@ -1068,7 +1206,7 @@ export function CascadingTaskTable({
                 title="Trang kế tiếp"
               >
                 <span className="hidden sm:inline">Sau</span>
-                <ChevronRight className="size-3.5" />
+                <ChevronRight className="size-3.5" strokeWidth={1.5} />
               </button>
             </div>
           </div>
