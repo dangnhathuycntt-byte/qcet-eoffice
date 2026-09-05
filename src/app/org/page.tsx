@@ -5,20 +5,14 @@ import { OrganizationTree, QCET_DEPARTMENTS } from "@/components/org/organizatio
 import {
   Building2,
   Users,
-  GraduationCap,
-  FolderKanban,
-  Globe,
   Download,
   Printer,
   RefreshCw,
-  Share2,
   CheckCircle2,
   Briefcase,
-  Layers,
   Network,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 export default function OrgPage() {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
@@ -59,14 +53,14 @@ export default function OrgPage() {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
-              <Network className="size-3" />
+              <Network className="size-3" strokeWidth={1.5} />
               <span>CƠ CẤU BỘ MÁY & DANH BẠ QCET</span>
             </span>
             <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
               • Toàn trường
             </span>
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl flex items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl flex items-center gap-2">
             <span>Cơ cấu Tổ chức & Danh bạ Cán bộ</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -84,6 +78,7 @@ export default function OrgPage() {
             title="Làm mới danh bạ"
           >
             <RefreshCw
+              strokeWidth={1.5}
               className={`size-3.5 ${
                 isRefreshing ? "animate-spin text-foreground" : ""
               }`}
@@ -97,13 +92,13 @@ export default function OrgPage() {
             className="inline-flex h-8.5 items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer shadow-2xs"
             title="In sơ đồ danh bạ"
           >
-            <Printer className="size-3.5" />
+            <Printer className="size-3.5" strokeWidth={1.5} />
             <span className="hidden sm:inline">In danh bạ</span>
           </button>
 
           <Button
             type="button"
-            className="h-8.5 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-card-hover transition-all cursor-pointer rounded-lg"
+            className="h-8.5 gap-1.5 px-3.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs transition-all cursor-pointer rounded-lg"
             onClick={() => {
               // Quick export as CSV
               const rows = [
@@ -131,7 +126,7 @@ export default function OrgPage() {
               document.body.removeChild(link);
             }}
           >
-            <Download className="size-3.5" />
+            <Download className="size-3.5" strokeWidth={1.5} />
             <span>Xuất Excel/CSV</span>
           </Button>
         </div>
@@ -142,48 +137,48 @@ export default function OrgPage() {
       {/* ===================================================================== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Metric 1: Total Units */}
-        <div className="flex items-center gap-3.5 rounded-2xl border border-border/60 bg-card p-4 shadow-card hover:shadow-card-hover transition-all">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
-            <Building2 className="size-5" />
+        <div className="flex items-center gap-3.5 rounded-xl border border-border/60 bg-card p-3.5 shadow-2xs hover:shadow-xs transition-all">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+            <Building2 className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
             <span className="text-[11px] font-medium text-muted-foreground block truncate">
               Tổng số đơn vị
             </span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-bold text-foreground">{totalUnits}</span>
+              <span className="text-xl font-semibold text-foreground font-mono tabular-nums">{totalUnits}</span>
               <span className="text-[10px] text-muted-foreground font-medium">phòng/khoa/TT</span>
             </div>
           </div>
         </div>
 
         {/* Metric 2: Total Staff */}
-        <div className="flex items-center gap-3.5 rounded-2xl border border-border/60 bg-card p-4 shadow-card hover:shadow-card-hover transition-all">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
-            <Users className="size-5" />
+        <div className="flex items-center gap-3.5 rounded-xl border border-border/60 bg-card p-3.5 shadow-2xs hover:shadow-xs transition-all">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
+            <Users className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
             <span className="text-[11px] font-medium text-muted-foreground block truncate">
               Cán bộ & Giảng viên
             </span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-bold text-foreground">{totalStaff}</span>
+              <span className="text-xl font-semibold text-foreground font-mono tabular-nums">{totalStaff}</span>
               <span className="text-[10px] text-muted-foreground font-medium">nhân sự</span>
             </div>
           </div>
         </div>
 
         {/* Metric 3: Active Delegated Tasks */}
-        <div className="flex items-center gap-3.5 rounded-2xl border border-border/60 bg-card p-4 shadow-card hover:shadow-card-hover transition-all">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
-            <Briefcase className="size-5" />
+        <div className="flex items-center gap-3.5 rounded-xl border border-border/60 bg-card p-3.5 shadow-2xs hover:shadow-xs transition-all">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+            <Briefcase className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
             <span className="text-[11px] font-medium text-muted-foreground block truncate">
               Nhiệm vụ đang điều phối
             </span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-bold text-foreground">
+              <span className="text-xl font-semibold text-foreground font-mono tabular-nums">
                 {totalActiveTasks}
               </span>
               <span className="text-[10px] text-muted-foreground font-medium">đầu việc</span>
@@ -192,16 +187,16 @@ export default function OrgPage() {
         </div>
 
         {/* Metric 4: Digital Identity Coverage */}
-        <div className="flex items-center gap-3.5 rounded-2xl border border-border/60 bg-card p-4 shadow-card hover:shadow-card-hover transition-all">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-            <CheckCircle2 className="size-5" />
+        <div className="flex items-center gap-3.5 rounded-xl border border-border/60 bg-card p-3.5 shadow-2xs hover:shadow-xs transition-all">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+            <CheckCircle2 className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
             <span className="text-[11px] font-medium text-muted-foreground block truncate">
               Định danh số E-Office
             </span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-bold text-foreground">100%</span>
+              <span className="text-xl font-semibold text-foreground font-mono tabular-nums">100%</span>
               <span className="text-[10px] text-emerald-600 font-semibold">
                 Email công vụ
               </span>
