@@ -24,6 +24,7 @@ import {
   FileCheck,
   ExternalLink,
   Link,
+  ShieldCheck,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -31,6 +32,8 @@ import type {
   TaskCategory,
   TaskStatus,
   DeliverableItem,
+  AIReviewSummary,
+  EscalationMeta,
 } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
@@ -847,6 +850,145 @@ export function TaskDetailSideSheet({
                     <p className="text-amber-600/90 dark:text-amber-400/90 leading-relaxed">
                       {task.rejectionReason}
                     </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* AI Executive Brief Card (StaffTask NEEDS_REVIEW for MANAGER/ADMIN) */}
+            {!isSchool && task.status === "NEEDS_REVIEW" && canReview && (task as StaffTask).aiReview && (() => {
+              const aiReview = (task as StaffTask).aiReview!;
+              const riskColorMap: Record<string, string> = {
+                CLEAN: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                NEEDS_ATTENTION: "bg-amber-50 text-amber-700 border-amber-200",
+                HIGH_RISK: "bg-rose-50 text-rose-700 border-rose-200",
+              };
+              const riskLabel: Record<string, string> = {
+                CLEAN: "An toan",
+                NEEDS_ATTENTION: "Can luu y",
+                HIGH_RISK: "Rui ro cao",
+              };
+              return (
+                <div className="mt-3.5 rounded-xl border border-border/50 bg-card p-4 text-xs space-y-3 shadow-xs" data-testid="ai-executive-brief">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-foreground flex items-center gap-1.5">
+                      <ShieldCheck className="size-4 text-primary" strokeWidth={1.5} />
+                      Tong hop AI Executive Brief
+                    </h4>
+                    <span className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border",
+                      riskColorMap[aiReview.status] || riskColorMap.CLEAN
+                    )}>
+                      {riskLabel[aiReview.status] || aiReview.status}
+                    </span>
+                  </div>
+
+                  {/* Compliance Score */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      Diem tuan thu (complianceScore):
+                    </span>
+                    <span className={cn(
+                      "font-mono font-bold tabular-nums",
+                      aiReview.complianceScore >= 80 ? "text-emerald-700" :
+                      aiReview.complianceScore >= 50 ? "text-amber-700" :
+                      "text-rose-700"
+                    )}>
+                      {aiReview.complianceScore}/100
+                    </span>
+                  </div>
+
+                  {/* Executive Summary */}
+                  <p className="text-xs text-foreground leading-relaxed">
+                    {aiReview.executiveSummary}
+                  </p>
+
+                  {/* DACUM Criteria Matched */}
+                  {aiReview.dacumCriteriaMatched.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-[11px] font-semibold text-muted-foreground">
+                        Tieu chi DACUM dat:
+                      </span>
+                      <ul className="list-disc list-inside text-[11px] text-foreground space-y-0.5 pl-1">
+                        {aiReview.dacumCriteriaMatched.map((c, i) => (
+                          <li key={i}>{c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Warning Flags */}
+                  {aiReview.flags.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-[11px] font-semibold text-muted-foreground">
+                        Canh bao:
+                      </span>
+                      <ul className="space-y-0.5 pl-1">
+                        {aiReview.flags.map((f, i) => (
+                          <li key={i} className={cn(
+                            "text-[11px]",
+                            f.type === "CRITICAL" ? "text-rose-600 font-medium" :
+                            f.type === "WARNING" ? "text-amber-600" :
+                            "text-muted-foreground"
+                          )}>
+                            [{f.type}] {f.message}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Quick Approve / Request Changes Buttons */}
+                  <div className="flex items-center gap-2 pt-1">
+                    {aiReview.suggestedAction === "QUICK_APPROVE" && (
+                      <Button
+                        type="button"
+                        onClick={handleManagerApprove}
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                      >
+                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <span>Duyet nhanh theo de xuat AI</span>
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        if (aiReview.suggestedFeedback) {
+                          setRejectionReasonInput(aiReview.suggestedFeedback);
+                        }
+                        setIsRejectionModalOpen(true);
+                      }}
+                      className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <AlertTriangle className="size-3.5" strokeWidth={1.5} />
+                      <span>Yeu cau chinh sua</span>
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Escalation Notice Banner (48h SLA exceeded) */}
+            {!isSchool && (task as StaffTask).escalation?.isEscalated && (
+              <div className="mt-3.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 p-4 text-xs" data-testid="escalation-notice">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="size-4 shrink-0 mt-0.5" strokeWidth={1.5} />
+                  <div className="space-y-1">
+                    <h4 className="font-semibold">
+                      Thong bao leo thang: Vuot qua SLA 48h
+                    </h4>
+                    <p className="leading-relaxed">
+                      Cong viec nay da vuot qua thoi han xu ly 48 gio va hien da duoc chuyen len Ban Giam hieu (BGH) de giam sat.
+                      {(task as StaffTask).escalation?.escalationNote && (
+                        <> {(task as StaffTask).escalation!.escalationNote}</>
+                      )}
+                    </p>
+                    {(task as StaffTask).escalation?.escalatedAt && (
+                      <span className="text-[10.5px] font-mono tabular-nums text-rose-600">
+                        Leo thang luc: {formatDetailDate((task as StaffTask).escalation!.escalatedAt)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
