@@ -92,7 +92,7 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
   const stats = statsInput || defaultStats;
   const urgentCount = stats.needsReviewTasksCount + stats.overdueTasksCount;
 
-  return [
+  const cards: StatCardData[] = [
     {
       id: "school-tasks",
       title: "Nhiệm vụ cấp Trường",
@@ -141,6 +141,36 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
       iconName: "CheckCircle2",
     },
   ];
+
+  // Conditionally add triage queue card when pendingTriageCount > 0
+  const triageCount = stats.pendingTriageCount ?? 0;
+  if (triageCount > 0) {
+    cards.push({
+      id: "triage-queue",
+      title: "Cho tiep nhan",
+      value: formatNumber(triageCount),
+      subtext: `${formatNumber(triageCount)} cho xu ly tiep nhan`,
+      iconName: "Clock",
+    });
+  }
+
+  // Conditionally add escalated reviews card when escalatedReviewCount > 0
+  const escalatedCount = stats.escalatedReviewCount ?? 0;
+  if (escalatedCount > 0) {
+    cards.push({
+      id: "escalated-reviews",
+      title: "Qua han tham dinh",
+      value: formatNumber(escalatedCount),
+      subtext: `${formatNumber(escalatedCount)} vuot han tham dinh`,
+      badge: {
+        label: `${escalatedCount} qua han`,
+        variant: "rose",
+      },
+      iconName: "AlertTriangle",
+    });
+  }
+
+  return cards;
 }
 
 export function ExecutiveStatStrip({

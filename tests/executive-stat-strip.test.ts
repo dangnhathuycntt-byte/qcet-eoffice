@@ -127,6 +127,109 @@ describe("ExecutiveStatStrip Helpers", () => {
     assert.equal(cards[3].progress, 0);
   });
 
+  test("renders triage queue card when pendingTriageCount is present and > 0", () => {
+    const stats: DashboardStats = {
+      ...mockStats,
+      pendingTriageCount: 2,
+    };
+    const cards = getStatCardData(stats);
+    const triageCard = cards.find((c) => c.id === "triage-queue");
+    assert.ok(triageCard, "triage-queue card must exist when pendingTriageCount > 0");
+    assert.equal(triageCard!.title, "Cho tiep nhan");
+    assert.equal(triageCard!.value, "2");
+    assert.equal(triageCard!.iconName, "Clock");
+    assert.ok(
+      triageCard!.subtext.length > 0,
+      "triage card must have non-empty subtext"
+    );
+  });
+
+  test("renders escalated review card when escalatedReviewCount is present and > 0", () => {
+    const stats: DashboardStats = {
+      ...mockStats,
+      escalatedReviewCount: 3,
+    };
+    const cards = getStatCardData(stats);
+    const escalatedCard = cards.find((c) => c.id === "escalated-reviews");
+    assert.ok(escalatedCard, "escalated-reviews card must exist when escalatedReviewCount > 0");
+    assert.equal(escalatedCard!.title, "Qua han tham dinh");
+    assert.equal(escalatedCard!.value, "3");
+    assert.equal(escalatedCard!.iconName, "AlertTriangle");
+    assert.ok(
+      escalatedCard!.subtext.length > 0,
+      "escalated card must have non-empty subtext"
+    );
+  });
+
+  test("renders both triage and escalated cards when both counts are > 0", () => {
+    const stats: DashboardStats = {
+      ...mockStats,
+      pendingTriageCount: 2,
+      escalatedReviewCount: 3,
+    };
+    const cards = getStatCardData(stats);
+    const triageCard = cards.find((c) => c.id === "triage-queue");
+    const escalatedCard = cards.find((c) => c.id === "escalated-reviews");
+    assert.ok(triageCard, "triage-queue card must be present");
+    assert.ok(escalatedCard, "escalated-reviews card must be present");
+    assert.equal(cards.length, 6, "should have 4 base cards + 2 new cards");
+  });
+
+  test("omits triage and escalated cards when counts are 0 or absent", () => {
+    const cards = getStatCardData(mockStats);
+    const triageCard = cards.find((c) => c.id === "triage-queue");
+    const escalatedCard = cards.find((c) => c.id === "escalated-reviews");
+    assert.equal(triageCard, undefined, "triage-queue card must not appear when count is 0/absent");
+    assert.equal(escalatedCard, undefined, "escalated-reviews card must not appear when count is 0/absent");
+  });
+
+  test("triage and escalated cards contain zero decorative emojis", () => {
+    const stats: DashboardStats = {
+      ...mockStats,
+      pendingTriageCount: 5,
+      escalatedReviewCount: 7,
+    };
+    const cards = getStatCardData(stats);
+    const emojiRegex = /\p{Extended_Pictographic}/u;
+    const newCards = cards.filter(
+      (c) => c.id === "triage-queue" || c.id === "escalated-reviews"
+    );
+    assert.equal(newCards.length, 2, "both new cards must exist");
+    newCards.forEach((card) => {
+      assert.equal(
+        emojiRegex.test(card.title),
+        false,
+        `Card title "${card.title}" must not contain emojis`
+      );
+      assert.equal(
+        emojiRegex.test(card.subtext),
+        false,
+        `Card subtext "${card.subtext}" must not contain emojis`
+      );
+      if (card.badge) {
+        assert.equal(
+          emojiRegex.test(card.badge.label),
+          false,
+          `Card badge "${card.badge.label}" must not contain emojis`
+        );
+      }
+    });
+  });
+
+  test("triage and escalated cards use tabular-nums compatible values", () => {
+    const stats: DashboardStats = {
+      ...mockStats,
+      pendingTriageCount: 12,
+      escalatedReviewCount: 8,
+    };
+    const cards = getStatCardData(stats);
+    const triageCard = cards.find((c) => c.id === "triage-queue")!;
+    const escalatedCard = cards.find((c) => c.id === "escalated-reviews")!;
+    // Values should be numeric strings (formatted by formatNumber)
+    assert.equal(triageCard.value, "12");
+    assert.equal(escalatedCard.value, "8");
+  });
+
   test("toggle logic switches between selected filterKey and ALL", () => {
     const cards = getStatCardData(mockStats);
     const getNextFilter = (active: WorkboxFilter | undefined, target: WorkboxFilter): WorkboxFilter =>
