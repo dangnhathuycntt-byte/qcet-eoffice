@@ -5,6 +5,8 @@ import type { AuthUser } from "../src/types/auth";
 import {
   screenDeliverablesWithAI,
   processTriageDecision,
+  transitionStaffTaskStatus,
+  evaluateReviewEscalation,
 } from "../src/lib/dacum-workflow-engine";
 
 describe("DACUM AI Executive Review Assistant", () => {
@@ -222,5 +224,112 @@ describe("Cross-Department Triage Queue Processing", () => {
     assert.equal(resultValid.success, true);
     assert.equal(resultValid.updatedTask?.triageStatus, "REJECTED");
     assert.equal(resultValid.updatedTask?.status, "BLOCKED");
+  });
+});
+
+describe("SLA Escalation Timers & Executive Override", () => {
+  const bghAdmin: AuthUser = {
+    id: "bgh-01",
+    name: "Hieu truong QCET",
+    email: "bgh@qcet.edu.vn",
+    role: "ADMIN",
+    roleLabel: "Ban Giam hieu",
+    department: "Ban Giam hieu",
+    departmentCode: "BGH",
+  };
+
+  test("initiates escalation meta when task moves to NEEDS_REVIEW", () => {
+    const task: StaffTask = {
+      id: "task-esc-01",
+      title: "Ra soat de cuong",
+      assigneeName: "Chuyen vien D",
+      status: "IN_PROGRESS",
+      dueDate: "2026-09-25",
+      parentSchoolTaskId: "school-01",
+      updatedAt: new Date().toISOString(),
+      deliverables: [{ id: "del-1", name: "Doc.pdf", url: "https://url.com" }],
+    };
+
+    const staffUser: AuthUser = {
+      id: "staff-01",
+      name: "Chuyen vien D",
+      email: "d@qcet.edu.vn",
+      role: "STAFF",
+      roleLabel: "Chuyen vien",
+      department: "Khoa CNTT",
+      departmentCode: "K_CNTT",
+    };
+
+    const res = transitionStaffTaskStatus(task, "NEEDS_REVIEW", staffUser, {
+      deliverables: task.deliverables,
+      notes: "Nop de cuong hoan chinh",
+    });
+
+    assert.equal(res.success, true);
+    assert.ok(res.updatedTask?.escalation?.reviewDeadline);
+    assert.equal(res.updatedTask?.escalation?.isEscalated, false);
+  });
+
+  test("evaluates escalation and sets isEscalated when past 48h SLA", () => {
+    const submittedTime = new Date("2026-09-01T08:00:00Z");
+    const deadlineTime = new Date("2026-09-03T08:00:00Z"); // +48h
+
+    const task: StaffTask = {
+      id: "task-esc-02",
+      title: "Cham thi tuyen sinh",
+      assigneeName: "Giang vien E",
+      status: "NEEDS_REVIEW",
+      dueDate: "2026-09-10",
+      parentSchoolTaskId: "school-01",
+      updatedAt: submittedTime.toISOString(),
+      escalation: {
+        submittedForReviewAt: submittedTime.toISOString(),
+        reviewDeadline: deadlineTime.toISOString(),
+        isEscalated: false,
+      },
+    };
+
+    // Before deadline
+    const taskBefore = evaluateReviewEscalation(
+      task,
+      new Date("2026-09-02T10:00:00Z")
+    );
+    assert.equal(taskBefore.escalation?.isEscalated, false);
+
+    // After deadline (+50h)
+    const taskAfter = evaluateReviewEscalation(
+      task,
+      new Date("2026-09-03T10:00:00Z")
+    );
+    assert.equal(taskAfter.escalation?.isEscalated, true);
+    assert.equal(taskAfter.escalation?.escalatedToRole, "ADMIN");
+  });
+
+  test("allows BGH ADMIN executive override on escalated tasks", () => {
+    const escalatedTask: StaffTask = {
+      id: "task-esc-03",
+      title: "Nghiem thu phong thi nghiem",
+      assigneeName: "Giang vien F",
+      status: "NEEDS_REVIEW",
+      dueDate: "2026-09-15",
+      parentSchoolTaskId: "school-01",
+      updatedAt: new Date().toISOString(),
+      escalation: {
+        isEscalated: true,
+        escalatedToRole: "ADMIN",
+        escalationNote: "Qua han duyet 48h tai Truong khoa",
+      },
+    };
+
+    const res = transitionStaffTaskStatus(
+      escalatedTask,
+      "COMPLETED",
+      bghAdmin,
+      {
+        notes: "Ban Giam hieu nghiem thu truc tiep do qua han phe duyet tai don vi.",
+      }
+    );
+    assert.equal(res.success, true);
+    assert.equal(res.updatedTask?.status, "COMPLETED");
   });
 });

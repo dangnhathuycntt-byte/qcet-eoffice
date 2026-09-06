@@ -168,6 +168,18 @@ export function transitionStaffTaskStatus(
     updatedTask.deliverableDescription = payload.notes;
   }
 
+  // When moving to NEEDS_REVIEW, attach escalation SLA and run AI screening
+  if (newStatus === "NEEDS_REVIEW") {
+    const submittedAt = new Date().toISOString();
+    const reviewDeadline = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+    updatedTask.escalation = {
+      submittedForReviewAt: submittedAt,
+      reviewDeadline,
+      isEscalated: false,
+    };
+    updatedTask.aiReview = screenDeliverablesWithAI(updatedTask);
+  }
+
   return { success: true, updatedTask };
 }
 
@@ -325,6 +337,33 @@ export function screenDeliverablesWithAI(
         ? "Yêu cầu viên chức bổ sung đường dẫn minh chứng và biên bản nghiệm thu theo đúng quy định."
         : undefined,
   };
+}
+
+export function evaluateReviewEscalation(
+  task: StaffTask,
+  now: Date = new Date(),
+  slaHours: number = 48
+): StaffTask {
+  if (task.status !== "NEEDS_REVIEW" || !task.escalation?.reviewDeadline) {
+    return task;
+  }
+
+  const deadline = new Date(task.escalation.reviewDeadline).getTime();
+  if (now.getTime() > deadline && !task.escalation.isEscalated) {
+    return {
+      ...task,
+      escalation: {
+        ...task.escalation,
+        isEscalated: true,
+        escalatedAt: now.toISOString(),
+        escalatedToRole: "ADMIN",
+        escalationNote: `Qua han tham dinh ${slaHours} gio tai cap don vi. Da tu dong chuyen Ban Giam hieu theo doi.`,
+      },
+      updatedAt: now.toISOString(),
+    };
+  }
+
+  return task;
 }
 
 export function processTriageDecision(
