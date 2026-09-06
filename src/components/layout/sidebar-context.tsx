@@ -46,7 +46,7 @@ export const MODULES: ModuleMeta[] = [
   {
     id: "documents",
     label: "Văn bản & Công văn",
-    shortLabel: "Công văn",
+    shortLabel: "Văn bản",
     icon: FileText,
     defaultHref: "/documents",
     isComingSoon: true,
@@ -55,7 +55,7 @@ export const MODULES: ModuleMeta[] = [
   {
     id: "org",
     label: "Cơ cấu & Danh bạ",
-    shortLabel: "Tổ chức",
+    shortLabel: "Cơ cấu",
     icon: Building2,
     defaultHref: "/org",
     description: "Sơ đồ tổ chức 11 đơn vị, nhân sự",

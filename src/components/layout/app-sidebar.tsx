@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
   useSidebar,
@@ -30,9 +30,16 @@ export function AppSidebar() {
     setIsMobileOpen,
     badgeCounts,
     currentModule,
+    setCurrentModule,
   } = useSidebar();
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // Close mobile drawer on route change
+  React.useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname, searchParams, setIsMobileOpen]);
 
   // Listen to Ctrl+B / Cmd+B globally to toggleCollapse
   React.useEffect(() => {
@@ -499,68 +506,137 @@ export function AppSidebar() {
             </button>
           </div>
 
+          {/* Module Selector / Tab Navigation */}
+          <div className="py-2.5 border-b border-border/50">
+            <div
+              role="tablist"
+              aria-label="Phân hệ hệ thống"
+              className="grid grid-cols-3 gap-1 p-1 bg-muted/60 rounded-lg border border-border/40 text-xs font-medium"
+            >
+              {MODULES.map((mod) => {
+                const isActive = currentModule === mod.id;
+                const Icon = mod.icon;
+                return (
+                  <button
+                    key={mod.id}
+                    type="button"
+                    role="tab"
+                    id={`mobile-tab-${mod.id}`}
+                    aria-selected={isActive}
+                    aria-controls={`mobile-tabpanel-${mod.id}`}
+                    onClick={() => {
+                      setCurrentModule(mod.id);
+                      if (pathname !== mod.defaultHref) {
+                        router.push(mod.defaultHref);
+                        setIsMobileOpen(false);
+                      }
+                    }}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-md transition-all text-center cursor-pointer",
+                      isActive
+                        ? "bg-card text-foreground font-semibold shadow-xs border border-border/40"
+                        : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                    )}
+                  >
+                    <div className="relative">
+                      <Icon size={16} strokeWidth={isActive ? 2 : 1.5} />
+                      {mod.isComingSoon && (
+                        <span
+                          className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-amber-500"
+                          title="Đang phát triển"
+                        />
+                      )}
+                    </div>
+                    <span className="truncate max-w-full text-[10px] leading-tight">
+                      {mod.shortLabel}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Mobile Navigation List */}
           <nav
-            className="flex-1 py-4 space-y-1 overflow-y-auto thin-scrollbar"
-            aria-label="Danh mục điều hướng di động"
+            id={`mobile-tabpanel-${currentModule}`}
+            role="tabpanel"
+            aria-labelledby={`mobile-tab-${currentModule}`}
+            className="flex-1 py-3 space-y-3.5 overflow-y-auto thin-scrollbar"
+            aria-label={`Danh mục điều hướng ${currentModuleMeta.label}`}
           >
-            {currentItems.map((item) => {
-              const active = isItemActive(item);
-              const Icon = item.icon;
-              const badge = getBadgeInfo(item);
-              return (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  onClick={(e) => {
-                    setIsMobileOpen(false);
-                    if (item.href === "/notifications") {
-                      e.preventDefault();
-                      window.dispatchEvent(new CustomEvent("qcet:toggle-notifications"));
-                    }
-                  }}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors active:scale-[0.98]",
-                    active
-                      ? "bg-primary/10 text-primary font-semibold shadow-xs"
-                      : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
-                  )}
-                >
-                  {active && (
-                    <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary" />
-                  )}
-                  <Icon
-                    size={18}
-                    strokeWidth={1.5}
-                    className={cn(
-                      "shrink-0 transition-colors",
-                      active
-                        ? "text-primary"
-                        : "text-muted-foreground group-hover:text-foreground"
-                    )}
-                  />
-                  <span className="truncate flex-1">{item.label}</span>
-                  {badge && (
-                    <span
-                      className={cn(
-                        "ml-auto inline-flex items-center justify-center px-2 py-0.5 min-w-[20px] rounded-full text-[10.5px] font-mono font-bold leading-none select-none tracking-tight",
-                        badge.variant === "primary" &&
-                          "bg-primary/15 text-primary border border-primary/20",
-                        badge.variant === "sky" &&
-                          "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20",
-                        badge.variant === "danger" &&
-                          "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
-                        badge.variant === "muted" &&
-                          "bg-secondary text-muted-foreground border border-border/50"
-                      )}
-                    >
-                      {badge.text}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+            {sections.map((sec) => (
+              <div key={sec.key} className="space-y-1">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 px-2.5 py-0.5 select-none">
+                  {sec.label}
+                </div>
+                <div className="space-y-0.5">
+                  {sec.items.map((item) => {
+                    const active = isItemActive(item);
+                    const Icon = item.icon;
+                    const badge = getBadgeInfo(item);
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        onClick={(e) => {
+                          setIsMobileOpen(false);
+                          if (item.href === "/notifications") {
+                            e.preventDefault();
+                            window.dispatchEvent(
+                              new CustomEvent("qcet:toggle-notifications")
+                            );
+                          }
+                        }}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors active:scale-[0.98]",
+                          active
+                            ? "bg-primary/10 text-primary font-semibold shadow-xs"
+                            : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
+                        )}
+                      >
+                        {active && (
+                          <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary" />
+                        )}
+                        <Icon
+                          size={18}
+                          strokeWidth={1.5}
+                          className={cn(
+                            "shrink-0 transition-colors",
+                            active
+                              ? "text-primary"
+                              : "text-muted-foreground group-hover:text-foreground"
+                          )}
+                        />
+                        <span className="truncate flex-1">{item.label}</span>
+                        {badge && (
+                          <span
+                            className={cn(
+                              "ml-auto inline-flex items-center justify-center px-2 py-0.5 min-w-[20px] rounded-full text-[10.5px] font-mono font-bold leading-none select-none tracking-tight",
+                              badge.variant === "primary" &&
+                                "bg-primary/15 text-primary border border-primary/20",
+                              badge.variant === "sky" &&
+                                "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20",
+                              badge.variant === "danger" &&
+                                "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
+                              badge.variant === "muted" &&
+                                "bg-secondary text-muted-foreground border border-border/50"
+                            )}
+                          >
+                            {badge.text}
+                          </span>
+                        )}
+                        {item.isComingSoon && !badge && (
+                          <span className="ml-auto text-[9px] font-normal text-muted-foreground/60">
+                            Sắp ra mắt
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
 
           {/* Mobile Drawer Footer */}

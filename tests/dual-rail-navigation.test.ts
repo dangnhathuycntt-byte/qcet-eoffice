@@ -355,4 +355,80 @@ describe("Dual-Rail Navigation Architecture Test Suite", () => {
       );
     });
   });
+
+  describe("AppShell & Mobile Drawer Contract (Task 6)", () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const shellFile = path.join(
+      process.cwd(),
+      "src/components/layout/app-shell.tsx"
+    );
+    const sidebarFile = path.join(
+      process.cwd(),
+      "src/components/layout/app-sidebar.tsx"
+    );
+
+    test("app-shell.tsx applies dual-rail content left padding: md:pl-28 (112px) collapsed, md:pl-[280px] (280px) expanded", () => {
+      assert.ok(fs.existsSync(shellFile), "app-shell.tsx must exist");
+      const content = fs.readFileSync(shellFile, "utf-8");
+      assert.ok(
+        content.includes('isCollapsed ? "md:pl-28" : "md:pl-[280px]"'),
+        "Main container must use md:pl-28 when collapsed and md:pl-[280px] when expanded"
+      );
+    });
+
+    test("app-shell.tsx Suspense fallback aside specifies w-[280px]", () => {
+      const content = fs.readFileSync(shellFile, "utf-8");
+      assert.ok(
+        content.includes('w-[280px] shrink-0 border-r'),
+        "Suspense fallback aside must specify w-[280px]"
+      );
+    });
+
+    test("app-sidebar.tsx mobile drawer includes module selector / tablist", () => {
+      const content = fs.readFileSync(sidebarFile, "utf-8");
+      assert.ok(
+        content.includes('role="tablist"'),
+        "Mobile drawer must have role='tablist'"
+      );
+      assert.ok(
+        content.includes('role="tab"'),
+        "Mobile drawer must have role='tab' on module buttons"
+      );
+      assert.ok(
+        content.includes('role="tabpanel"'),
+        "Mobile navigation list must have role='tabpanel'"
+      );
+      assert.ok(
+        content.includes("aria-controls="),
+        "Module tabs must have aria-controls attribute"
+      );
+      assert.ok(
+        content.includes("aria-selected="),
+        "Module tabs must have aria-selected attribute"
+      );
+    });
+
+    test("app-sidebar.tsx mobile drawer closes on route change and link click", () => {
+      const content = fs.readFileSync(sidebarFile, "utf-8");
+      assert.ok(
+        content.includes("[pathname, searchParams, setIsMobileOpen]"),
+        "Must have useEffect listening to pathname and searchParams to close drawer"
+      );
+      assert.ok(
+        content.includes("setIsMobileOpen(false)"),
+        "Link click must close mobile drawer"
+      );
+    });
+
+    test("Anti-slop check: 0% emojis in app-shell.tsx", () => {
+      const content = fs.readFileSync(shellFile, "utf-8");
+      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+      assert.strictEqual(
+        emojiRegex.test(content),
+        false,
+        "app-shell.tsx must contain zero emojis"
+      );
+    });
+  });
 });

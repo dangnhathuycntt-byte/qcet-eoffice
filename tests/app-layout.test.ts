@@ -221,12 +221,17 @@ describe("AppShell Layout Container & Root Integration", () => {
     assert.ok(content.includes("return <>{children}</>;"), "Must render children directly on login route");
   });
 
-  it("implements adaptive margins/padding conforming to collapsed (md:pl-16) and expanded (md:pl-60)", () => {
+  it("implements adaptive margins/padding conforming to collapsed (md:pl-28) and expanded (md:pl-[280px])", () => {
     const content = fs.readFileSync(appShellPath, "utf-8");
-    assert.ok(content.includes('isCollapsed ? "md:pl-16" : "md:pl-60"'), "Must apply adaptive md:pl-16 / md:pl-60");
+    assert.ok(content.includes('isCollapsed ? "md:pl-28" : "md:pl-[280px]"'), "Must apply adaptive md:pl-28 / md:pl-[280px]");
     assert.ok(content.includes("transition-all duration-200 ease-in-out"), "Must animate transition smoothly");
     assert.ok(content.includes("max-w-[1440px]"), "Must constrain content width to 1440px max");
     assert.ok(content.includes('id="main-content"'), "Must contain id main-content for skip link target");
+  });
+
+  it("uses w-[280px] in Suspense fallback aside matching expanded dual-rail width", () => {
+    const content = fs.readFileSync(appShellPath, "utf-8");
+    assert.ok(content.includes('aside className="hidden md:flex w-[280px] shrink-0'), "Must use w-[280px] for aside fallback");
   });
 
   it("wraps inner layout in SidebarProvider context", () => {
