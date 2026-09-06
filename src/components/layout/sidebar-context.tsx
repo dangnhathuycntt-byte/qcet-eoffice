@@ -1,16 +1,170 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import {
-  LayoutGrid,
-  CheckSquare,
+  Briefcase,
+  FileText,
+  Building2,
   LayoutDashboard,
   Calendar,
-  Network,
   Bell,
+  CheckSquare,
+  Inbox,
+  Send,
+  FileCheck,
+  Archive,
+  Users,
+  LayoutGrid,
+  Network,
   type LucideIcon,
 } from "lucide-react";
 import { WorkspaceZone } from "@/types/workspace";
+
+export type NavigationModule = "work" | "documents" | "org";
+export type NavigationSection = "personal" | "workspace";
+
+export interface ModuleMeta {
+  id: NavigationModule;
+  label: string;
+  shortLabel: string;
+  icon: LucideIcon;
+  defaultHref: string;
+  description: string;
+  isComingSoon?: boolean;
+}
+
+export const MODULES: ModuleMeta[] = [
+  {
+    id: "work",
+    label: "Quản lý công việc",
+    shortLabel: "Công việc",
+    icon: Briefcase,
+    defaultHref: "/",
+    description: "Bàn làm việc, lịch công tác, kho nhiệm vụ",
+  },
+  {
+    id: "documents",
+    label: "Văn bản & Công văn",
+    shortLabel: "Công văn",
+    icon: FileText,
+    defaultHref: "/documents",
+    isComingSoon: true,
+    description: "Công văn đến/đi, tờ trình, ký số (Đang phát triển)",
+  },
+  {
+    id: "org",
+    label: "Cơ cấu & Danh bạ",
+    shortLabel: "Tổ chức",
+    icon: Building2,
+    defaultHref: "/org",
+    description: "Sơ đồ tổ chức 11 đơn vị, nhân sự",
+  },
+];
+
+export interface SidebarItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  section: NavigationSection;
+  badgeKey?: string;
+  isComingSoon?: boolean;
+}
+
+export const MODULE_NAV_ITEMS: Record<NavigationModule, SidebarItem[]> = {
+  work: [
+    {
+      id: "desk",
+      label: "Bàn làm việc",
+      href: "/",
+      icon: LayoutDashboard,
+      section: "personal",
+      badgeKey: "myFocus",
+    },
+    {
+      id: "calendar",
+      label: "Lịch công tác",
+      href: "/calendar",
+      icon: Calendar,
+      section: "personal",
+      badgeKey: "calendar",
+    },
+    {
+      id: "notifications",
+      label: "Thông báo",
+      href: "/notifications",
+      icon: Bell,
+      section: "personal",
+      badgeKey: "notifications",
+    },
+    {
+      id: "tasks",
+      label: "Kho nhiệm vụ",
+      href: "/tasks",
+      icon: CheckSquare,
+      section: "workspace",
+      badgeKey: "allTasks",
+    },
+  ],
+  documents: [
+    {
+      id: "docs-inbox",
+      label: "Công văn đến",
+      href: "/documents?tab=inbox",
+      icon: Inbox,
+      section: "personal",
+      isComingSoon: true,
+    },
+    {
+      id: "docs-outbox",
+      label: "Công văn đi & Tờ trình",
+      href: "/documents?tab=outbox",
+      icon: Send,
+      section: "personal",
+      isComingSoon: true,
+    },
+    {
+      id: "docs-pending",
+      label: "Chờ ký duyệt",
+      href: "/documents?tab=pending",
+      icon: FileCheck,
+      section: "workspace",
+      isComingSoon: true,
+    },
+    {
+      id: "docs-archive",
+      label: "Sổ văn bản",
+      href: "/documents?tab=archive",
+      icon: Archive,
+      section: "workspace",
+      isComingSoon: true,
+    },
+  ],
+  org: [
+    {
+      id: "org-structure",
+      label: "Sơ đồ tổ chức",
+      href: "/org",
+      icon: Building2,
+      section: "workspace",
+    },
+    {
+      id: "org-directory",
+      label: "Danh bạ cán bộ",
+      href: "/org?tab=directory",
+      icon: Users,
+      section: "workspace",
+    },
+  ],
+};
+
+export function resolveModuleFromPathname(pathname: string): NavigationModule {
+  if (!pathname) return "work";
+  if (pathname.startsWith("/documents")) return "documents";
+  if (pathname.startsWith("/org")) return "org";
+  return "work";
+}
 
 export interface NavigationItem {
   href: string;
@@ -26,6 +180,9 @@ export interface SidebarBadgeCounts {
   calendar?: number | string;
   org?: number | string;
   notifications?: number | string;
+  myFocus?: number | string;
+  allTasks?: number | string;
+  [key: string]: number | string | undefined;
 }
 
 export const DEFAULT_SIDEBAR_BADGES: SidebarBadgeCounts = {
@@ -97,6 +254,7 @@ export function resolveBreadcrumb(
     return ["QCET E-Office", "Quản lý công việc"];
   }
 
+  if (path.startsWith("/documents")) return ["QCET E-Office", "Văn bản & Công văn"];
   if (path.startsWith("/unit-tasks")) return ["QCET E-Office", "Công việc Đơn vị"];
   if (path.startsWith("/tasks")) return ["QCET E-Office", "Nhiệm vụ cấp Trường"];
   if (path.startsWith("/calendar")) return ["QCET E-Office", "Lịch công tác"];
@@ -108,7 +266,7 @@ export function resolveBreadcrumb(
   return ["QCET E-Office", "Tổng quan"];
 }
 
-interface SidebarContextValue {
+export interface SidebarContextType {
   isCollapsed: boolean;
   toggleCollapse: () => void;
   setCollapsed: (collapsed: boolean) => void;
@@ -117,18 +275,30 @@ interface SidebarContextValue {
   toggleMobile: () => void;
   badgeCounts: SidebarBadgeCounts;
   setBadgeCounts: React.Dispatch<React.SetStateAction<SidebarBadgeCounts>>;
+  currentModule: NavigationModule;
+  setCurrentModule: (module: NavigationModule) => void;
+  isMounted: boolean;
+  sidebarWidth: number;
 }
 
-const SidebarContext = React.createContext<SidebarContextValue | undefined>(undefined);
+export type SidebarContextValue = SidebarContextType;
+
+const SidebarContext = React.createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = React.useState<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = React.useState<boolean>(false);
-  const [mounted, setMounted] = React.useState<boolean>(false);
+  const [isMounted, setIsMounted] = React.useState<boolean>(false);
   const [badgeCounts, setBadgeCounts] = React.useState<SidebarBadgeCounts>(DEFAULT_SIDEBAR_BADGES);
 
+  const [currentModule, setCurrentModule] = React.useState<NavigationModule>(() =>
+    resolveModuleFromPathname(pathname || "")
+  );
+  const lastPathnameRef = React.useRef(pathname);
+
   React.useEffect(() => {
-    setMounted(true);
+    setIsMounted(true);
     try {
       const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
       if (saved !== null) {
@@ -138,6 +308,13 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       // safe fallback if storage unavailable
     }
   }, []);
+
+  React.useEffect(() => {
+    if (pathname && pathname !== lastPathnameRef.current) {
+      lastPathnameRef.current = pathname;
+      setCurrentModule(resolveModuleFromPathname(pathname));
+    }
+  }, [pathname]);
 
   const toggleCollapse = React.useCallback(() => {
     setIsCollapsed((prev) => {
@@ -164,9 +341,12 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     setIsMobileOpen((prev) => !prev);
   }, []);
 
-  const value = React.useMemo(
+  const effectiveCollapsed = isMounted ? isCollapsed : false;
+  const sidebarWidth = effectiveCollapsed ? 112 : 280;
+
+  const value = React.useMemo<SidebarContextType>(
     () => ({
-      isCollapsed: mounted ? isCollapsed : false,
+      isCollapsed: effectiveCollapsed,
       toggleCollapse,
       setCollapsed,
       isMobileOpen,
@@ -174,14 +354,29 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       toggleMobile,
       badgeCounts,
       setBadgeCounts,
+      currentModule,
+      setCurrentModule,
+      isMounted,
+      sidebarWidth,
     }),
-    [isCollapsed, isMobileOpen, mounted, setCollapsed, setIsMobileOpen, toggleCollapse, toggleMobile, badgeCounts]
+    [
+      effectiveCollapsed,
+      toggleCollapse,
+      setCollapsed,
+      isMobileOpen,
+      setIsMobileOpen,
+      toggleMobile,
+      badgeCounts,
+      currentModule,
+      isMounted,
+      sidebarWidth,
+    ]
   );
 
   return <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>;
 }
 
-export function useSidebar() {
+export function useSidebar(): SidebarContextType {
   const context = React.useContext(SidebarContext);
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider");
