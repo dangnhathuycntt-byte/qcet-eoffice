@@ -5,9 +5,16 @@ import path from "node:path";
 import { aggregateTasksByDepartment } from "../src/lib/department-task-aggregator";
 import { QCET_DEPARTMENTS } from "../src/components/org/organization-tree";
 import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+import { parseViewModeParam } from "../src/lib/unified-task-hub";
 
 describe("Department Grouped Task View Integration", () => {
   const payload = getMockDashboardPayload();
+
+  test("parseViewModeParam parses 'department' and 'don-vi' correctly", () => {
+    assert.equal(parseViewModeParam("department"), "department");
+    assert.equal(parseViewModeParam("don-vi"), "department");
+    assert.equal(parseViewModeParam("unit"), "department");
+  });
 
   test("Gom nhóm toàn bộ dữ liệu mock của trường thành 12 đơn vị", () => {
     const groups = aggregateTasksByDepartment(payload.tasks, QCET_DEPARTMENTS, "2026-09-06");
@@ -50,5 +57,28 @@ describe("Department Grouped Task View Integration", () => {
 
     // No replacement characters
     assert.ok(!content.includes("�"), "Must not contain replacement character");
+  });
+
+  test("src/app/page.tsx integrates DepartmentGroupedTaskView with dynamic import and viewMode === 'department'", () => {
+    const pagePath = path.join(process.cwd(), "src/app/page.tsx");
+    assert.ok(fs.existsSync(pagePath), "src/app/page.tsx must exist");
+
+    const pageContent = fs.readFileSync(pagePath, "utf-8");
+    assert.ok(
+      pageContent.includes("DepartmentGroupedTaskView = dynamic("),
+      "src/app/page.tsx must dynamically import DepartmentGroupedTaskView"
+    );
+    assert.ok(
+      pageContent.includes("@/components/dashboard/department-grouped-task-view"),
+      "src/app/page.tsx must import from '@/components/dashboard/department-grouped-task-view'"
+    );
+    assert.ok(
+      pageContent.includes("viewMode === \"department\""),
+      "src/app/page.tsx must conditionally render when viewMode === 'department'"
+    );
+    assert.ok(
+      pageContent.includes("<DepartmentGroupedTaskView"),
+      "src/app/page.tsx must render <DepartmentGroupedTaskView"
+    );
   });
 });
