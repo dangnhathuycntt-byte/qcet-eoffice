@@ -40,6 +40,7 @@ import { useAuth } from "@/lib/auth-context";
 import {
   transitionStaffTaskStatus,
   validateDeliverableSubmission,
+  screenDeliverablesWithAI,
 } from "@/lib/dacum-workflow-engine";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -430,6 +431,12 @@ export function TaskDetailSideSheet({
   const canCloseSchool =
     isSchool && canUserCloseSchoolTask(task as SchoolTask, user);
 
+  // AI Screening for NEEDS_REVIEW tasks
+  const aiReview = React.useMemo(() => {
+    if (isSchool || task.status !== "NEEDS_REVIEW") return null;
+    return screenDeliverablesWithAI(task as StaffTask);
+  }, [task, isSchool]);
+
   // Deliverable submission handler (Staff)
   const handleSubmitDeliverable = (e: React.FormEvent) => {
     e.preventDefault();
@@ -770,32 +777,98 @@ export function TaskDetailSideSheet({
 
               {/* If task is NEEDS_REVIEW */}
               {task.status === "NEEDS_REVIEW" && (
-                canReview ? (
-                  <div className="flex items-center gap-2 w-full">
-                    <Button
-                      type="button"
-                      onClick={handleManagerApprove}
-                      className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                    >
-                      <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                      <span>Nghiệm thu Đạt (COMPLETED)</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsRejectionModalOpen(true)}
-                      className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
-                    >
-                      <RotateCcw className="size-3.5" strokeWidth={1.5} />
-                      <span>Trả lại Yêu cầu Sửa</span>
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300 font-medium">
-                    <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
-                    <span>Đã nộp minh chứng. Đang chờ Trưởng đơn vị kiểm tra và nghiệm thu.</span>
-                  </div>
-                )
+                <>
+                  {/* AI Executive Brief Card */}
+                  {aiReview && canReview && (
+                    <div className="w-full rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="size-4 text-indigo-600 dark:text-indigo-400 shrink-0" strokeWidth={1.5} />
+                        <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                          Ket qua sang loc tu dong
+                        </span>
+                        <span className={cn(
+                          "ml-auto text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded-md border",
+                          aiReview.complianceScore >= 80
+                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                            : aiReview.complianceScore >= 50
+                            ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                            : "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                        )}>
+                          Diem tuan thu: {aiReview.complianceScore}/100
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {aiReview.executiveSummary}
+                      </p>
+                      {aiReview.flags.length > 0 && (
+                        <ul className="space-y-1">
+                          {aiReview.flags.map((flag, idx) => (
+                            <li key={idx} className={cn(
+                              "text-[10.5px] flex items-start gap-1.5",
+                              flag.type === "CRITICAL"
+                                ? "text-rose-600 dark:text-rose-400"
+                                : flag.type === "WARNING"
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-blue-600 dark:text-blue-400"
+                            )}>
+                              <AlertTriangle className="size-3 shrink-0 mt-0.5" strokeWidth={1.5} />
+                              <span>{flag.message}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {aiReview.suggestedAction === "QUICK_APPROVE" && (
+                        <div className="flex items-center gap-1.5 text-[10.5px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          <CheckCircle2 className="size-3" strokeWidth={1.5} />
+                          <span>Khuyen nghi: Duyet nhanh</span>
+                        </div>
+                      )}
+                      {aiReview.suggestedAction === "REQUEST_CHANGES" && (
+                        <div className="flex items-center gap-1.5 text-[10.5px] text-amber-600 dark:text-amber-400 font-medium">
+                          <RotateCcw className="size-3" strokeWidth={1.5} />
+                          <span>Khuyen nghi: Yeu cau bo sung</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {canReview ? (
+                    <div className="flex items-center gap-2 w-full">
+                      {aiReview?.suggestedAction === "QUICK_APPROVE" ? (
+                        <Button
+                          type="button"
+                          onClick={handleManagerApprove}
+                          className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                        >
+                          <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                          <span>Duyet nhanh (QUICK_APPROVE)</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          onClick={handleManagerApprove}
+                          className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                        >
+                          <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                          <span>Nghiem thu Dat (COMPLETED)</span>
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsRejectionModalOpen(true)}
+                        className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <RotateCcw className="size-3.5" strokeWidth={1.5} />
+                        <span>Tra lai Yeu cau Sua</span>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300 font-medium">
+                      <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
+                      <span>Da nop minh chung. Dang cho Truong don vi kiem tra va nghiem thu.</span>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* If task is COMPLETED */}
