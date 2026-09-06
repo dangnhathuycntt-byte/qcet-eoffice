@@ -338,6 +338,15 @@ export function processTriageDecision(
     rejectionReason?: string;
   }
 ): { success: boolean; updatedTask?: StaffTask; error?: string } {
+  // Precondition: task must be awaiting triage
+  if (task.triageStatus !== "PENDING_TRIAGE") {
+    return {
+      success: false,
+      error:
+        "Chi co the xu ly yeu cau phoi hop dang cho tiep nhan (PENDING_TRIAGE). Trang thai hien tai khong hop le.",
+    };
+  }
+
   // Only MANAGER of target department or ADMIN can triage
   const isTargetManager =
     actor.role === "ADMIN" ||

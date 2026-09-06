@@ -135,6 +135,7 @@ describe("Cross-Department Triage Queue Processing", () => {
     updatedAt: new Date().toISOString(),
     triageStatus: "PENDING_TRIAGE",
     triageSourceDept: "P_KHTC",
+    departmentCode: "K_CNTT",
   };
 
   test("rejects triage action if actor is not MANAGER or ADMIN of target department", () => {
@@ -146,6 +147,42 @@ describe("Cross-Department Triage Queue Processing", () => {
     );
     assert.equal(result.success, false);
     assert.ok(result.error?.includes("tham quyen"));
+  });
+
+  test("rejects triage action if MANAGER belongs to a different department than the task", () => {
+    const managerOtherDept: AuthUser = {
+      id: "user-mgr-khac",
+      name: "Truong phong khac",
+      email: "mgr-khac@qcet.edu.vn",
+      role: "MANAGER",
+      roleLabel: "Truong phong",
+      department: "Phong Dao tao",
+      departmentCode: "P_DT",
+    };
+    const result = processTriageDecision(
+      pendingTriageTask,
+      "ACCEPT",
+      managerOtherDept,
+      { targetAssigneeId: "staff-01", targetAssigneeName: "Le Van B" }
+    );
+    assert.equal(result.success, false);
+    assert.ok(result.error?.includes("tham quyen"));
+  });
+
+  test("rejects triage when task triageStatus is not PENDING_TRIAGE", () => {
+    const alreadyAccepted: StaffTask = {
+      ...pendingTriageTask,
+      triageStatus: "ACCEPTED",
+      status: "IN_PROGRESS",
+    };
+    const result = processTriageDecision(
+      alreadyAccepted,
+      "ACCEPT",
+      managerCNTT,
+      { targetAssigneeId: "staff-cntt-01", targetAssigneeName: "Nguyen Van C" }
+    );
+    assert.equal(result.success, false);
+    assert.ok(result.error?.includes("PENDING_TRIAGE"));
   });
 
   test("successfully accepts triage and reassigns task to internal staff", () => {
