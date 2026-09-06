@@ -6,6 +6,8 @@ import {
   AlertTriangle,
   FileCheck,
   ChevronRight,
+  ChevronUp,
+  X,
   Target,
   Calendar,
   Clock,
@@ -13,6 +15,8 @@ import {
   AlertCircle,
   Search,
   Filter,
+  Layers,
+  ArrowUpRight,
 } from "lucide-react";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import type {
@@ -28,7 +32,8 @@ import { cn } from "@/lib/utils";
 export interface ExecutiveDepartmentCommandCenterProps {
   tasks: SchoolTask[];
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
-  onSelectDepartment?: (deptId: string) => void;
+  onSelectDepartment?: (deptId: string | null) => void;
+  selectedDepartmentId?: string | null;
   className?: string;
   referenceDate?: string;
 }
@@ -141,6 +146,54 @@ export function getPriorityBadgeConfig(priority: "HIGH" | "MEDIUM" | "LOW"): {
 }
 
 /**
+ * Resolve task status semantic badge config
+ */
+export function getTaskStatusConfig(status: string): {
+  label: string;
+  className: string;
+} {
+  switch (status) {
+    case "COMPLETED":
+      return {
+        label: "Hoàn thành",
+        className:
+          "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900/60",
+      };
+    case "PENDING_EXECUTIVE_APPROVAL":
+      return {
+        label: "Chờ BGH duyệt",
+        className:
+          "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-900/60",
+      };
+    case "NEEDS_REVIEW":
+      return {
+        label: "Chờ duyệt",
+        className:
+          "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-900/60",
+      };
+    case "BLOCKED":
+      return {
+        label: "Bị nghẽn",
+        className:
+          "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/60",
+      };
+    case "NEW":
+      return {
+        label: "Mới tạo",
+        className:
+          "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700",
+      };
+    case "IN_PROGRESS":
+    default:
+      return {
+        label: "Đang thực hiện",
+        className:
+          "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-900/60",
+      };
+  }
+}
+
+/**
  * Helper to get name initials for leadership avatar
  */
 function getLeadershipInitials(name: string): string {
@@ -155,13 +208,96 @@ function getLeadershipInitials(name: string): string {
  */
 function formatDeadlineDisplay(dateStr?: string): string {
   if (!dateStr) return "Chưa đặt hạn";
-  const [y, m, d] = dateStr.split("-");
+  const [y, m, d] = dateStr.split("T")[0].split("-");
   if (d && m && y) return `${d}/${m}/${y}`;
   return dateStr;
 }
 
+/**
+ * Helper to get task progress percent
+ */
+function getTaskProgress(task: SchoolTask | StaffTask): number {
+  if (typeof (task as { progressPercent?: number }).progressPercent === "number") {
+    return (task as { progressPercent?: number }).progressPercent!;
+  }
+  if (task.status === "COMPLETED") return 100;
+  if (task.status === "IN_PROGRESS") return 50;
+  if (task.status === "NEEDS_REVIEW") return 90;
+  return 0;
+}
+
+/**
+ * Helper to get task category label
+ */
+function getTaskCategoryLabel(task: SchoolTask | StaffTask): string {
+  if ("categoryLabel" in task && task.categoryLabel) {
+    return task.categoryLabel;
+  }
+  if ("category" in task && task.category) {
+    return String(task.category);
+  }
+  return "Nhiệm vụ";
+}
+
+/**
+ * Helper to get task assignee display name
+ */
+function getTaskAssigneeName(task: SchoolTask | StaffTask): string | undefined {
+  if ("leadAssigneeName" in task && task.leadAssigneeName) {
+    return task.leadAssigneeName;
+  }
+  if ("assigneeName" in task && task.assigneeName) {
+    return task.assigneeName;
+  }
+  return undefined;
+}
+
+/**
+ * Split department tasks into school-level vs unit-internal tasks
+ */
+export function splitDepartmentTasks(
+  tasks: SchoolTask[],
+  summary?: ExecutiveDepartmentSummary
+): {
+  schoolTasks: (SchoolTask | StaffTask)[];
+  unitTasks: (SchoolTask | StaffTask)[];
+} {
+  const schoolTasks: (SchoolTask | StaffTask)[] = [];
+  const unitTasks: (SchoolTask | StaffTask)[] = [];
+
+  for (const task of tasks) {
+    const isExplicitUnit =
+      (task as unknown as { scope?: string }).scope === "UNIT";
+
+    if (isExplicitUnit) {
+      unitTasks.push(task);
+    } else {
+      schoolTasks.push(task);
+    }
+
+    // Also extract internal subTasks into unitTasks
+    if (Array.isArray(task.subTasks)) {
+      for (const sub of task.subTasks) {
+        if (!unitTasks.some((t) => t.id === sub.id)) {
+          const subTaskWithMeta = {
+            ...sub,
+            categoryLabel:
+              (sub as unknown as { categoryLabel?: string }).categoryLabel ||
+              task.categoryLabel ||
+              "Nội bộ",
+          };
+          unitTasks.push(subTaskWithMeta as unknown as StaffTask);
+        }
+      }
+    }
+  }
+
+  return { schoolTasks, unitTasks };
+}
+
 export interface DepartmentCommandCardProps {
   summary: ExecutiveDepartmentSummary;
+  isSelected?: boolean;
   onSelectDepartment?: (deptId: string) => void;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
 }
@@ -171,6 +307,7 @@ export interface DepartmentCommandCardProps {
  */
 export function DepartmentCommandCard({
   summary,
+  isSelected = false,
   onSelectDepartment,
   onSelectTask,
 }: DepartmentCommandCardProps) {
@@ -195,13 +332,15 @@ export function DepartmentCommandCard({
   return (
     <div
       data-slot="department-command-card"
+      data-selected={isSelected}
       onClick={handleCardClick}
       className={cn(
-        "group relative flex flex-col justify-between rounded-xl border bg-card p-4 transition-all duration-200",
+        "group relative flex flex-col justify-between rounded-xl border bg-card p-4 transition-all duration-200 cursor-pointer",
         "border-border/40 hover:border-border/80 hover:shadow-md hover:-translate-y-0.5",
         "focus-within:ring-2 focus-within:ring-primary/20",
         summary.ragStatus === "RED" && "border-rose-300/60 dark:border-rose-900/60",
-        summary.ragStatus === "AMBER" && "border-amber-300/60 dark:border-amber-900/60"
+        summary.ragStatus === "AMBER" && "border-amber-300/60 dark:border-amber-900/60",
+        isSelected && "ring-2 ring-primary/40 border-primary/60 shadow-md bg-accent/15"
       )}
     >
       {/* 1. Header: Department Name in UPPERCASE, Head of Dept with avatar/title, RAG Alert Badge */}
@@ -337,7 +476,12 @@ export function DepartmentCommandCard({
                   ? "bg-amber-500"
                   : "bg-rose-500"
               )}
-              style={{ width: `${Math.min(100, Math.max(0, summary.metrics.completionRate))}%` }}
+              style={{
+                width: `${Math.min(
+                  100,
+                  Math.max(0, summary.metrics.completionRate)
+                )}%`,
+              }}
             />
           </div>
         </div>
@@ -388,16 +532,343 @@ export function DepartmentCommandCard({
               e.stopPropagation();
               onSelectDepartment?.(summary.departmentId);
             }}
-            className="w-full h-8 text-xs font-medium justify-between text-foreground border-border/60 hover:bg-accent hover:border-primary/40 group-hover:border-primary/50 transition-colors"
+            className={cn(
+              "w-full h-8 text-xs font-medium justify-between text-foreground border-border/60 transition-colors",
+              isSelected
+                ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
+                : "hover:bg-accent hover:border-primary/40 group-hover:border-primary/50"
+            )}
           >
             <span>Soi chi tiết việc đơn vị</span>
             <ChevronRight
               size={14}
               strokeWidth={1.5}
-              className="text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all"
+              className={cn(
+                "transition-all",
+                isSelected
+                  ? "text-primary-foreground translate-x-0.5"
+                  : "text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5"
+              )}
             />
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+export interface DepartmentDrillDownPanelProps {
+  summary: ExecutiveDepartmentSummary;
+  onClose: () => void;
+  onSelectTask?: (task: SchoolTask | StaffTask) => void;
+  referenceDate?: string;
+}
+
+/**
+ * Inline Department Drill-Down Panel
+ */
+export function DepartmentDrillDownPanel({
+  summary,
+  onClose,
+  onSelectTask,
+}: DepartmentDrillDownPanelProps) {
+  const [activeTab, setActiveTab] = React.useState<"SCHOOL" | "UNIT">("SCHOOL");
+  const ragConfig = getRAGBadgeConfig(summary.ragStatus);
+  const initials = getLeadershipInitials(summary.headOfDepartment.name);
+
+  // Keyboard accessibility: Escape closes drill-down panel
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const { schoolTasks, unitTasks } = React.useMemo(() => {
+    return splitDepartmentTasks(summary.tasks, summary);
+  }, [summary]);
+
+  const displayedTasks = activeTab === "SCHOOL" ? schoolTasks : unitTasks;
+
+  return (
+    <div
+      id="department-drilldown-panel"
+      data-slot="department-drilldown-panel"
+      className="space-y-4 rounded-xl border border-primary/30 bg-card p-4 shadow-sm md:p-5 transition-all duration-200"
+    >
+      {/* 1. Header: Department title, Head of Department badge, and Collapse button */}
+      <div className="flex flex-col gap-3 border-b border-border/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 mt-0.5">
+            <Building2 size={20} strokeWidth={1.5} />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                {summary.departmentCode}
+              </span>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.2 text-[10px] font-mono font-semibold",
+                  ragConfig.className
+                )}
+              >
+                <span
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    ragConfig.dotColor,
+                    ragConfig.pulse && "animate-pulse"
+                  )}
+                />
+                {ragConfig.label}
+              </span>
+            </div>
+            <h3 className="text-base font-bold uppercase tracking-wide text-foreground">
+              {summary.departmentName}
+            </h3>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          {/* Head of Department badge */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-mono text-[10px] font-bold">
+              {initials}
+            </div>
+            <span className="font-semibold text-foreground">
+              {summary.headOfDepartment.name}
+            </span>
+            <span className="text-muted-foreground">•</span>
+            <span className="text-muted-foreground">
+              {summary.headOfDepartment.title}
+            </span>
+          </div>
+
+          {/* Button: "Thu gọn / Quay lại toàn trường" */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            className="h-8 gap-1.5 text-xs font-medium cursor-pointer border-border/60 hover:bg-accent hover:text-foreground"
+          >
+            <ChevronUp size={14} strokeWidth={1.5} />
+            <span>Thu gọn / Quay lại toàn trường</span>
+          </Button>
+
+          {/* Quick close X button */}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Đóng bảng chi tiết"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+          >
+            <X size={16} strokeWidth={1.5} />
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Summary Metric pill row for this department */}
+      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-muted/50 px-2.5 py-1 text-xs border border-border/40">
+          <span className="text-muted-foreground">Tổng số:</span>
+          <span className="font-mono tabular-nums font-bold text-foreground">
+            {summary.metrics.totalTasks}
+          </span>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-sky-50 dark:bg-sky-950/40 px-2.5 py-1 text-xs border border-sky-200 dark:border-sky-900/60 text-sky-800 dark:text-sky-300">
+          <span>Đang làm:</span>
+          <span className="font-mono tabular-nums font-bold">
+            {summary.metrics.inProgress}
+          </span>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 text-xs border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-300">
+          <span>Hoàn thành:</span>
+          <span className="font-mono tabular-nums font-bold">
+            {summary.metrics.completed}
+          </span>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 text-xs border border-amber-200 dark:border-amber-900/60 text-amber-800 dark:text-amber-300">
+          <span>Sắp hạn:</span>
+          <span className="font-mono tabular-nums font-bold">
+            {summary.metrics.dueSoon}
+          </span>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 dark:bg-rose-950/40 px-2.5 py-1 text-xs border border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-300">
+          <span>Trễ hạn:</span>
+          <span className="font-mono tabular-nums font-bold">
+            {summary.metrics.overdue}
+          </span>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-muted/50 px-2.5 py-1 text-xs border border-border/40">
+          <span className="text-muted-foreground">Tiến độ chung:</span>
+          <span className="font-mono tabular-nums font-bold text-foreground">
+            {summary.metrics.completionRate}%
+          </span>
+        </div>
+        {summary.pendingApprovalCount > 0 && (
+          <div className="inline-flex items-center gap-1.5 rounded-md bg-purple-50 dark:bg-purple-950/40 px-2.5 py-1 text-xs border border-purple-200 dark:border-purple-900/60 text-purple-800 dark:text-purple-300">
+            <span>Chờ BGH duyệt:</span>
+            <span className="font-mono tabular-nums font-bold">
+              {summary.pendingApprovalCount}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Two sub-sections / tabs: Cấp Trường vs Nội bộ */}
+      <div className="space-y-3 pt-2">
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-border/40 pb-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("SCHOOL")}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+              activeTab === "SCHOOL"
+                ? "bg-background text-foreground shadow-xs border border-border/80"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Building2 size={14} strokeWidth={1.5} className="text-primary" />
+            <span>Nhiệm vụ Cấp Trường giao cho Đơn vị</span>
+            <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-[11px] tabular-nums text-foreground border border-border/40">
+              {schoolTasks.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("UNIT")}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
+              activeTab === "UNIT"
+                ? "bg-background text-foreground shadow-xs border border-border/80"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Layers size={14} strokeWidth={1.5} className="text-primary" />
+            <span>Nhiệm vụ Nội bộ Đơn vị triển khai</span>
+            <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-[11px] tabular-nums text-foreground border border-border/40">
+              {unitTasks.length}
+            </span>
+          </button>
+        </div>
+
+        {/* Task list rows */}
+        {displayedTasks.length > 0 ? (
+          <div className="space-y-2">
+            {displayedTasks.map((task) => {
+              const categoryLabel = getTaskCategoryLabel(task);
+              const statusConfig = getTaskStatusConfig(task.status);
+              const progress = getTaskProgress(task);
+              const assignee = getTaskAssigneeName(task);
+
+              return (
+                <div
+                  key={task.id}
+                  data-slot="drilldown-task-row"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      onSelectTask?.(task);
+                    }
+                  }}
+                  onClick={() => onSelectTask?.(task)}
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-border/40 bg-card p-3 transition-colors hover:border-border/80 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer"
+                >
+                  {/* Left Info */}
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center rounded border border-border/50 bg-muted/60 px-1.5 py-0.2 text-[10px] font-medium text-muted-foreground">
+                        {categoryLabel}
+                      </span>
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full border px-2 py-0.2 text-[10px] font-medium font-mono",
+                          statusConfig.className
+                        )}
+                      >
+                        {statusConfig.label}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <Calendar size={12} strokeWidth={1.5} />
+                        <span className="font-mono tabular-nums">
+                          Hạn: {formatDeadlineDisplay(task.dueDate)}
+                        </span>
+                      </span>
+                      {assignee && (
+                        <span className="text-[11px] text-muted-foreground truncate max-w-[160px]">
+                          • {assignee}
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-xs font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                      {task.title}
+                    </h4>
+                  </div>
+
+                  {/* Right Info: Progress bar & Action */}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-2 min-w-[120px] max-w-[150px]">
+                      <div className="h-1.5 w-20 sm:w-24 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn(
+                            "h-full transition-all duration-300",
+                            progress >= 80
+                              ? "bg-emerald-500"
+                              : progress >= 50
+                              ? "bg-amber-500"
+                              : "bg-rose-500"
+                          )}
+                          style={{
+                            width: `${Math.min(100, Math.max(0, progress))}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="font-mono tabular-nums text-xs font-semibold text-foreground w-9 text-right">
+                        {progress}%
+                      </span>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectTask?.(task);
+                      }}
+                      className="h-7 px-2.5 text-xs font-medium cursor-pointer border-border/60 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all shrink-0"
+                    >
+                      <span>Chi tiết</span>
+                      <ArrowUpRight
+                        size={12}
+                        strokeWidth={1.5}
+                        className="ml-1"
+                      />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 py-8 text-center bg-muted/20">
+            <Building2
+              size={24}
+              strokeWidth={1.5}
+              className="text-muted-foreground/60 mb-2"
+            />
+            <p className="text-xs font-medium text-muted-foreground">
+              {activeTab === "SCHOOL"
+                ? "Đơn vị chưa có nhiệm vụ cấp trường được giao."
+                : "Chưa có nhiệm vụ nội bộ được tạo cho đơn vị này."}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -410,12 +881,32 @@ export function ExecutiveDepartmentCommandCenter({
   tasks,
   onSelectTask,
   onSelectDepartment,
+  selectedDepartmentId,
   className,
   referenceDate = "2026-09-06",
 }: ExecutiveDepartmentCommandCenterProps) {
   const [activeFilter, setActiveFilter] =
     React.useState<ExecutiveTriageFilter>("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [internalSelectedDeptId, setInternalSelectedDeptId] =
+    React.useState<string | null>(null);
+
+  const activeDeptId =
+    selectedDepartmentId !== undefined
+      ? selectedDepartmentId
+      : internalSelectedDeptId;
+
+  const drillDownRef = React.useRef<HTMLDivElement | null>(null);
+
+  const handleSelectDepartment = React.useCallback(
+    (deptId: string | null) => {
+      if (selectedDepartmentId === undefined) {
+        setInternalSelectedDeptId(deptId);
+      }
+      onSelectDepartment?.(deptId);
+    },
+    [selectedDepartmentId, onSelectDepartment]
+  );
 
   // Aggregate 12 departments
   const allSummaries = React.useMemo(() => {
@@ -429,7 +920,10 @@ export function ExecutiveDepartmentCommandCenter({
 
   // Filtered summaries
   const displayedSummaries = React.useMemo(() => {
-    let filtered = filterExecutiveDepartmentSummaries(allSummaries, activeFilter);
+    let filtered = filterExecutiveDepartmentSummaries(
+      allSummaries,
+      activeFilter
+    );
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -444,6 +938,22 @@ export function ExecutiveDepartmentCommandCenter({
 
     return filtered;
   }, [allSummaries, activeFilter, searchQuery]);
+
+  // Find currently selected department summary
+  const selectedSummary = React.useMemo(() => {
+    if (!activeDeptId) return null;
+    return allSummaries.find((s) => s.departmentId === activeDeptId) || null;
+  }, [allSummaries, activeDeptId]);
+
+  // Smooth scroll to drill-down panel when opened
+  React.useEffect(() => {
+    if (activeDeptId && drillDownRef.current) {
+      drillDownRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [activeDeptId]);
 
   return (
     <div
@@ -560,7 +1070,10 @@ export function ExecutiveDepartmentCommandCenter({
             <DepartmentCommandCard
               key={summary.departmentId}
               summary={summary}
-              onSelectDepartment={onSelectDepartment}
+              isSelected={summary.departmentId === activeDeptId}
+              onSelectDepartment={() =>
+                handleSelectDepartment(summary.departmentId)
+              }
               onSelectTask={onSelectTask}
             />
           ))}
@@ -576,7 +1089,8 @@ export function ExecutiveDepartmentCommandCenter({
             Không tìm thấy đơn vị phù hợp
           </h4>
           <p className="text-xs text-muted-foreground max-w-sm mt-1">
-            Không có Khoa/Phòng nào thỏa mãn điều kiện lọc hiện tại. Thử chuyển về lăng kính "Tất cả đơn vị" hoặc xóa từ khóa tìm kiếm.
+            Không có Khoa/Phòng nào thỏa mãn điều kiện lọc hiện tại. Thử chuyển
+            về lăng kính "Tất cả đơn vị" hoặc xóa từ khóa tìm kiếm.
           </p>
           <Button
             type="button"
@@ -590,6 +1104,18 @@ export function ExecutiveDepartmentCommandCenter({
           >
             Đặt lại bộ lọc
           </Button>
+        </div>
+      )}
+
+      {/* 3. Inline Department Drill-Down Panel */}
+      {selectedSummary && (
+        <div ref={drillDownRef} className="mt-4 animate-in fade-in-50 duration-200">
+          <DepartmentDrillDownPanel
+            summary={selectedSummary}
+            onClose={() => handleSelectDepartment(null)}
+            onSelectTask={onSelectTask}
+            referenceDate={referenceDate}
+          />
         </div>
       )}
     </div>
