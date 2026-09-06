@@ -2,12 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
-  Plus,
   Sun,
   Moon,
   ChevronDown,
@@ -16,12 +15,15 @@ import {
   Settings,
   LogOut,
   CheckCircle2,
-  Clock,
+  Search,
+  Bell,
+  FlaskConical,
+  Check,
 } from "lucide-react";
 import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
 import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth-context";
-import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
+import { UserRole } from "@/types/auth";
 import { UserProfileModal } from "@/components/auth/user-profile-modal";
 import {
   CreateTaskModal,
@@ -39,81 +41,42 @@ export function getInitials(name: string): string {
   return (first + last).toUpperCase();
 }
 
-export function LiveClock() {
-  const [timeStr, setTimeStr] = React.useState<string>("");
-
-  React.useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setTimeStr(
-        now.toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        })
-      );
-    };
-    updateTime();
-    const timer = setInterval(updateTime, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  if (!timeStr) return null;
+function TopbarBreadcrumbs({ pathname }: { pathname: string }) {
+  const searchParams = useSearchParams();
+  const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
 
   return (
-    <div className="hidden xl:flex items-center gap-1.5 text-xs font-mono tabular-nums text-muted-foreground select-none">
-      <Clock size={13} strokeWidth={1.5} className="text-muted-foreground/80 shrink-0" />
-      <span>{timeStr}</span>
+    <div className="flex items-center min-w-0">
+      <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
+        {rootTitle}
+      </span>
+      <ChevronRight
+        size={12}
+        className="text-muted-foreground/50 hidden sm:inline mx-1 shrink-0"
+      />
+      <span className="text-xs font-semibold text-foreground truncate max-w-[180px] sm:max-w-none">
+        {pageTitle}
+      </span>
     </div>
   );
 }
 
-export function ZoomToggle() {
-  const [zoomLevel, setZoomLevel] = React.useState<number>(1.0);
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-    try {
-      const saved = localStorage.getItem("qcet_ui_zoom");
-      if (saved) {
-        const z = parseFloat(saved);
-        if (!isNaN(z)) {
-          setZoomLevel(z);
-          document.documentElement.style.zoom = String(z);
-        }
-      } else {
-        document.documentElement.style.zoom = "1.0";
-      }
-    } catch {
-      // safe fallback
-    }
-  }, []);
-
-  const toggleZoom = () => {
-    const nextZoom = zoomLevel === 1.2 ? 1.0 : 1.2;
-    setZoomLevel(nextZoom);
-    try {
-      document.documentElement.style.zoom = String(nextZoom);
-      localStorage.setItem("qcet_ui_zoom", String(nextZoom));
-    } catch {
-      // safe fallback
-    }
-  };
+function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
+  const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/");
 
   return (
-    <button
-      type="button"
-      onClick={toggleZoom}
-      className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary/80 text-xs font-medium text-foreground transition-colors cursor-pointer active:scale-[0.98]"
-      title="Bật / Tắt phóng to giao diện (100% / 120%)"
-    >
-      <span className="text-[10px] text-muted-foreground font-normal">Zoom</span>
-      <span className="font-mono text-[11px] text-foreground font-semibold tabular-nums">
-        {mounted ? `${Math.round(zoomLevel * 100)}%` : "100%"}
+    <div className="flex items-center min-w-0">
+      <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
+        {rootTitle}
       </span>
-    </button>
+      <ChevronRight
+        size={12}
+        className="text-muted-foreground/50 hidden sm:inline mx-1 shrink-0"
+      />
+      <span className="text-xs font-semibold text-foreground truncate max-w-[180px] sm:max-w-none">
+        {pageTitle}
+      </span>
+    </div>
   );
 }
 
@@ -121,14 +84,12 @@ export function AppTopbar() {
   const pathname = usePathname();
   const { isCollapsed, toggleCollapse, toggleMobile } = useSidebar();
   const { resolved, toggleTheme } = useTheme();
-  const { user, logout, setIsProfileModalOpen } = useAuth();
+  const { user, switchRole, logout, setIsProfileModalOpen } = useAuth();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
-
-  const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/");
 
   // Close profile dropdown on outside click
   React.useEffect(() => {
@@ -163,7 +124,11 @@ export function AppTopbar() {
     return () => window.removeEventListener("qcet:open-create-task", handleOpenCreateTask);
   }, []);
 
-  // Global keyboard shortcuts: '⌘K' / 'Ctrl+K' or 'N' (outside form inputs) to quick-create task
+  const handleOpenSearch = React.useCallback(() => {
+    window.dispatchEvent(new CustomEvent("qcet:open-command-search"));
+  }, []);
+
+  // Global keyboard shortcuts: '⌘K' / 'Ctrl+K' to quick search
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -176,17 +141,14 @@ export function AppTopbar() {
       ) {
         return;
       }
-      if (
-        ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) ||
-        ((e.key === "n" || e.key === "N") && !e.metaKey && !e.ctrlKey && !e.altKey)
-      ) {
+      if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setIsCreateModalOpen(true);
+        handleOpenSearch();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [handleOpenSearch]);
 
   const handleCreateTaskFromTopbar = (data: CreateTaskFormData) => {
     window.dispatchEvent(
@@ -195,13 +157,19 @@ export function AppTopbar() {
     setIsCreateModalOpen(false);
   };
 
+  const devRoles: Array<{ role: UserRole; label: string; desc: string }> = [
+    { role: "ADMIN", label: "Ban Giám hiệu", desc: "BGH QCET (Toàn quyền)" },
+    { role: "MANAGER", label: "Trưởng đơn vị", desc: "Lãnh đạo Phòng / Khoa" },
+    { role: "STAFF", label: "Chuyên viên", desc: "Giảng viên / Chuyên viên" },
+  ];
+
   return (
     <header
       data-slot="app-topbar"
       className="sticky top-0 z-30 w-full h-[52px] border-b border-border/50 bg-background/80 backdrop-blur-md transition-colors"
     >
       <div className="h-full w-full px-3.5 sm:px-6 flex items-center justify-between gap-3">
-        {/* Left Section: Mobile Menu, Desktop Collapse Toggle, Dynamic Breadcrumbs */}
+        {/* Left Zone: Mobile Menu, Desktop Collapse Toggle, Dynamic Breadcrumbs */}
         <div className="flex items-center min-w-0">
           {/* Mobile Menu Trigger (< 768px) */}
           <Button
@@ -227,40 +195,46 @@ export function AppTopbar() {
           </Button>
 
           {/* Dynamic Breadcrumbs */}
-          <div className="flex items-center min-w-0">
-            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
-              {rootTitle}
-            </span>
-            <ChevronRight
-              size={12}
-              className="text-muted-foreground/50 hidden sm:inline mx-1 shrink-0"
-            />
-            <span className="text-xs font-semibold text-foreground truncate max-w-[200px] sm:max-w-none">
-              {pageTitle}
-            </span>
-          </div>
+          <React.Suspense fallback={<TopbarBreadcrumbsFallback pathname={pathname} />}>
+            <TopbarBreadcrumbs pathname={pathname} />
+          </React.Suspense>
         </div>
 
-        {/* Right Section: LiveClock, ZoomToggle, RoleSwitcherPill, Create Task, Theme Switcher, Avatar */}
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          <LiveClock />
-          <ZoomToggle />
-          <RoleSwitcherPill />
-
-          {/* Quick Create Task Button */}
-          <Button
+        {/* Center Zone: Global Command / Quick Search */}
+        <div className="flex items-center justify-center flex-1 max-w-md px-2">
+          <button
             type="button"
-            size="sm"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs transition-all cursor-pointer active:scale-[0.98]"
-            title="Giao việc mới (phím ⌘K hoặc N)"
+            onClick={handleOpenSearch}
+            className="hidden sm:flex items-center justify-between w-64 md:w-80 lg:w-96 h-8 px-2.5 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/60 text-muted-foreground transition-colors cursor-pointer group"
+            title="Tìm nhanh công việc, nhân sự... (phím ⌘K hoặc Ctrl+K)"
+            aria-label="Tìm nhanh công việc, nhân sự"
           >
-            <Plus size={14} strokeWidth={1.5} className="shrink-0" />
-            <span className="hidden sm:inline font-medium">Giao việc</span>
-            <kbd className="ml-0.5 hidden items-center gap-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1 py-0.5 text-[10px] font-mono leading-none sm:inline-flex opacity-90">
+            <div className="flex items-center gap-2 min-w-0">
+              <Search
+                size={14}
+                strokeWidth={1.5}
+                className="size-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors"
+              />
+              <span className="text-xs truncate">Tìm nhanh công việc, nhân sự...</span>
+            </div>
+            <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60 bg-background/80 text-muted-foreground group-hover:text-foreground shrink-0">
               ⌘K
             </kbd>
-          </Button>
+          </button>
+        </div>
+
+        {/* Right Zone: Notification Bell, Theme Switcher & User Profile */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          {/* Notification Bell */}
+          <Link
+            href="/notifications"
+            className="relative flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            title="Thông báo điều hành"
+            aria-label="Thông báo điều hành"
+          >
+            <Bell size={16} strokeWidth={1.5} className="size-4" />
+            <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
+          </Link>
 
           {/* Theme Switcher Button */}
           <Button
@@ -269,6 +243,7 @@ export function AppTopbar() {
             size="icon-sm"
             onClick={toggleTheme}
             aria-label="Chuyển đổi giao diện sáng/tối"
+            title="Chuyển đổi giao diện sáng/tối"
             className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
           >
             {resolved === "dark" ? (
@@ -287,7 +262,7 @@ export function AppTopbar() {
               title={`Hồ sơ cá nhân: ${user.name}`}
               aria-expanded={isProfileDropdownOpen}
             >
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-xs group-hover:ring-1 group-hover:ring-primary/40 transition-all">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-2xs">
                 {getInitials(user.name)}
               </div>
               <div className="hidden text-left xl:block">
@@ -353,7 +328,7 @@ export function AppTopbar() {
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Primary Actions */}
                 <div className="mt-2 space-y-0.5">
                   <button
                     type="button"
@@ -363,7 +338,7 @@ export function AppTopbar() {
                     }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
                   >
-                    <Settings size={14} strokeWidth={1.5} className="text-muted-foreground" />
+                    <Settings size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
                     <span>Hồ sơ cá nhân</span>
                   </button>
 
@@ -372,10 +347,50 @@ export function AppTopbar() {
                     onClick={() => setIsProfileDropdownOpen(false)}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
                   >
-                    <User size={14} strokeWidth={1.5} className="text-muted-foreground" />
+                    <User size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
                     <span>Đổi tài khoản / Đăng nhập khác</span>
                   </Link>
+                </div>
 
+                {/* Embedded Dev Role Testing Section */}
+                <div className="my-2 border-t border-border/50 pt-2">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground">
+                    <FlaskConical size={13} strokeWidth={1.5} className="text-amber-500 shrink-0" />
+                    <span>Chế độ kiểm thử vai trò (Dev)</span>
+                  </div>
+                  <div className="mt-1 space-y-0.5">
+                    {devRoles.map((r) => {
+                      const isActive = user.role === r.role;
+                      return (
+                        <button
+                          key={r.role}
+                          type="button"
+                          onClick={() => {
+                            switchRole(r.role);
+                            setIsProfileDropdownOpen(false);
+                          }}
+                          className={cn(
+                            "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors cursor-pointer text-left active:scale-[0.98]",
+                            isActive
+                              ? "bg-secondary text-foreground font-semibold"
+                              : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                          )}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-xs leading-tight font-medium text-foreground truncate">{r.label}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{r.desc}</p>
+                          </div>
+                          {isActive && (
+                            <Check size={13} strokeWidth={2} className="text-primary shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Divider & Logout */}
+                <div className="border-t border-border/50 pt-1.5 mt-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -384,7 +399,7 @@ export function AppTopbar() {
                     }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer text-left active:scale-[0.98]"
                   >
-                    <LogOut size={14} strokeWidth={1.5} />
+                    <LogOut size={14} strokeWidth={1.5} className="shrink-0" />
                     <span>Đăng xuất</span>
                   </button>
                 </div>
