@@ -1,18 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import {
-  CheckCircle2,
-  ShieldCheck,
-  AlertCircle,
+  ShieldAlert,
   X,
+  Database,
   ArrowRight,
-  User,
-  Sparkles,
-  Lock,
+  ExternalLink,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 // Official Google Multi-Color SVG Icon
@@ -48,106 +43,25 @@ interface GoogleLoginButtonProps {
   className?: string;
 }
 
-export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonProps) {
-  const router = useRouter();
-  const { loginWithGoogle } = useAuth();
-
+export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [customEmail, setCustomEmail] = React.useState("");
-  const [customName, setCustomName] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  // Common quick-login accounts for the school
-  const SUGGESTED_ACCOUNTS = [
-    {
-      name: "Đặng Nhật Huy",
-      email: "dangnhathuy@cdktcnqn.edu.vn",
-      roleDesc: "Cán bộ / Giảng viên nhà trường",
-      badge: "Mới / Auto-provision",
-    },
-    {
-      name: "TS. Nguyễn Văn Tuấn",
-      email: "bgh@cdktcnqn.edu.vn",
-      roleDesc: "Ban Giám hiệu - Hiệu trưởng",
-      badge: "Quản trị cấp cao",
-    },
-  ];
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-  const handleSelectAccount = (accountEmail: string, accountName: string) => {
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      loginWithGoogle({
-        email: accountEmail,
-        name: accountName,
-      });
-
-      if (onSuccess) onSuccess();
-
-      setTimeout(() => {
-        router.push("/");
-      }, 300);
-    } catch (err: unknown) {
-      setIsLoading(false);
-      setErrorMessage("Đăng nhập không thành công. Vui lòng thử lại.");
-    }
-  };
-
-  const handleCustomGoogleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-
-    const trimmed = customEmail.trim().toLowerCase();
-    if (!trimmed) {
-      setErrorMessage("Vui lòng nhập địa chỉ email Google công vụ của trường");
+  const handleClick = () => {
+    if (!googleClientId) {
+      setIsModalOpen(true);
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmed)) {
-      setErrorMessage("Địa chỉ email không đúng định dạng");
-      return;
-    }
+    // When GOOGLE_CLIENT_ID is configured, redirect to Google OAuth
+    const redirectUri = typeof window !== "undefined" ? `${window.location.origin}/api/auth/callback/google` : "";
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&response_type=code&scope=openid%20email%20profile&access_type=offline&prompt=consent`;
 
-    // Educational domain check - verify institution email
-    const isValidSchoolDomain =
-      trimmed.endsWith("@cdktcnqn.edu.vn") ||
-      trimmed.endsWith("@qcet.edu.vn") ||
-      trimmed.endsWith(".edu.vn");
-
-    if (!isValidSchoolDomain) {
-      setErrorMessage(
-        "Hệ thống chỉ chấp nhận tài khoản Google Workspace thuộc tên miền công vụ nhà trường (@cdktcnqn.edu.vn hoặc @qcet.edu.vn)."
-      );
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const emailPrefix = trimmed.split("@")[0];
-      const displayName =
-        customName.trim() ||
-        emailPrefix
-          .replace(/[._-]+/g, " ")
-          .split(" ")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ");
-
-      loginWithGoogle({
-        email: trimmed,
-        name: displayName,
-      });
-
-      if (onSuccess) onSuccess();
-
-      setTimeout(() => {
-        router.push("/");
-      }, 300);
-    } catch {
-      setIsLoading(false);
-      setErrorMessage("Có lỗi xảy ra khi xác thực Google. Vui lòng thử lại.");
+    if (typeof window !== "undefined") {
+      window.location.href = authUrl;
     }
   };
 
@@ -156,7 +70,7 @@ export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonPro
       {/* Google Login Trigger Button */}
       <button
         type="button"
-        onClick={() => setIsModalOpen(true)}
+        onClick={handleClick}
         className={cn(
           "group relative flex w-full items-center justify-center gap-3 rounded-xl border border-border/80 bg-background px-4 py-3 text-xs font-semibold text-foreground shadow-xs transition-all hover:bg-secondary/70 hover:border-primary/40 hover:shadow-card active:scale-[0.99] cursor-pointer",
           className
@@ -164,176 +78,90 @@ export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonPro
       >
         <GoogleIcon className="size-5 shrink-0 transition-transform group-hover:scale-105" />
         <span className="font-bold text-foreground">
-          Đăng nhập trực tiếp với Google Workspace
+          Đăng nhập với Google Workspace
         </span>
-        <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+        <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 border border-blue-500/20">
           @cdktcnqn.edu.vn
         </span>
       </button>
 
-      {/* Google OAuth Modal Dialog */}
+      {/* Guidance Dialog when GOOGLE_CLIENT_ID is unconfigured */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
-            onClick={() => !isLoading && setIsModalOpen(false)}
+            className="fixed inset-0"
+            onClick={() => setIsModalOpen(false)}
+            aria-hidden="true"
           />
 
-          {/* Dialog Body */}
-          <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="flex items-start justify-between border-b border-border/60 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-muted/60 border border-border/80">
-                  <GoogleIcon className="size-6" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">
-                    Cổng xác thực Google Workspace
-                  </h3>
-                  <p className="text-[11.5px] text-muted-foreground">
-                    Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (QCET)
-                  </p>
-                </div>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="google-dialog-title"
+            className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150"
+          >
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+              aria-label="Đóng thông báo"
+            >
+              <X className="size-4" strokeWidth={1.5} />
+            </button>
+
+            <div className="flex items-start gap-3.5 mb-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <ShieldAlert className="size-5" strokeWidth={1.5} />
               </div>
+              <div>
+                <h3
+                  id="google-dialog-title"
+                  className="text-sm font-bold text-foreground"
+                >
+                  Thông báo xác thực Google Workspace
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Cấu hình dịch vụ định danh liên kết trường
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs leading-relaxed text-foreground">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 text-amber-900 dark:text-amber-200">
+                <p className="font-semibold">
+                  Hệ thống đang chạy CSDL PostgreSQL nội bộ. Để kích hoạt đăng nhập Google Workspace trường, vui lòng cấu hình GOOGLE_CLIENT_ID trong .env.local.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border/80 bg-secondary/30 p-3 space-y-2">
+                <div className="flex items-center gap-2 font-medium text-foreground">
+                  <Database className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+                  <span>Hướng dẫn đăng nhập hiện hành:</span>
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1 text-[11.5px]">
+                  <li>
+                    Sử dụng form đăng nhập email / mật khẩu bên dưới với các tài khoản nội bộ nhà trường.
+                  </li>
+                  <li>
+                    Hoặc click trực tiếp các tài khoản kiểm thử hạt nhân (Ban Giám hiệu, Trưởng đơn vị, Chuyên viên) để truy cập nhanh.
+                  </li>
+                  <li>
+                    Mật khẩu mặc định cho toàn bộ tài khoản nội bộ là: <span className="font-mono font-semibold text-foreground">Qcet@2026</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                disabled={isLoading}
-                aria-label="Đóng"
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
               >
-                <X className="size-4" />
+                <span>Đã hiểu, quay lại đăng nhập</span>
+                <ArrowRight className="size-3.5" strokeWidth={1.5} />
               </button>
-            </div>
-
-            {/* Error banner if any */}
-            {errorMessage && (
-              <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/90 p-3 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 animate-in fade-in">
-                <AlertCircle className="size-4 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
-                <div className="flex-1 leading-snug">{errorMessage}</div>
-              </div>
-            )}
-
-            {/* Account Selection Area */}
-            <div className="mt-4 space-y-3">
-              <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Chọn tài khoản công vụ của bạn:
-              </div>
-
-              {/* Suggested Accounts */}
-              <div className="space-y-2">
-                {SUGGESTED_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => handleSelectAccount(acc.email, acc.name)}
-                    disabled={isLoading}
-                    className="group flex w-full items-center justify-between rounded-xl border border-border/70 bg-background/80 p-3 text-left transition-all hover:border-primary/50 hover:bg-primary/[0.04] hover:shadow-xs active:scale-[0.99] cursor-pointer disabled:opacity-60"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 text-xs font-bold">
-                        {acc.name
-                          .split(" ")
-                          .slice(-2)
-                          .map((w) => w[0])
-                          .join("")}
-                      </div>
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-foreground">
-                            {acc.name}
-                          </span>
-                          <span className="rounded bg-secondary px-1.5 py-0.5 text-[9.5px] font-semibold text-muted-foreground border border-border/70">
-                            {acc.badge}
-                          </span>
-                        </div>
-                        <p className="text-[11px] font-mono text-muted-foreground">
-                          {acc.email}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center pl-2">
-                      <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                        {isLoading ? "Đang vào..." : "Tiếp tục"}
-                        <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Divider */}
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border/60" />
-                </div>
-                <div className="relative flex justify-center text-[10.5px] uppercase tracking-wider font-semibold">
-                  <span className="bg-card px-2.5 text-muted-foreground">
-                    Hoặc nhập email trường khác
-                  </span>
-                </div>
-              </div>
-
-              {/* Form to enter any other school email */}
-              <form onSubmit={handleCustomGoogleSubmit} className="space-y-3">
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="customGoogleEmail"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Email công vụ Google (@cdktcnqn.edu.vn)
-                  </label>
-                  <input
-                    id="customGoogleEmail"
-                    type="email"
-                    value={customEmail}
-                    onChange={(e) => setCustomEmail(e.target.value)}
-                    placeholder="vidu: hoten@cdktcnqn.edu.vn"
-                    className="block w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="customGoogleName"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Họ và tên cán bộ (tùy chọn)
-                  </label>
-                  <input
-                    id="customGoogleName"
-                    type="text"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    placeholder="Để trống hệ thống sẽ tự nhận diện theo email"
-                    className="block w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 px-4 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
-                >
-                  {isLoading ? (
-                    <span>Đang xác thực Google...</span>
-                  ) : (
-                    <>
-                      <span>Xác thực & Tạo tài khoản tự động</span>
-                      <ArrowRight className="size-3.5" />
-                    </>
-                  )}
-                </button>
-              </form>
-
-              {/* Security info footer */}
-              <div className="mt-4 flex items-center justify-center gap-1.5 text-center text-[10.5px] text-muted-foreground">
-                <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Xác thực an toàn qua giao thức Google Identity OAuth 2.0</span>
-              </div>
             </div>
           </div>
         </div>
