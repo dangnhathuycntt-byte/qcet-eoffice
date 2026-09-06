@@ -115,7 +115,7 @@ export function UserProfileModal() {
                 </h3>
                 {user.emailVerified && (
                   <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    <CheckCircle2 className="size-3" />
+                    <CheckCircle2 className="size-3" strokeWidth={1.5} />
                     Đã xác thực Google
                   </span>
                 )}
@@ -132,14 +132,14 @@ export function UserProfileModal() {
             aria-label="Đóng"
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
           >
-            <X className="size-4" />
+            <X className="size-4" strokeWidth={1.5} />
           </button>
         </div>
 
         {/* First Login Welcome Banner */}
         {user.isFirstLogin && (
           <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary/[0.06] p-3 text-xs text-foreground animate-in fade-in">
-            <Sparkles className="size-4 shrink-0 text-primary mt-0.5" />
+            <Sparkles className="size-4 shrink-0 text-primary mt-0.5" strokeWidth={1.5} />
             <div className="leading-relaxed">
               <strong className="font-semibold text-primary">
                 Chào mừng bạn đến với QCET E-Office!
@@ -153,7 +153,7 @@ export function UserProfileModal() {
         {/* Success Alert */}
         {savedSuccess && (
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300 animate-in fade-in">
-            <CheckCircle2 className="size-4 shrink-0" />
+            <CheckCircle2 className="size-4 shrink-0" strokeWidth={1.5} />
             <span>Cập nhật thông tin cán bộ thành công!</span>
           </div>
         )}
@@ -170,7 +170,7 @@ export function UserProfileModal() {
             </label>
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <User className="size-4 text-muted-foreground" />
+                <User className="size-4 text-muted-foreground" strokeWidth={1.5} />
               </div>
               <input
                 id="profileName"
@@ -194,7 +194,7 @@ export function UserProfileModal() {
             </label>
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <Building2 className="size-4 text-muted-foreground" />
+                <Building2 className="size-4 text-muted-foreground" strokeWidth={1.5} />
               </div>
               <select
                 id="profileDept"
@@ -223,7 +223,7 @@ export function UserProfileModal() {
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Briefcase className="size-4 text-muted-foreground" />
+                  <Briefcase className="size-4 text-muted-foreground" strokeWidth={1.5} />
                 </div>
                 <input
                   id="profileTitle"
@@ -245,7 +245,7 @@ export function UserProfileModal() {
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Phone className="size-4 text-muted-foreground" />
+                  <Phone className="size-4 text-muted-foreground" strokeWidth={1.5} />
                 </div>
                 <input
                   id="profilePhone"
@@ -275,7 +275,7 @@ export function UserProfileModal() {
                     : "border-border/80 bg-background hover:bg-secondary text-muted-foreground"
                 )}
               >
-                <User className="size-4 mb-1" />
+                <User className="size-4 mb-1" strokeWidth={1.5} />
                 <span className="text-[11px] font-bold">Viên chức</span>
                 <span className="text-[9.5px] opacity-80">Xem việc trực tiếp</span>
               </button>
@@ -290,7 +290,7 @@ export function UserProfileModal() {
                     : "border-border/80 bg-background hover:bg-secondary text-muted-foreground"
                 )}
               >
-                <Building2 className="size-4 mb-1" />
+                <Building2 className="size-4 mb-1" strokeWidth={1.5} />
                 <span className="text-[11px] font-bold">Trưởng đơn vị</span>
                 <span className="text-[9.5px] opacity-80">Quản trị khoa/phòng</span>
               </button>
@@ -305,7 +305,7 @@ export function UserProfileModal() {
                     : "border-border/80 bg-background hover:bg-secondary text-muted-foreground"
                 )}
               >
-                <Award className="size-4 mb-1" />
+                <Award className="size-4 mb-1" strokeWidth={1.5} />
                 <span className="text-[11px] font-bold">Ban Giám hiệu</span>
                 <span className="text-[9.5px] opacity-80">Điều hành toàn trường</span>
               </button>
@@ -325,7 +325,7 @@ export function UserProfileModal() {
               type="submit"
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all active:scale-[0.99] cursor-pointer"
             >
-              <Save className="size-3.5" />
+              <Save className="size-3.5" strokeWidth={1.5} />
               <span>Lưu thông tin hồ sơ</span>
             </button>
           </div>

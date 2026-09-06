@@ -104,7 +104,7 @@ export function ActivityFeedWidget({
       <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
         <div className="flex items-center gap-2.5">
           <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <Zap className="size-4 fill-amber-500/20" />
+            <Zap className="size-4 fill-amber-500/20" strokeWidth={1.5} />
           </div>
           <div>
             <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
@@ -147,7 +147,7 @@ export function ActivityFeedWidget({
                     {initials}
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-card ring-1 ring-border/60 shadow-xs">
-                    <ActionIcon className="size-2.5 text-foreground/80" />
+                    <ActionIcon className="size-2.5 text-foreground/80" strokeWidth={1.5} />
                   </div>
                 </div>
 
@@ -175,7 +175,7 @@ export function ActivityFeedWidget({
 
                   {/* Timestamp */}
                   <div className="flex items-center gap-1 pt-0.5 text-[10px] text-muted-foreground font-mono">
-                    <Clock className="size-2.5 opacity-70" />
+                    <Clock className="size-2.5 opacity-70" strokeWidth={1.5} />
                     <span>{item.timestamp}</span>
                   </div>
                 </div>

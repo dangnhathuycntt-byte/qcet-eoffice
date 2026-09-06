@@ -112,7 +112,7 @@ export function UpcomingDeadlinesWidget({
       <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
         <div className="flex items-center gap-2.5">
           <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <Calendar className="size-4" />
+            <Calendar className="size-4" strokeWidth={1.5} />
           </div>
           <div>
             <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
@@ -174,9 +174,9 @@ export function UpcomingDeadlinesWidget({
                       )}
                     >
                       {isSchool ? (
-                        <Building2 className="size-3" />
+                        <Building2 className="size-3" strokeWidth={1.5} />
                       ) : (
-                        <Layers className="size-3" />
+                        <Layers className="size-3" strokeWidth={1.5} />
                       )}
                       {item.level}
                     </Badge>
@@ -187,7 +187,7 @@ export function UpcomingDeadlinesWidget({
                         variant="rose"
                         className="text-[10px] px-2 py-0.5 font-semibold h-5 rounded-md gap-1"
                       >
-                        <AlertTriangle className="size-3" />
+                        <AlertTriangle className="size-3" strokeWidth={1.5} />
                         {relativeDistance.startsWith("Quá hạn")
                           ? relativeDistance
                           : `Quá hạn · ${relativeDistance}`}
@@ -202,7 +202,7 @@ export function UpcomingDeadlinesWidget({
                         }
                         className="text-[10px] px-2 py-0.5 font-medium h-5 rounded-md gap-1"
                       >
-                        <Clock className="size-3 opacity-75" />
+                        <Clock className="size-3 opacity-75" strokeWidth={1.5} />
                         {relativeDistance}
                       </Badge>
                     )}
