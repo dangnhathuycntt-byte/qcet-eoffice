@@ -49,6 +49,17 @@ import {
   DepartmentManagerWorkspace,
   ManagerWorkspace,
 } from "../src/components/portal/department-manager-workspace";
+import {
+  calculateDepartmentHealth,
+  calculateHealth,
+  computeExecutiveCockpitMetrics,
+  computeElevenDepartmentRadar,
+  extractSchoolBottlenecks,
+  extractInstitutionalApprovalQueue,
+  filterStrategicTasks,
+  ExecutiveCockpitWorkspace,
+  ExecutiveWorkspace,
+} from "../src/components/portal/executive-cockpit-workspace";
 
 const EMOJI_REGEX = /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
 
@@ -1402,6 +1413,536 @@ describe("Zero-Emoji Strict Anti-Slop Audit on department-manager-workspace", ()
     });
   });
 });
+
+describe("Executive Health Radar Logic", () => {
+  test("identifies departments with delayed tasks as RED or YELLOW", () => {
+    const calculateHealthLocal = (completed: number, delayed: number, total: number) => {
+      if (total === 0) return "GREEN";
+      if (delayed > 2) return "RED";
+      if (delayed > 0) return "YELLOW";
+      return "GREEN";
+    };
+
+    assert.equal(calculateHealthLocal(10, 0, 10), "GREEN");
+    assert.equal(calculateHealthLocal(8, 1, 10), "YELLOW");
+    assert.equal(calculateHealthLocal(5, 3, 10), "RED");
+  });
+
+  test("verifies calculateDepartmentHealth and calculateHealth exports match exact contract", () => {
+    assert.equal(calculateDepartmentHealth(10, 0, 10), "GREEN");
+    assert.equal(calculateDepartmentHealth(8, 1, 10), "YELLOW");
+    assert.equal(calculateDepartmentHealth(5, 3, 10), "RED");
+    assert.equal(calculateDepartmentHealth(0, 0, 0), "GREEN");
+
+    assert.equal(calculateHealth(10, 0, 10), "GREEN");
+    assert.equal(calculateHealth(8, 1, 10), "YELLOW");
+    assert.equal(calculateHealth(5, 3, 10), "RED");
+    assert.equal(calculateHealth(0, 0, 0), "GREEN");
+  });
+});
+
+describe("Executive Cockpit Metrics Computations", () => {
+  const refDate = "2026-09-06";
+
+  const mockTasks: SchoolTask[] = [
+    {
+      id: "sch-1",
+      title: "Đề án nâng cấp hạ tầng CNTT",
+      category: "CNTT",
+      categoryLabel: "Hạ tầng",
+      leadAssigneeName: "TS. Nguyễn Minh",
+      leadDepartment: "Khoa Công nghệ thông tin",
+      leadDepartmentCode: "CNTT",
+      coAssignees: [],
+      assignedDate: "2026-08-01",
+      dueDate: "2026-09-01", // Overdue -> Bottleneck
+      status: "IN_PROGRESS",
+      subTasks: [
+        {
+          id: "sub-1",
+          title: "Khảo sát hệ thống mạng cáp quang",
+          assigneeName: "ThS. Lê Hoàng",
+          status: "BLOCKED", // Blocked -> Bottleneck
+          blockedReason: "Chưa có thiết bị đo lường",
+          dueDate: "2026-09-05",
+          parentSchoolTaskId: "sch-1",
+          updatedAt: "2026-09-06",
+        },
+        {
+          id: "sub-2",
+          title: "Đề xuất cấu hình máy chủ ảo",
+          assigneeName: "KS. Trần Nam",
+          status: "NEEDS_REVIEW", // Pending approval
+          dueDate: "2026-09-10",
+          parentSchoolTaskId: "sch-1",
+          updatedAt: "2026-09-06",
+          requiresReview: true,
+        },
+      ],
+      totalSubTasks: 2,
+      completedSubTasks: 0,
+      progressPercent: 50,
+    },
+    {
+      id: "sch-2",
+      title: "Tờ trình phê duyệt khung chương trình 2026",
+      category: "BAO_CAO",
+      categoryLabel: "Đào tạo",
+      leadAssigneeName: "ThS. Đỗ Quang Trung",
+      leadDepartment: "Phòng Đào tạo & QLKH",
+      leadDepartmentCode: "DAO_TAO",
+      coAssignees: [],
+      assignedDate: "2026-08-15",
+      dueDate: "2026-09-20",
+      status: "PENDING_EXECUTIVE_APPROVAL", // Institutional approval queue
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 100,
+    },
+    {
+      id: "sch-3",
+      title: "Báo cáo kiểm định chất lượng GDNN cấp Bộ",
+      category: "BAO_CAO",
+      categoryLabel: "Khảo thí",
+      leadAssigneeName: "TS. Nguyễn Công Minh",
+      leadDepartment: "Phòng Khảo thí & ĐBCL",
+      leadDepartmentCode: "KHAO_THI",
+      coAssignees: [],
+      assignedDate: "2026-07-01",
+      dueDate: "2026-08-30",
+      status: "COMPLETED",
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 100,
+    },
+  ];
+
+  test("computes bottlenecksCount combining overdue and blocked tasks", () => {
+    const metrics = computeExecutiveCockpitMetrics(mockTasks, [], refDate);
+    // sch-1 is overdue (+1)
+    // sub-1 is blocked (+1) and overdue (+1)
+    // total bottlenecks >= 2
+    assert.ok(metrics.bottlenecksCount >= 2);
+  });
+
+  test("computes pendingInstitutionalApprovalCount accurately", () => {
+    const metrics = computeExecutiveCockpitMetrics(mockTasks, [], refDate);
+    // sch-2 is PENDING_EXECUTIVE_APPROVAL (+1)
+    // sub-2 is NEEDS_REVIEW (+1)
+    assert.equal(metrics.pendingInstitutionalApprovalCount, 2);
+  });
+
+  test("computes totalSchoolCompletionRate and active counts", () => {
+    const metrics = computeExecutiveCockpitMetrics(mockTasks, [], refDate);
+    assert.equal(metrics.totalTasksCount, 3);
+    assert.equal(metrics.completedTasksCount, 1);
+    assert.equal(metrics.activeTasksCount, 1);
+    // Average progress: (50 + 100 + 100) / 3 = 83%
+    assert.equal(metrics.totalSchoolCompletionRate, 83);
+  });
+
+  test("handles empty tasks safely without division by zero", () => {
+    const metrics = computeExecutiveCockpitMetrics([], [], refDate);
+    assert.equal(metrics.totalTasksCount, 0);
+    assert.equal(metrics.completedTasksCount, 0);
+    assert.equal(metrics.bottlenecksCount, 0);
+    assert.equal(metrics.pendingInstitutionalApprovalCount, 0);
+    assert.equal(metrics.totalSchoolCompletionRate, 0);
+    assert.equal(metrics.activeTasksCount, 0);
+  });
+});
+
+describe("Eleven Department Health Radar & Sorting", () => {
+  const refDate = "2026-09-06";
+
+  const sampleTasks: SchoolTask[] = [
+    {
+      id: "cntt-1",
+      title: "Chuyển đổi số Khoa CNTT",
+      category: "CNTT",
+      categoryLabel: "CNTT",
+      leadAssigneeName: "TS. Nguyễn Minh",
+      leadDepartmentCode: "CNTT",
+      leadDepartment: "Khoa Công nghệ thông tin",
+      coAssignees: [],
+      assignedDate: "2026-08-01",
+      dueDate: "2026-08-20", // overdue
+      status: "IN_PROGRESS",
+      subTasks: [
+        {
+          id: "sub-c1",
+          title: "Sub 1",
+          assigneeName: "A",
+          status: "BLOCKED", // blocked
+          dueDate: "2026-08-20", // overdue
+          parentSchoolTaskId: "cntt-1",
+          updatedAt: "2026-09-06",
+        },
+        {
+          id: "sub-c2",
+          title: "Sub 2",
+          assigneeName: "B",
+          status: "IN_PROGRESS",
+          dueDate: "2026-08-25", // overdue
+          parentSchoolTaskId: "cntt-1",
+          updatedAt: "2026-09-06",
+        },
+      ],
+      totalSubTasks: 2,
+      completedSubTasks: 0,
+      progressPercent: 20,
+    },
+  ];
+
+  test("always returns exactly 11 departments", () => {
+    const radar = computeElevenDepartmentRadar(sampleTasks, [], refDate);
+    assert.equal(radar.length, 11);
+    const codes = radar.map((d) => d.departmentCode);
+    assert.ok(codes.includes("BGH"));
+    assert.ok(codes.includes("CNTT"));
+    assert.ok(codes.includes("DAO_TAO"));
+    assert.ok(codes.includes("TRUYEN_THONG"));
+    assert.ok(codes.includes("HANH_CHINH"));
+    assert.ok(codes.includes("KHAO_THI"));
+    assert.ok(codes.includes("THU_VIEN"));
+    assert.ok(codes.includes("KINH_TE"));
+    assert.ok(codes.includes("KY_THUAT"));
+    assert.ok(codes.includes("TAI_CHINH"));
+    assert.ok(codes.includes("CTHSSV"));
+  });
+
+  test("sorts departments with RED first, then YELLOW, then GREEN", () => {
+    const radar = computeElevenDepartmentRadar(sampleTasks, [], refDate);
+    // CNTT has multiple overdue and blocked tasks -> RED
+    assert.equal(radar[0].departmentCode, "CNTT");
+    assert.equal(radar[0].healthStatus, "RED");
+
+    // Verify ordering is strictly RED -> YELLOW -> GREEN
+    const severityMap: Record<string, number> = { RED: 0, YELLOW: 1, GREEN: 2 };
+    for (let i = 0; i < radar.length - 1; i++) {
+      const curOrder = severityMap[radar[i].healthStatus];
+      const nextOrder = severityMap[radar[i + 1].healthStatus];
+      assert.ok(
+        curOrder <= nextOrder,
+        `Department ${radar[i].departmentCode} (${radar[i].healthStatus}) should precede ${radar[i + 1].departmentCode} (${radar[i + 1].healthStatus})`
+      );
+    }
+  });
+});
+
+describe("Executive Bottleneck Extraction & Approval Queue", () => {
+  const refDate = "2026-09-06";
+
+  const tasks: SchoolTask[] = [
+    {
+      id: "task-bn-1",
+      title: "Triển khai phần mềm quản lý giảng dạy",
+      category: "CHUYEN_DOI_SO",
+      categoryLabel: "Chuyển đổi số",
+      leadAssigneeName: "TS. Nguyễn Minh Tuấn",
+      leadDepartmentCode: "CNTT",
+      leadDepartment: "Khoa CNTT",
+      coAssignees: [],
+      assignedDate: "2026-08-01",
+      dueDate: "2026-08-25", // Overdue
+      status: "IN_PROGRESS",
+      subTasks: [
+        {
+          id: "sub-bn-1",
+          title: "Đấu nối CSDL phòng Đào tạo",
+          assigneeName: "KS. Văn A",
+          departmentCode: "CNTT",
+          status: "BLOCKED",
+          blockedReason: "Thiếu quyền truy cập API",
+          dueDate: "2026-09-01",
+          parentSchoolTaskId: "task-bn-1",
+          updatedAt: "2026-09-06",
+        },
+      ],
+      totalSubTasks: 1,
+      completedSubTasks: 0,
+      progressPercent: 40,
+    },
+    {
+      id: "task-ap-1",
+      title: "Dự toán tài chính hội nghị khoa học quốc tế 2026",
+      category: "BAO_CAO",
+      categoryLabel: "Kế hoạch",
+      leadAssigneeName: "ThS. Trần Thị Mai Loan",
+      leadDepartmentCode: "TAI_CHINH",
+      leadDepartment: "Phòng Kế hoạch - Tài chính",
+      coAssignees: [],
+      assignedDate: "2026-08-10",
+      dueDate: "2026-09-15",
+      status: "PENDING_EXECUTIVE_APPROVAL",
+      completionReport: {
+        summary: "Đã tổng hợp dự toán chi tiết 11 đơn vị",
+        submittedBy: "ThS. Trần Thị Mai Loan",
+        submittedAt: "2026-09-05",
+        reportUrl: "https://drive.google.com/du-toan-2026.pdf",
+      },
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 100,
+    },
+  ];
+
+  test("extracts bottlenecks with proper flags and blocked reasons", () => {
+    const bottlenecks = extractSchoolBottlenecks(tasks, [], refDate);
+    assert.ok(bottlenecks.length >= 2);
+
+    const blockedItem = bottlenecks.find((b) => b.isBlocked);
+    assert.ok(blockedItem);
+    assert.equal(blockedItem.id, "sub-bn-1");
+    assert.equal(blockedItem.blockedReason, "Thiếu quyền truy cập API");
+  });
+
+  test("extracts institutional approval queue items", () => {
+    const queue = extractInstitutionalApprovalQueue(tasks, []);
+    assert.equal(queue.length, 1);
+    assert.equal(queue[0].id, "task-ap-1");
+    assert.equal(queue[0].departmentCode, "TAI_CHINH");
+    assert.equal(queue[0].deliverablesCount, 1);
+  });
+});
+
+describe("Strategic Tasks Filtering", () => {
+  const refDate = "2026-09-06";
+
+  const tasks: SchoolTask[] = [
+    {
+      id: "st-1",
+      title: "Chuyển đổi số đào tạo",
+      category: "CHUYEN_DOI_SO",
+      categoryLabel: "Chuyển đổi số",
+      leadAssigneeName: "TS. Nguyễn Minh",
+      leadDepartmentCode: "CNTT",
+      leadDepartment: "Khoa CNTT",
+      coAssignees: [],
+      assignedDate: "2026-08-01",
+      dueDate: "2026-09-20",
+      status: "IN_PROGRESS",
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 60,
+    },
+    {
+      id: "st-2",
+      title: "Khảo sát th��� trường việc làm 2026",
+      category: "BAO_CAO",
+      categoryLabel: "Đào tạo",
+      leadAssigneeName: "ThS. Đỗ Quang Trung",
+      leadDepartmentCode: "DAO_TAO",
+      leadDepartment: "Phòng Đào tạo",
+      coAssignees: [],
+      assignedDate: "2026-08-01",
+      dueDate: "2026-08-15", // Overdue -> Bottleneck
+      status: "IN_PROGRESS",
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 40,
+    },
+    {
+      id: "st-3",
+      title: "Báo cáo tài chính quý 3",
+      category: "BAO_CAO",
+      categoryLabel: "Tài chính",
+      leadAssigneeName: "ThS. Trần Thị Mai Loan",
+      leadDepartmentCode: "TAI_CHINH",
+      leadDepartment: "Phòng Kế hoạch - Tài chính",
+      coAssignees: [],
+      assignedDate: "2026-07-01",
+      dueDate: "2026-08-30",
+      status: "COMPLETED",
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 100,
+    },
+  ];
+
+  test("filters by department", () => {
+    const filtered = filterStrategicTasks(tasks, { departmentFilter: "CNTT" });
+    assert.equal(filtered.length, 1);
+    assert.equal(filtered[0].id, "st-1");
+  });
+
+  test("filters by search term", () => {
+    const filtered = filterStrategicTasks(tasks, { searchTerm: "tài chính" });
+    assert.equal(filtered.length, 1);
+    assert.equal(filtered[0].id, "st-3");
+  });
+
+  test("filters by status filter", () => {
+    const inProgress = filterStrategicTasks(tasks, { statusFilter: "IN_PROGRESS" });
+    assert.equal(inProgress.length, 2);
+
+    const completed = filterStrategicTasks(tasks, { statusFilter: "COMPLETED" });
+    assert.equal(completed.length, 1);
+
+    const bottlenecks = filterStrategicTasks(tasks, {
+      statusFilter: "BOTTLENECK",
+      referenceDate: refDate,
+    });
+    assert.equal(bottlenecks.length, 1);
+    assert.equal(bottlenecks[0].id, "st-2");
+  });
+});
+
+describe("ExecutiveCockpitWorkspace Component Static Rendering", () => {
+  const mockUser: AuthUser = {
+    id: "user-bgh-1",
+    name: "TS. Nguyễn Minh Tuấn",
+    email: "tuan.nm@cdktcnqn.edu.vn",
+    role: "ADMIN",
+    roleLabel: "Phó Hiệu trưởng phụ trách",
+    department: "Ban Giám hiệu",
+    departmentCode: "BGH",
+  };
+
+  const mockTasks: SchoolTask[] = [
+    {
+      id: "sch-bgh-1",
+      title: "Xây dựng đề án tự chủ đại học giai đoạn 2026-2030",
+      category: "CHUYEN_DOI_SO",
+      categoryLabel: "Chiến lược",
+      leadAssigneeName: "TS. Nguyễn Minh Tuấn",
+      leadDepartmentCode: "BGH",
+      leadDepartment: "Ban Giám hiệu",
+      coAssignees: [],
+      assignedDate: "2026-08-01",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 75,
+    },
+    {
+      id: "sch-bgh-2",
+      title: "Báo cáo kiểm định chất lượng đào tạo",
+      category: "BAO_CAO",
+      categoryLabel: "Khảo thí",
+      leadAssigneeName: "TS. Nguyễn Công Minh",
+      leadDepartmentCode: "KHAO_THI",
+      leadDepartment: "Phòng Khảo thí & ĐBCL",
+      coAssignees: [],
+      assignedDate: "2026-08-01",
+      dueDate: "2026-09-01", // Overdue
+      status: "IN_PROGRESS",
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 50,
+    },
+  ];
+
+  test("renders welcome header with user name and BGH badge", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ExecutiveCockpitWorkspace, {
+        user: mockUser,
+        tasks: mockTasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    assert.ok(html.includes("Xin chào, TS. Nguyễn Minh Tuấn"));
+    assert.ok(html.includes("Lãnh đạo Ban Giám Hiệu"));
+    assert.ok(html.includes("Khoang điều hành chiến lược"));
+  });
+
+  test("renders high-altitude cockpit strip with all 4 metric cards", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ExecutiveCockpitWorkspace, {
+        user: mockUser,
+        tasks: mockTasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    assert.ok(html.includes("Tắc nghẽn cần tháo gỡ"));
+    assert.ok(html.includes("Hồ sơ chờ phê duyệt cấp Trường"));
+    assert.ok(html.includes("Chỉ số hoàn thành toàn trường"));
+    assert.ok(html.includes("Tổng số nhiệm vụ đang chạy"));
+  });
+
+  test("renders navigation tabs for all 4 views", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ExecutiveCockpitWorkspace, {
+        user: mockUser,
+        tasks: mockTasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    assert.ok(html.includes("Cảnh báo thắt nút cổ chai &amp; Tắc nghẽn") || html.includes("Cảnh báo thắt nút cổ chai & Tắc nghẽn"));
+    assert.ok(html.includes("Hàng đợi Phê duyệt Chiến lược"));
+    assert.ok(html.includes("Radar Sức Khỏe 11 Đơn Vị"));
+    assert.ok(html.includes("Nhiệm vụ Chiến lược cấp Trường"));
+  });
+
+  test("renders action button for Giao chỉ đạo nhiệm vụ BGH when callback provided", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ExecutiveCockpitWorkspace, {
+        user: mockUser,
+        tasks: mockTasks,
+        referenceDate: "2026-09-06",
+        onCreateDirective: () => {},
+      })
+    );
+
+    assert.ok(html.includes("Giao chỉ đạo nhiệm vụ BGH"));
+  });
+
+  test("verifies ExecutiveWorkspace alias is exported and functional", () => {
+    assert.equal(ExecutiveWorkspace, ExecutiveCockpitWorkspace);
+    const html = renderToStaticMarkup(
+      React.createElement(ExecutiveWorkspace, {
+        user: mockUser,
+        tasks: mockTasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+    assert.ok(html.includes("Xin chào, TS. Nguyễn Minh Tuấn"));
+  });
+});
+
+describe("Zero-Emoji Strict Anti-Slop Audit on executive-cockpit-workspace", () => {
+  const executiveFiles = [
+    "src/components/portal/executive-cockpit-workspace.tsx",
+    "src/components/workspace/executive-cockpit-workspace.tsx",
+    "src/components/portal/executive-workspace.tsx",
+    "src/components/workspace/executive-workspace.tsx",
+  ];
+
+  executiveFiles.forEach((relPath) => {
+    test(`verifies ${relPath} contains zero emojis`, () => {
+      const fullPath = path.resolve(process.cwd(), relPath);
+      assert.ok(fs.existsSync(fullPath), `File phai ton tai: ${relPath}`);
+      const content = fs.readFileSync(fullPath, "utf-8");
+      const lines = content.split("\n");
+      const violations: string[] = [];
+
+      lines.forEach((line, idx) => {
+        if (EMOJI_REGEX.test(line)) {
+          violations.push(`${relPath}:${idx + 1}: ${line.trim()}`);
+        }
+      });
+
+      assert.equal(
+        violations.length,
+        0,
+        `Phat hien emoji tai:\n${violations.join("\n")}`
+      );
+    });
+  });
+});
+
 
 
 
