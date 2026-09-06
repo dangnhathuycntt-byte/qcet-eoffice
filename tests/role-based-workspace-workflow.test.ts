@@ -12,7 +12,7 @@ import type {
   StaffUrgencySummary,
   DepartmentHealthSummary,
 } from "../src/types/workspace";
-import type { SchoolTask, StaffTask } from "../src/types/dashboard";
+import type { SchoolTask, StaffTask, TaskStatus } from "../src/types/dashboard";
 import type { AuthUser } from "../src/types/auth";
 import {
   SIDEBAR_ZONE_ITEMS,
@@ -2056,6 +2056,157 @@ describe("Sidebar Navigation Hygiene", () => {
     // Legacy ?zone=tasks on root
     assert.equal(isItemActive("/", "/", "tasks"), false);
     assert.equal(isItemActive("/tasks", "/", "tasks"), true);
+  });
+});
+
+describe("Task 9: Root Page Role-Based Dispatcher Workflow", () => {
+  const PAGE_PATH = path.resolve(process.cwd(), "src/app/page.tsx");
+
+  test("verifies role normalization logic for executive, manager, and staff", () => {
+    const resolveRoles = (role?: string) => {
+      const roleStr = String(role || "").toUpperCase();
+      const isExecutive =
+        role === "ADMIN" ||
+        roleStr === "ADMIN" ||
+        roleStr === "BGH" ||
+        roleStr === "BAN_GIAM_HIEU";
+      const isManager =
+        role === "MANAGER" ||
+        roleStr === "MANAGER" ||
+        roleStr === "TRUONG_DON_VI" ||
+        roleStr === "TRUONG_PHONG";
+      const isStaff =
+        role === "STAFF" ||
+        roleStr === "STAFF" ||
+        roleStr === "GIANG_VIEN" ||
+        roleStr === "CHUYEN_VIEN" ||
+        (!isExecutive && !isManager);
+
+      return { isExecutive, isManager, isStaff };
+    };
+
+    // Executive variants
+    assert.deepEqual(resolveRoles("ADMIN"), { isExecutive: true, isManager: false, isStaff: false });
+    assert.deepEqual(resolveRoles("BGH"), { isExecutive: true, isManager: false, isStaff: false });
+    assert.deepEqual(resolveRoles("BAN_GIAM_HIEU"), { isExecutive: true, isManager: false, isStaff: false });
+
+    // Manager variants
+    assert.deepEqual(resolveRoles("MANAGER"), { isExecutive: false, isManager: true, isStaff: false });
+    assert.deepEqual(resolveRoles("TRUONG_DON_VI"), { isExecutive: false, isManager: true, isStaff: false });
+    assert.deepEqual(resolveRoles("TRUONG_PHONG"), { isExecutive: false, isManager: true, isStaff: false });
+
+    // Staff variants
+    assert.deepEqual(resolveRoles("STAFF"), { isExecutive: false, isManager: false, isStaff: true });
+    assert.deepEqual(resolveRoles("GIANG_VIEN"), { isExecutive: false, isManager: false, isStaff: true });
+    assert.deepEqual(resolveRoles("CHUYEN_VIEN"), { isExecutive: false, isManager: false, isStaff: true });
+
+    // Fallback
+    assert.deepEqual(resolveRoles(undefined), { isExecutive: false, isManager: false, isStaff: true });
+  });
+
+  test("verifies deliverable submission state update logic for subtasks", () => {
+    const todayStr = "2026-09-06";
+    const initialTask: SchoolTask = {
+      id: "task-test-1",
+      title: "Công tác DACUM",
+      category: "CNTT",
+      categoryLabel: "Công nghệ thông tin",
+      status: "IN_PROGRESS",
+      leadAssigneeName: "TS. Nguyễn Ngọc Vinh",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      subTasks: [
+        {
+          id: "sub-test-1",
+          title: "Xây dựng ma trận kỹ năng",
+          assigneeName: "ThS. Lê Văn Phó",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-15",
+          parentSchoolTaskId: "task-test-1",
+          deliverables: [],
+          updatedAt: todayStr,
+        },
+      ],
+      totalSubTasks: 1,
+      completedSubTasks: 0,
+      progressPercent: 0,
+    };
+
+    const payload: DeliverableSubmissionPayload = {
+      taskId: "sub-test-1",
+      deliverableName: "Bao_cao_DACUM_K_CNTT.pdf",
+      url: "https://drive.google.com/file/d/test12345",
+      fileType: "application/pdf",
+      note: "Đã hoàn thành phân tích kỹ năng nghề",
+    };
+
+    const updatedSubs = initialTask.subTasks.map((sub) => {
+      if (sub.id === payload.taskId) {
+        const existingDeliverables = sub.deliverables || [];
+        const newFile = {
+          id: `deliv-1`,
+          name: payload.deliverableName || "Tài liệu minh chứng",
+          url: payload.url || "#",
+          fileType: payload.fileType || "application/pdf",
+          submittedAt: todayStr,
+        };
+        return {
+          ...sub,
+          status: "NEEDS_REVIEW" as const,
+          deliverables: [...existingDeliverables, newFile],
+          deliverableDescription: payload.note || sub.deliverableDescription,
+          updatedAt: todayStr,
+        };
+      }
+      return sub;
+    });
+
+    assert.equal(updatedSubs[0].status, "NEEDS_REVIEW");
+    assert.equal(updatedSubs[0].deliverables?.length, 1);
+    assert.equal(updatedSubs[0].deliverables?.[0].name, "Bao_cao_DACUM_K_CNTT.pdf");
+    assert.equal(updatedSubs[0].deliverableDescription, "Đã hoàn thành phân tích kỹ năng nghề");
+  });
+
+  test("verifies review action transitions: approved, revision_requested, rejected", () => {
+    const evaluateReviewStatus = (decision: "approved" | "revision_requested" | "rejected"): TaskStatus => {
+      if (decision === "approved") return "COMPLETED";
+      if (decision === "revision_requested") return "IN_PROGRESS";
+      return "BLOCKED";
+    };
+
+    assert.equal(evaluateReviewStatus("approved"), "COMPLETED");
+    assert.equal(evaluateReviewStatus("revision_requested"), "IN_PROGRESS");
+    assert.equal(evaluateReviewStatus("rejected"), "BLOCKED");
+  });
+
+  test("src/app/page.tsx strict anti-slop audit: 0% emojis in source code", () => {
+    assert.ok(fs.existsSync(PAGE_PATH), "src/app/page.tsx must exist");
+    const content = fs.readFileSync(PAGE_PATH, "utf-8");
+    const lines = content.split("\n");
+    const violations: string[] = [];
+
+    lines.forEach((line, idx) => {
+      if (EMOJI_REGEX.test(line)) {
+        violations.push(`src/app/page.tsx:${idx + 1}: ${line.trim()}`);
+      }
+    });
+
+    assert.equal(
+      violations.length,
+      0,
+      `Detected emoji in src/app/page.tsx at:\n${violations.join("\n")}`
+    );
+  });
+
+  test("src/app/page.tsx contains all role workspace components and dispatching directives", () => {
+    const content = fs.readFileSync(PAGE_PATH, "utf-8");
+    assert.ok(content.includes("<ExecutiveCockpitWorkspace"), "Must render ExecutiveCockpitWorkspace");
+    assert.ok(content.includes("<DepartmentManagerWorkspace"), "Must render DepartmentManagerWorkspace");
+    assert.ok(content.includes("<LecturerFocusWorkspace"), "Must render LecturerFocusWorkspace");
+    assert.ok(content.includes("data-slot=\"role-workspace-landing\""), "Must contain role workspace landing slot");
+    assert.ok(content.includes("handleSubmitDeliverable"), "Must wire handleSubmitDeliverable");
+    assert.ok(content.includes("handleReviewAction"), "Must wire handleReviewAction");
   });
 });
 

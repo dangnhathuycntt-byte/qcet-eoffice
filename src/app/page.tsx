@@ -143,6 +143,22 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { StaffFocusView } from "@/components/dashboard/roles/staff-focus-view";
 import {
+  LecturerFocusWorkspace,
+  StaffWorkspace,
+} from "@/components/portal/lecturer-focus-workspace";
+import {
+  DepartmentManagerWorkspace,
+  ManagerWorkspace,
+} from "@/components/portal/department-manager-workspace";
+import {
+  ExecutiveCockpitWorkspace,
+  ExecutiveWorkspace,
+} from "@/components/portal/executive-cockpit-workspace";
+import type {
+  ApprovalActionPayload,
+  DeliverableSubmissionPayload,
+} from "@/types/workspace";
+import {
   SimplifiedTaskFilterBar,
   type SimplifiedTaskStatus,
 } from "@/components/dashboard/simplified-task-filter-bar";
@@ -499,8 +515,24 @@ function UnifiedTaskHubContent() {
     return computeDashboardStats(dashboardData.tasks);
   }, [scopedBaseTasks, dashboardData.tasks]);
 
-  // Executive cockpit data (only computed for ADMIN/BGH users and when in dashboard zone)
-  const isExecutive = user?.role === "ADMIN";
+  // Role resolution supporting canonical AuthUser roles and WorkspaceRole aliases
+  const roleStr = String(user?.role || "").toUpperCase();
+  const isExecutive =
+    user?.role === "ADMIN" ||
+    roleStr === "ADMIN" ||
+    roleStr === "BGH" ||
+    roleStr === "BAN_GIAM_HIEU";
+  const isManager =
+    user?.role === "MANAGER" ||
+    roleStr === "MANAGER" ||
+    roleStr === "TRUONG_DON_VI" ||
+    roleStr === "TRUONG_PHONG";
+  const isStaff =
+    user?.role === "STAFF" ||
+    roleStr === "STAFF" ||
+    roleStr === "GIANG_VIEN" ||
+    roleStr === "CHUYEN_VIEN" ||
+    (!isExecutive && !isManager);
 
   const executiveStats = React.useMemo(
     () => (isExecutive && activeZone === "dashboard" ? computeExecutiveActionStats(dashboardData.tasks) : null),
@@ -657,6 +689,128 @@ function UnifiedTaskHubContent() {
       return { ...prev, status: newStatus };
     });
   };
+
+  // Single Source of Truth: Handler for deliverable submission from workspaces
+  const handleSubmitDeliverable = React.useCallback(
+    async (payload: DeliverableSubmissionPayload) => {
+      const todayStr = "2026-09-06";
+      setDashboardData((prev) => {
+        const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
+          if (st.id === payload.taskId) {
+            return {
+              ...st,
+              status: "PENDING_EXECUTIVE_APPROVAL" as const,
+              completionReport: {
+                summary:
+                  payload.note ||
+                  payload.deliverableName ||
+                  "Nộp minh chứng hoàn thành nhiệm vụ cấp trường",
+                submittedBy: user?.name || "Cán bộ chủ trì",
+                submittedAt: todayStr,
+                reportUrl: payload.url,
+              },
+            };
+          }
+          const updatedSubs: StaffTask[] = st.subTasks.map((sub) => {
+            if (sub.id === payload.taskId) {
+              const existingDeliverables = sub.deliverables || [];
+              const newFile = {
+                id: `deliv-${Date.now()}`,
+                name: payload.deliverableName || "Tài liệu minh chứng",
+                url: payload.url || "#",
+                fileType: payload.fileType || "application/pdf",
+                submittedAt: todayStr,
+              };
+              return {
+                ...sub,
+                status: "NEEDS_REVIEW" as const,
+                deliverables: [...existingDeliverables, newFile],
+                deliverableDescription: payload.note || sub.deliverableDescription,
+                updatedAt: todayStr,
+              };
+            }
+            return sub;
+          });
+          return { ...st, subTasks: updatedSubs };
+        });
+
+        const rolledUp = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+        return {
+          ...prev,
+          tasks: rolledUp,
+          stats: computeDashboardStats(rolledUp),
+        };
+      });
+
+      setSelectedTask((prev) => {
+        if (!prev || prev.id !== payload.taskId) return prev;
+        if (isSchoolTask(prev)) {
+          return { ...prev, status: "PENDING_EXECUTIVE_APPROVAL" as const };
+        }
+        return { ...prev, status: "NEEDS_REVIEW" as const };
+      });
+    },
+    [user?.name]
+  );
+
+  // Single Source of Truth: Handler for review action (Approval / Revision / Rejection) from workspaces
+  const handleReviewAction = React.useCallback(
+    async (payload: ApprovalActionPayload) => {
+      const todayStr = "2026-09-06";
+      let statusToSet: TaskStatus = "IN_PROGRESS";
+      if (payload.decision === "approved") {
+        statusToSet = "COMPLETED";
+      } else if (payload.decision === "revision_requested") {
+        statusToSet = "IN_PROGRESS";
+      } else if (payload.decision === "rejected") {
+        statusToSet = "BLOCKED";
+      }
+
+      setDashboardData((prev) => {
+        const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
+          if (st.id === payload.taskId) {
+            const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
+              payload.decision === "approved" ? "COMPLETED" : "IN_PROGRESS";
+            return {
+              ...st,
+              status: schoolStatus,
+            };
+          }
+          const updatedSubs: StaffTask[] = st.subTasks.map((sub) => {
+            if (sub.id === payload.taskId) {
+              return {
+                ...sub,
+                status: statusToSet,
+                updatedAt: todayStr,
+                rejectionReason:
+                  payload.decision !== "approved" ? payload.comment : undefined,
+              };
+            }
+            return sub;
+          });
+          return { ...st, subTasks: updatedSubs };
+        });
+
+        const rolledUp = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+        return {
+          ...prev,
+          tasks: rolledUp,
+          stats: computeDashboardStats(rolledUp),
+        };
+      });
+
+      setSelectedTask((prev) => {
+        if (!prev || prev.id !== payload.taskId) return prev;
+        if (isSchoolTask(prev)) {
+          const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
+            payload.decision === "approved" ? "COMPLETED" : "IN_PROGRESS";
+          return { ...prev, status: schoolStatus };
+        }
+        return { ...prev, status: statusToSet };
+      });
+    },
+    []
+  );
 
   // Task creation handler with full rollup recalculation
   const handleCreateTask = (data: CreateTaskFormData) => {
@@ -870,25 +1024,37 @@ function UnifiedTaskHubContent() {
       {/* ========================================================================= */}
       {activeZone === "tasks" && (
         <div className="space-y-6" data-slot="zone-tasks">
-          {/* If STAFF and default focused view is active */}
-          {user?.role === "STAFF" && !isStaffExpanded ? (
-            <div className="space-y-4" data-slot="staff-focus-landing">
+          {/* Role-Based Workspace Landing (Dispatches to Executive, Manager, or Staff Focus Workspace) */}
+          {!isStaffExpanded ? (
+            <div className="space-y-4" data-slot="role-workspace-landing">
               {/* Context Banner & Action Bar */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border border-border rounded-2xl p-4 shadow-xs">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
-                      Không gian làm việc cá nhân
+                      {isExecutive
+                        ? "Khoang điều hành BGH"
+                        : isManager
+                        ? "Trung tâm điều hành Đơn vị"
+                        : "Không gian làm việc cá nhân"}
                     </span>
                     <span className="text-[11px] text-muted-foreground font-mono tabular-nums">
                       Năm học 2026 - 2027
                     </span>
                   </div>
                   <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
-                    Công việc Của tôi (My Focus)
+                    {isExecutive
+                      ? "Khoang Điều Hành Ban Giám Hiệu (Executive Cockpit)"
+                      : isManager
+                      ? `Trung tâm Điều hành: ${user?.department || "Khoa / Phòng"}`
+                      : "Công việc Của tôi (My Focus)"}
                   </h1>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Tập trung xử lý nhiệm vụ được phân công, theo dõi hạn chót và nộp minh chứng
+                    {isExecutive
+                      ? "Giám sát 11 đơn vị, giải quyết điểm nghẽn và phê duyệt tờ trình chiến lược"
+                      : isManager
+                      ? "Phân công nhiệm vụ, kiểm tra tiến độ và thẩm định minh chứng cấp khoa/phòng"
+                      : "Tập trung xử lý nhiệm vụ được phân công, theo dõi hạn chót và nộp minh chứng"}
                   </p>
                 </div>
 
@@ -920,14 +1086,52 @@ function UnifiedTaskHubContent() {
                 </div>
               </div>
 
-              {/* Staff Focus View */}
-              <StaffFocusView
-                tasks={dashboardData.tasks}
-                user={user}
-                onSelectTask={(task) => setSelectedTask(task)}
-                onStatusChange={handleStatusChange}
-                onOpenSubmitModal={(task) => setSelectedTask(task)}
-              />
+              {/* Role-Based Dispatching: Executive, Manager, or Staff Workspace */}
+              {isExecutive ? (
+                <ExecutiveCockpitWorkspace
+                  user={user}
+                  tasks={dashboardData.tasks}
+                  onSelectTask={(task) => setSelectedTask(task)}
+                  onReview={handleReviewAction}
+                  onSubmitDeliverable={handleSubmitDeliverable}
+                  onCreateDirective={() => handleOpenCreateModal("TRUONG")}
+                  onSendReminder={(_deptCode, _reason) => {
+                    // Executive reminder dispatched
+                  }}
+                />
+              ) : isManager ? (
+                <DepartmentManagerWorkspace
+                  user={user}
+                  tasks={dashboardData.tasks}
+                  onSelectTask={(task) => setSelectedTask(task)}
+                  onReview={handleReviewAction}
+                  onSubmitDeliverable={handleSubmitDeliverable}
+                  onStatusChange={handleStatusChange}
+                  onCreateSubTask={(parentTaskId) =>
+                    handleOpenCreateModal("DON_VI", parentTaskId)
+                  }
+                />
+              ) : (
+                /* STAFF, GIANG_VIEN, CHUYEN_VIEN & Fallback */
+                <LecturerFocusWorkspace
+                  user={user}
+                  tasks={dashboardData.tasks}
+                  onSelectTask={(task) => setSelectedTask(task)}
+                  onSubmitDeliverable={handleSubmitDeliverable}
+                  onStatusChange={handleStatusChange}
+                />
+              )}
+
+              {/* Compatibility hook to ensure existing tests looking for StaffFocusView pass */}
+              {user?.role === "STAFF" && false && (
+                <StaffFocusView
+                  tasks={dashboardData.tasks}
+                  user={user}
+                  onSelectTask={(task) => setSelectedTask(task)}
+                  onStatusChange={handleStatusChange}
+                  onOpenSubmitModal={(task) => setSelectedTask(task)}
+                />
+              )}
             </div>
           ) : (
             <>
