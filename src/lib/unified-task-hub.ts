@@ -33,6 +33,16 @@ export function getDefaultScopeForRole(role?: UserRole): TaskScope {
 }
 
 /**
+ * Role-based default view modes:
+ * - ADMIN (Ban Giám hiệu) -> executive (Trung tâm điều hành BGH 12 đơn vị)
+ * - All other roles -> table (Bảng phân cấp)
+ */
+export function getDefaultViewModeForRole(role?: UserRole): TaskViewMode {
+  if (role === "ADMIN") return "executive";
+  return "table";
+}
+
+/**
  * Parse URL ?scope= parameter into validated TaskScope.
  * Accepts shorthand ("my", "school", "unit") or full keys.
  */
@@ -67,7 +77,7 @@ export function scopeToParam(scope: TaskScope): string {
 }
 
 /**
- * Parse URL ?view= parameter into validated TaskViewMode ("table" | "kanban" | "calendar" | "department").
+ * Parse URL ?view= parameter into validated TaskViewMode ("table" | "kanban" | "calendar" | "department" | "executive").
  */
 export function parseViewModeParam(
   param: string | null | undefined,
@@ -80,6 +90,7 @@ export function parseViewModeParam(
   if (normalized === "kanban" || normalized === "board") return "kanban";
   if (normalized === "calendar" || normalized === "month") return "calendar";
   if (normalized === "department" || normalized === "don-vi" || normalized === "unit") return "department";
+  if (normalized === "executive" || normalized === "chi-huy" || normalized === "bgh" || normalized === "command") return "executive";
 
   return defaultMode;
 }

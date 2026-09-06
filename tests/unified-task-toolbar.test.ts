@@ -25,9 +25,16 @@ describe("UnifiedTaskToolbar Helpers", () => {
     assert.deepEqual(ids, ["MY_TASKS", "SCHOOL_TASKS", "UNIT_TASKS"]);
   });
 
-  test("VIEW_MODE_OPTIONS defines table, kanban, calendar, and department modes", () => {
+  test("VIEW_MODE_OPTIONS defines table, kanban, calendar, department, and executive modes", () => {
     const ids = VIEW_MODE_OPTIONS.map((v: ViewModeOption) => v.id);
-    assert.deepEqual(ids, ["table", "kanban", "calendar", "department"]);
+    assert.deepEqual(ids, ["table", "kanban", "calendar", "department", "executive"]);
+  });
+
+  test("Executive view mode option is properly configured with label and icon", () => {
+    const execOpt = VIEW_MODE_OPTIONS.find((v: ViewModeOption) => v.id === "executive");
+    assert.ok(execOpt, "Executive view mode option must exist");
+    assert.equal(execOpt.label, "Chỉ huy BGH");
+    assert.ok(execOpt.icon, "Executive view mode option must have an icon");
   });
 
   test("filterTasksByScope correctly filters for MY_TASKS", () => {

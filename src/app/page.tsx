@@ -67,6 +67,17 @@ const DepartmentGroupedTaskView = dynamic(
   }
 );
 
+const ExecutiveDepartmentCommandCenter = dynamic(
+  () =>
+    import("@/components/tasks/executive-department-command-center").then(
+      (m) => m.ExecutiveDepartmentCommandCenter
+    ),
+  {
+    ssr: false,
+    loading: () => <div className="h-96 rounded-2xl bg-muted/20 animate-pulse" />,
+  }
+);
+
 const OrganizationTree = dynamic(
   () => import("@/components/org/organization-tree").then((m) => m.OrganizationTree),
   { ssr: false, loading: () => <div className="h-96 rounded-2xl bg-muted/20 animate-pulse" /> }
@@ -98,6 +109,7 @@ import {
 } from "@/lib/role-task-filter";
 import {
   getDefaultScopeForRole,
+  getDefaultViewModeForRole,
   parseScopeParam,
   scopeToParam,
   parseViewModeParam,
@@ -135,12 +147,16 @@ function UnifiedTaskHubContent() {
     () => getDefaultScopeForRole(user?.role),
     [user?.role]
   );
+  const defaultViewMode = React.useMemo(
+    () => getDefaultViewModeForRole(user?.role),
+    [user?.role]
+  );
 
   const [scope, setScope] = React.useState<TaskScope>(() =>
     parseScopeParam(scopeQuery, defaultScope)
   );
   const [viewMode, setViewMode] = React.useState<TaskViewMode>(() =>
-    parseViewModeParam(viewQuery, "table")
+    parseViewModeParam(viewQuery, defaultViewMode)
   );
   const [selectedDepartment, setSelectedDepartment] = React.useState<string>(
     deptQuery || "ALL"
@@ -171,9 +187,11 @@ function UnifiedTaskHubContent() {
 
   React.useEffect(() => {
     if (viewQuery) {
-      setViewMode(parseViewModeParam(viewQuery, "table"));
+      setViewMode(parseViewModeParam(viewQuery, defaultViewMode));
+    } else {
+      setViewMode(defaultViewMode);
     }
-  }, [viewQuery]);
+  }, [viewQuery, defaultViewMode]);
 
   React.useEffect(() => {
     if (deptQuery !== null) {
@@ -746,6 +764,8 @@ function UnifiedTaskHubContent() {
               onSearchChange={setSearchQuery}
               onNewTaskClick={() => handleOpenCreateModal("TRUONG")}
               totalTasksCount={filteredTasks.length}
+              isExecutive={isExecutive}
+              userRole={user?.role}
             />
           </section>
 
@@ -791,6 +811,15 @@ function UnifiedTaskHubContent() {
                 onAddTask={(deptCode) => handleOpenCreateModal("TRUONG")}
                 selectedDepartmentFilter={selectedDepartment}
                 searchQuery={searchQuery}
+              />
+            )}
+
+            {viewMode === "executive" && (
+              <ExecutiveDepartmentCommandCenter
+                tasks={filteredTasks}
+                onSelectTask={(task) => setSelectedTask(task)}
+                onSelectDepartment={(deptId) => handleDepartmentChange(deptId || "ALL")}
+                selectedDepartmentId={selectedDepartment !== "ALL" ? selectedDepartment : null}
               />
             )}
           </section>

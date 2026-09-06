@@ -10,6 +10,7 @@ import {
   Plus,
   Building2,
   Filter,
+  ShieldAlert,
 } from "lucide-react";
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import { type AuthUser, matchesUser, filterTasksByRole } from "@/lib/role-task-filter";
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
 // ============================================================================
 
 export type TaskScope = "MY_TASKS" | "SCHOOL_TASKS" | "UNIT_TASKS";
-export type TaskViewMode = "table" | "kanban" | "calendar" | "department";
+export type TaskViewMode = "table" | "kanban" | "calendar" | "department" | "executive";
 
 export interface ScopeTab {
   id: TaskScope;
@@ -51,6 +52,8 @@ export interface UnifiedTaskToolbarProps {
   onNewTaskClick: () => void;
   canCreateTask?: boolean;
   totalTasksCount?: number;
+  isExecutive?: boolean;
+  userRole?: string;
 }
 
 // ============================================================================
@@ -68,6 +71,7 @@ export const VIEW_MODE_OPTIONS: ViewModeOption[] = [
   { id: "kanban", label: "Kanban", icon: Kanban },
   { id: "calendar", label: "Lịch", icon: Calendar },
   { id: "department", label: "Theo đơn vị", icon: Building2 },
+  { id: "executive", label: "Chỉ huy BGH", icon: ShieldAlert },
 ];
 
 export const DEFAULT_AVAILABLE_DEPARTMENTS: { code: string; name: string }[] = [
@@ -169,8 +173,25 @@ export function UnifiedTaskToolbar({
   onNewTaskClick,
   canCreateTask = true,
   totalTasksCount,
+  isExecutive,
+  userRole,
 }: UnifiedTaskToolbarProps) {
   const isUnitScope = scope === "UNIT_TASKS";
+
+  const viewModeOptions = React.useMemo(() => {
+    // If explicitly specified as non-executive / non-admin, filter out executive unless viewMode is currently "executive"
+    if (isExecutive !== undefined) {
+      return isExecutive || viewMode === "executive"
+        ? VIEW_MODE_OPTIONS
+        : VIEW_MODE_OPTIONS.filter((o) => o.id !== "executive");
+    }
+    if (userRole !== undefined) {
+      return userRole === "ADMIN" || viewMode === "executive"
+        ? VIEW_MODE_OPTIONS
+        : VIEW_MODE_OPTIONS.filter((o) => o.id !== "executive");
+    }
+    return VIEW_MODE_OPTIONS;
+  }, [isExecutive, userRole, viewMode]);
 
   return (
     <div
@@ -243,7 +264,7 @@ export function UnifiedTaskToolbar({
             role="group"
             aria-label="Chế độ hiển thị"
           >
-            {VIEW_MODE_OPTIONS.map((opt) => {
+            {viewModeOptions.map((opt) => {
               const Icon = opt.icon;
               const isActive = viewMode === opt.id;
               return (
