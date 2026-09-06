@@ -15,6 +15,10 @@ import type {
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 import type { AuthUser } from "../src/types/auth";
 import {
+  SIDEBAR_ZONE_ITEMS,
+  NAVIGATION_ITEMS,
+} from "../src/components/layout/sidebar-context";
+import {
   validateDeliverableSubmission,
   isValidSubmission,
   getDeliverableDraftKey,
@@ -1942,6 +1946,119 @@ describe("Zero-Emoji Strict Anti-Slop Audit on executive-cockpit-workspace", () 
     });
   });
 });
+
+describe("Sidebar Navigation Hygiene", () => {
+  test("ensures all navigation items use clean Next.js path routes without query strings", () => {
+    const allItems = [...SIDEBAR_ZONE_ITEMS, ...NAVIGATION_ITEMS];
+    for (const item of allItems) {
+      assert.equal(
+        item.href.includes("?zone="),
+        false,
+        `Item ${item.label} should not contain ?zone=`
+      );
+      assert.equal(
+        item.href.includes("?view="),
+        false,
+        `Item ${item.label} should not contain ?view=`
+      );
+      assert.equal(
+        item.href.includes("?tab="),
+        false,
+        `Item ${item.label} should not contain ?tab=`
+      );
+    }
+  });
+
+  test("defines clean canonical routes in SIDEBAR_ZONE_ITEMS", () => {
+    const routes = SIDEBAR_ZONE_ITEMS.map((item) => item.href);
+    assert.ok(routes.includes("/"), "Must contain root path /");
+    assert.ok(routes.includes("/tasks"), "Must contain /tasks");
+    assert.ok(routes.includes("/calendar"), "Must contain /calendar");
+    assert.ok(routes.includes("/org"), "Must contain /org");
+    assert.ok(routes.includes("/notifications"), "Must contain /notifications");
+  });
+
+  test("ensures layout components contain zero emojis (strict anti-slop)", () => {
+    const layoutFiles = [
+      "src/components/layout/sidebar-context.tsx",
+      "src/components/layout/app-sidebar.tsx",
+      "src/components/layout/app-shell.tsx",
+    ];
+
+    layoutFiles.forEach((relPath) => {
+      const fullPath = path.resolve(process.cwd(), relPath);
+      assert.ok(fs.existsSync(fullPath), `File must exist: ${relPath}`);
+      const content = fs.readFileSync(fullPath, "utf-8");
+      const lines = content.split("\n");
+      const violations: string[] = [];
+
+      lines.forEach((line, idx) => {
+        if (EMOJI_REGEX.test(line)) {
+          violations.push(`${relPath}:${idx + 1}: ${line.trim()}`);
+        }
+      });
+
+      assert.equal(
+        violations.length,
+        0,
+        `Detected emoji in layout at:\n${violations.join("\n")}`
+      );
+    });
+  });
+
+  test("ensures all SIDEBAR_ZONE_ITEMS have valid Lucide icons and non-empty labels", () => {
+    for (const item of SIDEBAR_ZONE_ITEMS) {
+      assert.ok(item.label && item.label.length > 0, "Item must have non-empty label");
+      assert.equal(typeof item.icon, "object", `Item ${item.label} icon must be a Lucide component`);
+    }
+  });
+
+  test("verifies active route matching behavior for clean paths", () => {
+    const isItemActive = (itemHref: string, pathname: string, searchZone?: string | null) => {
+      if (itemHref === "/portal") return pathname === "/portal";
+      if (itemHref === "/") {
+        if (searchZone && (searchZone === "tasks" || searchZone === "calendar" || searchZone === "org")) {
+          return false;
+        }
+        return pathname === "/";
+      }
+      if (pathname === itemHref || (itemHref !== "/" && pathname.startsWith(itemHref + "/"))) {
+        return true;
+      }
+      if (pathname === "/" && searchZone) {
+        if (itemHref === "/tasks" && searchZone === "tasks") return true;
+        if (itemHref === "/calendar" && searchZone === "calendar") return true;
+        if (itemHref === "/org" && searchZone === "org") return true;
+      }
+      return false;
+    };
+
+    // Root path
+    assert.equal(isItemActive("/", "/"), true);
+    assert.equal(isItemActive("/tasks", "/"), false);
+    assert.equal(isItemActive("/calendar", "/"), false);
+
+    // /tasks path
+    assert.equal(isItemActive("/", "/tasks"), false);
+    assert.equal(isItemActive("/tasks", "/tasks"), true);
+    assert.equal(isItemActive("/tasks", "/tasks/sub-123"), true);
+
+    // /calendar path
+    assert.equal(isItemActive("/", "/calendar"), false);
+    assert.equal(isItemActive("/calendar", "/calendar"), true);
+
+    // /org path
+    assert.equal(isItemActive("/org", "/org"), true);
+
+    // /notifications path
+    assert.equal(isItemActive("/notifications", "/notifications"), true);
+
+    // Legacy ?zone=tasks on root
+    assert.equal(isItemActive("/", "/", "tasks"), false);
+    assert.equal(isItemActive("/tasks", "/", "tasks"), true);
+  });
+});
+
 
 
 

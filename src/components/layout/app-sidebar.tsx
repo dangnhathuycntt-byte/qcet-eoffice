@@ -24,14 +24,26 @@ export function AppSidebar() {
     if (item.href === "/portal") {
       return pathname === "/portal";
     }
-    if (pathname === "/") {
-      const activeZone = searchParams.get("zone") || "tasks";
-      if (item.zone) {
-        return activeZone === item.zone;
+    if (item.href === "/") {
+      const zone = searchParams.get("zone");
+      if (zone && (zone === "tasks" || zone === "calendar" || zone === "org")) {
+        return false;
       }
-      return false;
+      return pathname === "/";
     }
-    return pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
+    if (pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"))) {
+      return true;
+    }
+    // Backward compatibility for legacy ?zone= query parameters on root
+    if (pathname === "/") {
+      const zone = searchParams.get("zone");
+      if (zone) {
+        if (item.href === "/tasks" && zone === "tasks") return true;
+        if (item.href === "/calendar" && zone === "calendar") return true;
+        if (item.href === "/org" && zone === "org") return true;
+      }
+    }
+    return false;
   };
 
   // Helper to get badge counter and variant

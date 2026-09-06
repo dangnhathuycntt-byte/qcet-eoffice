@@ -29,9 +29,6 @@ export interface SidebarBadgeCounts {
 }
 
 export const DEFAULT_SIDEBAR_BADGES: SidebarBadgeCounts = {
-  tasks: 304,
-  calendar: 7,
-  org: 11,
   notifications: 5,
 };
 
@@ -43,12 +40,11 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
 ];
 
 export const SIDEBAR_ZONE_ITEMS: NavigationItem[] = [
-  { href: "/?zone=portal", label: "Cổng Portal", icon: LayoutGrid, zone: "portal" },
-  { href: "/?zone=dashboard", label: "Dashboard Điều hành", icon: LayoutDashboard, zone: "dashboard" },
-  { href: "/?zone=tasks", label: "Quản lý công việc", icon: CheckSquare, zone: "tasks", badge: "304", badgeVariant: "primary" },
-  { href: "/?zone=calendar", label: "Lịch công tác", icon: Calendar, zone: "calendar", badge: "7", badgeVariant: "sky" },
-  { href: "/?zone=org", label: "Cơ cấu & Danh bạ", icon: Network, zone: "org", badge: "11", badgeVariant: "muted" },
-  { href: "/notifications", label: "Thông báo", icon: Bell, badge: "5", badgeVariant: "danger" },
+  { href: "/", label: "Bàn làm việc", icon: LayoutDashboard, zone: "dashboard" },
+  { href: "/tasks", label: "Kho nhiệm vụ", icon: CheckSquare, zone: "tasks" },
+  { href: "/calendar", label: "Lịch công tác", icon: Calendar, zone: "calendar" },
+  { href: "/org", label: "Sơ đồ tổ chức & Nhân sự", icon: Network, zone: "org" },
+  { href: "/notifications", label: "Thông báo & Nhắc việc", icon: Bell, badge: "5", badgeVariant: "danger" },
 ];
 
 export const SIDEBAR_STORAGE_KEY = "qcet_sidebar_collapsed";
