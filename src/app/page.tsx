@@ -114,7 +114,12 @@ import {
   scopeToParam,
   parseViewModeParam,
   filterTasksHub,
+  computeMonthlyTaskCounts,
 } from "@/lib/unified-task-hub";
+import {
+  getAcademicMonthInfo,
+  getAcademicMonthsForYear,
+} from "@/lib/academic-calendar";
 
 function DashboardLoadingFallback() {
   return (
@@ -133,11 +138,12 @@ function UnifiedTaskHubContent() {
   const { user } = useAuth();
   const { setBadgeCounts } = useSidebar();
 
-  // 1. URL Query Parameter sync for zone, scope, view, and department
+  // 1. URL Query Parameter sync for zone, scope, view, department, and academic month
   const zoneQuery = searchParams.get("zone");
   const scopeQuery = searchParams.get("scope");
   const viewQuery = searchParams.get("view");
   const deptQuery = searchParams.get("dept");
+  const monthQuery = searchParams.get("month");
 
   const [activeZone, setActiveZone] = React.useState<WorkspaceZone>(() =>
     parseZoneParam(zoneQuery)
@@ -161,6 +167,16 @@ function UnifiedTaskHubContent() {
   const [selectedDepartment, setSelectedDepartment] = React.useState<string>(
     deptQuery || "ALL"
   );
+  const [selectedAcademicMonth, setSelectedAcademicMonth] = React.useState<number | "ALL">(() => {
+    if (monthQuery === "ALL") return "ALL";
+    if (monthQuery) {
+      const parsed = parseInt(monthQuery, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
+        return parsed;
+      }
+    }
+    return getAcademicMonthInfo(new Date()).monthNumber;
+  });
   const [selectedCategory, setSelectedCategory] = React.useState<string>("ALL");
   const [selectedPriority, setSelectedPriority] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState<string>("");
@@ -199,6 +215,19 @@ function UnifiedTaskHubContent() {
     }
   }, [deptQuery]);
 
+  React.useEffect(() => {
+    if (monthQuery !== null) {
+      if (monthQuery === "ALL") {
+        setSelectedAcademicMonth("ALL");
+      } else {
+        const parsed = parseInt(monthQuery, 10);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
+          setSelectedAcademicMonth(parsed);
+        }
+      }
+    }
+  }, [monthQuery]);
+
   // URL updating helper
   const updateUrlParams = React.useCallback(
     (updates: {
@@ -206,6 +235,7 @@ function UnifiedTaskHubContent() {
       scope?: TaskScope;
       view?: TaskViewMode;
       dept?: string;
+      month?: number | "ALL";
     }) => {
       const params = new URLSearchParams(searchParams.toString());
       if (updates.zone !== undefined) {
@@ -226,6 +256,13 @@ function UnifiedTaskHubContent() {
           params.set("dept", updates.dept);
         } else {
           params.delete("dept");
+        }
+      }
+      if (updates.month !== undefined) {
+        if (updates.month === "ALL") {
+          params.set("month", "ALL");
+        } else {
+          params.set("month", String(updates.month));
         }
       }
       const qs = params.toString();
@@ -259,6 +296,11 @@ function UnifiedTaskHubContent() {
   const handleDepartmentChange = (newDept: string) => {
     setSelectedDepartment(newDept);
     updateUrlParams({ dept: newDept });
+  };
+
+  const handleAcademicMonthChange = (newMonth: number | "ALL") => {
+    setSelectedAcademicMonth(newMonth);
+    updateUrlParams({ month: newMonth });
   };
 
   // 2. Synchronous optimistic initial state from getMockDashboardPayload (0ms blank screen)
@@ -329,6 +371,18 @@ function UnifiedTaskHubContent() {
     [dashboardData.tasks, scope, user, selectedDepartment]
   );
 
+  // Monthly task counts across scoped tasks for the 12-month operational cycle
+  const monthlyTaskCounts = React.useMemo(
+    () => computeMonthlyTaskCounts(scopedBaseTasks, "2026-2027"),
+    [scopedBaseTasks]
+  );
+
+  const selectedMonthPeriod = React.useMemo(() => {
+    if (selectedAcademicMonth === "ALL") return null;
+    const months = getAcademicMonthsForYear("2026-2027");
+    return months.find((m) => m.monthNumber === selectedAcademicMonth) ?? null;
+  }, [selectedAcademicMonth]);
+
   const displayedStats = React.useMemo(() => {
     if (scopedBaseTasks.length > 0) return computeDashboardStats(scopedBaseTasks);
     return computeDashboardStats(dashboardData.tasks);
@@ -359,6 +413,8 @@ function UnifiedTaskHubContent() {
       department: selectedDepartment,
       searchQuery,
       user,
+      academicMonth: selectedAcademicMonth,
+      academicYear: "2026-2027",
     });
     if (isExecutive && executiveFilter !== "ALL") {
       result = filterTasksByExecutive(result, executiveFilter);
@@ -376,6 +432,7 @@ function UnifiedTaskHubContent() {
     user,
     isExecutive,
     executiveFilter,
+    selectedAcademicMonth,
   ]);
 
   // Role-filtered tasks for widgets & notifications
@@ -707,11 +764,18 @@ function UnifiedTaskHubContent() {
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
-                  Năm học 2025 - 2026
+                  Năm học 2026 - 2027
                 </span>
-                <span className="text-[11px] text-muted-foreground font-medium">
-                  Học kỳ I
-                </span>
+                {selectedMonthPeriod ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[10.5px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 shadow-2xs font-mono">
+                    <span className="size-1.5 rounded-full bg-sky-500 animate-pulse" />
+                    <span>{selectedMonthPeriod.label} ({selectedMonthPeriod.shortDateSpan})</span>
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground font-medium">
+                    Cả năm học (12 tháng chu kỳ)
+                  </span>
+                )}
               </div>
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground font-heading">
                 Quản lý Giao việc & Nhiệm vụ
@@ -748,7 +812,7 @@ function UnifiedTaskHubContent() {
           </section>
 
           {/* Unified Task Toolbar */}
-          <section aria-label="Thanh công cụ điều khiển nhiệm vụ">
+          <section aria-label="Thanh công cụ điều khiển nhiệm vụ" className="space-y-2">
             <UnifiedTaskToolbar
               scope={scope}
               onScopeChange={handleScopeChange}
@@ -766,7 +830,30 @@ function UnifiedTaskHubContent() {
               totalTasksCount={filteredTasks.length}
               isExecutive={isExecutive}
               userRole={user?.role}
+              selectedAcademicMonth={selectedAcademicMonth}
+              onAcademicMonthChange={handleAcademicMonthChange}
+              academicYear="2026-2027"
+              monthlyTaskCounts={monthlyTaskCounts}
             />
+
+            {/* Active Academic Month Filter Notification Banner */}
+            {selectedMonthPeriod && (
+              <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="inline-block size-1.5 rounded-full bg-primary shrink-0" />
+                  <span className="truncate">
+                    Đang lọc hiển thị theo chu kỳ <strong>{selectedMonthPeriod.fullLabel}</strong> ({filteredTasks.length} nhiệm vụ)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAcademicMonthChange("ALL")}
+                  className="shrink-0 text-[11px] font-medium text-primary hover:underline cursor-pointer"
+                >
+                  Hiển thị cả năm
+                </button>
+              </div>
+            )}
           </section>
 
           {/* Dynamic Work Canvas */}
