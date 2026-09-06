@@ -2,14 +2,13 @@
 
 import * as React from "react";
 import { CheckCircle2, AlertTriangle, Target } from "lucide-react";
-import type { ExecutiveActionStats } from "@/lib/executive-matrix-aggregator";
+import type {
+  ExecutiveActionStats,
+  ExecutiveFilter,
+} from "@/lib/executive-matrix-aggregator";
 import { cn } from "@/lib/utils";
 
-export type ExecutiveFilter =
-  | "ALL"
-  | "PENDING_APPROVAL"
-  | "BLOCKED_OVERDUE"
-  | "STRATEGIC";
+export type { ExecutiveFilter };
 
 export interface ExecutiveActionCenterProps {
   stats: ExecutiveActionStats;

@@ -18,6 +18,16 @@ import {
   ExecutiveStatStrip,
   type WorkboxFilter,
 } from "@/components/dashboard/executive-stat-strip";
+import {
+  ExecutiveActionCenter,
+  type ExecutiveFilter,
+} from "@/components/dashboard/executive-action-center";
+import { DepartmentProgressMatrix } from "@/components/dashboard/department-progress-matrix";
+import {
+  computeExecutiveActionStats,
+  computeDepartmentHealthMatrix,
+  filterTasksByExecutive,
+} from "@/lib/executive-matrix-aggregator";
 import { CascadingTaskTable } from "@/components/dashboard/cascading-task-table";
 import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
@@ -85,6 +95,8 @@ function UnifiedTaskHubContent() {
   const [selectedPriority, setSelectedPriority] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [activeWorkbox, setActiveWorkbox] = React.useState<WorkboxFilter>("ALL");
+  const [executiveFilter, setExecutiveFilter] =
+    React.useState<ExecutiveFilter>("ALL");
 
   // Keep state in sync with URL query changes
   React.useEffect(() => {
@@ -211,9 +223,22 @@ function UnifiedTaskHubContent() {
     return computeDashboardStats(dashboardData.tasks);
   }, [scopedBaseTasks, dashboardData.tasks]);
 
+  // Executive cockpit data (only computed for ADMIN/BGH users)
+  const isExecutive = user?.role === "ADMIN";
+
+  const executiveStats = React.useMemo(
+    () => (isExecutive ? computeExecutiveActionStats(dashboardData.tasks) : null),
+    [dashboardData.tasks, isExecutive]
+  );
+
+  const departmentHealth = React.useMemo(
+    () => (isExecutive ? computeDepartmentHealthMatrix(dashboardData.tasks) : []),
+    [dashboardData.tasks, isExecutive]
+  );
+
   // Master filtered tasks feeding Work Canvas
   const filteredTasks = React.useMemo(() => {
-    return filterTasksHub({
+    let result = filterTasksHub({
       tasks: dashboardData.tasks,
       scope,
       workboxFilter: activeWorkbox,
@@ -223,6 +248,10 @@ function UnifiedTaskHubContent() {
       searchQuery,
       user,
     });
+    if (isExecutive && executiveFilter !== "ALL") {
+      result = filterTasksByExecutive(result, executiveFilter);
+    }
+    return result;
   }, [
     dashboardData.tasks,
     scope,
@@ -232,6 +261,8 @@ function UnifiedTaskHubContent() {
     selectedDepartment,
     searchQuery,
     user,
+    isExecutive,
+    executiveFilter,
   ]);
 
   const parentSchoolTaskTitle = React.useMemo(() => {
@@ -412,13 +443,29 @@ function UnifiedTaskHubContent() {
       </div>
 
       {/* Executive Stat Strip / Interactive Workbox Filter */}
-      <section aria-label="Chỉ số điều hành toàn trường">
+      <section aria-label="Chi so dieu hanh toan truong">
         <ExecutiveStatStrip
           stats={displayedStats}
           activeFilter={activeWorkbox}
           onFilterChange={(filter) => setActiveWorkbox(filter)}
         />
       </section>
+
+      {/* Executive Cockpit (BGH only) */}
+      {isExecutive && executiveStats && (
+        <section aria-label="Khoang dieu hanh Ban Giam hieu" className="space-y-4">
+          <ExecutiveActionCenter
+            stats={executiveStats}
+            activeFilter={executiveFilter}
+            onFilterChange={setExecutiveFilter}
+          />
+          <DepartmentProgressMatrix
+            departments={departmentHealth}
+            selectedDepartment={selectedDepartment}
+            onSelectDepartment={handleDepartmentChange}
+          />
+        </section>
+      )}
 
       {/* Unified Task Toolbar */}
       <section aria-label="Thanh công cụ điều khiển nhiệm vụ">

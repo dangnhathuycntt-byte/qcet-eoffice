@@ -1,6 +1,12 @@
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import { isTaskPastDue, TODAY_ISO } from "./unified-task-hub";
 
+export type ExecutiveFilter =
+  | "ALL"
+  | "PENDING_APPROVAL"
+  | "BLOCKED_OVERDUE"
+  | "STRATEGIC";
+
 export interface ExecutiveActionStats {
   pendingSchoolApprovalCount: number;
   blockedTasksCount: number;
@@ -315,4 +321,44 @@ export function computeDepartmentHealthMatrix(
       averageProgressPercent,
     };
   });
+}
+
+/**
+ * Filters SchoolTask[] by an executive action lens.
+ * Applied after filterTasksHub to narrow the work canvas for BGH users.
+ */
+export function filterTasksByExecutive(
+  tasks: SchoolTask[],
+  filter: ExecutiveFilter,
+  referenceDate: string = TODAY_ISO
+): SchoolTask[] {
+  if (filter === "ALL") return tasks;
+
+  switch (filter) {
+    case "PENDING_APPROVAL":
+      return tasks.filter(
+        (t) => t.progressPercent === 100 && t.status !== "COMPLETED"
+      );
+    case "BLOCKED_OVERDUE":
+      return tasks.filter((t) => {
+        if ((t.status as string) === "BLOCKED") return true;
+        if (
+          t.status !== "COMPLETED" &&
+          isTaskPastDue(t.dueDate, referenceDate)
+        ) {
+          return true;
+        }
+        const hasBlockedSub = (t.subTasks || []).some(
+          (sub) =>
+            sub.status === "BLOCKED" ||
+            (sub.status !== "COMPLETED" &&
+              isTaskPastDue(sub.dueDate, referenceDate))
+        );
+        return hasBlockedSub;
+      });
+    case "STRATEGIC":
+      return tasks.filter((t) => t.status === "IN_PROGRESS");
+    default:
+      return tasks;
+  }
 }
