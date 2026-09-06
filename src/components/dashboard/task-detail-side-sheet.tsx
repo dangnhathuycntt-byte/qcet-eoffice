@@ -820,13 +820,13 @@ export function TaskDetailSideSheet({
                       {aiReview.suggestedAction === "QUICK_APPROVE" && (
                         <div className="flex items-center gap-1.5 text-[10.5px] text-emerald-600 dark:text-emerald-400 font-medium">
                           <CheckCircle2 className="size-3" strokeWidth={1.5} />
-                          <span>Khuyen nghi: Duyet nhanh</span>
+                          <span>Khuyến nghị: Duyệt nhanh</span>
                         </div>
                       )}
                       {aiReview.suggestedAction === "REQUEST_CHANGES" && (
                         <div className="flex items-center gap-1.5 text-[10.5px] text-amber-600 dark:text-amber-400 font-medium">
                           <RotateCcw className="size-3" strokeWidth={1.5} />
-                          <span>Khuyen nghi: Yeu cau bo sung</span>
+                          <span>Khuyến nghị: Yêu cầu bổ sung</span>
                         </div>
                       )}
                     </div>
@@ -1020,7 +1020,7 @@ export function TaskDetailSideSheet({
                         className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
                       >
                         <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                        <span>Duyet nhanh theo de xuat AI</span>
+                        <span>Duyệt nhanh theo đề xuất AI</span>
                       </Button>
                     )}
                     <Button
@@ -1035,7 +1035,7 @@ export function TaskDetailSideSheet({
                       className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                     >
                       <AlertTriangle className="size-3.5" strokeWidth={1.5} />
-                      <span>Yeu cau chinh sua</span>
+                      <span>Yêu cầu chỉnh sửa</span>
                     </Button>
                   </div>
                 </div>
