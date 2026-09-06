@@ -8,6 +8,7 @@ import {
 import type { WorkboxFilter } from "@/components/dashboard/executive-stat-strip";
 import { matchesUser } from "@/lib/role-task-filter";
 import { filterTasksForTable } from "@/components/dashboard/cascading-task-table";
+import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 
 export const TODAY_ISO = "2026-09-04";
 
@@ -156,6 +157,62 @@ export function filterTasksByWorkbox(
   return tasks;
 }
 
+/**
+ * Filter tasks by academic month period.
+ * A task matches an academic month if:
+ * 1. academicMonth is "ALL" or undefined -> all tasks pass
+ * 2. The task's dueDate falls in the academic month window, OR
+ * 3. Any of the task's subtasks has a dueDate falling in the academic month window.
+ */
+export function filterTasksByAcademicMonth(
+  tasks: SchoolTask[],
+  academicMonth?: number | "ALL",
+  academicYear?: string
+): SchoolTask[] {
+  if (!academicMonth || academicMonth === "ALL") {
+    return tasks;
+  }
+  return tasks.filter((t) => {
+    const parentMatches = isDateInAcademicMonth(t.dueDate, academicMonth, academicYear);
+    const subMatches = t.subTasks?.some((s) =>
+      isDateInAcademicMonth(s.dueDate, academicMonth, academicYear)
+    );
+    return parentMatches || subMatches;
+  });
+}
+
+/**
+ * Computes task counts for each of the 12 academic months (1 to 12).
+ * For each month, counts tasks whose dueDate or subtask dueDate falls in that month.
+ */
+export function computeMonthlyTaskCounts(
+  tasks: SchoolTask[],
+  academicYear: string = "2026-2027"
+): Record<number, number> {
+  const counts: Record<number, number> = {
+    9: 0, 10: 0, 11: 0, 12: 0,
+    1: 0, 2: 0, 3: 0, 4: 0,
+    5: 0, 6: 0, 7: 0, 8: 0,
+  };
+
+  for (const task of tasks) {
+    const matchedMonths = new Set<number>();
+    for (let m = 1; m <= 12; m++) {
+      if (
+        isDateInAcademicMonth(task.dueDate, m, academicYear) ||
+        task.subTasks?.some((s) => isDateInAcademicMonth(s.dueDate, m, academicYear))
+      ) {
+        matchedMonths.add(m);
+      }
+    }
+    for (const m of matchedMonths) {
+      counts[m] = (counts[m] || 0) + 1;
+    }
+  }
+
+  return counts;
+}
+
 export interface FilterTasksHubOptions {
   tasks: SchoolTask[];
   scope: TaskScope;
@@ -166,6 +223,8 @@ export interface FilterTasksHubOptions {
   searchQuery?: string;
   user?: AuthUser;
   referenceDate?: string;
+  academicMonth?: number | "ALL";
+  academicYear?: string;
 }
 
 /**
@@ -181,6 +240,8 @@ export function filterTasksHub({
   searchQuery = "",
   user,
   referenceDate = TODAY_ISO,
+  academicMonth = "ALL",
+  academicYear = "2026-2027",
 }: FilterTasksHubOptions): SchoolTask[] {
   // 1. Filter by Scope
   let result = filterTasksByScope(tasks, scope, user, department);
@@ -243,6 +304,11 @@ export function filterTasksHub({
       );
       return matchTitle || matchDesc || matchLead || matchDept || matchSub;
     });
+  }
+
+  // 7. Filter by Academic Month
+  if (academicMonth && academicMonth !== "ALL") {
+    result = filterTasksByAcademicMonth(result, academicMonth, academicYear);
   }
 
   return result;

@@ -15,6 +15,7 @@ import {
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import { type AuthUser, matchesUser, filterTasksByRole } from "@/lib/role-task-filter";
 import { filterTasksForTable } from "@/components/dashboard/cascading-task-table";
+import { getAcademicMonthsForYear, type AcademicMonthPeriod } from "@/lib/academic-calendar";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -54,6 +55,10 @@ export interface UnifiedTaskToolbarProps {
   totalTasksCount?: number;
   isExecutive?: boolean;
   userRole?: string;
+  selectedAcademicMonth?: number | "ALL"; // 1-12 or "ALL"
+  onAcademicMonthChange?: (month: number | "ALL") => void;
+  academicYear?: string; // default "2026-2027"
+  monthlyTaskCounts?: Record<number, number>;
 }
 
 // ============================================================================
@@ -175,8 +180,24 @@ export function UnifiedTaskToolbar({
   totalTasksCount,
   isExecutive,
   userRole,
+  selectedAcademicMonth = "ALL",
+  onAcademicMonthChange,
+  academicYear = "2026-2027",
+  monthlyTaskCounts,
 }: UnifiedTaskToolbarProps) {
   const isUnitScope = scope === "UNIT_TASKS";
+  const activeAcademicMonth = selectedAcademicMonth ?? "ALL";
+
+  const academicMonths = React.useMemo(() => {
+    return getAcademicMonthsForYear(academicYear);
+  }, [academicYear]);
+
+  const allYearCount = React.useMemo(() => {
+    if (monthlyTaskCounts) {
+      return Object.values(monthlyTaskCounts).reduce((acc, c) => acc + (c || 0), 0);
+    }
+    return totalTasksCount;
+  }, [monthlyTaskCounts, totalTasksCount]);
 
   const viewModeOptions = React.useMemo(() => {
     // If explicitly specified as non-executive / non-admin, filter out executive unless viewMode is currently "executive"
@@ -299,6 +320,97 @@ export function UnifiedTaskToolbar({
               <span>Giao việc mới</span>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Middle Row: 12 Academic Month Operational Cycle Pill Bar */}
+      <div
+        className="flex items-center gap-2 overflow-x-auto pt-2 pb-0.5 border-t border-border/50 scrollbar-none"
+        role="tablist"
+        aria-label="Chu kỳ 12 tháng công tác năm học"
+      >
+        <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground whitespace-nowrap pr-0.5 shrink-0 select-none">
+          <Calendar className="size-3.5 text-primary" strokeWidth={1.5} />
+          <span className="hidden sm:inline">Năm học {academicYear}:</span>
+          <span className="sm:hidden">{academicYear}:</span>
+        </div>
+
+        <div className="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-muted/30 p-1 shadow-2xs shrink-0">
+          {/* All Year / Cả năm tab */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeAcademicMonth === "ALL"}
+            onClick={() => onAcademicMonthChange?.("ALL")}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
+              activeAcademicMonth === "ALL"
+                ? "bg-card text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+            )}
+            title={`Tất cả các tháng công tác trong năm học ${academicYear}`}
+          >
+            <span>Cả năm</span>
+            {allYearCount !== undefined && (
+              <span
+                className={cn(
+                  "inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-[10px] tabular-nums font-semibold",
+                  activeAcademicMonth === "ALL"
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                {allYearCount}
+              </span>
+            )}
+          </button>
+
+          {/* 12 Operational Academic Months: Tháng 9 -> Tháng 8 */}
+          {academicMonths.map((period) => {
+            const isSelected = activeAcademicMonth === period.monthNumber;
+            const count = monthlyTaskCounts ? monthlyTaskCounts[period.monthNumber] : undefined;
+
+            return (
+              <button
+                key={period.monthNumber}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => onAcademicMonthChange?.(period.monthNumber)}
+                className={cn(
+                  "group inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
+                  isSelected
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                )}
+                title={period.fullLabel}
+              >
+                <span>{period.label}</span>
+                <span
+                  className={cn(
+                    "hidden 2xl:inline text-[10px] font-normal transition-opacity",
+                    isSelected ? "text-muted-foreground" : "text-muted-foreground/60"
+                  )}
+                >
+                  ({period.shortDateSpan})
+                </span>
+                {typeof count === "number" && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-[10px] tabular-nums font-semibold",
+                      isSelected
+                        ? "bg-primary/10 text-primary"
+                        : count > 0
+                        ? "bg-muted text-muted-foreground"
+                        : "bg-muted/40 text-muted-foreground/50"
+                    )}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
