@@ -38,6 +38,17 @@ import {
   LecturerFocusWorkspace,
   StaffWorkspace,
 } from "../src/components/portal/lecturer-focus-workspace";
+import {
+  computeDepartmentManagerMetrics,
+  filterDepartmentStaffTasks,
+  filterDepartmentSchoolTasks,
+  extractAllDepartmentStaffTasks,
+  getApprovalQueue,
+  getManagerDirectTasks,
+  filterManagerTasks,
+  DepartmentManagerWorkspace,
+  ManagerWorkspace,
+} from "../src/components/portal/department-manager-workspace";
 
 const EMOJI_REGEX = /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
 
@@ -930,6 +941,468 @@ describe("Zero-Emoji Strict Anti-Slop Audit on lecturer-focus-workspace", () => 
     });
   });
 });
+
+describe("Manager Workspace Filtering & Dual-Role", () => {
+  test("filters approval queue strictly by department and NEEDS_REVIEW status", () => {
+    const tasks: StaffTask[] = [
+      {
+        id: "t1",
+        title: "De thi",
+        assigneeName: "GV A",
+        departmentCode: "CNTT",
+        status: "NEEDS_REVIEW",
+        dueDate: "2026-09-08",
+        parentSchoolTaskId: "p1",
+        updatedAt: "2026-09-06",
+      },
+      {
+        id: "t2",
+        title: "Bao cao",
+        assigneeName: "GV B",
+        departmentCode: "KTL",
+        status: "NEEDS_REVIEW",
+        dueDate: "2026-09-08",
+        parentSchoolTaskId: "p2",
+        updatedAt: "2026-09-06",
+      },
+    ];
+
+    const cnttQueue = tasks.filter(
+      (t) => t.departmentCode === "CNTT" && t.status === "NEEDS_REVIEW"
+    );
+    assert.equal(cnttQueue.length, 1);
+    assert.equal(cnttQueue[0].id, "t1");
+
+    // Also test exported getApprovalQueue helper
+    const queue = getApprovalQueue(tasks, "CNTT");
+    assert.equal(queue.length, 1);
+    assert.equal(queue[0].id, "t1");
+  });
+
+  test("filters department school tasks by leadDepartmentCode or coDepartmentCodes", () => {
+    const schoolTasks: SchoolTask[] = [
+      {
+        id: "st-1",
+        title: "Kế hoạch CNTT năm 2026",
+        category: "CNTT",
+        categoryLabel: "Công nghệ thông tin",
+        leadAssigneeName: "Trần Hùng",
+        leadDepartmentCode: "CNTT",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "IN_PROGRESS",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 60,
+      },
+      {
+        id: "st-2",
+        title: "Phát triển chương trình đào tạo",
+        category: "BAO_CAO",
+        categoryLabel: "Báo cáo",
+        leadAssigneeName: "Lê Văn C",
+        leadDepartmentCode: "DAO_TAO",
+        coDepartmentCodes: ["CNTT", "KTL"],
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "IN_PROGRESS",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 40,
+      },
+      {
+        id: "st-3",
+        title: "Kế hoạch Tài chính",
+        category: "KHAC",
+        categoryLabel: "Tài chính",
+        leadAssigneeName: "Phạm Thị D",
+        leadDepartmentCode: "TAI_CHINH",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "IN_PROGRESS",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 20,
+      },
+    ];
+
+    const cnttSchoolTasks = filterDepartmentSchoolTasks(schoolTasks, "CNTT");
+    assert.equal(cnttSchoolTasks.length, 2);
+    assert.ok(cnttSchoolTasks.some((t) => t.id === "st-1"));
+    assert.ok(cnttSchoolTasks.some((t) => t.id === "st-2"));
+  });
+
+  test("isolates manager direct tasks from department members subtasks", () => {
+    const managerUser: AuthUser = {
+      id: "manager-1",
+      name: "TS. Lê Hoàng",
+      email: "lehoang@cdktcnqn.edu.vn",
+      role: "MANAGER",
+      roleLabel: "Trưởng khoa CNTT",
+      department: "Khoa CNTT",
+      departmentCode: "CNTT",
+    };
+
+    const tasks: StaffTask[] = [
+      {
+        id: "mt-1",
+        title: "Phê duyệt kế hoạch thực tập",
+        assigneeName: "TS. Lê Hoàng",
+        assigneeId: "manager-1",
+        departmentCode: "CNTT",
+        status: "IN_PROGRESS",
+        dueDate: "2026-09-10",
+        parentSchoolTaskId: "p-1",
+        updatedAt: "2026-09-06",
+      },
+      {
+        id: "st-1",
+        title: "Giảng dạy môn Mạng máy tính",
+        assigneeName: "ThS. Trần Bình",
+        assigneeId: "gv-1",
+        departmentCode: "CNTT",
+        status: "IN_PROGRESS",
+        dueDate: "2026-09-12",
+        parentSchoolTaskId: "p-1",
+        updatedAt: "2026-09-06",
+      },
+    ];
+
+    const myTasks = getManagerDirectTasks(tasks, managerUser);
+    assert.equal(myTasks.length, 1);
+    assert.equal(myTasks[0].id, "mt-1");
+  });
+
+  test("extracts and consolidates subtasks with parent school task context", () => {
+    const schoolTasks: SchoolTask[] = [
+      {
+        id: "school-99",
+        title: "Nhiệm vụ chuyển đổi số",
+        category: "CHUYEN_DOI_SO",
+        categoryLabel: "Chuyển đổi số",
+        leadAssigneeName: "Trưởng Khoa",
+        leadDepartmentCode: "CNTT",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-20",
+        status: "IN_PROGRESS",
+        totalSubTasks: 1,
+        completedSubTasks: 0,
+        progressPercent: 50,
+        subTasks: [
+          {
+            id: "sub-99-1",
+            title: "Triển khai phần mềm",
+            assigneeName: "GV A",
+            status: "IN_PROGRESS",
+            dueDate: "2026-09-15",
+            parentSchoolTaskId: "school-99",
+            updatedAt: "2026-09-06",
+          },
+        ],
+      },
+    ];
+
+    const extracted = extractAllDepartmentStaffTasks(schoolTasks);
+    assert.equal(extracted.length, 1);
+    assert.equal(extracted[0].id, "sub-99-1");
+    assert.equal(extracted[0].parentTaskTitle, "Nhiệm vụ chuyển đổi số");
+    assert.equal(extracted[0].departmentCode, "CNTT");
+  });
+});
+
+describe("Department Manager Metrics & Computations", () => {
+  const mockUser: AuthUser = {
+    id: "user-mgr-1",
+    name: "Trần Hùng",
+    email: "daotao@cdktcnqn.edu.vn",
+    role: "MANAGER",
+    roleLabel: "Trưởng phòng Đào tạo & QLKH",
+    department: "Phòng Đào tạo",
+    departmentCode: "DAO_TAO",
+  };
+
+  const sampleStaffTasks: StaffTask[] = [
+    {
+      id: "t-review-1",
+      title: "Đề thi hết môn K48",
+      assigneeName: "Nguyễn Văn A",
+      departmentCode: "DAO_TAO",
+      status: "NEEDS_REVIEW",
+      dueDate: "2026-09-08",
+      parentSchoolTaskId: "st-1",
+      updatedAt: "2026-09-06",
+    },
+    {
+      id: "t-overdue-1",
+      title: "Báo cáo tiến độ đào tạo tháng 8",
+      assigneeName: "Trần Hùng",
+      assigneeId: "user-mgr-1",
+      departmentCode: "DAO_TAO",
+      status: "IN_PROGRESS",
+      dueDate: "2026-09-04", // overdue relative to 2026-09-06
+      parentSchoolTaskId: "st-1",
+      updatedAt: "2026-09-05",
+    },
+    {
+      id: "t-focus-1",
+      title: "Tổ chức hội đồng thẩm định",
+      assigneeName: "Lê Văn C",
+      departmentCode: "DAO_TAO",
+      status: "BLOCKED",
+      dueDate: "2026-09-07",
+      parentSchoolTaskId: "st-1",
+      updatedAt: "2026-09-06",
+    },
+    {
+      id: "t-completed-1",
+      title: "Lập danh sách học viên",
+      assigneeName: "Trần Hùng",
+      assigneeId: "user-mgr-1",
+      departmentCode: "DAO_TAO",
+      status: "COMPLETED",
+      dueDate: "2026-09-05",
+      parentSchoolTaskId: "st-1",
+      updatedAt: "2026-09-05",
+    },
+    {
+      id: "t-other-dept",
+      title: "Việc của khoa khác",
+      assigneeName: "Nguyễn Văn B",
+      departmentCode: "CNTT",
+      status: "NEEDS_REVIEW",
+      dueDate: "2026-09-08",
+      parentSchoolTaskId: "st-2",
+      updatedAt: "2026-09-06",
+    },
+  ];
+
+  const sampleSchoolTasks: SchoolTask[] = [
+    {
+      id: "st-1",
+      title: "Đổi mới chương trình đào tạo",
+      category: "BAO_CAO",
+      categoryLabel: "Báo cáo",
+      leadAssigneeName: "Trần Hùng",
+      leadDepartmentCode: "DAO_TAO",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      subTasks: [],
+      totalSubTasks: 4,
+      completedSubTasks: 2,
+      progressPercent: 75,
+    },
+  ];
+
+  test("computes full 4-metric executive strip accurately", () => {
+    const metrics = computeDepartmentManagerMetrics(
+      sampleStaffTasks,
+      sampleSchoolTasks,
+      "DAO_TAO",
+      "2026-09-06",
+      mockUser
+    );
+
+    assert.equal(metrics.waitingReviewCount, 1); // only t-review-1 (t-other-dept excluded)
+    assert.equal(metrics.overdueCount, 1); // t-overdue-1 is overdue
+    assert.ok(metrics.focusTaskCount >= 2); // includes blocked, overdue, needs_review
+    assert.equal(metrics.averageProgressPercent, 75); // from school tasks
+    assert.equal(metrics.totalDepartmentTasks, 4);
+    assert.equal(metrics.completedDepartmentTasks, 1);
+    assert.equal(metrics.myDirectTasksCount, 2); // t-overdue-1 and t-completed-1
+  });
+
+  test("handles empty tasks and missing department code cleanly", () => {
+    const metrics = computeDepartmentManagerMetrics([], []);
+    assert.equal(metrics.waitingReviewCount, 0);
+    assert.equal(metrics.overdueCount, 0);
+    assert.equal(metrics.focusTaskCount, 0);
+    assert.equal(metrics.averageProgressPercent, 0);
+    assert.equal(metrics.totalDepartmentTasks, 0);
+    assert.equal(metrics.completedDepartmentTasks, 0);
+    assert.equal(metrics.myDirectTasksCount, 0);
+  });
+});
+
+describe("DepartmentManagerWorkspace Component Static Rendering", () => {
+  const mockUser: AuthUser = {
+    id: "user-mgr-cntt",
+    name: "TS. Nguyễn Minh",
+    email: "minhn@cdktcnqn.edu.vn",
+    role: "MANAGER",
+    roleLabel: "Trưởng khoa CNTT",
+    department: "Khoa Công nghệ thông tin",
+    departmentCode: "CNTT",
+  };
+
+  const mockStaffTasks: StaffTask[] = [
+    {
+      id: "task-rv-1",
+      title: "Hồ sơ bài giảng Lập trình Web",
+      assigneeName: "ThS. Lê Hoàng",
+      departmentCode: "CNTT",
+      status: "NEEDS_REVIEW",
+      dueDate: "2026-09-08",
+      parentSchoolTaskId: "school-100",
+      updatedAt: "2026-09-06",
+      deliverableDescription: "File bài giảng điện tử và bài tập thực hành",
+      deliverables: [
+        {
+          id: "del-1",
+          name: "Bai-giang-Web-2026.pdf",
+          url: "https://drive.google.com/test",
+          fileType: "pdf",
+        },
+      ],
+    },
+    {
+      id: "task-my-1",
+      title: "Báo cáo công tác chuyển đổi số Khoa CNTT",
+      assigneeName: "TS. Nguyễn Minh",
+      assigneeId: "user-mgr-cntt",
+      departmentCode: "CNTT",
+      status: "IN_PROGRESS",
+      dueDate: "2026-09-10",
+      parentSchoolTaskId: "school-100",
+      updatedAt: "2026-09-06",
+      deliverableDescription: "Bản báo cáo tiến độ và phụ lục thống kê",
+    },
+  ];
+
+  const mockSchoolTasks: SchoolTask[] = [
+    {
+      id: "school-100",
+      title: "Chuyển đổi số công tác đào tạo và khảo thí",
+      category: "CHUYEN_DOI_SO",
+      categoryLabel: "Chuyển đổi số",
+      leadAssigneeName: "TS. Nguyễn Minh",
+      leadDepartmentCode: "CNTT",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-25",
+      status: "IN_PROGRESS",
+      subTasks: mockStaffTasks,
+      totalSubTasks: 2,
+      completedSubTasks: 0,
+      progressPercent: 45,
+    },
+  ];
+
+  test("renders welcome header with user name and department badge", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(DepartmentManagerWorkspace, {
+        user: mockUser,
+        tasks: mockSchoolTasks,
+        staffTasks: mockStaffTasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    assert.ok(html.includes("Xin chào, TS. Nguyễn Minh"));
+    assert.ok(html.includes("CNTT"));
+    assert.ok(html.includes("Trưởng khoa CNTT"));
+    assert.ok(html.includes("Khoa Công nghệ thông tin"));
+  });
+
+  test("renders executive strip with all 4 metric cards", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(DepartmentManagerWorkspace, {
+        user: mockUser,
+        tasks: mockSchoolTasks,
+        staffTasks: mockStaffTasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    assert.ok(html.includes("Chờ thẩm định"));
+    assert.ok(html.includes("Đang chậm tiến độ"));
+    assert.ok(html.includes("Nhiệm vụ trọng tâm"));
+    assert.ok(html.includes("Tiến độ chung đơn vị"));
+  });
+
+  test("renders tab navigation buttons", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(DepartmentManagerWorkspace, {
+        user: mockUser,
+        tasks: mockSchoolTasks,
+        staffTasks: mockStaffTasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    assert.ok(html.includes("Hàng đợi thẩm định"));
+    assert.ok(html.includes("Tiến độ nhiệm vụ đơn vị"));
+    assert.ok(html.includes("Nhiệm vụ trực tiếp của tôi"));
+  });
+
+  test("renders approval queue items with Thẩm định ngay button", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(DepartmentManagerWorkspace, {
+        user: mockUser,
+        tasks: mockSchoolTasks,
+        staffTasks: mockStaffTasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    assert.ok(html.includes("Hồ sơ bài giảng Lập trình Web"));
+    assert.ok(html.includes("Thẩm định ngay"));
+    assert.ok(html.includes("ThS. Lê Hoàng"));
+  });
+
+  test("verifies ManagerWorkspace alias is exported and functional", () => {
+    assert.equal(ManagerWorkspace, DepartmentManagerWorkspace);
+    const html = renderToStaticMarkup(
+      React.createElement(ManagerWorkspace, {
+        user: mockUser,
+        tasks: mockSchoolTasks,
+        staffTasks: mockStaffTasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+    assert.ok(html.includes("Xin chào, TS. Nguyễn Minh"));
+  });
+});
+
+describe("Zero-Emoji Strict Anti-Slop Audit on department-manager-workspace", () => {
+  const managerWorkspaceFiles = [
+    "src/components/portal/department-manager-workspace.tsx",
+    "src/components/workspace/department-manager-workspace.tsx",
+    "src/components/portal/manager-workspace.tsx",
+    "src/components/workspace/manager-workspace.tsx",
+  ];
+
+  managerWorkspaceFiles.forEach((relPath) => {
+    test(`verifies ${relPath} contains zero emojis`, () => {
+      const fullPath = path.resolve(process.cwd(), relPath);
+      assert.ok(fs.existsSync(fullPath), `File phai ton tai: ${relPath}`);
+      const content = fs.readFileSync(fullPath, "utf-8");
+      const lines = content.split("\n");
+      const violations: string[] = [];
+
+      lines.forEach((line, idx) => {
+        if (EMOJI_REGEX.test(line)) {
+          violations.push(`${relPath}:${idx + 1}: ${line.trim()}`);
+        }
+      });
+
+      assert.equal(
+        violations.length,
+        0,
+        `Phat hien emoji tai:\n${violations.join("\n")}`
+      );
+    });
+  });
+});
+
 
 
 
