@@ -202,7 +202,7 @@ export function AppSidebar() {
         data-slot="app-sidebar"
         aria-label="Thanh điều hướng chính"
         className={cn(
-          "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-row transition-all duration-200 ease-in-out bg-card/90 backdrop-blur-md border-r border-border/70",
+          "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-row transition-all duration-200 ease-in-out bg-card/90 backdrop-blur-md border-r border-border/70 select-none",
           isCollapsed ? "w-28" : "w-[280px]"
         )}
       >
@@ -212,7 +212,7 @@ export function AppSidebar() {
         {/* Rail 2: Sub-Navigation Pane (56px collapsed / 224px expanded) */}
         <div
           className={cn(
-            "flex flex-col h-full transition-all duration-200 ease-in-out border-r border-border/50 bg-background/50",
+            "flex flex-col h-full transition-all duration-200 ease-in-out border-r border-border/50 bg-background/50 overflow-hidden",
             isCollapsed ? "w-14 items-center" : "w-56"
           )}
         >
