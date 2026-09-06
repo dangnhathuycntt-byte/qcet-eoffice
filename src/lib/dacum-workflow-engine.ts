@@ -4,6 +4,7 @@ import type {
   SchoolTask,
   DeliverableItem,
   TaskStatus,
+  TriageStatus,
   AIRiskStatus,
   AISuggestedAction,
   AIFlagItem,
@@ -324,4 +325,70 @@ export function screenDeliverablesWithAI(
         ? "Yêu cầu viên chức bổ sung đường dẫn minh chứng và biên bản nghiệm thu theo đúng quy định."
         : undefined,
   };
+}
+
+export function processTriageDecision(
+  task: StaffTask,
+  decision: "ACCEPT" | "REJECT",
+  actor: AuthUser,
+  payload: {
+    targetAssigneeId?: string;
+    targetAssigneeName?: string;
+    internalDueDate?: string;
+    rejectionReason?: string;
+  }
+): { success: boolean; updatedTask?: StaffTask; error?: string } {
+  // Only MANAGER of target department or ADMIN can triage
+  const isTargetManager =
+    actor.role === "ADMIN" ||
+    (actor.role === "MANAGER" &&
+      (!task.departmentCode || actor.departmentCode === task.departmentCode));
+
+  if (!isTargetManager) {
+    return {
+      success: false,
+      error:
+        "Chi Lanh dao don vi tiep nhan hoac Ban Giam hieu moi co tham quyen phan loai va tiep nhan yeu cau phoi hop.",
+    };
+  }
+
+  if (decision === "ACCEPT") {
+    if (!payload.targetAssigneeName || !payload.targetAssigneeName.trim()) {
+      return {
+        success: false,
+        error: "Bat buoc phai chi dinh nhan su phu trach khi tiep nhan cong viec.",
+      };
+    }
+
+    const updatedTask: StaffTask = {
+      ...task,
+      triageStatus: "ACCEPTED",
+      status: "IN_PROGRESS",
+      assigneeName: payload.targetAssigneeName,
+      internalDueDate: payload.internalDueDate || task.dueDate,
+      updatedAt: new Date().toISOString(),
+    };
+    return { success: true, updatedTask };
+  }
+
+  if (decision === "REJECT") {
+    if (!payload.rejectionReason || !payload.rejectionReason.trim()) {
+      return {
+        success: false,
+        error: "Bat buoc phai ghi ro ly do khi tu choi tiep nhan yeu cau phoi hop.",
+      };
+    }
+
+    const updatedTask: StaffTask = {
+      ...task,
+      triageStatus: "REJECTED",
+      status: "BLOCKED",
+      triageRejectionReason: payload.rejectionReason,
+      blockedReason: `Tu choi phoi hop: ${payload.rejectionReason}`,
+      updatedAt: new Date().toISOString(),
+    };
+    return { success: true, updatedTask };
+  }
+
+  return { success: false, error: "Hanh dong khong hop le." };
 }

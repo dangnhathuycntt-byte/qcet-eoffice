@@ -1,7 +1,11 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import type { StaffTask, SchoolTask } from "../src/types/dashboard";
-import { screenDeliverablesWithAI } from "../src/lib/dacum-workflow-engine";
+import type { AuthUser } from "../src/types/auth";
+import {
+  screenDeliverablesWithAI,
+  processTriageDecision,
+} from "../src/lib/dacum-workflow-engine";
 
 describe("DACUM AI Executive Review Assistant", () => {
   const mockSchoolTask: SchoolTask = {
@@ -97,5 +101,89 @@ describe("DACUM AI Executive Review Assistant", () => {
         (f) => f.type === "WARNING" && f.message.includes("Nhiệm vụ cấp Trường")
       )
     );
+  });
+});
+
+describe("Cross-Department Triage Queue Processing", () => {
+  const managerCNTT: AuthUser = {
+    id: "user-mgr-cntt",
+    name: "Truong khoa CNTT",
+    email: "cntt@qcet.edu.vn",
+    role: "MANAGER",
+    roleLabel: "Truong khoa",
+    department: "Khoa CNTT",
+    departmentCode: "K_CNTT",
+  };
+
+  const staffOtherDept: AuthUser = {
+    id: "user-staff-khac",
+    name: "Nhan vien khac",
+    email: "staff@qcet.edu.vn",
+    role: "STAFF",
+    roleLabel: "Chuyen vien",
+    department: "Phong Khac",
+    departmentCode: "P_KHAC",
+  };
+
+  const pendingTriageTask: StaffTask = {
+    id: "task-triage-01",
+    title: "Phoi hop cu giang vien coi thi tuyen sinh",
+    assigneeName: "Chua phan cong",
+    status: "NEW",
+    dueDate: "2026-10-05",
+    parentSchoolTaskId: "school-task-01",
+    updatedAt: new Date().toISOString(),
+    triageStatus: "PENDING_TRIAGE",
+    triageSourceDept: "P_KHTC",
+  };
+
+  test("rejects triage action if actor is not MANAGER or ADMIN of target department", () => {
+    const result = processTriageDecision(
+      pendingTriageTask,
+      "ACCEPT",
+      staffOtherDept,
+      { targetAssigneeId: "staff-01", targetAssigneeName: "Le Van B" }
+    );
+    assert.equal(result.success, false);
+    assert.ok(result.error?.includes("tham quyen"));
+  });
+
+  test("successfully accepts triage and reassigns task to internal staff", () => {
+    const result = processTriageDecision(
+      pendingTriageTask,
+      "ACCEPT",
+      managerCNTT,
+      {
+        targetAssigneeId: "staff-cntt-01",
+        targetAssigneeName: "Nguyen Van C",
+        internalDueDate: "2026-10-04",
+      }
+    );
+    assert.equal(result.success, true);
+    assert.equal(result.updatedTask?.triageStatus, "ACCEPTED");
+    assert.equal(result.updatedTask?.status, "IN_PROGRESS");
+    assert.equal(result.updatedTask?.assigneeName, "Nguyen Van C");
+    assert.equal(result.updatedTask?.internalDueDate, "2026-10-04");
+  });
+
+  test("requires rejectionReason when declining a triage request", () => {
+    const resultNoReason = processTriageDecision(
+      pendingTriageTask,
+      "REJECT",
+      managerCNTT,
+      {}
+    );
+    assert.equal(resultNoReason.success, false);
+    assert.ok(resultNoReason.error?.includes("ly do"));
+
+    const resultValid = processTriageDecision(
+      pendingTriageTask,
+      "REJECT",
+      managerCNTT,
+      { rejectionReason: "Trung lich bao ve do an tot nghiep." }
+    );
+    assert.equal(resultValid.success, true);
+    assert.equal(resultValid.updatedTask?.triageStatus, "REJECTED");
+    assert.equal(resultValid.updatedTask?.status, "BLOCKED");
   });
 });
