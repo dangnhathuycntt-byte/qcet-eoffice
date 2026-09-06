@@ -26,9 +26,11 @@ export function AppPrimaryRail() {
     setCurrentModule,
     toggleCollapse,
     setCollapsed,
+    isCollapsed,
   } = useSidebar();
 
   const handleModuleClick = (mod: ModuleMeta) => {
+    (document.activeElement as HTMLElement)?.blur?.();
     if (currentModule === mod.id) {
       toggleCollapse();
     } else {
@@ -91,7 +93,7 @@ export function AppPrimaryRail() {
                       )}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="right">
+                  <TooltipContent side="right" hidden={!isCollapsed && isActive}>
                     <div className="flex items-center gap-1.5">
                       <span>{mod.label}</span>
                       {mod.isComingSoon && (
