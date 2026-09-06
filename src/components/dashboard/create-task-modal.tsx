@@ -54,6 +54,7 @@ export interface CreateTaskFormData {
   requiredDeliverables?: string;
   vtvlRole?: string;
   isBypassWarning?: boolean;
+  requiresReview?: boolean;
 }
 
 export function getInitialTaskFormData(
@@ -72,6 +73,7 @@ export function getInitialTaskFormData(
     requiredDeliverables: "",
     vtvlRole: "",
     isBypassWarning: false,
+    requiresReview: false,
   };
 }
 
@@ -257,10 +259,11 @@ export function validateTaskForm(
   }
   if (
     data.level === "DON_VI" &&
+    data.requiresReview &&
     (!data.requiredDeliverables || data.requiredDeliverables.trim().length === 0)
   ) {
     errors.requiredDeliverables =
-      "Sản phẩm đầu ra đo lường được bắt buộc đối với nhiệm vụ cấp đơn vị (theo Nghị định 232/DACUM).";
+      "Sản phẩm đầu ra đo lường được bắt buộc đối với nhiệm vụ cấp đơn vị yêu cầu nghiệm thu (theo Nghị định 232/DACUM).";
   }
   if (data.internalDueDate && data.dueDate) {
     if (new Date(data.internalDueDate).getTime() > new Date(data.dueDate).getTime()) {
@@ -804,22 +807,66 @@ export function CreateTaskModal({
                 </div>
               </div>
 
+              {/* Row: Cấu hình quy trình phê duyệt (Việc Thường quy vs Trọng điểm DACUM) */}
+              {formData.level === "DON_VI" && (
+                <div className="flex flex-col gap-2 text-xs pt-1 border-t border-border/40">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
+                      <CheckCircle2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      Quy trình phê duyệt
+                    </span>
+                    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formData.requiresReview || false}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData((p) => ({ ...p, requiresReview: checked }));
+                          if (!checked && errors.requiredDeliverables) {
+                            clearError("requiredDeliverables");
+                          }
+                        }}
+                        className="size-3.5 rounded border-border text-primary focus:ring-primary/30"
+                      />
+                      <span className="text-[11px] font-medium text-foreground">
+                        Bắt buộc Trưởng phòng nghiệm thu (DACUM)
+                      </span>
+                    </label>
+                  </div>
+                  {formData.requiresReview ? (
+                    <p className="text-[10.5px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 p-2 rounded-lg">
+                      Nhiệm vụ trọng điểm: Viên chức phải nộp sản phẩm minh chứng để chuyển sang Chờ duyệt. Trưởng phòng trực tiếp nghiệm thu.
+                    </p>
+                  ) : (
+                    <p className="text-[10.5px] text-muted-foreground bg-muted/30 p-2 rounded-lg">
+                      Việc thường quy: Viên chức tự bấm hoàn thành nhiệm vụ (1-click) khi xong. Trưởng phòng theo dõi và hậu kiểm.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Row: Sản phẩm đầu ra đo lường được (Nghị định 232/DACUM) */}
               <div className="flex flex-col gap-1.5 text-xs pt-1 border-t border-border/40">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
                     <FileCheck className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                     Sản phẩm đầu ra đo lường được (DACUM)
-                    {formData.level === "DON_VI" && (
+                    {formData.level === "DON_VI" && formData.requiresReview && (
                       <span className="text-destructive">*</span>
                     )}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">Nghị định 232/2026/NĐ-CP</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {formData.requiresReview ? "Bắt buộc theo NĐ 232" : "Tùy chọn"}
+                  </span>
                 </div>
 
                 <textarea
                   rows={2}
-                  placeholder="Mô tả kết quả/minh chứng cụ thể (VD: Dự thảo Quy chế (PDF), Báo cáo kỹ thuật, Bộ tiêu chí đánh giá...)"
+                  placeholder={
+                    formData.requiresReview
+                      ? "Bắt buộc: Mô tả kết quả/minh chứng cụ thể (VD: Dự thảo Quy chế PDF, Báo cáo kỹ thuật...)"
+                      : "Mô tả kết quả/minh chứng cụ thể (tùy chọn)..."
+                  }
                   value={formData.requiredDeliverables || ""}
                   onChange={(e) => {
                     setFormData((p) => ({ ...p, requiredDeliverables: e.target.value }));

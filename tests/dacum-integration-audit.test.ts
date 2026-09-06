@@ -195,6 +195,7 @@ describe("DACUM 3-Tier Workflow End-to-End Integration & Audit", () => {
       parentSchoolTaskId: schoolTaskInitial.id,
       updatedAt: "2026-09-06T08:00:00Z",
       vtvlRole: "Chuyên viên Công nghệ thông tin",
+      requiresReview: subTasksToCreate[0].requiresReview ?? true,
       deliverableDescription: subTasksToCreate[0].deliverableDescription,
     };
 

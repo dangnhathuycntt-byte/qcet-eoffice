@@ -199,6 +199,10 @@ export default function TasksPage() {
           assigneeName: data.leadAssigneeName,
           status: "NEW",
           dueDate: data.dueDate,
+          internalDueDate: data.internalDueDate,
+          deliverableDescription: data.requiredDeliverables,
+          vtvlRole: data.vtvlRole,
+          requiresReview: data.requiresReview,
           parentSchoolTaskId:
             data.parentTaskId || updatedTasks[0]?.id || "task-1",
           updatedAt: todayStr,

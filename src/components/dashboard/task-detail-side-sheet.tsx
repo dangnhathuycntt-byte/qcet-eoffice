@@ -607,6 +607,19 @@ export function TaskDetailSideSheet({
                 {relativeTime.text}
               </span>
             )}
+
+            {!isSchool && (
+              <span
+                className={cn(
+                  "text-[11px] px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden sm:inline font-medium",
+                  (task as StaffTask).requiresReview
+                    ? "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    : "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                )}
+              >
+                {(task as StaffTask).requiresReview ? "Trọng điểm (DACUM)" : "Thường quy (Tự xong)"}
+              </span>
+            )}
           </div>
 
           {/* Quick Status Select & Close Button */}
@@ -624,8 +637,8 @@ export function TaskDetailSideSheet({
                 <option value="NEW">Mới</option>
                 <option value="IN_PROGRESS">Đang thực hiện</option>
                 <option value="NEEDS_REVIEW">Cần chỉnh sửa / Chờ duyệt</option>
-                {/* Staff cannot directly select COMPLETED */}
-                {user?.role !== "STAFF" && (
+                {/* Staff cannot directly select COMPLETED if task requires review */}
+                {(user?.role !== "STAFF" || !(task as StaffTask).requiresReview) && (
                   <option value="COMPLETED">Hoàn thành</option>
                 )}
                 <option value="BLOCKED">Bị nghẽn / Phối hợp</option>
@@ -703,19 +716,30 @@ export function TaskDetailSideSheet({
                 <>
                   {user?.role === "STAFF" ? (
                     canSubmitDeliverable ? (
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          const formElem = document.getElementById("deliverable-form");
-                          formElem?.scrollIntoView({ behavior: "smooth" });
-                          const nameInput = document.getElementById("deliverable-name");
-                          nameInput?.focus();
-                        }}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                      >
-                        <FileCheck className="size-3.5" strokeWidth={1.5} />
-                        <span>Nộp minh chứng nghiệm thu</span>
-                      </Button>
+                      (task as StaffTask).requiresReview ? (
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            const formElem = document.getElementById("deliverable-form");
+                            formElem?.scrollIntoView({ behavior: "smooth" });
+                            const nameInput = document.getElementById("deliverable-name");
+                            nameInput?.focus();
+                          }}
+                          className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                        >
+                          <FileCheck className="size-3.5" strokeWidth={1.5} />
+                          <span>Nộp minh chứng nghiệm thu</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          onClick={() => onStatusChange?.(task.id, "COMPLETED")}
+                          className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                        >
+                          <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                          <span>Hoàn thành nhiệm vụ</span>
+                        </Button>
+                      )
                     ) : null
                   ) : onStatusChange ? (
                     <>
@@ -988,7 +1012,9 @@ export function TaskDetailSideSheet({
               <div className="flex items-center justify-between">
                 <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <FileCheck className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-                  Sản phẩm minh chứng (DACUM)
+                  {(task as StaffTask).requiresReview
+                    ? "Sản phẩm minh chứng (Bắt buộc nghiệm thu - DACUM)"
+                    : "Tài liệu đính kèm (Việc thường quy - Tùy chọn)"}
                 </h3>
                 {((task as StaffTask).deliverables?.length || 0) > 0 && (
                   <span className="text-[11px] font-mono text-muted-foreground tabular-nums">
@@ -1062,10 +1088,14 @@ export function TaskDetailSideSheet({
                   <div className="space-y-1">
                     <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <FileCheck className="size-3.5 text-primary" strokeWidth={1.5} />
-                      Nộp sản phẩm minh chứng nghiệm thu
+                      {(task as StaffTask).requiresReview
+                        ? "Nộp sản phẩm minh chứng nghiệm thu"
+                        : "Đính kèm tài liệu kết quả (tùy chọn)"}
                     </h4>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Cung cấp đường dẫn tệp tài liệu và mô tả kết quả công việc theo tiêu chuẩn DACUM & Nghị định 232.
+                      {(task as StaffTask).requiresReview
+                        ? "Cung cấp đường dẫn tệp tài liệu và mô tả kết quả công việc theo tiêu chuẩn DACUM & Nghị định 232 để Trưởng phòng nghiệm thu."
+                        : "Viên chức có thể đính kèm đường dẫn tài liệu lưu trữ hoặc dùng nút 'Hoàn thành nhiệm vụ' trên thanh tác vụ."}
                     </p>
                   </div>
 

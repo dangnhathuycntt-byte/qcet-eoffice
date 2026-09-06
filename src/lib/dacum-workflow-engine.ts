@@ -101,12 +101,12 @@ export function transitionStaffTaskStatus(
 ): { success: boolean; updatedTask?: StaffTask; error?: string } {
   const role = actor.role;
 
-  // Rule 1: STAFF cannot directly complete task
-  if (newStatus === "COMPLETED" && role === "STAFF") {
+  // Rule 1: STAFF cannot directly complete task if it requires review (Nhiệm vụ trọng điểm / DACUM)
+  if (newStatus === "COMPLETED" && role === "STAFF" && task.requiresReview) {
     return {
       success: false,
       error:
-        "Chỉ Trưởng phòng hoặc BGH mới có quyền nghiệm thu hoàn thành công việc. Viên chức vui lòng nộp minh chứng để chuyển sang Chờ duyệt (NEEDS_REVIEW).",
+        "Nhiệm vụ này yêu cầu nghiệm thu sản phẩm (DACUM). Chỉ Trưởng phòng hoặc BGH mới có quyền nghiệm thu và hoàn thành nhiệm vụ. Viên chức vui lòng nộp minh chứng để chuyển sang Chờ duyệt (NEEDS_REVIEW).",
     };
   }
 

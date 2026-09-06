@@ -90,15 +90,24 @@ describe("Create Task Modal Constraints & Helpers", () => {
   });
 
   test("validateTaskForm enforces required fields and DACUM deliverables", () => {
-    const emptyUnitForm = getInitialTaskFormData("DON_VI");
-    const errors = validateTaskForm(emptyUnitForm);
+    // Routine unit task (requiresReview: false) does not force requiredDeliverables
+    const routineUnitForm = getInitialTaskFormData("DON_VI");
+    const routineErrors = validateTaskForm(routineUnitForm);
 
-    assert.ok(errors.title);
-    assert.ok(errors.leadAssigneeName);
-    assert.ok(errors.dueDate);
+    assert.ok(routineErrors.title);
+    assert.ok(routineErrors.leadAssigneeName);
+    assert.ok(routineErrors.dueDate);
+    assert.equal(routineErrors.requiredDeliverables, undefined);
+
+    // Critical unit task (requiresReview: true) requires requiredDeliverables
+    const criticalUnitForm = {
+      ...routineUnitForm,
+      requiresReview: true,
+    };
+    const criticalErrors = validateTaskForm(criticalUnitForm);
     assert.equal(
-      errors.requiredDeliverables,
-      "Sản phẩm đầu ra đo lường được bắt buộc đối với nhiệm vụ cấp đơn vị (theo Nghị định 232/DACUM)."
+      criticalErrors.requiredDeliverables,
+      "Sản phẩm đầu ra đo lường được bắt buộc đối với nhiệm vụ cấp đơn vị yêu cầu nghiệm thu (theo Nghị định 232/DACUM)."
     );
 
     // School level does not strictly enforce requiredDeliverables
@@ -113,7 +122,7 @@ describe("Create Task Modal Constraints & Helpers", () => {
 
     // Unit level with requiredDeliverables passes
     const validUnitForm = {
-      ...emptyUnitForm,
+      ...criticalUnitForm,
       title: "Công việc khoa",
       leadAssigneeName: "Trần Hùng",
       dueDate: "2026-09-20",

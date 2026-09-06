@@ -32,6 +32,7 @@ export interface StaffTask {
   vtvlRole?: string;
   blockedReason?: string;
   rejectionReason?: string;
+  requiresReview?: boolean;
 }
 
 export interface SchoolTask {

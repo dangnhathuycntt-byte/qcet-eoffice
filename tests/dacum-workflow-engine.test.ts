@@ -135,10 +135,18 @@ describe("DACUM Workflow & RBAC Engine", () => {
       updatedAt: "2026-09-06T00:00:00Z",
     };
 
-    test("Staff cannot directly complete task without review", () => {
-      const res = transitionStaffTaskStatus(task, "COMPLETED", staffDaoTao);
+    test("Staff can directly complete routine task without review", () => {
+      const routineTask: StaffTask = { ...task, requiresReview: false };
+      const res = transitionStaffTaskStatus(routineTask, "COMPLETED", staffDaoTao);
+      assert.equal(res.success, true);
+      assert.equal(res.updatedTask?.status, "COMPLETED");
+    });
+
+    test("Staff cannot directly complete critical DACUM task when requiresReview is true", () => {
+      const criticalTask: StaffTask = { ...task, requiresReview: true };
+      const res = transitionStaffTaskStatus(criticalTask, "COMPLETED", staffDaoTao);
       assert.equal(res.success, false);
-      assert.ok(res.error?.includes("Chỉ Trưởng phòng hoặc BGH mới có quyền nghiệm thu"));
+      assert.ok(res.error?.includes("yêu cầu nghiệm thu sản phẩm"));
     });
 
     test("Manager can approve NEEDS_REVIEW task to COMPLETED", () => {

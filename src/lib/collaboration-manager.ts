@@ -39,6 +39,7 @@ export function acceptCollaborationRequest(
     dueDate: req.dueDate,
     internalDueDate: req.dueDate,
     status: "NEW",
+    requiresReview: true,
     deliverableDescription: `Sản phẩm yêu cầu: ${req.requiredDeliverables}`,
     updatedAt: new Date().toISOString(),
   }));
