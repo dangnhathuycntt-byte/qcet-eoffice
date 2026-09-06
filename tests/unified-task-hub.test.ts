@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
 import { filterTasksByScope } from "../src/components/dashboard/unified-task-toolbar";
-import { filterTasksHub } from "../src/lib/unified-task-hub";
+import { filterTasksHub, filterTasksByWorkbox } from "../src/lib/unified-task-hub";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
 
 describe("Unified Task Hub Page Integration", () => {
@@ -62,5 +62,18 @@ describe("Unified Task Hub Page Integration", () => {
       user: admin,
     });
     assert.ok(filteredByName.length > 0, "Must return tasks matching 'Đào tạo' department name");
+  });
+
+  test("filterTasksByWorkbox with NEEDS_REVIEW filters tasks requiring approval or review", () => {
+    const reviewTasks = filterTasksByWorkbox(payload.tasks, "NEEDS_REVIEW", admin);
+    assert.ok(Array.isArray(reviewTasks), "Must return an array of tasks");
+    for (const t of reviewTasks) {
+      const isNeedsExecutive = t.status === "PENDING_EXECUTIVE_APPROVAL";
+      const hasSubNeedsReview = t.subTasks?.some((s) => s.status === "NEEDS_REVIEW");
+      assert.ok(
+        isNeedsExecutive || hasSubNeedsReview,
+        "Every returned task must be pending executive approval or have subtasks needing review"
+      );
+    }
   });
 });

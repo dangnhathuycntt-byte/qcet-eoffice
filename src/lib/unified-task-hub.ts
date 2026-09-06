@@ -44,6 +44,29 @@ export function getDefaultViewModeForRole(role?: UserRole): TaskViewMode {
 }
 
 /**
+ * Resolves whether a user in zone=tasks should display the Staff focus view or the advanced view.
+ * - If role !== "STAFF", returns "ADVANCED"
+ * - If role === "STAFF":
+ *   - If isExpanded is true -> "ADVANCED"
+ *   - If viewQuery is explicitly provided and not "focus" -> "ADVANCED"
+ *   - Otherwise -> "STAFF_FOCUS"
+ */
+export function resolveStaffLandingMode({
+  role,
+  isExpanded = false,
+  viewQuery,
+}: {
+  role?: UserRole;
+  isExpanded?: boolean;
+  viewQuery?: string | null;
+}): "STAFF_FOCUS" | "ADVANCED" {
+  if (role !== "STAFF") return "ADVANCED";
+  if (isExpanded) return "ADVANCED";
+  if (viewQuery && viewQuery !== "focus") return "ADVANCED";
+  return "STAFF_FOCUS";
+}
+
+/**
  * Parse URL ?scope= parameter into validated TaskScope.
  * Accepts shorthand ("my", "school", "unit") or full keys.
  */
@@ -152,6 +175,14 @@ export function filterTasksByWorkbox(
 
   if (filter === "COMPLETED") {
     return tasks.filter((t) => t.status === "COMPLETED" || t.progressPercent === 100);
+  }
+
+  if (filter === "NEEDS_REVIEW") {
+    return tasks.filter((t) => {
+      const isNeedsReview = t.status === "PENDING_EXECUTIVE_APPROVAL";
+      const hasSubNeedsReview = t.subTasks?.some((s) => s.status === "NEEDS_REVIEW");
+      return isNeedsReview || hasSubNeedsReview;
+    });
   }
 
   return tasks;

@@ -16,7 +16,8 @@ export type WorkboxFilter =
   | "URGENT_OVERDUE"
   | "MY_ACTION"
   | "ASSIGNED_BY_ME"
-  | "COMPLETED";
+  | "COMPLETED"
+  | "NEEDS_REVIEW";
 
 export interface StatCardBadge {
   label: string;
@@ -240,11 +241,15 @@ export function ExecutiveStatStrip({
               }
             }}
             className={cn(
-              "group relative flex flex-col justify-between p-4 sm:p-5 transition-all duration-150 text-left",
+              "group relative flex flex-col justify-between p-4 sm:p-5 transition-all duration-200 text-left",
               isClickable &&
-                "cursor-pointer select-none hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+                "cursor-pointer select-none hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
               !isClickable && "hover:bg-muted/15",
-              isActive && "ring-2 ring-primary ring-inset bg-primary/[0.04] shadow-sm z-10",
+              isActive && (
+                isOverdueAlert
+                  ? "ring-2 ring-rose-500 ring-inset bg-rose-500/[0.04] shadow-xs z-10"
+                  : "ring-2 ring-primary ring-inset bg-primary/[0.04] shadow-xs z-10"
+              ),
               // Responsive hairline dividers for 2-column mode on mobile/tablet
               idx % 2 === 0 ? "border-r border-border/40 lg:border-r-0" : "",
               idx < 2 ? "border-b border-border/40 lg:border-b-0" : "",
@@ -259,8 +264,10 @@ export function ExecutiveStatStrip({
             {/* Subtle top accent line */}
             <div
               className={cn(
-                "absolute inset-x-0 top-0 transition-all",
-                isActive ? "h-[3px] bg-primary" : cn("h-[2px]", accentLineColor)
+                "absolute inset-x-0 top-0 transition-all duration-200",
+                isActive
+                  ? cn("h-[3px]", isOverdueAlert ? "bg-rose-500" : "bg-primary")
+                  : cn("h-[2px] opacity-70 group-hover:opacity-100 group-hover:h-[3px]", accentLineColor)
               )}
             />
 
