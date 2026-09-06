@@ -380,19 +380,17 @@ function UnifiedTaskHubContent() {
   };
 
   const handleToggleStaffExpanded = React.useCallback(() => {
-    setIsStaffExpanded((prev) => {
-      const next = !prev;
-      if (next) {
-        updateUrlParams({ view: "table" });
-      } else {
-        const params = new URLSearchParams(searchParams.toString());
-        params.delete("view");
-        const qs = params.toString();
-        router.replace(qs ? `/?${qs}` : "/", { scroll: false });
-      }
-      return next;
-    });
-  }, [updateUrlParams, searchParams, router]);
+    const next = !isStaffExpanded;
+    setIsStaffExpanded(next);
+    if (next) {
+      updateUrlParams({ view: "table" });
+    } else {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("view");
+      const qs = params.toString();
+      router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+    }
+  }, [isStaffExpanded, updateUrlParams, searchParams, router]);
 
   const handleResetFilters = React.useCallback(() => {
     handleDepartmentChange("ALL");
