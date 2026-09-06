@@ -139,6 +139,7 @@ describe("AppTopbar Component Contracts", () => {
     assert.ok(content.includes("toggleCollapse"), "Must wire toggleCollapse on desktop trigger");
     assert.ok(content.includes("PanelLeftOpen"), "Must render PanelLeftOpen when collapsed");
     assert.ok(content.includes("PanelLeftClose"), "Must render PanelLeftClose when expanded");
+    assert.ok(content.includes("Menu"), "Must render Menu icon for mobile");
   });
 
   it("wires dynamic breadcrumbs trail with resolveBreadcrumb", () => {
@@ -148,15 +149,45 @@ describe("AppTopbar Component Contracts", () => {
     assert.ok(content.includes("pageTitle"), "Must render pageTitle");
   });
 
-  it("integrates primary action controls and modals", () => {
+  it("integrates center command search trigger bar", () => {
     const content = fs.readFileSync(topbarPath, "utf-8");
-    assert.ok(content.includes("CreateTaskModal"), "Must render CreateTaskModal");
-    assert.ok(content.includes("RoleSwitcherPill"), "Must render RoleSwitcherPill");
-    assert.ok(content.includes("UserProfileModal"), "Must render UserProfileModal");
-    assert.ok(content.includes("LiveClock"), "Must render LiveClock");
-    assert.ok(content.includes("ZoomToggle"), "Must render ZoomToggle");
-    assert.ok(content.includes("toggleTheme"), "Must wire theme toggle");
+    assert.ok(content.includes("Search"), "Must render Search icon");
     assert.ok(content.includes("⌘K"), "Must display ⌘K keyboard shortcut badge");
+    assert.ok(
+      content.includes("Tìm nhanh công việc, nhân sự..."),
+      "Must have search placeholder text"
+    );
+    assert.ok(
+      content.includes("qcet:open-command-search"),
+      "Must dispatch qcet:open-command-search event"
+    );
+  });
+
+  it("integrates right utilities: notification bell, theme toggle, and user profile", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(content.includes("Bell"), "Must render Bell icon");
+    assert.ok(content.includes("/notifications"), "Must link to /notifications");
+    assert.ok(content.includes("toggleTheme"), "Must wire theme toggle");
+    assert.ok(content.includes("UserProfileModal"), "Must render UserProfileModal");
+  });
+
+  it("integrates embedded dev role testing simulator within user profile dropdown", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(content.includes("switchRole"), "Must wire switchRole for role switching");
+    assert.ok(content.includes("ADMIN"), "Must support ADMIN role testing");
+    assert.ok(content.includes("MANAGER"), "Must support MANAGER role testing");
+    assert.ok(content.includes("STAFF"), "Must support STAFF role testing");
+    assert.ok(content.includes("FlaskConical"), "Must render FlaskConical icon for dev simulator");
+  });
+
+  it("anti-pattern assertions: cleans legacy widgets and preserves event listeners", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(!content.includes("LiveClock"), "LiveClock must NOT be rendered in AppTopbar");
+    assert.ok(!content.includes("ZoomToggle"), "ZoomToggle must NOT be rendered in AppTopbar");
+    assert.ok(!content.includes("RoleSwitcherPill"), "RoleSwitcherPill must NOT be rendered in AppTopbar");
+
+    // Modal backward compatibility event listeners preserved
+    assert.ok(content.includes("CreateTaskModal"), "Must preserve CreateTaskModal");
     assert.ok(content.includes("qcet:open-create-task"), "Must listen to qcet:open-create-task event");
     assert.ok(content.includes("qcet:task-created"), "Must dispatch qcet:task-created event");
   });

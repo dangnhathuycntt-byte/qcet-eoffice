@@ -42,6 +42,11 @@ export function getInitials(name: string): string {
 export { NAVIGATION_ITEMS } from "@/components/layout/sidebar-context";
 import { NAVIGATION_ITEMS } from "@/components/layout/sidebar-context";
 
+/**
+ * @deprecated Legacy header live clock component.
+ * Deprecated as part of Executive Header Redesign. Replaced by clean 3-zone AppTopbar.
+ * Preserved for backwards compatibility.
+ */
 export function LiveClock() {
   const [timeStr, setTimeStr] = React.useState<string>("");
 
@@ -72,6 +77,11 @@ export function LiveClock() {
   );
 }
 
+/**
+ * @deprecated Legacy UI zoom toggle component.
+ * Deprecated as part of Executive Header Redesign. Replaced by clean 3-zone AppTopbar.
+ * Preserved for backwards compatibility.
+ */
 export function ZoomToggle() {
   const [zoomLevel, setZoomLevel] = React.useState<number>(1.0);
   const [mounted, setMounted] = React.useState(false);
@@ -123,8 +133,7 @@ export function MobileNav({ pathname }: { pathname: string }) {
         {NAVIGATION_ITEMS.map((item) => {
           const active =
             pathname === item.href ||
-            (item.href !== "/" &&
-              (pathname === item.href || pathname.startsWith(item.href + "/")));
+            (item.href !== "/" && pathname.startsWith(item.href + "/"));
           const Icon = item.icon;
           const shortLabel =
             item.label === "Quản lý công việc"
@@ -164,6 +173,11 @@ export function MobileNav({ pathname }: { pathname: string }) {
   );
 }
 
+/**
+ * @deprecated Legacy topbar navigation component.
+ * Replaced by AppTopbar and AppSidebar in the Executive Two-Tier layout.
+ * Preserved for backwards compatibility.
+ */
 export function Navigation() {
   const pathname = usePathname();
   const { resolved, toggleTheme } = useTheme();
@@ -277,8 +291,7 @@ export function Navigation() {
             {NAVIGATION_ITEMS.map((item) => {
               const active =
                 pathname === item.href ||
-                (item.href !== "/" &&
-                  (pathname === item.href || pathname.startsWith(item.href + "/")));
+                (item.href !== "/" && pathname.startsWith(item.href + "/"));
               const Icon = item.icon;
               return (
                 <Link
