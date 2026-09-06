@@ -406,6 +406,12 @@ export function TaskDetailSideSheet({
     };
   }, [visible, onClose, isRejectionModalOpen]);
 
+  // AI Screening for NEEDS_REVIEW tasks (must be above early return to respect Rules of Hooks)
+  const aiReview = React.useMemo(() => {
+    if (!task || isSchoolTask(task) || task.status !== "NEEDS_REVIEW") return null;
+    return screenDeliverablesWithAI(task as StaffTask);
+  }, [task]);
+
   if (!visible || !task) {
     return null;
   }
@@ -430,12 +436,6 @@ export function TaskDetailSideSheet({
     !isSchool && canUserReviewTask(task as StaffTask, user);
   const canCloseSchool =
     isSchool && canUserCloseSchoolTask(task as SchoolTask, user);
-
-  // AI Screening for NEEDS_REVIEW tasks
-  const aiReview = React.useMemo(() => {
-    if (isSchool || task.status !== "NEEDS_REVIEW") return null;
-    return screenDeliverablesWithAI(task as StaffTask);
-  }, [task, isSchool]);
 
   // Deliverable submission handler (Staff)
   const handleSubmitDeliverable = (e: React.FormEvent) => {
