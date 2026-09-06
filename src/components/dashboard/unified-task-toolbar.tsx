@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 // ============================================================================
 
 export type TaskScope = "MY_TASKS" | "SCHOOL_TASKS" | "UNIT_TASKS";
-export type TaskViewMode = "table" | "kanban" | "calendar";
+export type TaskViewMode = "table" | "kanban" | "calendar" | "department";
 
 export interface ScopeTab {
   id: TaskScope;
@@ -67,6 +67,7 @@ export const VIEW_MODE_OPTIONS: ViewModeOption[] = [
   { id: "table", label: "Bảng", icon: List },
   { id: "kanban", label: "Kanban", icon: Kanban },
   { id: "calendar", label: "Lịch", icon: Calendar },
+  { id: "department", label: "Theo đơn vị", icon: Building2 },
 ];
 
 export const DEFAULT_AVAILABLE_DEPARTMENTS: { code: string; name: string }[] = [

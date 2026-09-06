@@ -25,9 +25,9 @@ describe("UnifiedTaskToolbar Helpers", () => {
     assert.deepEqual(ids, ["MY_TASKS", "SCHOOL_TASKS", "UNIT_TASKS"]);
   });
 
-  test("VIEW_MODE_OPTIONS defines table, kanban, and calendar modes", () => {
+  test("VIEW_MODE_OPTIONS defines table, kanban, calendar, and department modes", () => {
     const ids = VIEW_MODE_OPTIONS.map((v: ViewModeOption) => v.id);
-    assert.deepEqual(ids, ["table", "kanban", "calendar"]);
+    assert.deepEqual(ids, ["table", "kanban", "calendar", "department"]);
   });
 
   test("filterTasksByScope correctly filters for MY_TASKS", () => {

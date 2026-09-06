@@ -67,7 +67,7 @@ export function scopeToParam(scope: TaskScope): string {
 }
 
 /**
- * Parse URL ?view= parameter into validated TaskViewMode ("table" | "kanban" | "calendar").
+ * Parse URL ?view= parameter into validated TaskViewMode ("table" | "kanban" | "calendar" | "department").
  */
 export function parseViewModeParam(
   param: string | null | undefined,
@@ -77,8 +77,9 @@ export function parseViewModeParam(
   const normalized = param.trim().toLowerCase();
 
   if (normalized === "table") return "table";
-  if (normalized === "kanban") return "kanban";
-  if (normalized === "calendar") return "calendar";
+  if (normalized === "kanban" || normalized === "board") return "kanban";
+  if (normalized === "calendar" || normalized === "month") return "calendar";
+  if (normalized === "department" || normalized === "don-vi" || normalized === "unit") return "department";
 
   return defaultMode;
 }
