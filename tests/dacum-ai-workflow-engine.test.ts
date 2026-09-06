@@ -148,7 +148,10 @@ describe("Cross-Department Triage Queue Processing", () => {
       { targetAssigneeId: "staff-01", targetAssigneeName: "Le Van B" }
     );
     assert.equal(result.success, false);
-    assert.ok(result.error?.includes("tham quyen"));
+    assert.ok(
+      result.error?.toLowerCase().includes("thẩm quyền") ||
+      result.error?.toLowerCase().includes("tham quyen")
+    );
   });
 
   test("rejects triage action if MANAGER belongs to a different department than the task", () => {
@@ -168,7 +171,10 @@ describe("Cross-Department Triage Queue Processing", () => {
       { targetAssigneeId: "staff-01", targetAssigneeName: "Le Van B" }
     );
     assert.equal(result.success, false);
-    assert.ok(result.error?.includes("tham quyen"));
+    assert.ok(
+      result.error?.toLowerCase().includes("thẩm quyền") ||
+      result.error?.toLowerCase().includes("tham quyen")
+    );
   });
 
   test("rejects triage when task triageStatus is not PENDING_TRIAGE", () => {
@@ -213,7 +219,10 @@ describe("Cross-Department Triage Queue Processing", () => {
       {}
     );
     assert.equal(resultNoReason.success, false);
-    assert.ok(resultNoReason.error?.includes("ly do"));
+    assert.ok(
+      resultNoReason.error?.toLowerCase().includes("lý do") ||
+      resultNoReason.error?.toLowerCase().includes("ly do")
+    );
 
     const resultValid = processTriageDecision(
       pendingTriageTask,

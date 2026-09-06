@@ -443,7 +443,7 @@ function UnifiedTaskHubContent() {
       </div>
 
       {/* Executive Stat Strip / Interactive Workbox Filter */}
-      <section aria-label="Chi so dieu hanh toan truong">
+      <section aria-label="Chỉ số điều hành toàn trường">
         <ExecutiveStatStrip
           stats={displayedStats}
           activeFilter={activeWorkbox}
@@ -453,7 +453,7 @@ function UnifiedTaskHubContent() {
 
       {/* Executive Cockpit (BGH only) */}
       {isExecutive && executiveStats && (
-        <section aria-label="Khoang dieu hanh Ban Giam hieu" className="space-y-4">
+        <section aria-label="Khoang điều hành Ban Giám hiệu" className="space-y-4">
           <ExecutiveActionCenter
             stats={executiveStats}
             activeFilter={executiveFilter}

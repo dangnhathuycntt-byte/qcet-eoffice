@@ -673,6 +673,7 @@ describe("DACUM Full 6-Phase E2E Lifecycle: AI Review, Triage Queue, and Escalat
     assert.ok(escalatedTask.escalation?.escalatedAt, "escalatedAt must be set");
     assert.equal(escalatedTask.escalation?.escalatedToRole, "ADMIN");
     assert.ok(
+      escalatedTask.escalation?.escalationNote?.includes("Quá hạn thẩm định") ||
       escalatedTask.escalation?.escalationNote?.includes("Qua han tham dinh"),
       "Escalation note must reference overdue review"
     );
@@ -792,7 +793,7 @@ describe("DACUM Full 6-Phase E2E Lifecycle: AI Review, Triage Queue, and Escalat
     // Reject without reason must fail
     const noReasonResult = processTriageDecision(pendingTask, "REJECT", bghActor, {});
     assert.equal(noReasonResult.success, false);
-    assert.ok(noReasonResult.error?.includes("ly do"));
+    assert.ok(noReasonResult.error?.toLowerCase().includes("lý do") || noReasonResult.error?.toLowerCase().includes("ly do"));
 
     // Reject with reason must succeed
     const withReasonResult = processTriageDecision(pendingTask, "REJECT", bghActor, {

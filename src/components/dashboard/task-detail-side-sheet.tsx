@@ -784,7 +784,7 @@ export function TaskDetailSideSheet({
                       <div className="flex items-center gap-2">
                         <ShieldCheck className="size-4 text-indigo-600 dark:text-indigo-400 shrink-0" strokeWidth={1.5} />
                         <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                          Ket qua sang loc tu dong
+                          Kết quả sàng lọc tự động
                         </span>
                         <span className={cn(
                           "ml-auto text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded-md border",
@@ -840,7 +840,7 @@ export function TaskDetailSideSheet({
                           className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
                         >
                           <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                          <span>Duyet nhanh (QUICK_APPROVE)</span>
+                          <span>Duyệt nhanh (Đạt chuẩn)</span>
                         </Button>
                       ) : (
                         <Button
@@ -849,7 +849,7 @@ export function TaskDetailSideSheet({
                           className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
                         >
                           <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                          <span>Nghiem thu Dat (COMPLETED)</span>
+                          <span>Nghiệm thu Đạt (Hoàn thành)</span>
                         </Button>
                       )}
                       <Button
@@ -859,13 +859,13 @@ export function TaskDetailSideSheet({
                         className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                       >
                         <RotateCcw className="size-3.5" strokeWidth={1.5} />
-                        <span>Tra lai Yeu cau Sua</span>
+                        <span>Trả lại Yêu cầu Sửa</span>
                       </Button>
                     </div>
                   ) : (
                     <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300 font-medium">
                       <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
-                      <span>Da nop minh chung. Dang cho Truong don vi kiem tra va nghiem thu.</span>
+                      <span>Đã nộp minh chứng. Đang chờ Trưởng đơn vị kiểm tra và nghiệm thu.</span>
                     </div>
                   )}
                 </>
@@ -1049,17 +1049,17 @@ export function TaskDetailSideSheet({
                   <AlertTriangle className="size-4 shrink-0 mt-0.5" strokeWidth={1.5} />
                   <div className="space-y-1">
                     <h4 className="font-semibold">
-                      Thong bao leo thang: Vuot qua SLA 48h
+                      Thông báo leo thang: Vượt quá SLA 48h
                     </h4>
                     <p className="leading-relaxed">
-                      Cong viec nay da vuot qua thoi han xu ly 48 gio va hien da duoc chuyen len Ban Giam hieu (BGH) de giam sat.
+                      Công việc này đã vượt quá thời hạn xử lý 48 giờ và hiện đã được chuyển lên Ban Giám hiệu (BGH) để giám sát.
                       {(task as StaffTask).escalation?.escalationNote && (
                         <> {(task as StaffTask).escalation!.escalationNote}</>
                       )}
                     </p>
                     {(task as StaffTask).escalation?.escalatedAt && (
                       <span className="text-[10.5px] font-mono tabular-nums text-rose-600">
-                        Leo thang luc: {formatDetailDate((task as StaffTask).escalation!.escalatedAt)}
+                        Leo thang lúc: {formatDetailDate((task as StaffTask).escalation!.escalatedAt)}
                       </span>
                     )}
                   </div>

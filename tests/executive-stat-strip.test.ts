@@ -135,7 +135,7 @@ describe("ExecutiveStatStrip Helpers", () => {
     const cards = getStatCardData(stats);
     const triageCard = cards.find((c) => c.id === "triage-queue");
     assert.ok(triageCard, "triage-queue card must exist when pendingTriageCount > 0");
-    assert.equal(triageCard!.title, "Cho tiep nhan");
+    assert.equal(triageCard!.title, "Chờ tiếp nhận");
     assert.equal(triageCard!.value, "2");
     assert.equal(triageCard!.iconName, "Clock");
     assert.ok(
@@ -152,7 +152,7 @@ describe("ExecutiveStatStrip Helpers", () => {
     const cards = getStatCardData(stats);
     const escalatedCard = cards.find((c) => c.id === "escalated-reviews");
     assert.ok(escalatedCard, "escalated-reviews card must exist when escalatedReviewCount > 0");
-    assert.equal(escalatedCard!.title, "Qua han tham dinh");
+    assert.equal(escalatedCard!.title, "Quá hạn thẩm định");
     assert.equal(escalatedCard!.value, "3");
     assert.equal(escalatedCard!.iconName, "AlertTriangle");
     assert.ok(

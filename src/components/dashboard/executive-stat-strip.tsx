@@ -147,9 +147,9 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
   if (triageCount > 0) {
     cards.push({
       id: "triage-queue",
-      title: "Cho tiep nhan",
+      title: "Chờ tiếp nhận",
       value: formatNumber(triageCount),
-      subtext: `${formatNumber(triageCount)} cho xu ly tiep nhan`,
+      subtext: `${formatNumber(triageCount)} chờ xử lý tiếp nhận`,
       iconName: "Clock",
     });
   }
@@ -159,11 +159,11 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
   if (escalatedCount > 0) {
     cards.push({
       id: "escalated-reviews",
-      title: "Qua han tham dinh",
+      title: "Quá hạn thẩm định",
       value: formatNumber(escalatedCount),
-      subtext: `${formatNumber(escalatedCount)} vuot han tham dinh`,
+      subtext: `${formatNumber(escalatedCount)} vượt hạn thẩm định`,
       badge: {
-        label: `${escalatedCount} qua han`,
+        label: `${escalatedCount} quá hạn`,
         variant: "rose",
       },
       iconName: "AlertTriangle",

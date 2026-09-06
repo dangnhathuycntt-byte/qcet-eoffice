@@ -357,7 +357,7 @@ export function evaluateReviewEscalation(
         isEscalated: true,
         escalatedAt: now.toISOString(),
         escalatedToRole: "ADMIN",
-        escalationNote: `Qua han tham dinh ${slaHours} gio tai cap don vi. Da tu dong chuyen Ban Giam hieu theo doi.`,
+        escalationNote: `Quá hạn thẩm định ${slaHours} giờ tại cấp đơn vị. Đã tự động chuyển Ban Giám hiệu theo dõi.`,
       },
       updatedAt: now.toISOString(),
     };
@@ -382,7 +382,7 @@ export function processTriageDecision(
     return {
       success: false,
       error:
-        "Chi co the xu ly yeu cau phoi hop dang cho tiep nhan (PENDING_TRIAGE). Trang thai hien tai khong hop le.",
+        "Chỉ có thể xử lý yêu cầu phối hợp đang chờ tiếp nhận (PENDING_TRIAGE). Trạng thái hiện tại không hợp lệ.",
     };
   }
 
@@ -396,7 +396,7 @@ export function processTriageDecision(
     return {
       success: false,
       error:
-        "Chi Lanh dao don vi tiep nhan hoac Ban Giam hieu moi co tham quyen phan loai va tiep nhan yeu cau phoi hop.",
+        "Chỉ Lãnh đạo đơn vị tiếp nhận hoặc Ban Giám hiệu mới có thẩm quyền phân loại và tiếp nhận yêu cầu phối hợp.",
     };
   }
 
@@ -404,7 +404,7 @@ export function processTriageDecision(
     if (!payload.targetAssigneeName || !payload.targetAssigneeName.trim()) {
       return {
         success: false,
-        error: "Bat buoc phai chi dinh nhan su phu trach khi tiep nhan cong viec.",
+        error: "Bắt buộc phải chỉ định nhân sự phụ trách khi tiếp nhận công việc.",
       };
     }
 
@@ -423,7 +423,7 @@ export function processTriageDecision(
     if (!payload.rejectionReason || !payload.rejectionReason.trim()) {
       return {
         success: false,
-        error: "Bat buoc phai ghi ro ly do khi tu choi tiep nhan yeu cau phoi hop.",
+        error: "Bắt buộc phải ghi rõ lý do khi từ chối tiếp nhận yêu cầu phối hợp.",
       };
     }
 
@@ -432,11 +432,11 @@ export function processTriageDecision(
       triageStatus: "REJECTED",
       status: "BLOCKED",
       triageRejectionReason: payload.rejectionReason,
-      blockedReason: `Tu choi phoi hop: ${payload.rejectionReason}`,
+      blockedReason: `Từ chối phối hợp: ${payload.rejectionReason}`,
       updatedAt: new Date().toISOString(),
     };
     return { success: true, updatedTask };
   }
 
-  return { success: false, error: "Hanh dong khong hop le." };
+  return { success: false, error: "Hành động không hợp lệ." };
 }

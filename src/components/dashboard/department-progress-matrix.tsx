@@ -96,7 +96,7 @@ export function DepartmentProgressMatrix({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] text-muted-foreground">
-                  Tien do
+                  Tiến độ
                 </span>
                 <span className="text-[11px] font-mono font-semibold text-foreground tabular-nums">
                   {dept.averageProgressPercent}%
@@ -108,12 +108,12 @@ export function DepartmentProgressMatrix({
             <div className="flex flex-wrap gap-1.5">
               {dept.overdueTasksCount > 0 && (
                 <Badge variant="rose" className="text-[10px] h-4 px-1.5">
-                  {dept.overdueTasksCount} tre han
+                  {dept.overdueTasksCount} trễ hạn
                 </Badge>
               )}
               {dept.blockedTasksCount > 0 && (
                 <Badge variant="amber" className="text-[10px] h-4 px-1.5">
-                  {dept.blockedTasksCount} vuong mac
+                  {dept.blockedTasksCount} vướng mắc
                 </Badge>
               )}
             </div>

@@ -76,9 +76,9 @@ describe("ExecutiveActionCenter", () => {
 
   test("getActionCardData returns correct titles", () => {
     const cards = getActionCardData(mockStats);
-    assert.equal(cards[0].title, "Cho BGH Phe duyet");
-    assert.equal(cards[1].title, "Vuong mac & Tre han");
-    assert.equal(cards[2].title, "Nhiem vu Chien luoc");
+    assert.equal(cards[0].title, "Chờ BGH Phê duyệt");
+    assert.equal(cards[1].title, "Vướng mắc & Trễ hạn");
+    assert.equal(cards[2].title, "Nhiệm vụ Chiến lược");
   });
 
   test("action card titles and values contain zero emojis", () => {

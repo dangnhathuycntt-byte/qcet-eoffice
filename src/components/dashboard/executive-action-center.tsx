@@ -31,7 +31,7 @@ const ACTION_CARDS: ActionCardConfig[] = [
   {
     id: "pending-approval",
     filterKey: "PENDING_APPROVAL",
-    title: "Cho BGH Phe duyet",
+    title: "Chờ BGH Phê duyệt",
     getValue: (s) => s.pendingSchoolApprovalCount,
     icon: CheckCircle2,
     accentColor: "bg-indigo-500/50",
@@ -41,7 +41,7 @@ const ACTION_CARDS: ActionCardConfig[] = [
   {
     id: "blocked-overdue",
     filterKey: "BLOCKED_OVERDUE",
-    title: "Vuong mac & Tre han",
+    title: "Vướng mắc & Trễ hạn",
     getValue: (s) => s.blockedTasksCount + s.overdueTasksCount,
     icon: AlertTriangle,
     accentColor: "bg-rose-500/50",
@@ -51,7 +51,7 @@ const ACTION_CARDS: ActionCardConfig[] = [
   {
     id: "strategic-active",
     filterKey: "STRATEGIC",
-    title: "Nhiem vu Chien luoc",
+    title: "Nhiệm vụ Chiến lược",
     getValue: (s) => s.strategicActiveCount,
     icon: Target,
     accentColor: "bg-emerald-500/50",
