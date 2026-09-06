@@ -251,4 +251,108 @@ describe("Dual-Rail Navigation Architecture Test Suite", () => {
       );
     });
   });
+
+  describe("AppSidebar Sub-Navigation Pane (Rail 2) Contract", () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const sidebarFile = path.join(
+      process.cwd(),
+      "src/components/layout/app-sidebar.tsx"
+    );
+
+    test("app-sidebar.tsx exists and is a client component", () => {
+      assert.ok(fs.existsSync(sidebarFile), "app-sidebar.tsx must exist");
+      const content = fs.readFileSync(sidebarFile, "utf-8");
+      assert.ok(
+        content.startsWith('"use client"') || content.startsWith("'use client'"),
+        "app-sidebar.tsx must have 'use client' directive"
+      );
+    });
+
+    test("app-sidebar.tsx houses AppPrimaryRail and Rail 2 sub-nav pane as flex-row siblings", () => {
+      const content = fs.readFileSync(sidebarFile, "utf-8");
+      assert.ok(
+        content.includes("<AppPrimaryRail />") || content.includes("<AppPrimaryRail"),
+        "Must render AppPrimaryRail"
+      );
+      assert.ok(
+        content.includes("hidden md:flex flex-row"),
+        "Desktop container must be hidden md:flex flex-row"
+      );
+      assert.ok(
+        content.includes('aria-label="Thanh điều hướng chính"'),
+        "Desktop aside must have aria-label='Thanh điều hướng chính'"
+      );
+    });
+
+    test("Desktop navigation container switches between w-28 (112px) and w-[280px]", () => {
+      const content = fs.readFileSync(sidebarFile, "utf-8");
+      assert.ok(
+        content.includes('isCollapsed ? "w-28" : "w-[280px]"'),
+        "Desktop container must switch between w-28 (112px) and w-[280px]"
+      );
+    });
+
+    test("Rail 2 sub-nav container switches between w-14 items-center (56px) and w-56 (224px)", () => {
+      const content = fs.readFileSync(sidebarFile, "utf-8");
+      assert.ok(
+        content.includes('isCollapsed ? "w-14 items-center" : "w-56"'),
+        "Rail 2 container must switch between w-14 items-center and w-56"
+      );
+    });
+
+    test("Expanded Rail 2 renders group labels 'CÁ NHÂN' and 'TOÀN TRƯỜNG & ĐƠN VỊ'", () => {
+      const content = fs.readFileSync(sidebarFile, "utf-8");
+      assert.ok(
+        content.includes("CÁ NHÂN"),
+        "Must have 'CÁ NHÂN' group label"
+      );
+      assert.ok(
+        content.includes("TOÀN TRƯỜNG & ĐƠN VỊ"),
+        "Must have 'TOÀN TRƯỜNG & ĐƠN VỊ' group label"
+      );
+    });
+
+    test("Collapsed Rail 2 renders 56px mode with TooltipProvider, size-9 icon buttons and expand button", () => {
+      const content = fs.readFileSync(sidebarFile, "utf-8");
+      assert.ok(
+        content.includes("TooltipProvider"),
+        "Must use TooltipProvider"
+      );
+      assert.ok(
+        content.includes("size-9 rounded-lg"),
+        "Must render size-9 icon-only buttons in collapsed mode"
+      );
+      assert.ok(
+        content.includes("ChevronRight"),
+        "Must render ChevronRight expand button when collapsed"
+      );
+      assert.ok(
+        content.includes("Mở rộng [Ctrl+B]"),
+        "Must have 'Mở rộng [Ctrl+B]' label/tooltip"
+      );
+    });
+
+    test("Handles global Ctrl+B / Cmd+B keyboard shortcut for toggleCollapse", () => {
+      const content = fs.readFileSync(sidebarFile, "utf-8");
+      assert.ok(
+        content.includes("ctrlKey") && content.includes("metaKey"),
+        "Must listen to ctrlKey and metaKey"
+      );
+      assert.ok(
+        content.includes("toggleCollapse()"),
+        "Must call toggleCollapse on shortcut"
+      );
+    });
+
+    test("Anti-slop check: 0% emojis in app-sidebar.tsx", () => {
+      const content = fs.readFileSync(sidebarFile, "utf-8");
+      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+      assert.strictEqual(
+        emojiRegex.test(content),
+        false,
+        "app-sidebar.tsx must contain zero emojis"
+      );
+    });
+  });
 });

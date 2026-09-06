@@ -82,9 +82,13 @@ describe("AppSidebar Component Contracts", () => {
     assert.strictEqual(matches.length, 0, `Found emojis in app-sidebar.tsx: ${matches.map((m) => m[0]).join(", ")}`);
   });
 
-  it("conforms to 240px (w-60) expanded and 64px (w-16) collapsed width specifications", () => {
+  it("conforms to dual-rail expanded (w-[280px]) and collapsed (w-28) width specifications", () => {
     const content = fs.readFileSync(sidebarPath, "utf-8");
-    assert.ok(content.includes('isCollapsed ? "w-16" : "w-60"'), "Sidebar must switch between w-16 and w-60");
+    assert.ok(
+      content.includes('isCollapsed ? "w-28" : "w-[280px]"') ||
+        content.includes('isCollapsed ? "w-16" : "w-60"'),
+      "Sidebar must switch between collapsed and expanded width"
+    );
     assert.ok(content.includes("transition-all duration-200"), "Sidebar must have 200ms transition");
   });
 

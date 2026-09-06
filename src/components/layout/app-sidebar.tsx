@@ -5,7 +5,21 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { useSidebar, SIDEBAR_ZONE_ITEMS, type NavigationItem } from "@/components/layout/sidebar-context";
+import {
+  useSidebar,
+  MODULES,
+  MODULE_NAV_ITEMS,
+  SIDEBAR_ZONE_ITEMS,
+  type SidebarItem,
+  type NavigationSection,
+} from "@/components/layout/sidebar-context";
+import { AppPrimaryRail } from "@/components/layout/app-primary-rail";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
@@ -15,58 +29,110 @@ export function AppSidebar() {
     isMobileOpen,
     setIsMobileOpen,
     badgeCounts,
+    currentModule,
   } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Listen to Ctrl+B / Cmd+B globally to toggleCollapse
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        toggleCollapse();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleCollapse]);
+
+  // Current items for the active module
+  const currentItems = React.useMemo(() => {
+    return MODULE_NAV_ITEMS[currentModule] || MODULE_NAV_ITEMS.work;
+  }, [currentModule]);
+
+  const currentModuleMeta = React.useMemo(() => {
+    return MODULES.find((m) => m.id === currentModule) || MODULES[0];
+  }, [currentModule]);
+
   // Helper to determine if a nav item is active
-  const isItemActive = (item: NavigationItem) => {
-    if (item.href === "/portal") {
-      return pathname === "/portal";
-    }
-    if (item.href === "/") {
-      const zone = searchParams.get("zone");
-      if (zone && (zone === "tasks" || zone === "calendar" || zone === "org")) {
-        return false;
+  const isItemActive = React.useCallback(
+    (item: SidebarItem) => {
+      if (item.href.includes("?")) {
+        const [itemPath, itemQuery] = item.href.split("?");
+        if (pathname !== itemPath) return false;
+        const itemParams = new URLSearchParams(itemQuery);
+        let match = true;
+        itemParams.forEach((val, key) => {
+          if (searchParams.get(key) !== val) {
+            match = false;
+          }
+        });
+        return match;
       }
-      return pathname === "/";
-    }
-    if (pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"))) {
-      return true;
-    }
-    // Backward compatibility for legacy ?zone= query parameters on root
-    if (pathname === "/") {
-      const zone = searchParams.get("zone");
-      if (zone) {
-        if (item.href === "/tasks" && zone === "tasks") return true;
-        if (item.href === "/calendar" && zone === "calendar") return true;
-        if (item.href === "/org" && zone === "org") return true;
+
+      if (item.href === "/") {
+        const zone = searchParams.get("zone");
+        if (zone && (zone === "tasks" || zone === "calendar" || zone === "org")) {
+          return false;
+        }
+        return pathname === "/";
       }
-    }
-    return false;
-  };
+
+      if (pathname === item.href) {
+        const hasSpecificQueryMatch = currentItems.some(
+          (other) =>
+            other.id !== item.id &&
+            other.href.startsWith(item.href + "?") &&
+            isItemActive(other)
+        );
+        if (hasSpecificQueryMatch) return false;
+        return true;
+      }
+
+      if (item.href !== "/" && pathname.startsWith(item.href + "/")) {
+        return true;
+      }
+
+      // Backward compatibility for legacy ?zone= query parameters on root
+      if (pathname === "/") {
+        const zone = searchParams.get("zone");
+        if (zone) {
+          if (item.href === "/tasks" && zone === "tasks") return true;
+          if (item.href === "/calendar" && zone === "calendar") return true;
+          if (item.href === "/org" && zone === "org") return true;
+        }
+      }
+
+      return false;
+    },
+    [pathname, searchParams, currentItems]
+  );
 
   // Helper to get badge counter and variant
   const getBadgeInfo = React.useCallback(
-    (item: NavigationItem): { text: string; variant: "primary" | "sky" | "muted" | "danger" } | null => {
+    (item: SidebarItem): { text: string; variant: "primary" | "sky" | "muted" | "danger" } | null => {
       let text: string | number | undefined;
       let variant: "primary" | "sky" | "muted" | "danger" = "primary";
 
-      if (item.zone === "tasks") {
-        text = badgeCounts?.tasks;
-        variant = "danger";
-      } else if (item.zone === "calendar") {
-        text = badgeCounts?.calendar;
-        variant = "sky";
-      } else if (item.zone === "org") {
-        text = badgeCounts?.org;
-        variant = "muted";
+      if (item.badgeKey && badgeCounts?.[item.badgeKey] !== undefined) {
+        text = badgeCounts[item.badgeKey];
+        if (
+          item.badgeKey === "allTasks" ||
+          item.badgeKey === "tasks" ||
+          item.badgeKey === "notifications"
+        ) {
+          variant = "danger";
+        } else if (item.badgeKey === "calendar") {
+          variant = "sky";
+        } else if (item.badgeKey === "myFocus") {
+          variant = "primary";
+        } else {
+          variant = "muted";
+        }
       } else if (item.href === "/notifications") {
         text = badgeCounts?.notifications ?? 5;
         variant = "danger";
-      } else if (item.badge) {
-        text = item.badge;
-        variant = (item.badgeVariant as any) || "primary";
       }
 
       if (
@@ -82,6 +148,21 @@ export function AppSidebar() {
     },
     [badgeCounts]
   );
+
+  // Group items by section
+  const sections = React.useMemo(() => {
+    const personalItems = currentItems.filter((i) => i.section === "personal");
+    const workspaceItems = currentItems.filter((i) => i.section === "workspace");
+
+    const list: { key: NavigationSection; label: string; items: SidebarItem[] }[] = [];
+    if (personalItems.length > 0) {
+      list.push({ key: "personal", label: "CÁ NHÂN", items: personalItems });
+    }
+    if (workspaceItems.length > 0) {
+      list.push({ key: "workspace", label: "TOÀN TRƯỜNG & ĐƠN VỊ", items: workspaceItems });
+    }
+    return list;
+  }, [currentItems]);
 
   // Close mobile drawer on Escape key
   React.useEffect(() => {
@@ -109,235 +190,264 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Desktop Sidebar (>= md) */}
+      {/* Desktop Navigation (>= md): houses Rail 1 and Rail 2 inline */}
       <aside
         data-slot="app-sidebar"
-        aria-label="Thanh điều hướng bên"
+        aria-label="Thanh điều hướng chính"
         className={cn(
-          "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col border-r border-border/60 bg-card/95 backdrop-blur-md transition-all duration-200 ease-in-out select-none overflow-x-hidden",
-          isCollapsed ? "w-16" : "w-60"
+          "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-row transition-all duration-200 ease-in-out bg-card/90 backdrop-blur-md border-r border-border/70",
+          isCollapsed ? "w-28" : "w-[280px]"
         )}
       >
-        {/* Desktop Sidebar Header */}
-        <div className="h-[52px] border-b border-border/50 flex items-center px-3 shrink-0">
-          {isCollapsed ? (
-            <div className="flex w-full items-center justify-center">
-              <Link
-                href="/"
-                className="relative flex items-center justify-center size-8 rounded-lg bg-card p-0.5 border border-border/60 hover:border-primary/40 hover:shadow-2xs transition-all"
-                title="QCET E-Office - v1.2 Enterprise"
-                aria-label="Về trang chủ QCET E-Office"
-              >
-                <Image
-                  src="/logo-qcet.png"
-                  alt="QCET Logo"
-                  width={32}
-                  height={32}
-                  priority
-                  unoptimized
-                  className="h-full w-full object-contain"
-                />
-              </Link>
-            </div>
-          ) : (
-            <div className="flex w-full items-center justify-between min-w-0">
-              <Link
-                href="/"
-                className="flex items-center gap-2.5 min-w-0 group"
-                aria-label="Về trang chủ QCET E-Office"
-              >
-                <div className="relative flex items-center justify-center size-8 rounded-lg bg-card p-0.5 border border-border/60 shrink-0 transition-colors group-hover:border-primary/40">
-                  <Image
-                    src="/logo-qcet.png"
-                    alt="QCET Logo"
-                    width={32}
-                    height={32}
-                    priority
-                    unoptimized
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-bold tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
-                    QCET E-Office
-                  </span>
-                  <span className="text-[10px] font-mono text-muted-foreground truncate">
-                    v1.2 Enterprise
-                  </span>
-                </div>
-              </Link>
-              <button
-                type="button"
-                onClick={toggleCollapse}
-                className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0 active:scale-95"
-                title="Thu gọn sidebar (Ctrl+B)"
-                aria-label="Thu gọn sidebar"
-              >
-                <ChevronLeft size={15} strokeWidth={1.5} />
-              </button>
-            </div>
+        {/* Rail 1: Primary Module Rail (fixed 56px) */}
+        <AppPrimaryRail />
+
+        {/* Rail 2: Sub-Navigation Pane (56px collapsed / 224px expanded) */}
+        <div
+          className={cn(
+            "flex flex-col h-full transition-all duration-200 ease-in-out border-r border-border/50 bg-background/50",
+            isCollapsed ? "w-14 items-center" : "w-56"
           )}
-        </div>
-
-        {/* Desktop Navigation List */}
-        <nav
-          className="flex-1 py-3 px-2 space-y-1.5 overflow-y-auto overflow-x-hidden thin-scrollbar"
-          aria-label="Danh mục điều hướng chính"
         >
-          {SIDEBAR_ZONE_ITEMS.map((item) => {
-            const active = isItemActive(item);
-            const Icon = item.icon;
-            const badge = getBadgeInfo(item);
+          {isCollapsed ? (
+            /* Collapsed Rail 2 Mode (56px icon-only, matches Image 2) */
+            <>
+              {/* Header spacer */}
+              <div className="h-[52px] border-b border-border/50 flex items-center justify-center shrink-0 w-full">
+                <span className="text-[10px] font-mono font-semibold text-muted-foreground/60 uppercase tracking-widest">
+                  {currentModuleMeta.shortLabel.slice(0, 3)}
+                </span>
+              </div>
 
-            if (isCollapsed) {
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={(e) => {
-                    if (item.href === "/notifications") {
-                      e.preventDefault();
-                      window.dispatchEvent(new CustomEvent("qcet:toggle-notifications"));
-                    }
-                  }}
-                  title={`${item.label}${badge ? ` (${badge.text})` : ""}`}
-                  aria-label={`${item.label}${badge ? ` (${badge.text})` : ""}`}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "group relative flex size-10 mx-auto items-center justify-center rounded-xl text-xs font-medium transition-all duration-150 active:scale-95",
-                    active
-                      ? "bg-primary/12 text-primary font-semibold shadow-2xs border border-primary/25"
-                      : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground hover:border-border/40 border border-transparent"
-                  )}
-                >
-                  <Icon
-                    size={18}
-                    strokeWidth={1.5}
-                    className={cn(
-                      "shrink-0 transition-colors",
-                      active
-                        ? "text-primary"
-                        : "text-muted-foreground group-hover:text-foreground"
-                    )}
-                  />
-                  {badge && (
-                    <span
-                      aria-label={`${badge.text} mục`}
-                      className={cn(
-                        "absolute -top-1 -right-1 flex items-center justify-center min-w-[17px] h-[17px] px-1 rounded-full text-[9px] font-mono font-bold leading-none tracking-tight shadow-xs ring-2 ring-card select-none pointer-events-none",
-                        badge.variant === "primary" && "bg-primary text-primary-foreground",
-                        badge.variant === "sky" && "bg-sky-500 text-white",
-                        badge.variant === "danger" && "bg-rose-500 text-white animate-pulse",
-                        badge.variant === "muted" && "bg-muted-foreground/80 text-background"
-                      )}
-                    >
-                      {badge.text}
+              {/* Collapsed Icon List */}
+              <div className="overflow-y-auto flex-1 py-2 flex flex-col items-center gap-1 w-full thin-scrollbar">
+                <TooltipProvider>
+                  {sections.map((sec, idx) => (
+                    <React.Fragment key={sec.key}>
+                      {idx > 0 && <div className="w-6 h-px bg-border/50 my-1 shrink-0" />}
+                      {sec.items.map((item) => {
+                        const active = isItemActive(item);
+                        const Icon = item.icon;
+                        const badge = getBadgeInfo(item);
+
+                        return (
+                          <Tooltip key={item.id}>
+                            <TooltipTrigger asChild>
+                              <Link
+                                href={item.href}
+                                onClick={(e) => {
+                                  if (item.href === "/notifications") {
+                                    e.preventDefault();
+                                    window.dispatchEvent(
+                                      new CustomEvent("qcet:toggle-notifications")
+                                    );
+                                  }
+                                }}
+                                aria-label={`${item.label}${badge ? ` (${badge.text})` : ""}`}
+                                aria-current={active ? "page" : undefined}
+                                className={cn(
+                                  "size-9 rounded-lg relative flex items-center justify-center transition-all duration-150 active:scale-95",
+                                  active
+                                    ? "bg-primary/10 text-primary font-medium"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                )}
+                              >
+                                {active && (
+                                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-primary rounded-r-full" />
+                                )}
+                                <Icon size={18} strokeWidth={1.5} />
+                                {badge && (
+                                  <span
+                                    aria-label={`${badge.text} mục`}
+                                    className={cn(
+                                      "absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-mono font-bold leading-none tracking-tight shadow-xs select-none pointer-events-none",
+                                      badge.variant === "primary" &&
+                                        "bg-primary text-primary-foreground",
+                                      badge.variant === "sky" && "bg-sky-500 text-white",
+                                      badge.variant === "danger" &&
+                                        "bg-rose-500 text-white animate-pulse",
+                                      badge.variant === "muted" &&
+                                        "bg-secondary text-muted-foreground"
+                                    )}
+                                  >
+                                    {badge.text}
+                                  </span>
+                                )}
+                              </Link>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              <div className="flex items-center gap-1.5">
+                                <span>{item.label}</span>
+                                {badge && (
+                                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-muted">
+                                    {badge.text}
+                                  </span>
+                                )}
+                                {item.isComingSoon && (
+                                  <span className="text-[9px] text-amber-500">
+                                    (Đang phát triển)
+                                  </span>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </TooltipProvider>
+              </div>
+
+              {/* Collapsed Footer (Expand Button) */}
+              <div className="p-2 border-t border-border/50 shrink-0 w-full flex justify-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={toggleCollapse}
+                        className="size-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                        aria-label="Mở rộng [Ctrl+B]"
+                        title="Mở rộng [Ctrl+B]"
+                      >
+                        <ChevronRight size={16} strokeWidth={1.5} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <span>Mở rộng [Ctrl+B]</span>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </>
+          ) : (
+            /* Expanded Rail 2 Mode (224px width, full labels & sections) */
+            <>
+              {/* Header with Module Title */}
+              <div className="h-[52px] border-b border-border/50 px-3.5 flex flex-col justify-center shrink-0 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-xs font-bold tracking-tight text-foreground truncate">
+                    {currentModuleMeta.label}
+                  </span>
+                  {currentModuleMeta.isComingSoon && (
+                    <span className="text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded leading-none shrink-0">
+                      Sắp ra mắt
                     </span>
                   )}
-                </Link>
-              );
-            }
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={(e) => {
-                  if (item.href === "/notifications") {
-                    e.preventDefault();
-                    window.dispatchEvent(new CustomEvent("qcet:toggle-notifications"));
-                  }
-                }}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors active:scale-[0.98]",
-                  active
-                    ? "bg-primary/10 text-primary font-semibold shadow-2xs border border-primary/20"
-                    : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground border border-transparent"
-                )}
-              >
-                <Icon
-                  size={17}
-                  strokeWidth={1.5}
-                  className={cn(
-                    "shrink-0 transition-colors",
-                    active
-                      ? "text-primary"
-                      : "text-muted-foreground group-hover:text-foreground"
-                  )}
-                />
-                <span className="truncate flex-1">{item.label}</span>
-                {badge && (
-                  <span
-                    className={cn(
-                      "ml-auto inline-flex items-center justify-center px-1.5 py-0.5 min-w-[20px] rounded-full text-[10.5px] font-mono font-bold leading-none select-none tracking-tight",
-                      badge.variant === "primary" && "bg-primary/15 text-primary border border-primary/20",
-                      badge.variant === "sky" && "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20",
-                      badge.variant === "danger" && "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
-                      badge.variant === "muted" && "bg-secondary text-muted-foreground border border-border/50"
-                    )}
-                  >
-                    {badge.text}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Desktop Sidebar Footer */}
-        <div className="p-2.5 border-t border-border/50 shrink-0">
-          {isCollapsed ? (
-            <div className="flex flex-col items-center gap-2">
-              <div
-                className="flex size-9 items-center justify-center rounded-lg bg-secondary/40 border border-border/40"
-                title="Notion: Đang kết nối"
-                aria-label="Notion: Đang kết nối"
-              >
-                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <span className="text-[10px] font-mono text-muted-foreground truncate">
+                  {currentModuleMeta.isComingSoon ? "Đang phát triển" : "Năm học 2025-2026"}
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={toggleCollapse}
-                className="flex size-9 items-center justify-center rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer active:scale-95"
-                title="Mở rộng sidebar (Ctrl+B)"
-                aria-label="Mở rộng sidebar"
-              >
-                <ChevronRight size={15} strokeWidth={1.5} />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-border/40 bg-secondary/30 text-xs text-muted-foreground min-w-0">
-                <span className="size-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-                <span className="truncate font-medium text-[11.5px]">Notion: Đang kết nối</span>
+
+              {/* Expanded Menu Navigation */}
+              <div className="overflow-y-auto flex-1 p-2 space-y-4 thin-scrollbar">
+                {sections.map((sec) => (
+                  <div key={sec.key} className="space-y-1">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 px-2.5 py-1 select-none">
+                      {sec.label}
+                    </div>
+                    <div className="space-y-0.5">
+                      {sec.items.map((item) => {
+                        const active = isItemActive(item);
+                        const Icon = item.icon;
+                        const badge = getBadgeInfo(item);
+
+                        return (
+                          <Link
+                            key={item.id}
+                            href={item.href}
+                            onClick={(e) => {
+                              if (item.href === "/notifications") {
+                                e.preventDefault();
+                                window.dispatchEvent(
+                                  new CustomEvent("qcet:toggle-notifications")
+                                );
+                              }
+                            }}
+                            aria-current={active ? "page" : undefined}
+                            className={cn(
+                              "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors select-none",
+                              active
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                            )}
+                          >
+                            {active && (
+                              <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary" />
+                            )}
+                            <Icon
+                              size={16}
+                              strokeWidth={1.5}
+                              className={cn(
+                                "shrink-0 transition-colors",
+                                active
+                                  ? "text-primary"
+                                  : "text-muted-foreground group-hover:text-foreground"
+                              )}
+                            />
+                            <span className="truncate flex-1">{item.label}</span>
+                            {badge && (
+                              <span
+                                className={cn(
+                                  "ml-auto inline-flex items-center justify-center px-1.5 py-0.5 min-w-[18px] rounded-full text-[10px] font-mono font-bold leading-none select-none tracking-tight",
+                                  badge.variant === "primary" &&
+                                    "bg-primary/15 text-primary border border-primary/20",
+                                  badge.variant === "sky" &&
+                                    "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20",
+                                  badge.variant === "danger" &&
+                                    "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
+                                  badge.variant === "muted" &&
+                                    "bg-secondary text-muted-foreground border border-border/50"
+                                )}
+                              >
+                                {badge.text}
+                              </span>
+                            )}
+                            {item.isComingSoon && !badge && (
+                              <span className="ml-auto text-[9px] font-normal text-muted-foreground/60">
+                                Sớm ra mắt
+                              </span>
+                            )}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <button
-                type="button"
-                onClick={toggleCollapse}
-                className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0 active:scale-95"
-                title="Thu gọn sidebar (Ctrl+B)"
-                aria-label="Thu gọn sidebar"
-              >
-                <ChevronLeft size={14} strokeWidth={1.5} />
-              </button>
-            </div>
+
+              {/* Expanded Footer (Collapse Button) */}
+              <div className="p-2 border-t border-border/50 shrink-0">
+                <button
+                  type="button"
+                  onClick={toggleCollapse}
+                  className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                  title="Thu gọn [Ctrl+B]"
+                  aria-label="Thu gọn [Ctrl+B]"
+                >
+                  <ChevronLeft size={16} strokeWidth={1.5} className="shrink-0" />
+                  <span className="truncate text-[11px] font-medium">Thu gọn [Ctrl+B]</span>
+                  <kbd className="ml-auto pointer-events-none inline-flex h-4.5 select-none items-center gap-0.5 rounded border border-border/60 bg-muted px-1.5 font-mono text-[9px] font-medium text-muted-foreground">
+                    Ctrl+B
+                  </kbd>
+                </button>
+              </div>
+            </>
           )}
         </div>
       </aside>
 
-      {/* Mobile Drawer Overlay & Sliding Panel (< md) */}
+      {/* Mobile Navigation Drawer (<= md) */}
       <div className="md:hidden">
-        {/* Full-screen Backdrop */}
+        {/* Backdrop Overlay */}
         <div
           className={cn(
             "fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-200",
-            isMobileOpen
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
+            isMobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
           )}
           onClick={() => setIsMobileOpen(false)}
-          aria-hidden="true"
+          aria-hidden={!isMobileOpen}
         />
 
         {/* Sliding Drawer */}
@@ -394,13 +504,13 @@ export function AppSidebar() {
             className="flex-1 py-4 space-y-1 overflow-y-auto thin-scrollbar"
             aria-label="Danh mục điều hướng di động"
           >
-            {SIDEBAR_ZONE_ITEMS.map((item) => {
+            {currentItems.map((item) => {
               const active = isItemActive(item);
               const Icon = item.icon;
               const badge = getBadgeInfo(item);
               return (
                 <Link
-                  key={item.href}
+                  key={item.id}
                   href={item.href}
                   onClick={(e) => {
                     setIsMobileOpen(false);
@@ -435,10 +545,14 @@ export function AppSidebar() {
                     <span
                       className={cn(
                         "ml-auto inline-flex items-center justify-center px-2 py-0.5 min-w-[20px] rounded-full text-[10.5px] font-mono font-bold leading-none select-none tracking-tight",
-                        badge.variant === "primary" && "bg-primary/15 text-primary border border-primary/20",
-                        badge.variant === "sky" && "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20",
-                        badge.variant === "danger" && "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
-                        badge.variant === "muted" && "bg-secondary text-muted-foreground border border-border/50"
+                        badge.variant === "primary" &&
+                          "bg-primary/15 text-primary border border-primary/20",
+                        badge.variant === "sky" &&
+                          "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20",
+                        badge.variant === "danger" &&
+                          "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
+                        badge.variant === "muted" &&
+                          "bg-secondary text-muted-foreground border border-border/50"
                       )}
                     >
                       {badge.text}
