@@ -26,6 +26,10 @@ describe("Scrollbar Modernization & Anti-Slop Audit", () => {
     assert.ok(css.includes(".thin-scrollbar::-webkit-scrollbar"), "Must include WebKit scrollbar rules");
     assert.ok(css.includes("width: 5px;"), "Must set scrollbar width to 5px");
     assert.ok(css.includes("height: 5px;"), "Must set scrollbar height to 5px");
+    assert.ok(
+      css.includes(".thin-scrollbar::-webkit-scrollbar-track") && css.includes("background: transparent;"),
+      "Must set WebKit scrollbar track to transparent"
+    );
     assert.ok(css.includes("border-radius: 9999px;"), "Must set pill border-radius 9999px");
     assert.ok(
       css.includes("background: color-mix(in srgb, var(--foreground) 18%, transparent);"),
@@ -35,6 +39,37 @@ describe("Scrollbar Modernization & Anti-Slop Audit", () => {
       css.includes("background: color-mix(in srgb, var(--foreground) 35%, transparent);"),
       "Must use semi-transparent hover thumb background"
     );
+  });
+
+  it("Scrollbar contract is applied to all key interactive overflow containers", () => {
+    const containersToCheck = [
+      {
+        path: "src/components/notifications/notification-popover.tsx",
+        name: "NotificationPopover list container",
+      },
+      {
+        path: "src/components/layout/app-sidebar.tsx",
+        name: "AppSidebar navigation container",
+      },
+      {
+        path: "src/components/auth/user-profile-modal.tsx",
+        name: "UserProfileModal body container",
+      },
+      {
+        path: "src/components/dashboard/create-task-modal.tsx",
+        name: "CreateTaskModal body container",
+      },
+    ];
+
+    containersToCheck.forEach(({ path: relPath, name }) => {
+      const fullPath = path.join(process.cwd(), relPath);
+      assert.ok(fs.existsSync(fullPath), `${relPath} must exist`);
+      const content = fs.readFileSync(fullPath, "utf-8");
+      assert.ok(
+        content.includes("thin-scrollbar"),
+        `${name} (${relPath}) must apply thin-scrollbar`
+      );
+    });
   });
 
   it("NotificationPopover scrollable list container applies thin-scrollbar", () => {
