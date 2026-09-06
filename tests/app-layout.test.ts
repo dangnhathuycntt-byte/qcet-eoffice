@@ -23,10 +23,35 @@ describe("Two-Tier Layout Configuration & Breadcrumbs", () => {
 
   it("resolves breadcrumbs accurately for all system routes", () => {
     assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", "Quản lý công việc"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/tasks"), ["QCET E-Office", "Nhiệm vụ cấp Trường"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/unit-tasks"), ["QCET E-Office", "Công việc Đơn vị"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/calendar"), ["QCET E-Office", "Lịch công tác"]);
     assert.deepStrictEqual(resolveBreadcrumb("/dashboard"), ["QCET E-Office", "Báo cáo & Thống kê KPI"]);
     assert.deepStrictEqual(resolveBreadcrumb("/org"), ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"]);
     assert.deepStrictEqual(resolveBreadcrumb("/notifications"), ["QCET E-Office", "Thông báo điều hành"]);
     assert.deepStrictEqual(resolveBreadcrumb("/login"), ["QCET E-Office", "Đăng nhập"]);
+  });
+
+  it("resolves breadcrumbs accurately for contextual zones via query parameters", () => {
+    // Embedded in pathname
+    assert.deepStrictEqual(resolveBreadcrumb("/?zone=portal"), ["QCET E-Office", "Cổng Portal Điều hành"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/?zone=dashboard"), ["QCET E-Office", "Dashboard Điều hành & KPI"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/?zone=tasks"), ["QCET E-Office", "Quản lý công việc"]);
+
+    // Query string as second parameter
+    assert.deepStrictEqual(resolveBreadcrumb("/", "zone=portal"), ["QCET E-Office", "Cổng Portal Điều hành"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/", "zone=dashboard"), ["QCET E-Office", "Dashboard Điều hành & KPI"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/", "zone=tasks"), ["QCET E-Office", "Quản lý công việc"]);
+
+    // URLSearchParams object as second parameter
+    assert.deepStrictEqual(resolveBreadcrumb("/", new URLSearchParams("zone=portal")), ["QCET E-Office", "Cổng Portal Điều hành"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/", new URLSearchParams("zone=dashboard")), ["QCET E-Office", "Dashboard Điều hành & KPI"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/", new URLSearchParams("zone=tasks")), ["QCET E-Office", "Quản lý công việc"]);
+
+    // Backward compatibility for direct zone name
+    assert.deepStrictEqual(resolveBreadcrumb("/", "portal"), ["QCET E-Office", "Cổng Portal Điều hành"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/", "dashboard"), ["QCET E-Office", "Dashboard Điều hành & KPI"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/", "tasks"), ["QCET E-Office", "Quản lý công việc"]);
   });
 
   it("zero emojis in navigation labels and breadcrumbs (anti-slop rule)", () => {
