@@ -25,6 +25,11 @@ import {
   getStatusBadgeConfig,
   CATEGORY_TABS,
 } from "@/components/dashboard/cascading-task-table";
+import {
+  type AcademicMonthPeriod,
+  getAcademicMonthInfo,
+  getAdjacentAcademicMonth,
+} from "@/lib/academic-calendar";
 
 export interface CalendarDayCell {
   date: Date;
@@ -62,6 +67,17 @@ export function toDateString(year: number, month: number, day: number): string {
 export function formatMonthYearVi(year: number, month: number): string {
   const m = String(month + 1).padStart(2, "0");
   return `Tháng ${m} / ${year}`;
+}
+
+/**
+ * Formats full academic month header with date span and academic year:
+ * e.g. "Tháng 9 / 2026 (25/08 - 24/09) • Năm học 2026 - 2027"
+ */
+export function formatAcademicMonthHeader(period: AcademicMonthPeriod): string {
+  const academicYearFormatted = period.academicYear.includes(" - ")
+    ? period.academicYear
+    : period.academicYear.replace("-", " - ");
+  return `${period.fullLabel} • Năm học ${academicYearFormatted}`;
 }
 
 export function getPrevMonth(
@@ -134,12 +150,12 @@ export function getStatusLabel(
 }
 
 /**
- * Generates calendar day cells for a month starting on Monday (T2) and ending on Sunday (CN).
+ * Generates calendar day cells for an academic operational period (25th of prior month to 24th of current month).
+ * Grid starts on Monday (T2) and ends on Sunday (CN).
  * Guarantees a grid length of 35 or 42 (5 or 6 complete 7-day weeks).
  */
-export function generateMonthGrid(
-  year: number,
-  month: number
+export function generateAcademicMonthGrid(
+  period: AcademicMonthPeriod
 ): CalendarDayCell[] {
   const today = new Date();
   const todayString = toDateString(
@@ -148,25 +164,140 @@ export function generateMonthGrid(
     today.getDate()
   );
 
+  const [startYear, startMonth, startDay] = period.startDate
+    .split("-")
+    .map((s) => parseInt(s, 10));
+  const [endYear, endMonth, endDay] = period.endDate
+    .split("-")
+    .map((s) => parseInt(s, 10));
+
+  const startDateObj = new Date(startYear, startMonth - 1, startDay, 12, 0, 0);
+  const startDayOfWeek = startDateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  const mondayOffset = (startDayOfWeek + 6) % 7; // Monday-start offset
+
+  const grid: CalendarDayCell[] = [];
+
+  // 1. Preceding days before startDate (starting from Monday of that week)
+  for (let i = mondayOffset; i >= 1; i--) {
+    const prevDate = new Date(startYear, startMonth - 1, startDay - i, 12, 0, 0);
+    const dateString = toDateString(
+      prevDate.getFullYear(),
+      prevDate.getMonth(),
+      prevDate.getDate()
+    );
+    const dayOfWeek = prevDate.getDay();
+
+    grid.push({
+      date: prevDate,
+      dateString,
+      dayNumber: prevDate.getDate(),
+      isCurrentMonth: false,
+      isToday: dateString === todayString,
+      isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+      dayOfWeek,
+    });
+  }
+
+  // 2. Active operational period days (from 25th of prev month to 24th of current month)
+  const endDateObj = new Date(endYear, endMonth - 1, endDay, 12, 0, 0);
+  let curr = new Date(startYear, startMonth - 1, startDay, 12, 0, 0);
+  while (curr <= endDateObj) {
+    const dateString = toDateString(
+      curr.getFullYear(),
+      curr.getMonth(),
+      curr.getDate()
+    );
+    const dayOfWeek = curr.getDay();
+
+    grid.push({
+      date: curr,
+      dateString,
+      dayNumber: curr.getDate(),
+      isCurrentMonth: true,
+      isToday: dateString === todayString,
+      isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+      dayOfWeek,
+    });
+
+    curr = new Date(curr.getFullYear(), curr.getMonth(), curr.getDate() + 1, 12, 0, 0);
+  }
+
+  // 3. Trailing days to complete 7-day rows (at least 35 cells, up to 42 cells)
+  const totalCells = Math.max(35, Math.ceil(grid.length / 7) * 7);
+  const trailingDaysNeeded = totalCells - grid.length;
+
+  for (let d = 1; d <= trailingDaysNeeded; d++) {
+    const nextDate = new Date(endYear, endMonth - 1, endDay + d, 12, 0, 0);
+    const dateString = toDateString(
+      nextDate.getFullYear(),
+      nextDate.getMonth(),
+      nextDate.getDate()
+    );
+    const dayOfWeek = nextDate.getDay();
+
+    grid.push({
+      date: nextDate,
+      dateString,
+      dayNumber: nextDate.getDate(),
+      isCurrentMonth: false,
+      isToday: dateString === todayString,
+      isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+      dayOfWeek,
+    });
+  }
+
+  return grid;
+}
+
+/**
+ * Generates calendar day cells starting on Monday (T2) and ending on Sunday (CN).
+ * Supports AcademicMonthPeriod for operational cycle or (year, month) for calendar months.
+ * Guarantees a grid length of 35 or 42 (5 or 6 complete 7-day weeks).
+ */
+export function generateMonthGrid(
+  period: AcademicMonthPeriod
+): CalendarDayCell[];
+export function generateMonthGrid(
+  year: number,
+  month: number
+): CalendarDayCell[];
+export function generateMonthGrid(
+  periodOrYear: AcademicMonthPeriod | number,
+  month?: number
+): CalendarDayCell[] {
+  if (typeof periodOrYear === "object" && periodOrYear !== null) {
+    return generateAcademicMonthGrid(periodOrYear);
+  }
+
+  const year = periodOrYear;
+  const targetMonth = month ?? 0;
+
+  const today = new Date();
+  const todayString = toDateString(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
   // 1st day of target month
-  const firstDay = new Date(year, month, 1);
+  const firstDay = new Date(year, targetMonth, 1);
   const firstDayOfWeek = firstDay.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
 
   // Monday-start offset: 0 for Mon, 1 for Tue, ..., 6 for Sun
   const mondayOffset = (firstDayOfWeek + 6) % 7;
 
   // Number of days in current month
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInMonth = new Date(year, targetMonth + 1, 0).getDate();
 
   // Number of days in previous month
-  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  const daysInPrevMonth = new Date(year, targetMonth, 0).getDate();
 
   const grid: CalendarDayCell[] = [];
 
   // 1. Preceding days from previous month
   for (let i = mondayOffset - 1; i >= 0; i--) {
     const day = daysInPrevMonth - i;
-    const prevMonthData = getPrevMonth(year, month);
+    const prevMonthData = getPrevMonth(year, targetMonth);
     const dateObj = new Date(prevMonthData.year, prevMonthData.month, day);
     const dateString = toDateString(prevMonthData.year, prevMonthData.month, day);
     const dayOfWeek = dateObj.getDay();
@@ -184,8 +315,8 @@ export function generateMonthGrid(
 
   // 2. Current month days
   for (let day = 1; day <= daysInMonth; day++) {
-    const dateObj = new Date(year, month, day);
-    const dateString = toDateString(year, month, day);
+    const dateObj = new Date(year, targetMonth, day);
+    const dateString = toDateString(year, targetMonth, day);
     const dayOfWeek = dateObj.getDay();
 
     grid.push({
@@ -202,7 +333,7 @@ export function generateMonthGrid(
   // 3. Trailing days from next month to complete the grid (multiple of 7, at least 35)
   const totalCells = Math.max(35, Math.ceil(grid.length / 7) * 7);
   const trailingDaysNeeded = totalCells - grid.length;
-  const nextMonthData = getNextMonth(year, month);
+  const nextMonthData = getNextMonth(year, targetMonth);
 
   for (let day = 1; day <= trailingDaysNeeded; day++) {
     const dateObj = new Date(nextMonthData.year, nextMonthData.month, day);
@@ -348,7 +479,10 @@ export interface CalendarMonthViewProps {
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onAddTask?: (initialDate?: string) => void;
   initialYear?: number;
-  initialMonth?: number; // 0-indexed
+  initialMonth?: number; // 0-indexed or 1-12
+  initialPeriod?: AcademicMonthPeriod;
+  currentPeriod?: AcademicMonthPeriod;
+  onPeriodChange?: (period: AcademicMonthPeriod) => void;
   className?: string;
 }
 
@@ -358,38 +492,53 @@ export function CalendarMonthView({
   onAddTask,
   initialYear = 2026,
   initialMonth = 8, // September 2026
+  initialPeriod,
+  currentPeriod: controlledPeriod,
+  onPeriodChange,
   className,
 }: CalendarMonthViewProps) {
-  const [currentYear, setCurrentYear] = React.useState(initialYear);
-  const [currentMonth, setCurrentMonth] = React.useState(initialMonth);
+  const [internalPeriod, setInternalPeriod] = React.useState<AcademicMonthPeriod>(() => {
+    if (initialPeriod) return initialPeriod;
+    // Derive initial academic period from initialYear and initialMonth
+    const m = initialMonth >= 1 && initialMonth <= 12 ? initialMonth : initialMonth + 1;
+    return getAcademicMonthInfo(new Date(initialYear, m - 1, 10));
+  });
+
+  const period = controlledPeriod ?? internalPeriod;
+
+  const handlePeriodChange = React.useCallback(
+    (newPeriod: AcademicMonthPeriod) => {
+      if (!controlledPeriod) {
+        setInternalPeriod(newPeriod);
+      }
+      onPeriodChange?.(newPeriod);
+    },
+    [controlledPeriod, onPeriodChange]
+  );
+
   const [selectedDate, setSelectedDate] = React.useState<string>("2026-09-04");
   const [activeCategory, setActiveCategory] = React.useState<TaskCategory | "ALL">("ALL");
   const [levelFilter, setLevelFilter] = React.useState<"ALL" | "TRUONG" | "DON_VI">("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // Month navigation handlers
+  // Month navigation handlers using getAdjacentAcademicMonth
   const handlePrevMonth = () => {
-    const prev = getPrevMonth(currentYear, currentMonth);
-    setCurrentYear(prev.year);
-    setCurrentMonth(prev.month);
+    handlePeriodChange(getAdjacentAcademicMonth(period, -1));
   };
 
   const handleNextMonth = () => {
-    const next = getNextMonth(currentYear, currentMonth);
-    setCurrentYear(next.year);
-    setCurrentMonth(next.month);
+    handlePeriodChange(getAdjacentAcademicMonth(period, 1));
   };
 
-  const handleToday = () => {
-    setCurrentYear(2026);
-    setCurrentMonth(8);
+  const handleCurrentMonth = () => {
+    handlePeriodChange(getAcademicMonthInfo("2026-09-04"));
     setSelectedDate("2026-09-04");
   };
 
-  // Generate calendar cells
+  // Generate calendar cells for the 25th-to-24th academic cycle
   const gridCells = React.useMemo(
-    () => generateMonthGrid(currentYear, currentMonth),
-    [currentYear, currentMonth]
+    () => generateAcademicMonthGrid(period),
+    [period]
   );
 
   const deferredSearchQuery = React.useDeferredValue(searchQuery);
@@ -502,17 +651,17 @@ export function CalendarMonthView({
       {/* ========================================================================= */}
       <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs p-4 shadow-card">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {/* Left: Month Selector & Navigation Controls */}
+          {/* Left: Academic Month Selector & Navigation Controls */}
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-foreground sm:text-lg tracking-tight">
-              {formatMonthYearVi(currentYear, currentMonth)}
+            <h2 className="text-sm font-bold text-foreground sm:text-base lg:text-lg tracking-tight">
+              {formatAcademicMonthHeader(period)}
             </h2>
 
             <div className="flex items-center gap-1 border-l border-border/60 pl-2">
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                aria-label="Tháng trước"
+                aria-label="Tháng học trước"
                 className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer shadow-xs"
               >
                 <ChevronLeft strokeWidth={1.5} className="size-4" />
@@ -520,7 +669,7 @@ export function CalendarMonthView({
               <button
                 type="button"
                 onClick={handleNextMonth}
-                aria-label="Tháng sau"
+                aria-label="Tháng học sau"
                 className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer shadow-xs"
               >
                 <ChevronRight strokeWidth={1.5} className="size-4" />
@@ -528,10 +677,11 @@ export function CalendarMonthView({
 
               <button
                 type="button"
-                onClick={handleToday}
+                onClick={handleCurrentMonth}
                 className="inline-flex h-8 items-center rounded-lg border border-border/70 bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-secondary cursor-pointer shadow-xs"
+                title="Về tháng hiện tại"
               >
-                Hôm nay
+                Tháng hiện tại
               </button>
             </div>
 
