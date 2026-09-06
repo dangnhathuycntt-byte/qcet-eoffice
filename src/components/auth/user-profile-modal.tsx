@@ -95,7 +95,7 @@ export function UserProfileModal() {
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto my-auto">
+      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto my-auto thin-scrollbar">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-border/60 pb-4">
           <div className="flex items-center gap-3">

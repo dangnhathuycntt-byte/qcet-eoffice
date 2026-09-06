@@ -178,10 +178,10 @@
 
 .thin-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 18%, transparent) transparent;
 }
 .thin-scrollbar:hover {
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 35%, transparent) transparent;
 }
 .thin-scrollbar::-webkit-scrollbar {
   width: 5px;
@@ -191,11 +191,12 @@
   background: transparent;
 }
 .thin-scrollbar::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
   border-radius: 9999px;
 }
+.thin-scrollbar::-webkit-scrollbar-thumb:hover,
 .thin-scrollbar:hover::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: color-mix(in srgb, var(--foreground) 35%, transparent);
 }
 
 @layer base {
