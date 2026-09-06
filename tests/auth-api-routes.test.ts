@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { signSessionToken, verifySessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
+import { signSessionToken, verifySessionToken, getJwtSecret, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import { POST as logoutPost } from "../src/app/api/auth/logout/route";
 import { POST as loginPost } from "../src/app/api/auth/login/route";
 import { POST as registerPost } from "../src/app/api/auth/register/route";
@@ -33,6 +33,24 @@ describe("JWT Session Utilities", () => {
 
   test("SESSION_COOKIE_NAME is defined and equals qcet_session", () => {
     assert.strictEqual(SESSION_COOKIE_NAME, "qcet_session");
+  });
+
+  test("getJwtSecret throws error in production environment when JWT_SECRET is missing", () => {
+    const env = process.env as Record<string, string | undefined>;
+    const originalNodeEnv = env.NODE_ENV;
+    const originalSecret = env.JWT_SECRET;
+    try {
+      env.NODE_ENV = "production";
+      delete env.JWT_SECRET;
+      assert.throws(() => {
+        getJwtSecret();
+      }, /JWT_SECRET environment variable is required in production/);
+    } finally {
+      env.NODE_ENV = originalNodeEnv;
+      if (originalSecret !== undefined) {
+        env.JWT_SECRET = originalSecret;
+      }
+    }
   });
 });
 
@@ -78,6 +96,45 @@ describe("Auth API Route Handlers Contracts", () => {
     const json = await res.json();
     assert.ok(json.error);
     assert.match(json.error, /Vui lòng cung cấp đầy đủ/);
+  });
+
+  test("POST /api/auth/register rejects short password (<6 chars) with status 400", async () => {
+    const req = new Request("http://localhost:3000/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "shortpass@qcet.edu.vn",
+        password: "123",
+        name: "Test Short Pass",
+      }),
+    });
+
+    const res = await registerPost(req);
+    assert.strictEqual(res.status, 400);
+
+    const json = await res.json();
+    assert.ok(json.error);
+    assert.match(json.error, /Mật khẩu phải từ 6 đến 72 ký tự/);
+  });
+
+  test("POST /api/auth/register rejects invalid department ID with status 400", async () => {
+    const req = new Request("http://localhost:3000/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "invaliddept@qcet.edu.vn",
+        password: "ValidPassword123",
+        name: "Test Invalid Dept",
+        departmentId: "NON_EXISTENT_DEPARTMENT_999",
+      }),
+    });
+
+    const res = await registerPost(req);
+    assert.strictEqual(res.status, 400);
+
+    const json = await res.json();
+    assert.ok(json.error);
+    assert.match(json.error, /Phòng ban không tồn tại/);
   });
 
   test("GET /api/auth/me returns unauthenticated when no cookie provided", async () => {
@@ -229,5 +286,118 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
       where: { email: testEmail },
     });
     await prisma.$disconnect();
+  });
+
+  test("POST /api/auth/register ignores arbitrary role escalation and unconditionally assigns CHUYEN_VIEN", async () => {
+    const { prisma } = await import("../src/lib/prisma");
+    const roleEscalateEmail = "hacker@qcet.edu.vn";
+
+    await prisma.user.deleteMany({
+      where: { email: roleEscalateEmail },
+    });
+
+    try {
+      const regReq = new Request("http://localhost:3000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Attacker Role",
+          email: roleEscalateEmail,
+          password: "SecurePassword123",
+          role: "ADMIN",
+          departmentId: "CNTT",
+        }),
+      });
+
+      const regRes = await registerPost(regReq);
+      assert.strictEqual(regRes.status, 201);
+      const regJson = await regRes.json();
+      assert.strictEqual(regJson.success, true);
+      assert.strictEqual(regJson.user.role, "CHUYEN_VIEN");
+
+      const dbUser = await prisma.user.findUnique({
+        where: { email: roleEscalateEmail },
+      });
+      assert.ok(dbUser);
+      assert.strictEqual(dbUser.role, "CHUYEN_VIEN");
+    } finally {
+      await prisma.user.deleteMany({
+        where: { email: roleEscalateEmail },
+      });
+      await prisma.$disconnect();
+    }
+  });
+
+  test("POST /api/auth/login rejects inactive user (isActive: false) with status 403", async () => {
+    const { prisma } = await import("../src/lib/prisma");
+    const inactiveEmail = "locked_user@qcet.edu.vn";
+    const inactivePassword = "PasswordLocked123";
+
+    await prisma.user.deleteMany({
+      where: { email: inactiveEmail },
+    });
+
+    try {
+      const regReq = new Request("http://localhost:3000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Locked User",
+          email: inactiveEmail,
+          password: inactivePassword,
+          departmentId: "CNTT",
+        }),
+      });
+      const regRes = await registerPost(regReq);
+      assert.strictEqual(regRes.status, 201);
+
+      // Lock user account in DB
+      await prisma.user.update({
+        where: { email: inactiveEmail },
+        data: { isActive: false },
+      });
+
+      // Attempt login
+      const loginReq = new Request("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: inactiveEmail,
+          password: inactivePassword,
+        }),
+      });
+      const loginRes = await loginPost(loginReq);
+      assert.strictEqual(loginRes.status, 403);
+      const loginJson = await loginRes.json();
+      assert.match(loginJson.error, /Tài khoản đã bị khóa hoặc tạm ngưng/);
+
+      // Verify me query also returns unauthenticated for inactive user
+      const { signSessionToken } = await import("../src/lib/jwt-session");
+      const dbUser = await prisma.user.findUnique({
+        where: { email: inactiveEmail },
+      });
+      assert.ok(dbUser);
+      const sessionToken = signSessionToken({
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+        role: dbUser.role,
+      });
+
+      const meReq = new NextRequest("http://localhost:3000/api/auth/me", {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${sessionToken}`,
+        },
+      });
+      const meRes = await meGet(meReq);
+      const meJson = await meRes.json();
+      assert.strictEqual(meJson.authenticated, false);
+      assert.strictEqual(meJson.user, null);
+    } finally {
+      await prisma.user.deleteMany({
+        where: { email: inactiveEmail },
+      });
+      await prisma.$disconnect();
+    }
   });
 });

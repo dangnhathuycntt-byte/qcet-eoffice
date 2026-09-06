@@ -27,6 +27,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!user.isActive) {
+      return NextResponse.json(
+        { error: "Tài khoản đã bị khóa hoặc tạm ngưng" },
+        { status: 403 }
+      );
+    }
+
     const isMatch = await verifyPassword(password, user.passwordHash);
     if (!isMatch) {
       return NextResponse.json(

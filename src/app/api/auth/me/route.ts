@@ -25,10 +25,11 @@ export async function GET(req: NextRequest) {
       title: true,
       avatarUrl: true,
       phone: true,
+      isActive: true,
     },
   });
 
-  if (!dbUser) {
+  if (!dbUser || !dbUser.isActive) {
     return NextResponse.json({ authenticated: false, user: null });
   }
 
