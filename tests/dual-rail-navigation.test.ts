@@ -188,4 +188,67 @@ describe("Dual-Rail Navigation Architecture Test Suite", () => {
       }
     });
   });
+
+  describe("AppPrimaryRail Component Contract", () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const railFile = path.join(
+      process.cwd(),
+      "src/components/layout/app-primary-rail.tsx"
+    );
+
+    test("app-primary-rail.tsx exists and is a client component", () => {
+      assert.ok(fs.existsSync(railFile), "app-primary-rail.tsx must exist");
+      const content = fs.readFileSync(railFile, "utf-8");
+      assert.ok(
+        content.startsWith('"use client"') || content.startsWith("'use client'"),
+        "app-primary-rail.tsx must have 'use client' directive"
+      );
+    });
+
+    test("app-primary-rail.tsx specifies 56px (w-14) nav container with correct aria-label", () => {
+      const content = fs.readFileSync(railFile, "utf-8");
+      assert.ok(
+        content.includes('aria-label="Thanh phân hệ chính"'),
+        "Must have aria-label='Thanh phân hệ chính'"
+      );
+      assert.ok(
+        content.includes("w-14"),
+        "Must specify w-14 (56px width)"
+      );
+    });
+
+    test("app-primary-rail.tsx renders QCET logo with aria-label", () => {
+      const content = fs.readFileSync(railFile, "utf-8");
+      assert.ok(
+        content.includes('aria-label="QCET E-Office Trang chủ"'),
+        "Must have QCET logo link with aria-label='QCET E-Office Trang chủ'"
+      );
+    });
+
+    test("app-primary-rail.tsx maps MODULES with active indicator and tooltip", () => {
+      const content = fs.readFileSync(railFile, "utf-8");
+      assert.ok(content.includes("MODULES.map"), "Must map over MODULES");
+      assert.ok(
+        content.includes("bg-primary rounded-r-full"),
+        "Must have left accent indicator bar for active state"
+      );
+      assert.ok(
+        content.includes("Đang phát triển"),
+        "Must handle isComingSoon indicator / badge"
+      );
+    });
+
+    test("app-primary-rail.tsx includes Settings button and Notion sync indicator", () => {
+      const content = fs.readFileSync(railFile, "utf-8");
+      assert.ok(
+        content.includes("/settings"),
+        "Must link or navigate to /settings"
+      );
+      assert.ok(
+        content.includes("Dữ liệu Notion: Đã kết nối"),
+        "Must show Notion sync status"
+      );
+    });
+  });
 });
