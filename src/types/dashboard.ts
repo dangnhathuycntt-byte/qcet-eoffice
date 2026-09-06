@@ -63,6 +63,7 @@ export interface StaffTask {
   rejectionReason?: string;
   requiresReview?: boolean;
   departmentCode?: string;
+  departmentId?: string;
   triageStatus?: TriageStatus;
   triageSourceDept?: string;
   triageRequestedBy?: string;
@@ -80,6 +81,7 @@ export interface SchoolTask {
   leadAssigneeAvatar?: string;
   leadDepartment?: string;
   leadDepartmentCode?: string;
+  leadDepartmentId?: string;
   coAssignees: string[];
   coDepartments?: string[];
   coDepartmentCodes?: string[];

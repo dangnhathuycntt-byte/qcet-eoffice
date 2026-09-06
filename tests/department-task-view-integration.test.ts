@@ -81,4 +81,50 @@ describe("Department Grouped Task View Integration", () => {
       "src/app/page.tsx must render <DepartmentGroupedTaskView"
     );
   });
+
+  test("Tuân thủ WAI-ARIA Accordion và không lồng interactive elements", () => {
+    const componentPath = path.join(
+      process.cwd(),
+      "src/components/dashboard/department-grouped-task-view.tsx"
+    );
+    const content = fs.readFileSync(componentPath, "utf-8");
+
+    // Accordion trigger button semantic attributes
+    assert.ok(
+      content.includes('type="button"'),
+      "Accordion trigger must be a semantic button with type='button'"
+    );
+    assert.ok(
+      content.includes("aria-expanded={isExpanded}"),
+      "Accordion trigger must have dynamic aria-expanded attribute"
+    );
+    assert.ok(
+      content.includes("aria-controls="),
+      "Accordion trigger must point to controlled panel via aria-controls"
+    );
+    assert.ok(
+      content.includes('role="region"'),
+      "Expanded panel must have role='region' according to WAI-ARIA Accordion spec"
+    );
+    assert.ok(
+      content.includes("aria-labelledby="),
+      "Expanded panel must reference trigger header via aria-labelledby"
+    );
+  });
+
+  test("Định dạng trạng thái công việc chuẩn tiếng Việt trong bảng danh sách", () => {
+    const componentPath = path.join(
+      process.cwd(),
+      "src/components/dashboard/department-grouped-task-view.tsx"
+    );
+    const content = fs.readFileSync(componentPath, "utf-8");
+
+    // Vietnamese localized status labels
+    assert.ok(content.includes("Hoàn thành"), "Must include 'Hoàn thành' for COMPLETED status");
+    assert.ok(content.includes("Quá hạn"), "Must include 'Quá hạn' for overdue status");
+    assert.ok(content.includes("Chờ BGH duyệt"), "Must include 'Chờ BGH duyệt' for PENDING_EXECUTIVE_APPROVAL");
+    assert.ok(content.includes("Cần đánh giá"), "Must include 'Cần đánh giá' for NEEDS_REVIEW");
+    assert.ok(content.includes("Đang thực hiện"), "Must include 'Đang thực hiện' for IN_PROGRESS");
+    assert.ok(content.includes("Bị nghẽn"), "Must include 'Bị nghẽn' for BLOCKED");
+  });
 });

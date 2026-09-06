@@ -215,11 +215,22 @@ export function filterTasksHub({
     const q = searchQuery.trim().toLowerCase();
     result = result.filter((t) => {
       const matchTitle = t.title.toLowerCase().includes(q);
+      const matchDesc =
+        ((t as any).description as string | undefined)?.toLowerCase().includes(q) ?? false;
       const matchLead = t.leadAssigneeName.toLowerCase().includes(q);
-      const matchSub = t.subTasks?.some(
-        (s) => s.title.toLowerCase().includes(q) || s.assigneeName.toLowerCase().includes(q)
+      const matchDept = Boolean(
+        (t.leadDepartment && t.leadDepartment.toLowerCase().includes(q)) ||
+        (t.leadDepartmentCode && t.leadDepartmentCode.toLowerCase().includes(q)) ||
+        (t.leadDepartmentId && t.leadDepartmentId.toLowerCase().includes(q))
       );
-      return matchTitle || matchLead || matchSub;
+      const matchSub = t.subTasks?.some(
+        (s) =>
+          s.title.toLowerCase().includes(q) ||
+          s.assigneeName.toLowerCase().includes(q) ||
+          Boolean(s.departmentCode && s.departmentCode.toLowerCase().includes(q)) ||
+          Boolean(s.departmentId && s.departmentId.toLowerCase().includes(q))
+      );
+      return matchTitle || matchDesc || matchLead || matchDept || matchSub;
     });
   }
 

@@ -40,36 +40,91 @@ export function aggregateTasksByDepartment(
   departments: DepartmentNode[],
   referenceDate: string = "2026-09-06"
 ): DepartmentTaskGroup[] {
-  // Khoi tao accumulator cho tung department
-  const groupsMap = new Map<
-    string,
-    {
-      dept: DepartmentNode;
-      schoolTasks: SchoolTask[];
-      unitTasks: StaffTask[];
-    }
-  >();
+  interface DepartmentAccumulator {
+    dept: DepartmentNode;
+    schoolTasks: SchoolTask[];
+    unitTasks: StaffTask[];
+  }
+
+  // Accumulator theo dept.code chuan
+  const groupsByCode = new Map<string, DepartmentAccumulator>();
+  // Lookup map ho tro tra cuu da chieu (code, id, name, shortName)
+  const lookupMap = new Map<string, DepartmentAccumulator>();
 
   for (const dept of departments) {
-    groupsMap.set(dept.code.toUpperCase(), {
+    const acc: DepartmentAccumulator = {
       dept,
       schoolTasks: [],
       unitTasks: [],
-    });
+    };
+    groupsByCode.set(dept.code.toUpperCase(), acc);
+
+    // 1. Theo code
+    lookupMap.set(dept.code.toUpperCase(), acc);
+    lookupMap.set(dept.code.toLowerCase(), acc);
+
+    // 2. Theo ID
+    lookupMap.set(dept.id.toUpperCase(), acc);
+    lookupMap.set(dept.id.toLowerCase(), acc);
+
+    // 3. Theo bien the ID (bo tien to dept-, khoa-, phong-, tt-)
+    const strippedId = dept.id.replace(/^(dept|khoa|phong|tt)-/i, "");
+    lookupMap.set(strippedId.toUpperCase(), acc);
+    lookupMap.set(strippedId.toLowerCase(), acc);
+    lookupMap.set(`khoa-${strippedId}`.toLowerCase(), acc);
+    lookupMap.set(`phong-${strippedId}`.toLowerCase(), acc);
+    lookupMap.set(`dept-${strippedId}`.toLowerCase(), acc);
+
+    // 4. Theo ten day du (normalized lowercase)
+    lookupMap.set(dept.name.trim().toLowerCase(), acc);
+
+    // 5. Theo ten viet tat neu co
+    if (dept.shortName) {
+      lookupMap.set(dept.shortName.trim().toLowerCase(), acc);
+    }
   }
+
+  function resolveTarget(identifier?: string): DepartmentAccumulator | undefined {
+    if (!identifier) return undefined;
+    const clean = identifier.trim();
+    if (!clean) return undefined;
+
+    return (
+      lookupMap.get(clean) ||
+      lookupMap.get(clean.toUpperCase()) ||
+      lookupMap.get(clean.toLowerCase()) ||
+      Array.from(groupsByCode.values()).find(
+        (acc) =>
+          acc.dept.name.toLowerCase() === clean.toLowerCase() ||
+          acc.dept.code.toLowerCase() === clean.toLowerCase() ||
+          acc.dept.id.toLowerCase() === clean.toLowerCase() ||
+          (acc.dept.shortName && acc.dept.shortName.toLowerCase() === clean.toLowerCase())
+      )
+    );
+  }
+
+  const fallbackBgh = lookupMap.get("BGH") || Array.from(groupsByCode.values())[0];
 
   // Gom cac school tasks
   for (const task of tasks) {
-    const rawCode = (task.leadDepartmentCode || task.leadDepartment || "BGH").toUpperCase();
-    const target = groupsMap.get(rawCode) || groupsMap.get("BGH");
+    const target =
+      resolveTarget(task.leadDepartmentId) ||
+      resolveTarget(task.leadDepartmentCode) ||
+      resolveTarget(task.leadDepartment) ||
+      fallbackBgh;
+
     if (target) {
       target.schoolTasks.push(task);
     }
 
     // Gom cac subTasks (cong viec don vi / chuyen vien)
     for (const sub of task.subTasks || []) {
-      const subCode = (sub.departmentCode || rawCode).toUpperCase();
-      const subTarget = groupsMap.get(subCode) || target;
+      const subTarget =
+        resolveTarget(sub.departmentId) ||
+        resolveTarget(sub.departmentCode) ||
+        resolveTarget((sub as any).department) ||
+        target;
+
       if (subTarget) {
         subTarget.unitTasks.push(sub);
       }
@@ -78,7 +133,7 @@ export function aggregateTasksByDepartment(
 
   // Tinh toan chi so thong ke va RAG status
   return departments.map((dept) => {
-    const data = groupsMap.get(dept.code.toUpperCase())!;
+    const data = groupsByCode.get(dept.code.toUpperCase())!;
     const schoolTasks = data.schoolTasks;
     const unitTasks = data.unitTasks;
 
@@ -110,10 +165,14 @@ export function aggregateTasksByDepartment(
 
       if (isCompleted) {
         completed++;
+        totalProgressSum += 100;
       } else if (isBlocked) {
         blocked++;
       } else {
         inProgress++;
+        if (ut.status === "IN_PROGRESS" || ut.status === "NEEDS_REVIEW") {
+          totalProgressSum += 50;
+        }
       }
 
       if (isPast) overdue++;
@@ -121,7 +180,7 @@ export function aggregateTasksByDepartment(
 
     const totalTasks = schoolTasks.length + unitTasks.length;
     const averageProgress =
-      schoolTasks.length > 0 ? Math.round(totalProgressSum / schoolTasks.length) : 0;
+      totalTasks > 0 ? Math.round(totalProgressSum / totalTasks) : 0;
 
     // Xac dinh RAG Status theo chuan kiem soat dai hoc
     let ragStatus: DepartmentRAGStatus = "GREEN";

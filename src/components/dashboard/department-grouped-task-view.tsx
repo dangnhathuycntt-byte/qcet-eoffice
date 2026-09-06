@@ -60,6 +60,65 @@ function RAGBadge({ status, reason }: { status: DepartmentRAGStatus; reason: str
   );
 }
 
+function formatTaskStatus(
+  status: string,
+  dueDate?: string,
+  referenceDate: string = "2026-09-06"
+): {
+  label: string;
+  className: string;
+} {
+  const isOverdue = status !== "COMPLETED" && !!dueDate && dueDate < referenceDate;
+
+  if (isOverdue) {
+    return {
+      label: "Quá hạn",
+      className:
+        "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/60",
+    };
+  }
+
+  switch (status) {
+    case "COMPLETED":
+      return {
+        label: "Hoàn thành",
+        className:
+          "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900/60",
+      };
+    case "PENDING_EXECUTIVE_APPROVAL":
+      return {
+        label: "Chờ BGH duyệt",
+        className:
+          "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-900/60",
+      };
+    case "NEEDS_REVIEW":
+      return {
+        label: "Cần đánh giá",
+        className:
+          "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900/60",
+      };
+    case "BLOCKED":
+      return {
+        label: "Bị nghẽn",
+        className:
+          "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/60",
+      };
+    case "IN_PROGRESS":
+      return {
+        label: "Đang thực hiện",
+        className:
+          "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-900/60",
+      };
+    case "NEW":
+    default:
+      return {
+        label: "Mới giao",
+        className:
+          "bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700",
+      };
+  }
+}
+
 export function DepartmentGroupedTaskView({
   tasks,
   onSelectTask,
@@ -161,54 +220,58 @@ export function DepartmentGroupedTaskView({
               className="rounded-xl border border-border/80 bg-card/60 backdrop-blur-xs transition-all shadow-xs overflow-hidden"
             >
               {/* Header của Đơn vị */}
-              <div
-                onClick={() => toggleDept(group.departmentId)}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 cursor-pointer hover:bg-muted/40 transition-colors select-none"
-              >
-                <div className="flex items-start sm:items-center gap-3">
-                  <button
-                    type="button"
-                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted shrink-0 mt-0.5 sm:mt-0"
-                    aria-label={isExpanded ? "Thu gọn" : "Mở rộng"}
-                  >
-                    {isExpanded ? (
-                      <ChevronDown size={18} strokeWidth={1.5} />
-                    ) : (
-                      <ChevronRight size={18} strokeWidth={1.5} />
-                    )}
-                  </button>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-muted/40 transition-colors">
+                {/* Semantic WAI-ARIA Accordion Toggle Button */}
+                <button
+                  type="button"
+                  id={`dept-trigger-${group.departmentId}`}
+                  aria-expanded={isExpanded}
+                  aria-controls={`dept-panel-${group.departmentId}`}
+                  onClick={() => toggleDept(group.departmentId)}
+                  className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left cursor-pointer select-none group/trigger focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring rounded-lg p-0.5"
+                >
+                  <div className="flex items-start sm:items-center gap-3">
+                    <span
+                      className="p-1 rounded-md text-muted-foreground group-hover/trigger:text-foreground group-hover/trigger:bg-muted shrink-0 mt-0.5 sm:mt-0 transition-colors"
+                      aria-hidden="true"
+                    >
+                      {isExpanded ? (
+                        <ChevronDown size={18} strokeWidth={1.5} />
+                      ) : (
+                        <ChevronRight size={18} strokeWidth={1.5} />
+                      )}
+                    </span>
 
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 font-mono">
-                        {group.departmentCode}
-                      </span>
-                      <h3 className="text-sm font-bold text-foreground font-heading">
-                        {group.departmentName}
-                      </h3>
-                      <RAGBadge
-                        status={group.stats.ragStatus}
-                        reason={group.stats.ragReason}
-                      />
-                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 font-mono">
+                          {group.departmentCode}
+                        </span>
+                        <h3 className="text-sm font-bold text-foreground font-heading">
+                          {group.departmentName}
+                        </h3>
+                        <RAGBadge
+                          status={group.stats.ragStatus}
+                          reason={group.stats.ragReason}
+                        />
+                      </div>
 
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                      <span className="inline-flex items-center gap-1 font-medium">
-                        <UserCheck size={13} strokeWidth={1.5} className="text-primary/70" />
-                        {group.leaderRole}: {group.leaderName}
-                      </span>
-                      <span>•</span>
-                      <span className="font-mono tabular-nums">
-                        {group.stats.totalTasks} nhiệm vụ ({group.stats.schoolTasksCount} cấp trường,{" "}
-                        {group.stats.unitTasksCount} cấp đơn vị)
-                      </span>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                        <span className="inline-flex items-center gap-1 font-medium">
+                          <UserCheck size={13} strokeWidth={1.5} className="text-primary/70" />
+                          {group.leaderRole}: {group.leaderName}
+                        </span>
+                        <span>•</span>
+                        <span className="font-mono tabular-nums">
+                          {group.stats.totalTasks} nhiệm vụ ({group.stats.schoolTasksCount} cấp trường,{" "}
+                          {group.stats.unitTasksCount} cấp đơn vị)
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Progress bar & quick metrics */}
-                <div className="flex items-center gap-4 sm:self-center shrink-0 pl-7 sm:pl-0">
-                  <div className="w-32 sm:w-40 space-y-1">
+                  {/* Progress bar & quick metrics */}
+                  <div className="w-32 sm:w-40 space-y-1 shrink-0 pl-7 sm:pl-0 sm:self-center mr-0 sm:mr-3">
                     <div className="flex items-center justify-between text-[11px] font-mono tabular-nums">
                       <span className="text-muted-foreground">Tiến độ</span>
                       <span className="font-bold text-foreground">
@@ -229,27 +292,33 @@ export function DepartmentGroupedTaskView({
                       />
                     </div>
                   </div>
+                </button>
 
-                  {onAddTask && (
+                {/* External Action Button (Giao việc) safely outside the toggle button */}
+                {onAddTask && (
+                  <div className="shrink-0 pl-7 sm:pl-0 sm:self-center">
                     <Button
+                      type="button"
                       variant="outline"
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAddTask(group.departmentCode);
-                      }}
-                      className="h-8 px-2 text-xs gap-1 rounded-lg"
+                      onClick={() => onAddTask(group.departmentCode)}
+                      className="h-8 px-2.5 text-xs gap-1 rounded-lg"
                     >
                       <Plus size={13} strokeWidth={1.5} />
                       <span className="hidden sm:inline">Giao việc</span>
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Nội dung chi tiết các việc khi mở rộng */}
               {isExpanded && (
-                <div className="border-t border-border/60 bg-background/50 px-4 py-3">
+                <div
+                  id={`dept-panel-${group.departmentId}`}
+                  role="region"
+                  aria-labelledby={`dept-trigger-${group.departmentId}`}
+                  className="border-t border-border/60 bg-background/50 px-4 py-3"
+                >
                   {group.allTasks.length === 0 ? (
                     <div className="text-center py-6 text-xs text-muted-foreground">
                       Chưa có nhiệm vụ nào được phân công cho đơn vị này.
@@ -276,6 +345,7 @@ export function DepartmentGroupedTaskView({
                               : (t as StaffTask).assigneeName;
                             const dueDate = t.dueDate;
                             const status = t.status;
+                            const statusInfo = formatTaskStatus(status, dueDate);
 
                             return (
                               <tr
@@ -307,15 +377,11 @@ export function DepartmentGroupedTaskView({
                                 <td className="py-2.5 px-2 text-center">
                                   <span
                                     className={cn(
-                                      "px-2 py-0.5 rounded-full text-[10px] font-medium font-mono",
-                                      status === "COMPLETED"
-                                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
-                                        : status === "BLOCKED"
-                                        ? "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400"
-                                        : "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400"
+                                      "px-2 py-0.5 rounded-full text-[10px] font-medium font-mono whitespace-nowrap",
+                                      statusInfo.className
                                     )}
                                   >
-                                    {status}
+                                    {statusInfo.label}
                                   </span>
                                 </td>
                                 <td className="py-2.5 px-2 text-right">

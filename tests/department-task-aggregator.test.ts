@@ -140,4 +140,131 @@ describe("Department Task Aggregator", () => {
     assert.equal(groups[0].stats.averageProgress, 0);
     assert.equal(groups[0].stats.ragStatus, "GREEN"); // Không có trễ hạn
   });
+
+  test("Đơn vị chỉ có unitTasks hoàn thành (0 schoolTasks) đạt 100% tiến độ và RAG status GREEN", () => {
+    const unitOnlyTasks: SchoolTask[] = [
+      {
+        id: "school-task-ext",
+        title: "Kế hoạch phối hợp liên đơn vị",
+        category: "KHAC",
+        categoryLabel: "Khác",
+        leadDepartmentCode: "DAO_TAO",
+        leadAssigneeName: "Trần Văn Quản lý",
+        coAssignees: [],
+        assignedDate: "2026-08-15",
+        dueDate: "2026-09-30",
+        status: "IN_PROGRESS",
+        progressPercent: 50,
+        subTasks: [
+          {
+            id: "unit-task-1",
+            title: "Triển khai hạ tầng phòng máy CNTT",
+            assigneeName: "Nguyễn Kỹ sư",
+            status: "COMPLETED",
+            dueDate: "2026-09-20",
+            parentSchoolTaskId: "school-task-ext",
+            updatedAt: "2026-08-30",
+            departmentCode: "CNTT",
+          },
+          {
+            id: "unit-task-2",
+            title: "Cấu hình mạng nội bộ cho phòng máy",
+            assigneeName: "Lê Kỹ sư",
+            status: "COMPLETED",
+            dueDate: "2026-09-25",
+            parentSchoolTaskId: "school-task-ext",
+            updatedAt: "2026-09-01",
+            departmentCode: "CNTT",
+          },
+        ],
+        totalSubTasks: 2,
+        completedSubTasks: 2,
+      },
+    ];
+
+    const groups = aggregateTasksByDepartment(unitOnlyTasks, mockDepartments, "2026-09-06");
+    const cnttGroup = groups.find((g) => g.departmentCode === "CNTT");
+
+    assert.ok(cnttGroup);
+    // CNTT có 0 school tasks và 2 unit tasks
+    assert.equal(cnttGroup.schoolTasks.length, 0);
+    assert.equal(cnttGroup.unitTasks.length, 2);
+    assert.equal(cnttGroup.stats.totalTasks, 2);
+    assert.equal(cnttGroup.stats.completedTasksCount, 2);
+    assert.equal(cnttGroup.stats.overdueTasksCount, 0);
+    assert.equal(cnttGroup.stats.blockedTasksCount, 0);
+    // Cả 2 unit tasks đều COMPLETED -> tiến độ trung bình phải là 100%
+    assert.equal(cnttGroup.stats.averageProgress, 100);
+    // RAG Status phải là GREEN
+    assert.equal(cnttGroup.stats.ragStatus, "GREEN");
+  });
+
+  test("Phân nhóm chính xác theo tên tiếng Việt đầy đủ và ID alias của đơn vị", () => {
+    const tasksWithVariousDepts: SchoolTask[] = [
+      // 1. Phân bổ theo tên tiếng Việt đầy đủ
+      {
+        id: "task-by-name",
+        title: "Xây dựng giáo trình thực hành CNTT",
+        category: "CNTT",
+        categoryLabel: "CNTT",
+        leadDepartment: "Khoa Công nghệ thông tin", // Match by name
+        leadAssigneeName: "Vũ Giảng viên",
+        coAssignees: [],
+        assignedDate: "2026-08-10",
+        dueDate: "2026-09-30",
+        status: "IN_PROGRESS",
+        progressPercent: 75,
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+      },
+      // 2. Phân bổ theo ID alias (ví dụ khoa-cntt hoặc dept-cntt)
+      {
+        id: "task-by-id",
+        title: "Tổ chức hội thảo công nghệ AI",
+        category: "CNTT",
+        categoryLabel: "CNTT",
+        leadDepartmentId: "khoa-cntt", // Match by ID alias
+        leadAssigneeName: "Hoàng Giảng viên",
+        coAssignees: [],
+        assignedDate: "2026-08-15",
+        dueDate: "2026-09-30",
+        status: "IN_PROGRESS",
+        progressPercent: 60,
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+      },
+      // 3. Phân bổ theo leadDepartmentCode chuẩn
+      {
+        id: "task-by-code",
+        title: "Kiểm tra chất lượng đào tạo",
+        category: "BAO_CAO",
+        categoryLabel: "Báo cáo",
+        leadDepartmentCode: "DAO_TAO",
+        leadAssigneeName: "Đặng Chuyên viên",
+        coAssignees: [],
+        assignedDate: "2026-08-20",
+        dueDate: "2026-09-30",
+        status: "IN_PROGRESS",
+        progressPercent: 90,
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+      },
+    ];
+
+    const groups = aggregateTasksByDepartment(tasksWithVariousDepts, mockDepartments, "2026-09-06");
+    const cnttGroup = groups.find((g) => g.departmentCode === "CNTT");
+    const daoTaoGroup = groups.find((g) => g.departmentCode === "DAO_TAO");
+
+    assert.ok(cnttGroup);
+    assert.equal(cnttGroup.schoolTasks.length, 2); // Cả task-by-name và task-by-id đều vào CNTT
+    assert.ok(cnttGroup.schoolTasks.some((t) => t.id === "task-by-name"));
+    assert.ok(cnttGroup.schoolTasks.some((t) => t.id === "task-by-id"));
+
+    assert.ok(daoTaoGroup);
+    assert.equal(daoTaoGroup.schoolTasks.length, 1);
+    assert.ok(daoTaoGroup.schoolTasks.some((t) => t.id === "task-by-code"));
+  });
 });
