@@ -9,6 +9,35 @@ export type TaskCategory =
   | 'BAO_CAO'
   | 'KHAC';
 
+export type AIRiskStatus = 'CLEAN' | 'NEEDS_ATTENTION' | 'HIGH_RISK';
+export type AISuggestedAction = 'QUICK_APPROVE' | 'REQUEST_CHANGES' | 'MANUAL_INSPECT';
+export type TriageStatus = 'NONE' | 'PENDING_TRIAGE' | 'ACCEPTED' | 'REJECTED';
+
+export interface AIFlagItem {
+  type: 'INFO' | 'WARNING' | 'CRITICAL';
+  message: string;
+}
+
+export interface AIReviewSummary {
+  status: AIRiskStatus;
+  executiveSummary: string;
+  complianceScore: number;
+  dacumCriteriaMatched: string[];
+  flags: AIFlagItem[];
+  suggestedAction: AISuggestedAction;
+  analyzedAt: string;
+  suggestedFeedback?: string;
+}
+
+export interface EscalationMeta {
+  submittedForReviewAt?: string;
+  reviewDeadline?: string;
+  isEscalated?: boolean;
+  escalatedAt?: string;
+  escalatedToRole?: 'ADMIN';
+  escalationNote?: string;
+}
+
 export interface DeliverableItem {
   id: string;
   name: string;
@@ -33,6 +62,13 @@ export interface StaffTask {
   blockedReason?: string;
   rejectionReason?: string;
   requiresReview?: boolean;
+  departmentCode?: string;
+  triageStatus?: TriageStatus;
+  triageSourceDept?: string;
+  triageRequestedBy?: string;
+  triageRejectionReason?: string;
+  escalation?: EscalationMeta;
+  aiReview?: AIReviewSummary;
 }
 
 export interface SchoolTask {
@@ -91,6 +127,8 @@ export interface DashboardStats {
   needsReviewTasksCount: number;
   overdueTasksCount: number;
   averageSchoolProgressPercent: number;
+  pendingTriageCount?: number;
+  escalatedReviewCount?: number;
 }
 
 export interface ActivityEvent {
