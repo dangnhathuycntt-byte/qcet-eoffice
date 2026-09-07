@@ -89,3 +89,8 @@ export async function getNextRegistrationNumber(
     return sequence.lastNumber;
   });
 }
+
+/**
+ * Convenience alias for formatDocumentDisplayNumber.
+ */
+export const formatRegistrationNumber = formatDocumentDisplayNumber;

@@ -11,6 +11,8 @@ import type { UserRole } from "./auth";
 
 export type WorkspaceRole = UserRole;
 
+export type TaskPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+
 export type ApprovalDecision = "approved" | "revision_requested" | "rejected";
 
 export interface DeliverableSubmissionPayload {

@@ -304,4 +304,14 @@ export async function getDocumentById(
   return mapPrismaDocumentToItem(record);
 }
 
+/**
+ * Convenience method to register an incoming official dispatch (Văn bản đến).
+ */
+export async function registerIncomingDocument(
+  payload: Omit<CreateDocumentPayload, "type">,
+  client?: any
+): Promise<DocumentItem> {
+  return createDocument({ ...payload, type: "VAN_BAN_DEN" }, client);
+}
+
 export { getNextRegistrationNumber };
