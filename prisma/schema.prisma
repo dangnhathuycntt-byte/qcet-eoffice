@@ -427,16 +427,17 @@ model PushSubscription {
 }
 
 model Notification {
-  id          String   @id @default(cuid())
-  userId      String   @map("user_id")
-  actorName   String   @map("actor_name")
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  actorName   String?   @map("actor_name")
   title       String
   body        String
-  category    String   @default("task")
+  category    String    @default("task")
   type        String
-  linkHref    String   @map("link_href")
-  isRead      Boolean  @default(false) @map("is_read")
-  createdAt   DateTime @default(now()) @map("created_at")
+  linkHref    String    @map("link_href")
+  isRead      Boolean   @default(false) @map("is_read")
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
