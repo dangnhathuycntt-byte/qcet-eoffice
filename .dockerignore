@@ -3,6 +3,8 @@ node_modules
 .git
 .gitignore
 .claude
+.superpowers
+.env*
 dev.db
 dev.db-journal
 prisma/dev.db
@@ -10,5 +12,7 @@ prisma/dev.db
 *.dump
 *.zip
 coverage
+tests
+docs
 test_uploads_sandbox
 uploads
