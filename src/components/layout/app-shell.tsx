@@ -8,6 +8,7 @@ import {
 } from "@/components/layout/sidebar-context";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { cn } from "@/lib/utils";
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
@@ -32,12 +33,16 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <React.Suspense fallback={<header className="sticky top-0 z-30 w-full h-[52px] border-b border-border/50 bg-background/80" />}>
           <AppTopbar />
         </React.Suspense>
-        <main id="main-content" className="flex-1 py-6 md:py-8" tabIndex={-1}>
+        <main id="main-content" className="flex-1 py-4 md:py-8 pb-28 md:pb-8" tabIndex={-1}>
           <div className="max-w-[1440px] w-full mx-auto px-3.5 sm:px-6">
             {children}
           </div>
         </main>
       </div>
+
+      <React.Suspense fallback={null}>
+        <MobileBottomNav className="flex md:hidden" />
+      </React.Suspense>
     </div>
   );
 }
