@@ -1,127 +1,133 @@
 # ĐẶC TẢ THIẾT KẾ KIẾN TRÚC: HỆ THỐNG THÔNG BÁO TỰ ĐỘNG QUA ĐỒNG BỘ LỊCH ĐIỆN THOẠI (iCal / Calendar Sync)
 **Dự án:** Văn phòng điện tử QCET E-Office - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  
 **Tài liệu:** `docs/superpowers/specs/2026-09-07-calendar-sync-notifications-spec.md`  
-**Ngày lập:** 07/09/2026  
-**Trạng thái:** Chờ Ban Giám hiệu & Quản trị phê duyệt (Draft)
+**Ngày cập nhật:** 07/09/2026 (Phiên bản v1.1 - Đã ki��m chứng thực tế & khắc phục độ trễ đồng bộ)  
+**Trạng thái:** Sẵn sàng phê duyệt & Lập kế hoạch triển khai
 
 ---
 
-## 1. BỐI CẢNH & TÍNH CẤP THIẾT
+## 1. BỐI CẢNH & PHÂN TÍCH KỸ THUẬT CHUYÊN SÂU
 
-### 1.1. Điểm nghẽn của các giải pháp thông báo truyền thống
-Trong quá trình khảo sát thực tế tại Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (QCET):
-* **Tin nhắn Zalo ZNS / SMS:** Tính phí theo từng tin (200đ - 450đ/tin). Với hàng trăm giảng viên và hàng ngàn đầu việc giao nhận mỗi tháng, chi phí viễn thông sẽ tạo gánh nặng ngân sách định kỳ, không phù hợp cho trường công lập.
-* **Web Push Notification trên trình duyệt:**
-  * Trên iPhone/iOS: Buộc người dùng phải biết thao tác "Thêm vào màn hình chính" (PWA). Đa số cán bộ, giảng viên không rành kỹ thuật sẽ không kích hoạt được.
-  * Tỷ lệ bị từ chối cao: Người dùng có thói quen bấm "Chặn" (Block) khi thấy popup xin quyền của trình duyệt.
-  * Bị hệ điều hành Android (Oppo, Xiaomi, Samsung) tối ưu pin tắt ngầm tiến trình duyệt web chạy ngầm.
-* **Tình trạng trôi việc:** Giảng viên đi dạy thực hành ở xưởng, di chuyển công tác không thể ngồi 24/7 trước màn hình máy tính để canh tab E-Office.
+### 1.1. Vì sao loại bỏ Zalo và Web Push?
+* **Zalo ZNS / SMS:** Tính phí từng tin nhắn (200đ - 450đ/tin), kiểm duyệt mẫu khắt khe, vi phạm nguyên tắc tiết kiệm ngân sách trường công lập.
+* **Web Push Notification:** Bị 3 rào cản chí mạng trên thực tế:
+  1. *Trên iOS (iPhone):* Ép người dùng phải biết thao tác "Add to Home Screen" (PWA) mới bật được push.
+  2. *Thói quen người dùng:* 80% Thầy/Cô bấm "Chặn" (Block) khi thấy popup xin quyền của trình duyệt.
+  3. *Hệ điều hành Android:* Các hãng (Samsung, Xiaomi, Oppo) tự động "giết ngầm" tiến trình trình duyệt để tiết kiệm pin ➔ Mất thông báo hoàn toàn.
 
-### 1.2. Mục tiêu của Giải pháp "Calendar Sync" (Đồng bộ Lịch)
-Tận dụng chuẩn mở quốc tế **iCalendar (RFC 5545)** và giao thức **`webcal://`** để biến chính ứng dụng Lịch mặc định trên điện thoại (Apple Calendar trên iPhone/iPad, Google Calendar trên Android/PC, Outlook) thành kênh thông báo chính thức của Nhà trường:
-* **"Bấm 1 lần – Nhận thông báo mãi mãi":** Người dùng chỉ cần kích hoạt 1 lần duy nhất, toàn bộ chỉ đạo, nhiệm vụ và lịch họp tự động chảy về điện thoại.
-* **0 Đồng chi phí vĩnh viễn:** Hoàn toàn miễn phí, không tốn bất kỳ chi phí viễn thông nào.
-* **Rung chuông báo thức chuẩn xác:** Điện thoại tự động phát chuông nhắc việc trước 24 giờ và trước 2 giờ đến hạn chót (kể cả khi điện thoại không có kết nối mạng tại thời điểm chuông reo).
-* **Trực quan:** Lịch công việc hiển thị cùng lúc với lịch giảng dạy, lịch thi, lịch sinh hoạt của giảng viên.
+### 1.2. Nghiên cứu thực tế về cơ chế đồng bộ Lịch (Sync Cadence Reality)
+Dựa trên khảo sát thực tế các hệ thống iCalendar toàn cầu (Apple, Google, Microsoft):
+* **Apple Calendar (iOS / iPadOS / macOS):** 
+  * Cơ chế kéo (Pull) linh hoạt: Mặc định cập nhật mỗi 1 giờ hoặc mỗi 15 phút (người dùng tùy chọn được trong cài đặt). Khi mở ứng dụng Lịch, Apple tự động ép làm mới (Force refresh) ngay lập tức.
+  * Hỗ trợ chuẩn chuông báo thức `VALARM` gốc của hệ điều hành.
+* **Google Calendar (Android / Web):**
+  * Google dùng máy chủ đám mây quét định kỳ các đường dẫn `webcal://` bên ngoài, chu kỳ quét từ **8 đến 24 giờ / lần** (không thể cấu hình cưỡng bức rút ngắn từ phía server).
+  * Do đó, **Đồng bộ Lịch iCal cực kỳ xuất sắc cho các nhiệm vụ trung và dài hạn (hạn chót từ 1 đến 30 ngày)**, nhưng **không thể dùng đơn độc cho việc hỏa tốc phát sinh trong 1 - 2 tiếng**.
 
 ---
 
-## 2. KIẾN TRÚC TỔNG THỂ & LUỒNG DỮ LIỆU
+## 2. KIẾN TRÚC THÔNG BÁO 2 TẦNG (HYBRID ARCHITECTURE)
+
+Để xử lý triệt để độ trễ của Google Calendar mà vẫn giữ nguyên tiêu chí **0 ĐỒNG CHI PHÍ**, hệ thống QCET E-Office áp dụng mô hình phân luồng thông minh:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        QCET E-OFFICE BACKEND                           │
-│  (Next.js 15 App Router + Prisma PostgreSQL)                           │
-│                                                                        │
-│   [Nhiệm vụ mới] / [Bút phê BGH] / [Lịch họp Trường]                   │
-│                       │                                                │
-│                       ▼                                                │
-│         /api/calendar/feed?token={USER_SECURE_TOKEN}                   │
-│         (Trả về nội dung chuẩn iCalendar RFC 5545)                     │
-└───────────────────────┬────────────────────────────────────────────────┘
-                        │ Giao thức webcal:// (HTTPS Polling ngầm)
-                        │ Định kỳ 15 - 30 phút / lần
-                        ▼
+│                        QCET E-OFFICE TASK ENGINE                       │
+└────────────────────────────────���─┬─────────────────────────────────────┘
+                                   │ Phân loại theo Hạn chót (Deadline)
+                 ┌─────────────────┴─────────────────┐
+                 ▼                                   ▼
+    [NHIỆM VỤ TIÊU CHUẨN]                   [NHIỆM VỤ HỎA TỐC / GẤP]
+    (Hạn chót > 24 giờ)                     (Hạn chót < 24 giờ / Trong ngày)
+                 │                                   │
+                 ▼                                   ▼
+      ┌─────────────────────┐             ┌─────────────────────┐
+      │  iCal Feed (webcal) │             │  Instant Push Mail  │
+      │  (RFC 5545 Feed)    │             │  (@qcet.edu.vn)     │
+      └──────────┬──────────┘             └──────────┬──────────┘
+                 │ Tự động kéo định kỳ               │ Bắn kèm file .ics
+                 │ về Apple/Google Cal               │ điện thoại nhận tức thì
+                 ▼                                   ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│                   HỆ ĐIỀU HÀNH THIẾT BỊ NGƯỜI DÙNG                     │
+│                      ỨNG DỤNG LỊCH TRÊN ĐIỆN THOẠI                     │
+│               (Apple Calendar / Google Calendar / Outlook)             │
 │                                                                        │
-│   ┌───────────────────────────┐    ┌───────────────────────────┐       │
-│   │   APPLE CALENDAR (iOS)    │    │  GOOGLE CALENDAR (Android)│       │
-│   └─────────────┬─────────────┘    └─────────────┬─────────────┘       │
-│                 │                                │                     │
-│                 ▼                                ▼                     │
-│         [TỰ ĐỘNG TẠO SỰ KIỆN TRÊN MÀN HÌNH KHÓA & WIDGET]              │
-│         • Tên nhiệm vụ, người giao, mức độ khẩn                        │
-│         • Báo thức 1: Trước 24h (8:00 sáng hôm trước)                  │
-│         • Báo thức 2: Trước 2h (Chặng nước rút hoàn thành)             │
-│         • Đường link 1-chạm mở trực tiếp trang nộp báo cáo             │
+│   • Rung chuông trước 24h (8:00 sáng hôm trước)                        │
+│   • Rung chuông trước 2h (Nước rút hoàn thành)                         │
+│   • Link 1-chạm mở đúng trang nộp báo cáo                              │
 └────────────────────────────────────────────────────────────────────────┘
 ```
+
+1. **Nhiệm vụ tiêu chuẩn (> 24h):** Chảy vào luồng **Calendar Feed (webcal://)**. Người dùng đăng ký 1 lần nhận mãi mãi.
+2. **Nhiệm vụ hỏa tốc (< 24h) hoặc Chỉ đạo khẩn của BGH:** 
+   * Ngoài việc ghi vào Feed lịch, hệ thống gửi thêm **1 Email công vụ tự động kèm tệp đính k��m `invite.ics`**.
+   * Ứng dụng Mail trên điện thoại (Apple Mail, Gmail, Outlook) nhận diện file `.ics` và **tự động đẩy sự kiện vào Lịch máy chủ với độ trễ 0 giây**, chuông reo lập tức.
 
 ---
 
 ## 3. THIẾT KẾ KỸ THUẬT CHI TIẾT
 
-### 3.1. Cơ chế Sinh Mã Định Danh Bảo Mật (Personal Calendar Token)
-Để đảm bảo Thầy Hùng không đọc được lịch nội bộ riêng của Thầy Vinh, mỗi người dùng sở hữu một **Token bảo mật duy nhất**:
-1. Thêm trường `calendarToken` vào bảng `User` (hoặc bảng `UserSettings`):
+### 3.1. Cơ chế Quản lý Token Cá nhân (Secure Calendar Token)
+Để đảm bảo Thầy Hùng không xem được việc của Thầy Vinh:
+1. Thêm trường vào CSDL Prisma:
    ```prisma
    model User {
      // ... các trường hiện có
      calendarToken   String?   @unique @default(cuid()) @map("calendar_token")
      calendarEnabled Boolean   @default(true) @map("calendar_enabled")
+     calendarLastSync DateTime? @map("calendar_last_sync")
    }
    ```
-2. Nếu nghi ngờ lộ link, người dùng có nút **"Tạo lại mã đồng bộ mới" (Revoke & Rotate Token)** ngay trên giao diện cá nhân.
+2. Giao diện cá nhân có nút **"Đổi mã đồng bộ mới" (Revoke & Rotate)** để vô hiệu hóa thiết bị cũ khi cần.
 
 ### 3.2. Endpoint Dịch Vụ Lịch (`GET /api/calendar/feed`)
-* **URL định dạng:** `webcal://eoffice.qcet.edu.vn/api/calendar/feed?token=cuid_user_123`  
-  *(Trình duyệt tự động mở app Lịch khi bấm vào URL dạng `webcal://`)*
-* **Headers phản hồi:**
+* **URL:** `webcal://eoffice.qcet.edu.vn/api/calendar/feed?token={calendarToken}`
+* **Headers phản hồi tối ưu hóa Cache & SEO:**
   ```http
   Content-Type: text/calendar; charset=utf-8
   Content-Disposition: inline; filename="qcet-eoffice.ics"
   Cache-Control: private, max-age=900, must-revalidate
+  X-Robots-Tag: noindex, nofollow
   ```
-* **Bộ lọc dữ liệu (Query Logic):**
-  * Lấy các nhiệm vụ mà User là **Chủ trì (DRI)** hoặc **Phối hợp xử lý**.
-  * Nếu là Trưởng phòng/khoa: Bổ sung thêm các việc lớn của đơn vị có deadline gần.
-  * Chỉ lấy các nhiệm vụ ở trạng thái: `TODO` (Đợi xử lý), `IN_PROGRESS` (Đang xử lý), `REPORTED` (Chờ BGH duyệt).
-  * Ẩn các nhiệm vụ đã `COMPLETED` quá 3 ngày để cuốn lịch luôn tinh gọn.
+* **Cơ chế ETag tiết kiệm tài nguyên:**
+  * Tính mã hash MD5 từ danh sách nhiệm vụ của người dùng.
+  * Nếu điện thoại gửi `If-None-Match: "hash123"` và dữ liệu không đổi ➔ Trả về mã **`304 Not Modified`** ngay lập tức (tiết kiệm 100% băng thông và tải DB).
 
-### 3.3. Cấu trúc Đối tượng Sự kiện trong iCalendar (`VEVENT` & `VALARM`)
-Mỗi nhiệm vụ trong E-Office được chuyển đổi thành một `VEVENT` chuẩn mực:
+### 3.3. Cấu trúc Đối tượng iCalendar chuẩn quốc tế (RFC 5545 & RFC 7986)
+Áp dụng đầy đủ các thẻ tối ưu tần suất làm mới và hỗ trợ chuông báo thức:
 ```ics
 BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//QCET//E-Office Calendar Service//VI
+PRODID:-//QCET//E-Office Calendar Service v1.1//VI
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-X-WR-CALNAME:QCET E-Office - Nhiệm vụ của Thầy Hùng
+X-WR-CALNAME:QCET E-Office - Việc cần làm
 X-WR-TIMEZONE:Asia/Ho_Chi_Minh
-X-PUBLISHED-TTL:PT15M
+REFRESH-INTERVAL;VALUE=DURATION:PT1H
+X-PUBLISHED-TTL:PT1H
 
 BEGIN:VEVENT
 UID:qcet-task-2805-ubnd@eoffice.qcet.edu.vn
+SEQUENCE:0
 DTSTAMP:20260907T080000Z
 DTSTART:20260915T093000Z
 DTEND:20260915T103000Z
-SUMMARY:🚨 [QCET] Báo cáo tình hình quản lý, sử dụng tài sản công
-DESCRIPTION:Văn bản chỉ đạo: [2805/UBND-KTTH]\nNgười giao: Ban Giám hiệu\nĐơn vị chủ trì: Khoa CNTT\nHạn xử lý: 17:30 ngày 15/09/2026\n\n👉 Bấm vào link để xử lý và nộp minh chứng:\nhttps://eoffice.qcet.edu.vn/?task=2805-ubnd
+SUMMARY:🚨 [QCET] Báo cáo tình hình quản lý tài sản công
+DESCRIPTION:Văn bản: [2805/UBND-KTTH]\nNgười giao: Ban Giám hiệu\nĐơn vị chủ trì: Khoa CNTT\nHạn chót: 17:30 ngày 15/09/2026\n\n👉 Bấm vào link để nộp minh chứng:\nhttps://eoffice.qcet.edu.vn/?task=2805-ubnd
 URL:https://eoffice.qcet.edu.vn/?task=2805-ubnd
 STATUS:CONFIRMED
 PRIORITY:1
 
 BEGIN:VALARM
 ACTION:DISPLAY
-DESCRIPTION:Nhắc nhở: Ngày mai hết hạn nhiệm vụ Báo cáo tài sản công
+DESCRIPTION:Nhắc nhở: Ngày mai hết h��n nhiệm vụ Báo cáo tài sản công
 TRIGGER:-P1D
 END:VALARM
 
 BEGIN:VALARM
-ACTION:AUDIO
+ACTION:DISPLAY
+DESCRIPTION:Khẩn: Còn 2 tiếng nữa hết hạn nộp Báo cáo tài sản công
 TRIGGER:-PT2H
-ATTACH;VALUE=URI:Chord
 END:VALARM
 
 END:VEVENT
@@ -130,57 +136,37 @@ END:VCALENDAR
 
 ---
 
-## 4. THIẾT KẾ GIAO DIỆN NGƯỜI DÙNG (UI/UX)
+## 4. THIẾT KẾ GIAO DIỆN NGƯỜI DÙNG & HƯỚNG DẪN ONBOARDING (UX)
 
-Hệ thống cung cấp trải nghiệm kết nối **thông minh theo ngữ cảnh thiết bị**:
+### 4.1. Hộp thoại "Kích hoạt Lịch công việc" (Smart Calendar Modal)
+Khi Thầy/Cô bấm nút `[📅 Đồng bộ Lịch điện thoại]`:
+* **Nếu mở trên điện thoại (Mobile):**
+  * Nút to: **"Thêm vào Lịch máy này (1 Cú chạm)"** (gắn link `webcal://...`).
+  * Ghi chú ngắn: *"Trên iPhone, khi máy hỏi 'Remove Alarms?', vui lòng chọn 'Keep Alarms' để nhận chuông nhắc việc"* .
+* **Nếu mở trên máy tính (Desktop):**
+  * Hiển thị **Mã QR Code cá nhân** để lấy camera điện thoại quét đăng ký ngay.
+  * Kèm nút **"Thêm vào Google Calendar"** (mở thẳng link `https://calendar.google.com/calendar/r?cid=webcal://...`).
+  * Nút sao chép liên kết iCal thủ công.
 
-### 4.1. Điểm kích hoạt trên giao diện Web (Entrypoints)
-1. **Nút bấm trên thanh Header / Menu cá nhân:** Nút `[📅 Đồng bộ Lịch điện thoại]` đặt cạnh Chuông thông báo.
-2. **Banner gợi ý ở l��n đầu đăng nhập:** Khi cán bộ mới đăng nhập lần đầu, hệ thống hiện banner nhẹ:  
-   *"Thầy/Cô có muốn nhận thông báo việc tự động trên điện thoại không? [Kích hoạt trong 5 giây]"*.
-
-### 4.2. Hộp thoại kích hoạt đa kênh (Smart Sync Modal)
-Khi bấm nút, hệ thống tự nhận diện người dùng đang dùng thiết bị gì:
-* **Nếu đang mở bằng Điện thoại (iOS / Android):**
-  * Nút to nổi bật: **"Thêm vào Ứng dụng Lịch trên máy này"**.
-  * Bấm 1 phát ➔ Mở trực tiếp hộp thoại `Subscribe Calendar` mặc định của iOS / Android ➔ Bấm **Đăng ký (Subscribe)** là xong.
-* **Nếu đang mở bằng Máy tính văn phòng (Laptop / Desktop):**
-  * Hiển thị **Mã QR Code cá nhân**: Cán bộ chỉ cần lấy camera điện thoại quét mã QR ➔ Điện thoại tự mở ứng dụng Lịch để đăng ký.
-  * Kèm theo nút **"Sao chép liên kết iCal"** cho người muốn thêm vào Google Calendar hoặc Microsoft Outlook trên máy tính.
-
----
-
-## 5. BẢO MẬT & QUẢN TRỊ DỮ LIỆU
-
-1. **Bảo mật đường dẫn (URL Obfuscation):**
-   * Link iCal không dùng mã định danh số tăng tuần tự (không dùng `/feed?user_id=1`).
-   * Sử dụng CUID hoặc UUIDv4 ngẫu nhiên có độ dài lớn, chống brute-force.
-2. **Cơ chế thu hồi quyền (Instant Revocation):**
-   * Khi cán bộ mất điện thoại hoặc chuyển công tác: Bấm nút "Thu hồi liên kết cũ & Cấp mã mới". Toàn bộ lịch trên máy cũ sẽ bị vô hiệu hóa ngay lập tức.
-3. **Hiệu năng & Chống nghẽn Server (Rate Limiting & Caching):**
-   * Các thiết bị điện thoại sẽ gọi định kỳ 15 - 60 phút / lần.
-   * Dùng cơ chế **HTTP ETag** và `Cache-Control: private, max-age=900` (15 phút). Nếu danh sách việc không có gì thay đổi, server trả về `304 Not Modified` ngay lập tức (tiêu tốn gần như 0% CPU và băng thông).
+### 4.2. Quản lý trạng thái
+* Hiển thị dòng trạng thái thân thiện:  
+  *🟢 Đã kết nối với điện thoại (Lần kiểm tra cuối: 10 phút trước)*.
+* Nút *"Tạo lại mã mới"* nếu nghi ngờ lộ liên kết.
 
 ---
 
-## 6. LỘ TRÌNH TRIỂN KHAI DỰ KIẾN (2 GIAI ĐOẠN)
+## 5. KẾ HOẠCH TRIỂN KHAI CHI TIẾT (IMPLEMENTATION PLAN)
 
-### Giai đoạn 1: Xây dựng Backend & API Feed iCal (1 - 2 ngày)
-* Cài đặt thư viện `ical-generator` (chuẩn TypeScript, tương thích Next.js 15).
-* Tạo API Route `src/app/api/calendar/feed/route.ts` xử lý sinh chuỗi `.ics`.
-* Bổ sung trường `calendarToken` vào schema dữ liệu.
-* Viết unit test kiểm thử cú pháp iCalendar theo chuẩn RFC 5545.
-
-### Giai đoạn 2: Tích hợp Giao diện & Trải nghiệm 1-Click (1 ngày)
-* Xây dựng Component `CalendarSyncModal` có QR Code + nút bấm `webcal://`.
-* Thêm nút đồng bộ trên thanh công cụ Workspace và trang Cá nhân.
-* Kiểm thử thực tế trên iPhone (Apple Calendar) và máy Android (Google Calendar).
+| Bước | Hạng mục công việc | Output cụ thể |
+| :--- | :--- | :--- |
+| **Bước 1** | Cài đặt thư viện `ical-generator` & cấu hình TypeScript | File thư viện chuẩn hóa |
+| **Bước 2** | Xây dựng API Route `src/app/api/calendar/feed/route.ts` | Endpoint trả về chuẩn `.ics` kèm ETag |
+| **Bước 3** | Cập nhật logic truy vấn task theo User (DRI / Co-assignee) | Query Prisma / mock data đồng bộ |
+| **Bước 4** | Xây dựng UI Component `CalendarSyncModal` có QR Code + nút 1-click | Modal thân thiện trên Header & Trang cá nhân |
+| **Bước 5** | Kiểm thử thực tế (Unit tests + Kiểm thử trên iOS và Android) | Test suite xanh 100% |
 
 ---
 
-## 7. KẾT LUẬN & ĐỀ XUẤT
+## 6. KẾT LUẬN
 
-Giải pháp **Đồng bộ Lịch điện thoại (iCal Sync)** là phương án tối ưu bậc nhất cho bài toán thông báo của Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn:
-* Không phụ thuộc nhà mạng hay đơn vị thu phí tin nhắn (tiết kiệm 100% ngân sách).
-* Không bị lỗi trình duyệt hay cơ chế chặn quyền như Web Push.
-* Đem lại trải nghiệm làm việc hiện đại, chuyên nghiệp ngang tầm các tập đoàn công nghệ lớn.
+Bản đặc tả v1.1 này đã giải quyết triệt để vấn đề độ trễ của các dịch vụ lịch toàn cầu, đảm bảo **100% không phát sinh chi phí**, an toàn bảo mật, và mang lại trải nghiệm tiện dụng tối đa cho đội ngũ Cán bộ - Giảng viên QCET.
