@@ -1,4 +1,15 @@
-import { PrismaClient, UserRole, TaskScope, TaskStatus, TaskPriority, AssigneeRole } from '@prisma/client';
+import {
+  PrismaClient,
+  UserRole,
+  TaskScope,
+  TaskStatus,
+  TaskPriority,
+  AssigneeRole,
+  DocumentType,
+  DocumentUrgency,
+  DocumentSecurityLevel,
+  DocumentStatus,
+} from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -800,7 +811,666 @@ async function main() {
     }
   }
 
-  console.log(`Seeding completed successfully with ${departments.length} departments, ${users.length} users, and ${sampleTasks.length} tasks.`);
+  // 4. Khởi tạo Bộ đếm số tự động NĐ 30/2020 (DocumentNumberSequence)
+  const sequences = [
+    { type: DocumentType.VAN_BAN_DEN, year: 2026, lastNumber: 7 },
+    { type: DocumentType.VAN_BAN_DI, year: 2026, lastNumber: 5 },
+    { type: DocumentType.TO_TRINH_NOI_BO, year: 2026, lastNumber: 4 },
+  ];
+
+  for (const seq of sequences) {
+    await prisma.documentNumberSequence.upsert({
+      where: {
+        type_year: {
+          type: seq.type,
+          year: seq.year,
+        },
+      },
+      update: {
+        lastNumber: seq.lastNumber,
+      },
+      create: {
+        type: seq.type,
+        year: seq.year,
+        lastNumber: seq.lastNumber,
+      },
+    });
+  }
+
+  // 5. Nạp danh mục 16 Văn bản chuẩn Nghị định 30/2020/NĐ-CP
+  const taskByCode = await prisma.task.findMany({ select: { id: true, code: true } });
+  const taskCodeMap = Object.fromEntries(taskByCode.map((t) => [t.code, t.id]));
+  const vanThuId = userMap['vanthu@qcet.edu.vn'] || adminId;
+
+  interface SampleDocumentItem {
+    type: DocumentType;
+    registrationNumber: number;
+    documentYear: number;
+    registeredDate: Date;
+    originalNumber: string;
+    issuedDate: Date;
+    issuingAuthority: string;
+    category: string;
+    summary: string;
+    urgency: DocumentUrgency;
+    securityLevel: DocumentSecurityLevel;
+    status: DocumentStatus;
+    signerName?: string;
+    signerTitle?: string;
+    draftingDeptId?: string;
+    recipientList?: string;
+    distributedCopies?: number;
+    dueDate?: Date;
+    leadDepartmentId?: string;
+    leadUserId?: string;
+    notes?: string;
+    linkedTaskCode?: string;
+    directives?: Array<{
+      leaderId: string;
+      instruction: string;
+      deadline?: Date;
+      assignedDeptId: string;
+      collaboratorIds?: string;
+      isTaskGenerated?: boolean;
+    }>;
+    attachments?: Array<{
+      fileName: string;
+      fileUrl: string;
+      fileSize: number;
+      mimeType: string;
+      sha256Hash?: string;
+      isOriginal?: boolean;
+    }>;
+  }
+
+  const sampleDocuments: SampleDocumentItem[] = [
+    // --- VĂN BẢN ĐẾN (VAN_BAN_DEN) ---
+    {
+      type: DocumentType.VAN_BAN_DEN,
+      registrationNumber: 1,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-03T09:00:00Z'),
+      originalNumber: '128/TCGDNN-VP',
+      issuedDate: new Date('2026-09-02T08:00:00Z'),
+      issuingAuthority: 'Tổng cục Giáo dục Nghề nghiệp',
+      category: 'Hướng dẫn',
+      summary: 'V/v Hướng dẫn giao chỉ tiêu tuyển sinh cao đẳng, trung cấp năm học 2026-2027 và đổi mới cấu trúc chuẩn đầu ra theo phương pháp DACUM',
+      urgency: DocumentUrgency.KHAN,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DANG_XU_LY,
+      dueDate: new Date('2026-09-20T17:00:00Z'),
+      leadDepartmentId: 'phong-dao-tao',
+      leadUserId: pdtOwnerId,
+      linkedTaskCode: 'NV-2026-09-001',
+      directives: [
+        {
+          leaderId: bghOwnerId,
+          instruction: 'Giao Phòng Đào tạo chủ trì, phối hợp Khoa CNTT rà soát chuẩn đầu ra DACUM và phân bổ chỉ tiêu cho các khoa chuyên môn.',
+          deadline: new Date('2026-09-18T17:00:00Z'),
+          assignedDeptId: 'phong-dao-tao',
+          collaboratorIds: 'khoa-cntt,tt-tuyensinh',
+          isTaskGenerated: true,
+        },
+      ],
+      attachments: [
+        {
+          fileName: '128_TCGDNN_HuongDan_TuyenSinh_DACUM.pdf',
+          fileUrl: '/documents/2026/128_TCGDNN_HuongDan_TuyenSinh_DACUM.pdf',
+          fileSize: 2516582,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.VAN_BAN_DEN,
+      registrationNumber: 2,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-05T08:30:00Z'),
+      originalNumber: '2456/UBND-VX',
+      issuedDate: new Date('2026-09-04T08:00:00Z'),
+      issuingAuthority: 'UBND Tỉnh Bình Định',
+      category: 'Kế hoạch',
+      summary: 'Kế hoạch triển khai đề án Chuyển đổi số toàn diện các cơ sở giáo dục nghề nghiệp tỉnh Bình Định giai đoạn 2025–2030',
+      urgency: DocumentUrgency.THUONG_KHAN,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DANG_XU_LY,
+      dueDate: new Date('2026-09-25T17:00:00Z'),
+      leadDepartmentId: 'khoa-cntt',
+      leadUserId: cnttOwnerId,
+      linkedTaskCode: 'NV-2026-10-008',
+      directives: [
+        {
+          leaderId: bghOwnerId,
+          instruction: 'Khoa CNTT chủ trì lập đề cương chi tiết hệ sinh thái số QCET E-Office kết nối trục liên thông của Tỉnh.',
+          deadline: new Date('2026-09-22T17:00:00Z'),
+          assignedDeptId: 'khoa-cntt',
+          collaboratorIds: 'phong-dao-tao,phong-qctb',
+          isTaskGenerated: true,
+        },
+      ],
+      attachments: [
+        {
+          fileName: '2456_UBND_DeAn_ChuyenDoiSo_GDNN.pdf',
+          fileUrl: '/documents/2026/2456_UBND_DeAn_ChuyenDoiSo_GDNN.pdf',
+          fileSize: 3984588,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.VAN_BAN_DEN,
+      registrationNumber: 3,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-06T08:00:00Z'),
+      originalNumber: '42/SLĐTBXH-DN',
+      issuedDate: new Date('2026-09-05T10:00:00Z'),
+      issuingAuthority: 'Sở Lao động - Thương binh & Xã hội',
+      category: 'Kế hoạch',
+      summary: 'Kế hoạch thanh kiểm tra công tác an toàn lao động, vệ sinh công nghiệp và tiêu chuẩn kiểm định chất lượng xưởng thực hành năm học 2026–2027',
+      urgency: DocumentUrgency.THUONG,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DANG_XU_LY,
+      dueDate: new Date('2026-10-10T17:00:00Z'),
+      leadDepartmentId: 'phong-qctb',
+      leadUserId: qctbOwnerId,
+      directives: [
+        {
+          leaderId: phoHieuTruongId,
+          instruction: 'Phòng Quản trị - Thiết bị phối hợp các khoa kỹ thuật tổng kiểm tra hệ thống tiếp địa và phương tiện PCCC xưởng thực hành.',
+          deadline: new Date('2026-09-30T17:00:00Z'),
+          assignedDeptId: 'phong-qctb',
+          collaboratorIds: 'khoa-co-khi,khoa-dien,khoa-oto',
+          isTaskGenerated: false,
+        },
+      ],
+      attachments: [
+        {
+          fileName: '42_SLDTBXH_KeHoach_KiemDinh_Xuong.pdf',
+          fileUrl: '/documents/2026/42_SLDTBXH_KeHoach_KiemDinh_Xuong.pdf',
+          fileSize: 1677721,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.VAN_BAN_DEN,
+      registrationNumber: 4,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-07T08:00:00Z'),
+      originalNumber: '89/BGDĐT-GDĐH',
+      issuedDate: new Date('2026-09-06T14:00:00Z'),
+      issuingAuthority: 'Bộ Giáo dục và Đào tạo',
+      category: 'Thông tri',
+      summary: 'Thông tri hướng dẫn công nhận tín chỉ kỹ năng thực hành nghề tương đương và liên thông đào tạo khối ngành kỹ thuật công nghệ',
+      urgency: DocumentUrgency.THUONG,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.CHO_PHAN_CONG,
+      dueDate: new Date('2026-09-30T17:00:00Z'),
+      leadDepartmentId: 'phong-dao-tao',
+      leadUserId: pdtOwnerId,
+      attachments: [
+        {
+          fileName: '89_BGDDT_CongNhan_TinChi_LienThong.pdf',
+          fileUrl: '/documents/2026/89_BGDDT_CongNhan_TinChi_LienThong.pdf',
+          fileSize: 1992294,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.VAN_BAN_DEN,
+      registrationNumber: 5,
+      documentYear: 2026,
+      registeredDate: new Date('2026-08-28T08:00:00Z'),
+      originalNumber: '19/UBND-NC',
+      issuedDate: new Date('2026-08-28T07:30:00Z'),
+      issuingAuthority: 'UBND Tỉnh Bình Định',
+      category: 'Công điện',
+      summary: 'Công điện HỎA TỐC: Chủ động ứng phó áp thấp nhiệt đới và rà soát an toàn hệ thống điện xưởng cơ khí, nhà điều hành trường học',
+      urgency: DocumentUrgency.HOA_TOC,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DA_HOAN_THANH,
+      dueDate: new Date('2026-08-30T17:00:00Z'),
+      leadDepartmentId: 'phong-qctb',
+      leadUserId: qctbOwnerId,
+      directives: [
+        {
+          leaderId: bghOwnerId,
+          instruction: 'Trưởng ban PCTT trực 24/24, chằng chống cây xanh và di dời máy móc nhạy cảm lên vị trí cao.',
+          deadline: new Date('2026-08-29T12:00:00Z'),
+          assignedDeptId: 'phong-qctb',
+          collaboratorIds: 'khoa-oto,khoa-co-khi',
+          isTaskGenerated: true,
+        },
+      ],
+      attachments: [
+        {
+          fileName: '19_UBND_HoaToc_PhongChongBaoLut.pdf',
+          fileUrl: '/documents/2026/19_UBND_HoaToc_PhongChongBaoLut.pdf',
+          fileSize: 870400,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.VAN_BAN_DEN,
+      registrationNumber: 6,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-02T10:00:00Z'),
+      originalNumber: '315/UBND-VX',
+      issuedDate: new Date('2026-09-01T09:00:00Z'),
+      issuingAuthority: 'UBND Tỉnh Bình Định',
+      category: 'Chỉ thị',
+      summary: 'Chỉ thị về nhiệm vụ trọng tâm năm học 2026–2027 đối với các trường cao đẳng, trung cấp nghề trên địa bàn tỉnh',
+      urgency: DocumentUrgency.THUONG,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DANG_XU_LY,
+      dueDate: new Date('2026-09-30T17:00:00Z'),
+      leadDepartmentId: 'ban-giam-hieu',
+      leadUserId: bghOwnerId,
+      directives: [
+        {
+          leaderId: bghOwnerId,
+          instruction: 'Các đơn vị quán triệt chỉ thị trong hội nghị cán bộ viên chức đầu năm học.',
+          deadline: new Date('2026-09-15T17:00:00Z'),
+          assignedDeptId: 'ban-giam-hieu',
+          collaboratorIds: 'phong-dao-tao,phong-cthssv',
+          isTaskGenerated: false,
+        },
+      ],
+      attachments: [
+        {
+          fileName: '315_UBND_ChiThi_NhiemVu_NamHoc.pdf',
+          fileUrl: '/documents/2026/315_UBND_ChiThi_NhiemVu_NamHoc.pdf',
+          fileSize: 1245000,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.VAN_BAN_DEN,
+      registrationNumber: 7,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-04T09:00:00Z'),
+      originalNumber: '78/TCGDNN-KHTC',
+      issuedDate: new Date('2026-09-03T11:00:00Z'),
+      issuingAuthority: 'Tổng cục Giáo dục Nghề nghiệp',
+      category: 'Thông báo',
+      summary: 'Thông báo phân bổ kinh phí dự án tăng cường cơ sở vật chất kỹ thuật và đào tạo nghề chất lượng cao năm 2026',
+      urgency: DocumentUrgency.KHAN,
+      securityLevel: DocumentSecurityLevel.MAT,
+      status: DocumentStatus.DANG_XU_LY,
+      dueDate: new Date('2026-09-25T17:00:00Z'),
+      leadDepartmentId: 'phong-tckt',
+      leadUserId: tcktOwnerId,
+      directives: [
+        {
+          leaderId: bghOwnerId,
+          instruction: 'Phòng TCKT phối hợp Phòng QTTB lập danh mục thiết bị ưu tiên giải ngân đợt 1.',
+          deadline: new Date('2026-09-20T17:00:00Z'),
+          assignedDeptId: 'phong-tckt',
+          collaboratorIds: 'phong-qctb',
+          isTaskGenerated: false,
+        },
+      ],
+      attachments: [
+        {
+          fileName: '78_TCGDNN_PhanBo_KinhPhi_2026.pdf',
+          fileUrl: '/documents/2026/78_TCGDNN_PhanBo_KinhPhi_2026.pdf',
+          fileSize: 2150000,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+
+    // --- VĂN BẢN ĐI (VAN_BAN_DI) ---
+    {
+      type: DocumentType.VAN_BAN_DI,
+      registrationNumber: 1,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-03T15:00:00Z'),
+      originalNumber: '145/CĐKTCN-ĐT',
+      issuedDate: new Date('2026-09-03T14:30:00Z'),
+      issuingAuthority: 'Trường CĐ Kỹ thuật Công nghệ Quy Nhơn',
+      category: 'Báo cáo',
+      summary: 'Báo cáo sơ kết giai đoạn 1 đề án đào tạo thí điểm kỹ thuật viên Cơ điện tử và Ô tô điện theo tiêu chuẩn CHLB Đức',
+      urgency: DocumentUrgency.THUONG,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DA_HOAN_THANH,
+      signerName: 'TS. Nguyễn Văn Hiệu',
+      signerTitle: 'Hiệu trưởng',
+      draftingDeptId: 'phong-dao-tao',
+      recipientList: 'Tổng cục GDNN, Tổ chức Hợp tác Phát triển Đức (GIZ), Ban Giám hiệu',
+      distributedCopies: 5,
+      attachments: [
+        {
+          fileName: '145_CDKTCN_BaoCao_DaoTao_TieuChuanDuc.pdf',
+          fileUrl: '/documents/2026/145_CDKTCN_BaoCao_DaoTao_TieuChuanDuc.pdf',
+          fileSize: 4404019,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.VAN_BAN_DI,
+      registrationNumber: 2,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-05T09:30:00Z'),
+      originalNumber: '210/CĐKTCN-TCKT',
+      issuedDate: new Date('2026-09-05T09:15:00Z'),
+      issuingAuthority: 'Trường CĐ Kỹ thuật Công nghệ Quy Nhơn',
+      category: 'Tờ trình',
+      summary: 'Tờ trình đề xuất phân bổ dự toán kinh phí mua sắm vật tư thực hành kỳ 1 và bảo dưỡng máy móc CNC xưởng Cơ khí',
+      urgency: DocumentUrgency.KHAN,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DANG_XU_LY,
+      signerName: 'ThS. Đỗ Tài Chính',
+      signerTitle: 'Trưởng phòng TCKT',
+      draftingDeptId: 'phong-tckt',
+      recipientList: 'Ban Giám hiệu, Khoa Cơ khí, Phòng Quản trị Thiết bị',
+      distributedCopies: 3,
+      attachments: [
+        {
+          fileName: '210_CDKTCN_DuToan_VatTu_ThucHanh.pdf',
+          fileUrl: '/documents/2026/210_CDKTCN_DuToan_VatTu_ThucHanh.pdf',
+          fileSize: 2202009,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.VAN_BAN_DI,
+      registrationNumber: 3,
+      documentYear: 2026,
+      registeredDate: new Date('2026-08-30T16:30:00Z'),
+      originalNumber: '56/CĐKTCN-VP',
+      issuedDate: new Date('2026-08-30T16:00:00Z'),
+      issuingAuthority: 'Trường CĐ Kỹ thuật Công nghệ Quy Nhơn',
+      category: 'Thông báo',
+      summary: 'Thông báo kế hoạch điều hành tuần lễ khai giảng năm học 2026–2027 và đón tân sinh viên nhập học đợt 2',
+      urgency: DocumentUrgency.THUONG,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DA_HOAN_THANH,
+      signerName: 'TS. Nguyễn Văn Hiệu',
+      signerTitle: 'Hiệu trưởng',
+      draftingDeptId: 'ban-giam-hieu',
+      recipientList: 'Toàn thể CB-GV-NV và Học sinh - Sinh viên toàn trường',
+      distributedCopies: 12,
+      attachments: [
+        {
+          fileName: '56_CDKTCN_KeHoach_KhaiGiang_2026.pdf',
+          fileUrl: '/documents/2026/56_CDKTCN_KeHoach_KhaiGiang_2026.pdf',
+          fileSize: 1258291,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.VAN_BAN_DI,
+      registrationNumber: 4,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-06T10:30:00Z'),
+      originalNumber: '320/CĐKTCN-TS',
+      issuedDate: new Date('2026-09-06T10:00:00Z'),
+      issuingAuthority: 'Trường CĐ Kỹ thuật Công nghệ Quy Nhơn',
+      category: 'Thông báo',
+      summary: 'Thông báo điểm chuẩn và chỉ tiêu xét tuyển bổ sung nguyện vọng 2 hệ Cao đẳng chính quy năm 2026',
+      urgency: DocumentUrgency.THUONG,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DA_HOAN_THANH,
+      signerName: 'TS. Nguyễn Văn Hiệu',
+      signerTitle: 'Chủ tịch Hội đồng Tuyển sinh',
+      draftingDeptId: 'tt-tuyensinh',
+      recipientList: 'Website trường, Báo Bình Định, Các trường THPT đối tác',
+      distributedCopies: 10,
+      attachments: [
+        {
+          fileName: '320_CDKTCN_ThongBao_TuyenSinh_BoSung.pdf',
+          fileUrl: '/documents/2026/320_CDKTCN_ThongBao_TuyenSinh_BoSung.pdf',
+          fileSize: 985000,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.VAN_BAN_DI,
+      registrationNumber: 5,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-07T09:00:00Z'),
+      originalNumber: '188/CĐKTCN-ĐT',
+      issuedDate: new Date('2026-09-07T08:30:00Z'),
+      issuingAuthority: 'Trường CĐ Kỹ thuật Công nghệ Quy Nhơn',
+      category: 'Quyết định',
+      summary: 'Quyết định thành lập Hội đồng rà soát chương trình đào tạo và cập nhật chuẩn đầu ra kỹ năng số năm 2026',
+      urgency: DocumentUrgency.KHAN,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DA_HOAN_THANH,
+      signerName: 'TS. Nguyễn Văn Hiệu',
+      signerTitle: 'Hiệu trưởng',
+      draftingDeptId: 'phong-dao-tao',
+      recipientList: 'Thành viên Hội đồng, Các Khoa chuyên môn, Phòng TCHC',
+      distributedCopies: 8,
+      attachments: [
+        {
+          fileName: '188_CDKTCN_QuyetDinh_HoiDong_ChuanDauRa.pdf',
+          fileUrl: '/documents/2026/188_CDKTCN_QuyetDinh_HoiDong_ChuanDauRa.pdf',
+          fileSize: 1850000,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+
+    // --- TỜ TRÌNH NỘI BỘ (TO_TRINH_NOI_BO) ---
+    {
+      type: DocumentType.TO_TRINH_NOI_BO,
+      registrationNumber: 1,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-06T11:30:00Z'),
+      originalNumber: '15/TTr-CNTT',
+      issuedDate: new Date('2026-09-06T11:00:00Z'),
+      issuingAuthority: 'Khoa Công nghệ Thông tin',
+      category: 'Tờ trình',
+      summary: 'Tờ trình xin phê duyệt kinh phí và cấu hình máy chủ phục vụ Hội thi Kỹ năng nghề quốc gia phân môn Điện toán đám mây',
+      urgency: DocumentUrgency.KHAN,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.CHO_PHE_DUYET,
+      draftingDeptId: 'khoa-cntt',
+      signerName: 'ThS. Hoàng Công Nghệ',
+      signerTitle: 'Trưởng khoa CNTT',
+      leadDepartmentId: 'ban-giam-hieu',
+      leadUserId: bghOwnerId,
+      directives: [
+        {
+          leaderId: bghOwnerId,
+          instruction: 'Đồng ý chủ trương. Giao Phòng TCKT thẩm định dự toán và báo cáo Hiệu trưởng trước ngày 12/09.',
+          deadline: new Date('2026-09-12T17:00:00Z'),
+          assignedDeptId: 'phong-tckt',
+          collaboratorIds: 'khoa-cntt,phong-qctb',
+          isTaskGenerated: false,
+        },
+      ],
+      attachments: [
+        {
+          fileName: '15_TTr_CNTT_KinhPhi_Server_HoiThi.pdf',
+          fileUrl: '/documents/2026/15_TTr_CNTT_KinhPhi_Server_HoiThi.pdf',
+          fileSize: 1468006,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.TO_TRINH_NOI_BO,
+      registrationNumber: 2,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-05T15:30:00Z'),
+      originalNumber: '28/TTr-ĐT',
+      issuedDate: new Date('2026-09-05T15:00:00Z'),
+      issuingAuthority: 'Phòng Đào tạo',
+      category: 'Tờ trình',
+      summary: 'Tờ trình ban hành Quy chế khảo thí trực tuyến và quy trình thẩm định minh chứng giảng dạy số hóa theo khung DACUM',
+      urgency: DocumentUrgency.THUONG,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.DA_HOAN_THANH,
+      draftingDeptId: 'phong-dao-tao',
+      signerName: 'ThS. Lê Đào Tạo',
+      signerTitle: 'Trưởng phòng Đào tạo',
+      leadDepartmentId: 'ban-giam-hieu',
+      leadUserId: bghOwnerId,
+      directives: [
+        {
+          leaderId: bghOwnerId,
+          instruction: 'Phê duyệt ban hành. Giao Phòng Đào tạo tổ chức phổ biến toàn thể giảng viên áp dụng từ học kỳ 1.',
+          deadline: new Date('2026-09-10T17:00:00Z'),
+          assignedDeptId: 'phong-dao-tao',
+          collaboratorIds: 'khoa-cntt,khoa-co-khi,khoa-dien',
+          isTaskGenerated: true,
+        },
+      ],
+      attachments: [
+        {
+          fileName: '28_TTr_DT_QuyChe_KhaoThi_DACUM.pdf',
+          fileUrl: '/documents/2026/28_TTr_DT_QuyChe_KhaoThi_DACUM.pdf',
+          fileSize: 2936012,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.TO_TRINH_NOI_BO,
+      registrationNumber: 3,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-05T08:00:00Z'),
+      originalNumber: '09/TTr-CK',
+      issuedDate: new Date('2026-09-04T16:00:00Z'),
+      issuingAuthority: 'Khoa Cơ khí',
+      category: 'Tờ trình',
+      summary: 'Tờ trình đề xuất thay thế linh kiện bộ trục chính máy phay CNC và bổ sung dầu làm mát xưởng thực hành Cơ khí chế tạo',
+      urgency: DocumentUrgency.KHAN,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.CHO_PHE_DUYET,
+      draftingDeptId: 'khoa-co-khi',
+      signerName: 'ThS. Đinh Văn Cơ Khí',
+      signerTitle: 'Trưởng khoa Cơ khí',
+      leadDepartmentId: 'ban-giam-hieu',
+      leadUserId: bghOwnerId,
+      attachments: [
+        {
+          fileName: '09_TTr_CK_ThayThe_TrucChinh_CNC.pdf',
+          fileUrl: '/documents/2026/09_TTr_CK_ThayThe_TrucChinh_CNC.pdf',
+          fileSize: 1120000,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+    {
+      type: DocumentType.TO_TRINH_NOI_BO,
+      registrationNumber: 4,
+      documentYear: 2026,
+      registeredDate: new Date('2026-09-07T08:30:00Z'),
+      originalNumber: '14/TTr-ÔTÔ',
+      issuedDate: new Date('2026-09-06T14:00:00Z'),
+      issuingAuthority: 'Khoa Kỹ thuật Ô tô',
+      category: 'Tờ trình',
+      summary: 'Tờ trình tiếp nhận tài trợ mô hình động cơ xăng hybrid thế hệ mới từ Công ty Cổ phần Ô tô Trường Hải (THACO)',
+      urgency: DocumentUrgency.THUONG,
+      securityLevel: DocumentSecurityLevel.THUONG,
+      status: DocumentStatus.CHO_PHE_DUYET,
+      draftingDeptId: 'khoa-oto',
+      signerName: 'ThS. Vũ Kỹ Thuật Ôtô',
+      signerTitle: 'Trưởng khoa Ôtô',
+      leadDepartmentId: 'ban-giam-hieu',
+      leadUserId: bghOwnerId,
+      attachments: [
+        {
+          fileName: '14_TTr_OTO_TiepNhan_TaiTro_THACO.pdf',
+          fileUrl: '/documents/2026/14_TTr_OTO_TiepNhan_TaiTro_THACO.pdf',
+          fileSize: 1780000,
+          mimeType: 'application/pdf',
+          isOriginal: true,
+        },
+      ],
+    },
+  ];
+
+  for (const docItem of sampleDocuments) {
+    const { directives, attachments, linkedTaskCode, ...baseData } = docItem;
+    const linkedTaskId = linkedTaskCode ? taskCodeMap[linkedTaskCode] || null : null;
+
+    const documentData = {
+      ...baseData,
+      registeredById: vanThuId,
+      linkedTaskId,
+    };
+
+    const doc = await prisma.document.upsert({
+      where: {
+        type_documentYear_registrationNumber: {
+          type: docItem.type,
+          documentYear: docItem.documentYear,
+          registrationNumber: docItem.registrationNumber,
+        },
+      },
+      update: documentData,
+      create: documentData,
+    });
+
+    // Đồng bộ tệp đính kèm chuẩn số hóa NĐ 30/2020
+    if (attachments && attachments.length > 0) {
+      await prisma.documentAttachment.deleteMany({
+        where: { documentId: doc.id },
+      });
+      for (const att of attachments) {
+        await prisma.documentAttachment.create({
+          data: {
+            documentId: doc.id,
+            fileName: att.fileName,
+            fileUrl: att.fileUrl,
+            fileSize: att.fileSize,
+            mimeType: att.mimeType,
+            sha256Hash: att.sha256Hash || null,
+            isOriginal: att.isOriginal ?? true,
+          },
+        });
+      }
+    }
+
+    // Đồng bộ bút phê & chỉ đạo điều hành BGH NĐ 30/2020
+    if (directives && directives.length > 0) {
+      await prisma.documentDirective.deleteMany({
+        where: { documentId: doc.id },
+      });
+      for (const dir of directives) {
+        await prisma.documentDirective.create({
+          data: {
+            documentId: doc.id,
+            leaderId: dir.leaderId,
+            instruction: dir.instruction,
+            deadline: dir.deadline || null,
+            assignedDeptId: dir.assignedDeptId,
+            collaboratorIds: dir.collaboratorIds || null,
+            isTaskGenerated: dir.isTaskGenerated ?? false,
+          },
+        });
+      }
+    }
+  }
+
+  console.log(`Seeding completed successfully with ${departments.length} departments, ${users.length} users, ${sampleTasks.length} tasks, and ${sampleDocuments.length} documents.`);
 }
 
 main()
