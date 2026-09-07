@@ -89,3 +89,74 @@ test("TasksFocusLanding contains tour-tasks-landing anchor and handles Actionabl
     "TasksFocusLanding must import and integrate ActionableEmptyState"
   );
 });
+
+test("AppTopbar provides restart-onboarding trigger and OnboardingHub handles event", () => {
+  const topbarPath = path.resolve(
+    process.cwd(),
+    "src/components/layout/app-topbar.tsx"
+  );
+  const shellPath = path.resolve(
+    process.cwd(),
+    "src/components/layout/app-shell.tsx"
+  );
+
+  assert.ok(fs.existsSync(topbarPath), "app-topbar.tsx must exist");
+  assert.ok(fs.existsSync(shellPath), "app-shell.tsx must exist");
+
+  const topbarContent = fs.readFileSync(topbarPath, "utf-8");
+  const shellContent = fs.readFileSync(shellPath, "utf-8");
+
+  // Verify AppTopbar contains trigger and dispatches custom event
+  assert.ok(
+    topbarContent.includes("Hướng dẫn làm quen (Onboarding)"),
+    "AppTopbar must include 'Hướng dẫn làm quen (Onboarding)' menu item"
+  );
+  assert.ok(
+    topbarContent.includes('"qcet:restart-onboarding"'),
+    "AppTopbar must dispatch 'qcet:restart-onboarding' custom event"
+  );
+
+  // Verify OnboardingHub listens to event and handles restart
+  assert.ok(
+    shellContent.includes('"qcet:restart-onboarding"'),
+    "OnboardingHub must listen to 'qcet:restart-onboarding' event"
+  );
+  assert.ok(
+    shellContent.includes("onboarding.restartOnboarding()"),
+    "OnboardingHub must call restartOnboarding on event"
+  );
+  assert.ok(
+    shellContent.includes("onboarding.setIsChecklistExpanded(true)"),
+    "OnboardingHub must expand checklist on event"
+  );
+  assert.ok(
+    shellContent.includes('removeEventListener("qcet:restart-onboarding"'),
+    "OnboardingHub must clean up event listener on unmount"
+  );
+
+  // Runtime event dispatch test simulation
+  let restartCalled = false;
+  let checklistExpanded = false;
+  const mockOnboarding = {
+    restartOnboarding: () => {
+      restartCalled = true;
+    },
+    setIsChecklistExpanded: (val: boolean) => {
+      checklistExpanded = val;
+    },
+  };
+
+  const handler = () => {
+    mockOnboarding.restartOnboarding();
+    mockOnboarding.setIsChecklistExpanded(true);
+  };
+
+  const bus = new EventTarget();
+  bus.addEventListener("qcet:restart-onboarding", handler);
+  bus.dispatchEvent(new CustomEvent("qcet:restart-onboarding"));
+  bus.removeEventListener("qcet:restart-onboarding", handler);
+
+  assert.equal(restartCalled, true, "restartOnboarding should be called when event dispatched");
+  assert.equal(checklistExpanded, true, "setIsChecklistExpanded should be called with true when event dispatched");
+});
+

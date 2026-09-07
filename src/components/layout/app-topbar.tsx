@@ -21,6 +21,7 @@ import {
   FlaskConical,
   Check,
   Plus,
+  Compass,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
@@ -398,6 +399,20 @@ export function AppTopbar() {
                   >
                     <Settings size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
                     <span>Hồ sơ cá nhân</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("qcet:restart-onboarding"));
+                      }
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
+                  >
+                    <Compass size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
+                    <span>Hướng dẫn làm quen (Onboarding)</span>
                   </button>
 
                   <Link

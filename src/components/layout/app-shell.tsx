@@ -19,6 +19,18 @@ import { cn } from "@/lib/utils";
 export function OnboardingHub() {
   const onboarding = useOnboarding();
 
+  React.useEffect(() => {
+    const handleRestart = () => {
+      onboarding.restartOnboarding();
+      onboarding.setIsChecklistExpanded(true);
+    };
+
+    window.addEventListener("qcet:restart-onboarding", handleRestart);
+    return () => {
+      window.removeEventListener("qcet:restart-onboarding", handleRestart);
+    };
+  }, [onboarding.restartOnboarding, onboarding.setIsChecklistExpanded]);
+
   return (
     <>
       <WelcomeModal
