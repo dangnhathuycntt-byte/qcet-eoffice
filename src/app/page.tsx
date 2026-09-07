@@ -19,10 +19,8 @@ import {
   type WorkboxFilter,
 } from "@/components/dashboard/executive-stat-strip";
 import {
-  ExecutiveActionCenter,
   type ExecutiveFilter,
 } from "@/components/dashboard/executive-action-center";
-import { DepartmentProgressMatrix } from "@/components/dashboard/department-progress-matrix";
 import dynamic from "next/dynamic";
 import {
   computeExecutiveActionStats,
@@ -39,8 +37,6 @@ import {
 import { isSchoolTask } from "@/components/dashboard/task-detail-side-sheet";
 import { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
-import { UpcomingDeadlinesWidget } from "@/components/dashboard/upcoming-deadlines-widget";
-import { ActivityFeedWidget } from "@/components/dashboard/activity-feed-widget";
 import { BentoPortalHub } from "@/components/portal/bento-portal-hub";
 import { WorkspaceZone, parseZoneParam } from "@/types/workspace";
 import { useSidebar } from "@/components/layout/sidebar-context";
@@ -71,6 +67,7 @@ const DepartmentGroupedTaskView = dynamic(
 import { DashboardStateProvider } from "@/components/dashboard/dashboard-context";
 import { OrgZone } from "@/components/dashboard/zones/org-zone";
 import { CalendarZone } from "@/components/dashboard/zones/calendar-zone";
+import { DashboardZone } from "@/components/dashboard/zones/dashboard-zone";
 
 const ExecutiveDepartmentCommandCenter = dynamic(
   () =>
@@ -969,81 +966,7 @@ function UnifiedTaskHubContent() {
       {/* ========================================================================= */}
       {/* ZONE 2: DASHBOARD (Dashboard điều hành & Chỉ số KPI toàn trường)         */}
       {/* ========================================================================= */}
-      {activeZone === "dashboard" && (
-        <div className="space-y-6" data-slot="zone-dashboard">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
-                  Phân khu Điều hành
-                </span>
-                <span className="text-xs text-muted-foreground font-medium">
-                  {isExecutive ? "BGH Giám sát toàn trường" : `Đơn vị: ${user?.department || "QCET"}`}
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground font-heading">
-                Dashboard Điều Hành & Báo Cáo KPI
-              </h1>
-              <p className="text-xs text-muted-foreground mt-1 text-balance">
-                Theo dõi toàn cảnh tiến độ, điểm nghẽn, và hàng đợi phê duyệt chiến lược của 11 đơn vị
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleManualRefresh}
-                disabled={isRefreshing}
-                className="gap-1.5 text-xs rounded-xl"
-              >
-                <RefreshCw
-                  size={14}
-                  className={isRefreshing ? "animate-spin text-primary" : ""}
-                />
-                <span className="hidden sm:inline">Làm mới dữ liệu</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Stat Strip */}
-          <section aria-label="Chỉ số điều hành toàn trường">
-            <ExecutiveStatStrip
-              stats={displayedStats}
-              activeFilter={activeWorkbox}
-              onFilterChange={(filter) => setActiveWorkbox(filter)}
-            />
-          </section>
-
-          {/* Executive Cockpit (BGH only) */}
-          {isExecutive && executiveStats && (
-            <section aria-label="Khoang điều hành Ban Giám hiệu" className="space-y-4">
-              <ExecutiveActionCenter
-                stats={executiveStats}
-                activeFilter={executiveFilter}
-                onFilterChange={setExecutiveFilter}
-              />
-              <DepartmentProgressMatrix
-                departments={departmentHealth}
-                selectedDepartment={selectedDepartment}
-                onSelectDepartment={handleDepartmentChange}
-              />
-            </section>
-          )}
-
-          {/* Widgets Grid: Upcoming Deadlines & Live Activity Feed */}
-          <section
-            aria-label="Tiện ích theo dõi tiến độ và hoạt động"
-            className="grid grid-cols-1 lg:grid-cols-2 gap-5"
-          >
-            <UpcomingDeadlinesWidget
-              items={roleUpcoming}
-              onSelectTask={handleSelectUpcoming}
-            />
-            <ActivityFeedWidget activities={dashboardData.activities} />
-          </section>
-        </div>
-      )}
+      {activeZone === "dashboard" && <DashboardZone />}
 
       {/* ========================================================================= */}
       {/* ZONE 3: TASKS (Bảng công việc 2 cấp, Lọc & Phân cấp nhiệm vụ)           */}
