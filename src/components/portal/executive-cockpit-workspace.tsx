@@ -805,12 +805,12 @@ export function ExecutiveCockpitWorkspace({
             asChild
             variant="outline"
             size="sm"
-            className="text-xs h-8 gap-1.5"
+            className="text-xs h-8 gap-1.5 whitespace-nowrap"
           >
-            <Link href={tasksUrl}>
-              <Layers className="w-3.5 h-3.5" />
+            <Link href={tasksUrl} className="inline-flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 shrink-0" />
               <span>Xem bảng giao việc đầy đủ</span>
-              <ArrowRight className="w-3 h-3 ml-0.5" />
+              <ArrowRight className="w-3 h-3 ml-0.5 shrink-0" />
             </Link>
           </Button>
         </div>

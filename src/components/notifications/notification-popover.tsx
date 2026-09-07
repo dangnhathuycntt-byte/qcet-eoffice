@@ -38,7 +38,7 @@ export const INITIAL_NOTIFICATIONS: QCETNotification[] = [
   {
     id: "notif-1",
     actorName: "Trần Hùng",
-    action: "vừa hoàn thành công việc",
+    action: "đã nộp minh chứng hoàn thành",
     targetTitle: "Báo cáo an toàn thông tin định kỳ tháng 9/2026",
     timestamp: "10 phút trước",
     category: "ATTT",
@@ -50,7 +50,7 @@ export const INITIAL_NOTIFICATIONS: QCETNotification[] = [
   {
     id: "notif-2",
     actorName: "Nguyễn Ngọc Vinh",
-    action: "đã cập nhật tiến độ công việc",
+    action: "trình phê duyệt tờ trình",
     targetTitle: "Theo dõi kênh theo dõi chỉ đạo của UBND Tỉnh tháng 9/2026",
     timestamp: "25 phút trước",
     category: "KHAC",
@@ -62,7 +62,7 @@ export const INITIAL_NOTIFICATIONS: QCETNotification[] = [
   {
     id: "notif-3",
     actorName: "Mai Đinh Thị Xuân",
-    action: "vừa tải lên ấn phẩm truyền thông",
+    action: "đăng tải bài viết truyền thông",
     targetTitle: "Bài viết MỚI VÀO QCET – NHỮNG NGÀY ĐẦU TIÊN SẼ CÓ GÌ?",
     timestamp: "45 phút trước",
     category: "TRUYEN_THONG",
@@ -74,7 +74,7 @@ export const INITIAL_NOTIFICATIONS: QCETNotification[] = [
   {
     id: "notif-4",
     actorName: "Trần Hùng",
-    action: "vừa kiểm tra và cấu hình",
+    action: "hoàn thành đo kiểm mạng",
     targetTitle: "Khảo sát và đo kiểm tín hiệu wifi khu nhà A và nhà B",
     timestamp: "1 giờ trước",
     category: "CNTT",
@@ -86,7 +86,7 @@ export const INITIAL_NOTIFICATIONS: QCETNotification[] = [
   {
     id: "notif-5",
     actorName: "Lê Hoàng Nam",
-    action: "vừa chuyển trạng thái cần chỉnh sửa",
+    action: "yêu cầu bổ sung tài liệu",
     targetTitle: "Phân luồng và nhắc nhở các đơn vị xử lý nhiệm vụ tồn đọng",
     timestamp: "2 giờ trước",
     category: "KHAC",
@@ -98,7 +98,7 @@ export const INITIAL_NOTIFICATIONS: QCETNotification[] = [
   {
     id: "notif-6",
     actorName: "Phạm Thị Thu",
-    action: "vừa hoàn thành quét OCR",
+    action: "đã số hóa vào kho học liệu",
     targetTitle: "Quét và OCR 150 đầu giáo trình chuyên ngành kỹ thuật",
     timestamp: "3 giờ trước",
     category: "THU_VIEN",
@@ -110,7 +110,7 @@ export const INITIAL_NOTIFICATIONS: QCETNotification[] = [
   {
     id: "notif-7",
     actorName: "Võ Minh Trí",
-    action: "vừa gửi báo cáo số liệu",
+    action: "gửi thống kê tuyển sinh tuần 37",
     targetTitle: "Thống kê số liệu nhập học các ngành công nghệ và kinh tế",
     timestamp: "4 giờ trước",
     category: "BAO_CAO",
@@ -122,7 +122,7 @@ export const INITIAL_NOTIFICATIONS: QCETNotification[] = [
   {
     id: "notif-8",
     actorName: "Đặng Văn Hậu",
-    action: "vừa tạo mới công việc đơn vị",
+    action: "giao chỉ đạo thẩm định",
     targetTitle: "Hoàn thiện báo cáo tự đánh giá tiêu chuẩn 1 đến 5",
     timestamp: "5 giờ trước",
     category: "BAO_CAO",
@@ -142,6 +142,63 @@ function getActorInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function getPersonnelAvatarStyle(name: string): { bg: string; text: string; ring: string } {
+  if (name.includes("Hùng")) {
+    return {
+      bg: "bg-emerald-500/15 dark:bg-emerald-500/25",
+      text: "text-emerald-700 dark:text-emerald-300",
+      ring: "ring-emerald-500/30",
+    };
+  }
+  if (name.includes("Vinh")) {
+    return {
+      bg: "bg-blue-500/15 dark:bg-blue-500/25",
+      text: "text-blue-700 dark:text-blue-300",
+      ring: "ring-blue-500/30",
+    };
+  }
+  if (name.includes("Xuân")) {
+    return {
+      bg: "bg-purple-500/15 dark:bg-purple-500/25",
+      text: "text-purple-700 dark:text-purple-300",
+      ring: "ring-purple-500/30",
+    };
+  }
+  if (name.includes("Nam")) {
+    return {
+      bg: "bg-amber-500/15 dark:bg-amber-500/25",
+      text: "text-amber-800 dark:text-amber-300",
+      ring: "ring-amber-500/30",
+    };
+  }
+  if (name.includes("Thu")) {
+    return {
+      bg: "bg-teal-500/15 dark:bg-teal-500/25",
+      text: "text-teal-700 dark:text-teal-300",
+      ring: "ring-teal-500/30",
+    };
+  }
+  if (name.includes("Trí")) {
+    return {
+      bg: "bg-rose-500/15 dark:bg-rose-500/25",
+      text: "text-rose-700 dark:text-rose-300",
+      ring: "ring-rose-500/30",
+    };
+  }
+  if (name.includes("Hậu")) {
+    return {
+      bg: "bg-indigo-500/15 dark:bg-indigo-500/25",
+      text: "text-indigo-700 dark:text-indigo-300",
+      ring: "ring-indigo-500/30",
+    };
+  }
+  return {
+    bg: "bg-primary/10",
+    text: "text-primary",
+    ring: "ring-primary/20",
+  };
 }
 
 function getTypeBadge(type: QCETNotification["type"]) {
@@ -271,7 +328,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
     <div
       ref={popoverRef}
       data-slot="notification-popover"
-      className="absolute right-0 sm:right-0 top-full mt-2 w-[calc(100vw-24px)] sm:w-[410px] max-w-[420px] max-h-[min(580px,85vh)] flex flex-col rounded-2xl border border-border/80 bg-card/98 backdrop-blur-xl shadow-dropdown z-50 animate-in fade-in zoom-in-95 duration-150 overflow-hidden select-none"
+      className="absolute right-0 sm:right-0 top-full mt-2 w-[calc(100vw-24px)] sm:w-[410px] max-w-[420px] max-h-[min(580px,85vh)] flex flex-col rounded-2xl border border-border bg-card shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 overflow-hidden select-none"
     >
       {/* Top Header */}
       <div className="p-3.5 pb-2.5 border-b border-border/50 shrink-0 bg-muted/20">
@@ -428,6 +485,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
   const personnel = getActorPersonnel(item.actorName);
   const badge = getTypeBadge(item.type);
   const BadgeIcon = badge.icon;
+  const avatarStyle = getPersonnelAvatarStyle(item.actorName);
 
   const handleClick = () => {
     onRead();
@@ -445,23 +503,18 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
           : "bg-primary/[0.04] dark:bg-primary/[0.08] hover:bg-muted/70 font-medium border-l-primary"
       )}
     >
-      {/* Avatar Container with Theme-Harmonized Mini Badge */}
+      {/* Avatar Container with Theme-Harmonized Initials Monogram Badge */}
       <div className="relative shrink-0 mt-0.5">
-        <div className="size-10 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center shadow-2xs">
-          {personnel?.avatar ? (
-            <Image
-              src={personnel.avatar}
-              alt={item.actorName}
-              width={40}
-              height={40}
-              unoptimized
-              className="size-full object-cover"
-            />
-          ) : (
-            <span className="font-bold text-xs text-foreground">
-              {getActorInitials(item.actorName)}
-            </span>
+        <div
+          className={cn(
+            "size-10 rounded-full flex items-center justify-center font-bold font-mono text-xs select-none shadow-2xs ring-1",
+            avatarStyle.bg,
+            avatarStyle.text,
+            avatarStyle.ring
           )}
+          title={`${item.actorName} (${personnel?.dept || "QCET"})`}
+        >
+          {getActorInitials(item.actorName)}
         </div>
 
         {/* Micro overlay icon badge */}

@@ -29,37 +29,37 @@ export interface Personnel {
 export const QCET_PERSONNEL: Personnel[] = [
   {
     name: "Trần Hùng",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+    avatar: "",
     dept: "CNTT / ATTT",
   },
   {
     name: "Nguyễn Ngọc Vinh",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
+    avatar: "",
     dept: "Chuyển đổi số",
   },
   {
     name: "Mai Đinh Thị Xuân",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80",
+    avatar: "",
     dept: "Truyền thông",
   },
   {
     name: "Lê Hoàng Nam",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80",
+    avatar: "",
     dept: "Hành chính - Quản trị",
   },
   {
     name: "Phạm Thị Thu",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=80",
+    avatar: "",
     dept: "Thư viện & Học liệu",
   },
   {
     name: "Đặng Văn Hậu",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=80",
+    avatar: "",
     dept: "Khảo thí & Đảm bảo chất lượng",
   },
   {
     name: "Võ Minh Trí",
-    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&auto=format&fit=crop&q=80",
+    avatar: "",
     dept: "Đào tạo & Quản lý sinh viên",
   },
 ];
