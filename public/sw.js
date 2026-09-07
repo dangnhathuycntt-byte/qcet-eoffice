@@ -1,13 +1,85 @@
 // QCET E-Office Service Worker
 // Version: 1.0.0
-// Handles push notifications, badge counts, and client navigation
+// Handles push notifications, badge counts, client navigation, and offline fallback cache
+
+const CACHE_NAME = 'qcet-eoffice-v1';
+const OFFLINE_FALLBACK_URL = '/';
+const PRECACHE_ASSETS = [
+  '/',
+  '/manifest.webmanifest',
+  '/logo-qcet.png',
+];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(self.skipWaiting());
+  const installTasks = [self.skipWaiting()];
+  if (typeof caches !== 'undefined') {
+    installTasks.push(
+      caches
+        .open(CACHE_NAME)
+        .then((cache) => cache.addAll(PRECACHE_ASSETS).catch(() => {}))
+    );
+  }
+  event.waitUntil(Promise.all(installTasks));
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  const activateTasks = [self.clients.claim()];
+  if (typeof caches !== 'undefined') {
+    activateTasks.push(
+      caches
+        .keys()
+        .then((cacheNames) =>
+          Promise.all(
+            cacheNames
+              .filter((name) => name !== CACHE_NAME)
+              .map((name) => caches.delete(name))
+          )
+        )
+    );
+  }
+  event.waitUntil(Promise.all(activateTasks));
+});
+
+self.addEventListener('fetch', (event) => {
+  // Only handle GET requests, bypass API calls and non-http schemes
+  if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/api/')) return;
+
+  if (typeof caches === 'undefined') {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (
+          networkResponse.status === 200 &&
+          event.request.url.startsWith(self.location.origin)
+        ) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone).catch(() => {});
+          });
+        }
+        return networkResponse;
+      })
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        if (event.request.mode === 'navigate') {
+          const fallback = await caches.match(OFFLINE_FALLBACK_URL);
+          if (fallback) return fallback;
+        }
+        return new Response('He thong dang ngoai tuyen. Vui long kiem tra lai ket noi mang.', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+      })
+  );
 });
 
 self.addEventListener('push', (event) => {

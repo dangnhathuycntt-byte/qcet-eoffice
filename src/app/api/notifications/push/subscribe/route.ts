@@ -1,9 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSessionFromRequest } from '@/lib/jwt-session';
+import { getVapidPublicKey } from '@/lib/push-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+export async function GET(_request: NextRequest) {
+  try {
+    const publicKey = getVapidPublicKey();
+    return NextResponse.json({
+      success: true,
+      publicKey,
+    });
+  } catch (error) {
+    console.error('Failed to get VAPID public key:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal Server Error' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +40,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { endpoint, p256dh, auth, deviceType, userAgent } = body;
+    const endpoint = body.endpoint;
+    const p256dh = body.p256dh || body.keys?.p256dh;
+    const auth = body.auth || body.keys?.auth;
+    const deviceType = body.deviceType || body.platform || null;
+    const userAgent = body.userAgent || request.headers.get('user-agent') || null;
 
     if (!endpoint || !p256dh || !auth) {
       return NextResponse.json(
