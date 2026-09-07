@@ -48,4 +48,40 @@ describe("Single Header Rule for Executive Role", () => {
       "{!isExecutive && ...} guard must appear before <ExecutiveCockpitWorkspace"
     );
   });
+
+  it("xác nhận page.tsx đã loại bỏ hoàn toàn nút legacy 'Chế độ xem toàn trường (Nâng cao)'", () => {
+    const pagePath = path.resolve(process.cwd(), "src/app/page.tsx");
+    const pageContent = fs.readFileSync(pagePath, "utf-8");
+
+    assert.ok(
+      !pageContent.includes("Chế độ xem toàn trường (Nâng cao)"),
+      "page.tsx không được chứa nút toggle 'Chế độ xem toàn trường (Nâng cao)'"
+    );
+  });
+
+  it("xác nhận page.tsx đồng bộ scope URL với các workspace điều hành", () => {
+    const pagePath = path.resolve(process.cwd(), "src/app/page.tsx");
+    const pageContent = fs.readFileSync(pagePath, "utf-8");
+
+    assert.ok(
+      pageContent.includes("isSchoolView"),
+      "page.tsx phải định nghĩa biến cờ isSchoolView để đồng bộ phạm vi toàn trường"
+    );
+    assert.ok(
+      pageContent.includes("isUnitView"),
+      "page.tsx phải định nghĩa biến cờ isUnitView để đồng bộ phạm vi đơn vị"
+    );
+    assert.ok(
+      pageContent.includes("<ExecutiveCockpitWorkspace"),
+      "page.tsx phải render ExecutiveCockpitWorkspace cho phạm vi toàn trường"
+    );
+    assert.ok(
+      pageContent.includes("<DepartmentManagerWorkspace"),
+      "page.tsx phải render DepartmentManagerWorkspace cho phạm vi đơn vị"
+    );
+    assert.ok(
+      pageContent.includes("<LecturerFocusWorkspace"),
+      "page.tsx phải render LecturerFocusWorkspace cho phạm vi cá nhân"
+    );
+  });
 });

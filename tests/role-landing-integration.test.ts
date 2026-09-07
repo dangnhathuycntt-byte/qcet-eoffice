@@ -149,11 +149,14 @@ describe("Role-Adaptive Landing & Integration (Task 3)", () => {
       );
     });
 
-    test("src/app/page.tsx provides secondary toggle button 'Chế độ xem toàn trường (Nâng cao)'", () => {
+    test("src/app/page.tsx deprecates legacy school toggle and synchronizes scope with Topbar ScopeSwitcher", () => {
       assert.ok(
-        pageContent.includes("Chế độ xem toàn trường (Nâng cao)") ||
-        pageContent.includes("Chế độ xem mở rộng toàn trường"),
-        "page.tsx must provide toggle button for expanded school view"
+        !pageContent.includes("Chế độ xem toàn trường (Nâng cao)"),
+        "page.tsx must eradicate legacy button 'Chế độ xem toàn trường (Nâng cao)'"
+      );
+      assert.ok(
+        pageContent.includes("scopeQuery") || pageContent.includes("parseScopeParam"),
+        "page.tsx must synchronize operational scope via URL params and ScopeSwitcher"
       );
     });
 

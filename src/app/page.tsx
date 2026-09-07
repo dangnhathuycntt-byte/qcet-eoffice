@@ -129,7 +129,6 @@ import {
   CheckSquare,
   Calendar as CalendarIcon,
   Network,
-  LayoutGrid,
   FileCheck,
   SlidersHorizontal,
   Table,
@@ -142,6 +141,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
+import type { AuthUser } from "@/types/auth";
 import { StaffFocusView } from "@/components/dashboard/roles/staff-focus-view";
 import {
   LecturerFocusWorkspace,
@@ -177,6 +177,10 @@ import {
   filterTasksHub,
   computeMonthlyTaskCounts,
 } from "@/lib/unified-task-hub";
+import {
+  formatDepartmentLabel,
+  resolveDepartment,
+} from "@/components/layout/scope-switcher";
 import {
   getAcademicMonthInfo,
   getAcademicMonthsForYear,
@@ -532,6 +536,31 @@ function UnifiedTaskHubContent() {
     roleStr === "GIANG_VIEN" ||
     roleStr === "CHUYEN_VIEN" ||
     (!isExecutive && !isManager);
+
+  // Scope resolution: whether school, unit, or personal scope is active
+  const isSchoolView =
+    scope === "SCHOOL_TASKS" ||
+    (isExecutive && (!scopeQuery || scopeQuery === "school"));
+  const isUnitView =
+    !isSchoolView && (scope === "UNIT_TASKS" || (isManager && !scopeQuery));
+
+  const effectiveManagerUser: AuthUser = React.useMemo(() => {
+    if (
+      selectedDepartment &&
+      selectedDepartment !== "ALL" &&
+      selectedDepartment !== user.departmentCode
+    ) {
+      const resolvedDept = resolveDepartment(selectedDepartment);
+      return {
+        ...user,
+        departmentCode: selectedDepartment,
+        department: resolvedDept
+          ? formatDepartmentLabel(resolvedDept)
+          : (user.department || selectedDepartment),
+      };
+    }
+    return user;
+  }, [user, selectedDepartment]);
 
   const executiveStats = React.useMemo(
     () => (isExecutive && activeZone === "dashboard" ? computeExecutiveActionStats(dashboardData.tasks) : null),
@@ -1027,12 +1056,12 @@ function UnifiedTaskHubContent() {
           {!isStaffExpanded ? (
             <div className="space-y-4" data-slot="role-workspace-landing">
               {/* Context Banner & Action Bar (Only render for non-executive roles; ExecutiveCockpitWorkspace provides its own unified single header) */}
-              {!isExecutive && (
+              {!isExecutive && !isSchoolView && (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border border-border rounded-2xl p-4 shadow-xs">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
-                        {isManager
+                        {isUnitView
                           ? "Trung tâm điều hành Đơn vị"
                           : "Không gian làm việc cá nhân"}
                       </span>
@@ -1041,28 +1070,18 @@ function UnifiedTaskHubContent() {
                       </span>
                     </div>
                     <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
-                      {isManager
-                        ? `Trung tâm Điều hành: ${user?.department || "Khoa / Phòng"}`
+                      {isUnitView
+                        ? `Trung tâm Điều hành: ${effectiveManagerUser.department || user?.department || "Khoa / Phòng"}`
                         : "Công việc Của tôi (My Focus)"}
                     </h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {isManager
+                      {isUnitView
                         ? "Phân công nhiệm vụ, kiểm tra tiến độ và thẩm định minh chứng cấp khoa/phòng"
                         : "Tập trung xử lý nhiệm vụ được phân công, theo dõi hạn chót và nộp minh chứng"}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleToggleStaffExpanded}
-                      className="gap-1.5 text-xs rounded-xl hover:bg-muted/80"
-                      title="Chuyển sang chế độ xem toàn trường để tra cứu bảng việc chi tiết"
-                    >
-                      <LayoutGrid size={14} strokeWidth={1.5} />
-                      <span>Chế độ xem toàn trường (Nâng cao)</span>
-                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -1082,7 +1101,7 @@ function UnifiedTaskHubContent() {
               )}
 
               {/* Role-Based Dispatching: Executive, Manager, or Staff Workspace */}
-              {isExecutive ? (
+              {isSchoolView ? (
                 <ExecutiveCockpitWorkspace
                   user={user}
                   tasks={dashboardData.tasks}
@@ -1094,9 +1113,9 @@ function UnifiedTaskHubContent() {
                     // Executive reminder dispatched
                   }}
                 />
-              ) : isManager ? (
+              ) : isUnitView ? (
                 <DepartmentManagerWorkspace
-                  user={user}
+                  user={effectiveManagerUser}
                   tasks={dashboardData.tasks}
                   onSelectTask={(task) => setSelectedTask(task)}
                   onReview={handleReviewAction}
