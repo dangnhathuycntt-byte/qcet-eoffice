@@ -51,7 +51,7 @@ export function DensityToggle({
             variant={variant}
             onClick={toggleDensity}
             className={cn(
-              "h-9 px-2.5 gap-2 border-border/80 text-xs font-medium cursor-pointer transition-colors relative",
+              "h-9.5 px-3 min-w-[38px] gap-2 border-border/80 text-xs font-medium cursor-pointer transition-colors relative",
               isCompact && "bg-secondary/80 text-foreground",
               className
             )}
