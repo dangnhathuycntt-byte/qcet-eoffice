@@ -402,6 +402,7 @@ export const SIDEBAR_ZONE_ITEMS: NavigationItem[] = [
   { href: "/", label: "Bàn làm việc", icon: LayoutDashboard, zone: "dashboard" },
   { href: "/tasks", label: "Kho nhiệm vụ", icon: CheckSquare, zone: "tasks" },
   { href: "/calendar", label: "Lịch công tác", icon: Calendar, zone: "calendar" },
+  { href: "/documents", label: "Sổ văn bản đến/đi", icon: FileText, zone: "documents" },
   { href: "/org", label: "Sơ đồ tổ chức & Nhân sự", icon: Network, zone: "org" },
   { href: "/notifications", label: "Thông báo & Nhắc việc", icon: Bell, badge: "5", badgeVariant: "danger" },
 ];
@@ -455,6 +456,7 @@ export function resolveBreadcrumb(
   if (zone === "dashboard") return ["QCET E-Office", "Dashboard Điều hành & KPI"];
   if (zone === "calendar" || view === "calendar" || view === "month") return ["QCET E-Office", "Lịch công tác"];
   if (zone === "tasks" || scope === "school" || scope === "unit") return ["QCET E-Office", "Quản lý công việc"];
+  if (zone === "documents") return ["QCET E-Office", "Văn bản & Công văn"];
   if (zone === "org") return ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"];
 
   if (path === "/") {

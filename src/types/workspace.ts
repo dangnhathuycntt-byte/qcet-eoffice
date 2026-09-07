@@ -5,6 +5,7 @@ import {
   CheckSquare,
   Calendar,
   Network,
+  FileText,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus } from "./dashboard";
 import type { UserRole } from "./auth";
@@ -49,7 +50,7 @@ export interface DepartmentHealthSummary {
   healthStatus: "GREEN" | "YELLOW" | "RED";
 }
 
-export type WorkspaceZone = "portal" | "dashboard" | "tasks" | "calendar" | "org";
+export type WorkspaceZone = "portal" | "dashboard" | "tasks" | "calendar" | "org" | "documents";
 
 export interface ZoneConfig {
   id: WorkspaceZone;
@@ -57,7 +58,7 @@ export interface ZoneConfig {
   shortLabel: string;
   description: string;
   icon: LucideIcon;
-  badgeKey?: "urgentTasks" | "totalTasks" | "upcomingDeadlines" | "unitsCount";
+  badgeKey?: "urgentTasks" | "totalTasks" | "upcomingDeadlines" | "unitsCount" | "docsCount";
 }
 
 export const WORKSPACE_ZONES: ZoneConfig[] = [
@@ -93,6 +94,13 @@ export const WORKSPACE_ZONES: ZoneConfig[] = [
     badgeKey: "upcomingDeadlines",
   },
   {
+    id: "documents",
+    label: "Văn bản & Công văn",
+    shortLabel: "Văn bản",
+    description: "Sổ văn bản đến/đi, tờ trình & ký số Nghị định 30",
+    icon: FileText,
+  },
+  {
     id: "org",
     label: "Cơ cấu Tổ chức",
     shortLabel: "Tổ chức",
@@ -116,6 +124,14 @@ export function parseZoneParam(param: string | null | undefined): WorkspaceZone 
     return "tasks";
   }
   if (normalized === "calendar" || normalized === "lich") return "calendar";
+  if (
+    normalized === "documents" ||
+    normalized === "van-ban" ||
+    normalized === "cong-van" ||
+    normalized === "docs"
+  ) {
+    return "documents";
+  }
   if (
     normalized === "org" ||
     normalized === "directory" ||

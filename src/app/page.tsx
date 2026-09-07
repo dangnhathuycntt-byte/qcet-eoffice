@@ -4,11 +4,13 @@ import * as React from "react";
 import {
   DashboardStateProvider,
   useDashboardNav,
+  useDashboardData,
 } from "@/components/dashboard/dashboard-context";
 import { DashboardZone } from "@/components/dashboard/zones/dashboard-zone";
 import { TasksZone } from "@/components/dashboard/zones/tasks-zone";
 import { CalendarZone } from "@/components/dashboard/zones/calendar-zone";
 import { OrgZone } from "@/components/dashboard/zones/org-zone";
+import { DocumentsZone } from "@/components/dashboard/zones/documents-zone";
 import { DashboardModalsHost } from "@/components/dashboard/dashboard-modals-host";
 import type { DelegationRule } from "@/types/delegation";
 import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
@@ -29,7 +31,15 @@ function PortalHubView() {
 }
 
 function UnifiedTaskHubContent() {
-  const { activeZone } = useDashboardNav();
+  const { activeZone, scope, handleScopeChange } = useDashboardNav();
+  const { isExecutive, isManager } = useDashboardData();
+
+  // Security access control guard: double-check scope access
+  React.useEffect(() => {
+    if (scope === "SCHOOL_TASKS" && !isExecutive) {
+      handleScopeChange(isManager ? "UNIT_TASKS" : "MY_TASKS");
+    }
+  }, [scope, isExecutive, isManager, handleScopeChange]);
 
   return (
     <div
@@ -43,6 +53,7 @@ function UnifiedTaskHubContent() {
       {activeZone === "tasks" && <TasksZone />}
       {activeZone === "calendar" && <CalendarZone />}
       {activeZone === "org" && <OrgZone />}
+      {activeZone === "documents" && <DocumentsZone />}
 
       <DashboardModalsHost />
 
