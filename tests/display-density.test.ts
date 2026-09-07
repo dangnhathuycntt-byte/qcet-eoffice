@@ -1,5 +1,6 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
+import { DENSITY_CONFIG } from "../src/components/ui/density-toggle";
 
 describe("Display Density State Management Contract", () => {
   const STORAGE_KEY = "qcet-display-density";
@@ -23,5 +24,14 @@ describe("Display Density State Management Contract", () => {
     assert.strictEqual(density, "compact");
     density = toggle(density);
     assert.strictEqual(density, "comfortable");
+  });
+
+  test("Density labels and icons mapping", () => {
+    assert.strictEqual(DENSITY_CONFIG.comfortable.label, "Thoải mái (48px)");
+    assert.strictEqual(DENSITY_CONFIG.compact.label, "Thu gọn (38px)");
+    assert.strictEqual(DENSITY_CONFIG.comfortable.next, "compact");
+    assert.strictEqual(DENSITY_CONFIG.compact.next, "comfortable");
+    assert.ok(DENSITY_CONFIG.comfortable.tooltip.includes("48px"));
+    assert.ok(DENSITY_CONFIG.compact.tooltip.includes("38px"));
   });
 });
