@@ -669,10 +669,13 @@ export function filterStrategicTasks(
 // 3. Main Component: ExecutiveCockpitWorkspace
 // ============================================================================
 
+const EMPTY_TASKS: SchoolTask[] = [];
+const EMPTY_STAFF_TASKS: StaffTask[] = [];
+
 export function ExecutiveCockpitWorkspace({
   user,
-  tasks = [],
-  staffTasks = [],
+  tasks = EMPTY_TASKS,
+  staffTasks = EMPTY_STAFF_TASKS,
   onSelectTask,
   onReview,
   onSubmitDeliverable,
