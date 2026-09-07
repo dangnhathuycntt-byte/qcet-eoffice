@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     if (!isBghOrAdmin) {
       return NextResponse.json(
-        { success: false, error: 'Forbidden: Chỉ Ban Giám Hiệu hoặc Quản trị viên mới có quyền ban hành lệnh đi��u hành' },
+        { success: false, error: 'Forbidden: Chỉ Ban Giám Hiệu hoặc Quản trị viên mới có quyền ban hành lệnh điều hành' },
         { status: 403 }
       );
     }
