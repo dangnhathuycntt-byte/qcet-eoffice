@@ -49,6 +49,7 @@ export function DensityToggle({
           <Button
             type="button"
             variant={variant}
+            data-density-toggle="true"
             onClick={toggleDensity}
             className={cn(
               "h-9.5 px-3 min-w-[38px] gap-2 border-border/80 text-xs font-medium cursor-pointer transition-colors relative",

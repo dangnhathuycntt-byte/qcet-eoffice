@@ -44,6 +44,7 @@ import { ActivityFeedWidget } from "@/components/dashboard/activity-feed-widget"
 import { BentoPortalHub } from "@/components/portal/bento-portal-hub";
 import { WorkspaceZone, parseZoneParam } from "@/types/workspace";
 import { useSidebar } from "@/components/layout/sidebar-context";
+import { DensityToggle } from "@/components/ui/density-toggle";
 
 // Dynamic Code-Splitting for Heavy Sub-views & Modals
 const TaskKanbanBoard = dynamic(
@@ -1301,6 +1302,9 @@ function UnifiedTaskHubContent() {
                         <SlidersHorizontal size={13} strokeWidth={1.5} />
                         <span className="hidden md:inline">Thanh công cụ đầy đủ</span>
                       </button>
+
+                      {/* Density Toggle */}
+                      <DensityToggle className="h-7.5 rounded-xl border-border/70 shadow-2xs" />
                     </div>
                   </div>
 

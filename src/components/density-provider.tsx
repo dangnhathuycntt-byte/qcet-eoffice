@@ -74,6 +74,30 @@ export function DisplayDensityProvider({ children }: { children: React.ReactNode
     });
   }, []);
 
+  // Global keyboard shortcut: Shift + D to toggle density
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.shiftKey && (e.key === "D" || e.key === "d") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        toggleDensity();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleDensity]);
+
   return (
     <DisplayDensityContext.Provider value={{ density, setDensity, toggleDensity }}>
       {children}
