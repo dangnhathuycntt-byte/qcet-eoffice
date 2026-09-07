@@ -279,7 +279,7 @@ export function ExecutiveStatStrip({
                     <IconComponent className="size-4 shrink-0" strokeWidth={1.5} />
                   )}
                 </div>
-                <span className="text-xs font-medium text-muted-foreground tracking-tight truncate">
+                <span className="text-xs sm:text-sm font-semibold text-foreground/90 tracking-tight truncate">
                   {card.title}
                 </span>
               </div>
@@ -287,7 +287,7 @@ export function ExecutiveStatStrip({
               {card.badge && (
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium font-mono shrink-0",
+                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono shrink-0",
                     isOverdueAlert
                       ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
                       : (stats?.needsReviewTasksCount ?? 0) > 0
@@ -303,7 +303,7 @@ export function ExecutiveStatStrip({
 
             {/* Metric Value */}
             <div className="my-2.5 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground font-mono tabular-nums">
+              <span className="font-mono tabular-nums text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
                 {card.value}
               </span>
             </div>
@@ -320,7 +320,7 @@ export function ExecutiveStatStrip({
                       }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between text-xs sm:text-[13px] font-medium text-muted-foreground">
                     <span className="truncate">{card.subtext}</span>
                     <span className="font-mono font-semibold text-foreground tabular-nums ml-1 shrink-0">
                       {card.progress}%
@@ -328,7 +328,7 @@ export function ExecutiveStatStrip({
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5 leading-snug">
+                <p className="text-xs sm:text-[13px] font-medium text-muted-foreground flex items-center gap-1.5 leading-snug">
                   <span className={cn("size-1.5 rounded-full shrink-0", dotColor)} />
                   <span className="truncate">{card.subtext}</span>
                 </p>
