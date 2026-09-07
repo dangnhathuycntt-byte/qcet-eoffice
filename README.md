@@ -169,6 +169,11 @@ Mở PowerShell với quyền Administrator và chạy lệnh:
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\register-windows-tasks.ps1 -AppDir "C:\QCET\QCET Work"
 ```
+Kiểm tra trạng thái các tác vụ đã đăng ký trong Task Scheduler:
+```powershell
+Get-ScheduledTask -TaskName "QCET_EOffice_*" | Format-Table TaskName, State
+```
+
 Lệnh trên sẽ tự động khởi tạo 2 tác vụ:
 1. `QCET_EOffice_AutoBoot`: Chạy ngầm khi máy chủ khởi động lại (độ trễ 1 phút) để tự động gọi `docker compose up -d`, bảo đảm hệ thống online sau sự cố điện mà không cần đăng nhập thủ công.
 2. `QCET_EOffice_DailyBackup`: Định kỳ chạy lúc 01:00 AM mỗi ngày, tự động sao lưu CSDL PostgreSQL dưới dạng nhị phân (`pg_dump -F c`), nén thư mục tài liệu `uploads` thành tệp `.zip`, ghi nhật ký và tự động xóa các bản sao lưu cũ quá 30 ngày.
