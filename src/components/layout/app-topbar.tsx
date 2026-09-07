@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
+import { ScopeSwitcher } from "@/components/layout/scope-switcher";
 import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth-context";
 import { UserRole } from "@/types/auth";
@@ -59,7 +61,7 @@ function TopbarBreadcrumbs({ pathname }: { pathname: string }) {
         size={12}
         className="text-muted-foreground/50 hidden sm:inline mx-1 shrink-0"
       />
-      <span className="text-xs font-semibold text-foreground truncate max-w-[180px] sm:max-w-none">
+      <span className="text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-none">
         {pageTitle}
       </span>
     </div>
@@ -78,7 +80,7 @@ function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
         size={12}
         className="text-muted-foreground/50 hidden sm:inline mx-1 shrink-0"
       />
-      <span className="text-xs font-semibold text-foreground truncate max-w-[180px] sm:max-w-none">
+      <span className="text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-none">
         {pageTitle}
       </span>
     </div>
@@ -184,13 +186,13 @@ export function AppTopbar() {
       className="sticky top-0 z-30 w-full h-[52px] border-b border-border/50 bg-background/80 backdrop-blur-md transition-colors"
     >
       <div className="h-full w-full px-3.5 sm:px-6 flex items-center justify-between gap-3">
-        {/* Left Zone: Mobile Menu, Desktop Collapse Toggle, Dynamic Breadcrumbs */}
-        <div className="flex items-center min-w-0">
+        {/* Left Zone: Mobile Menu, Desktop Collapse Toggle, Dynamic Breadcrumbs & Scope Switcher */}
+        <div className="flex items-center min-w-0 gap-2 sm:gap-3">
           {/* Mobile Menu Trigger (< 768px) */}
           <Button
             variant="ghost"
             size="icon-sm"
-            className="md:hidden size-8 mr-1.5"
+            className="md:hidden size-8 mr-1 shrink-0"
             onClick={toggleMobile}
             aria-label="Mở menu điều hướng"
           >
@@ -201,7 +203,7 @@ export function AppTopbar() {
           <Button
             variant="ghost"
             size="icon-sm"
-            className="hidden md:inline-flex size-8 mr-2 text-muted-foreground hover:text-foreground"
+            className="hidden md:inline-flex size-8 mr-1 shrink-0 text-muted-foreground hover:text-foreground"
             onClick={toggleCollapse}
             title="Thu gọn / Mở rộng thanh bên (phím [ hoặc Ctrl+B)"
             aria-label="Thu gọn / Mở rộng thanh bên"
@@ -210,9 +212,17 @@ export function AppTopbar() {
           </Button>
 
           {/* Dynamic Breadcrumbs */}
-          <React.Suspense fallback={<TopbarBreadcrumbsFallback pathname={pathname} />}>
+          <Suspense fallback={<TopbarBreadcrumbsFallback pathname={pathname} />}>
             <TopbarBreadcrumbs pathname={pathname} />
-          </React.Suspense>
+          </Suspense>
+
+          {/* Breadcrumb - Scope Separator */}
+          <div className="h-4 w-px bg-border/60 shrink-0 hidden sm:block" />
+
+          {/* Scope Switcher Dropdown */}
+          <Suspense fallback={<div className="h-8 w-44 rounded-lg bg-muted/40 animate-pulse" />}>
+            <ScopeSwitcher />
+          </Suspense>
         </div>
 
         {/* Center Zone: Global Command / Quick Search */}
