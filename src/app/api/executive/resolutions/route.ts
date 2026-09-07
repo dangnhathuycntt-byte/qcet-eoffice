@@ -1,7 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import prisma from '@/lib/prisma';
 import { ResolutionType, TaskPriority, TaskStatus, UserRole } from '@prisma/client';
 import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload } from '@/lib/jwt-session';
+import { sendPushNotificationToUser, formatTaskPushPayload } from '@/lib/push-service';
+import { safeAfter, dispatchExecutiveDirectivePush } from '@/lib/push-dispatch';
 
 function getSessionPayload(request: NextRequest): SessionPayload | null {
   const authHeader = request.headers.get('authorization');
@@ -290,6 +292,30 @@ export async function POST(request: NextRequest) {
       });
 
       return { resolution, updatedTask };
+    });
+
+    // Background push notification dispatch via Next.js 15 after()
+    safeAfter(async () => {
+      const start = Date.now();
+      try {
+        await dispatchExecutiveDirectivePush({
+          taskId: task.id,
+          taskTitle: task.title,
+          resolutionType: mappedResolutionType,
+          directiveNote: directiveNote || null,
+          actorName: session.name || 'Ban Giám Hiệu',
+          actorId: session.id,
+          departmentId: result.updatedTask.departmentId || task.departmentId,
+          newOwnerId: newOwnerId || null,
+        });
+      } catch (error) {
+        console.error('[after() Executive Directive Push Error]', {
+          taskId: task.id,
+          resolutionId: result.resolution.id,
+          durationMs: Date.now() - start,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     });
 
     return NextResponse.json({

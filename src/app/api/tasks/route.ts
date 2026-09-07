@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { mapPrismaTaskToSchoolTask } from '@/lib/adapters/task-db-adapter';
 import { TaskScope, TaskStatus, TaskPriority, AssigneeRole } from '@prisma/client';
 import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload } from '@/lib/jwt-session';
+import { sendPushNotificationToUser, formatTaskPushPayload } from '@/lib/push-service';
+import { safeAfter, dispatchTaskAssignedPush } from '@/lib/push-dispatch';
 
 function getSessionPayload(request: NextRequest): SessionPayload | null {
   const authHeader = request.headers.get('authorization');
@@ -193,6 +195,25 @@ export async function POST(request: NextRequest) {
       }
 
       return task;
+    });
+
+    // Background push notification dispatch via Next.js 15 after()
+    safeAfter(async () => {
+      const start = Date.now();
+      try {
+        await dispatchTaskAssignedPush({
+          task: newTask,
+          assigneeId,
+          actorName: session.name,
+          actorId: session.id,
+        });
+      } catch (error) {
+        console.error('[after() Task Push Error]', {
+          taskId: newTask.id,
+          durationMs: Date.now() - start,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     });
 
     return NextResponse.json({ success: true, task: newTask, data: newTask }, { status: 201 });
