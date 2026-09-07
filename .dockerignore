@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+.claude
+dev.db
+dev.db-journal
+prisma/dev.db
+*.log
+*.dump
+*.zip
+coverage
+test_uploads_sandbox
+uploads
