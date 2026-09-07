@@ -66,6 +66,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <link rel="apple-touch-icon" href="/logo-qcet.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -78,6 +79,13 @@ export default function RootLayout({
                     document.documentElement.setAttribute('data-density', 'comfortable');
                   }
                 } catch (e) {}
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                      console.error('ServiceWorker registration failed:', err);
+                    });
+                  });
+                }
               })();
             `,
           }}
