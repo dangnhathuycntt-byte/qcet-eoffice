@@ -602,7 +602,7 @@ export function CascadingTaskTable({
                   className="h-9.5 w-full rounded-xl border border-border/70 bg-card pl-9 pr-14 text-xs text-foreground placeholder:text-muted-foreground/60 transition-all hover:border-border focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 shadow-2xs"
                 />
                 <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5">
-                  <kbd className="rounded border border-border/70 bg-muted/60 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                  <kbd className="rounded border border-border/70 bg-muted/60 px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                     ⌘K
                   </kbd>
                 </div>
