@@ -525,7 +525,7 @@ export function CascadingTaskTable({
               <span className="size-2 rounded-full bg-primary" />
               Tất cả nhiệm vụ
             </span>
-            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-primary font-bold border border-primary/20">
+            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-mono tabular-nums text-primary font-bold border border-primary/20">
               {workboxCounts.all}
             </span>
           </button>
@@ -544,7 +544,7 @@ export function CascadingTaskTable({
               <span className="size-2 rounded-full bg-emerald-500" />
               Việc tôi nhận
             </span>
-            <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/20">
+            <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/20">
               {workboxCounts.received}
             </span>
           </button>
@@ -563,7 +563,7 @@ export function CascadingTaskTable({
               <span className="size-2 rounded-full bg-blue-500" />
               Việc tôi giao
             </span>
-            <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-blue-700 dark:text-blue-400 font-bold border border-blue-500/20">
+            <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-blue-700 dark:text-blue-400 font-bold border border-blue-500/20">
               {workboxCounts.assigned}
             </span>
           </button>
@@ -583,7 +583,7 @@ export function CascadingTaskTable({
               Cần xử lý gấp & Quá hạn
             </span>
             {workboxCounts.urgent > 0 && (
-              <span className="rounded-md bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-mono tabular-nums text-rose-700 dark:text-rose-400 font-bold border border-rose-500/20">
+              <span className="rounded-md bg-rose-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-rose-700 dark:text-rose-400 font-bold border border-rose-500/20">
                 {workboxCounts.urgent}
               </span>
             )}
@@ -608,7 +608,7 @@ export function CascadingTaskTable({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="h-8.5 w-full rounded-xl border border-border/70 bg-card/80 backdrop-blur-xs pl-8.5 pr-12 text-xs text-foreground placeholder:text-muted-foreground shadow-2xs transition-all focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15"
                 />
-                <kbd className="pointer-events-none absolute right-2.5 top-1/2 inline-flex h-4.5 -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/80 bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                <kbd className="pointer-events-none absolute right-2.5 top-1/2 inline-flex h-5 -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/80 bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
                   ⌘K
                 </kbd>
               </div>
@@ -665,19 +665,19 @@ export function CascadingTaskTable({
       {/* Main Table Container */}
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left table-row-dense">
             {/* Table Header */}
             <thead>
-              <tr className="border-b border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground">
-                <th className="w-9 px-3.5 py-2.5 text-center">
+              <tr className="border-b border-border/50 bg-muted/40">
+                <th className="w-9 py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-center">
                   <span className="sr-only">Mở rộng</span>
                 </th>
-                <th className="w-24 px-3.5 py-2.5 font-semibold">Mã NV</th>
-                <th className="px-3.5 py-2.5 font-semibold">Nhiệm vụ cấp Trường</th>
-                <th className="px-3.5 py-2.5 font-semibold">Danh mục</th>
-                <th className="px-3.5 py-2.5 font-semibold">Chủ trì</th>
-                <th className="px-3.5 py-2.5 font-semibold">Hạn chót</th>
-                <th className="w-56 px-3.5 py-2.5 font-semibold text-right">Tiến độ &amp; Thao tác</th>
+                <th className="w-24 py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mã NV</th>
+                <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nhiệm vụ cấp Trường</th>
+                <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh mục</th>
+                <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chủ trì</th>
+                <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Hạn chót</th>
+                <th className="w-56 py-3 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">Tiến độ &amp; Thao tác</th>
               </tr>
             </thead>
 
@@ -788,7 +788,7 @@ export function CascadingTaskTable({
                         data-task-tier="1"
                       >
                         {/* Expand / Collapse Caret */}
-                        <td className="px-3.5 py-3.5 text-center align-middle">
+                        <td className="table-cell-dense px-4 text-center align-middle">
                           {hasSubtasks ? (
                             <button
                               type="button"
@@ -810,16 +810,16 @@ export function CascadingTaskTable({
                         </td>
 
                         {/* Task Code */}
-                        <td className="w-24 px-3.5 py-3.5 align-middle whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
+                        <td className="w-24 table-cell-dense px-4 align-middle whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground font-semibold">
                           {task.id.toUpperCase()}
                         </td>
 
                         {/* Task Title */}
-                        <td className="px-3.5 py-3.5 align-middle font-medium text-foreground">
+                        <td className="table-cell-dense px-4 align-middle text-sm font-medium text-foreground leading-snug">
                           <div className="flex items-center gap-2">
-                            <span className="line-clamp-1 font-semibold">{task.title}</span>
+                            <span className="line-clamp-1 font-medium">{task.title}</span>
                             {hasSubtasks && (
-                              <span className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-muted-foreground">
+                              <span className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs font-medium tabular-nums text-muted-foreground">
                                 {task.completedSubTasks}/{task.totalSubTasks}
                               </span>
                             )}
@@ -827,11 +827,11 @@ export function CascadingTaskTable({
                         </td>
 
                         {/* Category Badge */}
-                        <td className="px-3.5 py-3.5 align-middle whitespace-nowrap">
+                        <td className="table-cell-dense px-4 align-middle whitespace-nowrap">
                           <Badge
                             variant="outline"
                             className={cn(
-                              "h-5 px-2 text-[10px] font-medium leading-none",
+                              "h-5.5 px-2.5 text-xs font-medium leading-none",
                               catConfig.className
                             )}
                           >
@@ -840,20 +840,20 @@ export function CascadingTaskTable({
                         </td>
 
                         {/* Lead Assignee */}
-                        <td className="px-3.5 py-3.5 align-middle whitespace-nowrap">
+                        <td className="table-cell-dense px-4 align-middle whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             {task.leadAssigneeAvatar ? (
                               <img
                                 src={task.leadAssigneeAvatar}
                                 alt=""
                                 aria-hidden="true"
-                                width={22}
-                                height={22}
+                                width={24}
+                                height={24}
                                 loading="lazy"
-                                className="size-5.5 rounded-full object-cover shrink-0"
+                                className="size-6 rounded-full object-cover shrink-0"
                               />
                             ) : (
-                              <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground">
+                              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
                                 {getInitials(task.leadAssigneeName)}
                               </span>
                             )}
@@ -864,12 +864,12 @@ export function CascadingTaskTable({
                         </td>
 
                         {/* Due Date */}
-                        <td className="px-3.5 py-3.5 align-middle whitespace-nowrap text-muted-foreground font-mono tabular-nums text-xs">
+                        <td className="table-cell-dense px-4 align-middle whitespace-nowrap text-muted-foreground font-mono tabular-nums text-xs">
                           {formatDate(task.dueDate)}
                         </td>
 
                         {/* Progress Bar & Metric with Quick Actions */}
-                        <td className="px-3.5 py-3.5 align-middle text-right whitespace-nowrap">
+                        <td className="table-cell-dense px-4 align-middle text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-2">
                             {/* Micro-ghost Quick Actions revealed on row hover */}
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
@@ -880,7 +880,7 @@ export function CascadingTaskTable({
                                     e.stopPropagation();
                                     onStatusChange(task.id, "COMPLETED");
                                   }}
-                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 text-[10.5px] font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                   title="Duyệt nhanh hoàn thành nhiệm vụ"
                                 >
                                   <Check className="size-3" strokeWidth={1.5} />
@@ -894,7 +894,7 @@ export function CascadingTaskTable({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                   }}
-                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 text-[10.5px] font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                   title="Đôn đốc tiến độ thực hiện"
                                 >
                                   <Bell className="size-3" strokeWidth={1.5} />
@@ -909,7 +909,7 @@ export function CascadingTaskTable({
                                     e.stopPropagation();
                                     onAddTask();
                                   }}
-                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-border/60 bg-secondary/60 px-2 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:text-foreground cursor-pointer active:scale-[0.98] transition-colors"
+                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-border/60 bg-secondary/60 px-2 text-xs font-medium text-foreground hover:bg-secondary hover:text-foreground cursor-pointer active:scale-[0.98] transition-colors"
                                   title="Phân công thêm việc con"
                                 >
                                   <UserCheck className="size-3" strokeWidth={1.5} />
@@ -943,7 +943,7 @@ export function CascadingTaskTable({
                                 />
                               )}
                             </div>
-                            <span className="font-mono text-[11px] font-bold tabular-nums text-foreground">
+                            <span className="font-mono text-xs font-bold tabular-nums text-foreground">
                               {task.progressPercent}%
                             </span>
 
@@ -960,7 +960,7 @@ export function CascadingTaskTable({
                               }}
                               title={onStatusChange ? "Click để chuyển đổi trạng thái" : undefined}
                               className={cn(
-                                "h-5 px-2 text-[10px] font-semibold leading-none shrink-0",
+                                "h-5.5 px-2.5 text-xs font-semibold leading-none shrink-0",
                                 task.status === "COMPLETED"
                                   ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
                                   : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
@@ -1025,7 +1025,7 @@ export function CascadingTaskTable({
                                               : undefined
                                           }
                                           className={cn(
-                                            "h-5 px-2 text-[10px] font-semibold leading-none shrink-0",
+                                            "h-5.5 px-2 text-xs font-semibold leading-none shrink-0",
                                             onStatusChange &&
                                               "cursor-pointer transition-transform hover:scale-105 active:scale-95",
                                             statusConfig.className
@@ -1033,7 +1033,7 @@ export function CascadingTaskTable({
                                         >
                                           {statusConfig.label}
                                         </Badge>
-                                        <span className="font-mono text-[10.5px] text-muted-foreground/70 tabular-nums shrink-0">
+                                        <span className="font-mono text-xs text-muted-foreground/70 tabular-nums shrink-0">
                                           {subTask.id.toUpperCase()}
                                         </span>
                                         <span className="truncate text-foreground/90 font-medium">
@@ -1050,7 +1050,7 @@ export function CascadingTaskTable({
                                                   e.stopPropagation();
                                                   onStatusChange(subTask.id, "IN_PROGRESS");
                                                 }}
-                                                className="inline-flex items-center gap-1 h-5 px-1.5 rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 text-[10px] font-medium border border-blue-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                                className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 text-xs font-medium border border-blue-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                                 title="Tiếp nhận việc này"
                                               >
                                                 <ArrowRight className="size-3" strokeWidth={1.5} />
@@ -1064,7 +1064,7 @@ export function CascadingTaskTable({
                                                   e.stopPropagation();
                                                   onStatusChange(subTask.id, "COMPLETED");
                                                 }}
-                                                className="inline-flex items-center gap-1 h-5 px-1.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-medium border border-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                                className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 text-xs font-medium border border-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                                 title="Báo cáo hoàn thành"
                                               >
                                                 <Check className="size-3" strokeWidth={1.5} />
@@ -1078,7 +1078,7 @@ export function CascadingTaskTable({
                                                   e.stopPropagation();
                                                   onStatusChange(subTask.id, "IN_PROGRESS");
                                                 }}
-                                                className="inline-flex items-center gap-1 h-5 px-1.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 text-[10px] font-medium border border-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                                className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 text-xs font-medium border border-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                                 title="Tiếp nhận sửa lại"
                                               >
                                                 <RotateCcw className="size-3" strokeWidth={1.5} />
@@ -1097,21 +1097,21 @@ export function CascadingTaskTable({
                                               src={subTask.assigneeAvatar}
                                               alt=""
                                               aria-hidden="true"
-                                              width={18}
-                                              height={18}
+                                              width={20}
+                                              height={20}
                                               loading="lazy"
-                                              className="size-4.5 rounded-full object-cover shrink-0"
+                                              className="size-5 rounded-full object-cover shrink-0"
                                             />
                                           ) : (
-                                            <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary text-[9px] font-semibold text-secondary-foreground">
+                                            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
                                               {getInitials(subTask.assigneeName)}
                                             </span>
                                           )}
-                                          <span className="text-[11px] font-medium text-muted-foreground">
+                                          <span className="text-xs font-medium text-muted-foreground">
                                             {subTask.assigneeName}
                                           </span>
                                         </div>
-                                        <span className="text-[11px] text-muted-foreground/80 tabular-nums font-mono">
+                                        <span className="text-xs text-muted-foreground/80 tabular-nums font-mono">
                                           {formatDate(subTask.dueDate)}
                                         </span>
                                       </div>

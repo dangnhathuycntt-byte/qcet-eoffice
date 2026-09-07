@@ -16,6 +16,7 @@ import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import { type AuthUser, matchesUser, filterTasksByRole } from "@/lib/role-task-filter";
 import { filterTasksForTable } from "@/components/dashboard/cascading-task-table";
 import { getAcademicMonthsForYear, type AcademicMonthPeriod } from "@/lib/academic-calendar";
+import { DensityToggle } from "@/components/ui/density-toggle";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -271,7 +272,7 @@ export function UnifiedTaskToolbar({
           )}
 
           {typeof totalTasksCount === "number" && (
-            <span className="hidden sm:inline-flex items-center text-[11px] text-muted-foreground tabular-nums px-1.5 py-0.5 rounded-md bg-muted/60">
+            <span className="hidden sm:inline-flex items-center text-xs font-semibold text-muted-foreground tabular-nums px-1.5 py-0.5 rounded-md bg-muted/60">
               {totalTasksCount} công việc
             </span>
           )}
@@ -354,7 +355,7 @@ export function UnifiedTaskToolbar({
             {allYearCount !== undefined && (
               <span
                 className={cn(
-                  "inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-[10px] tabular-nums font-semibold",
+                  "inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-xs tabular-nums font-semibold",
                   activeAcademicMonth === "ALL"
                     ? "bg-primary/10 text-primary"
                     : "bg-muted text-muted-foreground"
@@ -388,7 +389,7 @@ export function UnifiedTaskToolbar({
                 <span>{period.label}</span>
                 <span
                   className={cn(
-                    "hidden 2xl:inline text-[10px] font-normal transition-opacity",
+                    "hidden 2xl:inline text-xs font-normal transition-opacity",
                     isSelected ? "text-muted-foreground" : "text-muted-foreground/60"
                   )}
                 >
@@ -397,7 +398,7 @@ export function UnifiedTaskToolbar({
                 {typeof count === "number" && (
                   <span
                     className={cn(
-                      "inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-[10px] tabular-nums font-semibold",
+                      "inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-xs tabular-nums font-semibold",
                       isSelected
                         ? "bg-primary/10 text-primary"
                         : count > 0
@@ -414,7 +415,7 @@ export function UnifiedTaskToolbar({
         </div>
       </div>
 
-      {/* Bottom Row: Search Input + Category Filter + Priority Filter */}
+      {/* Bottom Row: Search Input + Category Filter + Priority Filter + Density Toggle */}
       <div className="flex flex-col gap-2 pt-2 border-t border-border/50 sm:flex-row sm:items-center">
         {/* Search Input Bar */}
         <div className="relative flex-1 min-w-[200px]">
@@ -475,6 +476,9 @@ export function UnifiedTaskToolbar({
               ))}
             </select>
           </div>
+
+          {/* Density Toggle */}
+          <DensityToggle className="h-8.5 rounded-xl border-border/70 shadow-2xs" />
         </div>
       </div>
     </div>
