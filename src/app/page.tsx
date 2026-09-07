@@ -1026,64 +1026,60 @@ function UnifiedTaskHubContent() {
           {/* Role-Based Workspace Landing (Dispatches to Executive, Manager, or Staff Focus Workspace) */}
           {!isStaffExpanded ? (
             <div className="space-y-4" data-slot="role-workspace-landing">
-              {/* Context Banner & Action Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border border-border rounded-2xl p-4 shadow-xs">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
-                      {isExecutive
-                        ? "Khoang điều hành BGH"
-                        : isManager
-                        ? "Trung tâm điều hành Đơn vị"
-                        : "Không gian làm việc cá nhân"}
-                    </span>
-                    <span className="text-xs text-muted-foreground font-mono tabular-nums">
-                      Năm học 2026 - 2027
-                    </span>
+              {/* Context Banner & Action Bar (Only render for non-executive roles; ExecutiveCockpitWorkspace provides its own unified single header) */}
+              {!isExecutive && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border border-border rounded-2xl p-4 shadow-xs">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
+                        {isManager
+                          ? "Trung tâm điều hành Đơn vị"
+                          : "Không gian làm việc cá nhân"}
+                      </span>
+                      <span className="text-xs text-muted-foreground font-mono tabular-nums">
+                        Năm học 2026 - 2027
+                      </span>
+                    </div>
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
+                      {isManager
+                        ? `Trung tâm Điều hành: ${user?.department || "Khoa / Phòng"}`
+                        : "Công việc Của tôi (My Focus)"}
+                    </h1>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {isManager
+                        ? "Phân công nhiệm vụ, kiểm tra tiến độ và thẩm định minh chứng cấp khoa/phòng"
+                        : "Tập trung xử lý nhiệm vụ được phân công, theo dõi hạn chót và nộp minh chứng"}
+                    </p>
                   </div>
-                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
-                    {isExecutive
-                      ? "Khoang Điều Hành Ban Giám Hiệu (Executive Cockpit)"
-                      : isManager
-                      ? `Trung tâm Điều hành: ${user?.department || "Khoa / Phòng"}`
-                      : "Công việc Của tôi (My Focus)"}
-                  </h1>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {isExecutive
-                      ? "Giám sát 11 đơn vị, giải quyết điểm nghẽn và phê duyệt tờ trình chiến lược"
-                      : isManager
-                      ? "Phân công nhiệm vụ, kiểm tra tiến độ và thẩm định minh chứng cấp khoa/phòng"
-                      : "Tập trung xử lý nhiệm vụ được phân công, theo dõi hạn chót và nộp minh chứng"}
-                  </p>
-                </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleToggleStaffExpanded}
-                    className="gap-1.5 text-xs rounded-xl hover:bg-muted/80"
-                    title="Chuyển sang chế độ xem toàn trường để tra cứu bảng việc chi tiết"
-                  >
-                    <LayoutGrid size={14} strokeWidth={1.5} />
-                    <span>Chế độ xem toàn trường (Nâng cao)</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleManualRefresh}
-                    disabled={isRefreshing}
-                    className="gap-1.5 text-xs rounded-xl"
-                  >
-                    <RefreshCw
-                      size={14}
-                      strokeWidth={1.5}
-                      className={isRefreshing ? "animate-spin text-primary" : ""}
-                    />
-                    <span className="hidden sm:inline">Làm mới</span>
-                  </Button>
+                  <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleToggleStaffExpanded}
+                      className="gap-1.5 text-xs rounded-xl hover:bg-muted/80"
+                      title="Chuyển sang chế độ xem toàn trường để tra cứu bảng việc chi tiết"
+                    >
+                      <LayoutGrid size={14} strokeWidth={1.5} />
+                      <span>Chế độ xem toàn trường (Nâng cao)</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleManualRefresh}
+                      disabled={isRefreshing}
+                      className="gap-1.5 text-xs rounded-xl"
+                    >
+                      <RefreshCw
+                        size={14}
+                        strokeWidth={1.5}
+                        className={isRefreshing ? "animate-spin text-primary" : ""}
+                      />
+                      <span className="hidden sm:inline">Làm mới</span>
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Role-Based Dispatching: Executive, Manager, or Staff Workspace */}
               {isExecutive ? (
