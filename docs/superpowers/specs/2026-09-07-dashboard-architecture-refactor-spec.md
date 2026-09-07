@@ -44,11 +44,12 @@
 ┌──────────────┐   ┌──────────────┐       ┌──────────────────┐   ┌─────────────────┐
 │  NavContext  │   │  DataContext │       │  ActionsContext  │   │  ModalContext   │
 ├──────────────┤   ├──────────────┤       ├──────────────────┤   ├─────────────────┤
-│ • activeZone │   │ • tasks      │       │ • handleZone...  │   │ • selectedTask  │
-│ • scope      │   │ • stats      │       │ • handleScope... │   │ • isCreateOpen  │
-│ • viewMode   │   │ • filterTasks│       │ • onStatusChange │   │ • isDelegOpen   │
-│ • isExpanded │   │ • user/roles │       │ • onReview...    │   │ • modal params  │
+│ • activeZone │   │ • tasks      │       │ • onStatusChange │   │ • selectedTask  │
+│ • scope      │   │ • stats      │       │ • onReview...    │   │ • isCreateOpen  │
+│ • viewMode   │   │ • filterTasks│       │ • onSubmitDeliv  │   │ • isDelegOpen   │
+│ • isExpanded │   │ • user/roles │       │ • handleCreate...│   │ • modal params  │
 │ • advToolbar │   │ • filters... │       │ • refresh...     │   │ • open/close fn │
+│ • nav setters│   │ • delegations│       │ • filter setters │   │                 │
 └──────┬───────┘   └──────┬───────┘       └────────┬─────────┘   └────────┬────────┘
        │                  │                        │                      │
        │                  └───────────┬────────────┘                      │
@@ -66,11 +67,13 @@
 
 ### 2.1 Context Interfaces
 1. **`DashboardNavContextValue`**:
-   - `activeZone: WorkspaceZone`
-   - `scope: TaskScope`
-   - `viewMode: TaskViewMode`
-   - `isStaffExpanded: boolean`
-   - `useAdvancedToolbar: boolean`
+   - Navigation state: `activeZone: WorkspaceZone`, `scope: TaskScope`, `viewMode: TaskViewMode`, `isStaffExpanded: boolean`, `useAdvancedToolbar: boolean`
+   - Navigation actions:
+     - `handleZoneChange(zone: WorkspaceZone): void`
+     - `handleScopeChange(scope: TaskScope): void`
+     - `handleViewModeChange(view: TaskViewMode): void`
+     - `setIsStaffExpanded(expanded: boolean): void`
+     - `setUseAdvancedToolbar(use: boolean): void`
 
 2. **`DashboardDataContextValue`**:
    - Master data: `tasks: SchoolTask[]`, `stats: DashboardStats`, `upcoming: UpcomingItem[]`, `activities: ActivityFeedItem[]`
@@ -82,7 +85,6 @@
    - Flags: `isRefreshing: boolean`
 
 3. **`DashboardActionsContextValue`**:
-   - Navigation actions: `handleZoneChange`, `handleScopeChange`, `handleViewModeChange`, `setIsStaffExpanded`, `setUseAdvancedToolbar`
    - Filter actions: `handleDepartmentChange`, `handleAcademicMonthChange`, `setActiveWorkbox`, `setExecutiveFilter`, `setSearchQuery`, `setSelectedPriority`, `setSelectedCategory`, `handleResetFilters`
    - Business mutations: `handleStatusChange`, `handleSubmitDeliverable`, `handleReviewAction`, `handleCreateTask`, `handleManualRefresh`
    - Delegation mutations: `handleSaveDelegation`, `handleRevokeDelegation`
@@ -102,7 +104,7 @@ src/
 │   └── use-modal-state.ts                # Modals state & handlers
 ├── components/
 │   └── dashboard/
-│       ├── dashboard-context.tsx         # 4 React Contexts & convenient consumer hooks
+│       ├── dashboard-context.tsx         # 4 React Contexts, DashboardStateProvider & hooks
 │       ├── dashboard-modals-host.tsx     # Independent host for SideSheet & Modals
 │       └── zones/
 │           ├── dashboard-zone.tsx        # KPI Strip, Executive Matrix, Cockpit, Widgets
@@ -113,6 +115,188 @@ src/
 │           └── org-zone.tsx              # Organization Structure Tree
 └── app/
     └── page.tsx                          # Thin Orchestrator (< 90 lines)
+```
+
+### 3.1 `DashboardStateProvider` Component Architecture
+Component `DashboardStateProvider` trong `src/components/dashboard/dashboard-context.tsx` đóng vai trò "cầu nối" khởi tạo state và cấp phát vào 4 React Contexts riêng biệt thông qua `useMemo`:
+
+```tsx
+export function DashboardStateProvider({ children }: { children: React.ReactNode }) {
+  const dashboardState = useDashboardState();
+  const modalState = useModalState();
+
+  // 1. Navigation value: Chỉ re-render khi navigation state hoặc handler thay đổi
+  const navValue = React.useMemo(
+    () => ({
+      activeZone: dashboardState.activeZone,
+      scope: dashboardState.scope,
+      viewMode: dashboardState.viewMode,
+      isStaffExpanded: dashboardState.isStaffExpanded,
+      useAdvancedToolbar: dashboardState.useAdvancedToolbar,
+      handleZoneChange: dashboardState.handleZoneChange,
+      handleScopeChange: dashboardState.handleScopeChange,
+      handleViewModeChange: dashboardState.handleViewModeChange,
+      setIsStaffExpanded: dashboardState.setIsStaffExpanded,
+      setUseAdvancedToolbar: dashboardState.setUseAdvancedToolbar,
+    }),
+    [
+      dashboardState.activeZone,
+      dashboardState.scope,
+      dashboardState.viewMode,
+      dashboardState.isStaffExpanded,
+      dashboardState.useAdvancedToolbar,
+      dashboardState.handleZoneChange,
+      dashboardState.handleScopeChange,
+      dashboardState.handleViewModeChange,
+      dashboardState.setIsStaffExpanded,
+      dashboardState.setUseAdvancedToolbar,
+    ]
+  );
+
+  // 2. Data value: Re-render khi tasks, filters, hoặc computed stats thay đổi
+  const dataValue = React.useMemo(
+    () => ({
+      tasks: dashboardState.tasks,
+      stats: dashboardState.stats,
+      upcoming: dashboardState.upcoming,
+      activities: dashboardState.activities,
+      filteredTasks: dashboardState.filteredTasks,
+      scopedBaseTasks: dashboardState.scopedBaseTasks,
+      monthlyTaskCounts: dashboardState.monthlyTaskCounts,
+      displayedStats: dashboardState.displayedStats,
+      user: dashboardState.user,
+      effectiveManagerUser: dashboardState.effectiveManagerUser,
+      isExecutive: dashboardState.isExecutive,
+      isUnitView: dashboardState.isUnitView,
+      isSchoolView: dashboardState.isSchoolView,
+      selectedDepartment: dashboardState.selectedDepartment,
+      selectedAcademicMonth: dashboardState.selectedAcademicMonth,
+      activeWorkbox: dashboardState.activeWorkbox,
+      executiveFilter: dashboardState.executiveFilter,
+      searchQuery: dashboardState.searchQuery,
+      selectedPriority: dashboardState.selectedPriority,
+      selectedCategory: dashboardState.selectedCategory,
+      departmentHealth: dashboardState.departmentHealth,
+      executiveStats: dashboardState.executiveStats,
+      roleUpcoming: dashboardState.roleUpcoming,
+      delegations: dashboardState.delegations,
+      delegationDeptCode: dashboardState.delegationDeptCode,
+      isRefreshing: dashboardState.isRefreshing,
+    }),
+    [
+      dashboardState.tasks,
+      dashboardState.stats,
+      dashboardState.upcoming,
+      dashboardState.activities,
+      dashboardState.filteredTasks,
+      dashboardState.scopedBaseTasks,
+      dashboardState.monthlyTaskCounts,
+      dashboardState.displayedStats,
+      dashboardState.user,
+      dashboardState.effectiveManagerUser,
+      dashboardState.isExecutive,
+      dashboardState.isUnitView,
+      dashboardState.isSchoolView,
+      dashboardState.selectedDepartment,
+      dashboardState.selectedAcademicMonth,
+      dashboardState.activeWorkbox,
+      dashboardState.executiveFilter,
+      dashboardState.searchQuery,
+      dashboardState.selectedPriority,
+      dashboardState.selectedCategory,
+      dashboardState.departmentHealth,
+      dashboardState.executiveStats,
+      dashboardState.roleUpcoming,
+      dashboardState.delegations,
+      dashboardState.delegationDeptCode,
+      dashboardState.isRefreshing,
+    ]
+  );
+
+  // 3. Actions value: Stable callbacks (empty dependency array -> KHÔNG BAO GIỜ re-render thừa)
+  const actionsValue = React.useMemo(
+    () => ({
+      handleDepartmentChange: dashboardState.handleDepartmentChange,
+      handleAcademicMonthChange: dashboardState.handleAcademicMonthChange,
+      setActiveWorkbox: dashboardState.setActiveWorkbox,
+      setExecutiveFilter: dashboardState.setExecutiveFilter,
+      setSearchQuery: dashboardState.setSearchQuery,
+      setSelectedPriority: dashboardState.setSelectedPriority,
+      setSelectedCategory: dashboardState.setSelectedCategory,
+      handleResetFilters: dashboardState.handleResetFilters,
+      handleStatusChange: dashboardState.handleStatusChange,
+      handleSubmitDeliverable: dashboardState.handleSubmitDeliverable,
+      handleReviewAction: dashboardState.handleReviewAction,
+      handleCreateTask: dashboardState.handleCreateTask,
+      handleManualRefresh: dashboardState.handleManualRefresh,
+      handleSaveDelegation: dashboardState.handleSaveDelegation,
+      handleRevokeDelegation: dashboardState.handleRevokeDelegation,
+    }),
+    [
+      dashboardState.handleDepartmentChange,
+      dashboardState.handleAcademicMonthChange,
+      dashboardState.setActiveWorkbox,
+      dashboardState.setExecutiveFilter,
+      dashboardState.setSearchQuery,
+      dashboardState.setSelectedPriority,
+      dashboardState.setSelectedCategory,
+      dashboardState.handleResetFilters,
+      dashboardState.handleStatusChange,
+      dashboardState.handleSubmitDeliverable,
+      dashboardState.handleReviewAction,
+      dashboardState.handleCreateTask,
+      dashboardState.handleManualRefresh,
+      dashboardState.handleSaveDelegation,
+      dashboardState.handleRevokeDelegation,
+    ]
+  );
+
+  // 4. Modal value: Chỉ re-render khi modal state mở/đóng hoặc đổi target
+  const modalValue = React.useMemo(
+    () => ({
+      selectedTask: modalState.selectedTask,
+      isCreateModalOpen: modalState.isCreateModalOpen,
+      initialTaskLevel: modalState.initialTaskLevel,
+      initialParentTaskId: modalState.initialParentTaskId,
+      initialAssigneeName: modalState.initialAssigneeName,
+      isDelegationModalOpen: modalState.isDelegationModalOpen,
+      delegationDeptCode: modalState.delegationDeptCode,
+      openTaskDetail: modalState.openTaskDetail,
+      closeTaskDetail: modalState.closeTaskDetail,
+      openCreateModal: modalState.openCreateModal,
+      closeCreateModal: modalState.closeCreateModal,
+      openDelegationModal: modalState.openDelegationModal,
+      closeDelegationModal: modalState.closeDelegationModal,
+    }),
+    [
+      modalState.selectedTask,
+      modalState.isCreateModalOpen,
+      modalState.initialTaskLevel,
+      modalState.initialParentTaskId,
+      modalState.initialAssigneeName,
+      modalState.isDelegationModalOpen,
+      modalState.delegationDeptCode,
+      modalState.openTaskDetail,
+      modalState.closeTaskDetail,
+      modalState.openCreateModal,
+      modalState.closeCreateModal,
+      modalState.openDelegationModal,
+      modalState.closeDelegationModal,
+    ]
+  );
+
+  return (
+    <DashboardNavContext.Provider value={navValue}>
+      <DashboardDataContext.Provider value={dataValue}>
+        <DashboardActionsContext.Provider value={actionsValue}>
+          <DashboardModalContext.Provider value={modalValue}>
+            {children}
+          </DashboardModalContext.Provider>
+        </DashboardActionsContext.Provider>
+      </DashboardDataContext.Provider>
+    </DashboardNavContext.Provider>
+  );
+}
 ```
 
 ---
