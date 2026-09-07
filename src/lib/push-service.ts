@@ -334,3 +334,45 @@ export async function sendPushNotificationToUser(
     details,
   };
 }
+
+/**
+ * Triggers client-side push notification permission request and registration if in browser environment.
+ */
+export async function subscribeToPush(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  try {
+    if (!("Notification" in window)) return false;
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return false;
+
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      const reg = await navigator.serviceWorker.ready;
+      const keyRes = await fetch("/api/notifications/push/key");
+      if (!keyRes.ok) return false;
+      const { publicKey } = await keyRes.json();
+      if (!publicKey) return false;
+
+      const padding = "=".repeat((4 - (publicKey.length % 4)) % 4);
+      const base64 = (publicKey + padding).replace(/-/g, "+").replace(/_/g, "/");
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: outputArray,
+      });
+      await fetch("/api/notifications/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub),
+      });
+      return true;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
