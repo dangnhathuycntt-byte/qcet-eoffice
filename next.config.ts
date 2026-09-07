@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: ["web-push"],
   outputFileTracingRoot: path.resolve(__dirname),
   turbopack: {
     root: path.resolve(__dirname),

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { ChecklistTaskConfig } from "@/lib/onboarding-constants";
 import { CelebrationConfetti } from "./celebration-confetti";
-import { subscribeToPush } from "@/lib/push-service";
+import { usePushNotification } from "@/hooks/use-push-notification";
 
 interface OnboardingChecklistWidgetProps {
   tasks: ChecklistTaskConfig[];
@@ -36,6 +36,7 @@ export function OnboardingChecklistWidget({
   onCompleteStep,
 }: OnboardingChecklistWidgetProps) {
   const [showConfetti, setShowConfetti] = React.useState(false);
+  const { subscribeToPush } = usePushNotification();
 
   React.useEffect(() => {
     if (percentage === 100) {
