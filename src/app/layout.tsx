@@ -1,20 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
 import { AppShell } from "@/components/layout/app-shell";
 
-const fontSans = Plus_Jakarta_Sans({
+const fontSans = Be_Vietnam_Pro({
   variable: "--font-sans",
   subsets: ["latin", "vietnamese"],
-  fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
   display: "swap",
 });
 
 const fontMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
   fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
   display: "swap",
 });
@@ -47,6 +49,24 @@ export default function RootLayout({
       className={`${fontSans.variable} ${fontMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var density = localStorage.getItem('qcet-display-density');
+                  if (density === 'compact') {
+                    document.documentElement.setAttribute('data-density', 'compact');
+                  } else {
+                    document.documentElement.setAttribute('data-density', 'comfortable');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full overflow-x-hidden bg-background text-foreground font-sans">
         <AuthProvider>
           <ThemeProvider>
