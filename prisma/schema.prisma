@@ -14,12 +14,54 @@ enum UserRole {
   ADMIN
 }
 
+enum TaskScope {
+  SCHOOL
+  DEPARTMENT
+  INDIVIDUAL
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  WAITING_APPROVAL
+  COMPLETED
+  OVERDUE
+  CANCELLED
+}
+
+enum TaskPriority {
+  URGENT
+  HIGH
+  NORMAL
+  LOW
+}
+
+enum AssigneeRole {
+  PRIMARY_OWNER
+  COLLABORATOR
+  SUPERVISOR
+}
+
+enum DeliverableReviewStatus {
+  PENDING
+  APPROVED
+  REVISION_REQUIRED
+}
+
+enum ResolutionType {
+  EXTEND_DEADLINE
+  REASSIGN_OWNER
+  DIRECTIVE_NOTE
+  DISMISS_BOTTLENECK
+}
+
 model Department {
   id          String   @id @db.VarChar(50)
   name        String   @db.VarChar(255)
   shortName   String?  @map("short_name") @db.VarChar(50)
   color       String?  @db.VarChar(20)
   users       User[]
+  tasks       Task[]
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -27,23 +69,30 @@ model Department {
 }
 
 model User {
-  id             String      @id @default(cuid())
-  email          String      @unique @db.VarChar(255)
-  name           String      @db.VarChar(255)
-  passwordHash   String?     @map("password_hash")
-  role           UserRole    @default(CHUYEN_VIEN)
-  departmentId   String?     @map("department_id") @db.VarChar(50)
-  department     Department? @relation(fields: [departmentId], references: [id])
-  title          String?     @db.VarChar(150)
-  phone          String?     @db.VarChar(20)
-  avatarUrl      String?     @map("avatar_url")
-  provider       String      @default("credentials") @db.VarChar(50)
-  isActive       Boolean     @default(true) @map("is_active")
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
+  id                    String                @id @default(cuid())
+  email                 String                @unique @db.VarChar(255)
+  name                  String                @db.VarChar(255)
+  passwordHash          String?               @map("password_hash")
+  role                  UserRole              @default(CHUYEN_VIEN)
+  departmentId          String?               @map("department_id") @db.VarChar(50)
+  department            Department?           @relation(fields: [departmentId], references: [id])
+  title                 String?               @db.VarChar(150)
+  phone                 String?               @db.VarChar(20)
+  avatarUrl             String?               @map("avatar_url")
+  provider              String                @default("credentials") @db.VarChar(50)
+  isActive              Boolean               @default(true) @map("is_active")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
 
-  accounts       Account[]
-  sessions       Session[]
+  accounts              Account[]
+  sessions              Session[]
+  tasksCreated          Task[]                @relation("TaskCreatedBy")
+  taskAssignees         TaskAssignee[]
+  deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
+  deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
+  delegationsGranted    DacumDelegation[]     @relation("DelegationGrantor")
+  delegationsReceived   DacumDelegation[]     @relation("DelegationDelegate")
+  resolutionsEnacted    ExecutiveResolution[] @relation("ResolutionActor")
 
   @@map("users")
 }
@@ -76,4 +125,112 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+model Task {
+  id              String                @id @default(cuid())
+  code            String                @unique @db.VarChar(50)
+  title           String                @db.VarChar(500)
+  description     String?               @db.Text
+  scope           TaskScope             @default(SCHOOL)
+  status          TaskStatus            @default(NOT_STARTED)
+  priority        TaskPriority          @default(NORMAL)
+  progressPercent Int                   @default(0) @map("progress_percent")
+  academicMonth   Int                   @map("academic_month")
+  academicYear    String                @map("academic_year") @db.VarChar(20)
+  startDate       DateTime              @default(now()) @map("start_date")
+  dueDate         DateTime              @map("due_date")
+  completedAt     DateTime?             @map("completed_at")
+  departmentId    String?               @map("department_id") @db.VarChar(50)
+  department      Department?           @relation(fields: [departmentId], references: [id])
+  createdById     String                @map("created_by_id")
+  createdBy       User                  @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  parentTaskId    String?               @map("parent_task_id")
+  parentTask      Task?                 @relation("SubTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subTasks        Task[]                @relation("SubTasks")
+  assignees       TaskAssignee[]
+  deliverables    TaskDeliverable[]
+  delegations     DacumDelegation[]
+  resolutions     ExecutiveResolution[]
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  @@index([departmentId, academicYear, academicMonth])
+  @@index([status, dueDate])
+  @@index([scope, priority])
+  @@map("tasks")
+}
+
+model TaskAssignee {
+  id         String       @id @default(cuid())
+  taskId     String       @map("task_id")
+  userId     String       @map("user_id")
+  roleInTask AssigneeRole @default(PRIMARY_OWNER) @map("role_in_task")
+  assignedAt DateTime     @default(now()) @map("assigned_at")
+  task       Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId, roleInTask])
+  @@index([userId, roleInTask])
+  @@map("task_assignees")
+}
+
+model TaskDeliverable {
+  id           String                  @id @default(cuid())
+  taskId       String                  @map("task_id")
+  title        String                  @db.VarChar(255)
+  fileUrl      String                  @map("file_url") @db.Text
+  fileType     String?                 @map("file_type") @db.VarChar(50)
+  fileSize     Int?                    @map("file_size")
+  uploadedById String                  @map("uploaded_by_id")
+  reviewStatus DeliverableReviewStatus @default(PENDING) @map("review_status")
+  reviewerId   String?                 @map("reviewer_id")
+  reviewNote   String?                 @map("review_note") @db.Text
+  reviewedAt   DateTime?               @map("reviewed_at")
+  task         Task                    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy   User                    @relation("DeliverableUploadedBy", fields: [uploadedById], references: [id])
+  reviewer     User?                   @relation("DeliverableReviewer", fields: [reviewerId], references: [id])
+  createdAt    DateTime                @default(now()) @map("created_at")
+  updatedAt    DateTime                @updatedAt @map("updated_at")
+
+  @@index([taskId, reviewStatus])
+  @@map("task_deliverables")
+}
+
+model DacumDelegation {
+  id             String   @id @default(cuid())
+  taskId         String   @map("task_id")
+  grantorId      String   @map("grantor_id")
+  delegateId     String   @map("delegate_id")
+  committeeRole  String   @map("committee_role") @db.VarChar(100)
+  authorityScope String   @map("authority_scope") @db.VarChar(255)
+  expiresAt      DateTime @map("expires_at")
+  isActive       Boolean  @default(true) @map("is_active")
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  grantor        User     @relation("DelegationGrantor", fields: [grantorId], references: [id])
+  delegate       User     @relation("DelegationDelegate", fields: [delegateId], references: [id])
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([delegateId, isActive, expiresAt])
+  @@map("dacum_delegations")
+}
+
+model ExecutiveResolution {
+  id              String         @id @default(cuid())
+  taskId          String         @map("task_id")
+  actorId         String         @map("actor_id")
+  resolutionType  ResolutionType @map("resolution_type")
+  directiveNote   String?        @map("directive_note") @db.Text
+  grantedDays     Int?           @map("granted_days")
+  previousDueDate DateTime?      @map("previous_due_date")
+  newDueDate      DateTime?      @map("new_due_date")
+  previousOwnerId String?        @map("previous_owner_id")
+  newOwnerId      String?        @map("new_owner_id")
+  task            Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor           User           @relation("ResolutionActor", fields: [actorId], references: [id])
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  @@index([taskId, resolutionType])
+  @@map("executive_resolutions")
 }
