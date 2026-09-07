@@ -1,86 +1,92 @@
-# KẾ HOẠCH TRIỂN KHAI: HỆ THỐNG THÔNG BÁO KÉP (LỊCH ĐIỆN THOẠI iCal + EMAIL CÔNG VỤ)
+# KẾ HOẠCH TRIỂN KHAI CHI TIẾT (ĐÃ EXA REVIEW & TỐI ƯU HÓA)
+## HỆ THỐNG THÔNG BÁO KÉP: LỊCH ĐIỆN THOẠI (iCal) + EMAIL CÔNG VỤ (`@qcet.edu.vn`)
 **Dự án:** QCET E-Office - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  
 **Tài liệu:** `docs/superpowers/plans/2026-09-07-calendar-and-email-notification-plan.md`  
-**Ngày lập:** 07/09/2026  
-**Dựa trên:** Đặc tả [docs/superpowers/specs/2026-09-07-calendar-sync-notifications-spec.md](../specs/2026-09-07-calendar-sync-notifications-spec.md)
+**Phiên bản:** v1.2 (Đã rà soát chuyên sâu qua Exa Research)  
+**Ngày lập:** 07/09/2026
 
 ---
 
-## 1. MỤC TIÊU & NGUYÊN TẮC THIẾT KẾ
+## 1. KẾT QUẢ RÀ SOÁT CHUYÊN SÂU (EXA REVIEW FINDINGS)
 
-Xây dựng hệ sinh thái thông báo 0 đồng chi phí viễn thông, ổn định 100% không bị phụ thuộc vào Zalo hay lỗi cấp quyền của Web Push:
-1. **Đồng bộ Lịch điện thoại (iCal / `webcal://`):** 
-   * Cán bộ/Giảng viên bấm 1 lần duy nhất để kết nối vào Apple Calendar hoặc Google Calendar.
-   * Tự động rung chuông nhắc việc trước 24 giờ và trước 2 giờ đến hạn chót (Deadline).
-   * Tự làm mới và loại bỏ các việc đã hoàn thành.
-2. **Email công vụ tức thì (`@qcet.edu.vn`):**
-   * Dành cho các nhiệm vụ **Hỏa tốc / Khẩn cấp / Trong ngày** hoặc khi BGH giao chỉ đạo mới.
-   * Đính kèm trực tiếp file `nhiem-vu.ics` trong email để người nhận mở mail trên điện thoại là sự kiện tự động nạp vào lịch máy với độ trễ 0 giây.
-
----
-
-## 2. CÁC PHA TRIỂN KHAI CHI TIẾT (PHASED IMPLEMENTATION)
-
-### PHA 1: HẠ TẦNG DỮ LIỆU & QUẢN LÝ TOKEN BẢO MẬT
-**Mục tiêu:** Đảm bảo mỗi cán bộ sở hữu 1 token định danh lịch duy nhất, chống xem chéo và có thể thu hồi khi cần.
-* **Tệp tác động:**
-  * `prisma/schema.prisma` (hoặc mở rộng mock data store nếu đang chạy in-memory mock).
-  * `src/lib/calendar-token.ts`: Hàm tạo token, kiểm tra tính hợp lệ và xoay vòng mã (rotate token).
-* **Kiểm thử:** Unit test sinh token và xác thực quyền truy cập hợp lệ.
+Qua quá trình tra cứu và đối chiếu các hệ thống sản phẩm thực tế trên thế giới (Next.js 15, Nodemailer, Gmail Workspace, Apple Mail):
+1. **Next.js 15 Route Handler (`app/api/calendar/feed/route.ts`):**
+   * Bắt buộc khai báo `export const dynamic = 'force-dynamic'` để ngăn Next.js 15 cache tĩnh (Static Render) nội dung file `.ics` tại thời điểm build.
+   * Cần kiểm tra header `if-none-match` để trả về `HTTP 304 Not Modified` với body rỗng (`new Response(null, { status: 304 })`).
+2. **Cấu trúc MIME Email Lịch mời (`method=REQUEST`):**
+   * Nếu chỉ đính kèm file `.ics` dạng attachment thông thường, Outlook và Gmail đôi khi chỉ coi là file tải về.
+   * Để Gmail, Apple Mail và Outlook tự động bật **Banner "Thêm vào Lịch" / RSVP interactive widget** ngay đầu email, phần đính kèm phải tuân thủ chuẩn MIME multipart:
+     ```ts
+     icalEvent: {
+       filename: "nhiem-vu.ics",
+       method: "REQUEST",
+       content: icsContentString
+     }
+     ```
+3. **Hiển thị QR Code trên giao diện Web:**
+   * Dùng thư viện `qrcode` sinh chuỗi SVG thuần (`QRCode.toString(url, { type: 'svg' })`), hiển thị nhẹ nhàng và an toàn 100% khi chạy trên Next.js Server Components / Client Components mà không bị lỗi canvas hydration.
 
 ---
 
-### PHA 2: XÂY DỰNG API ROUTE XUẤT LỊCH iCal (`/api/calendar/feed`)
-**Mục tiêu:** Endpoint chuẩn quốc tế RFC 5545 trả về file `.ics` siêu nhẹ kèm ETag tối ưu hóa tải 304 Not Modified.
-* **Thư viện sử dụng:** `ical-generator` (chuẩn công nghiệp, hỗ trợ đầy đủ `VALARM`, `VTIMEZONE`, `X-WR-CALNAME`).
-* **Tệp tác động:**
-  * `src/app/api/calendar/feed/route.ts`:
-    * Nhận `token` từ URL query: `GET /api/calendar/feed?token={token}`.
-    * Lọc các nhiệm vụ mà User là DRI (Chủ trì) hoặc Co-assignee (Phối hợp).
-    * Thiết lập 2 mốc chuông báo thức:
-      * `VALARM` 1: Nhắc trước 24 giờ (TRIGGER: `-P1D`).
-      * `VALARM` 2: Nhắc trước 2 giờ (TRIGGER: `-PT2H`).
-    * Tạo mã `ETag` băm từ trạng thái công việc; nếu request có `If-None-Match` trùng khớp ➔ Trả về `304 Not Modified`.
-* **Kiểm thử:** Viết unit test `tests/calendar-feed.test.ts` kiểm tra định dạng cú pháp iCalendar, tính đúng đắn của ETag và các mốc VALARM.
+## 2. KẾ HOẠCH CHI TIẾT TỪNG BƯỚC (STEP-BY-STEP EXECUTION)
+
+### Bước 1: Cài đặt thư viện phụ trợ (Dependencies)
+* Cài đặt `ical-generator` và `qrcode`:
+  ```bash
+  npm install ical-generator qrcode
+  npm install -D @types/qrcode
+  ```
+* Không cài đặt các thư viện nặng nề, đảm bảo bundle size client luôn dưới 50KB.
+
+### Bước 2: Xây dựng Module Quản lý Token Cá nhân (`src/lib/calendar-token.ts`)
+* Tạo các hàm tiện ích:
+  * `getUserCalendarToken(userId: string): Promise<string>`
+  * `verifyCalendarToken(token: string): Promise<{ userId: string; role: string } | null>`
+  * `rotateUserCalendarToken(userId: string): Promise<string>` (Dùng khi người dùng muốn đổi máy hoặc hủy liên kết cũ)
+* Viết mock store token ánh xạ các tài khoản mẫu hiện tại (`BGH-01`, `TRUONGKHOA-01`, `GIANGVIEN-01`...).
+
+### Bước 3: Xây dựng API Route iCal (`src/app/api/calendar/feed/route.ts`)
+* Khai báo:
+  * `export const dynamic = 'force-dynamic'`
+  * `export const runtime = 'nodejs'`
+* Logic xử lý:
+  1. Kiểm tra `token` từ URL query: `GET /api/calendar/feed?token=...`.
+  2. Lấy danh sách nhiệm vụ của user từ `unified-task-hub.ts`.
+  3. Sử dụng `ical-generator`:
+     * Đặt tên lịch: `X-WR-CALNAME: QCET E-Office - [Tên User]`.
+     * Tần suất làm mới: `REFRESH-INTERVAL;VALUE=DURATION:PT1H`, `X-PUBLISHED-TTL:PT1H`.
+     * Mỗi nhiệm vụ có 2 mốc `VALARM`: Trước 24h và trước 2h.
+     * Thêm deep-link mở trực tiếp trang nộp báo cáo.
+  4. Tính toán mã băm ETag; nếu trùng với `If-None-Match` ➔ Trả về `304 Not Modified`.
+
+### Bước 4: Xây dựng Service Gửi Email Công vụ (`src/lib/email-service.ts`)
+* Thiết kế mẫu Email HTML nhận diện thương hiệu Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (màu xanh Navy + biểu tượng đại bàng/kỹ thuật, font chữ rõ ràng, nút CTA màu xanh nổi bật).
+* Hàm `sendUrgentTaskEmail({ task, recipient })`:
+  * Tự động tạo tệp `invite.ics` tương ứng với nhiệm vụ.
+  * Tích hợp cấu trúc MIME `method: 'REQUEST'` để kích hoạt tính năng tự động ghi lịch trên điện thoại của người nhận.
+
+### Bước 5: Xây dựng Giao diện "Đồng bộ Lịch 1-Click" (`CalendarSyncModal.tsx`)
+* Vị trí xuất hiện:
+  * Nút `[📅 Đồng bộ Lịch điện thoại]` đặt trang trọng trên Header (cạnh Chuông thông báo).
+* Nội dung Modal:
+  * **Tab Mobile (hoặc tự nhận diện màn hình nhỏ):** Nút to `[Thêm vào Lịch điện thoại (1-Click)]` với link `webcal://...`.
+  * **Tab Desktop:** Hiển thị **Mã QR Code cá nhân** để mở camera quét trực tiếp.
+  * Nút phụ: *"Mở trên Google Calendar"* & *"Sao chép liên kết"*.
+  * Hướng dẫn iPhone: *"Thầy/Cô chọn 'Keep Alarms' nếu máy h���i để nhận chuông báo"*.
+
+### Bước 6: Kiểm thử tự động (Unit Tests & QA)
+* Viết test suite:
+  * `tests/calendar-feed.test.ts`: Kiểm tra định dạng chuỗi iCal, các thẻ VEVENT, VALARM, ETag 304, và chặn token không hợp lệ.
+  * `tests/email-service.test.ts`: Kiểm tra cấu trúc HTML email và nội dung `invite.ics`.
+* Chạy kiểm tra toàn diện:
+  ```bash
+  npm run typecheck
+  npm test
+  ```
 
 ---
 
-### PHA 3: HỆ THỐNG GỬI EMAIL CÔNG VỤ KÈM LỊCH MỜI (`.ics`)
-**Mục tiêu:** Khi có nhiệm vụ hỏa tốc hoặc giao việc mới, hệ thống tự động gửi email thông báo định dạng HTML trang trọng của Trường kèm file lịch đính kèm.
-* **Tệp tác động:**
-  * `src/lib/email-service.ts`:
-    * Hàm `sendTaskNotificationEmail({ task, recipient, isUrgent })`.
-    * Sinh file `invite.ics` đính kèm có MIME type `text/calendar; method=REQUEST`.
-    * Mẫu email HTML thương hiệu QCET (Logo trường, tiêu đề nhiệm vụ, hạn xử lý, nút bấm "Mở E-Office xử lý").
-* **Kiểm thử:** Viết unit test `tests/email-service.test.ts` giả lập gửi mail và kiểm tra cấu trúc MIME tệp lịch đính kèm.
-
----
-
-### PHA 4: GIAO DIỆN NGƯỜI DÙNG - HỘP THOẠI ĐỒNG BỘ LỊCH 1-CLICK
-**Mục tiêu:** Giảng viên mở điện thoại bấm 1 nút là xong; mở máy tính thì quét mã QR bằng camera.
-* **Tệp tác động:**
-  * `src/components/notifications/calendar-sync-modal.tsx`:
-    * Nút lớn: *"Thêm vào Lịch điện thoại (1 Cú chạm)"* (gắn link `webcal://...`).
-    * Khu vực hiển thị **Mã QR Code cá nhân** (tạo bằng thư viện QR Canvas nhẹ).
-    * Nút *"Mở bằng Google Calendar"* và nút *"Sao chép liên kết"*.
-    * Dòng hướng dẫn ngắn gọn cho người dùng iPhone: *"Chọn 'Keep Alarms' để nhận chuông báo giờ"*.
-  * `src/components/notifications/notification-popover.tsx` & Header:
-    * Bổ sung nút bấm `[📅 Lịch công tác / Đồng bộ]` ngay cạnh Chuông thông báo để Thầy/Cô dễ dàng thấy và bấm kích hoạt.
-* **Kiểm thử:** Kiểm tra visual rendering trên trình duyệt, test tính năng mở link `webcal://` và copy link.
-
----
-
-### PHA 5: TỔNG KIỂM TRA CHẤT LƯỢNG (QA & VERIFICATION)
-1. Chạy `npm run typecheck` đảm bảo không lỗi kiểu dữ liệu TypeScript.
-2. Chạy `npm test` đảm bảo 100% test suite xanh.
-3. Kiểm thử trên môi trường Dev Preview (trình duyệt).
-4. Xác nhận không can thiệp đè lên `.next` gây xung đột dev server theo quy tắc trong `CLAUDE.md`.
-
----
-
-## 3. DANH SÁCH GÓI CẦN CÀI ĐẶT
-```bash
-npm install ical-generator qrcode
-npm install -D @types/qrcode
-```
-*(Các thư viện này đều rất nhẹ, không làm nặng bundle web của client)*
+## 3. CHECKLIST ĐẢM BẢO QUY TẮC DỰ ÁN (ENGINEERING RULES)
+- [x] Không chạy `next build` đè lên `.next` trong lúc dev server đang chạy.
+- [x] Đảm bảo giao diện tuân thủ Tailwind CSS v4 trong `src/app/globals.css`.
+- [x] Toàn bộ code có Type an toàn 100%, không dùng `any` bừa bãi.
