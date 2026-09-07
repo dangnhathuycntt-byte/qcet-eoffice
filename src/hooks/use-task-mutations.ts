@@ -7,7 +7,6 @@ import type {
   DashboardPayload,
   TaskStatus,
 } from "@/types/dashboard";
-import { getMockDashboardPayload } from "@/lib/mock-dashboard-data";
 import {
   computeSchoolTaskRollup,
   computeDashboardStats,
@@ -17,6 +16,32 @@ import type { CreateTaskFormData } from "@/components/dashboard/create-task-moda
 import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
 import type { DelegationRule } from "@/types/delegation";
 import type { AuthUser } from "@/types/auth";
+
+export const EMPTY_DASHBOARD_PAYLOAD: DashboardPayload = {
+  stats: {
+    totalSchoolTasks: 0,
+    schoolTasksInProgress: 0,
+    schoolTasksCompleted: 0,
+    totalStaffTasks: 0,
+    staffTasksInProgress: 0,
+    staffTasksCompleted: 0,
+    needsReviewTasksCount: 0,
+    overdueTasksCount: 0,
+    averageSchoolProgressPercent: 0,
+    totalTasks: 0,
+    inProgressTasks: 0,
+    completedTasks: 0,
+    overdueTasks: 0,
+    pendingApprovals: 0,
+    completionRate: 0,
+  },
+  tasks: [],
+  upcoming: [],
+  activities: [],
+  source: "database",
+  departmentHealth: [],
+  syncTimestamp: "",
+};
 
 const INITIAL_QCET_DELEGATIONS: DelegationRule[] = [
   {
@@ -39,10 +64,13 @@ const INITIAL_QCET_DELEGATIONS: DelegationRule[] = [
 
 export interface TaskMutationsReturn {
   dashboardData: DashboardPayload;
+  isLoading: boolean;
+  errorMessage: string | null;
+  error?: string | null;
   isRefreshing: boolean;
   delegations: DelegationRule[];
   delegationDeptCode: string;
-  handleStatusChange: (taskId: string, newStatus: TaskStatus, note?: string) => void;
+  handleStatusChange: (taskId: string, newStatus: TaskStatus, note?: string) => Promise<void>;
   handleSubmitDeliverable: (payload: DeliverableSubmissionPayload) => Promise<void>;
   handleReviewAction: (payload: ApprovalActionPayload) => Promise<void>;
   handleCreateTask: (data: CreateTaskFormData) => void;
@@ -55,10 +83,10 @@ export function useTaskMutations(
   user?: AuthUser,
   onOpenCreateModal?: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void
 ): TaskMutationsReturn {
-  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(() =>
-    getMockDashboardPayload()
-  );
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(EMPTY_DASHBOARD_PAYLOAD);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = React.useState<boolean>(false);
   const [delegations, setDelegations] = React.useState<DelegationRule[]>(INITIAL_QCET_DELEGATIONS);
   const [delegationDeptCode] = React.useState("K_CNTT");
 
@@ -66,6 +94,8 @@ export function useTaskMutations(
   React.useEffect(() => {
     let isMounted = true;
     async function syncDashboardOverview() {
+      setIsLoading(true);
+      setErrorMessage(null);
       try {
         const response = await fetch("/api/dashboard/overview");
         if (response.ok && isMounted) {
@@ -73,9 +103,18 @@ export function useTaskMutations(
           if (liveData && liveData.tasks && liveData.stats) {
             setDashboardData(liveData);
           }
+        } else if (!response.ok && isMounted) {
+          const errData = await response.json().catch(() => null);
+          setErrorMessage(errData?.error || "Không thể tải dữ liệu dashboard từ máy chủ");
         }
-      } catch {
-        // Silently keep optimistic payload
+      } catch (err: any) {
+        if (isMounted) {
+          setErrorMessage(err?.message || "Lỗi mạng khi tải dữ liệu dashboard");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
     syncDashboardOverview();
@@ -86,6 +125,7 @@ export function useTaskMutations(
 
   const handleManualRefresh = React.useCallback(async () => {
     setIsRefreshing(true);
+    setErrorMessage(null);
     try {
       const response = await fetch("/api/dashboard/overview");
       if (response.ok) {
@@ -93,16 +133,23 @@ export function useTaskMutations(
         if (liveData && liveData.tasks && liveData.stats) {
           setDashboardData(liveData);
         }
+      } else {
+        const errData = await response.json().catch(() => null);
+        setErrorMessage(errData?.error || "Làm mới dữ liệu thất bại");
       }
-    } catch {
-      // Keep existing data
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Lỗi kết nối khi làm mới dữ liệu");
     } finally {
       setTimeout(() => setIsRefreshing(false), 600);
     }
   }, []);
 
   const handleStatusChange = React.useCallback(
-    (taskId: string, newStatus: TaskStatus, _note?: string) => {
+    async (taskId: string, newStatus: TaskStatus, note?: string) => {
+      const previousData = dashboardData;
+      setErrorMessage(null);
+
+      // Optimistic state update
       setDashboardData((prev) => {
         const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
           if (st.id === taskId) {
@@ -122,13 +169,34 @@ export function useTaskMutations(
           stats: computeDashboardStats(rolledUpTasks),
         };
       });
+
+      // API call with rollback on failure
+      try {
+        const res = await fetch(`/api/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus, note }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          setDashboardData(previousData);
+          setErrorMessage(errData?.error || "Cập nhật trạng thái nhiệm vụ thất bại. Đã khôi phục dữ liệu.");
+        }
+      } catch (err: any) {
+        setDashboardData(previousData);
+        setErrorMessage(err?.message || "Lỗi mạng khi cập nhật trạng thái. Đã khôi phục dữ liệu.");
+      }
     },
-    []
+    [dashboardData]
   );
 
   const handleSubmitDeliverable = React.useCallback(
     async (payload: DeliverableSubmissionPayload) => {
+      const previousData = dashboardData;
+      setErrorMessage(null);
       const todayStr = "2026-09-06";
+
+      // Optimistic state update
       setDashboardData((prev) => {
         const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
           if (st.id === payload.taskId) {
@@ -176,12 +244,36 @@ export function useTaskMutations(
           stats: computeDashboardStats(rolledUp),
         };
       });
+
+      // API call with rollback on failure
+      try {
+        const res = await fetch(`/api/tasks/${payload.taskId}/deliverables`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: payload.deliverableName || "Tài liệu minh chứng",
+            fileUrl: payload.url || "#",
+            fileType: payload.fileType || "LINK",
+            uploadedById: user?.id,
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          setDashboardData(previousData);
+          setErrorMessage(errData?.error || "Nộp minh chứng thất bại. Đã khôi phục dữ liệu.");
+        }
+      } catch (err: any) {
+        setDashboardData(previousData);
+        setErrorMessage(err?.message || "Lỗi mạng khi nộp minh chứng. Đã khôi phục dữ liệu.");
+      }
     },
-    [user?.name]
+    [dashboardData, user?.id, user?.name]
   );
 
   const handleReviewAction = React.useCallback(
     async (payload: ApprovalActionPayload) => {
+      const previousData = dashboardData;
+      setErrorMessage(null);
       const todayStr = "2026-09-06";
       let statusToSet: TaskStatus = "IN_PROGRESS";
       if (payload.decision === "approved") {
@@ -192,6 +284,7 @@ export function useTaskMutations(
         statusToSet = "BLOCKED";
       }
 
+      // Optimistic state update
       setDashboardData((prev) => {
         const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
           if (st.id === payload.taskId) {
@@ -224,8 +317,31 @@ export function useTaskMutations(
           stats: computeDashboardStats(rolledUp),
         };
       });
+
+      // API call with rollback on failure
+      try {
+        const res = await fetch(`/api/tasks/${payload.taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: statusToSet,
+            note: payload.comment,
+            decision: payload.decision,
+            reviewedByRole: payload.reviewedByRole,
+            reviewedByName: payload.reviewedByName,
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          setDashboardData(previousData);
+          setErrorMessage(errData?.error || "Phê duyệt nhiệm vụ thất bại. Đã khôi phục dữ liệu.");
+        }
+      } catch (err: any) {
+        setDashboardData(previousData);
+        setErrorMessage(err?.message || "Lỗi mạng khi phê duyệt nhiệm vụ. Đã khôi phục dữ liệu.");
+      }
     },
-    []
+    [dashboardData]
   );
 
   const handleCreateTask = React.useCallback(
@@ -339,6 +455,9 @@ export function useTaskMutations(
 
   return {
     dashboardData,
+    isLoading,
+    errorMessage,
+    error: errorMessage,
     isRefreshing,
     delegations,
     delegationDeptCode,
