@@ -128,6 +128,8 @@ model User {
   leadDocs              Document[]            @relation("LeadUserDocs")
   docsRegistered        Document[]            @relation("DocRegisteredBy")
   leaderDirectives      DocumentDirective[]   @relation("LeaderDirectives")
+  pushSubscriptions PushSubscription[]
+  notifications     Notification[]
 
   @@map("users")
 }
@@ -394,3 +396,52 @@ model DocumentDirective {
   @@index([documentId, leaderId])
   @@map("document_directives")
 }
+
+// ===================================================
+// 5. PUSH NOTIFICATIONS & PWA SUBSCRIPTIONS
+// ===================================================
+enum PushSubscriptionStatus {
+  ACTIVE
+  REVOKED
+}
+
+model PushSubscription {
+  id               String                 @id @default(cuid())
+  userId           String                 @map("user_id")
+  endpoint         String                 @unique
+  p256dh           String
+  auth             String
+  userAgent        String?                @map("user_agent")
+  deviceType       String?                @map("device_type")
+  status           PushSubscriptionStatus @default(ACTIVE)
+  failureCount     Int                    @default(0) @map("failure_count")
+  lastFailureCode  Int?                   @map("last_failure_code")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("push_subscriptions")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  actorName   String   @map("actor_name")
+  title       String
+  body        String
+  category    String   @default("task")
+  type        String
+  linkHref    String   @map("link_href")
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
