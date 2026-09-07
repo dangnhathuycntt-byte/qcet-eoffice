@@ -1,19 +1,110 @@
 /**
- * Data model for Official Documents & Dispatches (Văn bản & Quản lý Công văn)
- * Compliant with Decree 30/2020/ND-CP on clerical and archive operations.
+ * Data models for Official Documents & Dispatches (Phân hệ Văn thư & Sổ văn bản)
+ * Fully compliant with Decree 30/2020/ND-CP on clerical and archive operations.
  */
 
-export type DocumentType = "inbox" | "outbox" | "submission";
+// Decree 30/2020/ND-CP Standard Types & backward-compatible union
+export type DocumentType =
+  | 'VAN_BAN_DEN'
+  | 'VAN_BAN_DI'
+  | 'TO_TRINH_NOI_BO'
+  | 'inbox'
+  | 'outbox'
+  | 'submission';
 
-export type DocumentUrgency = "normal" | "urgent" | "top_urgent" | "flash";
+export type DocumentUrgency =
+  | 'THUONG'
+  | 'KHAN'
+  | 'THUONG_KHAN'
+  | 'HOA_TOC'
+  | 'normal'
+  | 'urgent'
+  | 'top_urgent'
+  | 'flash';
+
+export type DocumentSecurityLevel = 'THUONG' | 'MAT' | 'TOI_MAT' | 'TUYET_MAT';
 
 export type DocumentStatus =
-  | "pending_assignment" // Chờ bút phê / phân công
-  | "processing"         // Đang xử lý
-  | "delegated"          // Đã liên thông giao việc
-  | "approved"           // Đã ký duyệt
-  | "completed";         // Đã hoàn tất & lưu trữ
+  | 'CHO_PHAN_CONG'
+  | 'DANG_XU_LY'
+  | 'CHO_PHE_DUYET'
+  | 'DA_HOAN_THANH'
+  | 'LUU_THEO_DOI'
+  | 'pending_assignment'
+  | 'processing'
+  | 'delegated'
+  | 'approved'
+  | 'completed';
 
+export interface DocumentAttachmentItem {
+  id: string;
+  documentId: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+  sha256Hash?: string | null;
+  isOriginal: boolean;
+  createdAt?: string;
+}
+
+export interface DocumentDirectiveItem {
+  id: string;
+  documentId: string;
+  leaderId: string;
+  leaderName?: string;
+  instruction: string;
+  deadline?: string | null;
+  assignedDeptId: string;
+  assignedDeptName?: string;
+  collaboratorIds?: string | null;
+  isTaskGenerated: boolean;
+  createdAt?: string;
+}
+
+export interface DocumentItem {
+  id: string;
+  type: DocumentType;
+  registrationNumber: number;
+  documentYear: number;
+  registeredDate: string;
+  originalNumber: string;
+  issuedDate: string;
+  issuingAuthority: string;
+  category: string;
+  summary: string;
+  urgency: DocumentUrgency;
+  securityLevel: DocumentSecurityLevel;
+  dueDate?: string | null;
+  status: DocumentStatus;
+
+  // Văn bản đi
+  signerName?: string | null;
+  signerTitle?: string | null;
+  draftingDeptId?: string | null;
+  draftingDeptName?: string | null;
+  recipientList?: string | null;
+  distributedCopies?: number | null;
+
+  // Văn bản đến
+  leadDepartmentId?: string | null;
+  leadDepartmentName?: string | null;
+  leadUserId?: string | null;
+  leadUserName?: string | null;
+
+  notes?: string | null;
+  registeredById: string;
+  registeredByName?: string | null;
+
+  attachments?: DocumentAttachmentItem[];
+  directives?: DocumentDirectiveItem[];
+  linkedTaskId?: string | null;
+
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Backward-compatible interfaces for existing components and mock data
 export interface OfficialDocument {
   id: string;
   type: DocumentType;

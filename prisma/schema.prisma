@@ -11,7 +11,36 @@ enum UserRole {
   BAN_GIAM_HIEU
   TRUONG_PHONG
   CHUYEN_VIEN
+  VAN_THU
   ADMIN
+}
+
+enum DocumentType {
+  VAN_BAN_DEN
+  VAN_BAN_DI
+  TO_TRINH_NOI_BO
+}
+
+enum DocumentUrgency {
+  THUONG
+  KHAN
+  THUONG_KHAN
+  HOA_TOC
+}
+
+enum DocumentSecurityLevel {
+  THUONG
+  MAT
+  TOI_MAT
+  TUYET_MAT
+}
+
+enum DocumentStatus {
+  CHO_PHAN_CONG
+  DANG_XU_LY
+  CHO_PHE_DUYET
+  DA_HOAN_THANH
+  LUU_THEO_DOI
 }
 
 enum TaskScope {
@@ -62,6 +91,9 @@ model Department {
   color       String?  @db.VarChar(20)
   users       User[]
   tasks       Task[]
+  draftingDocs Document[]          @relation("DraftingDeptDocs")
+  leadDocs     Document[]          @relation("LeadDepartmentDocs")
+  directives   DocumentDirective[] @relation("DirectiveDepartments")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -93,6 +125,9 @@ model User {
   delegationsGranted    DacumDelegation[]     @relation("DelegationGrantor")
   delegationsReceived   DacumDelegation[]     @relation("DelegationDelegate")
   resolutionsEnacted    ExecutiveResolution[] @relation("ResolutionActor")
+  leadDocs              Document[]            @relation("LeadUserDocs")
+  docsRegistered        Document[]            @relation("DocRegisteredBy")
+  leaderDirectives      DocumentDirective[]   @relation("LeaderDirectives")
 
   @@map("users")
 }
@@ -152,6 +187,7 @@ model Task {
   deliverables    TaskDeliverable[]
   delegations     DacumDelegation[]
   resolutions     ExecutiveResolution[]
+  linkedDocument  Document?
   createdAt       DateTime              @default(now()) @map("created_at")
   updatedAt       DateTime              @updatedAt @map("updated_at")
 
@@ -233,4 +269,128 @@ model ExecutiveResolution {
 
   @@index([taskId, resolutionType])
   @@map("executive_resolutions")
+}
+
+// ===================================================
+// 1. BẢNG SỔ VĂN BẢN (DOCUMENTS)
+// Đáp ứng đồng thời Phụ lục IV và Phụ lục VI NĐ 30/2020
+// ===================================================
+model Document {
+  id                 String                @id @default(cuid())
+  type               DocumentType          @map("type")
+
+  // Thông tin đăng ký sổ (Số đến hoặc Số đi liên tục theo năm)
+  registrationNumber Int                   @map("registration_number")
+  documentYear       Int                   @map("document_year")
+  registeredDate     DateTime              @default(now()) @map("registered_date")
+
+  // Thông tin văn bản gốc
+  originalNumber     String                @map("original_number") @db.VarChar(100)
+  issuedDate         DateTime              @map("issued_date")
+  issuingAuthority   String                @map("issuing_authority") @db.VarChar(255)
+
+  // Trích yếu nội dung & Phân loại hành chính
+  category           String                @db.VarChar(100)
+  summary            String                @db.Text
+  urgency            DocumentUrgency       @default(THUONG)
+  securityLevel      DocumentSecurityLevel @default(THUONG) @map("security_level")
+
+  // Các trường đặc thù Văn bản Đi (Phụ lục IV Mẫu Sổ Văn bản Đi)
+  signerName         String?               @map("signer_name") @db.VarChar(150)
+  signerTitle        String?               @map("signer_title") @db.VarChar(100)
+  draftingDeptId     String?               @map("drafting_dept_id") @db.VarChar(50)
+  draftingDept       Department?           @relation("DraftingDeptDocs", fields: [draftingDeptId], references: [id])
+  recipientList      String?               @map("recipient_list") @db.Text
+  distributedCopies  Int?                  @default(1) @map("distributed_copies")
+
+  // Các trường đặc thù Văn bản Đến (Phụ lục IV Mẫu Sổ Văn bản Đến)
+  dueDate            DateTime?             @map("due_date")
+  leadDepartmentId   String?               @map("lead_department_id") @db.VarChar(50)
+  leadDepartment     Department?           @relation("LeadDepartmentDocs", fields: [leadDepartmentId], references: [id])
+  leadUserId         String?               @map("lead_user_id")
+  leadUser           User?                 @relation("LeadUserDocs", fields: [leadUserId], references: [id])
+
+  // Trạng thái vòng đời văn bản
+  status             DocumentStatus        @default(CHO_PHAN_CONG)
+  notes              String?               @db.Text
+
+  // Văn thư thực hiện vào sổ
+  registeredById     String                @map("registered_by_id")
+  registeredBy       User                  @relation("DocRegisteredBy", fields: [registeredById], references: [id])
+
+  // Quan hệ tệp đính kèm & Bút phê BGH
+  attachments        DocumentAttachment[]
+  directives         DocumentDirective[]
+
+  // Liên thông Unified Task Hub
+  linkedTaskId       String?               @unique @map("linked_task_id")
+  linkedTask         Task?                 @relation(fields: [linkedTaskId], references: [id])
+
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+
+  @@unique([type, documentYear, registrationNumber])
+  @@index([type, documentYear, registeredDate])
+  @@index([status, urgency, dueDate])
+  @@map("documents")
+}
+
+// ===================================================
+// 2. BỘ ĐẾM SỐ TỰ ĐỘNG ATOMIC (NUMBER SEQUENCE)
+// Đảm bảo nguyên tắc cấp số liên tục Điều 15 & Điều 22
+// ===================================================
+model DocumentNumberSequence {
+  id         String       @id @default(cuid())
+  type       DocumentType
+  year       Int
+  lastNumber Int          @default(0) @map("last_number")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  @@unique([type, year])
+  @@map("document_number_sequences")
+}
+
+// ===================================================
+// 3. TỆP ĐÍNH KÈM SỐ HÓA (ATTACHMENTS)
+// Tiêu chuẩn scan màu PDF/A có dấu đỏ (Phụ lục I NĐ 30)
+// ===================================================
+model DocumentAttachment {
+  id         String   @id @default(cuid())
+  documentId String   @map("document_id")
+  fileName   String   @map("file_name") @db.VarChar(255)
+  fileUrl    String   @map("file_url") @db.Text
+  fileSize   Int      @map("file_size")
+  mimeType   String   @map("mime_type") @db.VarChar(100)
+  sha256Hash String?  @map("sha256_hash") @db.VarChar(64)
+  isOriginal Boolean  @default(true) @map("is_original")
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@map("document_attachments")
+}
+
+// ===================================================
+// 4. BÚT PHÊ & Ý KIẾN CHỈ ĐẠO BGH (DIRECTIVES)
+// Quy chuẩn Điều 24 NĐ 30
+// ===================================================
+model DocumentDirective {
+  id               String      @id @default(cuid())
+  documentId       String      @map("document_id")
+  leaderId         String      @map("leader_id")
+  instruction      String      @db.Text
+  deadline         DateTime?
+  assignedDeptId   String      @map("assigned_dept_id") @db.VarChar(50)
+  collaboratorIds  String?     @map("collaborator_ids") @db.Text
+  isTaskGenerated  Boolean     @default(false) @map("is_task_generated")
+
+  document         Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  leader           User        @relation("LeaderDirectives", fields: [leaderId], references: [id])
+  assignedDept     Department  @relation("DirectiveDepartments", fields: [assignedDeptId], references: [id])
+
+  createdAt        DateTime    @default(now()) @map("created_at")
+
+  @@index([documentId, leaderId])
+  @@map("document_directives")
 }

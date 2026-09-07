@@ -118,12 +118,15 @@ export function DocumentDetailDialog({
   const statusConfig = getStatusBadgeConfig(doc.status);
   const StatusIcon = statusConfig.icon;
 
-  const typeLabels = {
+  const typeLabels: Record<string, { label: string; icon: any; color: string }> = {
     inbox: { label: "Văn bản đến", icon: Inbox, color: "text-sky-600 dark:text-sky-400 bg-sky-500/10" },
     outbox: { label: "Văn bản đi", icon: Send, color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10" },
     submission: { label: "Tờ trình", icon: FileText, color: "text-purple-600 dark:text-purple-400 bg-purple-500/10" },
+    VAN_BAN_DEN: { label: "Văn bản đến", icon: Inbox, color: "text-sky-600 dark:text-sky-400 bg-sky-500/10" },
+    VAN_BAN_DI: { label: "Văn bản đi", icon: Send, color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10" },
+    TO_TRINH_NOI_BO: { label: "Tờ trình", icon: FileText, color: "text-purple-600 dark:text-purple-400 bg-purple-500/10" },
   };
-  const currentType = typeLabels[doc.type];
+  const currentType = typeLabels[doc.type] || typeLabels.inbox;
   const TypeIcon = currentType.icon;
 
   return (
