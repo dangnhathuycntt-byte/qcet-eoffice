@@ -76,17 +76,35 @@ export function filterTasksByRole(tasks: SchoolTask[], user: AuthUser): SchoolTa
     });
   }
 
-  // STAFF role: only school tasks that have subtasks assigned to staff,
-  // with subtasks filtered down to user's subtasks only, with rollup recalculated
+  // STAFF role:
+  // 1. If staff is DRI (leadAssigneeName), they see the task with all subtasks for coordination.
+  // 2. If staff is coAssignee without subtasks, they see the task in observing/awaiting assignment mode.
+  // 3. If staff has assigned subtasks, they see the task filtered down to their subtasks.
   const result: SchoolTask[] = [];
   for (const task of tasks) {
-    const userSubTasks = (task.subTasks || []).filter((sub) => matchesUser(sub.assigneeName, user));
-    if (userSubTasks.length > 0) {
+    const isLead = matchesUser(task.leadAssigneeName, user);
+    const isCoAssignee = Boolean(
+      task.coAssignees && task.coAssignees.some((ca) => matchesUser(ca, user))
+    );
+    const userSubTasks = (task.subTasks || []).filter((sub) =>
+      matchesUser(sub.assigneeName, user)
+    );
+
+    if (isLead) {
+      // DRI retains full task with all subtasks
+      result.push({ ...task });
+    } else if (userSubTasks.length > 0) {
+      // Participant with assigned subtasks: filtered to user's subtasks, with recalculated rollup
       const totalSubTasks = userSubTasks.length;
-      const completedSubTasks = userSubTasks.filter((st) => st.status === "COMPLETED").length;
-      const progressPercent = totalSubTasks > 0
-        ? Math.round((completedSubTasks / totalSubTasks) * 100)
-        : (task.status === "COMPLETED" ? 100 : 0);
+      const completedSubTasks = userSubTasks.filter(
+        (st) => st.status === "COMPLETED"
+      ).length;
+      const progressPercent =
+        totalSubTasks > 0
+          ? Math.round((completedSubTasks / totalSubTasks) * 100)
+          : task.status === "COMPLETED"
+          ? 100
+          : 0;
 
       result.push({
         ...task,
@@ -94,6 +112,15 @@ export function filterTasksByRole(tasks: SchoolTask[], user: AuthUser): SchoolTa
         totalSubTasks,
         completedSubTasks,
         progressPercent,
+      });
+    } else if (isCoAssignee) {
+      // Co-assignee awaiting assignment: preserve task with empty subtasks for staff view
+      result.push({
+        ...task,
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: task.status === "COMPLETED" ? 100 : 0,
       });
     }
   }

@@ -4,6 +4,7 @@ import {
   filterTasksByRole,
   filterUpcomingByRole,
   DEFAULT_DEMO_USERS,
+  matchesUser,
 } from "../src/lib/role-task-filter";
 import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
 import { computeDashboardStats } from "../src/lib/dashboard-aggregator";
@@ -75,16 +76,29 @@ describe("Role Pages Filtering Integration", () => {
     assert.ok(staffTasks.length > 0);
     assert.ok(staffTasks.length <= payload.tasks.length);
 
-    // Verify all subtasks in staffTasks belong to this staff member
+    // Verify tasks in staffTasks conform to ownership model: DRI, participating, or co-assignee awaiting assignment
     for (const t of staffTasks) {
-      assert.ok(t.subTasks.length > 0);
-      for (const sub of t.subTasks) {
-        assert.ok(
-          sub.assigneeName.toLowerCase().includes("vinh") ||
-            sub.assigneeName.toLowerCase().includes("nguyễn ngọc vinh")
-        );
+      const isLead = matchesUser(t.leadAssigneeName, staff);
+      const isCoAssignee = Boolean(
+        t.coAssignees && t.coAssignees.some((ca) => matchesUser(ca, staff))
+      );
+      if (isLead) {
+        // DRI retains full subtasks
+        assert.ok(t.subTasks.length > 0);
+      } else if (t.subTasks.length === 0) {
+        // Co-assignee awaiting assignment
+        assert.ok(isCoAssignee);
+        assert.equal(t.totalSubTasks, 0);
+      } else {
+        // Participating with assigned subtasks
+        for (const sub of t.subTasks) {
+          assert.ok(
+            sub.assigneeName.toLowerCase().includes("vinh") ||
+              sub.assigneeName.toLowerCase().includes("nguyễn ngọc vinh")
+          );
+        }
+        assert.equal(t.totalSubTasks, t.subTasks.length);
       }
-      assert.equal(t.totalSubTasks, t.subTasks.length);
     }
 
     // Verify staff upcoming items are filtered to the staff user

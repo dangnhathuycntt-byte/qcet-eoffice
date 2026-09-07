@@ -241,3 +241,97 @@ describe("Task Ownership Logic - Workload and Grouping", () => {
     assert.ok(partIds.includes("school-3"));
   });
 });
+
+import { filterTasksByRole } from "../src/lib/role-task-filter";
+
+describe("Role Task Filter - STAFF DRI and Co-Assignee Support", () => {
+  const staffMember: AuthUser = {
+    id: "user-vinh",
+    name: "Nguyễn Ngọc Vinh",
+    email: "vinhnn@cdktcnqn.edu.vn",
+    role: "STAFF",
+    roleLabel: "Chuyên viên CNTT",
+    department: "Khoa CNTT",
+    departmentCode: "CNTT",
+  };
+
+  const tasksList: SchoolTask[] = [
+    // Task where Vinh is DRI (leadAssigneeName), with team members doing subtasks
+    {
+      id: "task-vinh-dri",
+      title: "Triển khai hệ thống E-Office",
+      category: "CHUYEN_DOI_SO",
+      categoryLabel: "Chuyển đổi số",
+      leadAssigneeName: "Nguyễn Ngọc Vinh",
+      coAssignees: ["Trần Hùng"],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      origin: "SELF_INITIATED",
+      totalSubTasks: 2,
+      completedSubTasks: 1,
+      progressPercent: 50,
+      subTasks: [
+        {
+          id: "sub-t1",
+          title: "Cấu hình Server",
+          assigneeName: "Trần Hùng",
+          status: "COMPLETED",
+          dueDate: "2026-09-10",
+          parentSchoolTaskId: "task-vinh-dri",
+          updatedAt: "2026-09-05",
+        },
+        {
+          id: "sub-t2",
+          title: "Kiểm thử bảo mật",
+          assigneeName: "Trần Hùng",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-20",
+          parentSchoolTaskId: "task-vinh-dri",
+          updatedAt: "2026-09-05",
+        },
+      ],
+    },
+    // Task where Vinh is co-assignee, but no sub-task assigned yet
+    {
+      id: "task-vinh-coassignee",
+      title: "Chuẩn bị Đại hội Đoàn trường",
+      category: "KHAC",
+      categoryLabel: "Khác",
+      leadAssigneeName: "Trần Hùng",
+      coAssignees: ["Nguyễn Ngọc Vinh"],
+      assignedDate: "2026-09-05",
+      dueDate: "2026-09-28",
+      status: "IN_PROGRESS",
+      origin: "SCHOOL",
+      totalSubTasks: 1,
+      completedSubTasks: 0,
+      progressPercent: 0,
+      subTasks: [
+        {
+          id: "sub-t3",
+          title: "Soạn văn kiện",
+          assigneeName: "Trần Hùng",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-20",
+          parentSchoolTaskId: "task-vinh-coassignee",
+          updatedAt: "2026-09-05",
+        },
+      ],
+    },
+  ];
+
+  test("STAFF sees tasks where they are DRI (retaining all subtasks for coordination)", () => {
+    const filtered = filterTasksByRole(tasksList, staffMember);
+    const driTask = filtered.find((t) => t.id === "task-vinh-dri");
+    assert.ok(driTask, "STAFF must see task where they are leadAssigneeName (DRI)");
+    assert.equal(driTask.subTasks.length, 2, "DRI must retain all subtasks for coordination");
+  });
+
+  test("STAFF sees tasks where they are in coAssignees even with zero assigned subtasks", () => {
+    const filtered = filterTasksByRole(tasksList, staffMember);
+    const coTask = filtered.find((t) => t.id === "task-vinh-coassignee");
+    assert.ok(coTask, "STAFF must see task where they are in coAssignees");
+  });
+});
+
