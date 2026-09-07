@@ -247,11 +247,11 @@ export default function NotificationsPage() {
               >
                 <span>Chưa đọc</span>
                 {unreadCount > 0 ? (
-                  <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-destructive/15 text-destructive border border-destructive/20 tabular-nums">
+                  <span className="px-1.5 py-0.2 rounded font-mono text-xs font-bold bg-destructive/15 text-destructive border border-destructive/20 tabular-nums">
                     {unreadCount}
                   </span>
                 ) : (
-                  <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-medium text-muted-foreground bg-muted tabular-nums">
+                  <span className="px-1.5 py-0.2 rounded font-mono text-xs font-medium text-muted-foreground bg-muted tabular-nums">
                     0
                   </span>
                 )}
@@ -281,7 +281,7 @@ export default function NotificationsPage() {
               {/* Section: Mới */}
               {newItems.length > 0 && (
                 <div className="pb-2">
-                  <div className="flex items-center justify-between px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20 rounded-lg mb-1">
+                  <div className="flex items-center justify-between px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20 rounded-lg mb-1">
                     <span>Mới cập nhật</span>
                   </div>
                   <div className="space-y-1">
@@ -299,7 +299,7 @@ export default function NotificationsPage() {
               {/* Section: Trước đó */}
               {earlierItems.length > 0 && (
                 <div className="pt-2 pb-1">
-                  <div className="flex items-center justify-between px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20 rounded-lg mb-1">
+                  <div className="flex items-center justify-between px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20 rounded-lg mb-1">
                     <span>Trước đó</span>
                   </div>
                   <div className="space-y-1">
@@ -377,7 +377,7 @@ function PageNotificationRow({
           <span className="font-semibold text-foreground">&ldquo;{item.targetTitle}&rdquo;</span>
         </p>
         <div className="flex items-center gap-2 mt-1.5">
-          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold bg-muted text-muted-foreground border border-border/50">
+          <span className="px-1.5 py-0.2 rounded text-xs font-mono font-semibold bg-muted text-muted-foreground border border-border/50">
             {item.category}
           </span>
           <span className="text-xs text-muted-foreground font-mono tabular-nums flex items-center gap-1">

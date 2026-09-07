@@ -116,7 +116,7 @@ describe("Dual-Rail Navigation Architecture Test Suite", () => {
     test("documents items are operational without comingSoon slop", () => {
       const docItems: SidebarItem[] = MODULE_NAV_ITEMS.documents;
       assert.ok(Array.isArray(docItems), "MODULE_NAV_ITEMS.documents must be an array");
-      assert.strictEqual(docItems.length, 4, "MODULE_NAV_ITEMS.documents must have 4 items");
+      assert.strictEqual(docItems.length, 7, "MODULE_NAV_ITEMS.documents must have 7 items");
 
       for (const item of docItems) {
         assert.ok(
@@ -128,6 +128,9 @@ describe("Dual-Rail Navigation Architecture Test Suite", () => {
       const labels = docItems.map((i) => i.label);
       assert.ok(labels.includes("Văn bản đến"));
       assert.ok(labels.includes("Văn bản đi"));
+      assert.ok(labels.includes("Văn bản đánh dấu"));
+      assert.ok(labels.includes("Văn bản xem để biết"));
+      assert.ok(labels.includes("Tra cứu văn bản"));
       assert.ok(labels.includes("Tờ trình duyệt"));
       assert.ok(labels.includes("Sổ lưu trữ toàn trường"));
     });

@@ -14,8 +14,11 @@ import {
   ArrowUpRight,
   Maximize2,
   Minimize2,
+  ShieldCheck,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
+import type { DelegationRule } from "@/types/delegation";
+import { isDelegationActive } from "@/lib/delegation-authority-engine";
 import {
   aggregateTasksByDepartment,
   type DepartmentTaskGroup,
@@ -33,12 +36,14 @@ export interface DepartmentGroupedTaskViewProps {
   onAddTask?: (departmentCode?: string) => void;
   selectedDepartmentFilter?: string;
   searchQuery?: string;
+  onManageDelegation?: (departmentCode: string) => void;
+  delegations?: DelegationRule[];
 }
 
 function RAGBadge({ status, reason }: { status: DepartmentRAGStatus; reason: string }) {
   if (status === "RED") {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/60 font-mono">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/60 font-mono">
         <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
         Cảnh báo trễ ({reason})
       </span>
@@ -46,14 +51,14 @@ function RAGBadge({ status, reason }: { status: DepartmentRAGStatus; reason: str
   }
   if (status === "AMBER") {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900/60 font-mono">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900/60 font-mono">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
         Cần lưu ý
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900/60 font-mono">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900/60 font-mono">
       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
       Bình thường
     </span>
@@ -122,9 +127,12 @@ function formatTaskStatus(
 export function DepartmentGroupedTaskView({
   tasks,
   onSelectTask,
+  onStatusChange,
   onAddTask,
   selectedDepartmentFilter = "ALL",
   searchQuery = "",
+  onManageDelegation,
+  delegations = [],
 }: DepartmentGroupedTaskViewProps) {
   const [expandedDeptIds, setExpandedDeptIds] = React.useState<Set<string>>(() => {
     // Mặc định mở rộng 3 đơn vị đầu tiên
@@ -213,6 +221,16 @@ export function DepartmentGroupedTaskView({
       <div className="space-y-3">
         {departmentGroups.map((group) => {
           const isExpanded = expandedDeptIds.has(group.departmentId);
+          const activeDelegationCount = delegations
+            ? delegations.filter((d) => {
+                const dCode = (d.departmentCode || "").toUpperCase();
+                const deptCodeNorm = group.departmentCode.toUpperCase();
+                const matchesDept =
+                  dCode === deptCodeNorm ||
+                  dCode.replace(/^(K_|P_|TT_)/, "") === deptCodeNorm.replace(/^(K_|P_|TT_)/, "");
+                return matchesDept && isDelegationActive(d);
+              }).length
+            : 0;
 
           return (
             <div
@@ -244,7 +262,7 @@ export function DepartmentGroupedTaskView({
 
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 font-mono">
+                        <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-primary/10 text-primary border border-primary/20 font-mono">
                           {group.departmentCode}
                         </span>
                         <h3 className="text-sm font-bold text-foreground font-heading">
@@ -272,7 +290,7 @@ export function DepartmentGroupedTaskView({
 
                   {/* Progress bar & quick metrics */}
                   <div className="w-32 sm:w-40 space-y-1 shrink-0 pl-7 sm:pl-0 sm:self-center mr-0 sm:mr-3">
-                    <div className="flex items-center justify-between text-[11px] font-mono tabular-nums">
+                    <div className="flex items-center justify-between text-xs font-mono tabular-nums">
                       <span className="text-muted-foreground">Tiến độ</span>
                       <span className="font-bold text-foreground">
                         {group.stats.averageProgress}%
@@ -294,9 +312,33 @@ export function DepartmentGroupedTaskView({
                   </div>
                 </button>
 
-                {/* External Action Button (Giao việc) safely outside the toggle button */}
-                {onAddTask && (
-                  <div className="shrink-0 pl-7 sm:pl-0 sm:self-center">
+                {/* Action Area: Delegation & Task Creation safely outside the toggle button */}
+                <div className="flex items-center gap-2 shrink-0 pl-7 sm:pl-0 sm:self-center">
+                  {onManageDelegation && (
+                    <div className="flex items-center gap-1.5">
+                      {activeDelegationCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-900/60 font-mono">
+                          {activeDelegationCount} ủy quyền
+                        </span>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onManageDelegation(group.departmentCode);
+                        }}
+                        className="h-8 px-2.5 text-xs gap-1.5 rounded-lg border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 dark:border-indigo-900/60 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
+                        title={`Quản lý ủy quyền đơn vị ${group.departmentCode}`}
+                      >
+                        <ShieldCheck size={13} strokeWidth={1.5} />
+                        <span>Ủy quyền</span>
+                      </Button>
+                    </div>
+                  )}
+
+                  {onAddTask && (
                     <Button
                       type="button"
                       variant="outline"
@@ -307,8 +349,8 @@ export function DepartmentGroupedTaskView({
                       <Plus size={13} strokeWidth={1.5} />
                       <span className="hidden sm:inline">Giao việc</span>
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Nội dung chi tiết các việc khi mở rộng */}
@@ -359,7 +401,7 @@ export function DepartmentGroupedTaskView({
                                 <td className="py-2.5 px-2">
                                   <span
                                     className={cn(
-                                      "px-1.5 py-0.5 rounded text-[10px] font-mono font-medium",
+                                      "px-1.5 py-0.5 rounded text-xs font-mono font-medium",
                                       isSchool
                                         ? "bg-primary/10 text-primary border border-primary/20"
                                         : "bg-muted text-muted-foreground"
@@ -377,7 +419,7 @@ export function DepartmentGroupedTaskView({
                                 <td className="py-2.5 px-2 text-center">
                                   <span
                                     className={cn(
-                                      "px-2 py-0.5 rounded-full text-[10px] font-medium font-mono whitespace-nowrap",
+                                      "px-2 py-0.5 rounded-full text-xs font-medium font-mono whitespace-nowrap",
                                       statusInfo.className
                                     )}
                                   >

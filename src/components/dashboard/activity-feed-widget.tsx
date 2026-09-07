@@ -110,12 +110,12 @@ export function ActivityFeedWidget({
             <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
               Hoạt động vừa cập nhật
             </h3>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Dòng nhật ký tương tác và tiến độ thời gian thực
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold">
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold">
           <span className="relative flex size-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
@@ -159,7 +159,7 @@ export function ActivityFeedWidget({
                       <span className="text-muted-foreground font-normal">{item.action}</span>
                     </div>
                     {item.category && (
-                      <span className="shrink-0 inline-flex items-center rounded-md bg-secondary/80 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                      <span className="shrink-0 inline-flex items-center rounded-md bg-secondary/80 px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
                         {item.category}
                       </span>
                     )}
@@ -174,7 +174,7 @@ export function ActivityFeedWidget({
                   </div>
 
                   {/* Timestamp */}
-                  <div className="flex items-center gap-1 pt-0.5 text-[10px] text-muted-foreground font-mono">
+                  <div className="flex items-center gap-1 pt-0.5 text-xs text-muted-foreground font-mono">
                     <Clock className="size-2.5 opacity-70" strokeWidth={1.5} />
                     <span>{item.timestamp}</span>
                   </div>

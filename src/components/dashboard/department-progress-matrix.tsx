@@ -56,11 +56,12 @@ export function DepartmentProgressMatrix({
               }
             }}
             className={cn(
-              "group relative flex flex-col gap-2 rounded-xl border bg-card p-3 sm:p-4 transition-all duration-150 cursor-pointer select-none",
-              "hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+              "group relative flex flex-col gap-2 rounded-xl border bg-card p-3 sm:p-4 transition-all duration-200 cursor-pointer select-none",
+              "hover:-translate-y-0.5 hover:shadow-xs",
               isSelected
-                ? "ring-2 ring-indigo-500/40 ring-inset border-indigo-500 bg-primary/[0.04] shadow-sm z-10"
-                : "border-border/50"
+                ? "ring-2 ring-indigo-500/30 ring-inset border-indigo-500 bg-indigo-500/[0.04] shadow-xs z-10"
+                : "border-border/60 hover:border-indigo-500/30 hover:bg-muted/15",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
             )}
             data-slot="department-card"
             data-dept-id={dept.departmentId}
@@ -95,10 +96,10 @@ export function DepartmentProgressMatrix({
                 />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Tiến độ
                 </span>
-                <span className="text-[11px] font-mono font-semibold text-foreground tabular-nums">
+                <span className="text-xs font-mono font-semibold text-foreground tabular-nums">
                   {dept.averageProgressPercent}%
                 </span>
               </div>
@@ -107,12 +108,12 @@ export function DepartmentProgressMatrix({
             {/* Warning badges */}
             <div className="flex flex-wrap gap-1.5">
               {dept.overdueTasksCount > 0 && (
-                <Badge variant="rose" className="text-[10px] h-4 px-1.5">
+                <Badge variant="rose" className="text-xs h-4 px-1.5">
                   {dept.overdueTasksCount} trễ hạn
                 </Badge>
               )}
               {dept.blockedTasksCount > 0 && (
-                <Badge variant="amber" className="text-[10px] h-4 px-1.5">
+                <Badge variant="amber" className="text-xs h-4 px-1.5">
                   {dept.blockedTasksCount} vướng mắc
                 </Badge>
               )}

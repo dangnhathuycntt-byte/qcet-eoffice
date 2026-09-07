@@ -273,10 +273,10 @@ export default function UnitTasksPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-mono">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-mono">
               Khoa / Phòng / Ban
             </span>
-            <span className="text-[11px] text-muted-foreground font-medium">
+            <span className="text-xs text-muted-foreground font-medium">
               Năm học 2025 - 2026
             </span>
           </div>
@@ -350,7 +350,7 @@ export default function UnitTasksPage() {
                 type="button"
                 onClick={() => setLevelFilter("DON_VI")}
                 className={cn(
-                  "px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer font-mono tabular-nums",
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
                   levelFilter === "DON_VI"
                     ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
                     : "text-muted-foreground hover:text-foreground"
@@ -362,7 +362,7 @@ export default function UnitTasksPage() {
                 type="button"
                 onClick={() => setLevelFilter("ALL")}
                 className={cn(
-                  "px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer font-mono tabular-nums",
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
                   levelFilter === "ALL"
                     ? "bg-secondary text-foreground font-semibold"
                     : "text-muted-foreground hover:text-foreground"

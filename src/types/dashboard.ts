@@ -50,6 +50,7 @@ export interface StaffTask {
   id: string;
   title: string;
   assigneeName: string;
+  assigneeId?: string;
   assigneeAvatar?: string;
   status: TaskStatus;
   dueDate: string;
@@ -78,6 +79,7 @@ export interface SchoolTask {
   category: TaskCategory;
   categoryLabel: string;
   leadAssigneeName: string;
+  leadAssigneeId?: string;
   leadAssigneeAvatar?: string;
   leadDepartment?: string;
   leadDepartmentCode?: string;

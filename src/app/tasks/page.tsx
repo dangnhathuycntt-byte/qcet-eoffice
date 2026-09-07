@@ -274,18 +274,18 @@ export default function TasksPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-primary/10 text-primary border border-primary/20 font-mono">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-primary/10 text-primary border border-primary/20 font-mono">
               Năm học 2025 - 2026
             </span>
-            <span className="text-[11px] text-muted-foreground font-medium">
+            <span className="text-xs text-muted-foreground font-medium">
               Học kỳ I
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
-            Nhiệm vụ & Giao việc Cấp Trường
+            Quản lý Nhiệm vụ Toàn trường
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Theo dõi tiến độ, phân công chỉ đạo và thực hiện nhiệm vụ trọng tâm toàn trường
+            Theo dõi tiến độ, phân cấp nhiệm vụ và phối hợp điều hành công việc toàn trường
           </p>
         </div>
 
@@ -309,11 +309,17 @@ export default function TasksPage() {
 
           <button
             type="button"
-            onClick={() => openCreateModal("TRUONG")}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer shadow-2xs"
+            onClick={() => openCreateModal(user?.role === "ADMIN" ? "TRUONG" : "DON_VI")}
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer shadow-2xs active:scale-95"
           >
             <Plus strokeWidth={1.5} className="size-3.5" />
-            <span>Giao việc mới</span>
+            <span>
+              {user?.role === "STAFF"
+                ? "Tạo việc mới"
+                : user?.role === "MANAGER"
+                ? "Tạo việc / Giao việc"
+                : "Giao việc mới"}
+            </span>
           </button>
         </div>
       </div>
@@ -351,7 +357,7 @@ export default function TasksPage() {
                 type="button"
                 onClick={() => setLevelFilter("ALL")}
                 className={cn(
-                  "px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer font-mono tabular-nums",
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
                   levelFilter === "ALL"
                     ? "bg-secondary text-foreground font-semibold"
                     : "text-muted-foreground hover:text-foreground"
@@ -363,7 +369,7 @@ export default function TasksPage() {
                 type="button"
                 onClick={() => setLevelFilter("TRUONG")}
                 className={cn(
-                  "px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer font-mono tabular-nums",
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
                   levelFilter === "TRUONG"
                     ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800"
                     : "text-muted-foreground hover:text-foreground"
@@ -375,7 +381,7 @@ export default function TasksPage() {
                 type="button"
                 onClick={() => setLevelFilter("DON_VI")}
                 className={cn(
-                  "px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer font-mono tabular-nums",
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
                   levelFilter === "DON_VI"
                     ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
                     : "text-muted-foreground hover:text-foreground"

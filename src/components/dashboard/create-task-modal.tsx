@@ -33,6 +33,7 @@ export type TaskLevel = "TRUONG" | "DON_VI";
 export function getAllowedTaskLevelsForRole(role: UserRole): TaskLevel[] {
   if (role === "ADMIN") return ["TRUONG", "DON_VI"];
   if (role === "MANAGER") return ["DON_VI"];
+  if (role === "STAFF") return [];
   return [];
 }
 
@@ -218,14 +219,30 @@ export function getDepartmentForMember(
 export function canRoleSelectAssignee(
   user: AuthUser,
   targetDeptCode: string,
-  isEmergencyBypass?: boolean
+  isEmergencyBypass?: boolean,
+  targetUserName?: string
 ): { allowed: boolean; message?: string; isBypassWarning?: boolean } {
+  // Staff cannot assign tasks to others
+  if (user.role === "STAFF") {
+    if (
+      targetUserName &&
+      user.name &&
+      targetUserName.trim().toLowerCase() === user.name.trim().toLowerCase()
+    ) {
+      return { allowed: true };
+    }
+    return {
+      allowed: false,
+      message: "Giảng viên / Nhân sự không có thẩm quyền giao việc cho người khác.",
+    };
+  }
+
   const isDirectToOtherDept =
     user.role === "ADMIN" &&
     targetDeptCode !== "BGH" &&
     targetDeptCode !== user.departmentCode;
   const bypass = isEmergencyBypass ?? isDirectToOtherDept;
-  const result = canAssignStaffTask(user, targetDeptCode, bypass);
+  const result = canAssignStaffTask(user, targetDeptCode, bypass, targetUserName);
   return {
     allowed: result.allowed,
     message: result.reason,
@@ -243,14 +260,21 @@ export function validateTaskForm(
     errors.title = "Vui lòng nhập tên công việc";
   }
   if (!data.leadAssigneeName || data.leadAssigneeName.trim().length === 0) {
-    errors.leadAssigneeName = "Vui lòng chọn người chủ trì";
+    errors.leadAssigneeName = "Vui lòng chọn người thực hiện";
   } else if (currentUser) {
-    const dept = getDepartmentForMember(data.leadAssigneeName);
-    if (dept) {
-      const check = canRoleSelectAssignee(currentUser, dept.code);
-      if (!check.allowed) {
-        errors.leadAssigneeName =
-          check.message || "Không có thẩm quyền giao việc cho nhân sự này";
+    if (currentUser.role === "STAFF") {
+      const isSelf = data.leadAssigneeName.trim().toLowerCase() === currentUser.name.trim().toLowerCase();
+      if (!isSelf) {
+        errors.leadAssigneeName = "Giảng viên / Nhân sự chỉ có thể tự tạo công việc cho chính mình.";
+      }
+    } else {
+      const dept = getDepartmentForMember(data.leadAssigneeName);
+      if (dept) {
+        const check = canRoleSelectAssignee(currentUser, dept.code, false, data.leadAssigneeName);
+        if (!check.allowed) {
+          errors.leadAssigneeName =
+            check.message || "Không có thẩm quyền phân công cho nhân sự này";
+        }
       }
     }
   }
@@ -321,18 +345,19 @@ export function CreateTaskModal({
 
   const getEffectiveLevel = React.useCallback(
     (requestedLevel: TaskLevel): TaskLevel => {
-      if (isManager) return "DON_VI";
+      if (isManager || isStaff) return "DON_VI";
       if (allowedLevels.includes(requestedLevel)) return requestedLevel;
       return getDefaultTaskLevelForRole(user?.role ?? "ADMIN");
     },
-    [isManager, allowedLevels, user?.role]
+    [isManager, isStaff, allowedLevels, user?.role]
   );
 
   const [formData, setFormData] = React.useState<CreateTaskFormData>(() => ({
     ...getInitialTaskFormData(getEffectiveLevel(initialLevel)),
     parentTaskId: initialParentTaskId,
     dueDate: initialDueDate || "",
-    leadAssigneeName: initialLeadAssigneeName || "",
+    leadAssigneeName: initialLeadAssigneeName || (isStaff ? (user?.name || "") : ""),
+    vtvlRole: isStaff ? (user?.roleLabel || "Giảng viên") : "",
   }));
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [isCustomAssignee, setIsCustomAssignee] = React.useState(false);
@@ -356,9 +381,13 @@ export function CreateTaskModal({
   }, [formData.leadAssigneeName]);
 
   const isExternalDeptBlocked = React.useMemo(() => {
+    if (isStaff) {
+      if (!formData.leadAssigneeName || !user?.name) return false;
+      return formData.leadAssigneeName.trim().toLowerCase() !== user.name.trim().toLowerCase();
+    }
     if (!isManager || !selectedAssigneeDept || !user) return false;
     return selectedAssigneeDept.code !== user.departmentCode;
-  }, [isManager, selectedAssigneeDept, user]);
+  }, [isStaff, isManager, selectedAssigneeDept, user, formData.leadAssigneeName]);
 
   const isAdminBypassActive = React.useMemo(() => {
     if (user?.role !== "ADMIN" || !selectedAssigneeDept) return false;
@@ -403,7 +432,7 @@ export function CreateTaskModal({
   const prevIsOpen = React.useRef(false);
   React.useEffect(() => {
     if (isOpen && !prevIsOpen.current) {
-      const effectiveLevel = isManager
+      const effectiveLevel = isManager || isStaff
         ? "DON_VI"
         : allowedLevels.includes(initialLevel)
         ? initialLevel
@@ -413,7 +442,8 @@ export function CreateTaskModal({
         ...getInitialTaskFormData(effectiveLevel),
         parentTaskId: initialParentTaskId,
         dueDate: initialDueDate || "",
-        leadAssigneeName: initialLeadAssigneeName || "",
+        leadAssigneeName: initialLeadAssigneeName || (isStaff ? (user?.name || "") : ""),
+        vtvlRole: isStaff ? (user?.roleLabel || "Giảng viên") : "",
       });
       setErrors({});
       setIsCustomAssignee(false);
@@ -421,7 +451,7 @@ export function CreateTaskModal({
       setTimeout(() => titleInputRef.current?.focus(), 80);
     }
     prevIsOpen.current = isOpen;
-  }, [isOpen, initialLevel, initialParentTaskId, initialDueDate, initialLeadAssigneeName, isManager, allowedLevels, user?.role]);
+  }, [isOpen, initialLevel, initialParentTaskId, initialDueDate, initialLeadAssigneeName, isManager, isStaff, allowedLevels, user?.role, user?.name, user?.roleLabel]);
 
   // Body scroll lock when drawer is open
   React.useEffect(() => {
@@ -452,7 +482,7 @@ export function CreateTaskModal({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (isStaff || allowedLevels.length === 0 || isExternalDeptBlocked) return;
+    if (allowedLevels.length === 0 || isExternalDeptBlocked) return;
 
     const parentTask = schoolTasks.find((t) => t.id === formData.parentTaskId);
     const validationErrors = validateTaskForm(formData, parentTask, user || undefined);
@@ -534,14 +564,18 @@ export function CreateTaskModal({
             </span>
             <div>
               <span id="modal-title" className="text-xs font-bold uppercase tracking-wider text-foreground font-heading">
-                {isManager
-                  ? `Giao việc — ${user?.department || "Đơn vị"}`
-                  : "Giao nhiệm vụ mới"}
+                {isStaff
+                  ? "Tạo việc mới (Cá nhân)"
+                  : isManager
+                  ? `Tạo việc / Phân công — ${user?.department || "Đơn vị"}`
+                  : "Tạo việc & Giao nhiệm vụ"}
               </span>
-              <p className="text-[11px] text-muted-foreground font-medium">
-                {formData.level === "TRUONG"
+              <p className="text-xs text-muted-foreground font-medium">
+                {isStaff
+                  ? "Tự lên kế hoạch và theo dõi tiến độ công việc cá nhân"
+                  : formData.level === "TRUONG"
                   ? "Nhiệm vụ trọng tâm toàn trường"
-                  : "Công việc phân công nội bộ đơn vị"}
+                  : "Công việc phân công nội bộ đơn vị hoặc cá nhân"}
               </p>
             </div>
           </div>
@@ -549,7 +583,7 @@ export function CreateTaskModal({
           {/* Right: Level Switcher Pill (BGH only) or Close */}
           <div className="flex items-center gap-2">
             {!isManager && !isStaff && (
-              <div className="inline-flex rounded-lg bg-muted/70 p-0.5 border border-border/60 text-[11px]">
+              <div className="inline-flex rounded-lg bg-muted/70 p-0.5 border border-border/60 text-xs">
                 <button
                   type="button"
                   onClick={() => setFormData((p) => ({ ...p, level: "TRUONG", parentTaskId: undefined }))}
@@ -594,11 +628,13 @@ export function CreateTaskModal({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Scrollable Form Body */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 thin-scrollbar">
-            {/* Permission warning for STAFF */}
+            {/* Informational Mode Banner for STAFF */}
             {isStaff && (
-              <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                <AlertCircle className="size-4 shrink-0 text-amber-600" strokeWidth={1.5} />
-                <span>Chuyên viên không có quyền giao nhiệm vụ. Vui lòng liên hệ Trưởng đơn vị.</span>
+              <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-xs text-primary dark:text-primary/90">
+                <CheckCircle2 className="size-4 shrink-0 text-primary" strokeWidth={1.5} />
+                <span>
+                  Chế độ tạo việc cá nhân: Công việc sẽ được gán cho chính bạn (<strong>{user?.name || "Giảng viên"}</strong>) để chủ động lập kế hoạch và báo cáo tiến độ.
+                </span>
               </div>
             )}
 
@@ -607,7 +643,7 @@ export function CreateTaskModal({
               <input
                 ref={titleInputRef}
                 type="text"
-                placeholder="Tiêu đề nhiệm vụ cần giao..."
+                placeholder={isStaff ? "Tên công việc hoặc kế hoạch cá nhân..." : "Tiêu đề nhiệm vụ cần tạo / giao..."}
                 value={formData.title}
                 onChange={(e) => {
                   setFormData((prev) => ({ ...prev, title: e.target.value }));
@@ -619,7 +655,7 @@ export function CreateTaskModal({
                 )}
               />
               {errors.title && (
-                <p className="text-[11px] font-medium text-destructive flex items-center gap-1">
+                <p className="text-xs font-medium text-destructive flex items-center gap-1">
                   <AlertCircle className="size-3" strokeWidth={1.5} />
                   {errors.title}
                 </p>
@@ -648,12 +684,12 @@ export function CreateTaskModal({
                   </span>
                   {/* Quick Department Filter to narrow down within 300 staff */}
                   <div className="flex items-center gap-1">
-                    <span className="text-[10.5px] text-muted-foreground">Khoa/Phòng:</span>
+                    <span className="text-xs text-muted-foreground">Khoa/Phòng:</span>
                     <select
                       aria-label="Lọc nhanh theo đơn vị"
                       value={deptFilter}
                       onChange={(e) => setDeptFilter(e.target.value)}
-                      className="h-6 rounded-md border border-border/60 bg-background px-1.5 py-0 text-[11px] font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="h-6 rounded-md border border-border/60 bg-background px-1.5 py-0 text-xs font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
                     >
                       <option value="ALL">Toàn trường (11 đơn vị)</option>
                       {QCET_DEPARTMENT_GROUPS.map((g) => (
@@ -666,7 +702,12 @@ export function CreateTaskModal({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {!isCustomAssignee ? (
+                  {isStaff ? (
+                    <div className="flex-1 h-8.5 px-3 rounded-lg border border-primary/30 bg-primary/5 flex items-center justify-between text-xs font-semibold text-primary">
+                      <span>{user?.name || "Bạn"} (Chính bạn — {user?.roleLabel || "Giảng viên"})</span>
+                      <span className="text-xs text-muted-foreground font-normal">Tự thực hiện</span>
+                    </div>
+                  ) : !isCustomAssignee ? (
                     <div className="relative flex-1">
                       <select
                         value={formData.leadAssigneeName}
@@ -712,7 +753,7 @@ export function CreateTaskModal({
                           setIsCustomAssignee(false);
                           handleAssigneeSelect("");
                         }}
-                        className="text-[11px] font-medium text-muted-foreground hover:text-foreground shrink-0 underline cursor-pointer"
+                        className="text-xs font-medium text-muted-foreground hover:text-foreground shrink-0 underline cursor-pointer"
                       >
                         Chọn từ danh mục
                       </button>
@@ -727,10 +768,10 @@ export function CreateTaskModal({
                       <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" strokeWidth={1.5} />
                       <div className="space-y-1 leading-relaxed">
                         <p className="font-bold">Không thể giao việc trực tiếp ngoài đơn vị</p>
-                        <p className="text-[11.5px] opacity-90">
+                        <p className="text-xs opacity-90">
                           Theo Nghị định 232/2026/NĐ-CP và quy chế điều hành, Trưởng phòng không được giao việc trực tiếp cho nhân sự thuộc {selectedAssigneeDept.department}.
                         </p>
-                        <p className="text-[11.5px] opacity-90">
+                        <p className="text-xs opacity-90">
                           Vui lòng tạo Phiếu yêu cầu phối hợp để Lãnh đạo đơn vị tương ứng tiếp nhận và phân công.
                         </p>
                       </div>
@@ -757,7 +798,7 @@ export function CreateTaskModal({
                 {isAdminBypassActive && selectedAssigneeDept && (
                   <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50/80 dark:border-blue-800 dark:bg-blue-950/40 p-2.5 text-xs text-blue-900 dark:text-blue-200">
                     <ShieldAlert className="size-4 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" strokeWidth={1.5} />
-                    <p className="text-[11.5px] leading-relaxed">
+                    <p className="text-xs leading-relaxed">
                       <span className="font-bold">Chỉ đạo trực tiếp Ban Giám hiệu:</span> Hệ thống sẽ tự động gửi thông báo gắn cờ [CHỈ ĐẠO BGH] tới Lãnh đạo {selectedAssigneeDept.department} để phối hợp quản lý nhân sự.
                     </p>
                   </div>
@@ -828,17 +869,17 @@ export function CreateTaskModal({
                         }}
                         className="size-3.5 rounded border-border text-primary focus:ring-primary/30"
                       />
-                      <span className="text-[11px] font-medium text-foreground">
+                      <span className="text-xs font-medium text-foreground">
                         Bắt buộc Trưởng phòng nghiệm thu (DACUM)
                       </span>
                     </label>
                   </div>
                   {formData.requiresReview ? (
-                    <p className="text-[10.5px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 p-2 rounded-lg">
+                    <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 p-2 rounded-lg">
                       Nhiệm vụ trọng điểm: Viên chức phải nộp sản phẩm minh chứng để chuyển sang Chờ duyệt. Trưởng phòng trực tiếp nghiệm thu.
                     </p>
                   ) : (
-                    <p className="text-[10.5px] text-muted-foreground bg-muted/30 p-2 rounded-lg">
+                    <p className="text-xs text-muted-foreground bg-muted/30 p-2 rounded-lg">
                       Việc thường quy: Viên chức tự bấm hoàn thành nhiệm vụ (1-click) khi xong. Trưởng phòng theo dõi và hậu kiểm.
                     </p>
                   )}
@@ -855,7 +896,7 @@ export function CreateTaskModal({
                       <span className="text-destructive">*</span>
                     )}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {formData.requiresReview ? "Bắt buộc theo NĐ 232" : "Tùy chọn"}
                   </span>
                 </div>
@@ -878,7 +919,7 @@ export function CreateTaskModal({
                   )}
                 />
                 {errors.requiredDeliverables && (
-                  <p className="text-[11px] font-medium text-destructive flex items-center gap-1">
+                  <p className="text-xs font-medium text-destructive flex items-center gap-1">
                     <AlertCircle className="size-3 shrink-0" strokeWidth={1.5} />
                     <span>{errors.requiredDeliverables}</span>
                   </p>
@@ -912,28 +953,28 @@ export function CreateTaskModal({
                     <button
                       type="button"
                       onClick={() => handleDatePreset(0)}
-                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
                     >
                       Hôm nay
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDatePreset(3)}
-                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
                     >
                       +3 ngày
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDatePreset(7)}
-                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
                     >
                       +1 tuần
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDatePreset(-1)}
-                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[10.5px] font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
                     >
                       Cuối tháng
                     </button>
@@ -948,7 +989,7 @@ export function CreateTaskModal({
                     <Clock className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                     Hạn chót nội bộ
                   </span>
-                  <span className="text-[10px] text-muted-foreground">Nghiệm thu cấp 1 trước khi trình BGH</span>
+                  <span className="text-xs text-muted-foreground">Nghiệm thu cấp 1 trước khi trình BGH</span>
                 </div>
 
                 <div className="flex items-center gap-2 justify-end flex-1 font-mono tabular-nums">
@@ -967,7 +1008,7 @@ export function CreateTaskModal({
                 </div>
               </div>
               {errors.internalDueDate && (
-                <p className="text-[11px] font-medium text-destructive flex items-center gap-1">
+                <p className="text-xs font-medium text-destructive flex items-center gap-1">
                   <AlertCircle className="size-3 shrink-0" strokeWidth={1.5} />
                   <span>{errors.internalDueDate}</span>
                 </p>
@@ -1004,7 +1045,7 @@ export function CreateTaskModal({
 
             {/* Validation Errors Summary (if any) */}
             {(errors.leadAssigneeName || errors.dueDate || errors.internalDueDate || errors.requiredDeliverables) && (
-              <div className="text-[11px] text-destructive space-y-0.5">
+              <div className="text-xs text-destructive space-y-0.5">
                 {errors.leadAssigneeName && <p>• {errors.leadAssigneeName}</p>}
                 {errors.dueDate && <p>• {errors.dueDate}</p>}
                 {errors.internalDueDate && <p>• {errors.internalDueDate}</p>}
@@ -1016,15 +1057,15 @@ export function CreateTaskModal({
           {/* Sticky Bottom Actions Bar */}
           <div className="sticky bottom-0 z-10 flex items-center justify-between px-5 sm:px-6 py-3.5 border-t border-border/50 bg-card/95 backdrop-blur-md shrink-0">
             {/* Keyboard hint */}
-            <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[10px] font-bold">
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+              <kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-xs font-bold">
                 Ctrl
               </kbd>
               <span>+</span>
-              <kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[10px] font-bold">
+              <kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-xs font-bold">
                 Enter
               </kbd>
-              <span className="ml-0.5">để giao việc</span>
+              <span className="ml-0.5">để {isStaff ? "tạo việc" : "hoàn tất"}</span>
             </div>
 
             {/* Actions */}
@@ -1041,14 +1082,22 @@ export function CreateTaskModal({
               <Button
                 type="submit"
                 size="sm"
-                disabled={isStaff || allowedLevels.length === 0 || isExternalDeptBlocked}
+                disabled={allowedLevels.length === 0 || isExternalDeptBlocked}
                 className={cn(
                   "h-8.5 rounded-xl px-4 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs active:scale-[0.98] transition-all cursor-pointer inline-flex items-center gap-1.5",
-                  (isStaff || allowedLevels.length === 0 || isExternalDeptBlocked) && "opacity-50 cursor-not-allowed"
+                  (allowedLevels.length === 0 || isExternalDeptBlocked) && "opacity-50 cursor-not-allowed"
                 )}
               >
                 <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                <span>Giao việc</span>
+                <span>
+                  {isStaff
+                    ? "Tạo việc mới"
+                    : formData.level === "TRUONG"
+                    ? "Tạo việc cấp Trường"
+                    : formData.leadAssigneeName && formData.leadAssigneeName !== user?.name
+                    ? "Giao việc"
+                    : "Tạo việc mới"}
+                </span>
               </Button>
             </div>
           </div>

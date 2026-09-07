@@ -301,7 +301,7 @@ export default function LoginPage() {
               {/* Google Workspace SSO Trigger */}
               <div className="space-y-2">
                 <GoogleLoginButton />
-                <p className="text-center text-[11px] text-muted-foreground">
+                <p className="text-center text-xs text-muted-foreground">
                   Đăng nhập qua cổng định danh liên kết Google trường
                 </p>
               </div>
@@ -311,7 +311,7 @@ export default function LoginPage() {
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-border/60" />
                 </div>
-                <div className="relative flex justify-center text-[10.5px] uppercase tracking-wider font-semibold">
+                <div className="relative flex justify-center text-xs uppercase tracking-wider font-semibold">
                   <span className="bg-card px-3 text-muted-foreground">
                     Hoặc đăng nhập mật khẩu nội bộ
                   </span>
@@ -403,7 +403,7 @@ export default function LoginPage() {
                 <h3 className="text-xs font-bold text-foreground">
                   Đăng ký tài khoản nội bộ mới
                 </h3>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Tài khoản sẽ được khởi tạo trong CSDL PostgreSQL của trường
                 </p>
               </div>
@@ -545,7 +545,7 @@ export default function LoginPage() {
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border/60" />
             </div>
-            <div className="relative flex justify-center text-[10.5px] uppercase tracking-wider font-semibold">
+            <div className="relative flex justify-center text-xs uppercase tracking-wider font-semibold">
               <span className="bg-card px-3 text-muted-foreground">
                 Tài khoản kiểm thử CSDL hạt nhân (1-Click)
               </span>
@@ -597,24 +597,24 @@ export default function LoginPage() {
                         <span className="text-xs font-bold text-foreground truncate">
                           {account.name}
                         </span>
-                        <span className="rounded bg-secondary px-1.5 py-0.2 text-[9.5px] font-semibold text-muted-foreground border border-border/70">
+                        <span className="rounded bg-secondary px-1.5 py-0.2 text-xs font-semibold text-muted-foreground border border-border/70">
                           {account.badge}
                         </span>
                         {isSelected && (
-                          <span className="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                             <CheckCircle2 className="size-3" strokeWidth={1.5} />
                             Hiện tại
                           </span>
                         )}
                       </div>
-                      <p className="text-[10.5px] text-muted-foreground truncate">
+                      <p className="text-xs text-muted-foreground truncate">
                         {account.subtitle} &bull; <span className="font-mono">{account.email}</span>
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center pl-2 shrink-0">
-                    <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-xs">
+                    <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-xs">
                       {isLoadingThis ? "Đang vào..." : "Đăng nhập"}
                       <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
                     </span>
@@ -624,7 +624,7 @@ export default function LoginPage() {
             })}
           </div>
 
-          <div className="mt-5 flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+          <div className="mt-5 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
             <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.5} />
             <span>Xác thực an toàn đa quyền (BGH / Trưởng đơn vị / Giảng viên)</span>
           </div>
@@ -635,7 +635,7 @@ export default function LoginPage() {
           <p className="font-medium">
             Hệ thống Quản trị & Điều hành Văn phòng Điện tử QCET
           </p>
-          <p className="text-[11px]">
+          <p className="text-xs">
             Phát triển & Vận hành bởi Trung tâm CNTT - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
           </p>
         </div>

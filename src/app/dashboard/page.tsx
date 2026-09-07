@@ -120,11 +120,11 @@ export default function StandaloneDashboardAnalyticsPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link
-              href="/"
+              href="/?zone=portal"
               className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
             >
-              <ArrowLeft className="size-3" />
-              <span>Về Quản lý công việc</span>
+              <ArrowLeft className="size-3" strokeWidth={1.5} />
+              <span>Về Cổng Portal</span>
             </Link>
           </div>
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading">
@@ -137,10 +137,10 @@ export default function StandaloneDashboardAnalyticsPage() {
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <Link
-            href="/"
+            href="/?zone=tasks"
             className="inline-flex h-8.5 items-center gap-1.5 rounded-lg border border-border/80 bg-card px-3 text-xs font-medium text-foreground hover:bg-secondary transition-colors"
           >
-            <CheckSquare className="size-3.5 text-primary" />
+            <CheckSquare className="size-3.5 text-primary" strokeWidth={1.5} />
             <span>Xem Danh sách công việc</span>
           </Link>
 
@@ -154,6 +154,7 @@ export default function StandaloneDashboardAnalyticsPage() {
           >
             <RefreshCw
               className={`size-3.5 ${isRefreshing ? "animate-spin text-foreground" : ""}`}
+              strokeWidth={1.5}
             />
             <span className="hidden sm:inline">Làm mới dữ liệu</span>
           </Button>

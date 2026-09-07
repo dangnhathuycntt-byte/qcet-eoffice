@@ -52,7 +52,7 @@ export default function OrgPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
               <Network className="size-3" strokeWidth={1.5} />
               <span>CƠ CẤU BỘ MÁY & DANH BẠ QCET</span>
             </span>
@@ -142,12 +142,12 @@ export default function OrgPage() {
             <Building2 className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-medium text-muted-foreground block truncate">
+            <span className="text-xs font-medium text-muted-foreground block truncate">
               Tổng số đơn vị
             </span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-semibold text-foreground font-mono tabular-nums">{totalUnits}</span>
-              <span className="text-[10px] text-muted-foreground font-medium">phòng/khoa/TT</span>
+              <span className="text-xs text-muted-foreground font-medium">phòng/khoa/TT</span>
             </div>
           </div>
         </div>
@@ -158,12 +158,12 @@ export default function OrgPage() {
             <Users className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-medium text-muted-foreground block truncate">
+            <span className="text-xs font-medium text-muted-foreground block truncate">
               Cán bộ & Giảng viên
             </span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-semibold text-foreground font-mono tabular-nums">{totalStaff}</span>
-              <span className="text-[10px] text-muted-foreground font-medium">nhân sự</span>
+              <span className="text-xs text-muted-foreground font-medium">nhân sự</span>
             </div>
           </div>
         </div>
@@ -174,14 +174,14 @@ export default function OrgPage() {
             <Briefcase className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-medium text-muted-foreground block truncate">
+            <span className="text-xs font-medium text-muted-foreground block truncate">
               Nhiệm vụ đang điều phối
             </span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-semibold text-foreground font-mono tabular-nums">
                 {totalActiveTasks}
               </span>
-              <span className="text-[10px] text-muted-foreground font-medium">đầu việc</span>
+              <span className="text-xs text-muted-foreground font-medium">đầu việc</span>
             </div>
           </div>
         </div>
@@ -192,12 +192,12 @@ export default function OrgPage() {
             <CheckCircle2 className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
-            <span className="text-[11px] font-medium text-muted-foreground block truncate">
+            <span className="text-xs font-medium text-muted-foreground block truncate">
               Định danh số E-Office
             </span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-semibold text-foreground font-mono tabular-nums">100%</span>
-              <span className="text-[10px] text-emerald-600 font-semibold">
+              <span className="text-xs text-emerald-600 font-semibold">
                 Email công vụ
               </span>
             </div>

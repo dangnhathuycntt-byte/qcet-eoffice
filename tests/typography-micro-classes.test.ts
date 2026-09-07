@@ -4,8 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const SRC_DIR = path.resolve(process.cwd(), "src");
-const FORBIDDEN_CLASS_REGEX = /\btext-\[(8|9|10|11)px\]/g;
-const BASELINE_VIOLATIONS = 405;
+const FORBIDDEN_CLASS_REGEX = /\btext-\[(?:8|9|10|11)(?:\.[0-9]+)?px\]/g;
+const BASELINE_VIOLATIONS = 0;
 
 function getSourceFiles(dir: string, fileList: string[] = []): string[] {
   const files = fs.readdirSync(dir);
@@ -44,30 +44,24 @@ describe("Typography Floor Linter Test Suite (WCAG & Ergonomics)", () => {
       });
     }
 
-    console.log(`Current micro-typography violations: ${violations.length} (baseline: ${BASELINE_VIOLATIONS})`);
+    console.log(`Current micro-typography violations: ${violations.length} (target: 0)`);
 
-    const isStrict =
-      process.env.STRICT_TYPOGRAPHY === "true" ||
-      process.env.STRICT_TYPOGRAPHY === "1";
-
-    if (isStrict) {
-      if (violations.length > 0) {
-        const summary = violations
-          .slice(0, 20)
-          .map((v) => `  - ${v.file}:${v.line} uses forbidden class "${v.match}"`)
-          .join("\n");
-        const extra =
-          violations.length > 20 ? `\n  ... and ${violations.length - 20} more.` : "";
-        assert.fail(
-          `Found ${violations.length} forbidden micro-typography violations (< 12px) in STRICT mode:\n${summary}${extra}`
-        );
-      }
-      assert.strictEqual(violations.length, 0);
-    } else {
-      assert.ok(
-        violations.length <= BASELINE_VIOLATIONS,
-        `Violations (${violations.length}) must not exceed baseline of ${BASELINE_VIOLATIONS}`
+    if (violations.length > 0) {
+      const summary = violations
+        .slice(0, 20)
+        .map((v) => `  - ${v.file}:${v.line} uses forbidden class "${v.match}"`)
+        .join("\n");
+      const extra =
+        violations.length > 20 ? `\n  ... and ${violations.length - 20} more.` : "";
+      assert.fail(
+        `Found ${violations.length} forbidden micro-typography violations (< 12px):\n${summary}${extra}`
       );
     }
+
+    assert.strictEqual(
+      violations.length,
+      0,
+      "Codebase must contain exactly 0 forbidden micro-typography classes (< 12px)"
+    );
   });
 });

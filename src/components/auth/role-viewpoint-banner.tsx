@@ -50,7 +50,7 @@ export function RoleViewpointBanner({ className }: { className?: string }) {
           <Badge
             variant="outline"
             className={cn(
-              "text-[11px] font-bold px-2.5 py-0.5 rounded-lg shrink-0",
+              "text-xs font-bold px-2.5 py-0.5 rounded-lg shrink-0",
               user.role === "ADMIN" &&
                 "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
               user.role === "MANAGER" &&
@@ -72,7 +72,7 @@ export function RoleViewpointBanner({ className }: { className?: string }) {
       </div>
 
       <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-        <span className="text-[11px] text-muted-foreground hidden md:inline font-medium">
+        <span className="text-xs text-muted-foreground hidden md:inline font-medium">
           Chuyển góc nhìn:
         </span>
         <RoleSwitcherPill />

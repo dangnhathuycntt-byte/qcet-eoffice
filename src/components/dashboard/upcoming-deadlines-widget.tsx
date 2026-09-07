@@ -118,7 +118,7 @@ export function UpcomingDeadlinesWidget({
             <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
               Hạn chót 7 ngày tới
             </h3>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Nhiệm vụ cần ưu tiên hoàn tất theo tiến độ
             </p>
           </div>
@@ -169,7 +169,7 @@ export function UpcomingDeadlinesWidget({
                     <Badge
                       variant="outline"
                       className={cn(
-                        "text-[10px] px-2 py-0.5 font-semibold h-5 rounded-md border gap-1",
+                        "text-xs px-2 py-0.5 font-semibold h-5 rounded-md border gap-1",
                         levelBg
                       )}
                     >
@@ -185,7 +185,7 @@ export function UpcomingDeadlinesWidget({
                     {overdue ? (
                       <Badge
                         variant="rose"
-                        className="text-[10px] px-2 py-0.5 font-semibold h-5 rounded-md gap-1"
+                        className="text-xs px-2 py-0.5 font-semibold h-5 rounded-md gap-1"
                       >
                         <AlertTriangle className="size-3" strokeWidth={1.5} />
                         {relativeDistance.startsWith("Quá hạn")
@@ -200,7 +200,7 @@ export function UpcomingDeadlinesWidget({
                             ? "amber"
                             : "outline"
                         }
-                        className="text-[10px] px-2 py-0.5 font-medium h-5 rounded-md gap-1"
+                        className="text-xs px-2 py-0.5 font-medium h-5 rounded-md gap-1"
                       >
                         <Clock className="size-3 opacity-75" strokeWidth={1.5} />
                         {relativeDistance}
@@ -209,7 +209,7 @@ export function UpcomingDeadlinesWidget({
                   </div>
 
                   {/* Absolute date */}
-                  <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap font-medium">
+                  <span className="font-mono text-xs text-muted-foreground whitespace-nowrap font-medium">
                     {displayDate}
                   </span>
                 </div>
@@ -223,7 +223,7 @@ export function UpcomingDeadlinesWidget({
                 </h4>
 
                 {/* Assignee row */}
-                <div className="flex items-center gap-2 pt-0.5 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-2 pt-0.5 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5 min-w-0">
                     {item.assigneeAvatar ? (
                       <img
@@ -235,7 +235,7 @@ export function UpcomingDeadlinesWidget({
                         className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/50"
                       />
                     ) : (
-                      <div className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-[9px] font-semibold text-secondary-foreground ring-1 ring-border/50">
+                      <div className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-xs font-semibold text-secondary-foreground ring-1 ring-border/50">
                         {getInitials(item.assigneeName)}
                       </div>
                     )}

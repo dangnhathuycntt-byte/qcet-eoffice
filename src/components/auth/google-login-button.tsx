@@ -80,7 +80,7 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
         <span className="font-bold text-foreground">
           Đăng nhập với Google Workspace
         </span>
-        <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 border border-blue-500/20">
+        <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400 border border-blue-500/20">
           @cdktcnqn.edu.vn
         </span>
       </button>
@@ -139,7 +139,7 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
                   <Database className="size-4 text-primary shrink-0" strokeWidth={1.5} />
                   <span>Hướng dẫn đăng nhập hiện hành:</span>
                 </div>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1 text-[11.5px]">
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1 text-xs">
                   <li>
                     Sử dụng form đăng nhập email / mật khẩu bên dưới với các tài khoản nội bộ nhà trường.
                   </li>

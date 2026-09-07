@@ -111,7 +111,7 @@ export function Drawer({
                 value={stats.completionRate}
                 className="[&_[data-slot=progress-track]]:h-2.5 [&_[data-slot=progress-indicator]]:bg-emerald-500 rounded-full"
               />
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium pt-0.5">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium pt-0.5">
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold tabular-nums">
                   {stats.completed} hoàn thành
                 </span>

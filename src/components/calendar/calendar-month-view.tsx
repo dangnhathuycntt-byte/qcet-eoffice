@@ -491,7 +491,7 @@ export function CalendarMonthView({
   onSelectTask,
   onAddTask,
   initialYear = 2026,
-  initialMonth = 8, // September 2026
+  initialMonth = 9, // Tháng 9 / 2026 (25/08 - 24/09)
   initialPeriod,
   currentPeriod: controlledPeriod,
   onPeriodChange,
@@ -499,10 +499,20 @@ export function CalendarMonthView({
 }: CalendarMonthViewProps) {
   const [internalPeriod, setInternalPeriod] = React.useState<AcademicMonthPeriod>(() => {
     if (initialPeriod) return initialPeriod;
-    // Derive initial academic period from initialYear and initialMonth
-    const m = initialMonth >= 1 && initialMonth <= 12 ? initialMonth : initialMonth + 1;
+    // Derive initial academic period from initialYear and initialMonth (1-indexed: 9 = September)
+    const m = initialMonth >= 1 && initialMonth <= 12 ? initialMonth : 9;
     return getAcademicMonthInfo(new Date(initialYear, m - 1, 10));
   });
+
+  // Sync internal period if initialMonth, initialYear or initialPeriod props update
+  React.useEffect(() => {
+    if (initialPeriod) {
+      setInternalPeriod(initialPeriod);
+    } else if (initialMonth) {
+      const m = initialMonth >= 1 && initialMonth <= 12 ? initialMonth : 9;
+      setInternalPeriod(getAcademicMonthInfo(new Date(initialYear, m - 1, 10)));
+    }
+  }, [initialMonth, initialYear, initialPeriod]);
 
   const period = controlledPeriod ?? internalPeriod;
 
@@ -531,7 +541,8 @@ export function CalendarMonthView({
   };
 
   const handleCurrentMonth = () => {
-    handlePeriodChange(getAcademicMonthInfo("2026-09-04"));
+    const curPeriod = getAcademicMonthInfo(new Date());
+    handlePeriodChange(curPeriod);
     setSelectedDate("2026-09-04");
   };
 
@@ -685,7 +696,7 @@ export function CalendarMonthView({
               </button>
             </div>
 
-            <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-[11px] font-semibold font-mono tabular-nums">
+            <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 text-xs font-semibold font-mono tabular-nums">
               {currentMonthTaskCount} hạn chót trong tháng
             </span>
           </div>
@@ -729,7 +740,7 @@ export function CalendarMonthView({
                   type="button"
                   onClick={() => setActiveCategory(tab.id)}
                   className={cn(
-                    "whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all cursor-pointer",
+                    "whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium transition-all cursor-pointer",
                     isActive
                       ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                       : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
@@ -747,7 +758,7 @@ export function CalendarMonthView({
               type="button"
               onClick={() => setLevelFilter("ALL")}
               className={cn(
-                "px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
+                "px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer",
                 levelFilter === "ALL"
                   ? "bg-secondary text-foreground font-semibold"
                   : "text-muted-foreground hover:text-foreground"
@@ -759,7 +770,7 @@ export function CalendarMonthView({
               type="button"
               onClick={() => setLevelFilter("TRUONG")}
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer",
                 levelFilter === "TRUONG"
                   ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800"
                   : "text-muted-foreground hover:text-foreground"
@@ -772,7 +783,7 @@ export function CalendarMonthView({
               type="button"
               onClick={() => setLevelFilter("DON_VI")}
               className={cn(
-                "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer",
                 levelFilter === "DON_VI"
                   ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
                   : "text-muted-foreground hover:text-foreground"
@@ -842,7 +853,7 @@ export function CalendarMonthView({
                   {/* Top Day Header: Task count badge (left) + Day number (top right) */}
                   <div className="flex items-center justify-between mb-1.5">
                     {dayTasks.length > 0 ? (
-                      <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-mono font-medium tabular-nums bg-secondary/80 text-muted-foreground border border-border/40">
+                      <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-xs font-mono font-medium tabular-nums bg-secondary/80 text-muted-foreground border border-border/40">
                         {dayTasks.length}
                       </span>
                     ) : (
@@ -887,7 +898,7 @@ export function CalendarMonthView({
                             }
                           }}
                           className={cn(
-                            "flex items-center gap-1.5 rounded-[4px] px-1.5 py-0.5 text-[10px] font-medium transition-colors border truncate cursor-pointer shadow-2xs",
+                            "flex items-center gap-1.5 rounded-[4px] px-1.5 py-0.5 text-xs font-medium transition-colors border truncate cursor-pointer shadow-2xs",
                             item.level === "Trường"
                               ? "bg-background/90 border-border/70 text-foreground hover:border-primary/50 hover:bg-accent"
                               : "bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent",
@@ -901,7 +912,7 @@ export function CalendarMonthView({
                               dotClass
                             )}
                           />
-                          <span className="truncate font-sans text-[10px] leading-tight">
+                          <span className="truncate font-sans text-xs leading-tight">
                             {item.title}
                           </span>
                         </div>
@@ -915,7 +926,7 @@ export function CalendarMonthView({
                           e.stopPropagation();
                           setSelectedDate(cell.dateString);
                         }}
-                        className="w-full text-center py-0.5 rounded text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                        className="w-full text-center py-0.5 rounded text-xs font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                         title="Nhấn để xem toàn bộ danh sách nhiệm vụ của ngày này"
                       >
                         +{dayTasks.length - maxDisplay} nhiệm vụ
@@ -928,7 +939,7 @@ export function CalendarMonthView({
           </div>
 
           {/* Bottom Legend with status dots and concise Vietnamese labels */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-t border-border/40 bg-muted/20 text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-t border-border/40 bg-muted/20 text-xs text-muted-foreground">
             <div className="flex items-center gap-2 font-medium text-foreground">
               <span>Trạng thái:</span>
             </div>
@@ -950,7 +961,7 @@ export function CalendarMonthView({
                 <span>Quá hạn / Chậm tiến độ</span>
               </div>
             </div>
-            <div className="hidden sm:flex items-center gap-3 text-muted-foreground/80 font-mono text-[10px] tabular-nums">
+            <div className="hidden sm:flex items-center gap-3 text-muted-foreground/80 font-mono text-xs tabular-nums">
               <span>Hôm nay: 04/09/2026</span>
             </div>
           </div>
@@ -1000,7 +1011,7 @@ export function CalendarMonthView({
                 <p className="font-semibold text-foreground">
                   Không có hạn chót công việc
                 </p>
-                <p className="text-[11px] leading-relaxed">
+                <p className="text-xs leading-relaxed">
                   Không có nhiệm vụ nào đến hạn vào ngày này. Nhấn &ldquo;Thêm việc&rdquo; để phân công nhiệm vụ mới.
                 </p>
               </div>
@@ -1030,7 +1041,7 @@ export function CalendarMonthView({
                       <div className="flex items-center gap-1.5">
                         <span
                           className={cn(
-                            "inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold border",
+                            "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold border",
                             isSchool
                               ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800"
                               : "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800"
@@ -1042,7 +1053,7 @@ export function CalendarMonthView({
                         <Badge
                           variant="outline"
                           className={cn(
-                            "text-[10px] px-1.5 py-0 h-4.5 font-medium rounded-md",
+                            "text-xs px-1.5 py-0 h-4.5 font-medium rounded-md",
                             catConfig.className
                           )}
                         >
@@ -1053,7 +1064,7 @@ export function CalendarMonthView({
                       <Badge
                         variant={statusConfig.variant}
                         className={cn(
-                          "text-[10px] px-1.5 py-0 h-4.5 font-semibold rounded-md",
+                          "text-xs px-1.5 py-0 h-4.5 font-semibold rounded-md",
                           statusConfig.className
                         )}
                       >
@@ -1068,14 +1079,14 @@ export function CalendarMonthView({
 
                     {/* Parent task if Subtask */}
                     {!isSchool && item.parentSchoolTaskTitle && (
-                      <div className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                      <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
                         <Layers strokeWidth={1.5} className="size-3 text-muted-foreground/70 shrink-0" />
                         <span className="truncate">Thuộc: {item.parentSchoolTaskTitle}</span>
                       </div>
                     )}
 
                     {/* Footer: Assignee avatar & name */}
-                    <div className="flex items-center justify-between pt-1.5 border-t border-border/50 text-[11px]">
+                    <div className="flex items-center justify-between pt-1.5 border-t border-border/50 text-xs">
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         {item.assigneeAvatar ? (
                           <img
@@ -1084,7 +1095,7 @@ export function CalendarMonthView({
                             className="size-4.5 rounded-full object-cover shrink-0 border border-border"
                           />
                         ) : (
-                          <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary text-[8px] font-bold text-secondary-foreground border border-border">
+                          <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground border border-border">
                             {getInitials(item.assigneeName)}
                           </span>
                         )}
@@ -1093,7 +1104,7 @@ export function CalendarMonthView({
                         </span>
                       </div>
 
-                      <span className="text-muted-foreground text-[10px] font-mono tabular-nums">
+                      <span className="text-muted-foreground text-xs font-mono tabular-nums">
                         Hạn: {item.dueDate.split("T")[0]}
                       </span>
                     </div>

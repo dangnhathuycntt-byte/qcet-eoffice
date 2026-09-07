@@ -417,7 +417,7 @@ export function TaskKanbanBoard({
                             <div className="flex items-center justify-between gap-1.5 flex-wrap">
                               <div className="flex items-center gap-1.5">
                                 {item.level === "TRUONG" ? (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                                     <Building2
                                       strokeWidth={1.5}
                                       className="size-3"
@@ -425,7 +425,7 @@ export function TaskKanbanBoard({
                                     <span>Cấp Trường</span>
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                                     <Users
                                       strokeWidth={1.5}
                                       className="size-3"
@@ -436,7 +436,7 @@ export function TaskKanbanBoard({
 
                                 <span
                                   className={cn(
-                                    "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border border-border/50",
+                                    "inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border border-border/50",
                                     categoryConfig.className
                                   )}
                                 >
@@ -448,7 +448,7 @@ export function TaskKanbanBoard({
                             {/* Title & Parent School Task */}
                             <div>
                               {item.parentSchoolTaskTitle && (
-                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1 line-clamp-1">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1 line-clamp-1">
                                   <FolderTree
                                     strokeWidth={1.5}
                                     className="size-3 shrink-0 text-muted-foreground/70"
@@ -469,7 +469,7 @@ export function TaskKanbanBoard({
                             {/* 2px Micro Progress Bar (h-1) */}
                             {item.level === "TRUONG" && (
                               <div className="space-y-1">
-                                <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono tabular-nums">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground font-mono tabular-nums">
                                   <span className="text-muted-foreground/70">
                                     Tiến độ
                                   </span>
@@ -501,12 +501,12 @@ export function TaskKanbanBoard({
                               {/* Assignee & Due Date */}
                               <div className="flex items-center gap-2 min-w-0">
                                 <div
-                                  className="size-[22px] rounded-full bg-secondary text-foreground border border-border/80 flex items-center justify-center text-[10px] font-semibold font-mono shrink-0"
+                                  className="size-[22px] rounded-full bg-secondary text-foreground border border-border/80 flex items-center justify-center text-xs font-semibold font-mono shrink-0"
                                   title={item.assigneeName}
                                 >
                                   {getInitials(item.assigneeName)}
                                 </div>
-                                <div className="flex items-center gap-1 text-[11px] truncate text-muted-foreground">
+                                <div className="flex items-center gap-1 text-xs truncate text-muted-foreground">
                                   <Calendar
                                     strokeWidth={1.5}
                                     className={cn(
@@ -516,7 +516,7 @@ export function TaskKanbanBoard({
                                   />
                                   <span
                                     className={cn(
-                                      "truncate font-mono tabular-nums text-[11px]",
+                                      "truncate font-mono tabular-nums text-xs",
                                       overdue
                                         ? "text-destructive font-semibold"
                                         : ""

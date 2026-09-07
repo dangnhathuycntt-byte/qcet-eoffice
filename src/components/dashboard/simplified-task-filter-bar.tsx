@@ -288,7 +288,7 @@ export function SimplifiedTaskFilterBar({
             {activeFilterCount > 0 && (
               <span
                 data-testid="badge-filter-count"
-                className="badge-filter-count inline-flex items-center justify-center min-w-[1.25rem] h-4.5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-mono tabular-nums"
+                className="badge-filter-count inline-flex items-center justify-center min-w-[1.25rem] h-4.5 px-1 rounded-full bg-primary text-primary-foreground text-xs font-mono tabular-nums"
               >
                 {activeFilterCount}
               </span>
@@ -318,7 +318,7 @@ export function SimplifiedTaskFilterBar({
                   Bộ lọc nâng cao
                 </span>
                 {activeFilterCount > 0 && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/15 text-primary font-mono tabular-nums font-semibold">
+                  <span className="px-1.5 py-0.5 rounded text-xs bg-primary/15 text-primary font-mono tabular-nums font-semibold">
                     {activeFilterCount} đang chọn
                   </span>
                 )}

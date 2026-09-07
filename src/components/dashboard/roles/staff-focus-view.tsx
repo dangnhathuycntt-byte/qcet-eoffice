@@ -703,7 +703,7 @@ function TaskActionCard({
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span
               className={cn(
-                "inline-flex items-center px-2 py-0.5 rounded-md border font-medium text-[11px]",
+                "inline-flex items-center px-2 py-0.5 rounded-md border font-medium text-xs",
                 categoryInfo.badgeClass
               )}
             >

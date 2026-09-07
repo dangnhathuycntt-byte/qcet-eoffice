@@ -287,7 +287,7 @@ export function ExecutiveStatStrip({
               {card.badge && (
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-medium font-mono shrink-0",
+                    "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium font-mono shrink-0",
                     isOverdueAlert
                       ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
                       : (stats?.needsReviewTasksCount ?? 0) > 0
@@ -320,7 +320,7 @@ export function ExecutiveStatStrip({
                       }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="truncate">{card.subtext}</span>
                     <span className="font-mono font-semibold text-foreground tabular-nums ml-1 shrink-0">
                       {card.progress}%

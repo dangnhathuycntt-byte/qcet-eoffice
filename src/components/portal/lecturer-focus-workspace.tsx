@@ -22,6 +22,7 @@ import {
   X,
   User,
   Building2,
+  Plus,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
@@ -354,7 +355,7 @@ export function renderStatusBadge(status: TaskStatus) {
       return (
         <Badge
           variant="outline"
-          className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 text-[11px] font-medium"
+          className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 text-xs font-medium"
         >
           Đang thực hiện
         </Badge>
@@ -363,7 +364,7 @@ export function renderStatusBadge(status: TaskStatus) {
       return (
         <Badge
           variant="outline"
-          className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30 text-[11px] font-medium"
+          className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30 text-xs font-medium"
         >
           Chờ thẩm định
         </Badge>
@@ -372,7 +373,7 @@ export function renderStatusBadge(status: TaskStatus) {
       return (
         <Badge
           variant="outline"
-          className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 text-[11px] font-medium"
+          className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 text-xs font-medium"
         >
           Bị nghẽn
         </Badge>
@@ -381,7 +382,7 @@ export function renderStatusBadge(status: TaskStatus) {
       return (
         <Badge
           variant="outline"
-          className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[11px] font-medium"
+          className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-xs font-medium"
         >
           Đã hoàn thành
         </Badge>
@@ -391,7 +392,7 @@ export function renderStatusBadge(status: TaskStatus) {
       return (
         <Badge
           variant="outline"
-          className="bg-muted text-muted-foreground border-border text-[11px] font-medium"
+          className="bg-muted text-muted-foreground border-border text-xs font-medium"
         >
           Mới tiếp nhận
         </Badge>
@@ -518,14 +519,31 @@ export function LecturerFocusWorkspace({
           </div>
         </div>
 
-        {/* Global Task Warehouse Link */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Actions: Quick Create Task & Global Task Warehouse Link */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent("qcet:open-create-task", {
+                  detail: { leadAssigneeName: user.name },
+                })
+              );
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer active:scale-95"
+            title="Tự tạo công việc cá nhân mới"
+          >
+            <Plus className="size-3.5" strokeWidth={2} />
+            <span>Tạo việc mới</span>
+          </Button>
+
           <Link
             href={tasksUrl}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-border/80 bg-background/60 hover:bg-muted text-foreground transition-all shadow-xs"
           >
             <Eye className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-            <span>Xem kho nhiệm vụ toàn trường</span>
+            <span>Kho nhiệm vụ toàn trường</span>
             <ArrowRight className="size-3 text-muted-foreground" strokeWidth={1.5} />
           </Link>
         </div>
@@ -565,9 +583,9 @@ export function LecturerFocusWorkspace({
             <span className="text-2xl font-bold tracking-tight text-foreground">
               {summary.todayCount}
             </span>
-            <span className="text-[11px] text-muted-foreground">việc</span>
+            <span className="text-xs text-muted-foreground">việc</span>
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
             Quá hạn hoặc đến hạn
           </p>
         </button>
@@ -602,9 +620,9 @@ export function LecturerFocusWorkspace({
             <span className="text-2xl font-bold tracking-tight text-foreground">
               {summary.thisWeekCount}
             </span>
-            <span className="text-[11px] text-muted-foreground">việc</span>
+            <span className="text-xs text-muted-foreground">việc</span>
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
             Hạn chót trong 7 ngày tới
           </p>
         </button>
@@ -639,9 +657,9 @@ export function LecturerFocusWorkspace({
             <span className="text-2xl font-bold tracking-tight text-foreground">
               {summary.waitingApprovalCount}
             </span>
-            <span className="text-[11px] text-muted-foreground">hồ sơ</span>
+            <span className="text-xs text-muted-foreground">hồ sơ</span>
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
             Đang trong luồng thẩm định
           </p>
         </button>
@@ -676,9 +694,9 @@ export function LecturerFocusWorkspace({
             <span className="text-2xl font-bold tracking-tight text-foreground">
               {summary.revisionRequestedCount}
             </span>
-            <span className="text-[11px] text-muted-foreground">việc</span>
+            <span className="text-xs text-muted-foreground">việc</span>
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
             Cần bổ sung minh chứng
           </p>
         </button>
@@ -706,9 +724,9 @@ export function LecturerFocusWorkspace({
             <span className="text-2xl font-bold tracking-tight text-foreground">
               {summary.completedCount}
             </span>
-            <span className="text-[11px] text-muted-foreground">việc</span>
+            <span className="text-xs text-muted-foreground">việc</span>
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
             Đã nghiệm thu đạt chuẩn
           </p>
         </button>
@@ -779,7 +797,7 @@ export function LecturerFocusWorkspace({
             )}
           >
             <span>Khẩn cấp / Quá hạn</span>
-            <span className="text-[11px] font-bold">({summary.todayCount})</span>
+            <span className="text-xs font-bold">({summary.todayCount})</span>
           </button>
 
           <button
@@ -793,7 +811,7 @@ export function LecturerFocusWorkspace({
             )}
           >
             <span>Trong tuần này</span>
-            <span className="text-[11px] font-bold">({summary.thisWeekCount})</span>
+            <span className="text-xs font-bold">({summary.thisWeekCount})</span>
           </button>
 
           <button
@@ -820,7 +838,7 @@ export function LecturerFocusWorkspace({
             )}
           >
             <span>Chờ duyệt</span>
-            <span className="text-[11px] font-bold">
+            <span className="text-xs font-bold">
               ({summary.waitingApprovalCount})
             </span>
           </button>
@@ -836,7 +854,7 @@ export function LecturerFocusWorkspace({
             )}
           >
             <span>Cần bổ sung</span>
-            <span className="text-[11px] font-bold">
+            <span className="text-xs font-bold">
               ({summary.revisionRequestedCount})
             </span>
           </button>
@@ -852,7 +870,7 @@ export function LecturerFocusWorkspace({
             )}
           >
             <span>Đã xong</span>
-            <span className="text-[11px] font-bold">
+            <span className="text-xs font-bold">
               ({summary.completedCount})
             </span>
           </button>
@@ -924,12 +942,12 @@ export function LecturerFocusWorkspace({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
                       {task.parentTaskTitle && (
-                        <span className="text-[11px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md line-clamp-1 max-w-xs sm:max-w-md">
+                        <span className="text-xs font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md line-clamp-1 max-w-xs sm:max-w-md">
                           {task.parentTaskTitle}
                         </span>
                       )}
                       {task.parentCategoryLabel && (
-                        <span className="text-[10px] uppercase tracking-wider font-semibold text-primary/80 bg-primary/10 px-2 py-0.5 rounded-md">
+                        <span className="text-xs uppercase tracking-wider font-semibold text-primary/80 bg-primary/10 px-2 py-0.5 rounded-md">
                           {task.parentCategoryLabel}
                         </span>
                       )}
@@ -1011,14 +1029,14 @@ export function LecturerFocusWorkspace({
                   {/* Attached Deliverables List (if any) */}
                   {task.deliverables && task.deliverables.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                         <FileText className="size-3 text-muted-foreground" strokeWidth={1.5} />
                         <span>Minh chứng đã đính kèm:</span>
                       </span>
                       {task.deliverables.map((del) => (
                         <div
                           key={del.id || del.name}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/80 text-[11px] text-foreground border border-border/60"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/80 text-xs text-foreground border border-border/60"
                         >
                           <span className="max-w-[200px] truncate">{del.name}</span>
                           {del.url && (
@@ -1038,9 +1056,9 @@ export function LecturerFocusWorkspace({
 
                   {/* Bottom Action Strip */}
                   <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/50">
-                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <span>Mã:</span>
-                      <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[10px] text-foreground">
+                      <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs text-foreground">
                         {task.id}
                       </code>
                     </div>

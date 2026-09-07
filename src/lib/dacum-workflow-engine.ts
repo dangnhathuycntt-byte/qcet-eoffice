@@ -20,8 +20,25 @@ export interface AssignmentCheckResult {
 export function canAssignStaffTask(
   actor: AuthUser,
   targetUserDeptCode: string,
-  isEmergencyBypass: boolean = false
+  isEmergencyBypass: boolean = false,
+  targetUserName?: string
 ): AssignmentCheckResult {
+  // Rule: Staff cannot delegate to others; they can only create tasks for themselves
+  if (actor.role === "STAFF") {
+    if (
+      targetUserName &&
+      actor.name &&
+      targetUserName.trim().toLowerCase() === actor.name.trim().toLowerCase()
+    ) {
+      return { allowed: true };
+    }
+    return {
+      allowed: false,
+      reason:
+        "Giảng viên / Nhân sự chỉ có thể tự tạo việc cho chính mình. Quyền giao việc cho nhân sự khác thuộc thẩm quyền của Trưởng đơn vị.",
+    };
+  }
+
   if (actor.role === "ADMIN") {
     return {
       allowed: true,
@@ -45,7 +62,7 @@ export function canAssignStaffTask(
 
   return {
     allowed: false,
-    reason: "Chuyên viên/Nhân viên không có quyền giao việc.",
+    reason: "Giảng viên / Nhân sự chỉ có thể tự tạo việc cho chính mình. Quyền giao việc cho nhân sự khác thuộc thẩm quyền của Trưởng đơn vị.",
   };
 }
 

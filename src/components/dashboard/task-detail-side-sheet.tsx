@@ -36,6 +36,8 @@ import type {
   EscalationMeta,
 } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
+import type { DelegationRule } from "@/types/delegation";
+import { canUserApproveTask } from "@/lib/delegation-authority-engine";
 import { useAuth } from "@/lib/auth-context";
 import {
   transitionStaffTaskStatus,
@@ -327,6 +329,7 @@ export interface TaskDetailSideSheetProps {
   currentUser?: AuthUser;
   onUpdateStaffTask?: (updatedTask: StaffTask) => void;
   onCloseSchoolTask?: (schoolTaskId: string) => void;
+  delegations?: DelegationRule[];
 }
 
 export function TaskDetailSideSheet({
@@ -341,6 +344,7 @@ export function TaskDetailSideSheet({
   currentUser,
   onUpdateStaffTask,
   onCloseSchoolTask,
+  delegations = [],
 }: TaskDetailSideSheetProps) {
   const auth = useAuth();
   const user = currentUser ?? auth.user;
@@ -429,11 +433,50 @@ export function TaskDetailSideSheet({
       new Date("2026-09-04T00:00:00");
   const auditTimeline = getTaskAuditTimeline(task);
 
-  // Permission evaluations
+  // Permission evaluations & Stanford Authority Delegation Engine
+  const taskDepartmentCode =
+    (!isSchool && (task as StaffTask).departmentCode) ||
+    (isSchool && (task as SchoolTask).leadDepartmentCode) ||
+    user?.departmentCode ||
+    "";
+
+  const taskAssigneeId =
+    !isSchool
+      ? (task as StaffTask).assigneeId ||
+        (user && (task as StaffTask).assigneeName === user.name ? user.id : undefined)
+      : (task as SchoolTask).leadAssigneeId ||
+        (user && (task as SchoolTask).leadAssigneeName === user.name ? user.id : undefined);
+
+  const approvalResult = React.useMemo(() => {
+    if (!user || !task) {
+      return { allowed: false, reason: "Chưa xác thực người dùng hoặc thiếu thông tin nhiệm vụ." };
+    }
+    return canUserApproveTask({
+      actor: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        departmentCode: user.departmentCode,
+      },
+      task: {
+        id: task.id,
+        departmentCode: taskDepartmentCode,
+        assigneeId: taskAssigneeId,
+      },
+      activeDelegations: delegations,
+    });
+  }, [user, task, taskDepartmentCode, taskAssigneeId, delegations]);
+
   const canSubmitDeliverable =
     !isSchool && canUserSubmitDeliverable(task as StaffTask, user);
-  const canReview =
-    !isSchool && canUserReviewTask(task as StaffTask, user);
+  const canReview = !isSchool && approvalResult.allowed;
+  const isSeparationOfDutiesBlocked =
+    !isSchool &&
+    !approvalResult.allowed &&
+    Boolean(
+      (user?.id && taskAssigneeId && user.id === taskAssigneeId) ||
+      (user && (task as StaffTask).assigneeName === user.name)
+    );
   const canCloseSchool =
     isSchool && canUserCloseSchoolTask(task as SchoolTask, user);
 
@@ -610,7 +653,7 @@ export function TaskDetailSideSheet({
             {relativeTime && !isOverdue && (
               <span
                 className={cn(
-                  "text-[11px] px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden sm:inline font-mono",
+                  "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden sm:inline font-mono",
                   relativeTime.color
                 )}
               >
@@ -621,7 +664,7 @@ export function TaskDetailSideSheet({
             {!isSchool && (
               <span
                 className={cn(
-                  "text-[11px] px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden sm:inline font-medium",
+                  "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden sm:inline font-medium",
                   (task as StaffTask).requiresReview
                     ? "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                     : "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400"
@@ -671,12 +714,12 @@ export function TaskDetailSideSheet({
           {/* Header Block: Code + Level Badge + Title */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="font-mono text-[11px] font-semibold text-muted-foreground bg-muted/60 border border-border/50 px-2 py-0.5 rounded-md tabular-nums">
+              <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted/60 border border-border/50 px-2 py-0.5 rounded-md tabular-nums">
                 NV-{task.id.slice(0, 8).toUpperCase()}
               </span>
               <span
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md border text-[11px] font-semibold px-2 py-0.5 shadow-2xs",
+                  "inline-flex items-center gap-1.5 rounded-md border text-xs font-semibold px-2 py-0.5 shadow-2xs",
                   levelBadge.className
                 )}
               >
@@ -787,7 +830,7 @@ export function TaskDetailSideSheet({
                           Kết quả sàng lọc tự động
                         </span>
                         <span className={cn(
-                          "ml-auto text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded-md border",
+                          "ml-auto text-xs font-mono tabular-nums px-1.5 py-0.5 rounded-md border",
                           aiReview.complianceScore >= 80
                             ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                             : aiReview.complianceScore >= 50
@@ -797,14 +840,14 @@ export function TaskDetailSideSheet({
                           Diem tuan thu: {aiReview.complianceScore}/100
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      <p className="text-xs text-muted-foreground leading-relaxed">
                         {aiReview.executiveSummary}
                       </p>
                       {aiReview.flags.length > 0 && (
                         <ul className="space-y-1">
                           {aiReview.flags.map((flag, idx) => (
                             <li key={idx} className={cn(
-                              "text-[10.5px] flex items-start gap-1.5",
+                              "text-xs flex items-start gap-1.5",
                               flag.type === "CRITICAL"
                                 ? "text-rose-600 dark:text-rose-400"
                                 : flag.type === "WARNING"
@@ -818,19 +861,29 @@ export function TaskDetailSideSheet({
                         </ul>
                       )}
                       {aiReview.suggestedAction === "QUICK_APPROVE" && (
-                        <div className="flex items-center gap-1.5 text-[10.5px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                           <CheckCircle2 className="size-3" strokeWidth={1.5} />
                           <span>Khuyến nghị: Duyệt nhanh</span>
                         </div>
                       )}
                       {aiReview.suggestedAction === "REQUEST_CHANGES" && (
-                        <div className="flex items-center gap-1.5 text-[10.5px] text-amber-600 dark:text-amber-400 font-medium">
+                        <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
                           <RotateCcw className="size-3" strokeWidth={1.5} />
                           <span>Khuyến nghị: Yêu cầu bổ sung</span>
                         </div>
                       )}
                     </div>
                   )}
+                  {/* Delegation notice if acting under delegated authority */}
+                  {approvalResult.isDelegated && (
+                    <div className="w-full flex items-center gap-2 p-2.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs text-purple-700 dark:text-purple-300 font-medium">
+                      <ShieldCheck className="size-4 shrink-0 text-purple-600 dark:text-purple-400" strokeWidth={1.5} />
+                      <span>
+                        Phê duyệt theo thẩm quyền ủy quyền của {approvalResult.rule?.grantorName || "Trưởng đơn vị"}
+                      </span>
+                    </div>
+                  )}
+
                   {canReview ? (
                     <div className="flex items-center gap-2 w-full">
                       {aiReview?.suggestedAction === "QUICK_APPROVE" ? (
@@ -862,6 +915,37 @@ export function TaskDetailSideSheet({
                         <span>Trả lại Yêu cầu Sửa</span>
                       </Button>
                     </div>
+                  ) : isSeparationOfDutiesBlocked ? (
+                    <div className="space-y-2 w-full">
+                      <div className="w-full flex items-start gap-2 p-2.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-xs text-rose-700 dark:text-rose-300 font-medium">
+                        <AlertTriangle className="size-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" strokeWidth={1.5} />
+                        <div className="space-y-0.5">
+                          <p className="font-semibold">Phân lập thẩm quyền (Separation of Duties)</p>
+                          <p className="text-xs text-rose-600/90 dark:text-rose-400/90 leading-relaxed">
+                            Theo chuẩn quản trị đại học (Separation of Duties), bạn không thể tự nghiệm thu công việc do chính mình phụ trách.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 w-full">
+                        <Button
+                          type="button"
+                          disabled
+                          className="flex-1 h-8.5 text-xs font-semibold bg-muted text-muted-foreground rounded-lg cursor-not-allowed opacity-50 gap-1.5"
+                        >
+                          <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                          <span>Nghiệm thu Đạt (Vô hiệu hóa)</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled
+                          variant="outline"
+                          className="h-8.5 px-3 text-xs font-medium border-muted bg-muted/40 text-muted-foreground rounded-lg cursor-not-allowed opacity-50 inline-flex items-center gap-1.5"
+                        >
+                          <RotateCcw className="size-3.5" strokeWidth={1.5} />
+                          <span>Trả lại Yêu cầu Sửa</span>
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300 font-medium">
                       <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
@@ -882,7 +966,7 @@ export function TaskDetailSideSheet({
                     <button
                       type="button"
                       onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
-                      className="h-7 px-2.5 text-[11px] font-medium border border-border/60 bg-card text-foreground hover:bg-secondary rounded-md transition-all cursor-pointer inline-flex items-center gap-1"
+                      className="h-7 px-2.5 text-xs font-medium border border-border/60 bg-card text-foreground hover:bg-secondary rounded-md transition-all cursor-pointer inline-flex items-center gap-1"
                       title="Mở lại công việc để tiếp tục xử lý"
                     >
                       <RotateCcw className="size-3" strokeWidth={1.5} />
@@ -949,7 +1033,7 @@ export function TaskDetailSideSheet({
                       Tong hop AI Executive Brief
                     </h4>
                     <span className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border",
+                      "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border",
                       riskColorMap[aiReview.status] || riskColorMap.CLEAN
                     )}>
                       {riskLabel[aiReview.status] || aiReview.status}
@@ -958,7 +1042,7 @@ export function TaskDetailSideSheet({
 
                   {/* Compliance Score */}
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-medium text-muted-foreground">
+                    <span className="text-xs font-medium text-muted-foreground">
                       Diem tuan thu (complianceScore):
                     </span>
                     <span className={cn(
@@ -979,10 +1063,10 @@ export function TaskDetailSideSheet({
                   {/* DACUM Criteria Matched */}
                   {aiReview.dacumCriteriaMatched.length > 0 && (
                     <div className="space-y-1">
-                      <span className="text-[11px] font-semibold text-muted-foreground">
+                      <span className="text-xs font-semibold text-muted-foreground">
                         Tieu chi DACUM dat:
                       </span>
-                      <ul className="list-disc list-inside text-[11px] text-foreground space-y-0.5 pl-1">
+                      <ul className="list-disc list-inside text-xs text-foreground space-y-0.5 pl-1">
                         {aiReview.dacumCriteriaMatched.map((c, i) => (
                           <li key={i}>{c}</li>
                         ))}
@@ -993,13 +1077,13 @@ export function TaskDetailSideSheet({
                   {/* Warning Flags */}
                   {aiReview.flags.length > 0 && (
                     <div className="space-y-1">
-                      <span className="text-[11px] font-semibold text-muted-foreground">
+                      <span className="text-xs font-semibold text-muted-foreground">
                         Canh bao:
                       </span>
                       <ul className="space-y-0.5 pl-1">
                         {aiReview.flags.map((f, i) => (
                           <li key={i} className={cn(
-                            "text-[11px]",
+                            "text-xs",
                             f.type === "CRITICAL" ? "text-rose-600 font-medium" :
                             f.type === "WARNING" ? "text-amber-600" :
                             "text-muted-foreground"
@@ -1058,7 +1142,7 @@ export function TaskDetailSideSheet({
                       )}
                     </p>
                     {(task as StaffTask).escalation?.escalatedAt && (
-                      <span className="text-[10.5px] font-mono tabular-nums text-rose-600">
+                      <span className="text-xs font-mono tabular-nums text-rose-600">
                         Leo thang lúc: {formatDetailDate((task as StaffTask).escalation!.escalatedAt)}
                       </span>
                     )}
@@ -1092,13 +1176,13 @@ export function TaskDetailSideSheet({
                     <span>Đóng Nhiệm vụ cấp Trường</span>
                   </Button>
                 ) : (
-                  <p className="text-[11px] font-medium text-muted-foreground italic">
+                  <p className="text-xs font-medium text-muted-foreground italic">
                     Chỉ Ban Giám hiệu mới có thẩm quyền nghiệm thu đóng Nhiệm vụ cấp Trường.
                   </p>
                 )}
 
                 {executiveActionFeedback && (
-                  <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                  <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                     {executiveActionFeedback}
                   </p>
                 )}
@@ -1110,12 +1194,12 @@ export function TaskDetailSideSheet({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-border/50 bg-card/60 shadow-xs text-xs">
             {/* Cell 1: Lead / Assignee */}
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <User className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                 Cán bộ chủ trì
               </span>
               <div className="flex items-center gap-2">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary border border-primary/20">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary border border-primary/20">
                   {getInitials(assigneeName)}
                 </span>
                 <span className="font-semibold text-foreground truncate">
@@ -1126,7 +1210,7 @@ export function TaskDetailSideSheet({
 
             {/* Cell 2: Delegator */}
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                 Người giao việc
               </span>
@@ -1137,7 +1221,7 @@ export function TaskDetailSideSheet({
 
             {/* Cell 3: Due Date */}
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <Calendar className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                 Hạn hoàn thành
               </span>
@@ -1148,7 +1232,7 @@ export function TaskDetailSideSheet({
                 {relativeTime && (
                   <span
                     className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full border font-sans font-medium",
+                      "text-xs px-2 py-0.5 rounded-full border font-sans font-medium",
                       relativeTime.color
                     )}
                   >
@@ -1160,7 +1244,7 @@ export function TaskDetailSideSheet({
 
             {/* Cell 4: Progress / Last Update */}
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 {isSchool ? (
                   <TrendingUp className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                 ) : (
@@ -1182,7 +1266,7 @@ export function TaskDetailSideSheet({
             {/* Cell 5: Category (SchoolTask only) */}
             {isSchool && (
               <div className="flex flex-col gap-1 col-span-1 sm:col-span-2 pt-2 border-t border-border/30">
-                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                   <Tag className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                   Danh mục chuyên môn
                 </span>
@@ -1203,7 +1287,7 @@ export function TaskDetailSideSheet({
             {/* Cell 6: Co-assignees (SchoolTask only) */}
             {isSchool && task.coAssignees && task.coAssignees.length > 0 && (
               <div className="flex flex-col gap-1 col-span-1 sm:col-span-2 pt-2 border-t border-border/30">
-                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                   <Users className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                   Đơn vị phối hợp
                 </span>
@@ -1211,7 +1295,7 @@ export function TaskDetailSideSheet({
                   {task.coAssignees.map((partner) => (
                     <span
                       key={partner}
-                      className="inline-flex items-center rounded-md bg-secondary/80 px-2 py-0.5 text-[11px] font-medium text-foreground border border-border/40"
+                      className="inline-flex items-center rounded-md bg-secondary/80 px-2 py-0.5 text-xs font-medium text-foreground border border-border/40"
                     >
                       {partner}
                     </span>
@@ -1232,7 +1316,7 @@ export function TaskDetailSideSheet({
                     : "Tài liệu đính kèm (Việc thường quy - Tùy chọn)"}
                 </h3>
                 {((task as StaffTask).deliverables?.length || 0) > 0 && (
-                  <span className="text-[11px] font-mono text-muted-foreground tabular-nums">
+                  <span className="text-xs font-mono text-muted-foreground tabular-nums">
                     {(task as StaffTask).deliverables!.length} tài liệu
                   </span>
                 )}
@@ -1253,7 +1337,7 @@ export function TaskDetailSideSheet({
                             {item.name}
                           </span>
                           {item.submittedAt && (
-                            <span className="font-mono text-[10.5px] text-muted-foreground tabular-nums">
+                            <span className="font-mono text-xs text-muted-foreground tabular-nums">
                               Nộp ngày: {formatDetailDate(item.submittedAt)}
                             </span>
                           )}
@@ -1264,7 +1348,7 @@ export function TaskDetailSideSheet({
                           href={item.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline shrink-0"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline shrink-0"
                         >
                           <Link className="size-3" strokeWidth={1.5} />
                           <span>Xem tài liệu</span>
@@ -1283,7 +1367,7 @@ export function TaskDetailSideSheet({
               {/* Deliverable description / summary note if present */}
               {(task as StaffTask).deliverableDescription && (
                 <div className="rounded-xl border border-border/40 bg-muted/30 p-3 space-y-1">
-                  <span className="text-[11px] font-semibold text-muted-foreground">
+                  <span className="text-xs font-semibold text-muted-foreground">
                     Báo cáo kết quả công việc:
                   </span>
                   <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
@@ -1307,7 +1391,7 @@ export function TaskDetailSideSheet({
                         ? "Nộp sản phẩm minh chứng nghiệm thu"
                         : "Đính kèm tài liệu kết quả (tùy chọn)"}
                     </h4>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       {(task as StaffTask).requiresReview
                         ? "Cung cấp đường dẫn tệp tài liệu và mô tả kết quả công việc theo tiêu chuẩn DACUM & Nghị định 232 để Trưởng phòng nghiệm thu."
                         : "Viên chức có thể đính kèm đường dẫn tài liệu lưu trữ hoặc dùng nút 'Hoàn thành nhiệm vụ' trên thanh tác vụ."}
@@ -1318,7 +1402,7 @@ export function TaskDetailSideSheet({
                     <div>
                       <label
                         htmlFor="deliverable-name"
-                        className="block font-medium text-muted-foreground mb-1 text-[11px]"
+                        className="block font-medium text-muted-foreground mb-1 text-xs"
                       >
                         Tên tài liệu / sản phẩm minh chứng
                       </label>
@@ -1335,7 +1419,7 @@ export function TaskDetailSideSheet({
                     <div>
                       <label
                         htmlFor="deliverable-url"
-                        className="block font-medium text-muted-foreground mb-1 text-[11px]"
+                        className="block font-medium text-muted-foreground mb-1 text-xs"
                       >
                         Đường dẫn tài liệu / tệp đính kèm (Drive, Cloud, File URL)
                       </label>
@@ -1345,14 +1429,14 @@ export function TaskDetailSideSheet({
                         value={deliverableUrl}
                         onChange={(e) => setDeliverableUrl(e.target.value)}
                         placeholder="https://drive.google.com/..."
-                        className="w-full rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring font-mono text-[11px]"
+                        className="w-full rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring font-mono text-xs"
                       />
                     </div>
 
                     <div>
                       <label
                         htmlFor="deliverable-notes"
-                        className="block font-medium text-muted-foreground mb-1 text-[11px]"
+                        className="block font-medium text-muted-foreground mb-1 text-xs"
                       >
                         Mô tả tóm tắt kết quả công việc
                       </label>
@@ -1368,13 +1452,13 @@ export function TaskDetailSideSheet({
                   </div>
 
                   {deliverableError && (
-                    <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
                       {deliverableError}
                     </p>
                   )}
 
                   {deliverableSuccess && (
-                    <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                       {deliverableSuccess}
                     </p>
                   )}
@@ -1501,13 +1585,13 @@ export function TaskDetailSideSheet({
                         </div>
 
                         <div className="flex items-center gap-2.5 shrink-0">
-                          <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                          <span className="text-xs text-muted-foreground hidden sm:inline">
                             {sub.assigneeName}
                           </span>
                           <Badge
                             variant={subStatus.variant}
                             className={cn(
-                              "text-[10px] px-2 py-0.5 rounded-md font-medium",
+                              "text-xs px-2 py-0.5 rounded-md font-medium",
                               subStatus.className
                             )}
                           >
@@ -1529,7 +1613,7 @@ export function TaskDetailSideSheet({
                 <History className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                 Nhật ký hoạt động & tiến độ
               </h3>
-              <span className="text-[11px] font-mono text-muted-foreground tabular-nums">
+              <span className="text-xs font-mono text-muted-foreground tabular-nums">
                 {auditTimeline.length} sự kiện
               </span>
             </div>
@@ -1546,19 +1630,19 @@ export function TaskDetailSideSheet({
                     <span className="text-xs font-semibold text-foreground">
                       {item.label}
                     </span>
-                    <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                    <span className="font-mono text-xs text-muted-foreground tabular-nums">
                       {item.timestamp}
                     </span>
                   </div>
 
                   {item.description && (
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       {item.description}
                     </p>
                   )}
 
                   {item.actor && (
-                    <span className="text-[10.5px] font-medium text-muted-foreground/80">
+                    <span className="text-xs font-medium text-muted-foreground/80">
                       Chủ thể: {item.actor}
                     </span>
                   )}
@@ -1625,7 +1709,7 @@ export function TaskDetailSideSheet({
               </div>
 
               {rejectionError && (
-                <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
                   {rejectionError}
                 </p>
               )}

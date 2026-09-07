@@ -348,11 +348,11 @@ export function DepartmentCommandCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
                 {summary.departmentCode}
               </span>
               {summary.pendingApprovalCount > 0 && (
-                <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 text-[10px] font-mono font-semibold tabular-nums bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/60 dark:text-purple-400 dark:border-purple-800">
+                <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 text-xs font-mono font-semibold tabular-nums bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/60 dark:text-purple-400 dark:border-purple-800">
                   <FileCheck size={10} strokeWidth={1.5} />
                   {summary.pendingApprovalCount} chờ duyệt
                 </span>
@@ -369,7 +369,7 @@ export function DepartmentCommandCard({
           {/* RAG Alert Badge */}
           <div
             className={cn(
-              "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold font-mono",
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold font-mono",
               ragConfig.className
             )}
           >
@@ -393,7 +393,7 @@ export function DepartmentCommandCard({
             <div className="font-semibold text-foreground truncate">
               {summary.headOfDepartment.name}
             </div>
-            <div className="text-[11px] text-muted-foreground truncate">
+            <div className="text-xs text-muted-foreground truncate">
               {summary.headOfDepartment.title}
             </div>
           </div>
@@ -410,14 +410,14 @@ export function DepartmentCommandCard({
           )}
         >
           <div className="flex items-center justify-between gap-1.5 mb-1">
-            <div className="flex items-center gap-1 text-[11px] font-semibold text-primary">
+            <div className="flex items-center gap-1 text-xs font-semibold text-primary">
               <Target size={13} strokeWidth={1.5} />
               <span>Trọng tâm điều hành</span>
             </div>
             {priorityConfig && (
               <span
                 className={cn(
-                  "inline-flex items-center rounded border px-1.5 py-0.2 text-[10px] font-medium",
+                  "inline-flex items-center rounded border px-1.5 py-0.2 text-xs font-medium",
                   priorityConfig.className
                 )}
               >
@@ -434,7 +434,7 @@ export function DepartmentCommandCard({
               >
                 {focus.title}
               </p>
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground pt-0.5">
                 <span className="flex items-center gap-1">
                   <Calendar size={11} strokeWidth={1.5} />
                   <span className="font-mono tabular-nums">
@@ -459,7 +459,7 @@ export function DepartmentCommandCard({
         {/* Progress bar with % progress font-mono tabular-nums */}
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               Tiến độ chung đơn vị
             </span>
             <span className="font-mono tabular-nums font-semibold text-foreground text-xs">
@@ -489,13 +489,13 @@ export function DepartmentCommandCard({
         {/* 3 Stats: Đang làm | Sắp hạn | Trễ hạn with font-mono tabular-nums */}
         <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted/30 p-1.5 border border-border/20 text-center">
           <div className="px-1 py-0.5">
-            <div className="text-[10px] text-muted-foreground">Đang làm</div>
+            <div className="text-xs text-muted-foreground">Đang làm</div>
             <div className="text-xs font-bold font-mono tabular-nums text-foreground mt-0.5">
               {summary.metrics.inProgress}
             </div>
           </div>
           <div className="px-1 py-0.5 border-x border-border/30">
-            <div className="text-[10px] text-muted-foreground">Sắp hạn</div>
+            <div className="text-xs text-muted-foreground">Sắp hạn</div>
             <div
               className={cn(
                 "text-xs font-bold font-mono tabular-nums mt-0.5",
@@ -508,7 +508,7 @@ export function DepartmentCommandCard({
             </div>
           </div>
           <div className="px-1 py-0.5">
-            <div className="text-[10px] text-muted-foreground">Trễ hạn</div>
+            <div className="text-xs text-muted-foreground">Trễ hạn</div>
             <div
               className={cn(
                 "text-xs font-bold font-mono tabular-nums mt-0.5",
@@ -607,12 +607,12 @@ export function DepartmentDrillDownPanel({
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground">
                 {summary.departmentCode}
               </span>
               <span
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.2 text-[10px] font-mono font-semibold",
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.2 text-xs font-mono font-semibold",
                   ragConfig.className
                 )}
               >
@@ -635,7 +635,7 @@ export function DepartmentDrillDownPanel({
         <div className="flex items-center gap-2 self-start sm:self-center">
           {/* Head of Department badge */}
           <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/40 px-3 py-1 text-xs">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-mono text-[10px] font-bold">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-mono text-xs font-bold">
               {initials}
             </div>
             <span className="font-semibold text-foreground">
@@ -734,7 +734,7 @@ export function DepartmentDrillDownPanel({
           >
             <Building2 size={14} strokeWidth={1.5} className="text-primary" />
             <span>Nhiệm vụ Cấp Trường giao cho Đơn vị</span>
-            <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-[11px] tabular-nums text-foreground border border-border/40">
+            <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs tabular-nums text-foreground border border-border/40">
               {schoolTasks.length}
             </span>
           </button>
@@ -751,7 +751,7 @@ export function DepartmentDrillDownPanel({
           >
             <Layers size={14} strokeWidth={1.5} className="text-primary" />
             <span>Nhiệm vụ Nội bộ Đơn vị triển khai</span>
-            <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-[11px] tabular-nums text-foreground border border-border/40">
+            <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs tabular-nums text-foreground border border-border/40">
               {unitTasks.length}
             </span>
           </button>
@@ -782,25 +782,25 @@ export function DepartmentDrillDownPanel({
                   {/* Left Info */}
                   <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center rounded border border-border/50 bg-muted/60 px-1.5 py-0.2 text-[10px] font-medium text-muted-foreground">
+                      <span className="inline-flex items-center rounded border border-border/50 bg-muted/60 px-1.5 py-0.2 text-xs font-medium text-muted-foreground">
                         {categoryLabel}
                       </span>
                       <span
                         className={cn(
-                          "inline-flex items-center rounded-full border px-2 py-0.2 text-[10px] font-medium font-mono",
+                          "inline-flex items-center rounded-full border px-2 py-0.2 text-xs font-medium font-mono",
                           statusConfig.className
                         )}
                       >
                         {statusConfig.label}
                       </span>
-                      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar size={12} strokeWidth={1.5} />
                         <span className="font-mono tabular-nums">
                           Hạn: {formatDeadlineDisplay(task.dueDate)}
                         </span>
                       </span>
                       {assignee && (
-                        <span className="text-[11px] text-muted-foreground truncate max-w-[160px]">
+                        <span className="text-xs text-muted-foreground truncate max-w-[160px]">
                           • {assignee}
                         </span>
                       )}
@@ -976,7 +976,7 @@ export function ExecutiveDepartmentCommandCenter({
           >
             <Building2 size={14} strokeWidth={1.5} className="text-primary" />
             <span>Tất cả đơn vị</span>
-            <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-[11px] tabular-nums text-foreground border border-border/40">
+            <span className="rounded-full bg-muted px-1.5 py-0.2 font-mono text-xs tabular-nums text-foreground border border-border/40">
               {triageCounts.all}
             </span>
           </button>
@@ -1003,7 +1003,7 @@ export function ExecutiveDepartmentCommandCenter({
             <span>Điểm nghẽn cần BGH chỉ đạo</span>
             <span
               className={cn(
-                "rounded-full px-1.5 py-0.2 font-mono text-[11px] tabular-nums border",
+                "rounded-full px-1.5 py-0.2 font-mono text-xs tabular-nums border",
                 triageCounts.bottlenecks > 0
                   ? "bg-rose-100/80 text-rose-800 border-rose-300 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800"
                   : "bg-muted text-muted-foreground border-border/40"
@@ -1035,7 +1035,7 @@ export function ExecutiveDepartmentCommandCenter({
             <span>Chờ BGH ký duyệt</span>
             <span
               className={cn(
-                "rounded-full px-1.5 py-0.2 font-mono text-[11px] tabular-nums border",
+                "rounded-full px-1.5 py-0.2 font-mono text-xs tabular-nums border",
                 triageCounts.pendingApproval > 0
                   ? "bg-purple-100/80 text-purple-800 border-purple-300 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800"
                   : "bg-muted text-muted-foreground border-border/40"

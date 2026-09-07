@@ -338,11 +338,11 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
               Thông báo điều hành
             </h2>
             {unreadCount > 0 ? (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10.5px] font-mono font-bold bg-primary/10 text-primary border border-primary/20 tabular-nums">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/20 tabular-nums">
                 {unreadCount} mới
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
                 <Check size={12} strokeWidth={1.5} className="text-emerald-500" />
                 <span>Đã đọc hết</span>
               </span>
@@ -390,18 +390,18 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
             >
               <span>Chưa đọc</span>
               {unreadCount > 0 ? (
-                <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-bold bg-destructive/15 text-destructive border border-destructive/20 tabular-nums">
+                <span className="px-1.5 py-0.2 rounded font-mono text-xs font-bold bg-destructive/15 text-destructive border border-destructive/20 tabular-nums">
                   {unreadCount}
                 </span>
               ) : (
-                <span className="px-1.5 py-0.2 rounded font-mono text-[10px] font-medium text-muted-foreground bg-muted tabular-nums">
+                <span className="px-1.5 py-0.2 rounded font-mono text-xs font-medium text-muted-foreground bg-muted tabular-nums">
                   0
                 </span>
               )}
             </button>
           </div>
 
-          <span className="text-[11px] font-mono tabular-nums text-muted-foreground">
+          <span className="text-xs font-mono tabular-nums text-muted-foreground">
             {filteredNotifications.length} mục
           </span>
         </div>
@@ -415,14 +415,14 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
               <Check size={18} strokeWidth={1.5} />
             </div>
             <p className="text-xs font-semibold text-foreground">Không có thông báo chưa đọc nào</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Bạn đã nắm bắt hết mọi thông tin điều hành</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Bạn đã nắm bắt hết mọi thông tin điều hành</p>
           </div>
         ) : (
           <>
             {/* Section: Mới */}
             {newItems.length > 0 && (
               <div className="pb-1">
-                <div className="px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20">
+                <div className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20">
                   Mới cập nhật
                 </div>
                 <div className="space-y-0.5 px-1 pt-1">
@@ -441,7 +441,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
             {/* Section: Trước đó */}
             {earlierItems.length > 0 && (
               <div className="pt-1 pb-1">
-                <div className="px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20">
+                <div className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20">
                   Trước đó
                 </div>
                 <div className="space-y-0.5 px-1 pt-1">
@@ -536,10 +536,10 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
           <span className="font-semibold text-foreground">&ldquo;{item.targetTitle}&rdquo;</span>
         </p>
         <div className="flex items-center gap-2 mt-1">
-          <span className="px-1 py-0.2 rounded text-[9.5px] font-mono font-semibold bg-muted text-muted-foreground border border-border/50">
+          <span className="px-1 py-0.2 rounded text-xs font-mono font-semibold bg-muted text-muted-foreground border border-border/50">
             {item.category}
           </span>
-          <span className="text-[10.5px] text-muted-foreground font-mono tabular-nums flex items-center gap-1">
+          <span className="text-xs text-muted-foreground font-mono tabular-nums flex items-center gap-1">
             <Clock size={10} strokeWidth={1.5} className="text-muted-foreground/80 shrink-0" />
             <span>{item.timestamp}</span>
           </span>

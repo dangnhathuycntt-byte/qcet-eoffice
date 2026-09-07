@@ -946,10 +946,10 @@ function UnifiedTaskHubContent() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
                   Phân khu Điều hành
                 </span>
-                <span className="text-[11px] text-muted-foreground font-medium">
+                <span className="text-xs text-muted-foreground font-medium">
                   {isExecutive ? "BGH Giám sát toàn trường" : `Đơn vị: ${user?.department || "QCET"}`}
                 </span>
               </div>
@@ -1029,14 +1029,14 @@ function UnifiedTaskHubContent() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border border-border rounded-2xl p-4 shadow-xs">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
                       {isExecutive
                         ? "Khoang điều hành BGH"
                         : isManager
                         ? "Trung tâm điều hành Đơn vị"
                         : "Không gian làm việc cá nhân"}
                     </span>
-                    <span className="text-[11px] text-muted-foreground font-mono tabular-nums">
+                    <span className="text-xs text-muted-foreground font-mono tabular-nums">
                       Năm học 2026 - 2027
                     </span>
                   </div>
@@ -1137,16 +1137,16 @@ function UnifiedTaskHubContent() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
                       Năm học 2026 - 2027
                     </span>
                     {selectedMonthPeriod ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[10.5px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 shadow-2xs font-mono">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 shadow-2xs font-mono">
                         <span className="size-1.5 rounded-full bg-sky-500 animate-pulse" />
                         <span>{selectedMonthPeriod.label} ({selectedMonthPeriod.shortDateSpan})</span>
                       </span>
                     ) : (
-                      <span className="text-[11px] text-muted-foreground font-medium">
+                      <span className="text-xs text-muted-foreground font-medium">
                         Cả năm học (12 tháng chu kỳ)
                       </span>
                     )}
@@ -1384,7 +1384,7 @@ function UnifiedTaskHubContent() {
                       <button
                         type="button"
                         onClick={() => handleAcademicMonthChange("ALL")}
-                        className="shrink-0 text-[11px] font-medium text-primary hover:underline cursor-pointer"
+                        className="shrink-0 text-xs font-medium text-primary hover:underline cursor-pointer"
                       >
                         Hiển thị cả năm
                       </button>
@@ -1422,6 +1422,8 @@ function UnifiedTaskHubContent() {
                 {viewMode === "calendar" && (
                   <CalendarMonthView
                     tasks={filteredTasks}
+                    initialMonth={typeof selectedAcademicMonth === "number" ? selectedAcademicMonth : 9}
+                    initialYear={2026}
                     onSelectTask={(task) => setSelectedTask(task)}
                     onAddTask={() => handleOpenCreateModal("TRUONG")}
                   />
@@ -1462,7 +1464,7 @@ function UnifiedTaskHubContent() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-2xs font-mono">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-2xs font-mono">
                   Phân khu Lịch công tác
                 </span>
               </div>
@@ -1503,6 +1505,8 @@ function UnifiedTaskHubContent() {
           <section aria-label="Lưới lịch tháng">
             <CalendarMonthView
               tasks={filteredTasks}
+              initialMonth={typeof selectedAcademicMonth === "number" ? selectedAcademicMonth : 9}
+              initialYear={2026}
               onSelectTask={(task) => setSelectedTask(task)}
               onAddTask={() => handleOpenCreateModal("TRUONG")}
             />
@@ -1518,7 +1522,7 @@ function UnifiedTaskHubContent() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                   <Network className="size-3" strokeWidth={1.5} />
                   <span>CƠ CẤU BỘ MÁY & DANH BẠ QCET</span>
                 </span>

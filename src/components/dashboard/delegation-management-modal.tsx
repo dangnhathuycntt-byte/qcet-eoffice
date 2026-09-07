@@ -287,7 +287,7 @@ export function DelegationManagementModal({
                 <span className="font-semibold text-foreground">
                   {dept?.name || effectiveDeptCode}
                 </span>
-                <span className="font-mono tabular-nums px-1.5 py-0.2 rounded border border-border/70 bg-muted/50 text-[11px]">
+                <span className="font-mono tabular-nums px-1.5 py-0.2 rounded border border-border/70 bg-muted/50 text-xs">
                   {effectiveDeptCode}
                 </span>
               </p>
@@ -332,7 +332,7 @@ export function DelegationManagementModal({
                   </label>
                   <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-foreground">
                     <span className="font-medium">{grantorName}</span>
-                    <span className="font-mono tabular-nums text-[11px] text-muted-foreground">
+                    <span className="font-mono tabular-nums text-xs text-muted-foreground">
                       {grantorRole}
                     </span>
                   </div>
@@ -363,7 +363,7 @@ export function DelegationManagementModal({
                     )}
                   />
                   {errors.granteeName && (
-                    <p className="text-[11px] font-medium text-destructive flex items-center gap-1">
+                    <p className="text-xs font-medium text-destructive flex items-center gap-1">
                       <AlertCircle className="size-3" strokeWidth={1.5} />
                       {errors.granteeName}
                     </p>
@@ -372,7 +372,7 @@ export function DelegationManagementModal({
                   {/* Suggestion list from department members */}
                   {dept && dept.members && dept.members.length > 0 && (
                     <div className="pt-1">
-                      <p className="text-[10px] text-muted-foreground mb-1">
+                      <p className="text-xs text-muted-foreground mb-1">
                         Cán bộ gợi ý từ danh bạ đơn vị:
                       </p>
                       <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
@@ -384,7 +384,7 @@ export function DelegationManagementModal({
                               type="button"
                               onClick={() => handleSelectMember(member.name, member.role)}
                               className={cn(
-                                "text-[10px] rounded px-2 py-0.5 border border-border/60 bg-muted/40 hover:bg-primary/10 hover:border-primary/40 text-foreground transition-colors cursor-pointer active:scale-95",
+                                "text-xs rounded px-2 py-0.5 border border-border/60 bg-muted/40 hover:bg-primary/10 hover:border-primary/40 text-foreground transition-colors cursor-pointer active:scale-95",
                                 granteeName === member.name && "bg-primary/15 border-primary text-primary font-medium"
                               )}
                             >
@@ -455,7 +455,7 @@ export function DelegationManagementModal({
                         />
                         <div className="space-y-0.5 leading-tight">
                           <p className="font-medium text-foreground text-xs">{s.label}</p>
-                          <p className="text-[11px] text-muted-foreground">{s.description}</p>
+                          <p className="text-xs text-muted-foreground">{s.description}</p>
                         </div>
                       </label>
                     ))}
@@ -479,7 +479,7 @@ export function DelegationManagementModal({
                       )}
                     />
                     {errors.startDate && (
-                      <p className="text-[10px] text-destructive">{errors.startDate}</p>
+                      <p className="text-xs text-destructive">{errors.startDate}</p>
                     )}
                   </div>
 
@@ -498,7 +498,7 @@ export function DelegationManagementModal({
                       )}
                     />
                     {errors.endDate && (
-                      <p className="text-[10px] text-destructive">{errors.endDate}</p>
+                      <p className="text-xs text-destructive">{errors.endDate}</p>
                     )}
                   </div>
                 </div>
@@ -528,7 +528,7 @@ export function DelegationManagementModal({
                     )}
                   />
                   {errors.reason && (
-                    <p className="text-[11px] font-medium text-destructive flex items-center gap-1">
+                    <p className="text-xs font-medium text-destructive flex items-center gap-1">
                       <AlertCircle className="size-3" strokeWidth={1.5} />
                       {errors.reason}
                     </p>
@@ -600,7 +600,7 @@ export function DelegationManagementModal({
                               </span>
                               <Badge
                                 variant={del.granteeRole === "MANAGER" ? "sapphire" : "secondary"}
-                                className="font-mono tabular-nums text-[10px]"
+                                className="font-mono tabular-nums text-xs"
                               >
                                 {del.granteeRole}
                               </Badge>
@@ -612,7 +612,7 @@ export function DelegationManagementModal({
                                     ? "amber"
                                     : "destructive"
                                 }
-                                className="text-[10px]"
+                                className="text-xs"
                               >
                                 {isActive
                                   ? "Đang hiệu lực"
@@ -633,7 +633,7 @@ export function DelegationManagementModal({
                               variant="destructive"
                               size="xs"
                               onClick={() => onRevokeDelegation(del.id)}
-                              className="active:scale-95 text-[11px] gap-1 cursor-pointer shrink-0"
+                              className="active:scale-95 text-xs gap-1 cursor-pointer shrink-0"
                             >
                               <Trash2 className="size-3" strokeWidth={1.5} />
                               <span>Thu hồi</span>
@@ -666,7 +666,7 @@ export function DelegationManagementModal({
                         </div>
 
                         {/* Rule ID and Department Code */}
-                        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-0.5">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground pt-0.5">
                           <span className="font-mono tabular-nums">
                             Mã: {del.id}
                           </span>

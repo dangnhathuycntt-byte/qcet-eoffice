@@ -789,27 +789,32 @@ export function ExecutiveCockpitWorkspace({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {onCreateDirective && (
-            <Button
-              type="button"
-              onClick={onCreateDirective}
-              size="sm"
-              className="h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs text-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Giao chỉ đạo nhiệm vụ BGH</span>
-            </Button>
-          )}
+          <Button
+            type="button"
+            onClick={() => {
+              if (onCreateDirective) {
+                onCreateDirective();
+              } else {
+                window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
+              }
+            }}
+            size="sm"
+            className="h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs text-xs rounded-xl cursor-pointer active:scale-95"
+            title="Giao chỉ đạo nhiệm vụ BGH trọng tâm cấp trường"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Giao chỉ đạo nhiệm vụ BGH</span>
+          </Button>
 
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="text-xs h-8 gap-1.5 whitespace-nowrap"
+            className="text-xs h-8 gap-1.5 whitespace-nowrap rounded-xl border-border/80"
           >
             <Link href={tasksUrl} className="inline-flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 shrink-0" />
-              <span>Xem bảng giao việc đầy đủ</span>
+              <span>Kho nhiệm vụ toàn trường</span>
               <ArrowRight className="w-3 h-3 ml-0.5 shrink-0" />
             </Link>
           </Button>
@@ -1013,7 +1018,7 @@ export function ExecutiveCockpitWorkspace({
           {metrics.bottlenecksCount > 0 && (
             <Badge
               variant="destructive"
-              className="text-[10px] px-1.5 py-0 h-4 bg-rose-500"
+              className="text-xs px-1.5 py-0 h-4 bg-rose-500"
             >
               {metrics.bottlenecksCount}
             </Badge>
@@ -1033,7 +1038,7 @@ export function ExecutiveCockpitWorkspace({
           <CheckCircle2 className="w-4 h-4" />
           <span>Hàng đợi Phê duyệt Chiến lược</span>
           {metrics.pendingInstitutionalApprovalCount > 0 && (
-            <Badge className="text-[10px] px-1.5 py-0 h-4 bg-indigo-600 text-white">
+            <Badge className="text-xs px-1.5 py-0 h-4 bg-indigo-600 text-white">
               {metrics.pendingInstitutionalApprovalCount}
             </Badge>
           )}
@@ -1120,13 +1125,13 @@ export function ExecutiveCockpitWorkspace({
                         <div className="flex items-center gap-1.5">
                           <Badge
                             variant="outline"
-                            className="bg-muted text-foreground text-[10px] font-mono px-1.5 py-0.5"
+                            className="bg-muted text-foreground text-xs font-mono px-1.5 py-0.5"
                           >
                             {item.id}
                           </Badge>
                           <Badge
                             variant="outline"
-                            className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 text-[10px]"
+                            className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 text-xs"
                           >
                             {item.departmentCode}
                           </Badge>
@@ -1134,7 +1139,7 @@ export function ExecutiveCockpitWorkspace({
                         {item.isBlocked ? (
                           <Badge
                             variant="destructive"
-                            className="text-[10px] bg-rose-600 font-semibold"
+                            className="text-xs bg-rose-600 font-semibold"
                           >
                             Đang bị vướng mắc
                           </Badge>
@@ -1142,7 +1147,7 @@ export function ExecutiveCockpitWorkspace({
                           <Badge
                             variant="outline"
                             className={cn(
-                              "text-[10px] font-medium",
+                              "text-xs font-medium",
                               daysBadge.variant === "urgent"
                                 ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30"
                                 : daysBadge.variant === "warning"
@@ -1261,13 +1266,13 @@ export function ExecutiveCockpitWorkspace({
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge
                         variant="outline"
-                        className="bg-muted text-foreground text-[10px] font-mono px-1.5 py-0.5"
+                        className="bg-muted text-foreground text-xs font-mono px-1.5 py-0.5"
                       >
                         {item.id}
                       </Badge>
                       <Badge
                         variant="outline"
-                        className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30 text-[10px]"
+                        className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30 text-xs"
                       >
                         {item.departmentCode}
                       </Badge>
@@ -1421,7 +1426,7 @@ export function ExecutiveCockpitWorkspace({
                         </Badge>
                         <Badge
                           variant="outline"
-                          className={cn("text-[10px]", healthBadgeClass)}
+                          className={cn("text-xs", healthBadgeClass)}
                         >
                           {healthText}
                         </Badge>
@@ -1466,7 +1471,7 @@ export function ExecutiveCockpitWorkspace({
                           <div className="font-semibold text-foreground">
                             {dept.totalTasks}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground">
                             Tổng số
                           </div>
                         </div>
@@ -1474,7 +1479,7 @@ export function ExecutiveCockpitWorkspace({
                           <div className="font-semibold text-emerald-600 dark:text-emerald-400">
                             {dept.completedTasks}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground">
                             Hoàn thành
                           </div>
                         </div>
@@ -1487,7 +1492,7 @@ export function ExecutiveCockpitWorkspace({
                           )}
                         >
                           <div>{dept.delayedTasks + dept.blockedTasks}</div>
-                          <div className="text-[10px]">Chậm/Nghẽn</div>
+                          <div className="text-xs">Chậm/Nghẽn</div>
                         </div>
                       </div>
                     </div>
@@ -1645,39 +1650,39 @@ export function ExecutiveCockpitWorkspace({
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge
                           variant="outline"
-                          className="bg-muted text-foreground text-[10px] font-mono px-1.5 py-0.5"
+                          className="bg-muted text-foreground text-xs font-mono px-1.5 py-0.5"
                         >
                           {task.id}
                         </Badge>
                         <Badge
                           variant="outline"
-                          className="bg-primary/5 text-primary border-primary/20 text-[10px]"
+                          className="bg-primary/5 text-primary border-primary/20 text-xs"
                         >
                           {task.leadDepartmentCode || "BGH"}
                         </Badge>
                         <Badge
                           variant="outline"
-                          className="text-[10px] bg-muted/40 text-muted-foreground"
+                          className="text-xs bg-muted/40 text-muted-foreground"
                         >
                           {task.categoryLabel || "Chiến lược"}
                         </Badge>
                         {isOverdue && (
                           <Badge
                             variant="destructive"
-                            className="text-[10px] bg-rose-500"
+                            className="text-xs bg-rose-500"
                           >
                             Quá hạn
                           </Badge>
                         )}
                         {isPendingApproval && (
-                          <Badge className="text-[10px] bg-indigo-600 text-white">
+                          <Badge className="text-xs bg-indigo-600 text-white">
                             Chờ BGH phê duyệt
                           </Badge>
                         )}
                         {task.status === "COMPLETED" && (
                           <Badge
                             variant="outline"
-                            className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                            className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
                           >
                             Đã hoàn thành
                           </Badge>
@@ -1708,7 +1713,7 @@ export function ExecutiveCockpitWorkspace({
 
                       {/* Progress bar */}
                       <div className="w-full max-w-md pt-1 space-y-1">
-                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                        <div className="flex justify-between text-xs text-muted-foreground">
                           <span>Tiến độ thực hiện</span>
                           <span className="font-semibold text-foreground">
                             {task.progressPercent}%

@@ -474,7 +474,7 @@ export function SubmitDeliverableModal({
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center justify-between">
                 <span>Tải lên tệp minh chứng</span>
-                <span className="text-[11px] font-normal text-muted-foreground">Tùy chọn đính kèm</span>
+                <span className="text-xs font-normal text-muted-foreground">Tùy chọn đính kèm</span>
               </label>
 
               <div
@@ -503,7 +503,7 @@ export function SubmitDeliverableModal({
                 <p className="text-xs font-medium text-foreground">
                   Kéo thả tệp minh chứng vào đây hoặc <span className="text-primary underline">bấm để chọn</span>
                 </p>
-                <p className="text-[11px] text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Hỗ trợ định dạng PDF, DOCX, XLSX, ZIP (tối đa 50MB)
                 </p>
               </div>
@@ -514,7 +514,7 @@ export function SubmitDeliverableModal({
                   <div className="flex items-center gap-2 min-w-0">
                     <Paperclip className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
                     <span className="font-medium text-foreground truncate">{selectedFile.name}</span>
-                    <span className="text-muted-foreground text-[11px] shrink-0 font-mono">
+                    <span className="text-muted-foreground text-xs shrink-0 font-mono">
                       ({formatFileSize(selectedFile.size)})
                     </span>
                   </div>
@@ -557,7 +557,7 @@ export function SubmitDeliverableModal({
                 )}
               />
               {errorMessage && !deliverableName.trim() && (
-                <p className="text-[11px] text-destructive flex items-center gap-1 mt-1">
+                <p className="text-xs text-destructive flex items-center gap-1 mt-1">
                   <AlertCircle className="size-3" strokeWidth={1.5} />
                   <span>Vui lòng nhập tên minh chứng hoặc tải lên tệp đính kèm.</span>
                 </p>
@@ -598,7 +598,7 @@ export function SubmitDeliverableModal({
                     <LinkIcon className="size-3 text-muted-foreground" strokeWidth={1.5} />
                     <span>Đường dẫn minh chứng</span>
                   </span>
-                  <span className="text-[11px] font-normal text-muted-foreground">Tùy chọn</span>
+                  <span className="text-xs font-normal text-muted-foreground">Tùy chọn</span>
                 </label>
                 <input
                   id="url-input"
@@ -618,7 +618,7 @@ export function SubmitDeliverableModal({
                 className="text-xs font-semibold text-foreground flex items-center justify-between"
               >
                 <span>Ghi chú gửi Trưởng đơn vị / Người phê duyệt</span>
-                <span className="text-[11px] font-normal text-muted-foreground">Tùy chọn</span>
+                <span className="text-xs font-normal text-muted-foreground">Tùy chọn</span>
               </label>
               <textarea
                 id="deliverable-note"

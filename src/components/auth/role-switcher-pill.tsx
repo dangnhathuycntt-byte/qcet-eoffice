@@ -114,7 +114,7 @@ export function RoleSwitcherPill({ className }: { className?: string }) {
           aria-orientation="vertical"
           className="absolute right-0 top-full mt-1.5 w-64 rounded-xl border border-border/60 bg-card/95 p-1 text-popover-foreground shadow-dropdown backdrop-blur-md z-50 animate-in fade-in-0 zoom-in-95 focus:outline-none"
         >
-          <div className="px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground border-b border-border/40 mb-1">
+          <div className="px-2.5 py-1.5 text-xs font-medium text-muted-foreground border-b border-border/40 mb-1">
             Vai trò điều hành
           </div>
 
@@ -155,7 +155,7 @@ export function RoleSwitcherPill({ className }: { className?: string }) {
                       <p className="font-medium text-foreground truncate">
                         {item.label}
                       </p>
-                      <p className="text-[10.5px] text-muted-foreground truncate">
+                      <p className="text-xs text-muted-foreground truncate">
                         {item.description}
                       </p>
                     </div>

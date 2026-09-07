@@ -345,7 +345,7 @@ export function ReviewActionDialog({
                 Nhiệm vụ thẩm định
               </span>
               {effectiveTaskId && (
-                <Badge variant="outline" className="font-mono text-[11px] text-muted-foreground">
+                <Badge variant="outline" className="font-mono text-xs text-muted-foreground">
                   ID: {effectiveTaskId}
                 </Badge>
               )}
@@ -427,7 +427,7 @@ export function ReviewActionDialog({
                       </div>
                       <span
                         className={cn(
-                          "text-[10px] font-semibold px-1.5 py-0.5 rounded-md",
+                          "text-xs font-semibold px-1.5 py-0.5 rounded-md",
                           isSelected
                             ? opt.accentColor === "emerald"
                               ? "bg-emerald-600/20 text-emerald-800 dark:text-emerald-300"
@@ -471,7 +471,7 @@ export function ReviewActionDialog({
               </label>
               <span
                 className={cn(
-                  "text-[11px]",
+                  "text-xs",
                   isCommentRequired && commentCharCount < 5
                     ? "text-amber-600 dark:text-amber-400 font-medium"
                     : "text-muted-foreground"
@@ -515,7 +515,7 @@ export function ReviewActionDialog({
 
             {/* Quick Comment Templates */}
             <div className="pt-1.5 space-y-1.5">
-              <span className="text-[11px] font-medium text-muted-foreground block">
+              <span className="text-xs font-medium text-muted-foreground block">
                 Mẫu nhận xét nhanh:
               </span>
               <div className="flex flex-wrap gap-1.5">

@@ -114,7 +114,7 @@ export function UserProfileModal() {
                   Hồ sơ Cán bộ & Viên chức
                 </h3>
                 {user.emailVerified && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                     <CheckCircle2 className="size-3" strokeWidth={1.5} />
                     Đã xác thực Google
                   </span>
@@ -276,8 +276,8 @@ export function UserProfileModal() {
                 )}
               >
                 <User className="size-4 mb-1" strokeWidth={1.5} />
-                <span className="text-[11px] font-bold">Viên chức</span>
-                <span className="text-[9.5px] opacity-80">Xem việc trực tiếp</span>
+                <span className="text-xs font-bold">Viên chức</span>
+                <span className="text-xs opacity-80">Xem việc trực tiếp</span>
               </button>
 
               <button
@@ -291,8 +291,8 @@ export function UserProfileModal() {
                 )}
               >
                 <Building2 className="size-4 mb-1" strokeWidth={1.5} />
-                <span className="text-[11px] font-bold">Trưởng đơn vị</span>
-                <span className="text-[9.5px] opacity-80">Quản trị khoa/phòng</span>
+                <span className="text-xs font-bold">Trưởng đơn vị</span>
+                <span className="text-xs opacity-80">Quản trị khoa/phòng</span>
               </button>
 
               <button
@@ -306,8 +306,8 @@ export function UserProfileModal() {
                 )}
               >
                 <Award className="size-4 mb-1" strokeWidth={1.5} />
-                <span className="text-[11px] font-bold">Ban Giám hiệu</span>
-                <span className="text-[9.5px] opacity-80">Điều hành toàn trường</span>
+                <span className="text-xs font-bold">Ban Giám hiệu</span>
+                <span className="text-xs opacity-80">Điều hành toàn trường</span>
               </button>
             </div>
           </div>
