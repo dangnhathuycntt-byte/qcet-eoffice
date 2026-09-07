@@ -24,8 +24,13 @@ import {
   RefreshCw,
   Eye,
 } from "lucide-react";
-import { OfficialDocument, DocumentType, DocumentUrgency, DocumentStatus } from "@/types/document";
-import { MOCK_DOCUMENTS, getDocumentStats } from "@/lib/mock-document-data";
+import {
+  OfficialDocument,
+  DocumentType,
+  DocumentUrgency,
+  DocumentStatus,
+  DocumentStats,
+} from "@/types/document";
 import { Button } from "@/components/ui/button";
 import { DensityToggle } from "@/components/ui/density-toggle";
 import {
@@ -35,12 +40,92 @@ import {
 } from "./document-detail-dialog";
 import { CreateDocumentModal } from "./create-document-modal";
 
+function mapApiDocumentToOfficial(item: any): OfficialDocument {
+  let type: DocumentType = item.type;
+  if (item.type === "VAN_BAN_DEN") type = "inbox";
+  else if (item.type === "VAN_BAN_DI") type = "outbox";
+  else if (item.type === "TO_TRINH_NOI_BO") type = "submission";
+
+  let urgency: DocumentUrgency = item.urgency;
+  if (item.urgency === "HOA_TOC") urgency = "flash";
+  else if (item.urgency === "THUONG_KHAN") urgency = "top_urgent";
+  else if (item.urgency === "KHAN") urgency = "urgent";
+  else if (item.urgency === "THUONG") urgency = "normal";
+
+  let status: DocumentStatus = item.status;
+  if (item.status === "CHO_PHAN_CONG") status = "pending_assignment";
+  else if (item.status === "DANG_XU_LY") status = "processing";
+  else if (item.status === "CHO_PHE_DUYET") status = "approved";
+  else if (item.status === "DA_HOAN_THANH" || item.status === "LUU_THEO_DOI") status = "completed";
+  if (item.linkedTaskId && status === "processing") status = "delegated";
+
+  const issuedDateStr = item.issuedDate
+    ? typeof item.issuedDate === "string"
+      ? item.issuedDate.split("T")[0]
+      : new Date(item.issuedDate).toISOString().split("T")[0]
+    : "";
+
+  const receivedDateStr = item.registeredDate
+    ? typeof item.registeredDate === "string"
+      ? item.registeredDate.split("T")[0]
+      : new Date(item.registeredDate).toISOString().split("T")[0]
+    : item.receivedDate;
+
+  const docNumber =
+    item.originalNumber ||
+    item.documentNumber ||
+    (item.registrationNumber
+      ? `${item.registrationNumber}/${item.documentYear || new Date().getFullYear()}`
+      : item.id);
+
+  const signatory =
+    item.signerName
+      ? `${item.signerName}${item.signerTitle ? ` (${item.signerTitle})` : ""}`
+      : item.signatory || "Lãnh đạo đơn vị";
+
+  const fileAttachment =
+    item.attachments && item.attachments.length > 0
+      ? {
+          name: item.attachments[0].fileName,
+          size: `${Math.max(1, Math.round((item.attachments[0].fileSize || 1024) / 1024))} KB`,
+          url: item.attachments[0].fileUrl,
+        }
+      : item.fileAttachment;
+
+  return {
+    id: item.id,
+    type,
+    documentNumber: docNumber,
+    issuedDate: issuedDateStr,
+    receivedDate: receivedDateStr,
+    issuingAuthority: item.issuingAuthority || "Cơ quan ban hành",
+    summary: item.summary || "",
+    urgency: urgency || "normal",
+    status: status || "pending_assignment",
+    leadDepartment:
+      item.leadDepartmentName || item.leadDepartment || item.draftingDeptName || "Chưa phân công",
+    signatory,
+    linkedTaskId: item.linkedTaskId || undefined,
+    linkedTaskTitle:
+      item.linkedTask?.title || (item.linkedTaskId ? `Nhiệm vụ #${item.linkedTaskId}` : undefined),
+    fileAttachment,
+  };
+}
+
 export function DocumentRegistryView() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Data state initialized from mock data
-  const [documents, setDocuments] = React.useState<OfficialDocument[]>(MOCK_DOCUMENTS);
+  // Data state initialized as empty list from real database
+  const [documents, setDocuments] = React.useState<OfficialDocument[]>([]);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
+  const [stats, setStats] = React.useState<DocumentStats>({
+    totalInbox: 0,
+    totalOutbox: 0,
+    totalSubmissions: 0,
+    urgentCount: 0,
+    linkedTaskCount: 0,
+  });
 
   // Active Tab state synced with URL query ?tab=
   const tabParam = searchParams.get("tab") || "all";
@@ -57,6 +142,95 @@ export function DocumentRegistryView() {
   const [selectedDocument, setSelectedDocument] = React.useState<OfficialDocument | null>(null);
   const [isDetailOpen, setIsDetailOpen] = React.useState(false);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+
+  // Fetch document stats from real API route
+  const fetchStats = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/documents/stats");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setStats((prev) => ({
+            ...prev,
+            totalInbox: json.data.incoming ?? 0,
+            totalOutbox: json.data.outgoing ?? 0,
+            totalSubmissions: json.data.internal ?? 0,
+            urgentCount: json.data.urgent ?? 0,
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching document stats:", err);
+    }
+  }, []);
+
+  // Fetch documents from real API route with query filtering
+  const fetchDocuments = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (activeTab === "inbox") params.set("type", "VAN_BAN_DEN");
+      else if (activeTab === "outbox") params.set("type", "VAN_BAN_DI");
+      else if (activeTab === "pending") params.set("type", "TO_TRINH_NOI_BO");
+
+      if (searchQuery.trim()) {
+        params.set("search", searchQuery.trim());
+      }
+      if (urgencyFilter !== "ALL") {
+        const apiUrgency =
+          urgencyFilter === "flash"
+            ? "HOA_TOC"
+            : urgencyFilter === "top_urgent"
+            ? "THUONG_KHAN"
+            : urgencyFilter === "urgent"
+            ? "KHAN"
+            : urgencyFilter === "normal"
+            ? "THUONG"
+            : urgencyFilter;
+        params.set("urgency", apiUrgency);
+      }
+      if (statusFilter !== "ALL") {
+        const apiStatus =
+          statusFilter === "pending_assignment"
+            ? "CHO_PHAN_CONG"
+            : statusFilter === "processing"
+            ? "DANG_XU_LY"
+            : statusFilter === "approved"
+            ? "CHO_PHE_DUYET"
+            : statusFilter === "completed"
+            ? "DA_HOAN_THANH"
+            : statusFilter;
+        params.set("status", apiStatus);
+      }
+
+      const queryString = params.toString() ? `?${params.toString()}` : "";
+      const res = await fetch(`/api/documents${queryString}`);
+      if (res.ok) {
+        const json = await res.json();
+        const rawDocs = Array.isArray(json.data)
+          ? json.data
+          : Array.isArray(json.documents)
+          ? json.documents
+          : [];
+        const mapped = rawDocs.map(mapApiDocumentToOfficial);
+        setDocuments(mapped);
+        setStats((prev) => ({
+          ...prev,
+          linkedTaskCount: mapped.filter((d: OfficialDocument) => Boolean(d.linkedTaskId)).length,
+        }));
+      }
+    } catch (err) {
+      console.error("Error fetching documents:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeTab, searchQuery, urgencyFilter, statusFilter]);
+
+  // Load documents and stats on filter changes
+  React.useEffect(() => {
+    fetchDocuments();
+    fetchStats();
+  }, [fetchDocuments, fetchStats]);
 
   // Switch tab and sync with URL
   const handleTabChange = (tab: string) => {
@@ -75,29 +249,107 @@ export function DocumentRegistryView() {
     setIsDetailOpen(true);
   };
 
-  // Handle new document creation
-  const handleCreateDocument = (newDoc: OfficialDocument) => {
+  // Handle new document creation via real database API
+  const handleCreateDocument = async (newDoc: OfficialDocument) => {
     setDocuments((prev) => [newDoc, ...prev]);
     setSelectedDocument(newDoc);
     setIsDetailOpen(true);
+
+    try {
+      const apiType =
+        newDoc.type === "inbox"
+          ? "VAN_BAN_DEN"
+          : newDoc.type === "outbox"
+          ? "VAN_BAN_DI"
+          : "TO_TRINH_NOI_BO";
+
+      const apiUrgency =
+        newDoc.urgency === "flash"
+          ? "HOA_TOC"
+          : newDoc.urgency === "top_urgent"
+          ? "THUONG_KHAN"
+          : newDoc.urgency === "urgent"
+          ? "KHAN"
+          : "THUONG";
+
+      const res = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: apiType,
+          originalNumber: newDoc.documentNumber,
+          issuedDate: newDoc.issuedDate,
+          issuingAuthority: newDoc.issuingAuthority,
+          category: "Công văn",
+          summary: newDoc.summary,
+          urgency: apiUrgency,
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const created = json.data || json.document;
+        if (created?.id) {
+          setDocuments((prev) =>
+            prev.map((d) => (d.id === newDoc.id ? { ...d, id: created.id } : d))
+          );
+        }
+        fetchStats();
+      }
+    } catch (err) {
+      console.error("Error creating document via API:", err);
+    }
   };
 
   // Filtered documents
   const filteredDocuments = React.useMemo(() => {
     return documents.filter((doc) => {
       // Tab filter
-      if (activeTab === "inbox" && doc.type !== "inbox") return false;
-      if (activeTab === "outbox" && doc.type !== "outbox") return false;
+      if (activeTab === "inbox" && doc.type !== "inbox" && doc.type !== "VAN_BAN_DEN") return false;
+      if (activeTab === "outbox" && doc.type !== "outbox" && doc.type !== "VAN_BAN_DI") return false;
       if (activeTab === "pending") {
-        // Pending tab shows submissions and pending inbox
-        if (doc.type !== "submission" && doc.status !== "pending_assignment") return false;
+        const isSubmission = doc.type === "submission" || doc.type === "TO_TRINH_NOI_BO";
+        const isPending = doc.status === "pending_assignment" || doc.status === "CHO_PHAN_CONG";
+        if (!isSubmission && !isPending) return false;
       }
 
       // Urgency filter
-      if (urgencyFilter !== "ALL" && doc.urgency !== urgencyFilter) return false;
+      if (urgencyFilter !== "ALL") {
+        const isFlash =
+          (urgencyFilter === "flash" || urgencyFilter === "HOA_TOC") &&
+          (doc.urgency === "flash" || doc.urgency === "HOA_TOC");
+        const isTopUrgent =
+          (urgencyFilter === "top_urgent" || urgencyFilter === "THUONG_KHAN") &&
+          (doc.urgency === "top_urgent" || doc.urgency === "THUONG_KHAN");
+        const isUrgent =
+          (urgencyFilter === "urgent" || urgencyFilter === "KHAN") &&
+          (doc.urgency === "urgent" || doc.urgency === "KHAN");
+        const isNormal =
+          (urgencyFilter === "normal" || urgencyFilter === "THUONG") &&
+          (doc.urgency === "normal" || doc.urgency === "THUONG");
+        if (!isFlash && !isTopUrgent && !isUrgent && !isNormal && doc.urgency !== urgencyFilter) {
+          return false;
+        }
+      }
 
       // Status filter
-      if (statusFilter !== "ALL" && doc.status !== statusFilter) return false;
+      if (statusFilter !== "ALL") {
+        const isPending =
+          (statusFilter === "pending_assignment" || statusFilter === "CHO_PHAN_CONG") &&
+          (doc.status === "pending_assignment" || doc.status === "CHO_PHAN_CONG");
+        const isProc =
+          (statusFilter === "processing" || statusFilter === "DANG_XU_LY") &&
+          (doc.status === "processing" || doc.status === "DANG_XU_LY");
+        const isApproved =
+          (statusFilter === "approved" || statusFilter === "CHO_PHE_DUYET") &&
+          (doc.status === "approved" || doc.status === "CHO_PHE_DUYET");
+        const isCompleted =
+          (statusFilter === "completed" || statusFilter === "DA_HOAN_THANH") &&
+          (doc.status === "completed" || doc.status === "DA_HOAN_THANH");
+        if (!isPending && !isProc && !isApproved && !isCompleted && doc.status !== statusFilter) {
+          return false;
+        }
+      }
 
       // Search query
       if (searchQuery.trim()) {
@@ -113,10 +365,43 @@ export function DocumentRegistryView() {
     });
   }, [documents, activeTab, urgencyFilter, statusFilter, searchQuery]);
 
-  const stats = React.useMemo(() => getDocumentStats(documents), [documents]);
+  const computedStats = React.useMemo(() => {
+    const totalInbox =
+      stats.totalInbox > 0 ? stats.totalInbox : documents.filter((d) => d.type === "inbox").length;
+    const totalOutbox =
+      stats.totalOutbox > 0 ? stats.totalOutbox : documents.filter((d) => d.type === "outbox").length;
+    const totalSubmissions =
+      stats.totalSubmissions > 0
+        ? stats.totalSubmissions
+        : documents.filter((d) => d.type === "submission").length;
+    const linkedTaskCount = documents.filter((d) => Boolean(d.linkedTaskId)).length;
+    const urgentCount =
+      stats.urgentCount > 0
+        ? stats.urgentCount
+        : documents.filter(
+            (d) =>
+              d.urgency === "urgent" ||
+              d.urgency === "top_urgent" ||
+              d.urgency === "flash" ||
+              d.urgency === "KHAN" ||
+              d.urgency === "THUONG_KHAN" ||
+              d.urgency === "HOA_TOC"
+          ).length;
+
+    return {
+      totalInbox,
+      totalOutbox,
+      totalSubmissions,
+      urgentCount,
+      linkedTaskCount,
+    };
+  }, [stats, documents]);
 
   return (
-    <div className="max-w-[1440px] w-full mx-auto space-y-6 pb-20 md:pb-12" data-slot="document-registry-view">
+    <div
+      className="max-w-[1440px] w-full mx-auto space-y-6 pb-20 md:pb-12"
+      data-slot="document-registry-view"
+    >
       {/* 1. Header & Breadcrumb */}
       <div>
         <nav
@@ -138,142 +423,139 @@ export function DocumentRegistryView() {
             <div className="flex items-center gap-2 mb-1.5">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
                 <FileText className="size-3" strokeWidth={1.5} />
-                <span>Nghị định 30/2020/NĐ-CP • Sổ điện tử liên thông</span>
+                Nghị định 30/2020/NĐ-CP
               </span>
-              <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
-                Năm học 2026-2027
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <CheckCircle2 className="size-3" strokeWidth={1.5} />
+                Liên thông Task Hub
               </span>
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-              Sổ Quản Lý Văn Bản &amp; Công Văn Điện Tử
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+              Sổ Quản Lý Văn Bản &amp; Công Văn
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-              Tiếp nhận công văn đến, phát hành văn bản đi, xử lý tờ trình và liên thông tự động vào Kho nhiệm vụ QCET
+              Hệ thống đăng ký, quản lý công văn đi - đến, tờ trình nội bộ và bút phê lãnh đạo theo
+              chuẩn văn thư lưu trữ
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                alert("Đang xuất sổ công văn theo mẫu quy định của Bộ LĐ-TB&XH...");
+                fetchDocuments();
+                fetchStats();
               }}
-              className="gap-1.5 text-xs rounded-xl"
+              disabled={isLoading}
+              className="h-9 px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 cursor-pointer"
             >
-              <Download className="size-3.5" strokeWidth={1.5} />
-              <span>Xuất sổ điện tử</span>
+              <RefreshCw
+                className={`size-3.5 mr-1.5 ${isLoading ? "animate-spin" : ""}`}
+                strokeWidth={1.5}
+              />
+              <span>Làm mới</span>
             </Button>
+
             <Button
               size="sm"
               onClick={() => setIsCreateOpen(true)}
-              className="gap-1.5 text-xs rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
+              className="h-9 px-3.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 cursor-pointer"
             >
-              <Plus className="size-3.5" strokeWidth={1.5} />
-              <span>Soạn văn bản / Tờ trình</span>
+              <Plus className="size-3.5 mr-1.5" strokeWidth={2} />
+              <span>Tiếp nhận / Ban hành mới</span>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* 2. KPI & Information Density Strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Total Inbox */}
+      {/* 2. Quick Stats Strip (4 KPI Cards) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Card 1: Tổng Văn bản Đến */}
         <div
           onClick={() => handleTabChange("inbox")}
-          className="p-4 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs hover:border-sky-500/40 hover:bg-sky-500/5 transition-all cursor-pointer shadow-2xs group"
+          className="p-4 rounded-2xl border border-border/70 bg-card hover:border-primary/40 transition-colors cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-sky-600 transition-colors">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               VĂN BẢN ĐẾN
             </span>
-            <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
+            <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 group-hover:bg-sky-500/20 transition-colors">
               <Inbox className="size-4" strokeWidth={1.5} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-foreground">
-              {stats.totalInbox}
+            <span className="text-2xl md:text-3xl font-bold font-mono tracking-tight text-foreground">
+              {computedStats.totalInbox}
             </span>
-            <span className="text-xs text-muted-foreground font-medium">văn bản</span>
+            <span className="text-xs text-muted-foreground">sổ tiếp nhận</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Tổng cục, UBND Tỉnh, Sở &amp; Bộ
-          </p>
         </div>
 
-        {/* Total Outbox */}
+        {/* Card 2: Tổng Văn bản Đi */}
         <div
           onClick={() => handleTabChange("outbox")}
-          className="p-4 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all cursor-pointer shadow-2xs group"
+          className="p-4 rounded-2xl border border-border/70 bg-card hover:border-primary/40 transition-colors cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-emerald-600 transition-colors">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               VĂN BẢN ĐI
             </span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500/20 transition-colors">
               <Send className="size-4" strokeWidth={1.5} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-foreground">
-              {stats.totalOutbox}
+            <span className="text-2xl md:text-3xl font-bold font-mono tracking-tight text-foreground">
+              {computedStats.totalOutbox}
             </span>
-            <span className="text-xs text-muted-foreground font-medium">văn bản</span>
+            <span className="text-xs text-muted-foreground">phát hành</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            100% đã ký số &amp; đóng dấu điện tử
-          </p>
         </div>
 
-        {/* Submissions Pending */}
+        {/* Card 3: Tờ trình & Đề xuất */}
         <div
           onClick={() => handleTabChange("pending")}
-          className="p-4 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs hover:border-purple-500/40 hover:bg-purple-500/5 transition-all cursor-pointer shadow-2xs group"
+          className="p-4 rounded-2xl border border-border/70 bg-card hover:border-primary/40 transition-colors cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-purple-600 transition-colors">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               TỜ TRÌNH DUYỆT
             </span>
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500/20 transition-colors">
               <FileCheck className="size-4" strokeWidth={1.5} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-foreground">
-              {stats.totalSubmissions}
+            <span className="text-2xl md:text-3xl font-bold font-mono tracking-tight text-foreground">
+              {computedStats.totalSubmissions}
             </span>
-            <span className="text-xs text-muted-foreground font-medium">tờ trình</span>
+            <span className="text-xs text-muted-foreground">chờ BGH duyệt</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Khoa CNTT, Phòng Đào tạo đề xuất
-          </p>
         </div>
 
-        {/* Linked Tasks */}
-        <div
-          onClick={() => handleTabChange("all")}
-          className="p-4 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer shadow-2xs group"
-        >
+        {/* Card 4: Tỷ lệ Liên thông Giao việc */}
+        <div className="p-4 rounded-2xl border border-border/70 bg-card">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary transition-colors">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               LIÊN THÔNG NHIỆM VỤ
             </span>
-            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="size-4" strokeWidth={1.5} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-primary">
-              {stats.linkedTaskCount}/{documents.length}
+            <span className="text-2xl md:text-3xl font-bold font-mono tracking-tight text-emerald-600 dark:text-emerald-400">
+              {computedStats.linkedTaskCount}
             </span>
-            <span className="text-xs text-muted-foreground font-medium">
-              ({Math.round((stats.linkedTaskCount / documents.length) * 100)}%)
+            <span className="text-xs text-muted-foreground">
+              / {documents.length} (
+              {documents.length > 0
+                ? Math.round((computedStats.linkedTaskCount / documents.length) * 100)
+                : 0}
+              %)
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Tự động gán vào Kho nhiệm vụ QCET
-          </p>
         </div>
       </div>
 
@@ -308,7 +590,7 @@ export function DocumentRegistryView() {
             <Inbox className="size-3.5" strokeWidth={1.5} />
             <span>Văn bản đến</span>
             <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
-              {stats.totalInbox}
+              {computedStats.totalInbox}
             </span>
           </button>
 
@@ -324,7 +606,7 @@ export function DocumentRegistryView() {
             <Send className="size-3.5" strokeWidth={1.5} />
             <span>Văn bản đi</span>
             <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
-              {stats.totalOutbox}
+              {computedStats.totalOutbox}
             </span>
           </button>
 
@@ -340,7 +622,7 @@ export function DocumentRegistryView() {
             <FileCheck className="size-3.5" strokeWidth={1.5} />
             <span>Tờ trình duyệt</span>
             <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
-              {stats.totalSubmissions}
+              {computedStats.totalSubmissions}
             </span>
           </button>
 
@@ -413,7 +695,7 @@ export function DocumentRegistryView() {
               DANH SÁCH VĂN BẢN VÀ CÔNG VĂN
             </span>
             <span className="text-xs font-mono text-muted-foreground">
-              ({filteredDocuments.length} bản ghi)
+              {isLoading ? "(Đang tải dữ liệu...)" : `(${filteredDocuments.length} bản ghi)`}
             </span>
           </div>
           <span className="text-xs text-muted-foreground hidden sm:inline">
@@ -421,7 +703,69 @@ export function DocumentRegistryView() {
           </span>
         </div>
 
-        {filteredDocuments.length === 0 ? (
+        {isLoading ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse table-row-dense">
+              <thead>
+                <tr className="border-b border-border/50 bg-muted/10">
+                  <th className="py-3 px-4 w-[160px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Số / Ký hiệu
+                  </th>
+                  <th className="py-3 px-4 w-[120px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Ngày BH / Đến
+                  </th>
+                  <th className="py-3 px-4 w-[200px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Cơ quan &amp; Người ký
+                  </th>
+                  <th className="py-3 px-4 min-w-[280px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Trích yếu nội dung
+                  </th>
+                  <th className="py-3 px-4 w-[160px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Đơn vị &amp; Tiến độ
+                  </th>
+                  <th className="py-3 px-4 w-[180px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Liên thông việc
+                  </th>
+                  <th className="py-3 px-4 w-[80px] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Chi tiết
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <tr key={`skeleton-${idx}`} className="animate-pulse">
+                    <td className="py-3 px-4 table-cell-dense">
+                      <div className="h-4 w-28 bg-muted rounded mb-1" />
+                      <div className="h-3 w-16 bg-muted/60 rounded" />
+                    </td>
+                    <td className="py-3 px-4 table-cell-dense">
+                      <div className="h-4 w-20 bg-muted rounded mb-1" />
+                      <div className="h-3 w-14 bg-muted/60 rounded" />
+                    </td>
+                    <td className="py-3 px-4 table-cell-dense">
+                      <div className="h-4 w-32 bg-muted rounded mb-1" />
+                      <div className="h-3 w-24 bg-muted/60 rounded" />
+                    </td>
+                    <td className="py-3 px-4 table-cell-dense">
+                      <div className="h-4 w-3/4 bg-muted rounded mb-1.5" />
+                      <div className="h-3 w-20 bg-muted/60 rounded" />
+                    </td>
+                    <td className="py-3 px-4 table-cell-dense">
+                      <div className="h-4 w-24 bg-muted rounded mb-1" />
+                      <div className="h-3 w-20 bg-muted/60 rounded" />
+                    </td>
+                    <td className="py-3 px-4 table-cell-dense">
+                      <div className="h-6 w-24 bg-muted/80 rounded-lg" />
+                    </td>
+                    <td className="py-3 px-4 table-cell-dense text-right">
+                      <div className="h-7 w-7 bg-muted/60 rounded-lg ml-auto" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : filteredDocuments.length === 0 ? (
           <div className="p-12 text-center text-muted-foreground">
             <FileText className="size-8 mx-auto mb-2 opacity-50" strokeWidth={1.5} />
             <p className="text-sm font-medium text-foreground">Không tìm thấy văn bản phù hợp</p>
@@ -432,13 +776,27 @@ export function DocumentRegistryView() {
             <table className="w-full text-left text-xs border-collapse table-row-dense">
               <thead>
                 <tr className="border-b border-border/50 bg-muted/10">
-                  <th className="py-3 px-4 w-[160px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Số / Ký hiệu</th>
-                  <th className="py-3 px-4 w-[120px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ngày BH / Đến</th>
-                  <th className="py-3 px-4 w-[200px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cơ quan &amp; Người ký</th>
-                  <th className="py-3 px-4 min-w-[280px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trích yếu nội dung</th>
-                  <th className="py-3 px-4 w-[160px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Đơn vị &amp; Tiến độ</th>
-                  <th className="py-3 px-4 w-[180px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">Liên thông việc</th>
-                  <th className="py-3 px-4 w-[80px] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chi tiết</th>
+                  <th className="py-3 px-4 w-[160px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Số / Ký hiệu
+                  </th>
+                  <th className="py-3 px-4 w-[120px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Ngày BH / Đến
+                  </th>
+                  <th className="py-3 px-4 w-[200px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Cơ quan &amp; Người ký
+                  </th>
+                  <th className="py-3 px-4 min-w-[280px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Trích yếu nội dung
+                  </th>
+                  <th className="py-3 px-4 w-[160px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Đơn vị &amp; Tiến độ
+                  </th>
+                  <th className="py-3 px-4 w-[180px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Liên thông việc
+                  </th>
+                  <th className="py-3 px-4 w-[80px] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Chi tiết
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
@@ -524,7 +882,10 @@ export function DocumentRegistryView() {
                       </td>
 
                       {/* Liên thông việc */}
-                      <td className="py-3 px-4 table-cell-dense" onClick={(e) => e.stopPropagation()}>
+                      <td
+                        className="py-3 px-4 table-cell-dense"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {doc.linkedTaskId ? (
                           <Link
                             href={`/?taskId=${doc.linkedTaskId}`}
