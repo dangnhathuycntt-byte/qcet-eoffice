@@ -6,15 +6,18 @@
 
 **Kiến trúc:** 
 - Tầng cơ sở dữ liệu: Thêm 2 bảng `PushSubscription` và `Notification` trong Prisma.
-- Tầng backend: Thư viện `web-push` xử lý mã hóa VAPID, tích hợp hàm chuẩn `after()` của Next.js 15 trong các API nghiệp vụ (`/api/tasks`, `/api/executive/resolutions`) để đẩy tin ngầm không gây trễ giao diện; tự động dọn dẹp token hết hạn (404/410 Gone).
-- Tầng PWA & Service Worker: Cấu hình `src/app/manifest.ts` chuẩn mực, `public/sw.js` nhận push và điều hướng tab; React hook `usePWAInstall` và `usePushNotification`.
+- Tầng backend: Thư viện `web-push` xử lý mã hóa VAPID (Node.js runtime bắt buộc `export const runtime = 'nodejs'`), tích hợp hàm chuẩn `after()` của Next.js 15 trong các API nghiệp vụ (`/api/tasks`, `/api/executive/resolutions`) để đẩy tin ngầm không gây trễ giao diện; bọc `try/catch` và `AbortSignal.timeout(5000)` phòng vệ; tự động dọn dẹp token hết hạn (404/410 Gone).
+- Tầng PWA & Service Worker: Cấu hình `src/app/manifest.ts` chuẩn mực, `public/sw.js` nhận push và điều hướng tab; React hook `usePWAInstall` và `usePushNotification` tuân thủ quy tắc User Gesture của iOS WebKit (gọi `Notification.requestPermission()` đồng bộ ngay đầu sự kiện click, pre-register service worker trước).
 - Tầng trải nghiệm người lớn tuổi: Bottom Sheet `PushOnboardingSheet` hiển thị 1-click cho Android, hướng dẫn 3 bước trực quan cho iPhone Safari; menu gạt thông báo và thử chuông trong `MobileMenuDrawer`; gắn nhãn "Đang phát triển" cho phân hệ Văn bản.
 
 **Công nghệ:** Next.js 15.2+ (App Router, Server Actions, `after()`), Prisma 6, PostgreSQL, `web-push`, Service Worker API, Push API, Tailwind CSS v4, Lucide React, `node:test` + `tsx`.
 
 **Tài liệu Spec:** `docs/superpowers/specs/2026-09-07-mobile-task-push-pwa-design.md`
 
-## Quy Chuẩn Toàn Cục (Global Constraints)
+## Quy Chuẩn Toàn Cục & Phòng Vệ Kỹ Thuật (Global Constraints & Hardening Invariants)
+- **Quy tắc iOS WebKit User Gesture:** Tuyệt đối không đặt `await fetch()` hoặc `await navigator.serviceWorker.ready` trước `Notification.requestPermission()`. Phải gọi xin quyền ngay dòng đầu tiên của sự kiện click để không làm mất token Transient Activation của Apple WebKit.
+- **Node.js Runtime Invariant:** Mọi route handler gọi `web-push` phải có `export const runtime = 'nodejs'` và `export const dynamic = 'force-dynamic'`.
+- **VAPID Subject Invariant:** Định dạng subject RFC 8292 bắt buộc có scheme: `mailto:admin@qcet.edu.vn`.
 - **Giới hạn số ký tự Màn hình khóa:** Tiêu đề tối đa 35 ký tự, Nội dung tối đa 85-90 ký tự.
 - **Quy tắc Icon iOS:** `apple-touch-icon` phải là PNG 180x180 px vuông phẳng, nền đặc 100% (không dùng alpha/transparency), vùng an toàn 130x130 px ở tâm.
 - **Quy tắc Icon Android:** Maskable icon 512x512 px với vùng an toàn tròn đường kính 409.6 px (80% tâm hình).
@@ -206,10 +209,10 @@ Kết quả: FAIL vì `push-service.ts` chưa tồn tại.
 - [ ] **Bước 4: Viết mã triển khai `src/lib/push-service.ts`**
 
 Tạo file `src/lib/push-service.ts` với đầy đủ:
-- Cấu hình VAPID (`webpush.setVapidDetails`).
+- Khai báo cấu hình VAPID (`mailto:admin@qcet.edu.vn`).
 - Hàm `truncatePushText(text, maxChars)`.
 - Hàm `formatTaskPushPayload(input)` tuân thủ bảng Copywriting Matrix.
-- Hàm `sendPushNotificationToUser(userId, payload)` quét các subscription `ACTIVE`, gửi qua `webpush.sendNotification`, bắt lỗi 404/410 để cập nhật `status = REVOKED`.
+- Hàm `sendPushNotificationToUser(userId, payload)` quét các subscription `ACTIVE`, gửi qua `webpush.sendNotification` với timeout 5000ms, bắt lỗi 404/410 để cập nhật `status = REVOKED`.
 
 - [ ] **Bước 5: Chạy lại test để xác nhận test pass**
 
@@ -235,6 +238,7 @@ git commit -m "feat(push): implement web-push service with vietnamese copywritin
 - Kiểm thử: `tests/api-notifications-push.test.ts`
 
 **Giao diện (Interfaces):**
+- Khai báo: `export const runtime = 'nodejs'; export const dynamic = 'force-dynamic';`
 - `POST /api/notifications/push/subscribe`: Nhận `{ endpoint, p256dh, auth, deviceType, userAgent }`, upsert vào `PushSubscription`.
 - `DELETE /api/notifications/push/subscribe`: Nhận `{ endpoint }`, cập nhật `status = REVOKED`.
 - `POST /api/notifications/push/test`: Gửi 1 tin mẫu đến thiết bị active của user hiện tại.
@@ -252,11 +256,7 @@ Kết quả: FAIL vì các routes chưa tồn tại.
 
 - [ ] **Bước 3: Viết mã triển khai các route handlers**
 
-Triển khai:
-- `src/app/api/notifications/push/subscribe/route.ts`
-- `src/app/api/notifications/push/test/route.ts`
-- `src/app/api/notifications/route.ts`
-- `src/app/api/notifications/[id]/read/route.ts`
+Triển khai các route với đầy đủ runtime `nodejs`, dynamic `force-dynamic`, và xử lý session người dùng.
 
 - [ ] **Bước 4: Chạy lại test để xác nhận test pass**
 
@@ -276,7 +276,7 @@ git commit -m "feat(api): add push subscription, test notification, and notifica
 
 **Files:**
 - Sửa đổi: `src/app/api/tasks/route.ts` (khi giao việc mới)
-- Sửa đổi: `src/app/api/executive/resolutions/route.ts` (khi BGH ban hành chỉ đạo)
+- Sửa đổi: `src/app/api/executive/resolutions/route.ts` (khi BGH ban hành chỉ đ��o)
 - Kiểm thử: `tests/task-push-dispatch.test.ts`
 
 **Giao diện (Interfaces):**
@@ -292,40 +292,48 @@ Tạo file `tests/task-push-dispatch.test.ts` kiểm tra hàm tạo thông báo 
 Chạy lệnh: `npx tsx --test tests/task-push-dispatch.test.ts`
 Kết quả: FAIL.
 
-- [ ] **Bước 3: Tích hợp `after()` vào `src/app/api/tasks/route.ts` và `src/app/api/executive/resolutions/route.ts`**
+- [ ] **Bước 3: Tích hợp `after()` với bọc `try/catch` phòng vệ**
 
-Trong `POST /api/tasks`:
+Trong `POST /api/tasks` và `POST /api/executive/resolutions`:
 ```typescript
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPushNotificationToUser, formatTaskPushPayload } from "@/lib/push-service";
 
-// Sau khi tạo Task thành công trong DB:
 after(async () => {
-  if (task.assignees?.length > 0) {
-    for (const assignee of task.assignees) {
-      const payload = formatTaskPushPayload({
-        event: "TASK_ASSIGNED",
-        taskTitle: task.title,
-        actorName: currentUser.name,
-        dueDateStr: task.dueDate ? new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" }).format(new Date(task.dueDate)) : undefined,
-        taskId: task.id,
-      });
-      // Lưu bản ghi Notification in-app
-      await prisma.notification.create({
-        data: {
-          userId: assignee.userId,
+  const start = Date.now();
+  try {
+    if (task.assignees?.length > 0) {
+      for (const assignee of task.assignees) {
+        const payload = formatTaskPushPayload({
+          event: "TASK_ASSIGNED",
+          taskTitle: task.title,
           actorName: currentUser.name,
-          title: payload.title,
-          body: payload.body,
-          category: "task",
-          type: "assigned",
-          linkHref: payload.data.linkHref,
-        }
-      });
-      // Bắn push ra điện thoại
-      await sendPushNotificationToUser(assignee.userId, payload);
+          dueDateStr: task.dueDate ? new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" }).format(new Date(task.dueDate)) : undefined,
+          taskId: task.id,
+        });
+
+        await prisma.notification.create({
+          data: {
+            userId: assignee.userId,
+            actorName: currentUser.name,
+            title: payload.title,
+            body: payload.body,
+            category: "task",
+            type: "assigned",
+            linkHref: payload.data.linkHref,
+          }
+        });
+
+        await sendPushNotificationToUser(assignee.userId, payload);
+      }
     }
+  } catch (error) {
+    console.error("[after() Task Push Error]", {
+      taskId: task.id,
+      durationMs: Date.now() - start,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 ```
@@ -339,7 +347,7 @@ Kết quả: PASS.
 
 ```bash
 git add src/app/api/tasks/route.ts src/app/api/executive/resolutions/route.ts tests/task-push-dispatch.test.ts
-git commit -m "feat(tasks): integrate next.js 15 after() for non-blocking push dispatch on task creation and directives"
+git commit -m "feat(tasks): integrate next.js 15 after() with defensive try-catch for non-blocking push dispatch"
 ```
 
 ---
@@ -349,7 +357,7 @@ git commit -m "feat(tasks): integrate next.js 15 after() for non-blocking push d
 **Files:**
 - Tạo mới: `public/sw.js`
 - Sửa đổi: `src/app/manifest.ts`
-- Sửa đổi: `src/app/layout.tsx` (thêm `<link rel="apple-touch-icon" href="/apple-touch-icon.png">` và đăng ký sw)
+- Sửa đổi: `src/app/layout.tsx` (thêm `<link rel="apple-touch-icon" href="/logo-qcet.png">` và đăng ký sw)
 - Kiểm thử: `tests/service-worker-manifest.test.ts`
 
 **Giao diện (Interfaces):**
@@ -398,16 +406,13 @@ git commit -m "feat(pwa): add service worker for push and notification routing, 
   - `isIOS: boolean`
   - `installApp(): Promise<"accepted" | "dismissed" | null>`
 - `usePushNotification()`:
-  - `permission: NotificationPermission | "unsupported"`
-  - `isSubscribed: boolean`
-  - `loading: boolean`
-  - `subscribeToPush(): Promise<boolean>`
-  - `unsubscribeFromPush(): Promise<boolean>`
-  - `sendTestNotification(): Promise<boolean>`
+  - Pre-register service worker in `useEffect` on mount.
+  - Calling `subscribeToPush()` invokes `Notification.requestPermission()` synchronously at the very top of click handler.
+  - Cung cấp `urlBase64ToUint8Array(base64String)`.
 
 - [ ] **Bước 1: Viết test cho logic của 2 hooks**
 
-Tạo file `tests/use-pwa-push-hooks.test.ts` kiểm tra các trạng thái và hàm tiện ích (chuyển đổi base64 sang Uint8Array, nhận diện user agent iOS).
+Tạo file `tests/use-pwa-push-hooks.test.ts` kiểm tra các trạng thái và hàm tiện ích (`urlBase64ToUint8Array`, nhận diện user agent iOS).
 
 - [ ] **Bước 2: Chạy test để xác nhận test thất bại**
 
@@ -418,7 +423,7 @@ Kết quả: FAIL.
 
 Tạo:
 - `src/hooks/use-pwa-install.ts`: Lắng nghe `beforeinstallprompt`, `appinstalled`, nhận diện `(navigator as any).standalone`.
-- `src/hooks/use-push-notification.ts`: Đăng ký service worker, lấy push subscription, gọi API `/api/notifications/push/subscribe` và `/test`.
+- `src/hooks/use-push-notification.ts`: Đăng ký service worker từ trước, xin quyền đồng bộ khi click, gọi API `/api/notifications/push/subscribe` và `/test`.
 
 - [ ] **Bước 4: Chạy lại test để xác nhận test pass**
 
@@ -429,7 +434,7 @@ Kết quả: PASS.
 
 ```bash
 git add src/hooks/use-pwa-install.ts src/hooks/use-push-notification.ts tests/use-pwa-push-hooks.test.ts
-git commit -m "feat(hooks): add usePWAInstall and usePushNotification hooks"
+git commit -m "feat(hooks): add usePWAInstall and usePushNotification hooks with ios gesture invariants"
 ```
 
 ---
