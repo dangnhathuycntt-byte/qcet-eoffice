@@ -1,0 +1,353 @@
+"use client";
+
+import * as React from "react";
+import type {
+  SchoolTask,
+  StaffTask,
+  DashboardPayload,
+  TaskStatus,
+} from "@/types/dashboard";
+import { getMockDashboardPayload } from "@/lib/mock-dashboard-data";
+import {
+  computeSchoolTaskRollup,
+  computeDashboardStats,
+} from "@/lib/dashboard-aggregator";
+import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
+import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
+import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
+import type { DelegationRule } from "@/types/delegation";
+import type { AuthUser } from "@/types/auth";
+
+const INITIAL_QCET_DELEGATIONS: DelegationRule[] = [
+  {
+    id: "del-cntt-001",
+    grantorId: "staff-vinh-nn",
+    grantorName: "TS. Nguyễn Ngọc Vinh",
+    grantorRole: "MANAGER",
+    granteeId: "staff-pho-lv",
+    granteeName: "ThS. Lê Văn Phó",
+    granteeRole: "STAFF",
+    departmentCode: "K_CNTT",
+    scope: "DACUM_REVIEW_STEP1",
+    startDate: "2026-09-01",
+    endDate: "2026-09-30",
+    status: "ACTIVE",
+    reason: "Ủy quyền thẩm định và phê duyệt hồ sơ DACUM bước 1 trong thời gian Trưởng khoa công tác.",
+    createdAt: "2026-09-01T08:00:00.000Z",
+  },
+];
+
+export interface TaskMutationsReturn {
+  dashboardData: DashboardPayload;
+  isRefreshing: boolean;
+  delegations: DelegationRule[];
+  delegationDeptCode: string;
+  handleStatusChange: (taskId: string, newStatus: TaskStatus, note?: string) => void;
+  handleSubmitDeliverable: (payload: DeliverableSubmissionPayload) => Promise<void>;
+  handleReviewAction: (payload: ApprovalActionPayload) => Promise<void>;
+  handleCreateTask: (data: CreateTaskFormData) => void;
+  handleManualRefresh: () => Promise<void>;
+  handleSaveDelegation: (ruleData: Omit<DelegationRule, "id" | "createdAt">) => void;
+  handleRevokeDelegation: (ruleId: string) => void;
+}
+
+export function useTaskMutations(
+  user?: AuthUser,
+  onOpenCreateModal?: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void
+): TaskMutationsReturn {
+  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(() =>
+    getMockDashboardPayload()
+  );
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [delegations, setDelegations] = React.useState<DelegationRule[]>(INITIAL_QCET_DELEGATIONS);
+  const [delegationDeptCode] = React.useState("K_CNTT");
+
+  // Initial background sync
+  React.useEffect(() => {
+    let isMounted = true;
+    async function syncDashboardOverview() {
+      try {
+        const response = await fetch("/api/dashboard/overview");
+        if (response.ok && isMounted) {
+          const liveData: DashboardPayload = await response.json();
+          if (liveData && liveData.tasks && liveData.stats) {
+            setDashboardData(liveData);
+          }
+        }
+      } catch {
+        // Silently keep optimistic payload
+      }
+    }
+    syncDashboardOverview();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleManualRefresh = React.useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const response = await fetch("/api/dashboard/overview");
+      if (response.ok) {
+        const liveData: DashboardPayload = await response.json();
+        if (liveData && liveData.tasks && liveData.stats) {
+          setDashboardData(liveData);
+        }
+      }
+    } catch {
+      // Keep existing data
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  }, []);
+
+  const handleStatusChange = React.useCallback(
+    (taskId: string, newStatus: TaskStatus, _note?: string) => {
+      setDashboardData((prev) => {
+        const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
+          if (st.id === taskId) {
+            const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
+              newStatus === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS";
+            return { ...st, status: schoolStatus };
+          }
+          const updatedSubs: StaffTask[] = st.subTasks.map((sub) =>
+            sub.id === taskId ? { ...sub, status: newStatus } : sub
+          );
+          return { ...st, subTasks: updatedSubs };
+        });
+        const rolledUpTasks = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+        return {
+          ...prev,
+          tasks: rolledUpTasks,
+          stats: computeDashboardStats(rolledUpTasks),
+        };
+      });
+    },
+    []
+  );
+
+  const handleSubmitDeliverable = React.useCallback(
+    async (payload: DeliverableSubmissionPayload) => {
+      const todayStr = "2026-09-06";
+      setDashboardData((prev) => {
+        const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
+          if (st.id === payload.taskId) {
+            return {
+              ...st,
+              status: "PENDING_EXECUTIVE_APPROVAL" as const,
+              completionReport: {
+                summary:
+                  payload.note ||
+                  payload.deliverableName ||
+                  "Nộp minh chứng hoàn thành nhiệm vụ cấp trường",
+                submittedBy: user?.name || "Cán bộ chủ trì",
+                submittedAt: todayStr,
+                reportUrl: payload.url,
+              },
+            };
+          }
+          const updatedSubs: StaffTask[] = st.subTasks.map((sub) => {
+            if (sub.id === payload.taskId) {
+              const existingDeliverables = sub.deliverables || [];
+              const newFile = {
+                id: `deliv-${Date.now()}`,
+                name: payload.deliverableName || "Tài liệu minh chứng",
+                url: payload.url || "#",
+                fileType: payload.fileType || "application/pdf",
+                submittedAt: todayStr,
+              };
+              return {
+                ...sub,
+                status: "NEEDS_REVIEW" as const,
+                deliverables: [...existingDeliverables, newFile],
+                deliverableDescription: payload.note || sub.deliverableDescription,
+                updatedAt: todayStr,
+              };
+            }
+            return sub;
+          });
+          return { ...st, subTasks: updatedSubs };
+        });
+
+        const rolledUp = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+        return {
+          ...prev,
+          tasks: rolledUp,
+          stats: computeDashboardStats(rolledUp),
+        };
+      });
+    },
+    [user?.name]
+  );
+
+  const handleReviewAction = React.useCallback(
+    async (payload: ApprovalActionPayload) => {
+      const todayStr = "2026-09-06";
+      let statusToSet: TaskStatus = "IN_PROGRESS";
+      if (payload.decision === "approved") {
+        statusToSet = "COMPLETED";
+      } else if (payload.decision === "revision_requested") {
+        statusToSet = "IN_PROGRESS";
+      } else if (payload.decision === "rejected") {
+        statusToSet = "BLOCKED";
+      }
+
+      setDashboardData((prev) => {
+        const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
+          if (st.id === payload.taskId) {
+            const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
+              payload.decision === "approved" ? "COMPLETED" : "IN_PROGRESS";
+            return {
+              ...st,
+              status: schoolStatus,
+            };
+          }
+          const updatedSubs: StaffTask[] = st.subTasks.map((sub) => {
+            if (sub.id === payload.taskId) {
+              return {
+                ...sub,
+                status: statusToSet,
+                updatedAt: todayStr,
+                rejectionReason:
+                  payload.decision !== "approved" ? payload.comment : undefined,
+              };
+            }
+            return sub;
+          });
+          return { ...st, subTasks: updatedSubs };
+        });
+
+        const rolledUp = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+        return {
+          ...prev,
+          tasks: rolledUp,
+          stats: computeDashboardStats(rolledUp),
+        };
+      });
+    },
+    []
+  );
+
+  const handleCreateTask = React.useCallback(
+    (data: CreateTaskFormData) => {
+      const todayStr = "2026-09-04";
+
+      setDashboardData((prev) => {
+        let updatedTasks = [...prev.tasks];
+
+        if (data.level === "TRUONG") {
+          const newTask: SchoolTask = {
+            id: `task-${Date.now()}`,
+            title: data.title,
+            category: data.category,
+            categoryLabel:
+              CATEGORY_TABS.find((c) => c.id === data.category)?.label || data.category,
+            leadAssigneeName: data.leadAssigneeName,
+            coAssignees: data.coAssignees,
+            assignedDate: todayStr,
+            dueDate: data.dueDate,
+            status: "IN_PROGRESS",
+            subTasks: [],
+            totalSubTasks: 0,
+            completedSubTasks: 0,
+            progressPercent: 0,
+          };
+          updatedTasks.unshift(newTask);
+        } else {
+          const newSubTask: StaffTask = {
+            id: `sub-${Date.now()}`,
+            title: data.title,
+            assigneeName: data.leadAssigneeName,
+            status: "NEW",
+            dueDate: data.dueDate,
+            internalDueDate: data.internalDueDate,
+            deliverableDescription: data.requiredDeliverables,
+            vtvlRole: data.vtvlRole,
+            requiresReview: data.requiresReview,
+            parentSchoolTaskId: data.parentTaskId || updatedTasks[0]?.id || "task-1",
+            updatedAt: todayStr,
+          };
+
+          if (data.parentTaskId) {
+            updatedTasks = updatedTasks.map((st) => {
+              if (st.id === data.parentTaskId) {
+                return {
+                  ...st,
+                  subTasks: [newSubTask, ...st.subTasks],
+                };
+              }
+              return st;
+            });
+          } else if (updatedTasks.length > 0) {
+            updatedTasks[0] = {
+              ...updatedTasks[0],
+              subTasks: [newSubTask, ...updatedTasks[0].subTasks],
+            };
+          }
+        }
+
+        const rolledUp = updatedTasks.map((t) => computeSchoolTaskRollup(t));
+        return {
+          ...prev,
+          tasks: rolledUp,
+          stats: computeDashboardStats(rolledUp),
+        };
+      });
+    },
+    []
+  );
+
+  const handleSaveDelegation = React.useCallback(
+    (ruleData: Omit<DelegationRule, "id" | "createdAt">) => {
+      const newRule: DelegationRule = {
+        ...ruleData,
+        id: `del-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+      };
+      setDelegations((prev) => [newRule, ...prev]);
+    },
+    []
+  );
+
+  const handleRevokeDelegation = React.useCallback((ruleId: string) => {
+    setDelegations((prev) =>
+      prev.map((d) => (d.id === ruleId ? { ...d, status: "REVOKED" as const } : d))
+    );
+  }, []);
+
+  // Global custom event listeners
+  React.useEffect(() => {
+    const handleGlobalTaskCreated = (e: Event) => {
+      const customEvent = e as CustomEvent<CreateTaskFormData>;
+      if (customEvent.detail) {
+        handleCreateTask(customEvent.detail);
+      }
+    };
+
+    const handleGlobalOpenCreate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ leadAssigneeName?: string }>;
+      onOpenCreateModal?.("TRUONG", undefined, customEvent?.detail?.leadAssigneeName);
+    };
+
+    window.addEventListener("qcet:task-created", handleGlobalTaskCreated);
+    window.addEventListener("qcet:open-create-task", handleGlobalOpenCreate);
+    return () => {
+      window.removeEventListener("qcet:task-created", handleGlobalTaskCreated);
+      window.removeEventListener("qcet:open-create-task", handleGlobalOpenCreate);
+    };
+  }, [handleCreateTask, onOpenCreateModal]);
+
+  return {
+    dashboardData,
+    isRefreshing,
+    delegations,
+    delegationDeptCode,
+    handleStatusChange,
+    handleSubmitDeliverable,
+    handleReviewAction,
+    handleCreateTask,
+    handleManualRefresh,
+    handleSaveDelegation,
+    handleRevokeDelegation,
+  };
+}

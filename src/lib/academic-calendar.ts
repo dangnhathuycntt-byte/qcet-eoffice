@@ -20,6 +20,8 @@ export interface AcademicMonthPeriod {
   shortDateSpan: string; // "25/08 - 24/09"
 }
 
+export type AcademicMonthInfo = AcademicMonthPeriod;
+
 function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }

@@ -31,6 +31,7 @@ import type {
 } from "@/types/dashboard";
 import { useAuth } from "@/lib/auth-context";
 import { canAssignUnitTask, matchesUser } from "@/lib/role-task-filter";
+import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -203,57 +204,58 @@ export function filterTasksForTable(
     }
 
     if (department && department !== "ALL") {
+      const canonicalDept = resolveDepartmentId(department) || department;
       const deptQuery = department.toLowerCase();
       const isDeptMatch =
-        (department === "BGH" &&
+        (canonicalDept === "BGH" &&
           (task.leadAssigneeName.includes("Tuấn") ||
             task.leadAssigneeName.includes("Đạt") ||
             task.leadAssigneeName.includes("Cúc") ||
             task.leadAssigneeName.toLowerCase().includes("bgh") ||
             task.leadAssigneeName.toLowerCase().includes("hiệu trưởng"))) ||
-        (department === "CNTT" &&
+        (canonicalDept === "CNTT" &&
           (task.category === "CNTT" ||
             task.category === "ATTT" ||
             task.category === "CHUYEN_DOI_SO" ||
             task.leadAssigneeName.includes("Vinh") ||
             task.leadAssigneeName.includes("Hùng") ||
             task.leadAssigneeName.includes("Khôi"))) ||
-        (department === "DAO_TAO" &&
+        (canonicalDept === "DAO_TAO" &&
           (task.category === "BAO_CAO" ||
             task.leadAssigneeName.includes("Trung") ||
             task.leadAssigneeName.includes("Trí") ||
             task.leadAssigneeName.includes("Thủy"))) ||
-        (department === "TRUYEN_THONG" &&
+        (canonicalDept === "TRUYEN_THONG" &&
           (task.category === "TRUYEN_THONG" ||
             task.leadAssigneeName.includes("Xuân") ||
             task.leadAssigneeName.includes("Huy") ||
             task.leadAssigneeName.includes("Linh"))) ||
-        (department === "HANH_CHINH" &&
+        (canonicalDept === "HANH_CHINH" &&
           (task.leadAssigneeName.includes("Thanh") ||
             task.leadAssigneeName.includes("Nam") ||
             task.leadAssigneeName.includes("Nhung"))) ||
-        (department === "KHAO_THI" &&
+        (canonicalDept === "KHAO_THI" &&
           (task.leadAssigneeName.includes("Minh") ||
             task.leadAssigneeName.includes("Hậu") ||
             task.leadAssigneeName.includes("My"))) ||
-        (department === "THU_VIEN" &&
+        (canonicalDept === "THU_VIEN" &&
           (task.category === "THU_VIEN" ||
             task.leadAssigneeName.includes("Thắng") ||
             task.leadAssigneeName.includes("Thu") ||
             task.leadAssigneeName.includes("Ngọc"))) ||
-        (department === "KINH_TE" &&
+        (canonicalDept === "KINH_TE" &&
           (task.leadAssigneeName.includes("Tuyết") ||
             task.leadAssigneeName.includes("Sơn") ||
             task.leadAssigneeName.includes("Phượng"))) ||
-        (department === "KY_THUAT" &&
+        (canonicalDept === "KY_THUAT" &&
           (task.leadAssigneeName.includes("Cường") ||
             task.leadAssigneeName.includes("Vũ") ||
             task.leadAssigneeName.includes("Lộc"))) ||
-        (department === "TAI_CHINH" &&
+        (canonicalDept === "TAI_CHINH" &&
           (task.leadAssigneeName.includes("Loan") ||
             task.leadAssigneeName.includes("Vân") ||
             task.leadAssigneeName.includes("Hào"))) ||
-        (department === "CTHSSV" &&
+        (canonicalDept === "CTHSSV" &&
           (task.leadAssigneeName.includes("Tuấn") ||
             task.leadAssigneeName.includes("Hà") ||
             task.leadAssigneeName.includes("Phúc"))) ||
