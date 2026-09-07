@@ -124,3 +124,23 @@ export function parseZoneParam(param: string | null | undefined): WorkspaceZone 
   }
   return "portal";
 }
+
+export interface SchoolBottleneckItem {
+  id: string;
+  title: string;
+  departmentCode: string;
+  departmentName: string;
+  assigneeName: string;
+  dueDate: string;
+  daysRemaining?: number | null;
+  daysOverdue?: number;
+  isOverdue?: boolean;
+  isBlocked: boolean;
+  blockedReason?: string;
+  priority?: "KHAN_CAP" | "CAO" | "TRUNG_BINH" | "THAP" | string;
+  status?: string;
+  progressPercent?: number;
+  taskType?: "SCHOOL_TASK" | "STAFF_TASK";
+  parentSchoolTaskId?: string;
+  originalTask: SchoolTask | StaffTask;
+}

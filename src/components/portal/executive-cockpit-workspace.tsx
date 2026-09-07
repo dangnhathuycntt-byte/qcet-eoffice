@@ -33,6 +33,7 @@ import type {
   ApprovalActionPayload,
   DeliverableSubmissionPayload,
   DepartmentHealthSummary as WorkspaceDepartmentHealthSummary,
+  SchoolBottleneckItem,
 } from "@/types/workspace";
 import {
   QCET_DEPARTMENT_DEFINITIONS,
@@ -84,22 +85,7 @@ export interface ElevenDepartmentRadarItem {
   healthStatus: "GREEN" | "YELLOW" | "RED";
 }
 
-export interface SchoolBottleneckItem {
-  id: string;
-  title: string;
-  departmentCode: string;
-  departmentName: string;
-  assigneeName: string;
-  dueDate: string;
-  daysRemaining: number | null;
-  isOverdue: boolean;
-  isBlocked: boolean;
-  blockedReason?: string;
-  progressPercent: number;
-  taskType: "SCHOOL_TASK" | "STAFF_TASK";
-  parentSchoolTaskId?: string;
-  originalTask: SchoolTask | StaffTask;
-}
+export type { SchoolBottleneckItem };
 
 export interface InstitutionalApprovalItem {
   id: string;
