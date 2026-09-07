@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Settings, RefreshCw } from "lucide-react";
 import {
@@ -48,20 +49,27 @@ export function AppPrimaryRail() {
       >
         {/* Top Section */}
         <div className="flex flex-col items-center w-full">
-          {/* Logo button */}
+          {/* School Logo */}
           <Link
             href="/"
             aria-label="QCET E-Office Trang chủ"
-            className="aspect-square size-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs tracking-wider shadow-xs hover:scale-105 transition-transform"
+            className="group relative size-10 rounded-xl flex items-center justify-center hover:scale-105 transition-transform"
           >
-            QCET
+            <Image
+              src="/logo-qcet.png"
+              alt="Logo QCET"
+              width={36}
+              height={36}
+              className="size-9 object-contain drop-shadow-xs"
+              priority
+            />
           </Link>
 
           {/* Divider */}
           <div className="w-6 h-px bg-border/70 my-2" />
 
-          {/* Module Buttons */}
-          <div className="flex flex-col gap-1 items-center w-full px-1.5">
+          {/* Module Buttons with Label Below */}
+          <div className="flex flex-col gap-1.5 items-center w-full px-1">
             {MODULES.map((mod) => {
               const Icon = mod.icon;
               const isActive = currentModule === mod.id;
@@ -75,22 +83,38 @@ export function AppPrimaryRail() {
                       aria-label={mod.label}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "size-10 rounded-xl relative flex items-center justify-center transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                        "w-full flex flex-col items-center justify-center gap-1 py-1.5 px-0.5 rounded-xl transition-all duration-150 group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring select-none",
                         isActive
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       )}
                     >
-                      {isActive && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
-                      )}
-                      <Icon className="size-5" />
-                      {mod.isComingSoon && (
-                        <span
-                          className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-amber-500"
-                          title="Đang phát triển"
-                        />
-                      )}
+                      <div
+                        className={cn(
+                          "size-8 rounded-lg flex items-center justify-center transition-all duration-150 relative",
+                          isActive
+                            ? "bg-primary text-primary-foreground shadow-xs"
+                            : "group-hover:bg-muted/80 text-muted-foreground group-hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="size-4.5" strokeWidth={isActive ? 2 : 1.5} />
+                        {mod.isComingSoon && (
+                          <span
+                            className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-amber-500"
+                            title="Đang phát triển"
+                          />
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[9.5px] leading-tight text-center truncate max-w-full tracking-tight px-0.5",
+                          isActive
+                            ? "font-semibold text-primary"
+                            : "font-medium text-muted-foreground/80 group-hover:text-foreground"
+                        )}
+                      >
+                        {mod.shortLabel}
+                      </span>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" hidden={!isCollapsed && isActive}>

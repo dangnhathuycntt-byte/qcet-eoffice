@@ -219,11 +219,25 @@ export function AppSidebar() {
           {isCollapsed ? (
             /* Collapsed Rail 2 Mode (56px icon-only, matches Image 2) */
             <>
-              {/* Header spacer */}
+              {/* Header with expand toggle trigger */}
               <div className="h-[52px] border-b border-border/50 flex items-center justify-center shrink-0 w-full">
-                <span className="text-[10px] font-mono font-semibold text-muted-foreground/60 uppercase tracking-widest">
-                  {currentModuleMeta.shortLabel.slice(0, 3)}
-                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={toggleCollapse}
+                        aria-label="Mở rộng bảng điều hướng [Ctrl+B]"
+                        className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                      >
+                        <ChevronRight size={16} strokeWidth={1.5} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <span>Mở rộng bảng điều hướng [Ctrl+B]</span>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
 
               {/* Collapsed Icon List */}
@@ -255,14 +269,11 @@ export function AppSidebar() {
                                 className={cn(
                                   "size-9 rounded-lg relative flex items-center justify-center transition-all duration-150 active:scale-95",
                                   active
-                                    ? "bg-primary/10 text-primary font-medium"
+                                    ? "bg-primary/15 text-primary font-semibold shadow-xs ring-1 ring-primary/25"
                                     : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                                 )}
                               >
-                                {active && (
-                                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-primary rounded-r-full" />
-                                )}
-                                <Icon size={18} strokeWidth={1.5} />
+                                <Icon size={18} strokeWidth={active ? 2 : 1.5} />
                                 {badge && (
                                   <span
                                     aria-label={`${badge.text} mục`}
@@ -376,16 +387,13 @@ export function AppSidebar() {
                             className={cn(
                               "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors select-none",
                               active
-                                ? "bg-primary/10 text-primary font-medium"
+                                ? "bg-primary/10 text-primary font-semibold shadow-xs"
                                 : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                             )}
                           >
-                            {active && (
-                              <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary" />
-                            )}
                             <Icon
                               size={16}
-                              strokeWidth={1.5}
+                              strokeWidth={active ? 2 : 1.5}
                               className={cn(
                                 "shrink-0 transition-colors",
                                 active
@@ -595,12 +603,9 @@ export function AppSidebar() {
                             : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                         )}
                       >
-                        {active && (
-                          <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-primary" />
-                        )}
                         <Icon
                           size={18}
-                          strokeWidth={1.5}
+                          strokeWidth={active ? 2 : 1.5}
                           className={cn(
                             "shrink-0 transition-colors",
                             active

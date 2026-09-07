@@ -56,11 +56,14 @@ describe("Dual-Rail Navigation Architecture Test Suite", () => {
       );
     });
 
-    test("documents module has defaultHref '/documents' and isComingSoon true", () => {
+    test("documents module has defaultHref '/documents' and is operational (anti-slop)", () => {
       const docsModule = MODULES.find((m) => m.id === "documents");
       assert.ok(docsModule, "documents module must exist in MODULES");
       assert.strictEqual(docsModule.defaultHref, "/documents");
-      assert.strictEqual(docsModule.isComingSoon, true, "documents module must be coming soon");
+      assert.ok(
+        docsModule.isComingSoon === false || docsModule.isComingSoon === undefined,
+        "documents module must be operational without coming-soon slop"
+      );
     });
 
     test("org module has defaultHref '/org'", () => {
@@ -110,18 +113,23 @@ describe("Dual-Rail Navigation Architecture Test Suite", () => {
   });
 
   describe("Documents Module Navigation", () => {
-    test("documents items all have isComingSoon true", () => {
+    test("documents items are operational without comingSoon slop", () => {
       const docItems: SidebarItem[] = MODULE_NAV_ITEMS.documents;
       assert.ok(Array.isArray(docItems), "MODULE_NAV_ITEMS.documents must be an array");
-      assert.ok(docItems.length > 0, "MODULE_NAV_ITEMS.documents must not be empty");
+      assert.strictEqual(docItems.length, 4, "MODULE_NAV_ITEMS.documents must have 4 items");
 
       for (const item of docItems) {
-        assert.strictEqual(
-          item.isComingSoon,
-          true,
-          `Documents item "${item.id}" must have isComingSoon set to true`
+        assert.ok(
+          item.isComingSoon === false || item.isComingSoon === undefined,
+          `Documents item "${item.id}" must not have isComingSoon set to true`
         );
       }
+
+      const labels = docItems.map((i) => i.label);
+      assert.ok(labels.includes("Văn bản đến"));
+      assert.ok(labels.includes("Văn bản đi"));
+      assert.ok(labels.includes("Tờ trình duyệt"));
+      assert.ok(labels.includes("Sổ lưu trữ toàn trường"));
     });
   });
 
@@ -218,20 +226,28 @@ describe("Dual-Rail Navigation Architecture Test Suite", () => {
       );
     });
 
-    test("app-primary-rail.tsx renders QCET logo with aria-label", () => {
+    test("app-primary-rail.tsx renders QCET school logo image with aria-label", () => {
       const content = fs.readFileSync(railFile, "utf-8");
       assert.ok(
         content.includes('aria-label="QCET E-Office Trang chủ"'),
         "Must have QCET logo link with aria-label='QCET E-Office Trang chủ'"
       );
+      assert.ok(
+        content.includes("/logo-qcet.png"),
+        "Must render school logo /logo-qcet.png"
+      );
     });
 
-    test("app-primary-rail.tsx maps MODULES with active indicator and tooltip", () => {
+    test("app-primary-rail.tsx maps MODULES with label underneath icon and clean active indicator", () => {
       const content = fs.readFileSync(railFile, "utf-8");
       assert.ok(content.includes("MODULES.map"), "Must map over MODULES");
       assert.ok(
-        content.includes("bg-primary rounded-r-full"),
-        "Must have left accent indicator bar for active state"
+        content.includes("mod.shortLabel"),
+        "Must render mod.shortLabel underneath icon for navigation clarity"
+      );
+      assert.ok(
+        content.includes("bg-primary text-primary-foreground"),
+        "Must highlight active icon container with clean primary fill without slop border"
       );
       assert.ok(
         content.includes("Đang phát triển"),
