@@ -58,12 +58,12 @@ describe("Single-Tier Sidebar Component Contracts (app-sidebar.tsx)", () => {
     assert.ok(content.includes("Năm học 2026–2027"), "Must render academic year 2026–2027");
   });
 
-  test("app-sidebar.tsx renders sections CÁ NHÂN, TOÀN TRƯỜNG & ĐƠN VỊ, VĂN BẢN & ĐIỀU HÀNH", () => {
+  test("app-sidebar.tsx renders sections CÁ NHÂN, CÔNG VIỆC, VĂN BẢN & ĐIỀU HÀNH", () => {
     const content = fs.readFileSync(sidebarPath, "utf-8");
     assert.ok(content.includes("CÁ NHÂN"), "Must render CÁ NHÂN section");
     assert.ok(
-      content.includes("TOÀN TRƯỜNG & ĐƠN VỊ"),
-      "Must render TOÀN TRƯỜNG & ĐƠN VỊ section"
+      content.includes("CÔNG VIỆC"),
+      "Must render CÔNG VIỆC section"
     );
     assert.ok(
       content.includes("VĂN BẢN & ĐIỀU HÀNH"),

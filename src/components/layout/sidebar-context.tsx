@@ -221,7 +221,7 @@ export const SINGLE_TIER_NAV_ITEMS: SidebarItem[] = [
     section: "personal",
     badgeKey: "notifications",
   },
-  // SECTION 2: TOÀN TRƯỜNG & ĐƠN VỊ
+  // SECTION 2: CÔNG VIỆC
   {
     id: "tasks",
     label: "Kho nhiệm vụ",
@@ -384,6 +384,7 @@ export interface SidebarBadgeCounts {
 }
 
 export const DEFAULT_SIDEBAR_BADGES: SidebarBadgeCounts = {
+  calendar: 1,
   notifications: 5,
   docsInbox: 6,
   docsOutbox: 4,

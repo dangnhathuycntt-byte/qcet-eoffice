@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 
 const SECTIONS: { key: NavigationSection; label: string }[] = [
   { key: "personal", label: "CÁ NHÂN" },
-  { key: "workspace", label: "TOÀN TRƯỜNG & ĐƠN VỊ" },
+  { key: "workspace", label: "CÔNG VIỆC" },
   { key: "operations", label: "VĂN BẢN & ĐIỀU HÀNH" },
 ];
 
