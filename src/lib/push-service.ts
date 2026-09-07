@@ -86,8 +86,8 @@ const DEFAULT_VAPID_SUBJECT = "mailto:admin@qcet.edu.vn";
 let isVapidConfigured = false;
 
 function ensureVapidConfigured(): { publicKey: string; privateKey: string; subject: string } {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || FALLBACK_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY || FALLBACK_VAPID_PRIVATE_KEY;
+  let publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || FALLBACK_VAPID_PUBLIC_KEY;
+  let privateKey = process.env.VAPID_PRIVATE_KEY || FALLBACK_VAPID_PRIVATE_KEY;
   const subject = process.env.VAPID_SUBJECT || DEFAULT_VAPID_SUBJECT;
 
   if (!isVapidConfigured) {
@@ -97,7 +97,9 @@ function ensureVapidConfigured(): { publicKey: string; privateKey: string; subje
     } catch (err) {
       // In case the configured keys are malformed, fallback to deterministic keys
       console.warn("Invalid VAPID credentials in environment. Falling back to test keys.", err);
-      webpush.setVapidDetails(DEFAULT_VAPID_SUBJECT, FALLBACK_VAPID_PUBLIC_KEY, FALLBACK_VAPID_PRIVATE_KEY);
+      publicKey = FALLBACK_VAPID_PUBLIC_KEY;
+      privateKey = FALLBACK_VAPID_PRIVATE_KEY;
+      webpush.setVapidDetails(DEFAULT_VAPID_SUBJECT, publicKey, privateKey);
       isVapidConfigured = true;
     }
   }
