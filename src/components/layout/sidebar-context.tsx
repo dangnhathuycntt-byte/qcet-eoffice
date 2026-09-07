@@ -17,6 +17,16 @@ import {
   Users,
   LayoutGrid,
   Network,
+  Home,
+  FileBadge,
+  Eye,
+  Search,
+  BookUser,
+  CalendarDays,
+  ClipboardList,
+  Headphones,
+  Settings,
+  LogOut,
   type LucideIcon,
 } from "lucide-react";
 import { WorkspaceZone } from "@/types/workspace";
@@ -49,8 +59,7 @@ export const MODULES: ModuleMeta[] = [
     shortLabel: "Văn bản",
     icon: FileText,
     defaultHref: "/documents",
-    isComingSoon: true,
-    description: "Công văn đến/đi, tờ trình, ký số (Đang phát triển)",
+    description: "Sổ văn bản đến/đi, tờ trình & ký số điện tử",
   },
   {
     id: "org",
@@ -70,6 +79,8 @@ export interface SidebarItem {
   section: NavigationSection;
   badgeKey?: string;
   isComingSoon?: boolean;
+  isMaintenance?: boolean;
+  hasSubmenu?: boolean;
 }
 
 export const MODULE_NAV_ITEMS: Record<NavigationModule, SidebarItem[]> = {
@@ -110,35 +121,60 @@ export const MODULE_NAV_ITEMS: Record<NavigationModule, SidebarItem[]> = {
   documents: [
     {
       id: "docs-inbox",
-      label: "Công văn đến",
+      label: "Văn bản đến",
       href: "/documents?tab=inbox",
       icon: Inbox,
       section: "personal",
-      isComingSoon: true,
+      badgeKey: "docsInbox",
+      hasSubmenu: true,
     },
     {
       id: "docs-outbox",
-      label: "Công văn đi & Tờ trình",
+      label: "Văn bản đi",
       href: "/documents?tab=outbox",
       icon: Send,
       section: "personal",
-      isComingSoon: true,
+      badgeKey: "docsOutbox",
+      hasSubmenu: true,
+    },
+    {
+      id: "docs-starred",
+      label: "Văn bản đánh dấu",
+      href: "/maintenance?feature=starred-docs&title=V%C4%83n%20b%E1%BA%A3n%20%C4%91%C3%A1nh%20d%E1%BA%A5u",
+      icon: FileBadge,
+      section: "personal",
+      isMaintenance: true,
+    },
+    {
+      id: "docs-fyi",
+      label: "Văn bản xem để biết",
+      href: "/maintenance?feature=fyi-docs&title=V%C4%83n%20b%E1%BA%A3n%20xem%20%C4%91%E1%BB%83%20bi%E1%BA%BFt",
+      icon: Eye,
+      section: "personal",
+      isMaintenance: true,
+    },
+    {
+      id: "docs-search",
+      label: "Tra cứu văn bản",
+      href: "/maintenance?feature=search-docs&title=Tra%20c%E1%BB%A9u%20v%C4%83n%20b%E1%BA%A3n",
+      icon: Search,
+      section: "workspace",
+      isMaintenance: true,
     },
     {
       id: "docs-pending",
-      label: "Chờ ký duyệt",
+      label: "Tờ trình duyệt",
       href: "/documents?tab=pending",
       icon: FileCheck,
       section: "workspace",
-      isComingSoon: true,
+      badgeKey: "docsPending",
     },
     {
       id: "docs-archive",
-      label: "Sổ văn bản",
+      label: "Sổ lưu trữ toàn trường",
       href: "/documents?tab=archive",
       icon: Archive,
       section: "workspace",
-      isComingSoon: true,
     },
   ],
   org: [
@@ -158,6 +194,115 @@ export const MODULE_NAV_ITEMS: Record<NavigationModule, SidebarItem[]> = {
     },
   ],
 };
+
+export interface QCETMenuItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  isMaintenance?: boolean;
+  hasSubmenu?: boolean;
+  badge?: string;
+  badgeVariant?: "primary" | "sky" | "muted" | "danger";
+}
+
+/**
+ * Danh mục chuẩn Chuyển đổi số Trường CĐ KTCN Quy Nhơn (Version 2.4.3)
+ * Bao gồm đầy đủ 12 mục theo cấu trúc hệ thống nhà trường.
+ */
+export const QCET_CDS_MENU_ITEMS: QCETMenuItem[] = [
+  {
+    id: "home",
+    label: "Trang chủ",
+    href: "/",
+    icon: Home,
+  },
+  {
+    id: "docs-inbox",
+    label: "Văn bản đến",
+    href: "/documents?tab=inbox",
+    icon: FileText,
+    hasSubmenu: true,
+    badge: "6",
+    badgeVariant: "sky",
+  },
+  {
+    id: "docs-outbox",
+    label: "Văn bản đi",
+    href: "/documents?tab=outbox",
+    icon: FileText,
+    hasSubmenu: true,
+    badge: "4",
+    badgeVariant: "sky",
+  },
+  {
+    id: "docs-starred",
+    label: "Văn bản đánh dấu",
+    href: "/maintenance?feature=starred-docs&title=V%C4%83n%20b%E1%BA%A3n%20%C4%91%C3%A1nh%20d%E1%BA%A5u",
+    icon: FileBadge,
+    isMaintenance: true,
+  },
+  {
+    id: "docs-fyi",
+    label: "Văn bản xem để biết",
+    href: "/maintenance?feature=fyi-docs&title=V%C4%83n%20b%E1%BA%A3n%20xem%20%C4%91%E1%BB%83%20bi%E1%BA%BFt",
+    icon: Eye,
+    isMaintenance: true,
+  },
+  {
+    id: "docs-search",
+    label: "Tra cứu văn bản",
+    href: "/maintenance?feature=search-docs&title=Tra%20c%E1%BB%A9u%20v%C4%83n%20b%E1%BA%A3n",
+    icon: Search,
+    isMaintenance: true,
+  },
+  {
+    id: "org-directory",
+    label: "Danh bạ",
+    href: "/org?tab=directory",
+    icon: BookUser,
+  },
+  {
+    id: "unit-calendar",
+    label: "Quản lý lịch đơn vị",
+    href: "/calendar",
+    icon: CalendarDays,
+    hasSubmenu: true,
+    badge: "1",
+    badgeVariant: "sky",
+  },
+  {
+    id: "task-management",
+    label: "Quản lý công việc",
+    href: "/tasks",
+    icon: ClipboardList,
+    hasSubmenu: true,
+  },
+  {
+    id: "executive-info",
+    label: "Thông tin điều hành",
+    href: "/notifications",
+    icon: Headphones,
+    hasSubmenu: true,
+    badge: "5",
+    badgeVariant: "danger",
+  },
+  {
+    id: "system-settings",
+    label: "Cài đặt hệ thống",
+    href: "/maintenance?feature=settings&title=C%C3%A0i%20%C4%91%E1%BA%B7t%20h%E1%BB%87%20th%E1%BB%91ng",
+    icon: Settings,
+    hasSubmenu: true,
+    isMaintenance: true,
+  },
+  {
+    id: "logout",
+    label: "Đăng xuất",
+    href: "/maintenance?feature=logout&title=%C4%90%C4%83ng%20xu%E1%BA%A5t",
+    icon: LogOut,
+    isMaintenance: true,
+  },
+];
 
 export function resolveModuleFromPathname(pathname: string): NavigationModule {
   if (!pathname) return "work";
@@ -187,6 +332,9 @@ export interface SidebarBadgeCounts {
 
 export const DEFAULT_SIDEBAR_BADGES: SidebarBadgeCounts = {
   notifications: 5,
+  docsInbox: 6,
+  docsOutbox: 4,
+  docsPending: 2,
 };
 
 export const NAVIGATION_ITEMS: NavigationItem[] = [
@@ -212,6 +360,8 @@ export function resolveBreadcrumb(
 ): [string, string] {
   let path = pathname || "/";
   let zone: string | null = null;
+  let view: string | null = null;
+  let scope: string | null = null;
 
   // Extract query if contained in pathname (e.g. "/?zone=portal")
   if (path.includes("?")) {
@@ -227,11 +377,16 @@ export function resolveBreadcrumb(
   if (searchParams) {
     if (typeof searchParams === "object" && typeof searchParams.get === "function") {
       zone = searchParams.get("zone");
+      view = searchParams.get("view");
+      scope = searchParams.get("scope");
     } else if (typeof searchParams === "string") {
       const trimmed = searchParams.startsWith("?") ? searchParams.slice(1) : searchParams;
       if (trimmed.includes("=")) {
         try {
-          zone = new URLSearchParams(trimmed).get("zone");
+          const sp = new URLSearchParams(trimmed);
+          zone = sp.get("zone");
+          view = sp.get("view");
+          scope = sp.get("scope");
         } catch {
           zone = null;
         }
@@ -241,19 +396,19 @@ export function resolveBreadcrumb(
     }
   }
 
-  // Zone overrides
-  if (zone) {
-    if (zone === "portal") return ["QCET E-Office", "Cổng Portal Điều hành"];
-    if (zone === "dashboard") return ["QCET E-Office", "Dashboard Điều hành & KPI"];
-    if (zone === "tasks") return ["QCET E-Office", "Quản lý công việc"];
-    if (zone === "calendar") return ["QCET E-Office", "Lịch công tác"];
-    if (zone === "org") return ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"];
-  }
+  // Zone and query overrides
+  if (zone === "portal") return ["QCET E-Office", "Cổng Portal Điều hành"];
+  if (zone === "dashboard") return ["QCET E-Office", "Dashboard Điều hành & KPI"];
+  if (zone === "calendar" || view === "calendar" || view === "month") return ["QCET E-Office", "Lịch công tác"];
+  if (zone === "tasks" || scope === "school" || scope === "unit") return ["QCET E-Office", "Quản lý công việc"];
+  if (zone === "org") return ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"];
 
   if (path === "/") {
     return ["QCET E-Office", "Quản lý công việc"];
   }
 
+  if (path.startsWith("/maintenance")) return ["QCET E-Office", "Bảo trì & Nâng cấp"];
+  if (path.startsWith("/settings")) return ["QCET E-Office", "Cài đặt hệ thống"];
   if (path.startsWith("/documents")) return ["QCET E-Office", "Văn bản & Công văn"];
   if (path.startsWith("/unit-tasks")) return ["QCET E-Office", "Công việc Đơn vị"];
   if (path.startsWith("/tasks")) return ["QCET E-Office", "Nhiệm vụ cấp Trường"];

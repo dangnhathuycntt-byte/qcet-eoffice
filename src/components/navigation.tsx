@@ -114,8 +114,8 @@ export function ZoomToggle() {
       className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary/80 text-xs font-medium text-foreground transition-colors cursor-pointer active:scale-[0.98]"
       title="Bật / Tắt phóng to giao diện (100% / 120%)"
     >
-      <span className="text-[10px] text-muted-foreground font-normal">Zoom</span>
-      <span className="font-mono text-[11px] text-foreground font-semibold tabular-nums">
+      <span className="text-xs text-muted-foreground font-normal">Zoom</span>
+      <span className="font-mono text-xs text-foreground font-semibold tabular-nums">
         {mounted ? `${Math.round(zoomLevel * 100)}%` : "100%"}
       </span>
     </button>
@@ -150,7 +150,7 @@ export function MobileNav({ pathname }: { pathname: string }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium transition-colors",
+                "flex flex-col items-center justify-center py-1.5 px-2 min-h-10 rounded-lg text-xs font-medium transition-colors",
                 active
                   ? "text-primary font-semibold bg-primary/10"
                   : "text-muted-foreground hover:text-foreground"
@@ -280,7 +280,7 @@ export function Navigation() {
               <span className="text-sm font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">
                 QCET E-Office
               </span>
-              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-muted-foreground bg-muted border border-border/50 select-none">
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium text-muted-foreground bg-muted border border-border/50 select-none">
                 v1.2 Enterprise
               </span>
             </div>
@@ -332,11 +332,11 @@ export function Navigation() {
             size="sm"
             onClick={() => setIsCreateModalOpen(true)}
             className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all cursor-pointer active:scale-[0.98]"
-            title="Giao việc mới (phím ⌘K hoặc N)"
+            title={user.role === "STAFF" ? "Tạo việc cá nhân mới (phím ⌘K hoặc N)" : "Tạo việc / Giao việc mới (phím ⌘K hoặc N)"}
           >
             <Plus size={14} strokeWidth={1.5} className="shrink-0" />
-            <span className="hidden sm:inline font-medium">Giao việc</span>
-            <kbd className="ml-0.5 hidden items-center gap-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1 py-0.5 text-[10px] font-mono leading-none sm:inline-flex opacity-90">
+            <span className="hidden sm:inline font-medium">Tạo việc</span>
+            <kbd className="ml-0.5 hidden items-center gap-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1.5 py-0.5 text-xs font-mono leading-none sm:inline-flex opacity-90">
               ⌘K
             </kbd>
           </Button>
@@ -377,7 +377,7 @@ export function Navigation() {
                   {user.name}
                 </p>
                 <p
-                  className="text-[10.5px] text-muted-foreground font-medium max-w-[130px] truncate"
+                  className="text-xs text-muted-foreground font-medium max-w-[130px] truncate"
                   title={user.roleLabel}
                 >
                   {user.role === "ADMIN"
@@ -411,18 +411,18 @@ export function Navigation() {
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] font-mono text-muted-foreground truncate" title={user.email}>
+                    <p className="text-xs font-mono text-muted-foreground truncate" title={user.email}>
                       {user.email}
                     </p>
                     <div className="mt-1 flex items-center gap-1 flex-wrap">
-                      <span className="rounded bg-secondary px-1.5 py-0.5 text-[9.5px] font-medium text-foreground border border-border/50">
+                      <span className="rounded bg-secondary px-2 py-0.5 text-xs font-medium text-foreground border border-border/50">
                         {user.role === "ADMIN"
                           ? "Ban Giám hiệu"
                           : user.role === "MANAGER"
                           ? "Trưởng đơn vị"
                           : "Chuyên viên"}
                       </span>
-                      <span className="text-[10px] text-muted-foreground truncate">
+                      <span className="text-xs text-muted-foreground truncate">
                         {user.departmentCode || "QCET"}
                       </span>
                     </div>

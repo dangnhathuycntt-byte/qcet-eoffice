@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -19,18 +19,23 @@ import {
   Bell,
   FlaskConical,
   Check,
+  Plus,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
 import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth-context";
 import { UserRole } from "@/types/auth";
 import { UserProfileModal } from "@/components/auth/user-profile-modal";
-import {
-  CreateTaskModal,
-  CreateTaskFormData,
-} from "@/components/dashboard/create-task-modal";
+import { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// Lazy-loaded modal to avoid loading on initial topbar render
+const CreateTaskModal = dynamic(
+  () => import("@/components/dashboard/create-task-modal").then((m) => m.CreateTaskModal),
+  { ssr: false }
+);
 
 export function getInitials(name: string): string {
   if (!name || !name.trim()) return "QC";
@@ -82,14 +87,15 @@ function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
 
 export function AppTopbar() {
   const pathname = usePathname();
-  const { isCollapsed, toggleCollapse, toggleMobile } = useSidebar();
+  const router = useRouter();
+  const { isCollapsed, toggleCollapse, toggleMobile, badgeCounts } = useSidebar();
   const { resolved, toggleTheme } = useTheme();
   const { user, switchRole, logout, setIsProfileModalOpen } = useAuth();
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
-  const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
 
   // Close profile dropdown on outside click
   React.useEffect(() => {
@@ -109,7 +115,16 @@ export function AppTopbar() {
     };
   }, [isProfileDropdownOpen]);
 
-  // Global event listener for opening create modal with pre-selected assignee
+  // Global event listener for navigating to notifications
+  React.useEffect(() => {
+    const handleToggleNotifications = () => {
+      router.push("/notifications");
+    };
+    window.addEventListener("qcet:toggle-notifications", handleToggleNotifications);
+    return () => window.removeEventListener("qcet:toggle-notifications", handleToggleNotifications);
+  }, [router]);
+
+  // Backward compatibility event listener for opening create modal
   React.useEffect(() => {
     const handleOpenCreateTask = (e: Event) => {
       const customEvent = e as CustomEvent<{ leadAssigneeName?: string }>;
@@ -123,6 +138,13 @@ export function AppTopbar() {
     window.addEventListener("qcet:open-create-task", handleOpenCreateTask);
     return () => window.removeEventListener("qcet:open-create-task", handleOpenCreateTask);
   }, []);
+
+  const handleCreateTaskFromTopbar = (data: CreateTaskFormData) => {
+    window.dispatchEvent(
+      new CustomEvent("qcet:task-created", { detail: data })
+    );
+    setIsCreateModalOpen(false);
+  };
 
   const handleOpenSearch = React.useCallback(() => {
     window.dispatchEvent(new CustomEvent("qcet:open-command-search"));
@@ -149,13 +171,6 @@ export function AppTopbar() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleOpenSearch]);
-
-  const handleCreateTaskFromTopbar = (data: CreateTaskFormData) => {
-    window.dispatchEvent(
-      new CustomEvent("qcet:task-created", { detail: data })
-    );
-    setIsCreateModalOpen(false);
-  };
 
   const devRoles: Array<{ role: UserRole; label: string; desc: string }> = [
     { role: "ADMIN", label: "Ban Giám hiệu", desc: "BGH QCET (Toàn quyền)" },
@@ -205,7 +220,7 @@ export function AppTopbar() {
           <button
             type="button"
             onClick={handleOpenSearch}
-            className="hidden sm:flex items-center justify-between w-64 md:w-80 lg:w-96 h-8 px-2.5 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/60 text-muted-foreground transition-colors cursor-pointer group"
+            className="hidden sm:flex items-center justify-between w-64 md:w-80 lg:w-96 h-9 px-3 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/60 text-muted-foreground transition-colors cursor-pointer group"
             title="Tìm nhanh công việc, nhân sự... (phím ⌘K hoặc Ctrl+K)"
             aria-label="Tìm nhanh công việc, nhân sự"
           >
@@ -217,23 +232,40 @@ export function AppTopbar() {
               />
               <span className="text-xs truncate">Tìm nhanh công việc, nhân sự...</span>
             </div>
-            <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border/60 bg-background/80 text-muted-foreground group-hover:text-foreground shrink-0">
+            <kbd className="text-xs font-mono px-1.5 py-0.5 rounded border border-border/60 bg-background/80 text-muted-foreground group-hover:text-foreground shrink-0">
               ⌘K
             </kbd>
           </button>
         </div>
 
-        {/* Right Zone: Notification Bell, Theme Switcher & User Profile */}
+        {/* Right Zone: Create Task Button, Notification Bell, Theme Switcher & User Profile */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          {/* Notification Bell */}
+          {/* Quick Create Task Button */}
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setInitialAssigneeName(undefined);
+              setIsCreateModalOpen(true);
+            }}
+            className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer active:scale-95"
+            title="Tạo việc mới (N)"
+          >
+            <Plus size={14} strokeWidth={2} />
+            <span>Tạo việc</span>
+          </Button>
+
+          {/* Notification Bell: Direct Link to /notifications */}
           <Link
             href="/notifications"
-            className="relative flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
             title="Thông báo điều hành"
             aria-label="Thông báo điều hành"
           >
             <Bell size={16} strokeWidth={1.5} className="size-4" />
-            <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
+            {Number(badgeCounts?.notifications) > 0 && (
+              <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
+            )}
           </Link>
 
           {/* Theme Switcher Button */}
@@ -244,7 +276,7 @@ export function AppTopbar() {
             onClick={toggleTheme}
             aria-label="Chuyển đổi giao diện sáng/tối"
             title="Chuyển đổi giao diện sáng/tối"
-            className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            className="size-9 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
           >
             {resolved === "dark" ? (
               <Sun size={15} strokeWidth={1.5} className="text-amber-400" />
@@ -262,7 +294,7 @@ export function AppTopbar() {
               title={`Hồ sơ cá nhân: ${user.name}`}
               aria-expanded={isProfileDropdownOpen}
             >
-              <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-2xs">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-2xs">
                 {getInitials(user.name)}
               </div>
               <div className="hidden text-left xl:block">
@@ -273,7 +305,7 @@ export function AppTopbar() {
                   {user.name}
                 </p>
                 <p
-                  className="text-[10.5px] text-muted-foreground font-medium max-w-[130px] truncate"
+                  className="text-xs text-muted-foreground font-medium max-w-[130px] truncate"
                   title={user.roleLabel}
                 >
                   {user.role === "ADMIN"
@@ -310,18 +342,18 @@ export function AppTopbar() {
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] font-mono text-muted-foreground truncate" title={user.email}>
+                    <p className="text-xs font-mono text-muted-foreground truncate" title={user.email}>
                       {user.email}
                     </p>
                     <div className="mt-1 flex items-center gap-1 flex-wrap">
-                      <span className="rounded bg-secondary px-1.5 py-0.5 text-[9.5px] font-medium text-foreground border border-border/50">
+                      <span className="rounded bg-secondary px-2 py-0.5 text-xs font-medium text-foreground border border-border/50">
                         {user.role === "ADMIN"
                           ? "Ban Giám hiệu"
                           : user.role === "MANAGER"
                           ? "Trưởng đơn vị"
                           : "Chuyên viên"}
                       </span>
-                      <span className="text-[10px] text-muted-foreground truncate">
+                      <span className="text-xs text-muted-foreground truncate">
                         {user.departmentCode || "QCET"}
                       </span>
                     </div>
@@ -354,7 +386,7 @@ export function AppTopbar() {
 
                 {/* Embedded Dev Role Testing Section */}
                 <div className="my-2 border-t border-border/50 pt-2">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 text-[10.5px] font-medium text-muted-foreground">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-muted-foreground">
                     <FlaskConical size={13} strokeWidth={1.5} className="text-amber-500 shrink-0" />
                     <span>Chế độ kiểm thử vai trò (Dev)</span>
                   </div>
@@ -378,7 +410,7 @@ export function AppTopbar() {
                         >
                           <div className="min-w-0">
                             <p className="text-xs leading-tight font-medium text-foreground truncate">{r.label}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{r.desc}</p>
+                            <p className="text-xs text-muted-foreground truncate">{r.desc}</p>
                           </div>
                           {isActive && (
                             <Check size={13} strokeWidth={2} className="text-primary shrink-0" />
@@ -409,16 +441,18 @@ export function AppTopbar() {
         </div>
       </div>
 
-      {/* Quick Task Modal */}
-      <CreateTaskModal
-        isOpen={isCreateModalOpen}
-        onClose={() => {
-          setIsCreateModalOpen(false);
-          setInitialAssigneeName(undefined);
-        }}
-        onSubmit={handleCreateTaskFromTopbar}
-        initialLeadAssigneeName={initialAssigneeName}
-      />
+      {/* Quick Task Modal (rendered on-demand via dynamic import) */}
+      {isCreateModalOpen && (
+        <CreateTaskModal
+          isOpen={isCreateModalOpen}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setInitialAssigneeName(undefined);
+          }}
+          onSubmit={handleCreateTaskFromTopbar}
+          initialLeadAssigneeName={initialAssigneeName}
+        />
+      )}
 
       {/* User Profile Modal */}
       <UserProfileModal />

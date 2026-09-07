@@ -107,7 +107,7 @@ export function AppPrimaryRail() {
                       </div>
                       <span
                         className={cn(
-                          "text-[9.5px] leading-tight text-center truncate max-w-full tracking-tight px-0.5",
+                          "text-xs leading-tight text-center truncate max-w-full tracking-tight px-0.5",
                           isActive
                             ? "font-semibold text-primary"
                             : "font-medium text-muted-foreground/80 group-hover:text-foreground"
@@ -121,7 +121,7 @@ export function AppPrimaryRail() {
                     <div className="flex items-center gap-1.5">
                       <span>{mod.label}</span>
                       {mod.isComingSoon && (
-                        <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1 py-0.2 rounded">
+                        <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
                           Đang phát triển
                         </span>
                       )}

@@ -4,15 +4,18 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, X, User } from "lucide-react";
 import {
   useSidebar,
   MODULES,
   MODULE_NAV_ITEMS,
   SIDEBAR_ZONE_ITEMS,
+  QCET_CDS_MENU_ITEMS,
   type SidebarItem,
   type NavigationSection,
+  type QCETMenuItem,
 } from "@/components/layout/sidebar-context";
+import { MaintenanceDialog } from "@/components/common/maintenance-dialog";
 import { AppPrimaryRail } from "@/components/layout/app-primary-rail";
 import {
   Tooltip,
@@ -40,6 +43,35 @@ export function AppSidebar() {
   React.useEffect(() => {
     setIsMobileOpen(false);
   }, [pathname, searchParams, setIsMobileOpen]);
+
+  // Maintenance dialog state for items undergoing maintenance
+  const [maintenanceDialog, setMaintenanceDialog] = React.useState<{
+    isOpen: boolean;
+    title: string;
+    feature?: string;
+    description?: string;
+  }>({ isOpen: false, title: "" });
+
+  const [mobileMenuMode, setMobileMenuMode] = React.useState<"cds" | "modules">("cds");
+
+  // Global listener for opening maintenance dialog
+  React.useEffect(() => {
+    const handleOpenMaintenance = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        title?: string;
+        feature?: string;
+        description?: string;
+      }>;
+      setMaintenanceDialog({
+        isOpen: true,
+        title: customEvent.detail?.title || "Tính năng hệ thống",
+        feature: customEvent.detail?.feature || "general",
+        description: customEvent.detail?.description,
+      });
+    };
+    window.addEventListener("qcet:open-maintenance", handleOpenMaintenance);
+    return () => window.removeEventListener("qcet:open-maintenance", handleOpenMaintenance);
+  }, []);
 
   // Listen to Ctrl+B / Cmd+B globally to toggleCollapse
   React.useEffect(() => {
@@ -80,7 +112,15 @@ export function AppSidebar() {
 
       if (item.href === "/") {
         const zone = searchParams.get("zone");
+        const view = searchParams.get("view");
+        const scope = searchParams.get("scope");
         if (zone && (zone === "tasks" || zone === "calendar" || zone === "org")) {
+          return false;
+        }
+        if (view === "calendar" || view === "month") {
+          return false;
+        }
+        if (scope === "school" || scope === "unit") {
           return false;
         }
         return pathname === "/";
@@ -101,13 +141,26 @@ export function AppSidebar() {
         return true;
       }
 
-      // Backward compatibility for legacy ?zone= query parameters on root
+      // Backward compatibility for legacy ?zone= or ?view= / ?scope= query parameters on root
       if (pathname === "/") {
         const zone = searchParams.get("zone");
-        if (zone) {
-          if (item.href === "/tasks" && zone === "tasks") return true;
-          if (item.href === "/calendar" && zone === "calendar") return true;
-          if (item.href === "/org" && zone === "org") return true;
+        const view = searchParams.get("view");
+        const scope = searchParams.get("scope");
+
+        if (
+          item.href === "/calendar" &&
+          (zone === "calendar" || view === "calendar" || view === "month")
+        ) {
+          return true;
+        }
+        if (
+          item.href === "/tasks" &&
+          (zone === "tasks" || scope === "school" || scope === "unit")
+        ) {
+          return true;
+        }
+        if (item.href === "/org" && zone === "org") {
+          return true;
         }
       }
 
@@ -257,6 +310,15 @@ export function AppSidebar() {
                               <Link
                                 href={item.href}
                                 onClick={(e) => {
+                                  if (item.isMaintenance) {
+                                    e.preventDefault();
+                                    setMaintenanceDialog({
+                                      isOpen: true,
+                                      title: item.label,
+                                      feature: item.id,
+                                    });
+                                    return;
+                                  }
                                   if (item.href === "/notifications") {
                                     e.preventDefault();
                                     window.dispatchEvent(
@@ -264,7 +326,7 @@ export function AppSidebar() {
                                     );
                                   }
                                 }}
-                                aria-label={`${item.label}${badge ? ` (${badge.text})` : ""}`}
+                                aria-label={`${item.label}${badge ? ` (${badge.text})` : ""}${item.isMaintenance ? " (Đang bảo trì)" : ""}`}
                                 aria-current={active ? "page" : undefined}
                                 className={cn(
                                   "size-9 rounded-lg relative flex items-center justify-center transition-all duration-150 active:scale-95",
@@ -278,7 +340,7 @@ export function AppSidebar() {
                                   <span
                                     aria-label={`${badge.text} mục`}
                                     className={cn(
-                                      "absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-mono font-bold leading-none tracking-tight shadow-xs select-none pointer-events-none",
+                                      "absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-xs font-mono font-bold leading-none tracking-tight shadow-xs select-none pointer-events-none",
                                       badge.variant === "primary" &&
                                         "bg-primary text-primary-foreground",
                                       badge.variant === "sky" && "bg-sky-500 text-white",
@@ -291,19 +353,25 @@ export function AppSidebar() {
                                     {badge.text}
                                   </span>
                                 )}
+                                {item.isMaintenance && !badge && (
+                                  <span
+                                    className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500 ring-2 ring-background"
+                                    title="Đang bảo trì"
+                                  />
+                                )}
                               </Link>
                             </TooltipTrigger>
                             <TooltipContent side="right">
                               <div className="flex items-center gap-1.5">
                                 <span>{item.label}</span>
                                 {badge && (
-                                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-muted">
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-mono font-semibold bg-muted">
                                     {badge.text}
                                   </span>
                                 )}
-                                {item.isComingSoon && (
-                                  <span className="text-[9px] text-amber-500">
-                                    (Đang phát triển)
+                                {item.isMaintenance && (
+                                  <span className="text-xs text-amber-500 font-medium">
+                                    (Đang bảo trì)
                                   </span>
                                 )}
                               </div>
@@ -348,12 +416,12 @@ export function AppSidebar() {
                     {currentModuleMeta.label}
                   </span>
                   {currentModuleMeta.isComingSoon && (
-                    <span className="text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded leading-none shrink-0">
+                    <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded leading-none shrink-0">
                       Sắp ra mắt
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] font-mono text-muted-foreground truncate">
+                <span className="text-xs font-mono text-muted-foreground truncate">
                   {currentModuleMeta.isComingSoon ? "Đang phát triển" : "Năm học 2025-2026"}
                 </span>
               </div>
@@ -362,7 +430,7 @@ export function AppSidebar() {
               <div className="overflow-y-auto flex-1 p-2 space-y-4 thin-scrollbar">
                 {sections.map((sec) => (
                   <div key={sec.key} className="space-y-1">
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 px-2.5 py-1 select-none">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2.5 py-1 select-none">
                       {sec.label}
                     </div>
                     <div className="space-y-0.5">
@@ -376,6 +444,15 @@ export function AppSidebar() {
                             key={item.id}
                             href={item.href}
                             onClick={(e) => {
+                              if (item.isMaintenance) {
+                                e.preventDefault();
+                                setMaintenanceDialog({
+                                  isOpen: true,
+                                  title: item.label,
+                                  feature: item.id,
+                                });
+                                return;
+                              }
                               if (item.href === "/notifications") {
                                 e.preventDefault();
                                 window.dispatchEvent(
@@ -385,14 +462,14 @@ export function AppSidebar() {
                             }}
                             aria-current={active ? "page" : undefined}
                             className={cn(
-                              "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors select-none",
+                              "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 min-h-10 text-[13.5px] font-medium transition-colors select-none",
                               active
                                 ? "bg-primary/10 text-primary font-semibold shadow-xs"
                                 : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                             )}
                           >
                             <Icon
-                              size={16}
+                              size={18}
                               strokeWidth={active ? 2 : 1.5}
                               className={cn(
                                 "shrink-0 transition-colors",
@@ -405,7 +482,7 @@ export function AppSidebar() {
                             {badge && (
                               <span
                                 className={cn(
-                                  "ml-auto inline-flex items-center justify-center px-1.5 py-0.5 min-w-[18px] rounded-full text-[10px] font-mono font-bold leading-none select-none tracking-tight",
+                                  "ml-auto inline-flex items-center justify-center px-2 py-0.5 min-w-[20px] rounded-full text-xs font-mono font-semibold leading-none select-none tracking-tight",
                                   badge.variant === "primary" &&
                                     "bg-primary/15 text-primary border border-primary/20",
                                   badge.variant === "sky" &&
@@ -419,9 +496,9 @@ export function AppSidebar() {
                                 {badge.text}
                               </span>
                             )}
-                            {item.isComingSoon && !badge && (
-                              <span className="ml-auto text-[9px] font-normal text-muted-foreground/60">
-                                Sớm ra mắt
+                            {item.isMaintenance && !badge && (
+                              <span className="ml-auto text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded leading-none select-none">
+                                Bảo trì
                               </span>
                             )}
                           </Link>
@@ -432,21 +509,26 @@ export function AppSidebar() {
                 ))}
               </div>
 
-              {/* Expanded Footer (Collapse Button) */}
-              <div className="p-2 border-t border-border/50 shrink-0">
+              {/* Expanded Footer (Collapse Button & Version) */}
+              <div className="p-2 border-t border-border/50 shrink-0 space-y-1.5">
                 <button
                   type="button"
                   onClick={toggleCollapse}
-                  className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+                  className="flex w-full items-center gap-2 px-2.5 py-2 min-h-10 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
                   title="Thu gọn [Ctrl+B]"
                   aria-label="Thu gọn [Ctrl+B]"
                 >
                   <ChevronLeft size={16} strokeWidth={1.5} className="shrink-0" />
-                  <span className="truncate text-[11px] font-medium">Thu gọn [Ctrl+B]</span>
-                  <kbd className="ml-auto pointer-events-none inline-flex h-4.5 select-none items-center gap-0.5 rounded border border-border/60 bg-muted px-1.5 font-mono text-[9px] font-medium text-muted-foreground">
+                  <span className="truncate text-xs font-medium">Thu gọn [Ctrl+B]</span>
+                  <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border/60 bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
                     Ctrl+B
                   </kbd>
                 </button>
+                <div className="text-center pt-0.5">
+                  <span className="text-xs font-mono font-medium text-rose-500/90 tracking-wider">
+                    Version: 2.4.3
+                  </span>
+                </div>
               </div>
             </>
           )}
@@ -469,190 +551,335 @@ export function AppSidebar() {
         <aside
           data-slot="mobile-sidebar-drawer"
           className={cn(
-            "fixed left-0 top-0 bottom-0 z-50 w-64 bg-background border-r border-border p-4 flex flex-col transition-transform duration-200 ease-in-out shadow-2xl select-none",
+            "fixed left-0 top-0 bottom-0 z-50 w-72 sm:w-80 bg-background border-r border-border flex flex-col transition-transform duration-200 ease-in-out shadow-2xl select-none overflow-hidden",
             isMobileOpen ? "translate-x-0" : "-translate-x-full"
           )}
           aria-label="Điều hướng di động"
           aria-hidden={!isMobileOpen}
         >
-          {/* Mobile Drawer Header */}
-          <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
-            <Link
-              href="/"
-              onClick={() => setIsMobileOpen(false)}
-              className="flex items-center gap-2.5 min-w-0"
-              aria-label="Về trang chủ QCET E-Office"
-            >
-              <div className="relative flex items-center justify-center size-8 rounded-lg bg-card p-0.5 border border-border/60 shrink-0">
-                <Image
-                  src="/logo-qcet.png"
-                  alt="QCET Logo"
-                  width={32}
-                  height={32}
-                  priority
-                  unoptimized
-                  className="h-full w-full object-contain"
-                />
+          {/* Mobile Drawer Header: Blue Gradient Banner matching QCET CĐS System */}
+          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white p-4 shrink-0 shadow-xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="size-10 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0 shadow-xs">
+                  <User size={20} strokeWidth={2} />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-bold tracking-tight text-white leading-tight">
+                    Chuyển đổi số
+                  </span>
+                  <div className="flex items-center gap-1 text-xs text-blue-100 font-medium">
+                    <span className="truncate">CĐ Kỹ Thuật Công Nghệ Quy Nhơn</span>
+                    <ChevronDown size={13} className="shrink-0 opacity-80" />
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold tracking-tight text-foreground truncate">
-                  QCET E-Office
-                </span>
-                <span className="text-[10px] font-mono text-muted-foreground truncate">
-                  v1.2 Enterprise
-                </span>
-              </div>
-            </Link>
-            <button
-              type="button"
-              onClick={() => setIsMobileOpen(false)}
-              className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer active:scale-95"
-              aria-label="Đóng menu"
-              title="Đóng menu"
-            >
-              <X size={16} strokeWidth={1.5} />
-            </button>
-          </div>
-
-          {/* Module Selector / Tab Navigation */}
-          <div className="py-2.5 border-b border-border/50">
-            <div
-              role="tablist"
-              aria-label="Phân hệ hệ thống"
-              className="grid grid-cols-3 gap-1 p-1 bg-muted/60 rounded-lg border border-border/40 text-xs font-medium"
-            >
-              {MODULES.map((mod) => {
-                const isActive = currentModule === mod.id;
-                const Icon = mod.icon;
-                return (
-                  <button
-                    key={mod.id}
-                    type="button"
-                    role="tab"
-                    id={`mobile-tab-${mod.id}`}
-                    aria-selected={isActive}
-                    aria-controls={`mobile-tabpanel-${mod.id}`}
-                    onClick={() => {
-                      setCurrentModule(mod.id);
-                      if (pathname !== mod.defaultHref) {
-                        router.push(mod.defaultHref);
-                        setIsMobileOpen(false);
-                      }
-                    }}
-                    className={cn(
-                      "flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-md transition-all text-center cursor-pointer",
-                      isActive
-                        ? "bg-card text-foreground font-semibold shadow-xs border border-border/40"
-                        : "text-muted-foreground hover:text-foreground hover:bg-card/40"
-                    )}
-                  >
-                    <div className="relative">
-                      <Icon size={16} strokeWidth={isActive ? 2 : 1.5} />
-                      {mod.isComingSoon && (
-                        <span
-                          className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-amber-500"
-                          title="Đang phát triển"
-                        />
-                      )}
-                    </div>
-                    <span className="truncate max-w-full text-[10px] leading-tight">
-                      {mod.shortLabel}
-                    </span>
-                  </button>
-                );
-              })}
+              <button
+                type="button"
+                onClick={() => setIsMobileOpen(false)}
+                className="size-8 rounded-lg flex items-center justify-center bg-white/15 hover:bg-white/25 text-white transition-colors cursor-pointer active:scale-95 shrink-0"
+                aria-label="Đóng menu"
+                title="Đóng menu"
+              >
+                <X size={18} strokeWidth={2} />
+              </button>
             </div>
           </div>
 
-          {/* Mobile Navigation List */}
-          <nav
-            id={`mobile-tabpanel-${currentModule}`}
-            role="tabpanel"
-            aria-labelledby={`mobile-tab-${currentModule}`}
-            className="flex-1 py-3 space-y-3.5 overflow-y-auto thin-scrollbar"
-            aria-label={`Danh mục điều hướng ${currentModuleMeta.label}`}
-          >
-            {sections.map((sec) => (
-              <div key={sec.key} className="space-y-1">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 px-2.5 py-0.5 select-none">
-                  {sec.label}
-                </div>
-                <div className="space-y-0.5">
-                  {sec.items.map((item) => {
-                    const active = isItemActive(item);
-                    const Icon = item.icon;
-                    const badge = getBadgeInfo(item);
-                    return (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        onClick={(e) => {
+          {/* Mode Switcher Tabs (Satisfies test contract: role="tablist", role="tab", role="tabpanel") */}
+          <div className="p-2 border-b border-border/50 bg-muted/20 shrink-0">
+            <div
+              role="tablist"
+              aria-label="Chế độ danh mục"
+              className="grid grid-cols-2 gap-1 p-1 bg-muted/60 rounded-lg border border-border/40 text-xs font-medium"
+            >
+              <button
+                type="button"
+                role="tab"
+                id="mobile-tab-cds"
+                aria-selected={mobileMenuMode === "cds"}
+                aria-controls="mobile-tabpanel-cds"
+                onClick={() => setMobileMenuMode("cds")}
+                className={cn(
+                  "py-2 px-2.5 min-h-9 rounded-md transition-all text-center cursor-pointer text-xs",
+                  mobileMenuMode === "cds"
+                    ? "bg-card text-foreground font-semibold shadow-xs border border-border/40"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Danh mục CĐS (12 mục)
+              </button>
+              <button
+                type="button"
+                role="tab"
+                id="mobile-tab-modules"
+                aria-selected={mobileMenuMode === "modules"}
+                aria-controls="mobile-tabpanel-modules"
+                onClick={() => setMobileMenuMode("modules")}
+                className={cn(
+                  "py-2 px-2.5 min-h-9 rounded-md transition-all text-center cursor-pointer text-xs",
+                  mobileMenuMode === "modules"
+                    ? "bg-card text-foreground font-semibold shadow-xs border border-border/40"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Theo Phân hệ (3 nhóm)
+              </button>
+            </div>
+          </div>
+
+          {/* When in "modules" mode, show the 3 module tabs */}
+          {mobileMenuMode === "modules" && (
+            <div className="px-3 py-2 border-b border-border/50 shrink-0">
+              <div
+                role="tablist"
+                aria-label="Phân hệ hệ thống"
+                className="grid grid-cols-3 gap-1 p-1 bg-muted/60 rounded-lg border border-border/40 text-xs font-medium"
+              >
+                {MODULES.map((mod) => {
+                  const isActive = currentModule === mod.id;
+                  const Icon = mod.icon;
+                  return (
+                    <button
+                      key={mod.id}
+                      type="button"
+                      role="tab"
+                      id={`mobile-tab-${mod.id}`}
+                      aria-selected={isActive}
+                      aria-controls={`mobile-tabpanel-${mod.id}`}
+                      onClick={() => {
+                        setCurrentModule(mod.id);
+                        if (pathname !== mod.defaultHref) {
+                          router.push(mod.defaultHref);
                           setIsMobileOpen(false);
-                          if (item.href === "/notifications") {
-                            e.preventDefault();
-                            window.dispatchEvent(
-                              new CustomEvent("qcet:toggle-notifications")
-                            );
-                          }
-                        }}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors active:scale-[0.98]",
-                          active
-                            ? "bg-primary/10 text-primary font-semibold shadow-xs"
-                            : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
-                        )}
-                      >
-                        <Icon
-                          size={18}
-                          strokeWidth={active ? 2 : 1.5}
-                          className={cn(
-                            "shrink-0 transition-colors",
-                            active
-                              ? "text-primary"
-                              : "text-muted-foreground group-hover:text-foreground"
-                          )}
-                        />
-                        <span className="truncate flex-1">{item.label}</span>
-                        {badge && (
-                          <span
-                            className={cn(
-                              "ml-auto inline-flex items-center justify-center px-2 py-0.5 min-w-[20px] rounded-full text-[10.5px] font-mono font-bold leading-none select-none tracking-tight",
-                              badge.variant === "primary" &&
-                                "bg-primary/15 text-primary border border-primary/20",
-                              badge.variant === "sky" &&
-                                "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20",
-                              badge.variant === "danger" &&
-                                "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
-                              badge.variant === "muted" &&
-                                "bg-secondary text-muted-foreground border border-border/50"
-                            )}
-                          >
-                            {badge.text}
-                          </span>
-                        )}
-                        {item.isComingSoon && !badge && (
-                          <span className="ml-auto text-[9px] font-normal text-muted-foreground/60">
-                            Sắp ra mắt
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
+                        }
+                      }}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-1 py-1.5 px-1 min-h-10 rounded-md transition-all text-center cursor-pointer",
+                        isActive
+                          ? "bg-card text-foreground font-semibold shadow-xs border border-border/40"
+                          : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                      )}
+                    >
+                      <Icon size={15} strokeWidth={isActive ? 2 : 1.5} />
+                      <span className="truncate max-w-full text-xs leading-tight">
+                        {mod.shortLabel}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Navigation Body */}
+          <nav
+            id={
+              mobileMenuMode === "cds"
+                ? "mobile-tabpanel-cds"
+                : `mobile-tabpanel-${currentModule}`
+            }
+            role="tabpanel"
+            aria-labelledby={
+              mobileMenuMode === "cds"
+                ? "mobile-tab-cds"
+                : `mobile-tab-${currentModule}`
+            }
+            className="flex-1 py-2 px-3 space-y-1 overflow-y-auto thin-scrollbar"
+            aria-label={
+              mobileMenuMode === "cds"
+                ? "Danh mục Chuyển đổi số QCET"
+                : `Danh mục điều hướng ${currentModuleMeta.label}`
+            }
+          >
+            {mobileMenuMode === "cds" ? (
+              /* Full 12 Items from QCET CĐS System */
+              <div className="space-y-0.5">
+                {QCET_CDS_MENU_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const active =
+                    item.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(item.href.split("?")[0]);
+
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      onClick={(e) => {
+                        if (item.isMaintenance) {
+                          e.preventDefault();
+                          setIsMobileOpen(false);
+                          setMaintenanceDialog({
+                            isOpen: true,
+                            title: item.label,
+                            feature: item.id,
+                          });
+                          return;
+                        }
+                        setIsMobileOpen(false);
+                        if (item.href === "/notifications") {
+                          e.preventDefault();
+                          window.dispatchEvent(
+                            new CustomEvent("qcet:toggle-notifications")
+                          );
+                        }
+                      }}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "group flex items-center gap-3 rounded-lg px-3 py-2.5 min-h-10 text-[13.5px] font-medium transition-all active:scale-[0.98]",
+                        active
+                          ? "bg-primary/10 text-primary font-semibold shadow-xs"
+                          : "text-foreground/80 hover:bg-muted/70 hover:text-foreground"
+                      )}
+                    >
+                      <Icon
+                        size={18}
+                        strokeWidth={active ? 2 : 1.5}
+                        className={cn(
+                          "shrink-0 transition-colors",
+                          active
+                            ? "text-primary"
+                            : "text-muted-foreground group-hover:text-foreground"
+                        )}
+                      />
+                      <span className="truncate flex-1">{item.label}</span>
+
+                      {/* Item Badges or Submenu Indicators */}
+                      {item.badge && (
+                        <span
+                          className={cn(
+                            "inline-flex items-center justify-center px-2 py-0.5 min-w-[20px] rounded-full text-xs font-mono font-semibold leading-none select-none tracking-tight",
+                            item.badgeVariant === "danger"
+                              ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                              : "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20"
+                          )}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+
+                      {item.isMaintenance && !item.badge && (
+                        <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded leading-none select-none">
+                          Bảo trì
+                        </span>
+                      )}
+
+                      {item.hasSubmenu && !item.isMaintenance && !item.badge && (
+                        <ChevronRight size={14} className="text-muted-foreground/50 shrink-0" />
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Grouped Module Sections */
+              sections.map((sec) => (
+                <div key={sec.key} className="space-y-1">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2.5 py-1 select-none">
+                    {sec.label}
+                  </div>
+                  <div className="space-y-0.5">
+                    {sec.items.map((item) => {
+                      const active = isItemActive(item);
+                      const Icon = item.icon;
+                      const badge = getBadgeInfo(item);
+                      return (
+                        <Link
+                          key={item.id}
+                          href={item.href}
+                          onClick={(e) => {
+                            if (item.isMaintenance) {
+                              e.preventDefault();
+                              setIsMobileOpen(false);
+                              setMaintenanceDialog({
+                                isOpen: true,
+                                title: item.label,
+                                feature: item.id,
+                              });
+                              return;
+                            }
+                            setIsMobileOpen(false);
+                            if (item.href === "/notifications") {
+                              e.preventDefault();
+                              window.dispatchEvent(
+                                new CustomEvent("qcet:toggle-notifications")
+                              );
+                            }
+                          }}
+                          aria-current={active ? "page" : undefined}
+                          className={cn(
+                            "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 min-h-10 text-[13.5px] font-medium transition-colors active:scale-[0.98]",
+                            active
+                              ? "bg-primary/10 text-primary font-semibold shadow-xs"
+                              : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
+                          )}
+                        >
+                          <Icon
+                            size={18}
+                            strokeWidth={active ? 2 : 1.5}
+                            className={cn(
+                              "shrink-0 transition-colors",
+                              active
+                                ? "text-primary"
+                                : "text-muted-foreground group-hover:text-foreground"
+                            )}
+                          />
+                          <span className="truncate flex-1">{item.label}</span>
+                          {badge && (
+                            <span
+                              className={cn(
+                                "ml-auto inline-flex items-center justify-center px-2 py-0.5 min-w-[20px] rounded-full text-xs font-mono font-semibold leading-none select-none tracking-tight",
+                                badge.variant === "primary" &&
+                                  "bg-primary/15 text-primary border border-primary/20",
+                                badge.variant === "sky" &&
+                                  "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20",
+                                badge.variant === "danger" &&
+                                  "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
+                                badge.variant === "muted" &&
+                                  "bg-secondary text-muted-foreground border border-border/50"
+                              )}
+                            >
+                              {badge.text}
+                            </span>
+                          )}
+                          {item.isMaintenance && (
+                            <span className="ml-auto text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded leading-none select-none">
+                              Bảo trì
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
           </nav>
 
-          {/* Mobile Drawer Footer */}
-          <div className="pt-3 border-t border-border/50 shrink-0">
-            <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg border border-border/40 bg-secondary/30 text-xs text-muted-foreground">
+          {/* Mobile Drawer Footer: Exact Version from School System & Notion Sync */}
+          <div className="p-3 border-t border-border/50 shrink-0 bg-muted/20 space-y-2">
+            <div className="flex items-center justify-center gap-2 px-2.5 py-1 rounded-md border border-border/40 bg-card text-xs text-muted-foreground">
               <span className="size-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-              <span className="truncate font-medium">Notion: Đang kết nối</span>
+              <span className="truncate font-medium text-xs">Notion: Đang kết nối</span>
+            </div>
+            <div className="text-center">
+              <span className="text-xs font-semibold text-rose-500 font-mono tracking-wider">
+                Version: 2.4.3
+              </span>
             </div>
           </div>
         </aside>
       </div>
+
+      {/* Maintenance Dialog Modal */}
+      <MaintenanceDialog
+        isOpen={maintenanceDialog.isOpen}
+        onClose={() => setMaintenanceDialog({ isOpen: false, title: "" })}
+        title={maintenanceDialog.title}
+        feature={maintenanceDialog.feature}
+        description={maintenanceDialog.description}
+      />
     </>
   );
 }
