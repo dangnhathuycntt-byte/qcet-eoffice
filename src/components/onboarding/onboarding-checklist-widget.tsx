@@ -89,7 +89,7 @@ export function OnboardingChecklistWidget({
               <Rocket className="w-3.5 h-3.5 text-primary" />
               <span>Khởi động QCET</span>
             </span>
-            <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-bold">
+            <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">
               {percentage}%
             </span>
             <ChevronUp className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-transform" />
@@ -172,19 +172,19 @@ export function OnboardingChecklistWidget({
                             {task.title}
                           </p>
                           {isNext && !isDone && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
+                            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
                               Tiếp theo
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {task.description}
                         </p>
                       </div>
                       {!isDone && (
                         <button
                           onClick={() => handleAction(task)}
-                          className="px-2 py-1 rounded-lg text-[11px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0"
+                          className="px-2 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0"
                         >
                           {task.actionLabel}
                         </button>
