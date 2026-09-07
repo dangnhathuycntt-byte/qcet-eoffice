@@ -156,3 +156,23 @@ export interface ElevenDepartmentRadarItem {
   completionRate: number;
   healthStatus: "GREEN" | "YELLOW" | "RED";
 }
+
+export type OwnershipRoleFilter = 'ALL' | 'LEADING' | 'PARTICIPATING';
+
+export interface AssigneeWorkloadItem {
+  assigneeName: string;
+  assigneeId?: string;
+  count: number;
+  completedCount: number;
+}
+
+export interface GroupedParentTaskView {
+  parentTask: SchoolTask;
+  isLeading: boolean;
+  isParticipating: boolean;
+  isAwaitingAssignment: boolean;
+  workloads: AssigneeWorkloadItem[];
+  userSubTasks: StaffTask[];
+  allSubTasks: StaffTask[];
+}
+

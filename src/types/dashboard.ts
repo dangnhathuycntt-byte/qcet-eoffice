@@ -71,7 +71,23 @@ export interface StaffTask {
   triageRejectionReason?: string;
   escalation?: EscalationMeta;
   aiReview?: AIReviewSummary;
+  collaborators?: {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+    role?: string;
+  }[];
+  subItems?: {
+    id: string;
+    title: string;
+    assigneeId?: string;
+    assigneeName?: string;
+    dueDate?: string;
+    status: TaskStatus;
+  }[];
 }
+
+export type TaskOrigin = 'SCHOOL' | 'SELF_INITIATED';
 
 export interface SchoolTask {
   id: string;
@@ -95,6 +111,7 @@ export interface SchoolTask {
   completedSubTasks: number;
   progressPercent: number;
   executiveCriteria?: string;
+  origin?: TaskOrigin;
   completionReport?: {
     summary: string;
     submittedBy: string;
