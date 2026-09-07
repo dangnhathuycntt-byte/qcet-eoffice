@@ -26,7 +26,7 @@
 
 ---
 
-### Nhiệm Vụ 1: Nâng Cấp Cơ Sở Dữ Liệu Prisma (PushSubscription & Notification)
+### Task 1: Nhiệm Vụ 1: Nâng Cấp Cơ Sở Dữ Liệu Prisma (PushSubscription & Notification)
 
 **Files:**
 - Sửa đổi: `prisma/schema.prisma`
@@ -131,7 +131,7 @@ git commit -m "feat(db): add push_subscriptions and notifications models to sche
 
 ---
 
-### Nhiệm Vụ 2: Dịch Vụ Web Push Server & Copywriting Matrix (`src/lib/push-service.ts`)
+### Task 2: Nhiệm Vụ 2: Dịch Vụ Web Push Server & Copywriting Matrix (`src/lib/push-service.ts`)
 
 **Files:**
 - Cài đặt: `npm install web-push && npm install -D @types/web-push`
@@ -228,7 +228,7 @@ git commit -m "feat(push): implement web-push service with vietnamese copywritin
 
 ---
 
-### Nhiệm Vụ 3: Xây Dựng Các API Routes Cho Push & Thông Báo
+### Task 3: Nhiệm Vụ 3: Xây Dựng Các API Routes Cho Push & Thông Báo
 
 **Files:**
 - Tạo mới: `src/app/api/notifications/push/subscribe/route.ts`
@@ -272,7 +272,7 @@ git commit -m "feat(api): add push subscription, test notification, and notifica
 
 ---
 
-### Nhiệm Vụ 4: Tích Hợp Next.js 15 `after()` Bắn Push Ngầm Khi Có Biến Động Công Việc
+### Task 4: Nhiệm Vụ 4: Tích Hợp Next.js 15 `after()` Bắn Push Ngầm Khi Có Biến Động Công Việc
 
 **Files:**
 - Sửa đổi: `src/app/api/tasks/route.ts` (khi giao việc mới)
@@ -352,7 +352,7 @@ git commit -m "feat(tasks): integrate next.js 15 after() with defensive try-catc
 
 ---
 
-### Nhiệm Vụ 5: Xây Dựng Service Worker & Nâng Cấp PWA Manifest (`sw.js`, `manifest.ts`)
+### Task 5: Nhiệm Vụ 5: Xây Dựng Service Worker & Nâng Cấp PWA Manifest (`sw.js`, `manifest.ts`)
 
 **Files:**
 - Tạo mới: `public/sw.js`
@@ -392,7 +392,7 @@ git commit -m "feat(pwa): add service worker for push and notification routing, 
 
 ---
 
-### Nhiệm Vụ 6: Xây Dựng React Hooks: `usePWAInstall` & `usePushNotification`
+### Task 6: Nhiệm Vụ 6: Xây Dựng React Hooks: `usePWAInstall` & `usePushNotification`
 
 **Files:**
 - Tạo mới: `src/hooks/use-pwa-install.ts`
@@ -439,7 +439,7 @@ git commit -m "feat(hooks): add usePWAInstall and usePushNotification hooks with
 
 ---
 
-### Nhiệm Vụ 7: Xây Dựng Giao Diện Kích Hoạt Thân Thiện Người Lớn Tuổi & Cài Đặt Di Động
+### Task 7: Nhiệm Vụ 7: Xây Dựng Giao Diện Kích Hoạt Thân Thiện Người Lớn Tuổi & Cài Đặt Di Động
 
 **Files:**
 - Tạo mới: `src/components/pwa/push-onboarding-sheet.tsx`
@@ -481,7 +481,7 @@ git commit -m "feat(ui): add senior-friendly push onboarding sheet and mobile se
 
 ---
 
-### Nhiệm Vụ 8: Tạm Ẩn Phân Hệ Văn Bản Với Nhãn "Đang phát triển" & Landing Lộ Trình
+### Task 8: Nhiệm Vụ 8: Tạm Ẩn Phân Hệ Văn Bản Với Nhãn "Đang phát triển" & Landing Lộ Trình
 
 **Files:**
 - Sửa đổi: `src/components/layout/app-sidebar.tsx`
@@ -521,7 +521,7 @@ git commit -m "feat(documents): attach 'Đang phát triển' roadmap badge and i
 
 ---
 
-### Nhiệm Vụ 9: Kiểm Thử Toàn Diện, Typecheck & Nghiệm Thu Chất Lượng
+### Task 9: Nhiệm Vụ 9: Kiểm Thử Toàn Diện, Typecheck & Nghiệm Thu Chất Lượng
 
 **Files:**
 - Tạo mới: `tests/mobile-pwa-push-e2e.test.ts`
