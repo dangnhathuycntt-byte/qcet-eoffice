@@ -40,23 +40,60 @@ import {
 } from "./document-detail-dialog";
 import { CreateDocumentModal } from "./create-document-modal";
 
-function mapApiDocumentToOfficial(item: any): OfficialDocument {
-  let type: DocumentType = item.type;
-  if (item.type === "VAN_BAN_DEN") type = "inbox";
-  else if (item.type === "VAN_BAN_DI") type = "outbox";
-  else if (item.type === "TO_TRINH_NOI_BO") type = "submission";
+interface ApiDocumentItem {
+  id: string;
+  type: string;
+  urgency: string;
+  status: string;
+  originalNumber?: string | null;
+  documentNumber?: string | null;
+  registrationNumber?: number | null;
+  documentYear?: number | null;
+  issuedDate?: string | Date | null;
+  registeredDate?: string | Date | null;
+  receivedDate?: string | null;
+  issuingAuthority?: string | null;
+  signatory?: string | null;
+  signerName?: string | null;
+  signerTitle?: string | null;
+  summary?: string | null;
+  leadDepartment?: string | null;
+  leadDepartmentId?: string | null;
+  leadDepartmentName?: string | null;
+  draftingDeptName?: string | null;
+  linkedTaskId?: string | null;
+  linkedTaskTitle?: string | null;
+  linkedTask?: { id: string; title: string } | null;
+  securityLevel?: string | null;
+  attachments?: Array<{
+    fileName: string;
+    fileSize?: number;
+    fileUrl?: string;
+  }> | null;
+  fileAttachment?: {
+    name: string;
+    size: string;
+    url?: string;
+  } | null;
+}
 
-  let urgency: DocumentUrgency = item.urgency;
-  if (item.urgency === "HOA_TOC") urgency = "flash";
-  else if (item.urgency === "THUONG_KHAN") urgency = "top_urgent";
-  else if (item.urgency === "KHAN") urgency = "urgent";
-  else if (item.urgency === "THUONG") urgency = "normal";
+function mapApiDocumentToOfficial(item: ApiDocumentItem): OfficialDocument {
+  let type: DocumentType = "inbox";
+  if (item.type === "VAN_BAN_DEN" || item.type === "inbox") type = "inbox";
+  else if (item.type === "VAN_BAN_DI" || item.type === "outbox") type = "outbox";
+  else if (item.type === "TO_TRINH_NOI_BO" || item.type === "submission") type = "submission";
 
-  let status: DocumentStatus = item.status;
-  if (item.status === "CHO_PHAN_CONG") status = "pending_assignment";
-  else if (item.status === "DANG_XU_LY") status = "processing";
-  else if (item.status === "CHO_PHE_DUYET") status = "approved";
-  else if (item.status === "DA_HOAN_THANH" || item.status === "LUU_THEO_DOI") status = "completed";
+  let urgency: DocumentUrgency = "normal";
+  if (item.urgency === "HOA_TOC" || item.urgency === "flash") urgency = "flash";
+  else if (item.urgency === "THUONG_KHAN" || item.urgency === "top_urgent") urgency = "top_urgent";
+  else if (item.urgency === "KHAN" || item.urgency === "urgent") urgency = "urgent";
+  else if (item.urgency === "THUONG" || item.urgency === "normal") urgency = "normal";
+
+  let status: DocumentStatus = "pending_assignment";
+  if (item.status === "CHO_PHAN_CONG" || item.status === "pending_assignment") status = "pending_assignment";
+  else if (item.status === "DANG_XU_LY" || item.status === "processing") status = "processing";
+  else if (item.status === "CHO_PHE_DUYET" || item.status === "approved") status = "approved";
+  else if (item.status === "DA_HOAN_THANH" || item.status === "LUU_THEO_DOI" || item.status === "completed") status = "completed";
   if (item.linkedTaskId && status === "processing") status = "delegated";
 
   const issuedDateStr = item.issuedDate
@@ -69,7 +106,7 @@ function mapApiDocumentToOfficial(item: any): OfficialDocument {
     ? typeof item.registeredDate === "string"
       ? item.registeredDate.split("T")[0]
       : new Date(item.registeredDate).toISOString().split("T")[0]
-    : item.receivedDate;
+    : item.receivedDate || undefined;
 
   const docNumber =
     item.originalNumber ||
@@ -90,7 +127,7 @@ function mapApiDocumentToOfficial(item: any): OfficialDocument {
           size: `${Math.max(1, Math.round((item.attachments[0].fileSize || 1024) / 1024))} KB`,
           url: item.attachments[0].fileUrl,
         }
-      : item.fileAttachment;
+      : item.fileAttachment || undefined;
 
   return {
     id: item.id,
@@ -295,9 +332,17 @@ export function DocumentRegistryView() {
           );
         }
         fetchStats();
+      } else {
+        // Rollback optimistic addition on server failure
+        setDocuments((prev) => prev.filter((d) => d.id !== newDoc.id));
+        const errJson = await res.json().catch(() => null);
+        alert(errJson?.error || "Không thể đăng ký văn bản vào hệ thống. Vui lòng thử lại.");
       }
     } catch (err) {
+      // Rollback optimistic addition on network exception
+      setDocuments((prev) => prev.filter((d) => d.id !== newDoc.id));
       console.error("Error creating document via API:", err);
+      alert("Lỗi kết nối khi đăng ký văn bản. Đã hoàn tác dữ liệu.");
     }
   };
 
@@ -431,7 +476,7 @@ export function DocumentRegistryView() {
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-              Sổ Quản Lý Văn Bản &amp; Công Văn
+              Sổ Quản Lý Văn Bản &amp; Công Văn Điện Tử
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
               Hệ thống đăng ký, quản lý công văn đi - đến, tờ trình nội bộ và bút phê lãnh đạo theo
@@ -458,12 +503,22 @@ export function DocumentRegistryView() {
             </Button>
 
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() => alert("Tính năng xuất sổ điện tử theo định dạng Excel/PDF chuẩn NĐ30")}
+              className="h-9 px-3 text-xs rounded-xl border-border/70 shadow-2xs hover:bg-muted/60 cursor-pointer"
+            >
+              <Download className="size-3.5 mr-1.5" strokeWidth={1.5} />
+              <span>Xuất sổ điện tử</span>
+            </Button>
+
+            <Button
               size="sm"
               onClick={() => setIsCreateOpen(true)}
               className="h-9 px-3.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 cursor-pointer"
             >
               <Plus className="size-3.5 mr-1.5" strokeWidth={2} />
-              <span>Tiếp nhận / Ban hành mới</span>
+              <span>Soạn văn bản / Tờ trình</span>
             </Button>
           </div>
         </div>
