@@ -13,6 +13,7 @@ Module.prototype.require = function (id: string) {
   if (id === "next/font/google") {
     return {
       Be_Vietnam_Pro: () => ({ variable: "--font-sans" }),
+      Plus_Jakarta_Sans: () => ({ variable: "--font-heading" }),
       JetBrains_Mono: () => ({ variable: "--font-mono" }),
     };
   }
