@@ -144,3 +144,15 @@ export interface SchoolBottleneckItem {
   parentSchoolTaskId?: string;
   originalTask: SchoolTask | StaffTask;
 }
+
+export interface ElevenDepartmentRadarItem {
+  departmentCode: string;
+  departmentName: string;
+  leadName: string;
+  totalTasks: number;
+  completedTasks: number;
+  delayedTasks: number;
+  blockedTasks: number;
+  completionRate: number;
+  healthStatus: "GREEN" | "YELLOW" | "RED";
+}
