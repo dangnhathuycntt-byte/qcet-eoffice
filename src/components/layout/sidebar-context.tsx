@@ -32,7 +32,7 @@ import {
 import { WorkspaceZone } from "@/types/workspace";
 
 export type NavigationModule = "work" | "documents" | "org";
-export type NavigationSection = "personal" | "workspace";
+export type NavigationSection = "personal" | "workspace" | "operations";
 
 export interface ModuleMeta {
   id: NavigationModule;
@@ -194,6 +194,59 @@ export const MODULE_NAV_ITEMS: Record<NavigationModule, SidebarItem[]> = {
     },
   ],
 };
+
+export const SINGLE_TIER_NAV_ITEMS: SidebarItem[] = [
+  // SECTION 1: CÁ NHÂN
+  {
+    id: "desk",
+    label: "Bàn làm việc",
+    href: "/",
+    icon: LayoutDashboard,
+    section: "personal",
+    badgeKey: "myFocus",
+  },
+  {
+    id: "calendar",
+    label: "Lịch công tác",
+    href: "/calendar",
+    icon: Calendar,
+    section: "personal",
+    badgeKey: "calendar",
+  },
+  {
+    id: "notifications",
+    label: "Thông báo",
+    href: "/notifications",
+    icon: Bell,
+    section: "personal",
+    badgeKey: "notifications",
+  },
+  // SECTION 2: TOÀN TRƯỜNG & ĐƠN VỊ
+  {
+    id: "tasks",
+    label: "Kho nhiệm vụ",
+    href: "/tasks",
+    icon: CheckSquare,
+    section: "workspace",
+    badgeKey: "allTasks",
+  },
+  // SECTION 3: VĂN BẢN & ĐIỀU HÀNH
+  {
+    id: "documents",
+    label: "Sổ văn bản đến/đi",
+    href: "/documents",
+    icon: FileText,
+    section: "operations",
+    badgeKey: "docsInbox",
+  },
+  {
+    id: "org",
+    label: "Cơ cấu & Danh bạ",
+    href: "/org",
+    icon: Building2,
+    section: "operations",
+  },
+];
 
 export interface QCETMenuItem {
   id: string;
@@ -497,7 +550,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const effectiveCollapsed = isMounted ? isCollapsed : false;
-  const sidebarWidth = effectiveCollapsed ? 112 : 280;
+  const sidebarWidth = effectiveCollapsed ? 64 : 248;
 
   const value = React.useMemo<SidebarContextType>(
     () => ({
