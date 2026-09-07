@@ -232,14 +232,17 @@ export function AppTopbar() {
           <div className="h-4 w-px bg-border/60 shrink-0 hidden sm:block" />
 
           {/* Scope Switcher Dropdown */}
-          <Suspense fallback={<div className="h-8 w-44 rounded-lg bg-muted/40 animate-pulse" />}>
-            <ScopeSwitcher />
-          </Suspense>
+          <div id="tour-scope-switcher">
+            <Suspense fallback={<div className="h-8 w-44 rounded-lg bg-muted/40 animate-pulse" />}>
+              <ScopeSwitcher />
+            </Suspense>
+          </div>
         </div>
 
         {/* Center Zone: Global Command / Quick Search */}
         <div className="flex items-center justify-center flex-1 max-w-md px-2">
           <button
+            id="tour-topbar-search"
             type="button"
             onClick={handleOpenSearch}
             className="hidden sm:flex items-center justify-between w-64 md:w-80 lg:w-96 h-9 px-3 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/60 text-muted-foreground transition-colors cursor-pointer group"
@@ -264,6 +267,7 @@ export function AppTopbar() {
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           {/* Quick Create Task Button */}
           <Button
+            id="tour-create-task-btn"
             type="button"
             size="sm"
             onClick={() => {

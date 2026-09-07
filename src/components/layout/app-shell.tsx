@@ -10,7 +10,55 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { PushOnboardingSheet } from "@/components/pwa/push-onboarding-sheet";
+import { WelcomeModal } from "@/components/onboarding/welcome-modal";
+import { SpotlightTour } from "@/components/onboarding/spotlight-tour";
+import { OnboardingChecklistWidget } from "@/components/onboarding/onboarding-checklist-widget";
+import { useOnboarding } from "@/hooks/use-onboarding";
 import { cn } from "@/lib/utils";
+
+export function OnboardingHub() {
+  const onboarding = useOnboarding();
+
+  return (
+    <>
+      <WelcomeModal
+        isOpen={
+          onboarding.isMounted &&
+          !onboarding.state.hasSeenWelcome &&
+          !onboarding.state.isDismissed
+        }
+        onStartTour={onboarding.startTour}
+        onDismiss={onboarding.dismissOnboarding}
+      />
+      <SpotlightTour
+        isActive={onboarding.isTourActive}
+        steps={onboarding.tourSteps}
+        currentIndex={onboarding.currentTourIndex}
+        onNext={() => {
+          if (onboarding.currentTourIndex < onboarding.tourSteps.length - 1) {
+            onboarding.setCurrentTourIndex((i) => i + 1);
+          } else {
+            onboarding.endTour();
+          }
+        }}
+        onPrev={() => onboarding.setCurrentTourIndex((i) => Math.max(0, i - 1))}
+        onClose={onboarding.endTour}
+      />
+      {onboarding.isMounted && (
+        <OnboardingChecklistWidget
+          tasks={onboarding.checklistTasks}
+          completedSteps={onboarding.state.completedSteps}
+          percentage={onboarding.progress.percentage}
+          isExpanded={onboarding.isChecklistExpanded}
+          isDismissed={onboarding.state.isDismissed}
+          onToggleExpand={() => onboarding.setIsChecklistExpanded((v) => !v)}
+          onDismiss={onboarding.dismissOnboarding}
+          onCompleteStep={onboarding.completeStep}
+        />
+      )}
+    </>
+  );
+}
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebar();
@@ -46,6 +94,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       </React.Suspense>
 
       <PushOnboardingSheet />
+      <OnboardingHub />
     </div>
   );
 }
