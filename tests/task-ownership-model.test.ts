@@ -361,4 +361,119 @@ describe("Mock Dashboard Data - Origin and Ownership Cases", () => {
   });
 });
 
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { LecturerFocusWorkspace } from "../src/components/portal/lecturer-focus-workspace";
+
+describe("LecturerFocusWorkspace - 2-Tier Rendering and Workload Badges", () => {
+  const mockUser: AuthUser = {
+    id: "user-huy",
+    name: "Đặng Nhật Huy",
+    email: "huydn@cdktcnqn.edu.vn",
+    role: "STAFF",
+    roleLabel: "Chuyên viên CNTT",
+    department: "Khoa CNTT",
+    departmentCode: "CNTT",
+  };
+
+  const tasks: SchoolTask[] = [
+    {
+      id: "school-100",
+      title: "Lễ Khai giảng năm học 2026 - 2027",
+      category: "TRUYEN_THONG",
+      categoryLabel: "Truyền thông",
+      leadAssigneeName: "Trần Hùng",
+      coAssignees: ["Đặng Nhật Huy"],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-07",
+      status: "IN_PROGRESS",
+      origin: "SCHOOL",
+      totalSubTasks: 2,
+      completedSubTasks: 1,
+      progressPercent: 50,
+      subTasks: [
+        {
+          id: "sub-101",
+          title: "Chụp ảnh sự kiện",
+          assigneeName: "Đặng Nhật Huy",
+          status: "COMPLETED",
+          dueDate: "2026-09-05",
+          parentSchoolTaskId: "school-100",
+          updatedAt: "2026-09-05",
+        },
+        {
+          id: "sub-102",
+          title: "Quay phim bế mạc",
+          assigneeName: "Đặng Nhật Huy",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-05",
+          parentSchoolTaskId: "school-100",
+          updatedAt: "2026-09-05",
+        },
+      ],
+    },
+    {
+      id: "school-200",
+      title: "Sổ tay sinh viên điện tử",
+      category: "CHUYEN_DOI_SO",
+      categoryLabel: "Chuyển đổi số",
+      leadAssigneeName: "Đặng Nhật Huy",
+      coAssignees: ["Mai Thị Xuân"],
+      assignedDate: "2026-09-02",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      origin: "SELF_INITIATED",
+      totalSubTasks: 2,
+      completedSubTasks: 0,
+      progressPercent: 0,
+      subTasks: [
+        {
+          id: "sub-201",
+          title: "Soạn cấu trúc tài liệu",
+          assigneeName: "Đặng Nhật Huy",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-15",
+          parentSchoolTaskId: "school-200",
+          updatedAt: "2026-09-02",
+        },
+        {
+          id: "sub-202",
+          title: "Biên tập mỹ thuật",
+          assigneeName: "Mai Thị Xuân",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-20",
+          parentSchoolTaskId: "school-200",
+          updatedAt: "2026-09-02",
+        },
+      ],
+    },
+  ];
+
+  test("renders 2-tier parent header and subtasks under single container", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(LecturerFocusWorkspace, {
+        user: mockUser,
+        tasks: tasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    // Verifies Parent Task Title is present
+    assert.ok(html.includes("Lễ Khai giảng năm học 2026 - 2027"));
+    assert.ok(html.includes("Sổ tay sinh viên điện tử"));
+
+    // Verifies Sub-tasks are rendered
+    assert.ok(html.includes("Chụp ảnh sự kiện"));
+    assert.ok(html.includes("Quay phim bế mạc"));
+
+    // Verifies Segmented Ownership filters
+    assert.ok(html.includes("Tôi chủ trì") || html.includes("Chủ trì"));
+    assert.ok(html.includes("Tôi tham gia") || html.includes("Tham gia"));
+
+    // Verifies origin badge
+    assert.ok(html.includes("Tự khởi xướng") || html.includes("Cá nhân đề xuất"));
+  });
+});
+
+
 
