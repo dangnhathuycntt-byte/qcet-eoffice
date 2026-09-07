@@ -29,11 +29,17 @@ try {
     # 1. Chép tệp dump vào trong container để tối ưu tốc độ restore
     Write-Host "1. Sao chép tệp sao lưu vào container..." -ForegroundColor Yellow
     docker cp $DbDumpPath "$($ContainerName):/tmp/restore_target.dump"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Sao chép tệp dump vào container thất bại (ExitCode: $LASTEXITCODE)"
+    }
 
     # 2. Thực thi pg_restore với tùy chọn làm sạch và tạo lại bảng
     Write-Host "2. Đang thực thi pg_restore tái thiết lập CSDL..." -ForegroundColor Yellow
     $restoreCmd = "pg_restore -U $DbUser -d $DbName -v --clean --if-exists /tmp/restore_target.dump"
     docker exec $ContainerName sh -c "$restoreCmd"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Lỗi khi thực thi pg_restore trong container (ExitCode: $LASTEXITCODE)"
+    }
 
     # Dọn dẹp tệp tạm trong container
     docker exec $ContainerName rm -f /tmp/restore_target.dump
