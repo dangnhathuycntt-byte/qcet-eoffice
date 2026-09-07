@@ -4,7 +4,7 @@ import { getVapidPublicKey } from '@/lib/push-service';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(_request?: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const publicKey = getVapidPublicKey();
     return NextResponse.json({
