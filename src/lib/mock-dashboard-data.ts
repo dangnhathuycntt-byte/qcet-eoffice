@@ -7,6 +7,7 @@ import {
   DashboardPayload,
   TaskCategory,
   TaskStatus,
+  TaskOrigin,
 } from "../types/dashboard";
 import { computeSchoolTaskRollup, computeDashboardStats } from "./dashboard-aggregator";
 
@@ -71,6 +72,7 @@ interface SeedTaskDefinition {
   coAssignees: string[];
   assignedDate: string;
   dueDate: string;
+  origin?: TaskOrigin;
   subTaskTitles: { title: string; assigneeName: string; status: TaskStatus; dueDate: string }[];
 }
 
@@ -82,6 +84,7 @@ const SEED_SCHOOL_TASKS: SeedTaskDefinition[] = [
     coAssignees: ["Nguyễn Ngọc Vinh"],
     assignedDate: "2026-09-03",
     dueDate: "2026-09-24",
+    origin: "SCHOOL",
     subTaskTitles: [
       {
         title: "Kiểm tra các bản sao lưu và giám sát an ninh mạng máy chủ trung tâm",
@@ -110,6 +113,7 @@ const SEED_SCHOOL_TASKS: SeedTaskDefinition[] = [
     coAssignees: ["Trần Hùng", "Lê Hoàng Nam"],
     assignedDate: "2026-09-03",
     dueDate: "2026-09-24",
+    origin: "SCHOOL",
     subTaskTitles: [
       {
         title: "Theo dõi kênh Hệ thống theo dõi thực hiện chỉ đạo điều hành",
@@ -138,6 +142,7 @@ const SEED_SCHOOL_TASKS: SeedTaskDefinition[] = [
     coAssignees: ["Nguyễn Ngọc Vinh"],
     assignedDate: "2026-09-01",
     dueDate: "2026-09-15",
+    origin: "SCHOOL",
     subTaskTitles: [
       {
         title: "Biên tập nội dung cẩm nang chào tân sinh viên khóa 2026",
@@ -166,6 +171,7 @@ const SEED_SCHOOL_TASKS: SeedTaskDefinition[] = [
     coAssignees: ["Nguyễn Ngọc Vinh"],
     assignedDate: "2026-09-02",
     dueDate: "2026-09-18",
+    origin: "SCHOOL",
     subTaskTitles: [
       {
         title: "Khảo sát và đo kiểm tín hiệu wifi khu nhà A và nhà B",
@@ -194,6 +200,7 @@ const SEED_SCHOOL_TASKS: SeedTaskDefinition[] = [
     coAssignees: ["Trần Hùng", "Lê Hoàng Nam"],
     assignedDate: "2026-08-20",
     dueDate: "2026-09-30",
+    origin: "SCHOOL",
     subTaskTitles: [
       {
         title: "Tập huấn chữ ký số cho cán bộ quản lý và trưởng các khoa phòng",
@@ -222,6 +229,7 @@ const SEED_SCHOOL_TASKS: SeedTaskDefinition[] = [
     coAssignees: ["Nguyễn Ngọc Vinh"],
     assignedDate: "2026-08-15",
     dueDate: "2026-09-25",
+    origin: "SCHOOL",
     subTaskTitles: [
       {
         title: "Quét và OCR 150 đầu giáo trình chuyên ngành kỹ thuật công nghệ",
@@ -244,6 +252,7 @@ const SEED_SCHOOL_TASKS: SeedTaskDefinition[] = [
     coAssignees: ["Mai Đinh Thị Xuân", "Đặng Văn Hậu"],
     assignedDate: "2026-08-28",
     dueDate: "2026-09-12",
+    origin: "SCHOOL",
     subTaskTitles: [
       {
         title: "Thống kê số liệu nhập học các ngành công nghệ và kinh tế",
@@ -266,6 +275,7 @@ const SEED_SCHOOL_TASKS: SeedTaskDefinition[] = [
     coAssignees: ["Võ Minh Trí"],
     assignedDate: "2026-08-10",
     dueDate: "2026-10-15",
+    origin: "SCHOOL",
     subTaskTitles: [
       {
         title: "Hoàn thiện báo cáo tự đánh giá tiêu chuẩn 1 đến 5",
@@ -278,6 +288,35 @@ const SEED_SCHOOL_TASKS: SeedTaskDefinition[] = [
         assigneeName: "Đặng Văn Hậu",
         status: "IN_PROGRESS",
         dueDate: "2026-09-25",
+      },
+    ],
+  },
+  {
+    title: "Xây dựng Sổ tay sinh viên điện tử năm 2026",
+    category: "CHUYEN_DOI_SO",
+    leadName: "Nguyễn Ngọc Vinh",
+    coAssignees: ["Trần Hùng", "Mai Đinh Thị Xuân"],
+    assignedDate: "2026-09-02",
+    dueDate: "2026-09-30",
+    origin: "SELF_INITIATED",
+    subTaskTitles: [
+      {
+        title: "Thu thập tài liệu và quy chế đào tạo mới",
+        assigneeName: "Nguyễn Ngọc Vinh",
+        status: "COMPLETED",
+        dueDate: "2026-09-10",
+      },
+      {
+        title: "Thiết kế giao diện tra cứu trên Zalo Mini App",
+        assigneeName: "Nguyễn Ngọc Vinh",
+        status: "IN_PROGRESS",
+        dueDate: "2026-09-20",
+      },
+      {
+        title: "Soạn thảo nội dung chuyên mục Đoàn - Hội",
+        assigneeName: "Mai Đinh Thị Xuân",
+        status: "IN_PROGRESS",
+        dueDate: "2026-09-22",
       },
     ],
   },
@@ -410,6 +449,7 @@ const CATEGORY_SUBTASK_TEMPLATES: Record<TaskCategory, string[]> = {
 
 function generateQCETDataset(): {
   tasks: SchoolTask[];
+  schoolTasks: SchoolTask[];
   stats: DashboardStats;
   upcoming: UpcomingItem[];
   activities: ActivityEvent[];
@@ -435,6 +475,7 @@ function generateQCETDataset(): {
     let coAssignees: string[];
     let assignedDate: string;
     let dueDate: string;
+    let origin: TaskOrigin = "SCHOOL";
 
     if (isSeed) {
       const seed = SEED_SCHOOL_TASKS[i];
@@ -444,6 +485,7 @@ function generateQCETDataset(): {
       coAssignees = seed.coAssignees;
       assignedDate = seed.assignedDate;
       dueDate = seed.dueDate;
+      origin = seed.origin || "SCHOOL";
     } else {
       const template = TEMPLATE_TITLES[i % TEMPLATE_TITLES.length];
       const person = QCET_PERSONNEL[i % QCET_PERSONNEL.length];
@@ -456,6 +498,7 @@ function generateQCETDataset(): {
       const dayOffset = (i % 20) + 1;
       assignedDate = `2026-08-${String(Math.min(28, dayOffset + 5)).padStart(2, "0")}`;
       dueDate = `2026-09-${String(Math.min(30, dayOffset + 8)).padStart(2, "0")}`;
+      origin = "SCHOOL";
     }
 
     const leadPerson = QCET_PERSONNEL.find((p) => p.name === leadName) || QCET_PERSONNEL[0];
@@ -476,6 +519,7 @@ function generateQCETDataset(): {
       totalSubTasks: 0,
       completedSubTasks: 0,
       progressPercent: 0,
+      origin,
     });
   }
 
@@ -545,12 +589,19 @@ function generateQCETDataset(): {
         subDueDate = `2026-09-${String(day).padStart(2, "0")}`;
       }
 
-      const assigneePerson = QCET_PERSONNEL[(i + s) % QCET_PERSONNEL.length];
+      let assigneePerson = QCET_PERSONNEL[(i + s) % QCET_PERSONNEL.length];
 
-      // If seed sub-task exists, use its title
+      // If seed sub-task exists, use its title and assigneeName
       let subTitle: string;
       if (i < SEED_SCHOOL_TASKS.length && s < SEED_SCHOOL_TASKS[i].subTaskTitles.length) {
-        subTitle = SEED_SCHOOL_TASKS[i].subTaskTitles[s].title;
+        const seedSub = SEED_SCHOOL_TASKS[i].subTaskTitles[s];
+        subTitle = seedSub.title;
+        if (seedSub.assigneeName) {
+          const matched = QCET_PERSONNEL.find((p) => p.name === seedSub.assigneeName);
+          if (matched) {
+            assigneePerson = matched;
+          }
+        }
       } else {
         const templates =
           CATEGORY_SUBTASK_TEMPLATES[parentTask.category] ||
@@ -559,7 +610,7 @@ function generateQCETDataset(): {
         subTitle = templates[templateIdx];
       }
 
-      const staffTask: StaffTask = {
+      let staffTask: StaffTask = {
         id: `staff-task-${staffTaskIdCounter++}`,
         title: subTitle,
         assigneeName: assigneePerson.name,
@@ -569,6 +620,25 @@ function generateQCETDataset(): {
         parentSchoolTaskId: parentTask.id,
         updatedAt: `2026-09-03T08:${String(10 + (s * 7) % 50).padStart(2, "0")}:00Z`,
       };
+
+      if (i === 0 && s === 0) {
+        staffTask = {
+          ...staffTask,
+          id: "st-khai-giang-001",
+          title: "Lễ Khai giảng năm học 2026-2027",
+          assigneeId: "tran-hung",
+          assigneeName: "Trần Hùng",
+          collaborators: [
+            { id: "nguyen-anh", name: "Nguyễn Anh" },
+            { id: "le-mai", name: "Lê Mai" },
+            { id: "dang-huy", name: "Đặng Huy" },
+          ],
+          subItems: [
+            { id: "si-001", title: "Kịch bản, voice", assigneeName: "Lê Mai", dueDate: "2026-09-04", status: "COMPLETED" },
+            { id: "si-002", title: "Thiết kế banner", assigneeName: "Nguyễn Anh", dueDate: "2026-09-04", status: "COMPLETED" },
+          ],
+        };
+      }
 
       parentTask.subTasks.push(staffTask);
       allStaffTasks.push(staffTask);
@@ -732,6 +802,7 @@ function generateQCETDataset(): {
 
   return {
     tasks,
+    schoolTasks: tasks,
     stats,
     upcoming,
     activities,
@@ -739,9 +810,9 @@ function generateQCETDataset(): {
 }
 
 // Cached singleton mock payload to guarantee instant access
-let cachedPayload: DashboardPayload | null = null;
+let cachedPayload: (DashboardPayload & { schoolTasks: SchoolTask[] }) | null = null;
 
-export function getMockDashboardPayload(): DashboardPayload {
+export function getMockDashboardPayload(): DashboardPayload & { schoolTasks: SchoolTask[] } {
   if (!cachedPayload) {
     const data = generateQCETDataset();
     cachedPayload = {

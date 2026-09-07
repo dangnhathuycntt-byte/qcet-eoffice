@@ -335,3 +335,30 @@ describe("Role Task Filter - STAFF DRI and Co-Assignee Support", () => {
   });
 });
 
+import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+
+describe("Mock Dashboard Data - Origin and Ownership Cases", () => {
+  test("mock payload includes both SCHOOL and SELF_INITIATED tasks", () => {
+    const payload = getMockDashboardPayload();
+    const schoolOrigins = payload.schoolTasks.map((t) => t.origin || "SCHOOL");
+
+    assert.ok(schoolOrigins.includes("SCHOOL"), "Must contain SCHOOL origin tasks");
+    assert.ok(schoolOrigins.includes("SELF_INITIATED"), "Must contain SELF_INITIATED origin tasks");
+  });
+
+  test("mock payload contains a task with multiple subtasks assigned to the same individual", () => {
+    const payload = getMockDashboardPayload();
+    const hasMultipleSubTasksForSamePerson = payload.schoolTasks.some((task) => {
+      const counts: Record<string, number> = {};
+      for (const st of task.subTasks) {
+        counts[st.assigneeName] = (counts[st.assigneeName] || 0) + 1;
+        if (counts[st.assigneeName] > 1) return true;
+      }
+      return false;
+    });
+
+    assert.equal(hasMultipleSubTasksForSamePerson, true);
+  });
+});
+
+
