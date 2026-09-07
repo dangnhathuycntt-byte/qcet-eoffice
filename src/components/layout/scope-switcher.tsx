@@ -688,7 +688,10 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                   Lựa chọn không gian làm việc theo thẩm quyền & nhiệm vụ
                 </BottomSheetDescription>
               </div>
-              <BottomSheetClose className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors">
+              <BottomSheetClose
+                aria-label="Đóng bảng chọn phạm vi"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
+              >
                 <X size={18} />
               </BottomSheetClose>
             </div>
@@ -850,7 +853,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 <button
                   type="button"
                   onClick={() => setShowOtherUnits((prev) => !prev)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-xl transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-xl transition-colors cursor-pointer min-h-[44px]"
                 >
                   <span>CÁC ĐƠN VỊ KHÁC ({otherDepartments.length})</span>
                   <ChevronDown
@@ -876,7 +879,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                           type="button"
                           onClick={() => handleSelectScope("unit", dept.code)}
                           className={cn(
-                            "w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-left text-xs transition-colors cursor-pointer min-h-[42px]",
+                            "w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-left text-xs transition-colors cursor-pointer min-h-[44px]",
                             isSelected
                               ? "bg-primary/10 text-primary font-semibold"
                               : "hover:bg-muted/60 text-foreground"

@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "QCET E-Office - Hệ thống Điều hành Văn phòng Điện tử",
     short_name: "QCET E-Office",
-    description: "Hệ thống quản lý công việc và điều hành văn phòng điện tử Trường CĐ Kỹ thuật Cao Thắng",
+    description: "Hệ thống quản lý công việc và điều hành văn phòng điện tử Trường Cao đẳng Kỹ thuật Quy Nhơn (QCET)",
     start_url: "/",
     display: "standalone",
     background_color: "#0B0C0E",

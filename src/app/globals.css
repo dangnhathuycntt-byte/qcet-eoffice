@@ -238,8 +238,14 @@
   }
 }
 
-.safe-area-bottom {
+.safe-area-bottom,
+.pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-top,
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
 }
 
 @media (max-width: 768px) {
