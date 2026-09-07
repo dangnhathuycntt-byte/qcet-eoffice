@@ -5,6 +5,7 @@ import {
   type TaskViewMode,
   filterTasksByScope,
 } from "@/components/dashboard/unified-task-toolbar";
+export type { TaskScope, TaskViewMode };
 import type { WorkboxFilter } from "@/components/dashboard/executive-stat-strip";
 import { matchesUser } from "@/lib/role-task-filter";
 import { filterTasksForTable } from "@/components/dashboard/cascading-task-table";
