@@ -68,6 +68,7 @@ import { DashboardStateProvider, useDashboardModal } from "@/components/dashboar
 import { OrgZone } from "@/components/dashboard/zones/org-zone";
 import { CalendarZone } from "@/components/dashboard/zones/calendar-zone";
 import { DashboardZone } from "@/components/dashboard/zones/dashboard-zone";
+import { TasksZone } from "@/components/dashboard/zones/tasks-zone";
 import { DashboardModalsHost } from "@/components/dashboard/dashboard-modals-host";
 
 const ExecutiveDepartmentCommandCenter = dynamic(
@@ -999,430 +1000,7 @@ function UnifiedTaskHubContent() {
       {/* ========================================================================= */}
       {/* ZONE 3: TASKS (Bảng công việc 2 cấp, Lọc & Phân cấp nhiệm vụ)           */}
       {/* ========================================================================= */}
-      {activeZone === "tasks" && (
-        <div className="space-y-6" data-slot="zone-tasks">
-          {/* Role-Based Workspace Landing (Dispatches to Executive, Manager, or Staff Focus Workspace) */}
-          {!isStaffExpanded ? (
-            <div className="space-y-4" data-slot="role-workspace-landing">
-              {/* Context Banner & Action Bar (Only render for non-executive roles; ExecutiveCockpitWorkspace provides its own unified single header) */}
-              {!isExecutive && !isSchoolView && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-card border border-border rounded-2xl p-4 shadow-xs">
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
-                        {isUnitView
-                          ? "Trung tâm điều hành Đơn vị"
-                          : "Không gian làm việc cá nhân"}
-                      </span>
-                      <span className="text-xs text-muted-foreground font-mono tabular-nums">
-                        Năm học 2026 - 2027
-                      </span>
-                    </div>
-                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
-                      {isUnitView
-                        ? `Trung tâm Điều hành: ${effectiveManagerUser.department || user?.department || "Khoa / Phòng"}`
-                        : "Công việc Của tôi (My Focus)"}
-                    </h1>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {isUnitView
-                        ? "Phân công nhiệm vụ, kiểm tra tiến độ và thẩm định minh chứng cấp khoa/phòng"
-                        : "Tập trung xử lý nhiệm vụ được phân công, theo dõi hạn chót và nộp minh chứng"}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleManualRefresh}
-                      disabled={isRefreshing}
-                      className="gap-1.5 text-xs rounded-xl"
-                    >
-                      <RefreshCw
-                        size={14}
-                        strokeWidth={1.5}
-                        className={isRefreshing ? "animate-spin text-primary" : ""}
-                      />
-                      <span className="hidden sm:inline">Làm mới</span>
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Role-Based Dispatching: Executive, Manager, or Staff Workspace */}
-              {isSchoolView ? (
-                <ExecutiveCockpitWorkspace
-                  user={user}
-                  tasks={dashboardData.tasks}
-                  onSelectTask={(task) => setSelectedTask(task)}
-                  onReview={handleReviewAction}
-                  onSubmitDeliverable={handleSubmitDeliverable}
-                  onCreateDirective={() => handleOpenCreateModal("TRUONG")}
-                  onSendReminder={(_deptCode, _reason) => {
-                    // Executive reminder dispatched
-                  }}
-                />
-              ) : isUnitView ? (
-                <DepartmentManagerWorkspace
-                  user={effectiveManagerUser}
-                  tasks={dashboardData.tasks}
-                  onSelectTask={(task) => setSelectedTask(task)}
-                  onReview={handleReviewAction}
-                  onSubmitDeliverable={handleSubmitDeliverable}
-                  onStatusChange={handleStatusChange}
-                  onCreateSubTask={(parentTaskId) =>
-                    handleOpenCreateModal("DON_VI", parentTaskId)
-                  }
-                />
-              ) : (
-                /* STAFF, GIANG_VIEN, CHUYEN_VIEN & Fallback */
-                <LecturerFocusWorkspace
-                  user={user}
-                  tasks={dashboardData.tasks}
-                  onSelectTask={(task) => setSelectedTask(task)}
-                  onSubmitDeliverable={handleSubmitDeliverable}
-                  onStatusChange={handleStatusChange}
-                />
-              )}
-
-              {/* Compatibility hook to ensure existing tests looking for StaffFocusView pass */}
-              {user?.role === "STAFF" && false && (
-                <StaffFocusView
-                  tasks={dashboardData.tasks}
-                  user={user}
-                  onSelectTask={(task) => setSelectedTask(task)}
-                  onStatusChange={handleStatusChange}
-                  onOpenSubmitModal={(task) => setSelectedTask(task)}
-                />
-              )}
-            </div>
-          ) : (
-            <>
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
-                      Năm học 2026 - 2027
-                    </span>
-                    {selectedMonthPeriod ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 shadow-2xs font-mono">
-                        <span className="size-1.5 rounded-full bg-sky-500 animate-pulse" />
-                        <span>{selectedMonthPeriod.label} ({selectedMonthPeriod.shortDateSpan})</span>
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground font-medium">
-                        Cả năm học (12 tháng chu kỳ)
-                      </span>
-                    )}
-                  </div>
-                  <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground font-heading">
-                    Quản lý Giao việc & Nhiệm vụ
-                  </h1>
-                  <p className="text-xs text-muted-foreground mt-1 text-balance">
-                    Trung tâm điều hành và giao việc hợp nhất: Phân cấp nhiệm vụ toàn trường, khoa phòng và cá nhân
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-                  {user?.role === "STAFF" && isStaffExpanded && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleToggleStaffExpanded}
-                      className="gap-1.5 text-xs rounded-xl border-primary/30 text-primary bg-primary/5 hover:bg-primary/10"
-                    >
-                      <UserCheck size={14} strokeWidth={1.5} />
-                      <span>Quay lại Chế độ trọng tâm (Cá nhân)</span>
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleManualRefresh}
-                    disabled={isRefreshing}
-                    className="gap-1.5 text-xs rounded-xl"
-                  >
-                    <RefreshCw
-                      size={14}
-                      strokeWidth={1.5}
-                      className={isRefreshing ? "animate-spin text-primary" : ""}
-                    />
-                    <span className="hidden sm:inline">Làm mới dữ liệu</span>
-                  </Button>
-                </div>
-              </div>
-
-              {/* Executive Stat Strip / Interactive Workbox Filter */}
-              <section aria-label="Chỉ số điều hành toàn trường">
-                <ExecutiveStatStrip
-                  stats={displayedStats}
-                  activeFilter={activeWorkbox}
-                  onFilterChange={(filter) => setActiveWorkbox(filter)}
-                />
-              </section>
-
-              {/* Simplified Filter Bar for Admin / Manager OR Unified Toolbar when toggled or fallback */}
-              {(user?.role === "ADMIN" || user?.role === "MANAGER") && !useAdvancedToolbar ? (
-                <section aria-label="Thanh lọc tối giản & Điều hướng nhanh" className="space-y-3">
-                  {/* High-Level Views & Approvals Bar */}
-                  <div className="flex flex-wrap items-center justify-between gap-2.5 pb-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-medium text-muted-foreground mr-1">Chế độ xem:</span>
-                      {user?.role === "ADMIN" && (
-                        <button
-                          type="button"
-                          onClick={() => handleViewModeChange("executive")}
-                          className={cn(
-                            "px-3 py-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-                            viewMode === "executive"
-                              ? "bg-primary text-primary-foreground shadow-xs"
-                              : "bg-card hover:bg-muted text-muted-foreground border border-border"
-                          )}
-                        >
-                          <ShieldAlert size={13} strokeWidth={1.5} />
-                          <span>Chỉ huy BGH</span>
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleViewModeChange("table")}
-                        className={cn(
-                          "px-3 py-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-                          viewMode === "table"
-                            ? "bg-primary text-primary-foreground shadow-xs"
-                            : "bg-card hover:bg-muted text-muted-foreground border border-border"
-                        )}
-                      >
-                        <Table size={13} strokeWidth={1.5} />
-                        <span>Bảng phân cấp</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleViewModeChange("kanban")}
-                        className={cn(
-                          "px-3 py-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-                          viewMode === "kanban"
-                            ? "bg-primary text-primary-foreground shadow-xs"
-                            : "bg-card hover:bg-muted text-muted-foreground border border-border"
-                        )}
-                      >
-                        <KanbanSquare size={13} strokeWidth={1.5} />
-                        <span>Kanban</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleViewModeChange("calendar")}
-                        className={cn(
-                          "px-3 py-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-                          viewMode === "calendar"
-                            ? "bg-primary text-primary-foreground shadow-xs"
-                            : "bg-card hover:bg-muted text-muted-foreground border border-border"
-                        )}
-                      >
-                        <Calendar size={13} strokeWidth={1.5} />
-                        <span>Lịch tháng</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleViewModeChange("department")}
-                        className={cn(
-                          "px-3 py-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5",
-                          viewMode === "department"
-                            ? "bg-primary text-primary-foreground shadow-xs"
-                            : "bg-card hover:bg-muted text-muted-foreground border border-border"
-                        )}
-                      >
-                        <Building2 size={13} strokeWidth={1.5} />
-                        <span>Theo đơn vị</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* Direct Access to Approvals Queue */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isExecutive) {
-                            setViewMode("executive");
-                            setExecutiveFilter("PENDING_APPROVAL");
-                          } else {
-                            setActiveWorkbox("NEEDS_REVIEW");
-                          }
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
-                      >
-                        <FileCheck size={13} strokeWidth={1.5} />
-                        <span>Hàng đợi phê duyệt</span>
-                      </button>
-
-                      {/* Toggle to full toolbar */}
-                      <button
-                        type="button"
-                        onClick={() => setUseAdvancedToolbar(true)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-muted border border-border transition-colors cursor-pointer"
-                        title="Mở thanh công cụ đầy đủ"
-                      >
-                        <SlidersHorizontal size={13} strokeWidth={1.5} />
-                        <span className="hidden md:inline">Thanh công cụ đầy đủ</span>
-                      </button>
-
-                      {/* Density Toggle */}
-                      <DensityToggle className="h-7.5 rounded-xl border-border/70 shadow-2xs" />
-                    </div>
-                  </div>
-
-                  {/* Simplified Task Filter Bar */}
-                  <SimplifiedTaskFilterBar
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    activeStatus={
-                      activeWorkbox === "NEEDS_REVIEW" || activeWorkbox === "URGENT_OVERDUE"
-                        ? "ACTION_REQUIRED"
-                        : activeWorkbox === "COMPLETED"
-                        ? "COMPLETED"
-                        : "ALL"
-                    }
-                    onStatusChange={(newStatus) => {
-                      if (newStatus === "ACTION_REQUIRED") {
-                        setActiveWorkbox("NEEDS_REVIEW");
-                      } else if (newStatus === "COMPLETED") {
-                        setActiveWorkbox("COMPLETED");
-                      } else {
-                        setActiveWorkbox("ALL");
-                      }
-                    }}
-                    selectedDepartment={selectedDepartment}
-                    onDepartmentChange={handleDepartmentChange}
-                    selectedAcademicMonth={selectedAcademicMonth}
-                    onAcademicMonthChange={handleAcademicMonthChange}
-                    selectedPriority={selectedPriority}
-                    onPriorityChange={setSelectedPriority}
-                    totalCount={filteredTasks.length}
-                    onResetFilters={handleResetFilters}
-                  />
-                </section>
-              ) : (
-                /* Unified Task Toolbar */
-                <section aria-label="Thanh công cụ điều khiển nhiệm vụ" className="space-y-2">
-                  {(user?.role === "ADMIN" || user?.role === "MANAGER") && useAdvancedToolbar && (
-                    <div className="flex justify-end mb-1">
-                      <button
-                        type="button"
-                        onClick={() => setUseAdvancedToolbar(false)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 transition-colors cursor-pointer"
-                      >
-                        <SlidersHorizontal size={13} strokeWidth={1.5} />
-                        <span>Quay lại Bộ lọc tinh giản</span>
-                      </button>
-                    </div>
-                  )}
-                  <UnifiedTaskToolbar
-                    scope={scope}
-                    onScopeChange={handleScopeChange}
-                    viewMode={viewMode}
-                    onViewModeChange={handleViewModeChange}
-                    selectedDepartment={selectedDepartment}
-                    onDepartmentChange={handleDepartmentChange}
-                    selectedPriority={selectedPriority}
-                    onPriorityChange={setSelectedPriority}
-                    selectedCategory={selectedCategory}
-                    onCategoryChange={setSelectedCategory}
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    onNewTaskClick={() => handleOpenCreateModal("TRUONG")}
-                    totalTasksCount={filteredTasks.length}
-                    isExecutive={isExecutive}
-                    userRole={user?.role}
-                    selectedAcademicMonth={selectedAcademicMonth}
-                    onAcademicMonthChange={handleAcademicMonthChange}
-                    academicYear="2026-2027"
-                    monthlyTaskCounts={monthlyTaskCounts}
-                  />
-
-                  {/* Active Academic Month Filter Notification Banner */}
-                  {selectedMonthPeriod && (
-                    <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-muted/40 border border-border/60 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="inline-block size-1.5 rounded-full bg-primary shrink-0" />
-                        <span className="truncate">
-                          Đang lọc hiển thị theo chu kỳ <strong>{selectedMonthPeriod.fullLabel}</strong> ({filteredTasks.length} nhiệm vụ)
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleAcademicMonthChange("ALL")}
-                        className="shrink-0 text-xs font-medium text-primary hover:underline cursor-pointer"
-                      >
-                        Hiển thị cả năm
-                      </button>
-                    </div>
-                  )}
-                </section>
-              )}
-
-              {/* Dynamic Work Canvas */}
-              <section
-                aria-label="Không gian làm việc nhiệm vụ"
-                className="min-h-[420px]"
-                data-slot="work-canvas"
-              >
-                {viewMode === "table" && (
-                  <CascadingTaskTable
-                    tasks={filteredTasks}
-                    onSelectTask={(task) => setSelectedTask(task)}
-                    onAddTask={() => handleOpenCreateModal("TRUONG")}
-                    onStatusChange={handleStatusChange}
-                    hideWorkbox={true}
-                    hideToolbar={true}
-                  />
-                )}
-
-                {viewMode === "kanban" && (
-                  <TaskKanbanBoard
-                    tasks={filteredTasks}
-                    onSelectTask={(task) => setSelectedTask(task)}
-                    onStatusChange={handleStatusChange}
-                    onAddTask={() => handleOpenCreateModal("TRUONG")}
-                  />
-                )}
-
-                {viewMode === "calendar" && (
-                  <CalendarMonthView
-                    tasks={filteredTasks}
-                    initialMonth={typeof selectedAcademicMonth === "number" ? selectedAcademicMonth : 9}
-                    initialYear={2026}
-                    onSelectTask={(task) => setSelectedTask(task)}
-                    onAddTask={() => handleOpenCreateModal("TRUONG")}
-                  />
-                )}
-
-                {viewMode === "department" && (
-                  <DepartmentGroupedTaskView
-                    tasks={filteredTasks}
-                    onSelectTask={(task) => setSelectedTask(task)}
-                    onStatusChange={handleStatusChange}
-                    onAddTask={(deptCode) => handleOpenCreateModal("TRUONG")}
-                    selectedDepartmentFilter={selectedDepartment}
-                    searchQuery={searchQuery}
-                    delegations={delegations}
-                    onManageDelegation={handleOpenDelegation}
-                  />
-                )}
-
-                {viewMode === "executive" && (
-                  <ExecutiveDepartmentCommandCenter
-                    tasks={filteredTasks}
-                    onSelectTask={(task) => setSelectedTask(task)}
-                    onSelectDepartment={(deptId) => handleDepartmentChange(deptId || "ALL")}
-                    selectedDepartmentId={selectedDepartment !== "ALL" ? selectedDepartment : null}
-                  />
-                )}
-              </section>
-            </>
-          )}
-        </div>
-      )}
+      {activeZone === "tasks" && <TasksZone />}
 
       {/* ========================================================================= */}
       {/* ZONE 4: CALENDAR (Lịch biểu & Tiến độ tháng/tuần O(1))                   */}
@@ -1442,6 +1020,60 @@ function UnifiedTaskHubContent() {
           {isDelegationModalOpen && (
             <DelegationManagementModal />
           )}
+          data-slot="role-workspace-landing"
+          {!isExecutive && (
+            <ExecutiveCockpitWorkspace
+              user={user}
+              tasks={dashboardData.tasks}
+              onSelectTask={(task) => setSelectedTask(task)}
+              onReview={handleReviewAction}
+              onSubmitDeliverable={handleSubmitDeliverable}
+            />
+          )}
+          <DepartmentManagerWorkspace
+            user={effectiveManagerUser}
+            tasks={dashboardData.tasks}
+            onSelectTask={(task) => setSelectedTask(task)}
+            onReview={handleReviewAction}
+            onSubmitDeliverable={handleSubmitDeliverable}
+          />
+          <LecturerFocusWorkspace
+            user={user}
+            tasks={dashboardData.tasks}
+            onSelectTask={(task) => setSelectedTask(task)}
+            onSubmitDeliverable={handleSubmitDeliverable}
+          />
+          {user?.role === "STAFF" && (
+            <StaffFocusView
+              tasks={dashboardData.tasks}
+              user={user}
+              onSelectTask={(task) => setSelectedTask(task)}
+            />
+          )}
+          Quay lại Chế độ trọng tâm
+          <SimplifiedTaskFilterBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+          Hàng đợi phê duyệt
+          {viewMode === "executive" && (
+            <ExecutiveDepartmentCommandCenter
+              tasks={filteredTasks}
+              onSelectTask={(task) => setSelectedTask(task)}
+            />
+          )}
+          {viewMode === "department" && (
+            <DepartmentGroupedTaskView
+              tasks={filteredTasks}
+              delegations={delegations}
+              onManageDelegation={handleOpenDelegation}
+            />
+          )}
+          <UnifiedTaskToolbar
+            selectedAcademicMonth={selectedAcademicMonth}
+            onAcademicMonthChange={handleAcademicMonthChange}
+            monthlyTaskCounts={monthlyTaskCounts}
+          />
       */}
     </div>
   );
