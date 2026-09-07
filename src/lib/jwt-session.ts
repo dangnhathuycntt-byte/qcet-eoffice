@@ -35,3 +35,33 @@ export function verifySessionToken(token: string): SessionPayload | null {
     return null;
   }
 }
+
+export function getSessionFromRequest(request: {
+  cookies?: { get: (name: string) => { value: string } | undefined };
+  headers?: { get: (name: string) => string | null };
+}): SessionPayload | null {
+  let token: string | undefined | null = null;
+
+  if (request.cookies && typeof request.cookies.get === "function") {
+    token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  }
+
+  if (!token && request.headers && typeof request.headers.get === "function") {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+    if (!token) {
+      const cookieHeader = request.headers.get("cookie");
+      if (cookieHeader) {
+        const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]*)`));
+        if (match) {
+          token = decodeURIComponent(match[1]);
+        }
+      }
+    }
+  }
+
+  if (!token) return null;
+  return verifySessionToken(token);
+}
