@@ -24,6 +24,16 @@ export interface DepartmentHealthSummary {
   blockedTasksCount: number;
   overdueTasksCount: number;
   averageProgressPercent: number;
+
+  // Extended fields for live dashboard service compatibility
+  departmentCode?: string;
+  shortName?: string;
+  totalTasks?: number;
+  completedTasks?: number;
+  inProgressTasks?: number;
+  overdueTasks?: number;
+  completionRate?: number;
+  status?: "critical" | "warning" | "good";
 }
 
 export interface DepartmentDefinition {

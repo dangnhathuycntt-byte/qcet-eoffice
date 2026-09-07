@@ -150,6 +150,14 @@ export interface DashboardStats {
   averageSchoolProgressPercent: number;
   pendingTriageCount?: number;
   escalatedReviewCount?: number;
+
+  // Real-time server aggregator stats
+  totalTasks?: number;
+  inProgressTasks?: number;
+  completedTasks?: number;
+  overdueTasks?: number;
+  pendingApprovals?: number;
+  completionRate?: number;
 }
 
 export interface ActivityEvent {
@@ -179,6 +187,8 @@ export interface DashboardPayload {
   tasks: SchoolTask[];
   upcoming: UpcomingItem[];
   activities: ActivityEvent[];
-  source?: 'notion-live' | 'mock-fallback' | 'mock';
+  source?: 'notion-live' | 'mock-fallback' | 'mock' | 'database';
+  departmentHealth?: any[];
+  syncTimestamp?: string;
 }
 
