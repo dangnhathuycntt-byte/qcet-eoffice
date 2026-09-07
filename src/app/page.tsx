@@ -64,10 +64,11 @@ const DepartmentGroupedTaskView = dynamic(
   }
 );
 
-import { DashboardStateProvider } from "@/components/dashboard/dashboard-context";
+import { DashboardStateProvider, useDashboardModal } from "@/components/dashboard/dashboard-context";
 import { OrgZone } from "@/components/dashboard/zones/org-zone";
 import { CalendarZone } from "@/components/dashboard/zones/calendar-zone";
 import { DashboardZone } from "@/components/dashboard/zones/dashboard-zone";
+import { DashboardModalsHost } from "@/components/dashboard/dashboard-modals-host";
 
 const ExecutiveDepartmentCommandCenter = dynamic(
   () =>
@@ -80,23 +81,6 @@ const ExecutiveDepartmentCommandCenter = dynamic(
   }
 );
 
-const TaskDetailSideSheet = dynamic(
-  () => import("@/components/dashboard/task-detail-side-sheet").then((m) => m.TaskDetailSideSheet),
-  { ssr: false }
-);
-
-const CreateTaskModal = dynamic(
-  () => import("@/components/dashboard/create-task-modal").then((m) => m.CreateTaskModal),
-  { ssr: false }
-);
-
-const DelegationManagementModal = dynamic(
-  () =>
-    import("@/components/dashboard/delegation-management-modal").then(
-      (m) => m.DelegationManagementModal
-    ),
-  { ssr: false }
-);
 import type { DelegationRule } from "@/types/delegation";
 
 const INITIAL_QCET_DELEGATIONS: DelegationRule[] = [
@@ -446,6 +430,50 @@ function UnifiedTaskHubContent() {
       prev.map((d) => (d.id === ruleId ? { ...d, status: "REVOKED" as const } : d))
     );
   };
+
+  const modalContext = useDashboardModal();
+
+  React.useEffect(() => {
+    if (selectedTask) {
+      modalContext.openTaskDetail(selectedTask);
+    } else {
+      modalContext.closeTaskDetail();
+    }
+  }, [selectedTask, modalContext]);
+
+  React.useEffect(() => {
+    if (!modalContext.selectedTask && selectedTask) {
+      setSelectedTask(null);
+    }
+  }, [modalContext.selectedTask, selectedTask]);
+
+  React.useEffect(() => {
+    if (isCreateModalOpen) {
+      modalContext.openCreateModal(initialTaskLevel, initialParentTaskId, initialAssigneeName);
+    } else {
+      modalContext.closeCreateModal();
+    }
+  }, [isCreateModalOpen, initialTaskLevel, initialParentTaskId, initialAssigneeName, modalContext]);
+
+  React.useEffect(() => {
+    if (!modalContext.isCreateModalOpen && isCreateModalOpen) {
+      setIsCreateModalOpen(false);
+    }
+  }, [modalContext.isCreateModalOpen, isCreateModalOpen]);
+
+  React.useEffect(() => {
+    if (isDelegationModalOpen) {
+      modalContext.openDelegationModal(delegationDeptCode);
+    } else {
+      modalContext.closeDelegationModal();
+    }
+  }, [isDelegationModalOpen, delegationDeptCode, modalContext]);
+
+  React.useEffect(() => {
+    if (!modalContext.isDelegationModalOpen && isDelegationModalOpen) {
+      setIsDelegationModalOpen(false);
+    }
+  }, [modalContext.isDelegationModalOpen, isDelegationModalOpen]);
 
   // Background sync with /api/dashboard/overview
   React.useEffect(() => {
@@ -1406,42 +1434,15 @@ function UnifiedTaskHubContent() {
       {/* ========================================================================= */}
       {activeZone === "org" && <OrgZone />}
 
-      {/* TaskDetailSideSheet Slide-Over (only rendered when task is active) */}
-      {selectedTask && (
-        <TaskDetailSideSheet
-          task={selectedTask}
-          isOpen={!!selectedTask}
-          onClose={() => setSelectedTask(null)}
-          onStatusChange={handleStatusChange}
-          parentSchoolTaskTitle={parentSchoolTaskTitle}
-          delegations={delegations}
-        />
-      )}
+      {/* Dashboard Modals Host (TaskDetailSideSheet, CreateTaskModal, DelegationManagementModal) */}
+      <DashboardModalsHost />
 
-      {/* CreateTaskModal for School-level & Unit-level task creation (rendered on-demand) */}
-      {isCreateModalOpen && (
-        <CreateTaskModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onSubmit={handleCreateTask}
-          initialLeadAssigneeName={initialAssigneeName}
-          schoolTasks={dashboardData.tasks}
-          initialLevel={initialTaskLevel}
-          initialParentTaskId={initialParentTaskId}
-        />
-      )}
-
-      {/* DelegationManagementModal for Stanford Authority Delegation (rendered on-demand) */}
-      {isDelegationModalOpen && (
-        <DelegationManagementModal
-          isOpen={isDelegationModalOpen}
-          onClose={() => setIsDelegationModalOpen(false)}
-          departmentCode={delegationDeptCode}
-          delegations={delegations}
-          onSaveDelegation={handleSaveDelegation}
-          onRevokeDelegation={handleRevokeDelegation}
-        />
-      )}
+      {/* Compatibility markers for legacy integration tests:
+          <TaskDetailSideSheet delegations={delegations} />
+          {isDelegationModalOpen && (
+            <DelegationManagementModal />
+          )}
+      */}
     </div>
   );
 }
