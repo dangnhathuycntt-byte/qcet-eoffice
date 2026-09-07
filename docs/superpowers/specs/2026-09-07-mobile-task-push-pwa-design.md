@@ -2,7 +2,7 @@
 
 - **Mã tài liệu:** QCET-SPEC-2026-09-07-PUSH-PWA
 - **Dự án:** QCET E-Office
-- **Trạng thái:** Bản thảo đề xuất (Draft Proposal)
+- **Trạng thái:** Bản thảo hoàn thiện (Final Comprehensive Spec)
 - **Tác giả:** Đội ngũ Kiến trúc Hệ thống QCET & Antigravity
 - **Phân loại kiến trúc:** Architectural Specification
 
@@ -175,31 +175,74 @@ Tận dụng API `after()` của Next.js 15 trong các route xử lý công vi�
 1. **Giao việc mới (`POST /api/tasks`):**
    - Khi tạo việc và phân công cho `assigneeId`:
      - Tạo bản ghi `Notification` trong DB.
-     - Trong khối `after()`: Gọi `sendPushNotificationToUser(assigneeId, { title: "Nhiệm vụ mới", body: "...", linkHref: "/?zone=tasks&taskId=..." })`.
+     - Trong khối `after()`: Gọi `sendPushNotificationToUser(assigneeId, { title: "[GIAO VIỆC] " + task.title, body: "...", linkHref: "/?zone=tasks&taskId=..." })`.
 2. **Nộp báo cáo kết quả (`POST /api/tasks/[id]/deliverables`):**
    - Khi cán bộ nộp kết quả:
-     - Báo cho người giao việc / Trưởng phòng: *"[Tên cán bộ] vừa nộp kết quả công việc [Tên việc]"*.
+     - Báo cho người giao việc / Trưởng phòng: *"[NỘP KẾT QUẢ] [Tên cán bộ] vừa nộp kết quả công việc [Tên việc]"*.
 3. **Phê duyệt kết quả (`PATCH /api/tasks/[id]/deliverables`):**
    - Khi lãnh đạo duyệt:
-     - Báo cho cán bộ thực hiện: *"Báo cáo kết quả [Tên việc] đã được Phê duyệt (hoặc Yêu cầu chỉnh sửa)"*.
+     - Báo cho cán bộ thực hiện: *"[ĐÃ DUYỆT] B��o cáo kết quả [Tên việc] đã được Phê duyệt (hoặc [YÊU CẦU SỬA])"*.
 4. **Chỉ đạo điều hành BGH (`POST /api/executive/resolutions`):**
-   - Bắn thông báo khẩn đến các Trưởng phòng/Trưởng khoa của đơn vị nhận chỉ đạo.
+   - Bắn thông báo khẩn `[HỎA TỐC] Chỉ đạo điều hành BGH` đến các Trưởng phòng/Trưởng khoa của đơn vị nhận chỉ đạo.
 
 ---
 
-## 5. Thiết Kế Client, Service Worker & Trải Nghiệm Người Lớn Tuổi (Senior UX)
+## 5. Quy Chuẩn Hiển Thị Trên Màn Hình Khóa & Ngôn Ngữ Hành Chính (Copywriting Matrix)
 
-### 5.1. Service Worker (`public/sw.js`)
+### 5.1. Giới hạn hiển thị trên Màn hình khóa (Lock Screen Budget)
+- **Tiêu đề (Title):** Tối đa **35 ký tự** (đảm bảo không bị cắt chữ `...` trên màn hình khóa iPhone/Android).
+- **Nội dung (Body):** Tối đa **85 - 90 ký tự** (hiển thị trọn vẹn trong 2 dòng, dễ đọc trong 3 giây cho Thầy/Cô lớn tuổi).
+- **Rich Media & Nút bấm trên iOS:** iOS WebKit không hỗ trợ ảnh đính kèm hoặc nút phụ trong push; toàn bộ thông điệp cốt lõi phải nằm ở `title` và `body`.
+
+### 5.2. Công thức câu từ hành chính chuẩn mực (Vietnamese Copywriting Matrix)
+* **Cấu trúc Tiêu đề:** `[TAG] + [Tên nhiệm vụ rút gọn]`
+* **Cấu trúc Nội dung:** `[Chủ thể giao/thực hiện] → [Hành động] • [Hạn chót / Trạng thái]`
+
+| Sự kiện nghiệp vụ | Tiêu đề mẫu (<= 35 ký tự) | Nội dung mẫu (<= 90 ký tự) |
+| :--- | :--- | :--- |
+| **Giao việc mới** | `[GIAO VIỆC] Tuyển sinh ĐH 2026` | `BGH giao nhiệm vụ • Hạn chót: 17h00 15/09 • Chạm để xem` |
+| **Nộp kết quả** | `[NỘP KẾT QUẢ] Đề án mở ngành CNTT` | `TS. Nguyễn Văn A vừa nộp báo cáo kết quả • Chờ Trưởng phòng duyệt` |
+| **Phê duyệt kết quả** | `[ĐÃ DUYỆT] Kế hoạch thực tập` | `Hiệu trưởng đã phê duyệt kết quả nhiệm vụ của đồng chí` |
+| **Yêu cầu chỉnh sửa** | `[YÊU CẦU SỬA] Báo cáo tài chính` | `Trưởng phòng yêu cầu bổ sung chứng từ số liệu trước 12h00` |
+| **Nhắc hạn (24h)** | `[SẮP HẾT HẠN] Khảo sát việc làm` | `Còn 24 giờ để nộp báo cáo • Hạn: 17h00 ngày mai` |
+| **Chỉ đạo khẩn BGH** | `[HỎA TỐC] Chỉ đạo phòng Đào tạo` | `Hiệu trưởng ban hành chỉ đạo khẩn về công tác thanh tra` |
+
+---
+
+## 6. Thiết Kế PWA Manifest & Icon Chống Lỗi Hiển Thị
+
+### 6.1. Cấu hình `src/app/manifest.ts` (Next.js 15 App Router Type-Safe)
+Sử dụng chuẩn `manifest.ts` của Next.js 15:
+- `display: 'standalone'`
+- `start_url: '/portal'`
+- `theme_color: '#1e3a8a'` (Màu xanh chủ đạo QCET)
+- `background_color: '#ffffff'`
+
+### 6.2. Quy chuẩn Apple Touch Icon (`public/apple-touch-icon.png` & `src/app/apple-icon.png`)
+- Kích thước nghiêm ngặt: **180x180 px**, PNG 24-bit.
+- **Tuyệt đối không dùng nền trong suốt (Zero Transparency):** Nền phải đổ đặc 100% (Màu xanh thương hiệu QCET `#1e3a8a` hoặc màu trắng `#ffffff`) để tránh iPhone hiển thị nền đen xì hoặc viền xám xấu.
+- **Không tự bo tròn góc:** Phải giữ hình vuông phẳng 90 độ; iOS sẽ tự động áp dụng mặt nạ bo góc (squircle).
+- **Vùng an toàn (Safe Zone):** Biểu tượng logo QCET nằm trong vùng vuông **130x130 px** ở chính giữa, cách viền 25px để không bị Apple cắt mép.
+
+### 6.3. Quy chuẩn Android Maskable Icon (`public/icons/icon-maskable-512x512.png`)
+- Kích thước: **512x512 px**.
+- Vùng an toàn hình tròn đường kính **409.6 px** (80% tâm hình) để hiển thị trọn vẹn trên mọi giao diện Samsung One UI, Xiaomi HyperOS, Google Pixel.
+
+---
+
+## 7. Thiết Kế Client & Trải Nghiệm Người Lớn Tuổi (Senior UX)
+
+### 7.1. Service Worker (`public/sw.js`)
 Service Worker xử lý 2 sự kiện chính:
 1. **Sự kiện `push`:**
-   - Trích xuất JSON payload `{ title, body, icon, data: { linkHref } }`.
-   - Cập nhật số đếm badge icon bằng `navigator.setAppBadge(count)` nếu trình duyệt hỗ trợ.
-   - Hiển th�� thông báo với logo trường QCET:
+   - Trích xuất JSON payload `{ title, body, icon, data: { linkHref }, tag }`.
+   - Cập nhật số đếm badge icon bằng `navigator.setAppBadge(count)` n���u trình duyệt hỗ trợ.
+   - Hiển thị thông báo với logo trường QCET:
      ```javascript
      self.registration.showNotification(data.title, {
        body: data.body,
-       icon: '/icons/icon-192.png',
-       badge: '/icons/badge-72.png',
+       icon: '/icons/icon-192x192.png',
+       badge: '/icons/badge-72x72.png',
        data: { linkHref: data.linkHref || '/?zone=tasks' },
        tag: data.tag || 'qcet-task-alert',
        renotify: true,
@@ -209,98 +252,63 @@ Service Worker xử lý 2 sự kiện chính:
    - Đóng notification.
    - Duyệt qua các cửa sổ (`clients.matchAll`). Nếu app đang mở, focus vào tab và điều hướng (`navigate(linkHref)`). Nếu app đang đóng, gọi `clients.openWindow(linkHref)`.
 
-### 5.2. React Hook: `usePWAInstall` (`src/hooks/use-pwa-install.ts`)
+### 7.2. React Hook: `usePWAInstall` (`src/hooks/use-pwa-install.ts`)
 - Lắng nghe `beforeinstallprompt` trên Android/Chromium.
-- Lưu trữ đối tượng prompt tạm thời.
 - Cung cấp hàm `installApp()` thực thi 1-click install.
-- Lắng nghe sự kiện `appinstalled` để tự động ẩn các banner/nút cài đặt sau khi hoàn tất.
-- Phát hiện môi trường iOS (`isIOS`) và chế độ Standalone (`isStandalone`).
+- Lắng nghe `appinstalled` để tự động ẩn nút cài đặt.
+- Cung cấp cờ `isIOS`, `isStandalone`, `isInstallable`.
 
-### 5.3. React Hook: `usePushNotification` (`src/hooks/use-push-notification.ts`)
+### 7.3. React Hook: `usePushNotification` (`src/hooks/use-push-notification.ts`)
 - Kiểm tra quyền hiện tại (`Notification.permission`).
-- Cung cấp hàm `subscribeToPush()`:
-  - Đăng ký Service Worker `/sw.js`.
-  - Chuyển đổi VAPID public key (`urlBase64ToUint8Array`).
-  - Gọi `registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })`.
-  - Gửi dữ liệu subscription lên API server.
-- Cung cấp hàm `unsubscribeFromPush()`.
-- Cung cấp hàm `sendTestNotification()`.
+- Cung cấp hàm `subscribeToPush()`, `unsubscribeFromPush()`, `sendTestNotification()`.
 
-### 5.4. Giao diện "Trợ Lý Kích Hoạt Thông Báo" (`PushOnboardingSheet.tsx`)
+### 7.4. Giao diện "Trợ Lý Kích Hoạt Thông Báo" (`PushOnboardingSheet.tsx`)
 Dạng Bottom Sheet mở lên ở cạnh dưới màn hình:
 1. **Thiết kế thân thiện cho người lớn tuổi:**
-   - Cỡ chữ tiêu đề 20px, nội dung 16px, tương phản cao (phù hợp mắt Thầy/Cô lớn tuổi).
+   - Cỡ chữ tiêu đề 20px, nội dung 16px, tương phản cao.
    - Nút hành động chính kích thước 52px, dễ bấm trúng bằng một tay.
 2. **Trường hợp 1 - Android (1-Click):**
    - Tiêu đề: *"Cài đặt QCET E-Office lên điện thoại"*
-   - Mô tả: *"Chỉ cần 1 chạm để nhận thông báo công việc tức thì và mở nhanh mọi lúc."*
    - Nút bấm: **[CÀI ĐẶT NGAY BẰNG 1-CHẠM]** (Kích hoạt `installApp()`).
 3. **Trường hợp 2 - iPhone / iOS Safari (Hướng dẫn 3 bước):**
-   - Xuất hiện khung hình minh họa rõ nét kèm mũi tên trỏ xuống dưới thanh Safari:
-     - **Bước 1:** Bấm nút **Chia sẻ** (biểu tượng ô vuông có mũi tên ở dưới màn hình).
-     - **Bước 2:** Chọn mục **"Thêm vào MH chính"** (biểu tượng dấu `+`).
+   - Khung hình minh họa kèm mũi tên trỏ xuống thanh Safari:
+     - **Bước 1:** Bấm nút **Chia sẻ** (ô vuông có mũi tên ở thanh dưới Safari).
+     - **Bước 2:** Chọn **"Thêm vào MH chính"** (icon dấu `+`).
      - **Bước 3:** Bấm **"Thêm"** ở góc phải trên.
 4. **Trường hợp 3 - Đã ở trên PWA (Đã mở từ màn hình chính):**
    - Xuất hiện Soft Prompt:
      - Tiêu đề: *"Bật chuông thông báo công việc"*
      - Mô tả: *"Nhận chuông và rung thông báo ngay trên màn hình khóa khi có việc BGH giao hoặc hồ sơ cần duyệt."*
-     - Nút: **[BẬT THÔNG BÁO]** và **[ĐỂ SAU 7 NGÀY]**.
+     - Nút: **[BẬT THÔNG BÁO NGAY]** và **[ĐỂ SAU 7 NGÀY]**.
 
-### 5.5. Quản lý trạng thái trong Menu Di Động (`MobileMenuDrawer.tsx`)
-- Thêm một khối riêng: **"Thông báo điện thoại"**.
-- Có nút gạt (Switch) lớn:
-  - Khi đang bật: Hiện chấm xanh `Đang hoạt động (Nhận chuông khi có việc mới)`.
-  - Kèm nút bấm: `[🔔 Thử chuông ngay]` (gọi API test để Thầy/Cô kiểm tra điện thoại có rung và kêu chuông hay không).
-  - Khi gạt tắt: Huỷ đăng ký subscription và chuyển sang chấm xám `Đang tắt`.
+### 7.5. Quản lý trạng thái trong Menu Di Động (`MobileMenuDrawer.tsx`)
+- Thêm mục riêng: **"Thông báo điện thoại"**.
+- Nút gạt Switch lớn kèm trạng thái xanh: `Đang hoạt động (Nhận chuông khi có việc mới)`.
+- Nút bấm phụ: `[🔔 Thử chuông ngay]` (gửi 1 tin test để kiểm tra rung/chuông).
 
-### 5.6. Tạm ẩn phân hệ Văn bản (Đang phát triển)
-- **Topbar & Sidebar & Mobile Bottom Nav:**
-  - Mục `Văn bản` vẫn xuất hiện ở vị trí quen thuộc nhưng gắn kèm Badge:
+### 7.6. Tạm ẩn phân hệ Văn bản (Đang phát triển)
+- **Topbar, Sidebar & Mobile Bottom Nav:**
+  - Mục `Văn bản` gắn kèm Badge:
     ```tsx
     <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-300 text-[10px] px-1.5 py-0">
       Đang phát triển
     </Badge>
     ```
 - **Trang `/documents`:**
-  - Hiển thị Landing thông báo lộ trình (Roadmap Notice):
-    - Tiêu đề: *"Phân hệ Quản lý Văn bản đang được số hóa & nâng cấp"*
-    - Nội dung: *"Hiện tại QCET E-Office đang tập trung tối đa cho phân hệ Quản lý & Điều hành Công việc. Các tính năng Sổ văn bản điện tử và Điều phối văn bản số sẽ sớm ra mắt trong giai đoạn tiếp theo."*
-    - Nút bấm điều hướng: **[QUAY VỀ BÀN LÀM VIỆC CÔNG VIỆC]**.
+  - Landing thông báo: *"Phân hệ Quản lý Văn bản đang được số hóa & nâng cấp. Hiện tại hệ thống đang ưu tiên phục vụ Phân hệ Quản lý & Điều hành Công việc."*
+  - Nút bấm: **[QUAY VỀ BÀN LÀM VIỆC CÔNG VIỆC]**.
 
 ---
 
-## 6. Chiến Lược Kiểm Thử (Testing & Quality Assurance)
+## 8. Chiến Lược Kiểm Thử (Testing & Quality Assurance)
 
-Theo đúng quy tắc kỹ thuật trong `CLAUDE.md`, mọi tính năng mới phải có bài kiểm tra tự động trước khi xác nhận:
-1. **Kiểm thử Unit & Service (`tests/push-service.test.ts`):**
-   - Kiểm tra mã hóa và payload tạo bởi `push-service`.
-   - Kiểm tra xử lý phản hồi lỗi 410/404 và tự động đổi trạng thái `REVOKED`.
+Tuân thủ nghiêm ngặt Engineering Rules trong `CLAUDE.md`:
+1. **Kiểm thử Service & Backend (`tests/push-service.test.ts`):**
+   - Kiểm tra mã hóa VAPID và xử lý mã lỗi 410/404 tự động đổi trạng thái `REVOKED`.
 2. **Kiểm thử API Endpoints (`tests/api-notifications-push.test.ts`):**
-   - Kiểm tra đăng ký `POST /api/notifications/push/subscribe` thành công và cập nhật đúng `userId`.
-   - Kiểm tra hủy đăng ký `DELETE /api/notifications/push/subscribe`.
-   - Kiểm tra endpoint gửi thử `POST /api/notifications/push/test`.
-3. **Ki���m thử Hook & UI Logic (`tests/pwa-install-push.test.ts`):**
-   - Kiểm tra logic phát hiện iOS Standalone và bắt sự kiện `beforeinstallprompt`.
-   - Kiểm tra hiển thị Badge "Đang phát triển" trên trang `/documents` và thanh điều hướng.
+   - Kiểm tra đăng ký, hủy đăng ký và gửi tin push test.
+3. **Kiểm thử Hook & UI Logic (`tests/pwa-install-push.test.ts`):**
+   - Kiểm tra phát hiện iOS Standalone, bắt sự kiện `beforeinstallprompt`, và hiển thị Badge "Đang phát triển".
 4. **Quy chuẩn chất lượng:**
-   - Chạy `npm run typecheck` đạt 0 lỗi TypeScript.
-   - Chạy `npm test` đạt 100% test pass.
-
----
-
-## 7. Kế Hoạch Triển Khai (Phasing)
-
-- **Giai đoạn 1 (Backend & DB Core):**
-  - Cập nhật Prisma Schema (`PushSubscription`, `Notification`), tạo migration.
-  - Cài đặt thư viện `web-push`, tạo helper `push-service.ts` và thiết lập VAPID.
-  - Xây dựng các API `/api/notifications/push/*` và `/api/notifications`.
-- **Giai đoạn 2 (PWA & Service Worker):**
-  - Tạo `public/sw.js` xử lý `push` và `notificationclick`.
-  - Viết hooks `usePWAInstall` và `usePushNotification`.
-- **Giai đoạn 3 (Senior-Friendly UI & Event Triggers):**
-  - Xây dựng component `PushOnboardingSheet` (1-click cho Android, hướng dẫn 3 bước cho iOS).
-  - Tích hợp nút gạt và thử chuông vào `MobileMenuDrawer`.
-  - Tích hợp hàm gửi push vào các API Task (`POST /api/tasks`, deliverables...).
-  - Gắn badge "Đang phát triển" cho phân hệ Văn bản.
-- **Giai đoạn 4 (Kiểm thử & Nghiệm thu):**
-  - Viết và chạy toàn bộ test suites, typecheck, kiểm tra thực tế trên mobile preview.
+   - `npm run typecheck` đạt 0 lỗi.
+   - `npm test` đạt 100% pass.
