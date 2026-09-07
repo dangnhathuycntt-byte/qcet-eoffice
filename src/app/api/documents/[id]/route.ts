@@ -1,0 +1,79 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  getDocumentById,
+  updateDocument,
+} from "@/lib/documents/document-service";
+import { validateDocumentUpdatePayload } from "@/lib/documents/document-validator";
+
+interface RouteContext {
+  params: { id: string } | Promise<{ id: string }>;
+}
+
+export async function GET(
+  _request: NextRequest,
+  context: RouteContext
+) {
+  try {
+    const { id } = await context.params;
+
+    const document = await getDocumentById(id);
+    if (!document) {
+      return NextResponse.json(
+        { success: false, error: "Văn bản không tồn tại" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: document,
+      document,
+    });
+  } catch (error: any) {
+    console.error("Error fetching document by ID:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: RouteContext
+) {
+  try {
+    const { id } = await context.params;
+
+    const existing = await getDocumentById(id);
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: "Văn bản không tồn tại" },
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json();
+    const validation = validateDocumentUpdatePayload(body);
+    if (!validation.isValid) {
+      return NextResponse.json(
+        { success: false, errors: validation.errors },
+        { status: 400 }
+      );
+    }
+
+    const updated = await updateDocument(id, body);
+
+    return NextResponse.json({
+      success: true,
+      data: updated,
+      document: updated,
+    });
+  } catch (error: any) {
+    console.error("Error updating document:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}

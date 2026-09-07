@@ -43,6 +43,24 @@ export interface CreateDocumentPayload {
   }>;
 }
 
+export interface UpdateDocumentPayload {
+  summary?: string;
+  category?: string;
+  urgency?: DocumentUrgency;
+  securityLevel?: DocumentSecurityLevel;
+  status?: DocumentStatus;
+  dueDate?: string | Date | null;
+  signerName?: string | null;
+  signerTitle?: string | null;
+  draftingDeptId?: string | null;
+  recipientList?: string | null;
+  distributedCopies?: number | null;
+  leadDepartmentId?: string | null;
+  leadUserId?: string | null;
+  notes?: string | null;
+  linkedTaskId?: string | null;
+}
+
 export interface ListDocumentsFilter {
   type?: DocumentType;
   documentYear?: number;
@@ -301,6 +319,49 @@ export async function getDocumentById(
   });
 
   if (!record) return null;
+  return mapPrismaDocumentToItem(record);
+}
+
+/**
+ * Updates an existing document record.
+ */
+export async function updateDocument(
+  id: string,
+  payload: UpdateDocumentPayload,
+  client?: any
+): Promise<DocumentItem> {
+  const db = client || defaultPrisma;
+  const data: any = {};
+
+  if (payload.summary !== undefined) data.summary = payload.summary;
+  if (payload.category !== undefined) data.category = payload.category;
+  if (payload.urgency !== undefined) data.urgency = payload.urgency;
+  if (payload.securityLevel !== undefined) data.securityLevel = payload.securityLevel;
+  if (payload.status !== undefined) data.status = payload.status;
+  if (payload.signerName !== undefined) data.signerName = payload.signerName;
+  if (payload.signerTitle !== undefined) data.signerTitle = payload.signerTitle;
+  if (payload.draftingDeptId !== undefined) data.draftingDeptId = payload.draftingDeptId;
+  if (payload.recipientList !== undefined) data.recipientList = payload.recipientList;
+  if (payload.distributedCopies !== undefined) data.distributedCopies = payload.distributedCopies;
+  if (payload.leadDepartmentId !== undefined) data.leadDepartmentId = payload.leadDepartmentId;
+  if (payload.leadUserId !== undefined) data.leadUserId = payload.leadUserId;
+  if (payload.notes !== undefined) data.notes = payload.notes;
+  if (payload.linkedTaskId !== undefined) data.linkedTaskId = payload.linkedTaskId;
+
+  if (payload.dueDate !== undefined) {
+    data.dueDate = payload.dueDate
+      ? typeof payload.dueDate === "string"
+        ? new Date(payload.dueDate)
+        : payload.dueDate
+      : null;
+  }
+
+  const record = await db.document.update({
+    where: { id },
+    data,
+    include: defaultInclude,
+  });
+
   return mapPrismaDocumentToItem(record);
 }
 
