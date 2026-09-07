@@ -26,6 +26,8 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
+  ChevronUp,
   Users,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
@@ -424,6 +426,19 @@ export function renderStatusBadge(
   }
 }
 
+export function getPageNumbers(current: number, total: number): (number | string)[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
+}
+
 // ============================================================================
 // 4. Main Component: LecturerFocusWorkspace
 // ============================================================================
@@ -441,6 +456,12 @@ export function LecturerFocusWorkspace({
   onRefresh,
   isRefreshing,
 }: LecturerFocusWorkspaceProps) {
+  // Clean role label (strip redundant parenthesized name)
+  const cleanRoleLabel = React.useMemo(() => {
+    const raw = user.roleLabel || "Chuyên viên";
+    return raw.replace(/\s*\(.*?\)\s*/g, "").trim() || "Chuyên viên";
+  }, [user.roleLabel]);
+
   // 1. Resolve normalized staff tasks with parent context
   const resolvedTasks: StaffTaskWithContext[] = React.useMemo(() => {
     if (staffTasks && staffTasks.length > 0) {
@@ -467,15 +488,31 @@ export function LecturerFocusWorkspace({
   const [ownershipFilter, setOwnershipFilter] =
     React.useState<OwnershipRoleFilter>("ALL");
 
-  // Collapsed state for parent tasks
+  // Pagination state (default: 10 items/page)
+  const [currentPage, setCurrentPage] = React.useState<number>(1);
+  const [pageSize, setPageSize] = React.useState<number>(10);
+
+  // Auto-collapse state for parent tasks
+  // If task ID is in collapsedGroupIds, use explicit user preference.
+  // Otherwise, completed tasks (100% or COMPLETED) default to true (collapsed), active tasks to false (expanded).
   const [collapsedGroupIds, setCollapsedGroupIds] = React.useState<
     Record<string, boolean>
   >({});
 
-  const toggleCollapse = (groupId: string) => {
+  const isTaskCollapsed = React.useCallback(
+    (groupId: string, isCompleted: boolean) => {
+      if (groupId in collapsedGroupIds) {
+        return collapsedGroupIds[groupId];
+      }
+      return isCompleted;
+    },
+    [collapsedGroupIds]
+  );
+
+  const toggleCollapse = (groupId: string, currentCollapsed: boolean) => {
     setCollapsedGroupIds((prev) => ({
       ...prev,
-      [groupId]: !prev[groupId],
+      [groupId]: !currentCollapsed,
     }));
   };
 
@@ -629,6 +666,42 @@ export function LecturerFocusWorkspace({
     return result;
   }, [groupedTasks, ownershipFilter, activeFilter, searchTerm, referenceDate]);
 
+  // Reset pagination to page 1 whenever any filter or search changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [ownershipFilter, activeFilter, searchTerm, pageSize]);
+
+  const totalTasks = filteredGroupedTasks.length;
+  const totalPages = Math.max(1, Math.ceil(totalTasks / pageSize));
+
+  // Sliced tasks for current page
+  const paginatedGroupedTasks = React.useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredGroupedTasks.slice(start, start + pageSize);
+  }, [filteredGroupedTasks, currentPage, pageSize]);
+
+  // Bulk expand / collapse calculation for currently visible tasks
+  const allVisibleCollapsed = React.useMemo(() => {
+    if (paginatedGroupedTasks.length === 0) return false;
+    return paginatedGroupedTasks.every((g) => {
+      const isCompleted =
+        g.parentTask.status === "COMPLETED" ||
+        g.parentTask.progressPercent === 100;
+      return isTaskCollapsed(g.parentTask.id, isCompleted);
+    });
+  }, [paginatedGroupedTasks, isTaskCollapsed]);
+
+  const handleToggleAllVisible = () => {
+    const nextState = !allVisibleCollapsed;
+    setCollapsedGroupIds((prev) => {
+      const updated = { ...prev };
+      paginatedGroupedTasks.forEach((g) => {
+        updated[g.parentTask.id] = nextState;
+      });
+      return updated;
+    });
+  };
+
   // 6. Filter & sort legacy tasks (for pure function compatibility)
   const filteredTasks = React.useMemo(() => {
     const filtered = filterStaffTasks(
@@ -662,7 +735,7 @@ export function LecturerFocusWorkspace({
           </h1>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-primary/10 text-primary border border-primary/20 font-mono">
-              {user.roleLabel || "Chuyên viên"}
+              {cleanRoleLabel}
             </span>
             <span className="text-muted-foreground/40">·</span>
             <span className="font-medium text-foreground">{user.name}</span>
@@ -938,13 +1011,39 @@ export function LecturerFocusWorkspace({
             )}
           </div>
 
-          {/* Active Filter Indicator / Counter */}
-          <div className="flex items-center justify-end text-xs text-muted-foreground gap-1.5">
-            <Filter className="size-3.5" strokeWidth={1.5} />
-            <span>
-              Hiển thị <strong>{filteredGroupedTasks.length}</strong> /{" "}
-              {groupedTasks.length} nhiệm vụ
-            </span>
+          {/* Bulk Expand/Collapse & Active Filter Counter */}
+          <div className="flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={handleToggleAllVisible}
+              disabled={paginatedGroupedTasks.length === 0}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/70 bg-card hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              title={
+                allVisibleCollapsed
+                  ? "Mở rộng tất cả nhiệm vụ trên trang này"
+                  : "Thu gọn tất cả nhiệm vụ trên trang này"
+              }
+            >
+              {allVisibleCollapsed ? (
+                <>
+                  <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                  <span>Mở rộng tất cả</span>
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="size-3.5" strokeWidth={1.5} />
+                  <span>Thu gọn tất cả</span>
+                </>
+              )}
+            </button>
+
+            <div className="flex items-center text-xs text-muted-foreground gap-1.5 shrink-0 pl-1 border-l border-border/60">
+              <Filter className="size-3.5" strokeWidth={1.5} />
+              <span>
+                Hiển thị <strong>{filteredGroupedTasks.length}</strong> /{" "}
+                {groupedTasks.length} nhiệm vụ
+              </span>
+            </div>
           </div>
         </div>
 
@@ -994,24 +1093,16 @@ export function LecturerFocusWorkspace({
           </div>
         </div>
 
-        {/* Quick Filter Pills */}
+        {/* Status Filter Pills (Without redundant 'Tất cả' button) */}
         <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1">
-          <button
-            type="button"
-            onClick={() => handlePillClick("ALL")}
-            className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer",
-              activeFilter === "ALL"
-                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                : "bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Tất cả ({groupedTasks.length})
-          </button>
+          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1 shrink-0 pr-1">
+            <Filter className="size-3" strokeWidth={1.5} />
+            <span>Lọc trạng thái:</span>
+          </span>
 
           <button
             type="button"
-            onClick={() => handlePillClick("TODAY")}
+            onClick={() => handlePillClick(activeFilter === "TODAY" ? "ALL" : "TODAY")}
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "TODAY"
@@ -1025,7 +1116,7 @@ export function LecturerFocusWorkspace({
 
           <button
             type="button"
-            onClick={() => handlePillClick("THIS_WEEK")}
+            onClick={() => handlePillClick(activeFilter === "THIS_WEEK" ? "ALL" : "THIS_WEEK")}
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "THIS_WEEK"
@@ -1039,7 +1130,7 @@ export function LecturerFocusWorkspace({
 
           <button
             type="button"
-            onClick={() => handlePillClick("IN_PROGRESS")}
+            onClick={() => handlePillClick(activeFilter === "IN_PROGRESS" ? "ALL" : "IN_PROGRESS")}
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer",
               activeFilter === "IN_PROGRESS"
@@ -1052,7 +1143,7 @@ export function LecturerFocusWorkspace({
 
           <button
             type="button"
-            onClick={() => handlePillClick("NEEDS_REVIEW")}
+            onClick={() => handlePillClick(activeFilter === "NEEDS_REVIEW" ? "ALL" : "NEEDS_REVIEW")}
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "NEEDS_REVIEW"
@@ -1068,7 +1159,7 @@ export function LecturerFocusWorkspace({
 
           <button
             type="button"
-            onClick={() => handlePillClick("REVISION")}
+            onClick={() => handlePillClick(activeFilter === "REVISION" ? "ALL" : "REVISION")}
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "REVISION"
@@ -1084,7 +1175,7 @@ export function LecturerFocusWorkspace({
 
           <button
             type="button"
-            onClick={() => handlePillClick("COMPLETED")}
+            onClick={() => handlePillClick(activeFilter === "COMPLETED" ? "ALL" : "COMPLETED")}
             className={cn(
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "COMPLETED"
@@ -1097,6 +1188,18 @@ export function LecturerFocusWorkspace({
               ({summary.completedCount})
             </span>
           </button>
+
+          {activeFilter !== "ALL" && (
+            <button
+              type="button"
+              onClick={() => setActiveFilter("ALL")}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted border border-border/60 cursor-pointer transition-colors ml-1"
+              title="Xóa lọc trạng thái"
+            >
+              <X className="size-3" strokeWidth={1.5} />
+              <span>Xóa lọc</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1134,12 +1237,15 @@ export function LecturerFocusWorkspace({
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredGroupedTasks.map((group) => {
+          {paginatedGroupedTasks.map((group) => {
             const parentCountdown = getDeadlineBadgeInfo(
               group.parentTask.dueDate,
               referenceDate
             );
-            const isCollapsed = Boolean(collapsedGroupIds[group.parentTask.id]);
+            const isCompleted =
+              group.parentTask.status === "COMPLETED" ||
+              group.parentTask.progressPercent === 100;
+            const isCollapsed = isTaskCollapsed(group.parentTask.id, isCompleted);
             const subTasksToRender = group.isLeading
               ? group.allSubTasks
               : group.userSubTasks;
@@ -1219,7 +1325,7 @@ export function LecturerFocusWorkspace({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleCollapse(group.parentTask.id)}
+                        onClick={() => toggleCollapse(group.parentTask.id, isCollapsed)}
                         className="text-xs h-7 px-2 gap-1 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
                         title={
                           isCollapsed
@@ -1240,9 +1346,13 @@ export function LecturerFocusWorkspace({
                   </div>
 
                   {/* Parent Title & Progress */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                  <div
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 cursor-pointer select-none"
+                    onClick={() => toggleCollapse(group.parentTask.id, isCollapsed)}
+                    title={isCollapsed ? "Bấm để mở rộng chi tiết" : "Bấm để thu gọn"}
+                  >
                     <div className="space-y-0.5 flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
+                      <h3 className="text-base sm:text-lg font-bold text-foreground tracking-tight hover:text-primary transition-colors">
                         {group.parentTask.title}
                       </h3>
                       {group.parentTask.assignedDate && (
@@ -1272,8 +1382,9 @@ export function LecturerFocusWorkspace({
                     </div>
                   </div>
 
-                  {/* DRI Workload Breakdown Chips */}
-                  {group.isLeading &&
+                  {/* DRI Workload Breakdown Chips (Only when expanded) */}
+                  {!isCollapsed &&
+                    group.isLeading &&
                     group.workloads &&
                     group.workloads.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/50">
@@ -1304,7 +1415,7 @@ export function LecturerFocusWorkspace({
                     )}
                 </div>
 
-                {/* Tier 2: Subtasks Section */}
+                {/* Tier 2: Subtasks Section with Tree Connector */}
                 {!isCollapsed && (
                   <div className="pt-3 border-t border-border/60 space-y-2.5">
                     <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
@@ -1341,7 +1452,7 @@ export function LecturerFocusWorkspace({
                         Chưa có công việc chi tiết nào được phân công.
                       </div>
                     ) : (
-                      <div className="space-y-2.5">
+                      <div className="border-l-2 border-primary/20 dark:border-primary/30 pl-3 sm:pl-4 ml-1 sm:ml-2 space-y-2.5">
                         {subTasksToRender.map((subTask) => {
                           const countdownInfo = getDeadlineBadgeInfo(
                             subTask.dueDate,
@@ -1519,8 +1630,14 @@ export function LecturerFocusWorkspace({
                                   <Button
                                     type="button"
                                     size="sm"
+                                    variant={subTask.status === "COMPLETED" ? "outline" : "default"}
                                     onClick={() => handleOpenSubmitModal(subTask)}
-                                    className="text-xs font-semibold h-7 rounded-xl gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs cursor-pointer"
+                                    className={cn(
+                                      "text-xs h-7 rounded-xl gap-1.5 cursor-pointer transition-all",
+                                      subTask.status === "COMPLETED"
+                                        ? "border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted font-medium"
+                                        : "font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
+                                    )}
                                   >
                                     <UploadCloud
                                       className="size-3.5"
@@ -1544,6 +1661,72 @@ export function LecturerFocusWorkspace({
               </div>
             );
           })}
+
+          {/* Section 4.5: Pagination Toolbar */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-border/70 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span>Hiển thị</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  className="rounded-lg border border-border/70 bg-card px-2 py-1 text-xs text-foreground outline-none focus:border-ring cursor-pointer"
+                >
+                  <option value={5}>5 việc / trang</option>
+                  <option value={10}>10 việc / trang</option>
+                  <option value={20}>20 việc / trang</option>
+                  <option value={50}>50 việc / trang</option>
+                </select>
+                <span>
+                  (từ {(currentPage - 1) * pageSize + 1} đến{" "}
+                  {Math.min(currentPage * pageSize, totalTasks)} trong tổng số{" "}
+                  <strong>{totalTasks}</strong> nhiệm vụ)
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 self-center sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-xs font-medium text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                >
+                  Trước
+                </button>
+
+                {getPageNumbers(currentPage, totalPages).map((p, idx) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${idx}`} className="px-1.5 py-1 text-muted-foreground">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={`page-${p}`}
+                      type="button"
+                      onClick={() => setCurrentPage(Number(p))}
+                      className={cn(
+                        "size-7 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                        currentPage === p
+                          ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                          : "border border-border/70 bg-card hover:bg-muted text-foreground"
+                      )}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-xs font-medium text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -363,7 +363,7 @@ describe("Mock Dashboard Data - Origin and Ownership Cases", () => {
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { LecturerFocusWorkspace } from "../src/components/portal/lecturer-focus-workspace";
+import { LecturerFocusWorkspace, getPageNumbers } from "../src/components/portal/lecturer-focus-workspace";
 
 describe("LecturerFocusWorkspace - 2-Tier Rendering and Workload Badges", () => {
   const mockUser: AuthUser = {
@@ -472,6 +472,301 @@ describe("LecturerFocusWorkspace - 2-Tier Rendering and Workload Badges", () => 
 
     // Verifies origin badge
     assert.ok(html.includes("Tự khởi xướng") || html.includes("Cá nhân đề xuất"));
+  });
+});
+
+describe("LecturerFocusWorkspace - UX/UI Polish & Ergonomics (Task 7)", () => {
+  const staffUser: AuthUser = {
+    id: "user-huy",
+    name: "Đặng Nhật Huy",
+    email: "huydn@cdktcnqn.edu.vn",
+    role: "STAFF",
+    roleLabel: "Chuyên viên",
+    department: "CNTT",
+    departmentCode: "CNTT",
+  };
+
+  test("getPageNumbers generates correct page numbers with smart ellipsis", () => {
+    // total <= 7
+    assert.deepEqual(getPageNumbers(1, 5), [1, 2, 3, 4, 5]);
+    assert.deepEqual(getPageNumbers(3, 7), [1, 2, 3, 4, 5, 6, 7]);
+
+    // current near beginning (current <= 4)
+    assert.deepEqual(getPageNumbers(2, 10), [1, 2, 3, 4, 5, "...", 10]);
+    assert.deepEqual(getPageNumbers(4, 10), [1, 2, 3, 4, 5, "...", 10]);
+
+    // current near end (current >= total - 3)
+    assert.deepEqual(getPageNumbers(8, 10), [1, "...", 6, 7, 8, 9, 10]);
+    assert.deepEqual(getPageNumbers(10, 10), [1, "...", 6, 7, 8, 9, 10]);
+
+    // current in the middle
+    assert.deepEqual(getPageNumbers(6, 12), [1, "...", 5, 6, 7, "...", 12]);
+  });
+
+  test("renders tree connector styling on subtasks container", () => {
+    const activeTask: SchoolTask = {
+      id: "parent-active",
+      title: "Công việc đang thực hiện",
+      category: "CNTT",
+      categoryLabel: "Công nghệ thông tin",
+      leadAssigneeName: "Đặng Nhật Huy",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      origin: "SCHOOL",
+      totalSubTasks: 2,
+      completedSubTasks: 0,
+      progressPercent: 0,
+      subTasks: [
+        {
+          id: "sub-act-1",
+          title: "Đầu việc 1",
+          assigneeName: "Đặng Nhật Huy",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-15",
+          parentSchoolTaskId: "parent-active",
+          updatedAt: "2026-09-01",
+        },
+      ],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(LecturerFocusWorkspace, {
+        user: staffUser,
+        tasks: [activeTask],
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    // Verifies the exact tree connector styling
+    assert.ok(
+      html.includes("border-l-2 border-primary/20 dark:border-primary/30 pl-3 sm:pl-4 ml-1 sm:ml-2 space-y-2.5"),
+      "Subtasks container must render clear tree connector classes"
+    );
+  });
+
+  test("smart collapse: completed parent tasks default to collapsed, active tasks default to expanded", () => {
+    const completedParent: SchoolTask = {
+      id: "parent-completed",
+      title: "Nhiệm vụ đã hoàn thành 100%",
+      category: "CNTT",
+      categoryLabel: "Công nghệ thông tin",
+      leadAssigneeName: "Đặng Nhật Huy",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-10",
+      status: "COMPLETED",
+      origin: "SCHOOL",
+      totalSubTasks: 1,
+      completedSubTasks: 1,
+      progressPercent: 100,
+      subTasks: [
+        {
+          id: "sub-done-1",
+          title: "Đầu việc đã xong ẩn dưới collapse",
+          assigneeName: "Đặng Nhật Huy",
+          status: "COMPLETED",
+          dueDate: "2026-09-08",
+          parentSchoolTaskId: "parent-completed",
+          updatedAt: "2026-09-08",
+        },
+      ],
+    };
+
+    const activeParent: SchoolTask = {
+      id: "parent-active",
+      title: "Nhiệm vụ đang tiến hành",
+      category: "CNTT",
+      categoryLabel: "Công nghệ thông tin",
+      leadAssigneeName: "Đặng Nhật Huy",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      origin: "SCHOOL",
+      totalSubTasks: 1,
+      completedSubTasks: 0,
+      progressPercent: 0,
+      subTasks: [
+        {
+          id: "sub-open-1",
+          title: "Đầu việc đang làm hiển thị công khai",
+          assigneeName: "Đặng Nhật Huy",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-20",
+          parentSchoolTaskId: "parent-active",
+          updatedAt: "2026-09-01",
+        },
+      ],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(LecturerFocusWorkspace, {
+        user: staffUser,
+        tasks: [completedParent, activeParent],
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    // Completed parent title should be visible, but its subtask body is collapsed (not rendered)
+    assert.ok(html.includes("Nhiệm vụ đã hoàn thành 100%"));
+    assert.equal(
+      html.includes("Đầu việc đã xong ẩn dưới collapse"),
+      false,
+      "Completed task subtasks must be hidden by default"
+    );
+
+    // Active parent and its subtask must be visible (expanded by default)
+    assert.ok(html.includes("Nhiệm vụ đang tiến hành"));
+    assert.ok(
+      html.includes("Đầu việc đang làm hiển thị công khai"),
+      "Active task subtasks must be expanded and rendered"
+    );
+  });
+
+  test("action button visual hierarchy: outline for COMPLETED, solid for IN_PROGRESS", () => {
+    const mixedTask: SchoolTask = {
+      id: "parent-mixed",
+      title: "Nhiệm vụ có subtasks hỗn hợp",
+      category: "CNTT",
+      categoryLabel: "Công nghệ thông tin",
+      leadAssigneeName: "Đặng Nhật Huy",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      origin: "SCHOOL",
+      totalSubTasks: 2,
+      completedSubTasks: 1,
+      progressPercent: 50,
+      subTasks: [
+        {
+          id: "sub-mix-done",
+          title: "Việc đã xong cần cập nhật",
+          assigneeName: "Đặng Nhật Huy",
+          status: "COMPLETED",
+          dueDate: "2026-09-05",
+          parentSchoolTaskId: "parent-mixed",
+          updatedAt: "2026-09-05",
+        },
+        {
+          id: "sub-mix-active",
+          title: "Việc đang làm cần nộp mới",
+          assigneeName: "Đặng Nhật Huy",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-20",
+          parentSchoolTaskId: "parent-mixed",
+          updatedAt: "2026-09-05",
+        },
+      ],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(LecturerFocusWorkspace, {
+        user: staffUser,
+        tasks: [mixedTask],
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    // Check action button labels
+    assert.ok(
+      html.includes("Cập nhật minh chứng"),
+      "Completed subtask must show 'Cập nhật minh chứng' button"
+    );
+    assert.ok(
+      html.includes("Nộp minh chứng"),
+      "In-progress subtask must show 'Nộp minh chứng' button"
+    );
+  });
+
+  test("clean filter bar: contains status indicator and bulk collapse button", () => {
+    const singleTask: SchoolTask = {
+      id: "task-single",
+      title: "Một nhiệm vụ mẫu",
+      category: "CNTT",
+      categoryLabel: "Công nghệ thông tin",
+      leadAssigneeName: "Đặng Nhật Huy",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      origin: "SCHOOL",
+      totalSubTasks: 1,
+      completedSubTasks: 0,
+      progressPercent: 0,
+      subTasks: [
+        {
+          id: "sub-single",
+          title: "Việc mẫu",
+          assigneeName: "Đặng Nhật Huy",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-20",
+          parentSchoolTaskId: "task-single",
+          updatedAt: "2026-09-01",
+        },
+      ],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(LecturerFocusWorkspace, {
+        user: staffUser,
+        tasks: [singleTask],
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    // Indicator tag exists
+    assert.ok(html.includes("Lọc trạng thái:"));
+
+    // Bulk collapse toggle button exists
+    assert.ok(html.includes("Thu gọn tất cả") || html.includes("Mở rộng tất cả"));
+  });
+
+  test("pagination toolbar renders when total tasks exceed page size", () => {
+    // Generate 12 parent tasks to exceed default page size (10)
+    const manyTasks: SchoolTask[] = Array.from({ length: 12 }, (_, i) => ({
+      id: `task-page-${i + 1}`,
+      title: `Nhiệm vụ trang ${i + 1}`,
+      category: "CNTT",
+      categoryLabel: "Công nghệ thông tin",
+      leadAssigneeName: "Đặng Nhật Huy",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      origin: "SCHOOL",
+      totalSubTasks: 1,
+      completedSubTasks: 0,
+      progressPercent: 0,
+      subTasks: [
+        {
+          id: `sub-page-${i + 1}`,
+          title: `Việc con ${i + 1}`,
+          assigneeName: "Đặng Nhật Huy",
+          status: "IN_PROGRESS",
+          dueDate: "2026-09-20",
+          parentSchoolTaskId: `task-page-${i + 1}`,
+          updatedAt: "2026-09-01",
+        },
+      ],
+    }));
+
+    const html = renderToStaticMarkup(
+      React.createElement(LecturerFocusWorkspace, {
+        user: staffUser,
+        tasks: manyTasks,
+        referenceDate: "2026-09-06",
+      })
+    );
+
+    // Verify pagination elements
+    assert.ok(html.includes("Hiển thị"));
+    assert.ok(html.includes("việc / trang"));
+    assert.ok(html.includes("trong tổng số"));
+    assert.ok(html.includes("Trước"));
+    assert.ok(html.includes("Sau"));
   });
 });
 
