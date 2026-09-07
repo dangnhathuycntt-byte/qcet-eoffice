@@ -26,6 +26,7 @@ export interface RegisterPayload {
 export interface AuthContextType {
   user: AuthUser;
   switchRole: (role: UserRole) => void;
+  switchUser: (userId: string) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
   register: (data: RegisterPayload) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
   loginWithGoogle: (payload: {
@@ -100,6 +101,7 @@ export function mapDbUserToAuthUser(dbUser: {
 const AuthContext = createContext<AuthContextType>({
   user: DEFAULT_DEMO_USERS[0],
   switchRole: () => {},
+  switchUser: () => {},
   login: async () => ({ success: false, error: "Not initialized" }),
   register: async () => ({ success: false, error: "Not initialized" }),
   loginWithGoogle: () => DEFAULT_DEMO_USERS[0],
@@ -313,6 +315,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const switchUser = useCallback((userId: string) => {
+    const targetUser =
+      DEFAULT_DEMO_USERS.find((u) => u.id === userId || u.role === userId) || DEFAULT_DEMO_USERS[0];
+    setUser(targetUser);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(targetUser));
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
   const loginWithGoogle = useCallback(
     (payload: { email: string; name: string; avatar?: string }): AuthUser => {
       const normalizedEmail = payload.email.trim().toLowerCase();
@@ -435,6 +450,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         switchRole,
+        switchUser,
         login,
         register,
         loginWithGoogle,
