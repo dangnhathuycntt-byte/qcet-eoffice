@@ -27,6 +27,7 @@ export interface GeneratedTaskPayload {
   description: string;
   scope: "SCHOOL";
   departmentId: string;
+  collaboratorDepartmentIds?: string[];
   priority: TaskPriority;
   dueDate: string;
   sourceDocumentId: string;
@@ -35,7 +36,30 @@ export interface GeneratedTaskPayload {
     issuingAuthority: string;
     leaderName?: string;
     directiveInstruction: string;
+    collaboratorIds?: string[];
   };
+}
+
+/**
+ * Helper to parse collaborator IDs whether stored as JSON array string or comma-separated list.
+ */
+export function parseCollaboratorIds(raw?: string | null): string[] {
+  if (!raw || !raw.trim()) return [];
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => String(item).trim()).filter(Boolean);
+      }
+    } catch {
+      // fallback to comma-separated
+    }
+  }
+  return trimmed
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -48,29 +72,43 @@ export function mapDirectiveToSchoolTask(
 ): GeneratedTaskPayload {
   const shortSummary =
     doc.summary.length > 80 ? doc.summary.substring(0, 80) + "..." : doc.summary;
-  const title = `[Xử lý VB ${doc.originalNumber}] ${shortSummary}`;
+
+  const title =
+    doc.registrationNumber != null
+      ? `[Xử lý VB Đến #${doc.registrationNumber} - ${doc.originalNumber}] ${shortSummary}`
+      : `[Xử lý VB ${doc.originalNumber}] ${shortSummary}`;
 
   const dueDate =
     directive.deadline ||
     doc.dueDate ||
     new Date(Date.now() + 7 * 86400000).toISOString();
 
-  const description = [
+  const collaboratorIds = parseCollaboratorIds(directive.collaboratorIds);
+
+  const descriptionLines = [
     `TRÍCH YẾU VĂN BẢN: ${doc.summary}`,
     `CƠ QUAN BAN HÀNH: ${doc.issuingAuthority}`,
     `SỐ KÝ HIỆU GỐC: ${doc.originalNumber} (Ngày ký: ${doc.issuedDate.slice(0, 10)})`,
+  ];
+
+  if (collaboratorIds.length > 0) {
+    descriptionLines.push(`ĐƠN VỊ PHỐI HỢP: ${collaboratorIds.join(", ")}`);
+  }
+
+  descriptionLines.push(
     ``,
     `=== Ý KIẾN CHỈ ĐẠO BÚT PHÊ CỦA LÃNH ĐẠO TRƯỜNG ===`,
     `Người chỉ đạo: ${directive.leaderName || "Ban Giám hiệu"}`,
     `Nội dung: ${directive.instruction}`,
-    `Hạn hoàn thành báo cáo: ${dueDate.slice(0, 10)}`,
-  ].join("\n");
+    `Hạn hoàn thành báo cáo: ${dueDate.slice(0, 10)}`
+  );
 
   return {
     title,
-    description,
+    description: descriptionLines.join("\n"),
     scope: "SCHOOL",
     departmentId: directive.assignedDeptId,
+    collaboratorDepartmentIds: collaboratorIds.length > 0 ? collaboratorIds : undefined,
     priority: mapUrgencyToTaskPriority(doc.urgency),
     dueDate,
     sourceDocumentId: doc.id,
@@ -79,6 +117,7 @@ export function mapDirectiveToSchoolTask(
       issuingAuthority: doc.issuingAuthority,
       leaderName: directive.leaderName,
       directiveInstruction: directive.instruction,
+      collaboratorIds: collaboratorIds.length > 0 ? collaboratorIds : undefined,
     },
   };
 }

@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {
   mapDirectiveToSchoolTask,
   mapUrgencyToTaskPriority,
-  executeDirectivePipeline
+  executeDirectivePipeline,
+  parseCollaboratorIds
 } from "../src/lib/documents/directive-pipeline";
 import type { DocumentItem, DocumentDirectiveItem } from "../src/types/document";
 
@@ -53,16 +54,47 @@ describe("Document-to-Task Directive Pipeline", () => {
   test("generates valid SchoolTask payload with accurate metadata and backlink", () => {
     const taskPayload = mapDirectiveToSchoolTask(sampleDoc, sampleDirective);
 
-    assert.ok(taskPayload.title.includes("389/UBND-VX"), "Task title must include original number");
+    assert.ok(
+      taskPayload.title.includes("[Xử lý VB Đến #42 - 389/UBND-VX]"),
+      "Task title must format registrationNumber and originalNumber"
+    );
     assert.equal(taskPayload.scope, "SCHOOL");
     assert.equal(taskPayload.departmentId, "CNTT");
+    assert.deepEqual(taskPayload.collaboratorDepartmentIds, ["DT"]);
     assert.equal(taskPayload.priority, "URGENT");
     assert.equal(taskPayload.dueDate, "2026-09-15T17:00:00Z");
     assert.ok(taskPayload.description.includes("TS. Lê Hải Đăng (Hiệu trưởng)"));
     assert.ok(taskPayload.description.includes("Giao Khoa CNTT chủ trì"));
+    assert.ok(taskPayload.description.includes("ĐƠN VỊ PHỐI HỢP: DT"));
     assert.equal(taskPayload.sourceDocumentId, "doc-101");
     assert.equal(taskPayload.metadata.originalNumber, "389/UBND-VX");
     assert.equal(taskPayload.metadata.issuingAuthority, "UBND Tỉnh Bình Định");
+    assert.deepEqual(taskPayload.metadata.collaboratorIds, ["DT"]);
+  });
+
+  test("falls back to standard title when registrationNumber is not provided", () => {
+    const docWithoutRegNum = { ...sampleDoc, registrationNumber: undefined as any };
+    const taskPayload = mapDirectiveToSchoolTask(docWithoutRegNum, sampleDirective);
+
+    assert.ok(
+      taskPayload.title.startsWith("[Xử lý VB 389/UBND-VX]"),
+      "Fallback title should be used when registrationNumber is absent"
+    );
+  });
+
+  test("correctly parses collaboratorIds in JSON array and comma-separated formats", () => {
+    assert.deepEqual(parseCollaboratorIds(JSON.stringify(["DT", "KHTV"])), ["DT", "KHTV"]);
+    assert.deepEqual(parseCollaboratorIds("DT, KHTV, TCHC"), ["DT", "KHTV", "TCHC"]);
+    assert.deepEqual(parseCollaboratorIds(""), []);
+    assert.deepEqual(parseCollaboratorIds(null), []);
+
+    const directiveWithComma = {
+      ...sampleDirective,
+      collaboratorIds: "DT, KHTV"
+    };
+    const task = mapDirectiveToSchoolTask(sampleDoc, directiveWithComma);
+    assert.deepEqual(task.collaboratorDepartmentIds, ["DT", "KHTV"]);
+    assert.ok(task.description.includes("ĐƠN VỊ PHỐI HỢP: DT, KHTV"));
   });
 
   test("executes pipeline and marks directive as task-generated with backlink", async () => {
