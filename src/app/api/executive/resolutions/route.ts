@@ -11,7 +11,7 @@ function getSessionPayload(request: NextRequest): SessionPayload | null {
   return verifySessionToken(token);
 }
 
-function normalizeResolutionType(rawType: string): ResolutionType | null {
+function mapResolutionType(rawType: string): ResolutionType | null {
   const upper = rawType?.toUpperCase();
   if (upper === 'EXTEND_DEADLINE') return ResolutionType.EXTEND_DEADLINE;
   if (upper === 'REASSIGN' || upper === 'REASSIGN_OWNER') return ResolutionType.REASSIGN_OWNER;
@@ -24,6 +24,7 @@ function normalizeResolutionType(rawType: string): ResolutionType | null {
   }
   return null;
 }
+const normalizeResolutionType = mapResolutionType;
 
 function normalizeTaskStatus(rawStatus: string): TaskStatus | null {
   if (!rawStatus) return null;
@@ -56,12 +57,16 @@ export async function GET(request: NextRequest) {
   try {
     const session = getSessionPayload(request);
     if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: 'Chưa đăng nhập (Unauthorized)' },
+        { status: 401 }
+      );
     }
 
     const searchParams = request.nextUrl.searchParams;
     const taskId = searchParams.get('taskId');
     const resolutionType = searchParams.get('resolutionType');
+    const departmentId = searchParams.get('departmentId') || searchParams.get('dept');
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
 
     const where: any = {};
@@ -73,6 +78,9 @@ export async function GET(request: NextRequest) {
       if (normalized) {
         where.resolutionType = normalized;
       }
+    }
+    if (departmentId) {
+      where.task = { ...(where.task || {}), departmentId };
     }
 
     const resolutions = await prisma.executiveResolution.findMany({
@@ -116,45 +124,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = getSessionPayload(request);
-    const body = await request.json().catch(() => ({}));
-    const {
-      taskId,
-      resolutionType,
-      directiveNote,
-      grantedDays,
-      newOwnerId,
-      actorId,
-      status,
-      taskStatus,
-      priority,
-      taskPriority,
-    } = body;
-
-    // Determine actor & check authorization
-    let effectiveActorId: string | null = null;
-    let actorRole: UserRole | string | null = null;
-
-    if (session) {
-      effectiveActorId = session.id;
-      actorRole = session.role;
-    } else if (actorId) {
-      const user = await prisma.user.findUnique({
-        where: { id: actorId },
-        select: { id: true, role: true },
-      });
-      if (user) {
-        effectiveActorId = user.id;
-        actorRole = user.role;
-      }
-    }
-
-    if (!effectiveActorId) {
+    const session = await getSessionPayload(request);
+    if (!session) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized: Yêu cầu đăng nhập để ban hành lệnh điều hành' },
+        { success: false, error: 'Chưa đăng nhập (Unauthorized)' },
         { status: 401 }
       );
     }
+    const effectiveActorId = session.id;
+    const actorRole = session.role;
 
     // Role check: Only BGH or ADMIN can issue resolutions
     const isBghOrAdmin =
@@ -170,17 +148,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!taskId || !resolutionType) {
+    const body = await request.json().catch(() => ({}));
+    const {
+      taskId,
+      directiveNote,
+      newOwnerId,
+      status,
+      taskStatus,
+      priority,
+      taskPriority,
+    } = body;
+
+    const rawType = body.resolutionType || body.actionType || body.type;
+    const grantedDays = body.grantedDays || body.extensionDays;
+
+    if (!taskId || !rawType) {
       return NextResponse.json(
-        { success: false, error: 'Thiếu taskId hoặc loại can thiệp điều hành' },
+        { success: false, error: 'Thiếu thông tin bắt buộc (taskId, resolutionType/actionType)' },
         { status: 400 }
       );
     }
 
-    const mappedResolutionType = normalizeResolutionType(resolutionType);
+    const mappedResolutionType = mapResolutionType(rawType);
     if (!mappedResolutionType) {
       return NextResponse.json(
-        { success: false, error: `Loại can thiệp không hợp lệ: ${resolutionType}` },
+        { success: false, error: `Loại can thiệp không hợp lệ: ${rawType}` },
         { status: 400 }
       );
     }

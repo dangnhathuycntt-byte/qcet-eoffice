@@ -138,6 +138,24 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
     assert.match(json.error, /Unauthorized/i);
   });
 
+  test('POST /api/executive/resolutions returns 401 Unauthorized when unauthenticated even if actorId is provided in body', async () => {
+    const req = new NextRequest('http://localhost:3000/api/executive/resolutions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actorId: bghUser.id,
+        taskId: testTaskId,
+        resolutionType: 'EXTEND_DEADLINE',
+        grantedDays: 5,
+      }),
+    });
+    const res = await POST(req);
+    assert.strictEqual(res.status, 401);
+    const json = await res.json();
+    assert.strictEqual(json.success, false);
+    assert.match(json.error, /Unauthorized/i);
+  });
+
   test('POST /api/executive/resolutions returns 403 Forbidden when non-BGH user attempts to issue resolution', async () => {
     const req = new NextRequest('http://localhost:3000/api/executive/resolutions', {
       method: 'POST',
@@ -319,5 +337,78 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
     assert.strictEqual(json.resolutions.length >= 3, true);
     assert.strictEqual(json.resolutions[0].taskId, testTaskId);
     assert.ok(json.resolutions[0].actor);
+  });
+
+  test('GET /api/executive/resolutions filters by departmentId and dept alias', async () => {
+    // Current task department is targetDeptId after REASSIGN_OWNER
+    const reqMatching = new NextRequest(`http://localhost:3000/api/executive/resolutions?departmentId=${targetDeptId}`, {
+      headers: {
+        cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
+      },
+    });
+    const resMatching = await GET(reqMatching);
+    assert.strictEqual(resMatching.status, 200);
+    const jsonMatching = await resMatching.json();
+    assert.strictEqual(jsonMatching.success, true);
+    assert.ok(Array.isArray(jsonMatching.resolutions));
+    assert.strictEqual(jsonMatching.resolutions.length >= 1, true);
+    for (const r of jsonMatching.resolutions) {
+      assert.strictEqual(r.task.departmentId, targetDeptId);
+    }
+
+    // Query with dept alias on a non-existent department
+    const nonExistentDeptId = 'dept-not-found-000';
+    const reqDeptAlias = new NextRequest(`http://localhost:3000/api/executive/resolutions?dept=${nonExistentDeptId}`, {
+      headers: {
+        cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
+      },
+    });
+    const resDeptAlias = await GET(reqDeptAlias);
+    assert.strictEqual(resDeptAlias.status, 200);
+    const jsonDeptAlias = await resDeptAlias.json();
+    assert.strictEqual(jsonDeptAlias.success, true);
+    assert.strictEqual(jsonDeptAlias.resolutions.length, 0);
+  });
+
+  test('POST /api/executive/resolutions accepts actionType and extensionDays alias fields', async () => {
+    const req = new NextRequest('http://localhost:3000/api/executive/resolutions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
+      },
+      body: JSON.stringify({
+        taskId: testTaskId,
+        actionType: 'EXTEND_DEADLINE',
+        extensionDays: 4,
+        directiveNote: 'Gia hạn thêm 4 ngày qua alias actionType & extensionDays',
+      }),
+    });
+    const res = await POST(req);
+    assert.strictEqual(res.status, 200);
+    const json = await res.json();
+    assert.strictEqual(json.success, true);
+    assert.strictEqual(json.resolution.resolutionType, 'EXTEND_DEADLINE');
+    assert.strictEqual(json.resolution.grantedDays, 4);
+  });
+
+  test('POST /api/executive/resolutions accepts type as resolutionType alias', async () => {
+    const req = new NextRequest('http://localhost:3000/api/executive/resolutions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
+      },
+      body: JSON.stringify({
+        taskId: testTaskId,
+        type: 'DIRECTIVE_NOTE',
+        directiveNote: 'Chỉ đạo trực tiếp qua alias type',
+      }),
+    });
+    const res = await POST(req);
+    assert.strictEqual(res.status, 200);
+    const json = await res.json();
+    assert.strictEqual(json.success, true);
+    assert.strictEqual(json.resolution.resolutionType, 'DIRECTIVE_NOTE');
   });
 });
