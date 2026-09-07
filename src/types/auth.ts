@@ -1,5 +1,13 @@
 export type UserRole = 'ADMIN' | 'MANAGER' | 'STAFF';
 
+export interface OnboardingData {
+  hasSeenWelcome?: boolean;
+  hasCompletedTour?: boolean;
+  completedSteps?: string[];
+  isDismissed?: boolean;
+  snoozedUntil?: string | null;
+}
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -14,6 +22,9 @@ export interface AuthUser {
   isFirstLogin?: boolean;
   emailVerified?: boolean;
   provider?: 'google' | 'demo' | 'system';
+  dbRole?: string;
+  onboardedAt?: string | null;
+  onboardingData?: OnboardingData | null;
 }
 
 export type PermissionChecker = (roleOrUser: UserRole | AuthUser) => boolean;

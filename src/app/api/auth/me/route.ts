@@ -26,6 +26,8 @@ export async function GET(req: NextRequest) {
       avatarUrl: true,
       phone: true,
       isActive: true,
+      onboardedAt: true,
+      onboardingData: true,
     },
   });
 

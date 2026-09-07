@@ -8,7 +8,7 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { AuthUser, UserRole } from "../types/auth";
+import { AuthUser, UserRole, OnboardingData } from "../types/auth";
 import { DEFAULT_DEMO_USERS } from "./role-task-filter";
 
 export const AUTH_STORAGE_KEY = "qcet_active_user";
@@ -53,6 +53,8 @@ export function mapDbUserToAuthUser(dbUser: {
   avatar?: string | null;
   phone?: string | null;
   provider?: string | null;
+  onboardedAt?: Date | string | null;
+  onboardingData?: OnboardingData | any | null;
 }): AuthUser {
   const roleStr = String(dbUser.role || "").toUpperCase();
   let role: UserRole = "STAFF";
@@ -95,6 +97,13 @@ export function mapDbUserToAuthUser(dbUser: {
     isFirstLogin: false,
     emailVerified: true,
     provider: (dbUser.provider as "google" | "demo" | "system") || "system",
+    dbRole: dbUser.role,
+    onboardedAt: dbUser.onboardedAt
+      ? typeof dbUser.onboardedAt === "string"
+        ? dbUser.onboardedAt
+        : dbUser.onboardedAt.toISOString()
+      : null,
+    onboardingData: (dbUser.onboardingData as OnboardingData) || null,
   };
 }
 
