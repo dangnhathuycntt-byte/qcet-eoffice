@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse, after } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { ResolutionType, TaskPriority, TaskStatus, UserRole } from '@prisma/client';
 import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload } from '@/lib/jwt-session';
-import { sendPushNotificationToUser, formatTaskPushPayload } from '@/lib/push-service';
 import { safeAfter, dispatchExecutiveDirectivePush } from '@/lib/push-dispatch';
 
 function getSessionPayload(request: NextRequest): SessionPayload | null {

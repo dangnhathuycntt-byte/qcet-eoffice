@@ -289,7 +289,7 @@ export async function dispatchExecutiveDirectivePush(
             actorName: actorName || 'Ban Giám Hiệu',
             title: payload.title,
             body: payload.body,
-            category: 'task',
+            category: 'resolution',
             type: 'directive',
             linkHref: payload.data.linkHref,
           },

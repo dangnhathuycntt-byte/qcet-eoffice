@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse, after } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { mapPrismaTaskToSchoolTask } from '@/lib/adapters/task-db-adapter';
 import { TaskScope, TaskStatus, TaskPriority, AssigneeRole } from '@prisma/client';
 import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload } from '@/lib/jwt-session';
-import { sendPushNotificationToUser, formatTaskPushPayload } from '@/lib/push-service';
 import { safeAfter, dispatchTaskAssignedPush } from '@/lib/push-dispatch';
 
 function getSessionPayload(request: NextRequest): SessionPayload | null {

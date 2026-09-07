@@ -230,7 +230,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       const notif = await prisma.notification.findFirst({
         where: {
           userId: staffUser.id,
-          category: 'task',
+          category: 'resolution',
           type: 'directive',
           linkHref: `/portal?task=${task.id}`,
         },
@@ -341,7 +341,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       const notif = await prisma.notification.findFirst({
         where: {
           userId: staffUser.id,
-          category: 'task',
+          category: 'resolution',
           type: 'directive',
           linkHref: `/portal?task=${task.id}`,
         },
