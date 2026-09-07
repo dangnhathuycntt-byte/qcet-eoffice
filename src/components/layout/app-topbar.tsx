@@ -51,6 +51,7 @@ export function getInitials(name: string): string {
 function TopbarBreadcrumbs({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams();
   const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
+  const isDocuments = pathname?.startsWith("/documents");
 
   return (
     <div className="flex items-center min-w-0">
@@ -64,12 +65,18 @@ function TopbarBreadcrumbs({ pathname }: { pathname: string }) {
       <span className="text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-none">
         {pageTitle}
       </span>
+      {isDocuments && (
+        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 select-none">
+          Đang phát triển
+        </span>
+      )}
     </div>
   );
 }
 
 function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
   const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/");
+  const isDocuments = pathname?.startsWith("/documents");
 
   return (
     <div className="flex items-center min-w-0">
@@ -83,6 +90,11 @@ function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
       <span className="text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-none">
         {pageTitle}
       </span>
+      {isDocuments && (
+        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 select-none">
+          Đang phát triển
+        </span>
+      )}
     </div>
   );
 }

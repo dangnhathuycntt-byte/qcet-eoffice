@@ -286,7 +286,7 @@ export function AppSidebar() {
                                   );
                                 }
                               }}
-                              aria-label={`${item.label}${badge ? ` (${badge.text})` : ""}${item.isMaintenance ? " (Đang bảo trì)" : ""}`}
+                              aria-label={`${item.label}${item.isComingSoon ? " (Đang phát triển)" : badge ? ` (${badge.text})` : ""}${item.isMaintenance ? " (Đang bảo trì)" : ""}`}
                               aria-current={active ? "page" : undefined}
                               className={cn(
                                 "size-9 rounded-lg relative flex items-center justify-center transition-all duration-150 active:scale-95",
@@ -302,7 +302,12 @@ export function AppSidebar() {
                                 />
                               )}
                               <Icon size={18} strokeWidth={active ? 2 : 1.5} />
-                              {badge && (
+                              {item.isComingSoon ? (
+                                <span
+                                  className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500 ring-2 ring-background"
+                                  title="Đang phát triển"
+                                />
+                              ) : badge ? (
                                 <span
                                   aria-label={`${badge.text} mục`}
                                   className={cn(
@@ -321,23 +326,26 @@ export function AppSidebar() {
                                 >
                                   {badge.text}
                                 </span>
-                              )}
-                              {item.isMaintenance && !badge && (
+                              ) : item.isMaintenance ? (
                                 <span
                                   className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500 ring-2 ring-background"
                                   title="Đang bảo trì"
                                 />
-                              )}
+                              ) : null}
                             </Link>
                           </TooltipTrigger>
                           <TooltipContent side="right">
                             <div className="flex items-center gap-1.5">
                               <span>{item.label}</span>
-                              {badge && (
+                              {item.isComingSoon ? (
+                                <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                  Đang phát triển
+                                </span>
+                              ) : badge ? (
                                 <span className="px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-muted">
                                   {badge.text}
                                 </span>
-                              )}
+                              ) : null}
                               {item.isMaintenance && (
                                 <span className="text-xs text-amber-500 font-medium">
                                   (Đang bảo trì)
@@ -417,7 +425,11 @@ export function AppSidebar() {
                             )}
                           />
                           <span className="truncate flex-1">{item.label}</span>
-                          {badge && (
+                          {item.isComingSoon ? (
+                            <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 select-none">
+                              Đang phát triển
+                            </span>
+                          ) : badge ? (
                             <span
                               className={cn(
                                 "ml-auto inline-flex items-center justify-center px-1.5 py-0.5 rounded-md text-xs font-mono font-semibold leading-none select-none tracking-tight",
@@ -435,12 +447,11 @@ export function AppSidebar() {
                             >
                               {badge.text}
                             </span>
-                          )}
-                          {item.isMaintenance && !badge && (
+                          ) : item.isMaintenance && !badge ? (
                             <span className="ml-auto text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded leading-none select-none">
                               Bảo trì
                             </span>
-                          )}
+                          ) : null}
                         </Link>
                       );
                     })}
@@ -663,7 +674,11 @@ export function AppSidebar() {
                             )}
                           />
                           <span className="truncate flex-1">{item.label}</span>
-                          {badge && (
+                          {item.isComingSoon ? (
+                            <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 select-none">
+                              Đang phát triển
+                            </span>
+                          ) : badge ? (
                             <span
                               className={cn(
                                 "ml-auto inline-flex items-center justify-center px-1.5 py-0.5 rounded-md text-xs font-mono font-semibold leading-none select-none tracking-tight",
@@ -681,12 +696,11 @@ export function AppSidebar() {
                             >
                               {badge.text}
                             </span>
-                          )}
-                          {item.isMaintenance && !badge && (
+                          ) : item.isMaintenance && !badge ? (
                             <span className="ml-auto text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded leading-none select-none">
                               Bảo trì
                             </span>
-                          )}
+                          ) : null}
                         </Link>
                       );
                     })}

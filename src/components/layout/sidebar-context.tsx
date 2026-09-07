@@ -60,6 +60,7 @@ export const MODULES: ModuleMeta[] = [
     icon: FileText,
     defaultHref: "/documents",
     description: "Sổ văn bản đến/đi, tờ trình & ký số điện tử",
+    isComingSoon: true,
   },
   {
     id: "org",
@@ -238,6 +239,7 @@ export const SINGLE_TIER_NAV_ITEMS: SidebarItem[] = [
     icon: FileText,
     section: "operations",
     badgeKey: "docsInbox",
+    isComingSoon: true,
   },
   {
     id: "org",

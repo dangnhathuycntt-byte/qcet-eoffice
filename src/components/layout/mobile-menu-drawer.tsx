@@ -181,6 +181,9 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
               <div className="flex items-center gap-3">
                 <FileText size={17} className="text-primary" />
                 <span>Văn bản & Điều hành</span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                  Đang phát triển
+                </span>
               </div>
               <ChevronRight size={14} className="text-muted-foreground" />
             </Link>
