@@ -67,7 +67,7 @@ export interface TaskFiltersReturn {
   monthlyTaskCounts: Record<number, number>;
   selectedMonthPeriod: AcademicMonthInfo | null;
   displayedStats: DashboardStats;
-  filteredTasks: (SchoolTask | StaffTask)[];
+  filteredTasks: SchoolTask[];
   roleUpcoming: UpcomingItem[];
   departmentHealth: DepartmentHealthSummary[];
   executiveStats: ExecutiveActionStats | null;

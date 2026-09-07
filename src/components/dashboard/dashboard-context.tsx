@@ -51,7 +51,7 @@ export interface DashboardDataContextValue {
   stats: DashboardStats;
   upcoming: UpcomingItem[];
   activities: ActivityEvent[];
-  filteredTasks: (SchoolTask | StaffTask)[];
+  filteredTasks: SchoolTask[];
   scopedBaseTasks: SchoolTask[];
   monthlyTaskCounts: Record<number, number>;
   selectedMonthPeriod: AcademicMonthInfo | null;

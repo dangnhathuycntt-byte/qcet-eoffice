@@ -68,6 +68,10 @@ const DepartmentGroupedTaskView = dynamic(
   }
 );
 
+import { DashboardStateProvider } from "@/components/dashboard/dashboard-context";
+import { OrgZone } from "@/components/dashboard/zones/org-zone";
+import { CalendarZone } from "@/components/dashboard/zones/calendar-zone";
+
 const ExecutiveDepartmentCommandCenter = dynamic(
   () =>
     import("@/components/tasks/executive-department-command-center").then(
@@ -77,11 +81,6 @@ const ExecutiveDepartmentCommandCenter = dynamic(
     ssr: false,
     loading: () => <div className="h-96 rounded-2xl bg-muted/20 animate-pulse" />,
   }
-);
-
-const OrganizationTree = dynamic(
-  () => import("@/components/org/organization-tree").then((m) => m.OrganizationTree),
-  { ssr: false, loading: () => <div className="h-96 rounded-2xl bg-muted/20 animate-pulse" /> }
 );
 
 const TaskDetailSideSheet = dynamic(
@@ -128,7 +127,6 @@ import {
   LayoutDashboard,
   CheckSquare,
   Calendar as CalendarIcon,
-  Network,
   FileCheck,
   SlidersHorizontal,
   Table,
@@ -1478,107 +1476,12 @@ function UnifiedTaskHubContent() {
       {/* ========================================================================= */}
       {/* ZONE 4: CALENDAR (Lịch biểu & Tiến độ tháng/tuần O(1))                   */}
       {/* ========================================================================= */}
-      {activeZone === "calendar" && (
-        <div className="space-y-6" data-slot="zone-calendar">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-2xs font-mono">
-                  Phân khu Lịch công tác
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground font-heading">
-                Lịch Công Tác & Hạn Chót Toàn Trường
-              </h1>
-              <p className="text-xs text-muted-foreground mt-1 text-balance">
-                Theo dõi lịch trình các nhiệm vụ, sự kiện BGH và hạn chót giao việc theo thời gian thực
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              {isExecutive && (
-                <Button
-                  onClick={() => handleOpenCreateModal("TRUONG")}
-                  className="gap-1.5 text-xs font-bold rounded-xl"
-                >
-                  <Plus size={14} />
-                  <span>Thêm sự kiện / Việc mới</span>
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleManualRefresh}
-                disabled={isRefreshing}
-                className="gap-1.5 text-xs rounded-xl"
-              >
-                <RefreshCw
-                  size={14}
-                  className={isRefreshing ? "animate-spin text-primary" : ""}
-                />
-                <span className="hidden sm:inline">Làm mới</span>
-              </Button>
-            </div>
-          </div>
-
-          <section aria-label="Lưới lịch tháng">
-            <CalendarMonthView
-              tasks={filteredTasks}
-              initialMonth={typeof selectedAcademicMonth === "number" ? selectedAcademicMonth : 9}
-              initialYear={2026}
-              onSelectTask={(task) => setSelectedTask(task)}
-              onAddTask={() => handleOpenCreateModal("TRUONG")}
-            />
-          </section>
-        </div>
-      )}
+      {activeZone === "calendar" && <CalendarZone />}
 
       {/* ========================================================================= */}
       {/* ZONE 5: ORG (Cơ cấu tổ chức & Danh bạ 11 đơn vị)                         */}
       {/* ========================================================================= */}
-      {activeZone === "org" && (
-        <div className="space-y-6" data-slot="zone-org">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                  <Network className="size-3" strokeWidth={1.5} />
-                  <span>CƠ CẤU BỘ MÁY & DANH BẠ QCET</span>
-                </span>
-                <span className="text-xs text-muted-foreground font-medium hidden sm:inline">
-                  • 11 Đơn vị • 95 Cán bộ
-                </span>
-              </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground font-heading">
-                Cơ Cấu Tổ Chức & Danh Bạ Cán Bộ
-              </h1>
-              <p className="text-xs text-muted-foreground mt-1 text-balance">
-                Sơ đồ phân cấp bộ máy tổ chức và danh bạ liên hệ toàn trường QCET
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleManualRefresh}
-                disabled={isRefreshing}
-                className="gap-1.5 text-xs rounded-xl"
-              >
-                <RefreshCw
-                  size={14}
-                  className={isRefreshing ? "animate-spin text-primary" : ""}
-                />
-                <span className="hidden sm:inline">Làm mới danh bạ</span>
-              </Button>
-            </div>
-          </div>
-
-          <section aria-label="Sơ đồ cây tổ chức">
-            <OrganizationTree />
-          </section>
-        </div>
-      )}
+      {activeZone === "org" && <OrgZone />}
 
       {/* TaskDetailSideSheet Slide-Over (only rendered when task is active) */}
       {selectedTask && (
@@ -1623,7 +1526,9 @@ function UnifiedTaskHubContent() {
 export default function UnifiedTaskHubPage() {
   return (
     <React.Suspense fallback={<DashboardLoadingFallback />}>
-      <UnifiedTaskHubContent />
+      <DashboardStateProvider>
+        <UnifiedTaskHubContent />
+      </DashboardStateProvider>
     </React.Suspense>
   );
 }
