@@ -9,6 +9,7 @@ import {
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
+import { PushOnboardingSheet } from "@/components/pwa/push-onboarding-sheet";
 import { cn } from "@/lib/utils";
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
@@ -43,6 +44,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       <React.Suspense fallback={null}>
         <MobileBottomNav className="flex md:hidden" />
       </React.Suspense>
+
+      <PushOnboardingSheet />
     </div>
   );
 }

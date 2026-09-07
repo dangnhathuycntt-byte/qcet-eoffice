@@ -14,6 +14,14 @@ import {
   X,
   ChevronRight,
   ShieldCheck,
+  Bell,
+  BellRing,
+  BellOff,
+  Volume2,
+  Download,
+  Smartphone,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import {
   BottomSheet,
@@ -24,6 +32,8 @@ import {
   BottomSheetClose,
 } from "@/components/ui/bottom-sheet";
 import { useAuth } from "@/context/auth-context";
+import { usePushNotification } from "@/hooks/use-push-notification";
+import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { cn } from "@/lib/utils";
 import { DEMO_USERS } from "@/lib/auth/roles";
 
@@ -36,6 +46,25 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
   const { user, switchUser, logout } = useAuth();
   const pathname = usePathname();
   const [isDark, setIsDark] = React.useState(false);
+  const [isTestingPush, setIsTestingPush] = React.useState(false);
+  const [testPushResult, setTestPushResult] = React.useState<"success" | "failed" | null>(null);
+
+  const {
+    isSupported,
+    isSubscribed,
+    isLoading,
+    subscribeToPush,
+    unsubscribeFromPush,
+    sendTestNotification,
+  } = usePushNotification();
+
+  const {
+    isInstallable,
+    isInstalled,
+    isIOS,
+    isStandalone,
+    installApp,
+  } = usePWAInstall();
 
   React.useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
@@ -166,6 +195,149 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
               </div>
               <ChevronRight size={14} className="text-muted-foreground" />
             </Link>
+          </div>
+
+          {/* Mobile Push Notification & App Section */}
+          <div className="space-y-2 pt-2 border-t border-border/40">
+            <div className="flex items-center justify-between px-1 pb-1">
+              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Bell size={13} className="text-primary" />
+                <span>THÔNG BÁO ĐIỆN THOẠI & ỨNG DỤNG</span>
+              </div>
+              {isSupported ? (
+                isSubscribed ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <CheckCircle2 size={11} />
+                    Đã kích hoạt
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    Chưa bật
+                  </span>
+                )
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border/40">
+                  Không hỗ trợ
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              {/* Push Toggle Button */}
+              {isSupported && (
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={async () => {
+                    if (isSubscribed) {
+                      await unsubscribeFromPush();
+                    } else {
+                      await subscribeToPush();
+                    }
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between p-3 min-h-[44px] rounded-xl text-xs font-medium transition-colors border cursor-pointer",
+                    isSubscribed
+                      ? "bg-muted/40 hover:bg-muted/60 border-border/50 text-foreground"
+                      : "bg-primary/10 hover:bg-primary/15 border-primary/30 text-primary font-semibold"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    {isLoading ? (
+                      <Loader2 size={17} className="animate-spin text-primary" />
+                    ) : isSubscribed ? (
+                      <BellOff size={17} className="text-muted-foreground" />
+                    ) : (
+                      <BellRing size={17} className="text-primary" />
+                    )}
+                    <span>{isSubscribed ? "Tắt thông báo chuông" : "Bật thông báo chuông"}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {isSubscribed ? "Đang bật" : "Kích hoạt"}
+                  </span>
+                </button>
+              )}
+
+              {/* Test Ring Button */}
+              {isSupported && isSubscribed && (
+                <button
+                  type="button"
+                  disabled={isTestingPush || isLoading}
+                  onClick={async () => {
+                    setIsTestingPush(true);
+                    setTestPushResult(null);
+                    try {
+                      const ok = await sendTestNotification({
+                        title: "Thử nghiệm chuông QCET",
+                        body: "Thông báo chuông điện thoại đang hoạt động chuẩn xác.",
+                        linkHref: "/?zone=tasks",
+                      });
+                      setTestPushResult(ok ? "success" : "failed");
+                      setTimeout(() => setTestPushResult(null), 3000);
+                    } finally {
+                      setIsTestingPush(false);
+                    }
+                  }}
+                  className="w-full flex items-center justify-between p-3 min-h-[44px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors cursor-pointer border border-border/40"
+                >
+                  <div className="flex items-center gap-3">
+                    {isTestingPush ? (
+                      <Loader2 size={17} className="animate-spin text-primary" />
+                    ) : (
+                      <Volume2 size={17} className="text-primary" />
+                    )}
+                    <span>Thử chuông ngay</span>
+                  </div>
+                  <span className="text-xs font-semibold text-primary font-mono">
+                    {testPushResult === "success"
+                      ? "Đã gửi chuông"
+                      : testPushResult === "failed"
+                      ? "Lỗi gửi"
+                      : "Gửi thử"}
+                  </span>
+                </button>
+              )}
+
+              {/* Install App Button if installable */}
+              {isInstallable && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await installApp();
+                    onOpenChange(false);
+                  }}
+                  className="w-full flex items-center justify-between p-3 min-h-[44px] rounded-xl bg-primary text-primary-foreground font-semibold text-xs transition-colors cursor-pointer shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <Download size={17} />
+                    <span>Cài đặt lên màn hình chính</span>
+                  </div>
+                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-md">
+                    1-Chạm
+                  </span>
+                </button>
+              )}
+
+              {/* iOS Safari Guide Button if iOS & not standalone */}
+              {isIOS && !isStandalone && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenChange(false);
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent("qcet:open-push-onboarding"));
+                    }
+                  }}
+                  className="w-full flex items-center justify-between p-3 min-h-[44px] rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-medium text-xs transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <Smartphone size={17} />
+                    <span>Xem hướng dẫn cài đặt iOS</span>
+                  </div>
+                  <ChevronRight size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Preferences & Actions */}
