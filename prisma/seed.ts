@@ -91,8 +91,27 @@ async function main() {
   const tcktOwnerId = userMap['truongphong.tckt@qcet.edu.vn'];
   const lxOwnerId = userMap['giamdoc.ttlaixe@qcet.edu.vn'];
   const tsOwnerId = userMap['giamdoc.tttuyensinh@qcet.edu.vn'];
+  const cvId = userMap['chuyenvien@qcet.edu.vn'];
+  const phoHieuTruongId = userMap['phohieutruong1@qcet.edu.vn'];
 
-  const sampleTasks = [
+  interface SampleTaskItem {
+    code: string;
+    title: string;
+    description: string;
+    scope: TaskScope;
+    status: TaskStatus;
+    priority: TaskPriority;
+    progressPercent: number;
+    academicMonth: number;
+    academicYear: string;
+    dueDate: Date;
+    departmentId: string;
+    createdById: string;
+    assigneeId?: string;
+    collaboratorIds?: string[];
+  }
+
+  const sampleTasks: SampleTaskItem[] = [
     // --- THÁNG 9/2026 ---
     {
       code: 'NV-2026-09-001',
@@ -108,6 +127,7 @@ async function main() {
       departmentId: 'khoa-cntt',
       createdById: adminId,
       assigneeId: cnttOwnerId,
+      collaboratorIds: [gvId, cvId],
     },
     {
       code: 'NV-2026-09-002',
@@ -123,6 +143,7 @@ async function main() {
       departmentId: 'phong-dao-tao',
       createdById: adminId,
       assigneeId: pdtOwnerId,
+      collaboratorIds: [qctbOwnerId, cnttOwnerId],
     },
     {
       code: 'NV-2026-09-003',
@@ -138,6 +159,7 @@ async function main() {
       departmentId: 'khoa-cntt',
       createdById: cnttOwnerId,
       assigneeId: gvId,
+      collaboratorIds: [cnttOwnerId, pdtOwnerId],
     },
     {
       code: 'NV-2026-09-004',
@@ -153,6 +175,7 @@ async function main() {
       departmentId: 'phong-cthssv',
       createdById: adminId,
       assigneeId: cthssvOwnerId,
+      collaboratorIds: [pdtOwnerId, tsOwnerId, qctbOwnerId],
     },
 
     // --- THÁNG 10/2026 ---
@@ -170,6 +193,7 @@ async function main() {
       departmentId: 'khoa-co-khi',
       createdById: pdtOwnerId,
       assigneeId: ckOwnerId,
+      collaboratorIds: [qctbOwnerId],
     },
     {
       code: 'NV-2026-10-006',
@@ -185,6 +209,7 @@ async function main() {
       departmentId: 'tt-tuyensinh',
       createdById: adminId,
       assigneeId: tsOwnerId,
+      collaboratorIds: [pdtOwnerId],
     },
     {
       code: 'NV-2026-10-007',
@@ -200,6 +225,7 @@ async function main() {
       departmentId: 'phong-tckt',
       createdById: adminId,
       assigneeId: tcktOwnerId,
+      collaboratorIds: [ckOwnerId, dienOwnerId, otoOwnerId],
     },
     {
       code: 'NV-2026-10-008',
@@ -232,6 +258,7 @@ async function main() {
       departmentId: 'phong-dao-tao',
       createdById: adminId,
       assigneeId: pdtOwnerId,
+      collaboratorIds: [cnttOwnerId, ckOwnerId, dienOwnerId],
     },
     {
       code: 'NV-2026-11-010',
@@ -309,6 +336,7 @@ async function main() {
       departmentId: 'phong-dao-tao',
       createdById: adminId,
       assigneeId: pdtOwnerId,
+      collaboratorIds: [cnttOwnerId, cthssvOwnerId],
     },
     {
       code: 'NV-2026-12-015',
@@ -324,6 +352,7 @@ async function main() {
       departmentId: 'phong-qctb',
       createdById: adminId,
       assigneeId: qctbOwnerId,
+      collaboratorIds: [tcktOwnerId, ckOwnerId, cnttOwnerId],
     },
     {
       code: 'NV-2026-12-016',
@@ -386,6 +415,7 @@ async function main() {
       departmentId: 'phong-qctb',
       createdById: adminId,
       assigneeId: qctbOwnerId,
+      collaboratorIds: [otoOwnerId, ckOwnerId, dienOwnerId],
     },
 
     // --- THÁNG 2/2027 ---
@@ -450,6 +480,7 @@ async function main() {
       departmentId: 'khoa-co-khi',
       createdById: pdtOwnerId,
       assigneeId: ckOwnerId,
+      collaboratorIds: [dienOwnerId, pdtOwnerId],
     },
     {
       code: 'NV-2027-03-024',
@@ -512,6 +543,7 @@ async function main() {
       departmentId: 'phong-cthssv',
       createdById: adminId,
       assigneeId: cthssvOwnerId,
+      collaboratorIds: [tsOwnerId, ckOwnerId, cnttOwnerId, otoOwnerId],
     },
     {
       code: 'NV-2027-04-028',
@@ -527,6 +559,7 @@ async function main() {
       departmentId: 'phong-dao-tao',
       createdById: adminId,
       assigneeId: pdtOwnerId,
+      collaboratorIds: [cthssvOwnerId, ckOwnerId, otoOwnerId],
     },
     {
       code: 'NV-2027-04-029',
@@ -589,6 +622,7 @@ async function main() {
       departmentId: 'khoa-oto',
       createdById: pdtOwnerId,
       assigneeId: otoOwnerId,
+      collaboratorIds: [lxOwnerId, ckOwnerId],
     },
 
     // --- THÁNG 6/2027 ---
@@ -653,6 +687,7 @@ async function main() {
       departmentId: 'phong-cthssv',
       createdById: adminId,
       assigneeId: cthssvOwnerId,
+      collaboratorIds: [pdtOwnerId, tcktOwnerId, qctbOwnerId],
     },
     {
       code: 'NV-2027-07-037',
@@ -719,7 +754,7 @@ async function main() {
   ];
 
   for (const t of sampleTasks) {
-    const { assigneeId, ...taskData } = t;
+    const { assigneeId, collaboratorIds, ...taskData } = t;
     const task = await prisma.task.upsert({
       where: { code: t.code },
       update: taskData,
@@ -742,6 +777,26 @@ async function main() {
           roleInTask: AssigneeRole.PRIMARY_OWNER,
         },
       });
+    }
+
+    if (collaboratorIds && collaboratorIds.length > 0) {
+      for (const collabId of collaboratorIds) {
+        await prisma.taskAssignee.upsert({
+          where: {
+            taskId_userId_roleInTask: {
+              taskId: task.id,
+              userId: collabId,
+              roleInTask: AssigneeRole.COLLABORATOR,
+            },
+          },
+          update: {},
+          create: {
+            taskId: task.id,
+            userId: collabId,
+            roleInTask: AssigneeRole.COLLABORATOR,
+          },
+        });
+      }
     }
   }
 
