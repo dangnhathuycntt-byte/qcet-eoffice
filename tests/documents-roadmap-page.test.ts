@@ -5,8 +5,12 @@ import fs from "node:fs";
 import path from "node:path";
 import DocumentsPage, { metadata } from "@/app/documents/page";
 
-describe("Documents Roadmap Placeholder Page Test Suite", () => {
+describe("Documents Module Test Suite", () => {
   const pagePath = path.join(process.cwd(), "src/app/documents/page.tsx");
+  const viewPath = path.join(
+    process.cwd(),
+    "src/components/documents/document-registry-view.tsx"
+  );
 
   test("src/app/documents/page.tsx exists on disk", () => {
     assert.ok(fs.existsSync(pagePath), "src/app/documents/page.tsx must exist");
@@ -14,10 +18,9 @@ describe("Documents Roadmap Placeholder Page Test Suite", () => {
 
   test("Metadata title and description match QCET specification", () => {
     assert.ok(metadata, "Metadata must be exported from page");
-    assert.strictEqual(
-      metadata.title,
-      "Văn bản & Công văn - QCET E-Office",
-      "Page title must be 'Văn bản & Công văn - QCET E-Office'"
+    assert.ok(
+      typeof metadata.title === "string" && metadata.title.includes("Văn bản & Quản lý Công văn"),
+      "Page title must include 'Văn bản & Quản lý Công văn'"
     );
     assert.ok(
       typeof metadata.description === "string" && metadata.description.length > 0,
@@ -25,122 +28,123 @@ describe("Documents Roadmap Placeholder Page Test Suite", () => {
     );
   });
 
-  test("DocumentsPage component is a valid callable function", () => {
+  test("DocumentsPage component is a valid callable function returning JSX", () => {
     assert.strictEqual(typeof DocumentsPage, "function");
     const element = DocumentsPage();
     assert.ok(element, "DocumentsPage must return JSX element");
   });
 
-  describe("File Content & Anti-Slop Audit", () => {
-    const fileContent = fs.readFileSync(pagePath, "utf-8");
+  describe("Operational Registry Architecture & Anti-Slop Audit", () => {
+    test("Page mounts DocumentRegistryView inside React.Suspense", () => {
+      const pageContent = fs.readFileSync(pagePath, "utf-8");
+      assert.ok(
+        pageContent.includes("DocumentRegistryView"),
+        "Must import and render DocumentRegistryView"
+      );
+      assert.ok(
+        pageContent.includes("React.Suspense"),
+        "Must wrap in React.Suspense for search params"
+      );
+    });
 
-    test("Contains zero decorative emojis (100% Lucide icons)", () => {
+    test("DocumentRegistryView contains zero decorative emojis (100% Lucide icons)", () => {
+      const viewContent = fs.readFileSync(viewPath, "utf-8");
       const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
       assert.strictEqual(
-        emojiRegex.test(fileContent),
+        emojiRegex.test(viewContent),
         false,
-        "Page must not contain any decorative emojis"
+        "DocumentRegistryView must not contain any decorative emojis"
       );
     });
 
-    test("Header contains breadcrumb linking to Trang chủ and showing Văn bản & Công văn", () => {
+    test("Header contains breadcrumb linking to Trang chủ and official title", () => {
+      const viewContent = fs.readFileSync(viewPath, "utf-8");
+      assert.ok(viewContent.includes('href="/"'), "Must contain Link to '/'");
+      assert.ok(viewContent.includes("Trang chủ"), "Must contain 'Trang chủ' text");
       assert.ok(
-        fileContent.includes('href="/"'),
-        "Must contain Link to '/'"
+        viewContent.includes("Sổ Quản Lý Văn Bản &amp; Công Văn Điện Tử") ||
+          viewContent.includes("Sổ Quản Lý Văn Bản & Công Văn Điện Tử"),
+        "Must contain official title 'Sổ Quản Lý Văn Bản & Công Văn Điện Tử'"
       );
       assert.ok(
-        fileContent.includes("Trang chủ"),
-        "Must contain 'Trang chủ' text"
-      );
-      assert.ok(
-        fileContent.includes("Văn bản &amp; Công văn") || fileContent.includes("Văn bản & Công văn"),
-        "Must contain 'Văn bản & Công văn' text"
-      );
-    });
-
-    test("Header displays title and in-development badge", () => {
-      assert.ok(
-        fileContent.includes("Phân hệ Văn bản &amp; Quản lý Công văn") ||
-          fileContent.includes("Phân hệ Văn bản & Quản lý Công văn"),
-        "Must display 'Phân hệ Văn bản & Quản lý Công văn'"
-      );
-      assert.ok(
-        fileContent.includes("Đang phát triển - Lộ trình Năm học 2025-2026"),
-        "Must display in-development badge 'Đang phát triển - Lộ trình Năm học 2025-2026'"
+        viewContent.includes("Nghị định 30/2020/NĐ-CP"),
+        "Must reference Decree 30/2020/ND-CP"
       );
     });
 
-    test("Central feature card contains heading and descriptive text", () => {
+    test("Includes operational KPI cards for inbox, outbox, and linked tasks", () => {
+      const viewContent = fs.readFileSync(viewPath, "utf-8");
+      assert.ok(viewContent.includes("VĂN BẢN ĐẾN"), "Must display VĂN BẢN ĐẾN KPI card");
+      assert.ok(viewContent.includes("VĂN BẢN ĐI"), "Must display VĂN BẢN ĐI KPI card");
+      assert.ok(viewContent.includes("TỜ TRÌNH DUYỆT"), "Must display TỜ TRÌNH DUYỆT KPI card");
       assert.ok(
-        fileContent.includes("Tính năng đang trong lộ trình phát triển"),
-        "Must have heading 'Tính năng đang trong lộ trình phát triển'"
-      );
-      assert.ok(
-        fileContent.includes("Hệ thống đang tập trung nguồn lực tối ưu hóa phân hệ Quản lý công việc &amp; Bàn làm việc số") ||
-          fileContent.includes("Hệ thống đang tập trung nguồn lực tối ưu hóa phân hệ Quản lý công việc & Bàn làm việc số"),
-        "Must contain description regarding task management prioritization"
-      );
-      assert.ok(
-        fileContent.includes("Phân hệ Quản lý Công văn, Tờ trình và Ký số điện tử đang được hoàn thiện kỹ thuật và sẽ sớm ra mắt"),
-        "Must contain description regarding documents module roadmap"
+        viewContent.includes("LIÊN THÔNG NHIỆM VỤ"),
+        "Must display LIÊN THÔNG NHIỆM VỤ KPI card"
       );
     });
 
-    test("Includes 3 planned feature preview cards with exact requirements", () => {
-      // 1. Sổ công văn điện tử
+    test("Action buttons allow creating new documents and exporting registry", () => {
+      const viewContent = fs.readFileSync(viewPath, "utf-8");
       assert.ok(
-        fileContent.includes("Sổ công văn điện tử"),
-        "Must include 'Sổ công văn điện tử'"
+        viewContent.includes("Soạn văn bản / Tờ trình"),
+        "Must have button to compose document or proposal"
       );
       assert.ok(
-        fileContent.includes("Tiếp nhận, số hóa và lưu trữ công văn đến/đi từ các cơ quan cấp trên"),
-        "Must include description for 'Sổ công văn điện tử'"
-      );
-
-      // 2. Tờ trình & Bút phê số
-      assert.ok(
-        fileContent.includes("Tờ trình &amp; Bút phê số") || fileContent.includes("Tờ trình & Bút phê số"),
-        "Must include 'Tờ trình & Bút phê số'"
-      );
-      assert.ok(
-        fileContent.includes("Trình duyệt tờ trình điện tử liên phòng khoa, hỗ trợ ký số lãnh đạo"),
-        "Must include description for 'Tờ trình & Bút phê số'"
-      );
-
-      // 3. Tự động giao việc từ công văn
-      assert.ok(
-        fileContent.includes("Tự động giao việc từ công văn"),
-        "Must include 'Tự động giao việc từ công văn'"
-      );
-      assert.ok(
-        fileContent.includes("Liên thông trực tiếp văn bản vào Kho nhiệm vụ của từng đơn vị"),
-        "Must include description for 'Tự động giao việc từ công văn'"
+        viewContent.includes("Xuất sổ điện tử"),
+        "Must have button to export registry"
       );
     });
 
-    test("Action buttons link to '/' and '/tasks' with proper icons and labels", () => {
-      // Primary button
+    test("DensityToggle and ergonomic table density classes are integrated", () => {
+      const viewContent = fs.readFileSync(viewPath, "utf-8");
       assert.ok(
-        fileContent.includes("Quay về Bàn làm việc"),
-        "Must have button 'Quay về Bàn làm việc'"
+        viewContent.includes("<DensityToggle") && viewContent.includes("import { DensityToggle }"),
+        "DocumentRegistryView must import and render DensityToggle in toolbar"
       );
       assert.ok(
-        fileContent.includes("ArrowLeft"),
-        "Primary button must use ArrowLeft icon"
+        viewContent.includes("table-row-dense"),
+        "Table must apply table-row-dense class"
       );
+      assert.ok(
+        viewContent.includes("table-cell-dense"),
+        "Table cells must apply table-cell-dense class"
+      );
+    });
 
-      // Secondary button
+    test("Document summary and official code follow typography standards", () => {
+      const viewContent = fs.readFileSync(viewPath, "utf-8");
       assert.ok(
-        fileContent.includes("/tasks"),
-        "Must link to '/tasks'"
+        viewContent.includes("text-sm font-medium text-foreground line-clamp-2 leading-relaxed"),
+        "Trích yếu summary must be styled with text-sm font-medium text-foreground line-clamp-2 leading-relaxed"
       );
       assert.ok(
-        fileContent.includes("Xem Kho 304 nhiệm vụ"),
-        "Must have button 'Xem Kho 304 nhiệm vụ'"
+        viewContent.includes("font-mono text-xs md:text-[13px] font-semibold text-primary"),
+        "Document official number must be styled with font-mono text-xs md:text-[13px] font-semibold text-primary"
       );
       assert.ok(
-        fileContent.includes("CheckSquare"),
-        "Secondary button must use CheckSquare icon"
+        viewContent.includes("text-xs font-semibold uppercase tracking-wider text-muted-foreground"),
+        "Table headers must use uppercase tracking-wider text-xs font-semibold"
+      );
+    });
+
+    test("Zero micro-typography classes (< 12px) in documents components", () => {
+      const docsDir = path.join(process.cwd(), "src/components/documents");
+      const files = fs.readdirSync(docsDir).filter((f) => /\.(tsx|ts)$/.test(f));
+      const forbiddenRegex = /\btext-\[(8|9|10|11)px\]/g;
+      const violations: string[] = [];
+
+      for (const file of files) {
+        const content = fs.readFileSync(path.join(docsDir, file), "utf-8");
+        const matches = content.match(forbiddenRegex);
+        if (matches) {
+          violations.push(`${file}: ${matches.join(", ")}`);
+        }
+      }
+
+      assert.strictEqual(
+        violations.length,
+        0,
+        `Found micro-typography violations in documents: ${violations.join("; ")}`
       );
     });
   });
