@@ -97,16 +97,18 @@ export function validateDeliverableSubmission(
   }
 
   if (trimmedUrl) {
-    const isPotentiallyValidUrl =
-      trimmedUrl.startsWith("http://") ||
-      trimmedUrl.startsWith("https://") ||
-      trimmedUrl.startsWith("ftp://") ||
-      trimmedUrl.includes(".");
-
-    if (!isPotentiallyValidUrl) {
+    try {
+      const parsed = new URL(trimmedUrl);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        return {
+          isValid: false,
+          error: "Đường dẫn liên kết phải sử dụng giao thức http:// hoặc https://",
+        };
+      }
+    } catch {
       return {
         isValid: false,
-        error: "Đường dẫn liên kết không đúng định dạng (cần bắt đầu bằng https:// hoặc http://).",
+        error: "Đường dẫn liên kết không đúng định dạng URL hợp lệ",
       };
     }
   }

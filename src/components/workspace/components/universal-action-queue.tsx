@@ -25,6 +25,8 @@ export interface UniversalActionQueueProps {
   className?: string;
   onReview?: (payload: ApprovalActionPayload) => void;
   onSubmitDeliverable?: (payload: DeliverableSubmissionPayload) => void;
+  onOpenReview?: (task: SchoolTask | StaffTask) => void;
+  onOpenSubmit?: (task: StaffTask) => void;
 }
 
 export function UniversalActionQueue({
@@ -34,6 +36,8 @@ export function UniversalActionQueue({
   className,
   onReview,
   onSubmitDeliverable,
+  onOpenReview,
+  onOpenSubmit,
 }: UniversalActionQueueProps) {
   const { pendingApprovals = [], myPendingSubmissions = [] } = actionQueue;
   const [isApprovalsExpanded, setIsApprovalsExpanded] = React.useState(false);
@@ -207,13 +211,9 @@ export function UniversalActionQueue({
                         approvalConfig.btnClass
                       )}
                       onClick={() => {
-                        if (onReview && scope === "school") {
-                          onReview({
-                            taskId: item.task.id,
-                            decision: "approved",
-                            reviewedByRole: "ADMIN",
-                            reviewedByName: "BGH",
-                          });
+                        // Mở modal/sheet thẩm định chi tiết có danh tính thật nếu có, hoặc chuyển sang chọn task
+                        if (onOpenReview) {
+                          onOpenReview(item.task);
                         } else {
                           onSelectTask(item.task);
                         }
@@ -315,7 +315,9 @@ export function UniversalActionQueue({
                     size="xs"
                     className="min-h-[44px] touch-manipulation px-3.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shrink-0 gap-1.5 cursor-pointer"
                     onClick={() => {
-                      if (onSubmitDeliverable) {
+                      if (onOpenSubmit) {
+                        onOpenSubmit(item.task);
+                      } else if (onSubmitDeliverable) {
                         onSubmitDeliverable({
                           taskId: item.task.id,
                           deliverableName: item.task.title,

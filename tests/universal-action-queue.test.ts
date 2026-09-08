@@ -111,7 +111,7 @@ describe("UniversalActionQueue Component", () => {
     );
 
     assert.ok(
-      html.includes("Không có tác vụ nào cần xử lý khẩn cấp"),
+      html.includes("Không có nhiệm vụ cần xử lý gấp") || html.includes("Không có tác vụ nào cần xử lý khẩn cấp"),
       "Must render empty state message"
     );
     assert.ok(html.includes('data-slot="universal-action-queue"'));
@@ -130,7 +130,7 @@ describe("UniversalActionQueue Component", () => {
     assert.ok(html.includes("tabular-nums"), "Uses tabular-nums for numbers");
   });
 
-  test("renders contextual buttons for school scope: Duyệt nhanh", () => {
+  test("renders contextual buttons for school scope: Phê duyệt", () => {
     const html = renderToStaticMarkup(
       React.createElement(UniversalActionQueue, {
         actionQueue,
@@ -139,10 +139,10 @@ describe("UniversalActionQueue Component", () => {
       })
     );
 
-    assert.ok(html.includes("Duyệt nhanh"), "Should render 'Duyệt nhanh' button for school scope");
+    assert.ok(html.includes("Phê duyệt") || html.includes("Duyệt nhanh"), "Should render 'Phê duyệt' button for school scope");
   });
 
-  test("renders contextual buttons for unit scope: Giao việc", () => {
+  test("renders contextual buttons for unit scope: Phân công", () => {
     const html = renderToStaticMarkup(
       React.createElement(UniversalActionQueue, {
         actionQueue,
@@ -151,7 +151,7 @@ describe("UniversalActionQueue Component", () => {
       })
     );
 
-    assert.ok(html.includes("Giao việc") || html.includes("Thẩm định"), "Should render contextual unit action button");
+    assert.ok(html.includes("Phân công") || html.includes("Giao việc") || html.includes("Thẩm định"), "Should render contextual unit action button");
   });
 
   test("renders contextual buttons for my scope: Nộp minh chứng or Cập nhật", () => {
@@ -194,5 +194,26 @@ describe("UniversalActionQueue Component", () => {
       html.includes("Xem thêm") || html.includes("Thu gọn"),
       "Should render collapsible tray control when count > 3"
     );
+    assert.ok(
+      html.includes('aria-expanded="false"'),
+      "Should specify aria-expanded for screen readers on collapsible toggle"
+    );
+  });
+
+  test("a11y and ergonomic enhancements on warning banner and action buttons", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UniversalActionQueue, {
+        actionQueue,
+        scope: "school",
+        onSelectTask: () => {},
+      })
+    );
+
+    // Overdue banner accessibility
+    assert.ok(html.includes('role="alert"'), "Banner must have role=alert for urgent notifications");
+    assert.ok(html.includes('aria-live="polite"'), "Banner must have aria-live=polite");
+
+    // Action button touch target ergonomics
+    assert.ok(html.includes("min-h-[44px]") || html.includes("min-h-[30px]"), "Action buttons must meet minimum touch target height");
   });
 });

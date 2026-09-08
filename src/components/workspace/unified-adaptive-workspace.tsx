@@ -8,6 +8,9 @@ import { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 import { UniversalActionQueue } from "./components/universal-action-queue";
 import { CascadingTaskTable } from "@/components/tasks/cascading-task-table";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
+import { ReviewActionDialog } from "@/components/portal/review-action-dialog";
+import { SubmitDeliverableModal } from "@/components/portal/submit-deliverable-modal";
+import type { SchoolTask, StaffTask } from "@/types/dashboard";
 
 export function UnifiedAdaptiveWorkspace({
   user,
@@ -47,6 +50,17 @@ export function UnifiedAdaptiveWorkspace({
       setActiveScope(initialScope);
     }
   }, [forcedScope, initialScope]);
+
+  // Interactive dialog states for task review and deliverable submission
+  const [reviewingTask, setReviewingTask] = React.useState<SchoolTask | StaffTask | null>(null);
+  const [submittingTask, setSubmittingTask] = React.useState<StaffTask | null>(null);
+
+  const effectiveReviewerRole: "ADMIN" | "MANAGER" | "STAFF" = React.useMemo(() => {
+    if (forcedRole) return forcedRole;
+    if (isExecutiveUser(user)) return "ADMIN";
+    if (isManagerUser(user)) return "MANAGER";
+    return "STAFF";
+  }, [forcedRole, user]);
 
   const { scopedTasks, metrics, actionQueue } = useAdaptiveWorkspaceData(
     tasks,
@@ -114,6 +128,8 @@ export function UnifiedAdaptiveWorkspace({
         scope={activeScope}
         onReview={onReview}
         onSubmitDeliverable={onSubmitDeliverable}
+        onOpenReview={onReview ? (task) => setReviewingTask(task) : undefined}
+        onOpenSubmit={(task) => setSubmittingTask(task)}
       />
 
       {/* 4. Single Shared Task Canvas */}
@@ -129,18 +145,46 @@ export function UnifiedAdaptiveWorkspace({
               : undefined
           }
           onOpenSubmitModal={
-            onSubmitDeliverable
-              ? (st) =>
-                  onSubmitDeliverable({
-                    taskId: st.id,
-                    deliverableName: st.title || "Minh chứng",
-                    url: "",
-                    note: "",
-                  })
-              : undefined
+            (st) => {
+              if (onSubmitDeliverable) {
+                setSubmittingTask(st);
+              }
+            }
           }
         />
       </div>
+
+      {/* 5. Authenticated Review Action Dialog */}
+      {reviewingTask && onReview && (
+        <ReviewActionDialog
+          isOpen={Boolean(reviewingTask)}
+          onClose={() => setReviewingTask(null)}
+          task={reviewingTask}
+          taskId={reviewingTask.id}
+          taskTitle={reviewingTask.title}
+          reviewerRole={effectiveReviewerRole}
+          reviewerName={user.name}
+          onReview={async (payload) => {
+            await onReview(payload);
+            setReviewingTask(null);
+          }}
+        />
+      )}
+
+      {/* 6. Authenticated Submit Deliverable Modal */}
+      {submittingTask && onSubmitDeliverable && (
+        <SubmitDeliverableModal
+          isOpen={Boolean(submittingTask)}
+          onClose={() => setSubmittingTask(null)}
+          task={submittingTask}
+          taskId={submittingTask.id}
+          taskTitle={submittingTask.title}
+          onSubmit={async (payload) => {
+            await onSubmitDeliverable(payload);
+            setSubmittingTask(null);
+          }}
+        />
+      )}
     </div>
   );
 }
