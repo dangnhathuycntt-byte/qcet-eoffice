@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SubmitDeliverableModal } from "./submit-deliverable-modal";
+import { UnifiedAdaptiveWorkspace } from "@/components/workspace/unified-adaptive-workspace";
 
 // ============================================================================
 // 1. Types & Interfaces
@@ -101,12 +102,13 @@ export function getDaysRemaining(
   referenceDate?: string
 ): number | null {
   if (!dueDateStr) return null;
-  const ref = referenceDate
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const refDate = referenceDate
     ? new Date(referenceDate + "T00:00:00Z")
-    : new Date();
-  const refDate = new Date(
-    Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate())
-  );
+    : new Date(`${year}-${month}-${day}T00:00:00Z`);
 
   const dueParts = dueDateStr.slice(0, 10).split("-");
   if (dueParts.length !== 3) return null;
@@ -443,7 +445,40 @@ export function getPageNumbers(current: number, total: number): (number | string
 // 4. Main Component: LecturerFocusWorkspace
 // ============================================================================
 
+/**
+ * LecturerFocusWorkspace - Thin adapter over UnifiedAdaptiveWorkspace.
+ * Preserves complete backward compatibility for props and interfaces.
+ */
 export function LecturerFocusWorkspace({
+  user,
+  tasks = [],
+  onSelectTask,
+  onSubmitDeliverable,
+  onStatusChange,
+  onRefresh,
+  isRefreshing,
+  className,
+}: LecturerFocusWorkspaceProps) {
+  return (
+    <div className={className} data-slot="lecturer-focus-workspace">
+      <UnifiedAdaptiveWorkspace
+        user={user}
+        tasks={tasks}
+        initialScope="my"
+        forcedRole="STAFF"
+        contextTitle="Không gian tập trung - Giảng viên / Chuyên viên · Nộp minh chứng & Việc Hôm nay"
+        contextBadge="Cá nhân"
+        onSelectTask={onSelectTask || (() => {})}
+        onSubmitDeliverable={onSubmitDeliverable}
+        onStatusChange={onStatusChange}
+        onRefresh={onRefresh}
+        isRefreshing={isRefreshing}
+      />
+    </div>
+  );
+}
+
+export function LegacyLecturerFocusWorkspace({
   user,
   tasks = [],
   staffTasks,
@@ -728,7 +763,7 @@ export function LecturerFocusWorkspace({
   };
 
   return (
-    <div className={cn("space-y-6 max-w-7xl mx-auto px-4 sm:px-6 py-6", className)}>
+    <div id="tour-tasks-landing" className={cn("space-y-6 max-w-7xl mx-auto px-4 sm:px-6 py-6", className)}>
       {/* ------------------------------------------------------------------ */}
       {/* Section 1: Personal Welcome Header */}
       {/* ------------------------------------------------------------------ */}

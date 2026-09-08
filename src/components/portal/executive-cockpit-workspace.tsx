@@ -37,6 +37,7 @@ import type {
   SchoolBottleneckItem,
 } from "@/types/workspace";
 import type { ExecutiveResolutionPayload } from "@/types/executive-resolution";
+import { UnifiedAdaptiveWorkspace } from "@/components/workspace/unified-adaptive-workspace";
 import {
   QCET_DEPARTMENT_DEFINITIONS,
   computeDepartmentHealthMatrix,
@@ -542,7 +543,42 @@ export function filterStrategicTasks(
 const EMPTY_TASKS: SchoolTask[] = [];
 const EMPTY_STAFF_TASKS: StaffTask[] = [];
 
+/**
+ * ExecutiveCockpitWorkspace - Thin adapter over UnifiedAdaptiveWorkspace.
+ * Preserves complete backward compatibility for props and interfaces.
+ */
 export function ExecutiveCockpitWorkspace({
+  user,
+  tasks = EMPTY_TASKS,
+  onSelectTask,
+  onReview,
+  onSubmitDeliverable,
+  onCreateDirective,
+  onSendReminder,
+  onStatusChange,
+  className,
+}: ExecutiveCockpitWorkspaceProps) {
+  return (
+    <div className={className} data-slot="executive-cockpit-workspace">
+      <UnifiedAdaptiveWorkspace
+        user={user}
+        tasks={tasks}
+        initialScope="school"
+        forcedRole="ADMIN"
+        contextTitle="Khoang chỉ huy Ban Giám Hiệu"
+        contextBadge="BGH"
+        onSelectTask={onSelectTask || (() => {})}
+        onReview={onReview}
+        onSubmitDeliverable={onSubmitDeliverable}
+        onStatusChange={onStatusChange}
+        onCreateTask={onCreateDirective ? () => onCreateDirective() : undefined}
+        onSendReminder={onSendReminder}
+      />
+    </div>
+  );
+}
+
+export function LegacyExecutiveCockpitWorkspace({
   user,
   tasks = EMPTY_TASKS,
   staffTasks = EMPTY_STAFF_TASKS,
