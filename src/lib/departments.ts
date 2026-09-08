@@ -207,7 +207,9 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
 ];
 
 export function getDepartmentByCode(code: string): DepartmentPersonnelGroup | undefined {
-  return QCET_DEPARTMENT_GROUPS.find((group) => group.code === code);
+  return QCET_DEPARTMENT_GROUPS.find(
+    (g) => g.code.toLowerCase() === code.toLowerCase()
+  );
 }
 
 export function getDepartmentForMember(

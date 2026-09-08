@@ -5,8 +5,9 @@ import path from "node:path";
 import { QCET_DEPARTMENT_GROUPS, getDepartmentByCode } from "@/lib/departments";
 import { triggerHaptic, isHapticSupported, isHapticsEnabled, setHapticsEnabled } from "@/lib/haptics";
 import { isSchoolTask } from "@/types/dashboard";
+import type { DepartmentPersonnel, DepartmentPersonnelGroup } from "@/types/dashboard";
 
-describe("Bundle Leak Prevention & Haptics Suite", () => {
+describe("PWA Foundation, Departments & Haptics Suite", () => {
   test("QCET_DEPARTMENT_GROUPS contains valid school and unit departments", () => {
     assert.ok(Array.isArray(QCET_DEPARTMENT_GROUPS));
     assert.ok(QCET_DEPARTMENT_GROUPS.length >= 6);
@@ -15,7 +16,7 @@ describe("Bundle Leak Prevention & Haptics Suite", () => {
     assert.strictEqual(bgh.name, "Ban Giám hiệu");
   });
 
-  test("getDepartmentByCode resolves department personnel metadata (case-insensitive)", () => {
+  test("getDepartmentByCode resolves department personnel metadata case-insensitively", () => {
     const deptUpper = getDepartmentByCode("CNTT");
     assert.ok(deptUpper);
     assert.strictEqual(deptUpper.code, "CNTT");
@@ -50,6 +51,14 @@ describe("Bundle Leak Prevention & Haptics Suite", () => {
     setHapticsEnabled(true);
     const result = triggerHaptic("light");
     assert.strictEqual(result, false);
+  });
+
+  test("Department types are properly accessible from @/types/dashboard", () => {
+    const sampleGroup: DepartmentPersonnelGroup = QCET_DEPARTMENT_GROUPS[0];
+    assert.ok(sampleGroup);
+    const samplePerson: DepartmentPersonnel = sampleGroup.personnel[0];
+    assert.ok(samplePerson);
+    assert.ok(typeof samplePerson.name === "string");
   });
 
   test("user-profile-modal does not import create-task-modal (bundle leak fix)", () => {

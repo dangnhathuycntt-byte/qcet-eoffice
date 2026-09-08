@@ -26,15 +26,18 @@ import {
   Link,
   ShieldCheck,
 } from "lucide-react";
-import type {
-  SchoolTask,
-  StaffTask,
-  TaskCategory,
-  TaskStatus,
-  DeliverableItem,
-  AIReviewSummary,
-  EscalationMeta,
+import {
+  type SchoolTask,
+  type StaffTask,
+  type TaskCategory,
+  type TaskStatus,
+  type DeliverableItem,
+  type AIReviewSummary,
+  type EscalationMeta,
+  isSchoolTask,
 } from "@/types/dashboard";
+
+export { isSchoolTask };
 import type { AuthUser } from "@/types/auth";
 import type { DelegationRule } from "@/types/delegation";
 import { canUserApproveTask } from "@/lib/delegation-authority-engine";
@@ -48,13 +51,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCategoryBadgeConfig } from "./cascading-task-table";
-
-export function isSchoolTask(
-  task: SchoolTask | StaffTask | null | undefined
-): task is SchoolTask {
-  if (!task) return false;
-  return "subTasks" in task && Array.isArray(task.subTasks);
-}
 
 export function formatDetailDate(dateStr?: string): string {
   if (!dateStr) return "Chưa đặt";
