@@ -923,6 +923,16 @@ export function ExecutiveCockpitWorkspace({
     }, 4000);
   };
 
+  // Handler: Quick extend bottleneck deadline
+  const handleExtend = (item: SchoolBottleneckItem, extensionDays: 3 | 7 = 3) => {
+    handleConfirmResolution({
+      taskId: item.id,
+      type: "EXTEND_DEADLINE",
+      extensionDays,
+      directiveNote: `Ban Giám Hiệu gia hạn thêm ${extensionDays} ngày`,
+    });
+  };
+
   // Handler: Review action submit
   const handleReviewSubmit = async (payload: ApprovalActionPayload) => {
     if (onReview) {
@@ -1044,9 +1054,9 @@ export function ExecutiveCockpitWorkspace({
       {undoState && (
         <div
           role="status"
-          className="flex items-center justify-between gap-3 p-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-950 text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200"
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 z-40 md:relative md:bottom-auto md:left-auto md:right-auto md:z-auto flex items-center justify-between gap-3 p-3.5 rounded-xl border border-emerald-500/40 bg-background/95 backdrop-blur-md text-foreground shadow-lg text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200"
         >
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <CheckCircle2
               className="w-4 h-4 shrink-0 text-emerald-600"
               strokeWidth={1.5}
@@ -1061,7 +1071,7 @@ export function ExecutiveCockpitWorkspace({
               size="sm"
               variant="outline"
               onClick={handleUndo}
-              className="h-7 px-2.5 text-xs font-semibold bg-background hover:bg-muted text-foreground border-border/80 shadow-2xs cursor-pointer"
+              className="min-h-[36px] px-3 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 border-transparent shadow-xs cursor-pointer"
             >
               Hoàn tác (5s)
             </Button>
@@ -1071,7 +1081,7 @@ export function ExecutiveCockpitWorkspace({
               className="text-muted-foreground hover:text-foreground cursor-pointer p-1"
               aria-label="Đóng thông báo"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -1103,7 +1113,7 @@ export function ExecutiveCockpitWorkspace({
 
       {/* 2. High-Altitude Cockpit Strip */}
       <div
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4"
         data-slot="executive-cockpit-strip"
       >
         {/* Metric 1: Hero KPI Card (Visual Dominance) */}
@@ -1544,16 +1554,95 @@ export function ExecutiveCockpitWorkspace({
                 ) : (
                   <div className="flex flex-col gap-3">
                     {displayedBottlenecks.map((item) => (
-                      <ExecutiveBottleneckCard
-                        key={item.id}
-                        item={item}
-                        onResolve={(target) =>
-                          setActiveResolvingBottleneck(target)
-                        }
-                        onRemind={(deptCode, title) =>
-                          handleTriggerReminder(deptCode, title)
-                        }
-                      />
+                      <div key={item.id} className="space-y-2">
+                        {/* Mobile Optimized Single-Column Card (md:hidden) */}
+                        <div
+                          className="md:hidden flex flex-col justify-between gap-3 rounded-xl border border-rose-500/30 bg-card p-3.5 shadow-2xs"
+                          data-slot="mobile-bottleneck-card"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-700 border border-rose-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                              <span className="tabular-nums uppercase tracking-wide">
+                                {typeof item.daysOverdue === "number" && item.daysOverdue > 0
+                                  ? `QUÁ HẠN ${item.daysOverdue} NGÀY`
+                                  : item.isBlocked
+                                    ? "ĐANG BỊ TẮC NGHẼN"
+                                    : item.isOverdue
+                                      ? "ĐÃ QUÁ HẠN"
+                                      : "ĐIỂM NGHẼN CẤP THIẾT"}
+                              </span>
+                            </span>
+
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-medium text-muted-foreground border-border/70 bg-muted/40 px-2 py-0.5 shrink-0"
+                            >
+                              {item.departmentCode || item.departmentName || "QCET"}
+                            </Badge>
+                          </div>
+
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
+                              {item.title}
+                            </h4>
+                            {item.blockedReason && (
+                              <p className="mt-1 text-xs text-rose-600/90 line-clamp-1 italic flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3 shrink-0" />
+                                <span>Vướng mắc: {item.blockedReason}</span>
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground pt-0.5 border-t border-border/40 flex-wrap">
+                            <span className="flex items-center gap-1 font-medium text-foreground/80">
+                              <User className="w-3.5 h-3.5 text-muted-foreground/70" />
+                              <span className="truncate">{item.assigneeName || "Chưa phân công"}</span>
+                            </span>
+                            <span className="text-muted-foreground/40">·</span>
+                            <span className="flex items-center gap-1 tabular-nums font-mono">
+                              <Clock className="w-3.5 h-3.5 text-muted-foreground/60" />
+                              <span>Hạn {item.dueDate ? item.dueDate.split("T")[0] : "Chưa đặt"}</span>
+                            </span>
+                          </div>
+
+                          {/* 1-tap mobile triage action buttons (min-h-[40px] px-3.5) */}
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => handleTriggerReminder(item.departmentCode, item.title)}
+                              className="min-h-[40px] h-10 px-3.5 text-xs font-medium hover:bg-muted border-border/70 gap-1.5 cursor-pointer active:scale-95 transition-all"
+                              title="Gửi thông báo đôn đốc tức thì tới đơn vị"
+                            >
+                              <Bell className="w-3.5 h-3.5 text-muted-foreground" />
+                              <span>Đôn đốc</span>
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => handleExtend(item, 3)}
+                              className="min-h-[40px] h-10 px-3.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs gap-1.5 cursor-pointer active:scale-95 transition-all"
+                              title="Gia hạn tiến độ thêm 3 ngày và gỡ nghẽn tức thì"
+                            >
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>Gia hạn (+3 ngày)</span>
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Desktop Card (hidden md:block) */}
+                        <div className="hidden md:block">
+                          <ExecutiveBottleneckCard
+                            item={item}
+                            onResolve={(target) =>
+                              setActiveResolvingBottleneck(target)
+                            }
+                            onRemind={(deptCode, title) =>
+                              handleTriggerReminder(deptCode, title)
+                            }
+                          />
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -1726,14 +1815,14 @@ export function ExecutiveCockpitWorkspace({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                  <div className="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap">
                     {onSelectTask && (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => onSelectTask(item.originalTask)}
-                        className="text-xs h-8 gap-1"
+                        className="text-xs min-h-[40px] h-10 sm:h-8 px-3.5 sm:px-3 gap-1 cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>Xem chi tiết</span>
@@ -1744,7 +1833,7 @@ export function ExecutiveCockpitWorkspace({
                       type="button"
                       size="sm"
                       onClick={() => setReviewingTask(item.originalTask)}
-                      className="text-xs h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+                      className="text-xs min-h-[40px] h-10 sm:h-8 px-3.5 sm:px-3 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Ký duyệt ban hành</span>
