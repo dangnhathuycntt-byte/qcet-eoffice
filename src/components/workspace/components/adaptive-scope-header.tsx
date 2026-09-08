@@ -12,15 +12,42 @@ export interface AdaptiveScopeHeaderProps {
   user: AuthUser;
   activeScope: WorkspaceScope;
   onScopeChange: (scope: WorkspaceScope) => void;
+  badgeCounts?: Partial<Record<WorkspaceScope, number>>;
   onRefresh?: () => void;
   onCreateTask?: () => void;
   isRefreshing?: boolean;
+}
+
+const scopeActiveStyles: Record<WorkspaceScope, string> = {
+  school: "text-amber-700 bg-amber-50/80 border-amber-300 font-bold",
+  unit: "text-blue-700 bg-blue-50/80 border-blue-300 font-bold",
+  my: "text-emerald-700 bg-emerald-50/80 border-emerald-300 font-bold",
+};
+
+const scopeBadgeActiveStyles: Record<WorkspaceScope, string> = {
+  school: "bg-amber-100 text-amber-800 border-amber-200",
+  unit: "bg-blue-100 text-blue-800 border-blue-200",
+  my: "bg-emerald-100 text-emerald-800 border-emerald-200",
+};
+
+export function syncScopeToUrl(scope: WorkspaceScope) {
+  if (typeof window === "undefined") return;
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("scope") !== scope) {
+      url.searchParams.set("scope", scope);
+      window.history.replaceState(window.history.state, "", url.toString());
+    }
+  } catch {
+    // Ignore URL parse errors in unsupported environments
+  }
 }
 
 export function AdaptiveScopeHeader({
   user,
   activeScope,
   onScopeChange,
+  badgeCounts,
   onRefresh,
   onCreateTask,
   isRefreshing,
@@ -28,6 +55,31 @@ export function AdaptiveScopeHeader({
   const isExecutive = isExecutiveUser(user);
   const isManager = isManagerUser(user) || isExecutive;
   const unitLabel = user.department || user.departmentCode || "Đơn vị";
+
+  // Check URL search params on mount if not matching current activeScope
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const scopeParam = params.get("scope") as WorkspaceScope | null;
+      if (
+        scopeParam &&
+        (scopeParam === "school" || scopeParam === "unit" || scopeParam === "my") &&
+        scopeParam !== activeScope
+      ) {
+        if (scopeParam === "school" && !isExecutive) return;
+        if (scopeParam === "unit" && !isManager) return;
+        onScopeChange(scopeParam);
+      }
+    } catch {
+      // Ignore errors in non-standard window environments
+    }
+  }, [isExecutive, isManager, activeScope, onScopeChange]);
+
+  const handleScopeClick = (scope: WorkspaceScope) => {
+    syncScopeToUrl(scope);
+    onScopeChange(scope);
+  };
 
   const scopes: Array<{
     id: WorkspaceScope;
@@ -71,22 +123,38 @@ export function AdaptiveScopeHeader({
             .map((s) => {
               const Icon = s.icon;
               const isActive = activeScope === s.id;
+              const count = badgeCounts?.[s.id];
+              const showBadge = typeof count === "number" && count > 0;
+
               return (
                 <button
                   key={s.id}
                   type="button"
                   data-scope={s.id}
-                  onClick={() => onScopeChange(s.id)}
+                  onClick={() => handleScopeClick(s.id)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer min-h-[36px] sm:min-h-[32px] touch-manipulation",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer min-h-[36px] sm:min-h-[32px] touch-manipulation border",
                     isActive
-                      ? "bg-card text-foreground shadow-xs font-bold border border-border/80"
-                      : "text-muted-foreground hover:text-foreground hover:bg-card/50"
+                      ? scopeActiveStyles[s.id]
+                      : "text-muted-foreground border-transparent hover:text-foreground hover:bg-card/50"
                   )}
                 >
                   <Icon className="size-3.5 shrink-0 select-none" strokeWidth={1.5} aria-hidden="true" />
                   <span className="hidden sm:inline">{s.label}</span>
                   <span className="sm:hidden">{s.shortLabel}</span>
+                  {showBadge && (
+                    <span
+                      data-slot="scope-badge"
+                      className={cn(
+                        "inline-flex items-center justify-center min-w-[18px] h-4 px-1 rounded-full text-[10px] font-mono tabular-nums font-semibold border ml-0.5",
+                        isActive
+                          ? scopeBadgeActiveStyles[s.id]
+                          : "bg-muted text-muted-foreground border-border/60"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
                 </button>
               );
             })}
