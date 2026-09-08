@@ -2,6 +2,8 @@ import jwt from "jsonwebtoken";
 import { UserRole } from "@/types/auth";
 
 export const SESSION_COOKIE_NAME = "qcet_session";
+export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
+export const SESSION_COOKIE_MAX_AGE = SESSION_MAX_AGE_SECONDS;
 
 export function getJwtSecret(): string {
   if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
