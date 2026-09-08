@@ -15,8 +15,6 @@ import {
   CheckCircle2,
   Search,
   Bell,
-  FlaskConical,
-  Check,
   Plus,
   Compass,
   Smartphone,
@@ -26,7 +24,6 @@ import dynamic from "next/dynamic";
 import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
 import { ScopeSwitcher } from "@/components/layout/scope-switcher";
 import { useAuth } from "@/lib/auth-context";
-import { UserRole } from "@/types/auth";
 import { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -106,7 +103,7 @@ export function AppTopbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isCollapsed, toggleCollapse, badgeCounts } = useSidebar();
-  const { user, switchRole, logout, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
+  const { user, logout, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -187,12 +184,6 @@ export function AppTopbar() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleOpenSearch]);
-
-  const devRoles: Array<{ role: UserRole; label: string; desc: string }> = [
-    { role: "ADMIN", label: "Ban Giám hiệu", desc: "BGH QCET (Toàn quyền)" },
-    { role: "MANAGER", label: "Trưởng đơn vị", desc: "Lãnh đạo Phòng / Khoa" },
-    { role: "STAFF", label: "Chuyên viên", desc: "Giảng viên / Chuyên viên" },
-  ];
 
   return (
     <header
@@ -357,7 +348,7 @@ export function AppTopbar() {
                         {user.name}
                       </p>
                       {user.emailVerified && (
-                        <span title="Đã xác thực Google Workspace" className="shrink-0 text-emerald-600">
+                        <span title="Tài khoản email trường đã xác minh" className="shrink-0 text-emerald-600">
                           <CheckCircle2 size={13} strokeWidth={1.5} />
                         </span>
                       )}
@@ -402,15 +393,10 @@ export function AppTopbar() {
                         window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
                       }
                     }}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Smartphone size={14} strokeWidth={1.5} className="text-primary shrink-0" />
-                      <span>Cài đặt App Mobile</span>
-                    </div>
-                    <span className="text-xs uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25">
-                      PWA
-                    </span>
+                    <Smartphone size={14} strokeWidth={1.5} className="text-primary shrink-0" />
+                    <span>Cài đặt ứng dụng di động</span>
                   </button>
 
                   <button
@@ -424,7 +410,7 @@ export function AppTopbar() {
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
                   >
                     <Compass size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
-                    <span>Hướng dẫn làm quen (Onboarding)</span>
+                    <span>Hướng dẫn sử dụng hệ thống</span>
                   </button>
 
                   <Link
@@ -435,43 +421,6 @@ export function AppTopbar() {
                     <User size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
                     <span>Đổi tài khoản / Đăng nhập khác</span>
                   </Link>
-                </div>
-
-                {/* Embedded Dev Role Testing Section */}
-                <div className="my-2 border-t border-border/50 pt-2">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                    <FlaskConical size={13} strokeWidth={1.5} className="text-amber-500 shrink-0" />
-                    <span>Chế độ kiểm thử vai trò (Dev)</span>
-                  </div>
-                  <div className="mt-1 space-y-0.5">
-                    {devRoles.map((r) => {
-                      const isActive = user.role === r.role;
-                      return (
-                        <button
-                          key={r.role}
-                          type="button"
-                          onClick={() => {
-                            switchRole(r.role);
-                            setIsProfileDropdownOpen(false);
-                          }}
-                          className={cn(
-                            "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors cursor-pointer text-left active:scale-[0.98]",
-                            isActive
-                              ? "bg-secondary text-foreground font-semibold"
-                              : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                          )}
-                        >
-                          <div className="min-w-0">
-                            <p className="text-xs leading-tight font-medium text-foreground truncate">{r.label}</p>
-                            <p className="text-xs text-muted-foreground truncate">{r.desc}</p>
-                          </div>
-                          {isActive && (
-                            <Check size={13} strokeWidth={2} className="text-primary shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
 
                 {/* Divider & Logout */}

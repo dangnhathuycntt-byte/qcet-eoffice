@@ -29,7 +29,6 @@ import {
   CreateTaskFormData,
 } from "@/components/dashboard/create-task-modal";
 import { useAuth } from "@/lib/auth-context";
-import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
 import { UserProfileModal } from "@/components/auth/user-profile-modal";
 
 export function getInitials(name: string): string {
@@ -396,11 +395,10 @@ export function Navigation() {
           </nav>
         </div>
 
-        {/* Right: LiveClock | ZoomToggle | RoleSwitcherPill | Quick Create Task | Theme | Avatar */}
+        {/* Right: LiveClock | ZoomToggle | Quick Create Task | Theme | Avatar */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           <LiveClock />
           <ZoomToggle />
-          <RoleSwitcherPill />
 
           {/* Sleek Linear-style Quick Create Task Button */}
           <Button
@@ -467,7 +465,7 @@ export function Navigation() {
                         {user.name}
                       </p>
                       {user.emailVerified && (
-                        <span title="Đã xác thực Google Workspace" className="shrink-0 text-emerald-600">
+                        <span title="Tài khoản email trường đã xác minh" className="shrink-0 text-emerald-600">
                           <CheckCircle2 size={13} strokeWidth={1.5} />
                         </span>
                       )}
