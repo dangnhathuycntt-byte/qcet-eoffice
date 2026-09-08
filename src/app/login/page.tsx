@@ -4,54 +4,65 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
-  User,
-  Mail,
-  Lock,
-  ArrowRight,
   ShieldCheck,
   AlertCircle,
   AlertTriangle,
   Info,
   X,
-  Eye,
-  EyeOff,
-  CheckCircle2,
-  UserPlus,
-  Briefcase,
-  KeyRound,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
-import { resolveOAuthError } from "@/lib/login-helpers";
+import { resolveOAuthError, sanitizeRedirectUrl } from "@/lib/login-helpers";
 import { cn } from "@/lib/utils";
 
-const DEPARTMENTS = [
-  { id: "BGH", name: "Ban Giám hiệu Nhà trường" },
-  { id: "CNTT", name: "Phòng Quản trị Mạng và CNTT" },
-  { id: "TCHC", name: "Phòng Tổ chức Hành chính" },
-  { id: "KHTC", name: "Phòng Kế hoạch Tài chính" },
-  { id: "DT_QLKH", name: "Phòng Đào tạo & Quản lý Khoa học" },
-];
-
+/**
+ * Pixel-perfect Skeleton that mirrors LoginFormContent geometry 1:1
+ * Guarantees zero Cumulative Layout Shift (CLS) during SSR/CSR hydration.
+ */
 function LoginSkeleton() {
   return (
-    <div className="flex min-h-[calc(100vh-140px)] w-full items-center justify-center py-6 sm:py-10 px-4">
-      <div className="w-full max-w-lg space-y-6">
-        <div className="text-center space-y-3">
-          <div className="inline-flex p-2.5 rounded-2xl bg-card border border-border/80 shadow-xs ring-1 ring-primary/10">
-            <div className="size-14 rounded-xl bg-secondary/60 animate-pulse" />
+    <div className="relative flex min-h-[100dvh] w-full flex-col justify-between bg-background">
+      {/* Background patterns */}
+      <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] opacity-35 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,rgba(14,83,180,0.05),transparent_70%)] pointer-events-none" />
+
+      {/* Top Header Skeleton */}
+      <header className="relative z-10 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <div className="size-9 rounded-full bg-secondary/60 animate-pulse" />
+            <div className="space-y-1">
+              <div className="h-3 w-56 bg-secondary/50 rounded-md animate-pulse" />
+              <div className="h-3.5 w-28 bg-secondary/70 rounded-md animate-pulse" />
+            </div>
           </div>
-          <div className="space-y-2 flex flex-col items-center">
-            <div className="h-7 w-48 bg-secondary/60 rounded-lg animate-pulse" />
-            <div className="h-4 w-64 bg-secondary/50 rounded-md animate-pulse" />
-          </div>
+          <div className="h-3.5 w-32 bg-secondary/30 rounded-md animate-pulse hidden sm:block" />
         </div>
-        <div className="rounded-2xl border border-border/60 bg-card/90 p-6 shadow-card sm:p-8 space-y-4">
-          <div className="h-10 w-full bg-secondary/60 rounded-xl animate-pulse" />
-          <div className="h-12 w-full bg-secondary/40 rounded-xl animate-pulse" />
-          <div className="h-32 w-full bg-secondary/30 rounded-xl animate-pulse" />
+      </header>
+
+      {/* Center Card Skeleton */}
+      <div className="relative z-10 flex flex-1 items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-[420px] rounded-2xl border border-border/80 bg-card/95 p-6 sm:p-7 shadow-xs space-y-5">
+          <div className="space-y-2 text-center flex flex-col items-center">
+            <div className="h-6 w-44 bg-secondary/70 rounded-lg animate-pulse" />
+            <div className="h-4 w-64 bg-secondary/40 rounded-md animate-pulse" />
+          </div>
+          <div className="h-12 w-full bg-secondary/50 rounded-xl animate-pulse" />
+          <div className="h-4 w-48 mx-auto bg-secondary/40 rounded-md animate-pulse" />
+          <div className="pt-2 border-t border-border/60">
+            <div className="h-3.5 w-56 mx-auto bg-secondary/30 rounded-md animate-pulse" />
+          </div>
         </div>
       </div>
+
+      {/* Bottom Footer Skeleton */}
+      <footer className="relative z-10 w-full border-t border-border/60 bg-background/80 backdrop-blur-md py-3 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
+          <div className="h-3.5 w-64 bg-secondary/40 rounded-md animate-pulse" />
+          <div className="h-3.5 w-48 bg-secondary/30 rounded-md animate-pulse hidden sm:block" />
+        </div>
+      </footer>
     </div>
   );
 }
@@ -59,25 +70,18 @@ function LoginSkeleton() {
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, register } = useAuth();
+  const { user, isLoading } = useAuth();
 
-  const [activeTab, setActiveTab] = React.useState<"login" | "register">("login");
+  const targetUrl = React.useMemo(() => {
+    return sanitizeRedirectUrl(searchParams.get("redirect") || searchParams.get("callbackUrl"));
+  }, [searchParams]);
 
-  // Login form state
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [showPassword, setShowPassword] = React.useState(false);
-
-  // Register form state
-  const [regName, setRegName] = React.useState("");
-  const [regEmail, setRegEmail] = React.useState("");
-  const [regPassword, setRegPassword] = React.useState("");
-  const [regDept, setRegDept] = React.useState("CNTT");
-  const [regTitle, setRegTitle] = React.useState("");
-
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  // Auto-redirect if user is already authenticated
+  React.useEffect(() => {
+    if (!isLoading && user) {
+      router.replace(targetUrl);
+    }
+  }, [isLoading, user, router, targetUrl]);
 
   // OAuth Error handling from URL params
   const errorParam = searchParams.get("error");
@@ -94,130 +98,59 @@ function LoginFormContent() {
     }
   }, [errorParam]);
 
-  const handleStandardLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    const trimmedEmail = email.trim().toLowerCase();
-    if (!trimmedEmail || !password) {
-      setErrorMessage("Vui lòng nhập đầy đủ địa chỉ email và mật khẩu");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const res = await login(trimmedEmail, password);
-      if (!res.success) {
-        setErrorMessage(res.error || "Email hoặc mật khẩu không chính xác");
-        setIsSubmitting(false);
-        return;
-      }
-
-      setSuccessMessage("Đăng nhập thành công! Đang chuyển tiếp...");
-      setTimeout(() => {
-        router.push("/");
-      }, 300);
-    } catch {
-      setErrorMessage("Lỗi kết nối máy chủ xác thực. Vui lòng thử lại.");
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    const trimmedName = regName.trim();
-    const trimmedEmail = regEmail.trim().toLowerCase();
-
-    if (!trimmedName || !trimmedEmail || !regPassword) {
-      setErrorMessage("Vui lòng điền đầy đủ họ tên, email và mật khẩu");
-      return;
-    }
-
-    if (regPassword.length < 6) {
-      setErrorMessage("Mật khẩu bảo mật phải có ít nhất 6 ký tự");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const res = await register({
-        name: trimmedName,
-        email: trimmedEmail,
-        password: regPassword,
-        departmentId: regDept,
-        title: regTitle.trim() || "Chuyên viên",
-      });
-
-      if (!res.success) {
-        setErrorMessage(res.error || "Đăng ký không thành công");
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Automatically sign in with newly registered account
-      const loginRes = await login(trimmedEmail, regPassword);
-      if (loginRes.success) {
-        setSuccessMessage("Tạo tài khoản thành công! Đang vào hệ thống...");
-        setTimeout(() => {
-          router.push("/");
-        }, 300);
-      } else {
-        setSuccessMessage("Tài khoản đã tạo thành công. Vui lòng đăng nhập.");
-        setActiveTab("login");
-        setEmail(trimmedEmail);
-        setIsSubmitting(false);
-      }
-    } catch {
-      setErrorMessage("Đã xảy ra lỗi khi tạo tài khoản. Vui lòng thử lại.");
-      setIsSubmitting(false);
-    }
-  };
+  if (isLoading || user) {
+    return <LoginSkeleton />;
+  }
 
   return (
-    <div className="flex min-h-[calc(100vh-140px)] w-full items-center justify-center py-6 sm:py-10 px-4">
-      <div className="w-full max-w-lg space-y-6">
-        {/* Institutional Header */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex p-2.5 rounded-2xl bg-card border border-border/80 shadow-xs ring-1 ring-primary/10">
-            <div className="relative size-14 flex items-center justify-center rounded-xl overflow-hidden">
-              <Image
-                src="/logo-qcet.png"
-                alt="Logo QCET"
-                width={56}
-                height={56}
-                className="object-contain"
-                priority
-              />
+    <main
+      role="main"
+      aria-label="Trang đăng nhập QCET E-Office"
+      className="relative flex min-h-[100dvh] w-full flex-col justify-between bg-background selection:bg-primary/15 selection:text-primary"
+    >
+      {/* Blueprint Grid & Academic Blue Ambient Glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] opacity-35 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,rgba(14,83,180,0.05),transparent_70%)] pointer-events-none" />
+
+      {/* 1. TOP HEADER (Line mỏng, nằm hẳn phía trên) */}
+      <header className="relative z-10 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          {/* Brand Left: Logo + Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn + QCET E-Office */}
+          <div className="flex items-center gap-3">
+            <Image
+              src="/logo-qcet.png"
+              alt="Logo QCET"
+              width={36}
+              height={36}
+              className="size-9 object-contain"
+              priority
+            />
+            <div className="flex flex-col justify-center">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground leading-tight">
+                Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
+              </span>
+              <span className="text-sm font-bold tracking-tight text-foreground font-heading leading-tight">
+                QCET E-Office
+              </span>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl font-sans">
-              QCET E-Office
-            </h1>
-            <p className="text-sm font-semibold text-primary">
-              Văn phòng Điều hành & Quản trị Công việc Điện tử
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
-            </p>
+          {/* Right: Clean text identity, zero decorative pills */}
+          <div className="hidden sm:block text-xs font-medium text-muted-foreground">
+            Hệ thống Quản lý Văn bản & Điều hành
           </div>
         </div>
+      </header>
 
-        {/* Main Auth Card */}
-        <div className="rounded-2xl border border-border/60 bg-card/90 backdrop-blur-md p-6 shadow-card sm:p-8">
-          {/* Visual OAuth Error Banner */}
+      {/* 2. CENTER CONTENT (Chỉ có Login Card ở giữa) */}
+      <div className="relative z-10 flex flex-1 items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-[420px] space-y-4">
+          {/* OAuth Error Alert if any */}
           {oauthError && !dismissedOAuthError && (
             <div
               role={oauthError.variant === "neutral" ? "status" : "alert"}
               className={cn(
-                "mb-6 rounded-xl border p-4 text-xs shadow-xs animate-in fade-in transition-all",
+                "rounded-xl border p-3.5 text-xs shadow-xs animate-in fade-in transition-all",
                 oauthError.variant === "amber" &&
                   "border-amber-300/80 bg-amber-50/90 text-amber-950",
                 oauthError.variant === "red" &&
@@ -226,46 +159,46 @@ function LoginFormContent() {
                   "border-border/80 bg-secondary/60 text-secondary-foreground"
               )}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-2.5">
                 {oauthError.variant === "amber" && (
                   <AlertTriangle
-                    className="size-5 shrink-0 text-amber-600 mt-0.5"
-                    strokeWidth={1.5}
+                    className="size-4 shrink-0 text-amber-600 mt-0.5"
+                    strokeWidth={1.75}
                   />
                 )}
                 {oauthError.variant === "red" && (
                   <AlertCircle
-                    className="size-5 shrink-0 text-red-600 mt-0.5"
-                    strokeWidth={1.5}
+                    className="size-4 shrink-0 text-red-600 mt-0.5"
+                    strokeWidth={1.75}
                   />
                 )}
                 {oauthError.variant === "neutral" && (
                   <Info
-                    className="size-5 shrink-0 text-muted-foreground mt-0.5"
-                    strokeWidth={1.5}
+                    className="size-4 shrink-0 text-muted-foreground mt-0.5"
+                    strokeWidth={1.75}
                   />
                 )}
 
-                <div className="flex-1 space-y-1.5">
-                  <div className="font-bold text-xs">{oauthError.title}</div>
-                  <div className="leading-relaxed opacity-90">{oauthError.message}</div>
+                <div className="flex-1 space-y-1 text-left">
+                  <div className="font-semibold text-xs">{oauthError.title}</div>
+                  <div className="leading-relaxed opacity-90 text-xs">{oauthError.message}</div>
 
                   {oauthError.email && (
                     <div className="pt-0.5">
-                      <span className="inline-block rounded-md bg-amber-100/90 border border-amber-300/60 px-2 py-0.5 font-mono text-xs font-semibold text-amber-900">
+                      <span className="inline-block rounded bg-amber-100 px-2 py-0.5 font-mono text-xs font-semibold text-amber-900">
                         {oauthError.email}
                       </span>
                     </div>
                   )}
 
                   {oauthError.actionText && oauthError.actionHref && (
-                    <div className="pt-2">
+                    <div className="pt-1.5">
                       <a
                         href={oauthError.actionHref}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition-colors"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-700 transition-colors shadow-xs"
                       >
                         <span>{oauthError.actionText}</span>
-                        <ArrowRight className="size-3.5" strokeWidth={1.5} />
+                        <ArrowRight className="size-3" strokeWidth={1.75} />
                       </a>
                     </div>
                   )}
@@ -274,335 +207,53 @@ function LoginFormContent() {
                 <button
                   type="button"
                   onClick={() => setDismissedOAuthError(true)}
-                  className="shrink-0 p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-black/5 transition-colors cursor-pointer"
+                  className="shrink-0 p-1 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
                   aria-label="Đóng thông báo"
                 >
-                  <X className="size-4" strokeWidth={1.5} />
+                  <X className="size-3.5" strokeWidth={1.75} />
                 </button>
               </div>
             </div>
           )}
 
-          {/* Tab Selector: Login vs Register */}
-          <div className="mb-6 flex rounded-xl bg-secondary/60 p-1 border border-border/50">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("login");
-                setErrorMessage(null);
-              }}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer",
-                activeTab === "login"
-                  ? "bg-card text-foreground shadow-xs border border-border/60"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <KeyRound className="size-3.5" strokeWidth={1.5} />
-              <span>Đăng nhập</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("register");
-                setErrorMessage(null);
-              }}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer",
-                activeTab === "register"
-                  ? "bg-card text-foreground shadow-xs border border-border/60"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <UserPlus className="size-3.5" strokeWidth={1.5} />
-              <span>Đăng ký tài khoản mới</span>
-            </button>
-          </div>
-
-          {/* Form Error Message Display */}
-          {errorMessage && (
-            <div
-              role="alert"
-              className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-800 animate-in fade-in"
-            >
-              <AlertCircle className="size-4 shrink-0 text-red-600 mt-0.5" strokeWidth={1.5} />
-              <div className="flex-1 leading-relaxed">{errorMessage}</div>
+          {/* Centralized Login Card */}
+          <div className="rounded-2xl border border-border/80 bg-card/95 p-6 sm:p-7 shadow-xs backdrop-blur-sm space-y-5">
+            <div className="space-y-1.5 text-center">
+              <h1 className="text-xl font-bold tracking-tight text-foreground font-heading">
+                Đăng nhập hệ thống
+              </h1>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Hệ thống làm việc và điều hành văn bản điện tử dành cho Cán bộ, Giảng viên & Nhân viên Nhà trường.
+              </p>
             </div>
-          )}
 
-          {/* Form Success Message Display */}
-          {successMessage && (
-            <div
-              role="status"
-              className="mb-5 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-xs text-emerald-800 animate-in fade-in"
-            >
-              <CheckCircle2 className="size-4 shrink-0 text-emerald-600 mt-0.5" strokeWidth={1.5} />
-              <div className="flex-1 leading-relaxed">{successMessage}</div>
+            <GoogleLoginButton />
+
+            <div className="text-center text-xs text-muted-foreground">
+              <span>Áp dụng cho tài khoản email </span>
+              <span className="font-mono font-semibold text-primary">@cdktcnqn.edu.vn</span>
             </div>
-          )}
 
-          {/* TAB 1: LOGIN FORM */}
-          {activeTab === "login" && (
-            <>
-              {/* Google Workspace SSO Trigger */}
-              <div className="space-y-2">
-                <GoogleLoginButton />
-                <p className="text-center text-xs text-muted-foreground">
-                  Đăng nhập qua cổng định danh liên kết Google trường
-                </p>
-              </div>
-
-              {/* Divider */}
-              <div className="relative my-5">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border/60" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase tracking-wider font-semibold">
-                  <span className="bg-card px-3 text-muted-foreground">
-                    HOẶC ĐĂNG NHẬP MẬT KHẨU NỘI BỘ
-                  </span>
-                </div>
-              </div>
-
-              {/* Standard Credentials Form */}
-              <form onSubmit={handleStandardLogin} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="loginEmail"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Email công vụ
-                  </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                      <Mail className="size-4" strokeWidth={1.5} />
-                    </div>
-                    <input
-                      id="loginEmail"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="vidu: bgh@cdktcnqn.edu.vn"
-                      className="block w-full rounded-xl border border-border/80 bg-background pl-9 pr-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="loginPassword"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Mật khẩu
-                  </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                      <Lock className="size-4" strokeWidth={1.5} />
-                    </div>
-                    <input
-                      id="loginPassword"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Nhập mật khẩu công vụ"
-                      className="block w-full rounded-xl border border-border/80 bg-background pl-9 pr-10 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                      aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="size-4" strokeWidth={1.5} />
-                      ) : (
-                        <Eye className="size-4" strokeWidth={1.5} />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 px-4 text-xs font-semibold text-primary-foreground shadow-card hover:bg-primary/90 transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
-                >
-                  {isSubmitting ? (
-                    <span>Đang xác thực thông tin...</span>
-                  ) : (
-                    <>
-                      <span>Đăng nhập hệ thống</span>
-                      <ArrowRight className="size-3.5" strokeWidth={1.5} />
-                    </>
-                  )}
-                </button>
-              </form>
-            </>
-          )}
-
-          {/* TAB 2: REGISTRATION FORM */}
-          {activeTab === "register" && (
-            <form onSubmit={handleRegister} className="space-y-3.5">
-              <div className="space-y-1 border-b border-border/60 pb-3">
-                <h3 className="text-xs font-bold text-foreground">
-                  Đăng ký tài khoản nội bộ mới
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Tài khoản sẽ được khởi tạo trong CSDL của trường
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="regName"
-                  className="block text-xs font-semibold text-foreground"
-                >
-                  Họ và tên cán bộ <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                    <User className="size-4" strokeWidth={1.5} />
-                  </div>
-                  <input
-                    id="regName"
-                    type="text"
-                    required
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    placeholder="VD: TS. Nguyễn Văn A"
-                    className="block w-full rounded-xl border border-border/80 bg-background pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="regEmail"
-                  className="block text-xs font-semibold text-foreground"
-                >
-                  Email công vụ (@cdktcnqn.edu.vn) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                    <Mail className="size-4" strokeWidth={1.5} />
-                  </div>
-                  <input
-                    id="regEmail"
-                    type="email"
-                    required
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="canbo@cdktcnqn.edu.vn"
-                    className="block w-full rounded-xl border border-border/80 bg-background pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="regPassword"
-                  className="block text-xs font-semibold text-foreground"
-                >
-                  Mật khẩu bảo mật <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                    <Lock className="size-4" strokeWidth={1.5} />
-                  </div>
-                  <input
-                    id="regPassword"
-                    type="password"
-                    required
-                    minLength={6}
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="Tối thiểu 6 ký tự"
-                    className="block w-full rounded-xl border border-border/80 bg-background pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="regDept"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Đơn vị / Phòng ban
-                  </label>
-                  <select
-                    id="regDept"
-                    value={regDept}
-                    onChange={(e) => setRegDept(e.target.value)}
-                    className="block w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                  >
-                    {DEPARTMENTS.map((dept) => (
-                      <option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="regTitle"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Chức danh / Vị trí
-                  </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                      <Briefcase className="size-4" strokeWidth={1.5} />
-                    </div>
-                    <input
-                      id="regTitle"
-                      type="text"
-                      value={regTitle}
-                      onChange={(e) => setRegTitle(e.target.value)}
-                      placeholder="VD: Chuyên viên CNTT"
-                      className="block w-full rounded-xl border border-border/80 bg-background pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 px-4 text-xs font-semibold text-primary-foreground shadow-card hover:bg-primary/90 transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer mt-2"
-              >
-                {isSubmitting ? (
-                  <span>Đang khởi tạo tài khoản...</span>
-                ) : (
-                  <>
-                    <UserPlus className="size-3.5" strokeWidth={1.5} />
-                    <span>Tạo tài khoản & Đăng nhập</span>
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          <div className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-            <ShieldCheck className="size-4 text-emerald-600" strokeWidth={1.5} />
-            <span>Xác thực an toàn đa quyền (BGH / Trưởng đơn vị / Giảng viên)</span>
+            <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-border/60 text-xs text-muted-foreground">
+              <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" strokeWidth={2} />
+              <span>Hệ thống bảo mật sử dụng tài khoản email chính thức của Nhà trường</span>
+            </div>
           </div>
-        </div>
-
-        {/* Footer info */}
-        <div className="text-center text-xs text-muted-foreground/80 space-y-1">
-          <p className="font-medium">
-            Hệ thống Quản trị & Điều hành Văn phòng Điện tử QCET
-          </p>
-          <p className="text-xs">
-            Phát triển & Vận hành bởi Trung tâm CNTT - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
-          </p>
         </div>
       </div>
-    </div>
+
+      {/* 3. BOTTOM FOOTER (Line mỏng, chia đều không dồn nội dung) */}
+      <footer className="relative z-10 w-full border-t border-border/60 bg-background/80 backdrop-blur-md py-3 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
+          <p className="text-center sm:text-left">
+            Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
+          </p>
+          <p className="text-center sm:text-right">
+            Hỗ trợ kỹ thuật: Trung tâm Số & Truyền thông
+          </p>
+        </div>
+      </footer>
+    </main>
   );
 }
 
