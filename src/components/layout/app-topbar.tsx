@@ -106,7 +106,7 @@ export function AppTopbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isCollapsed, toggleCollapse, badgeCounts } = useSidebar();
-  const { user, switchRole, logout, setIsProfileModalOpen } = useAuth();
+  const { user, switchRole, logout, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -517,7 +517,7 @@ export function AppTopbar() {
       )}
 
       {/* User Profile Modal */}
-      <UserProfileModal />
+      {isProfileModalOpen && <UserProfileModal />}
     </header>
   );
 }

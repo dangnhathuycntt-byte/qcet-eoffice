@@ -11,6 +11,10 @@ describe("Bundle Dynamic Imports Verification Suite", () => {
     assert.ok(content.includes('import dynamic from "next/dynamic"'));
     assert.ok(content.includes('import("@/components/pwa/mobile-app-install-modal")'));
     assert.ok(content.includes('import("@/components/pwa/push-onboarding-sheet")'));
+    assert.ok(content.includes('import("@/components/onboarding/welcome-modal")'));
+    assert.ok(content.includes('import("@/components/onboarding/spotlight-tour")'));
+    assert.ok(content.includes('import("@/components/onboarding/onboarding-checklist-widget")'));
+    assert.ok(content.includes('{ ssr: false }'));
   });
 
   test("app-topbar.tsx dynamically imports UserProfileModal", () => {
@@ -18,6 +22,7 @@ describe("Bundle Dynamic Imports Verification Suite", () => {
     const content = fs.readFileSync(topbarPath, "utf-8");
     assert.ok(content.includes('import dynamic from "next/dynamic"'));
     assert.ok(content.includes('import("@/components/auth/user-profile-modal")'));
+    assert.ok(content.includes('{isProfileModalOpen && <UserProfileModal />}'));
   });
 
   test("page.tsx dynamically splits CalendarZone, OrgZone, DocumentsZone", () => {
