@@ -433,24 +433,30 @@ git commit -m "style(mobile): add 16px input floor, manipulation touch-action an
 
 ---
 
-### Task 3: PWA Manifest, Light Splash Theme & Service Worker Deep Routing
+### Task 3: PWA Manifest, Light Splash Theme, Service Worker Offline Cache Matrix & Mutation Queue
 
 **Files:**
+- Create: `src/lib/offline-sync.ts`
+- Create: `src/components/layout/offline-banner.tsx`
 - Modify: `src/app/manifest.ts`
 - Modify: `public/manifest.webmanifest`
-- Modify: `public/sw.js:80-160`
+- Modify: `public/sw.js:1-160`
+- Modify: `src/hooks/use-task-mutations.ts:80-140`
 - Modify: `src/components/pwa/mobile-app-install-modal.tsx:180-260`
 - Test: `tests/pwa-manifest-routing.test.ts`
 
 **Interfaces:**
-- Consumes: Manifest contract from Web App Manifest spec
+- Consumes: Manifest contract from Web App Manifest spec & Service Worker Cache API
 - Produces:
   - `#fbfbfb` background/theme colors
   - App shortcuts: `Tạo việc mới`, `Việc cần xử lý`, `Lịch công tác`
   - Push notification click fallback to `/?zone=tasks`
+  - Two-tier Service Worker Caching: Cache-First for `/_next/static/*`, Network-First with 2.5s Timeout for `/api/dashboard/*` & `/api/tasks/*`
+  - Local Mutation Queue in `src/lib/offline-sync.ts` preventing destructive rollbacks on network drops
+  - Non-intrusive Offline Floating Capsule in `src/components/layout/offline-banner.tsx`
   - Mobile install modal hiding QR and presenting 1-click install/share instructions
 
-- [ ] **Step 1: Write the failing test for manifest and SW fallback**
+- [ ] **Step 1: Write the failing test for manifest, offline sync and SW cache matrix**
 
 ```typescript
 // tests/pwa-manifest-routing.test.ts
@@ -459,8 +465,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import manifestFn from "@/app/manifest";
+import { enqueueOfflineMutation, getOfflineMutationQueue, removeOfflineMutation } from "@/lib/offline-sync";
 
-describe("PWA Manifest & Service Worker Deep Routing Suite", () => {
+describe("PWA Manifest, Service Worker & Offline Sync Suite", () => {
   test("manifest.ts generates light-only theme with shortcuts", () => {
     const manifest = manifestFn();
     assert.strictEqual(manifest.background_color, "#fbfbfb");
@@ -470,13 +477,28 @@ describe("PWA Manifest & Service Worker Deep Routing Suite", () => {
     assert.strictEqual(manifest.shortcuts[0].url, "/?action=create_task");
   });
 
-  test("public/sw.js notificationclick targets /?zone=tasks instead of /portal", () => {
+  test("public/sw.js includes static Cache-First and API timeout fallback", () => {
     const swPath = path.resolve(process.cwd(), "public/sw.js");
     const swContent = fs.readFileSync(swPath, "utf-8");
     assert.ok(swContent.includes("/?zone=tasks"));
-    assert.ok(!swContent.includes('const fallbackUrl = "/portal"'));
+    assert.ok(swContent.includes("/_next/static/"));
+    assert.ok(swContent.includes("X-QCET-Offline-Cache") || swContent.includes("API_CACHE_NAME"));
+  });
+
+  test("offline-sync manages queue and does not throw in node environment", () => {
+    const mutation = enqueueOfflineMutation({
+      url: "/api/tasks/123",
+      method: "PATCH",
+      body: { status: "COMPLETED" },
+      description: "Duyệt nhanh nhiệm vụ 123",
+    });
+    assert.ok(mutation.id);
+    const queue = getOfflineMutationQueue();
+    assert.ok(queue.some((item) => item.id === mutation.id));
+    removeOfflineMutation(mutation.id);
   });
 });
+```
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -821,9 +843,11 @@ git commit -m "feat(mobile): add responsive scope labels and 12-month scroll mas
 
 ---
 
-### Task 7: CascadingTaskTable Dual-Mode Rendering (Desktop Table / Mobile Card Feed)
+### Task 7: CascadingTaskTable Dual-Mode Rendering, Swipe Actions & Pull-to-Refresh
 
 **Files:**
+- Create: `src/hooks/use-swipe-action.ts`
+- Create: `src/hooks/use-pull-to-refresh.ts`
 - Modify: `src/components/tasks/cascading-task-table.tsx:640-1230`
 - Test: `tests/cascading-table-mobile.test.ts`
 
@@ -832,11 +856,13 @@ git commit -m "feat(mobile): add responsive scope labels and 12-month scroll mas
 - Produces:
   - `hidden md:block` table container for desktop
   - `flex flex-col gap-3 md:hidden` Mobile Card Feed
+  - `useSwipeAction` hook with 8px axis-locking slop & Haptic trigger (Swipe right for quick approve)
+  - `usePullToRefresh` hook with `overscroll-behavior-y: contain` & rubber-band damping
   - Always-visible 40px quick-action buttons (no hover dependency)
   - Full-width 44px accordion buttons for subtasks
   - Stepper pagination `[Trước] Trang X/Y [Sau]` on mobile
 
-- [ ] **Step 1: Write the failing test for mobile card feed rendering**
+- [ ] **Step 1: Write the failing test for mobile card feed, swipe and pull-to-refresh**
 
 ```typescript
 // tests/cascading-table-mobile.test.ts
@@ -844,6 +870,8 @@ import test, { describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { useSwipeAction } from "@/hooks/use-swipe-action";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 
 describe("Cascading Task Table Mobile Dual-Mode Suite", () => {
   test("cascading-task-table.tsx implements dual-mode with desktop table and mobile card feed", () => {
@@ -853,6 +881,14 @@ describe("Cascading Task Table Mobile Dual-Mode Suite", () => {
     assert.ok(content.includes("md:hidden"));
     assert.ok(content.includes("Duyệt nhanh"));
     assert.ok(!content.includes("group-hover:opacity-100")); // Mobile actions must not depend on hover
+  });
+
+  test("useSwipeAction hook exports valid contract", () => {
+    assert.strictEqual(typeof useSwipeAction, "function");
+  });
+
+  test("usePullToRefresh hook exports valid contract", () => {
+    assert.strictEqual(typeof usePullToRefresh, "function");
   });
 });
 ```
@@ -1041,7 +1077,87 @@ git commit -m "feat(kanban): transform mobile board into horizontal snap-carouse
 
 ---
 
-### Task 9: Outdoor Contrast Hardening & Mobile Spotlight Tour
+### Task 9: Mobile Forms, Virtual Keyboard & Adaptive Bottom Drawer
+
+**Files:**
+- Create: `src/hooks/use-virtual-keyboard.ts`
+- Modify: `src/components/dashboard/create-task-modal.tsx:690-760,1180-1230`
+- Modify: `src/components/auth/user-profile-modal.tsx:280-343`
+- Modify: `src/components/dashboard/task-detail-side-sheet.tsx:1640-1720`
+- Test: `tests/mobile-forms-keyboard.test.ts`
+
+**Interfaces:**
+- Consumes: `window.visualViewport` API & `vaul` BottomSheet
+- Produces:
+  - `useVirtualKeyboard` hook tracking OSK height and setting `--keyboard-height` CSS variable
+  - Smooth `scrollIntoView({ block: "center", behavior: "smooth" })` on input focus
+  - Adaptive Modal: Centered dialog on desktop (`md:`), `BottomSheet` on mobile (`< 768px`)
+  - Sticky Action Dock in `create-task-modal.tsx` and `user-profile-modal.tsx` with `pb-[max(0.75rem,env(safe-area-inset-bottom))]`
+  - Horizontal non-wrapping quick presets bar for date pickers
+  - Input mode optimization: `type="tel" inputMode="tel"`
+
+- [ ] **Step 1: Write the failing test for virtual keyboard hook and adaptive form drawer**
+
+```typescript
+// tests/mobile-forms-keyboard.test.ts
+import test, { describe } from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { useVirtualKeyboard } from "@/hooks/use-virtual-keyboard";
+
+describe("Mobile Forms & Virtual Keyboard Suite", () => {
+  test("useVirtualKeyboard hook exports valid contract", () => {
+    assert.strictEqual(typeof useVirtualKeyboard, "function");
+  });
+
+  test("create-task-modal.tsx uses sticky action dock and adaptive drawer", () => {
+    const modalPath = path.resolve(process.cwd(), "src/components/dashboard/create-task-modal.tsx");
+    const content = fs.readFileSync(modalPath, "utf-8");
+    assert.ok(content.includes("sticky bottom-0") || content.includes("safe-area-inset-bottom"));
+    assert.ok(content.includes("overflow-x-auto") || content.includes("no-scrollbar"));
+  });
+
+  test("user-profile-modal.tsx includes inputMode tel and sticky footer", () => {
+    const profilePath = path.resolve(process.cwd(), "src/components/auth/user-profile-modal.tsx");
+    const content = fs.readFileSync(profilePath, "utf-8");
+    assert.ok(content.includes('inputMode="tel"'));
+    assert.ok(content.includes("sticky bottom-0") || content.includes("border-t"));
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx tsx --test tests/mobile-forms-keyboard.test.ts`  
+Expected: FAIL.
+
+- [ ] **Step 3: Implement `src/hooks/use-virtual-keyboard.ts` and refactor modals**
+
+1. Create `src/hooks/use-virtual-keyboard.ts` listening to `window.visualViewport`.
+2. In `create-task-modal.tsx`:
+   - Replace wrap-breaking date buttons with horizontal swipeable pills `flex overflow-x-auto no-scrollbar gap-1.5 py-1`.
+   - Ensure sticky action dock at bottom with safe-area padding.
+   - Set inputs font size to `text-base sm:text-xs` to stop iOS auto-zoom.
+3. In `user-profile-modal.tsx`:
+   - Add `inputMode="tel"` to phone input.
+   - Convert action button row to sticky footer.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npx tsx --test tests/mobile-forms-keyboard.test.ts`  
+Expected: PASS.
+
+- [ ] **Step 5: Commit changes**
+
+```bash
+git add src/hooks/use-virtual-keyboard.ts src/components/dashboard/create-task-modal.tsx src/components/auth/user-profile-modal.tsx tests/mobile-forms-keyboard.test.ts
+git commit -m "feat(mobile): add virtual keyboard hook and adaptive sticky action dock for mobile forms"
+```
+
+---
+
+### Task 10: Outdoor Contrast Hardening & Mobile Spotlight Tour
 
 **Files:**
 - Modify: `src/components/onboarding/spotlight-tour.tsx:1-80`
@@ -1098,7 +1214,7 @@ git commit -m "fix(a11y): prevent onboarding tour from blocking mobile bottom na
 
 ---
 
-### Task 10: Full End-to-End Typecheck & Test Verification
+### Task 11: Full End-to-End Typecheck & Test Verification
 
 **Files:**
 - All modified files
