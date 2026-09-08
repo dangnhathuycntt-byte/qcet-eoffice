@@ -85,14 +85,17 @@ describe("Typography Tokens & Font Pairing Contract", () => {
       lightMutedLightness <= 0.40,
       `Light mode --muted-foreground lightness (${lightMutedLightness}) should be <= 0.40 for high contrast WCAG AA compliance`
     );
+  });
 
-    // Dark mode check
-    const darkMutedFgMatch = cssContent.match(/\.dark\s*{[\s\S]*?--muted-foreground:\s*oklch\(\s*([\d.]+)/);
-    assert.ok(darkMutedFgMatch, ".dark must define --muted-foreground using oklch");
-    const darkMutedLightness = parseFloat(darkMutedFgMatch[1]);
+  test("src/app/globals.css enforces pure light-only tokens and has no .dark block", () => {
+    const cssContent = fs.readFileSync(globalsCssPath, "utf-8");
     assert.ok(
-      darkMutedLightness >= 0.60,
-      `Dark mode --muted-foreground lightness (${darkMutedLightness}) should be >= 0.60 for contrast`
+      !cssContent.includes(".dark {") && !cssContent.includes(".dark{"),
+      "globals.css must not contain .dark theme token block"
+    );
+    assert.ok(
+      cssContent.includes("@custom-variant dark (&:not(*));"),
+      "globals.css must neutralize dark variant with (&:not(*))"
     );
   });
 });
