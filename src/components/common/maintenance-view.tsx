@@ -81,7 +81,7 @@ export function MaintenanceView({
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-5 relative z-10">
-          <div className="size-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs">
+          <div className="size-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center shrink-0 shadow-xs">
             <Wrench className="size-7" strokeWidth={1.75} />
           </div>
 
@@ -89,7 +89,7 @@ export function MaintenanceView({
             <div className="flex flex-wrap items-center gap-2">
               <Badge
                 variant="outline"
-                className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 text-xs font-medium"
+                className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-xs font-medium"
               >
                 <Clock className="size-3 mr-1 inline-block" />
                 Đang bảo trì & nâng cấp
@@ -125,7 +125,7 @@ export function MaintenanceView({
             <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
               Trạng thái
             </div>
-            <div className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+            <div className="text-xs font-semibold text-amber-600 flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
               Đang hoàn thiện
             </div>

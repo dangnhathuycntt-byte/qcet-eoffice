@@ -1738,10 +1738,10 @@ export function OrganizationTree({
                           dept.category === "BGH"
                             ? "bg-primary/10 text-primary"
                             : dept.category === "PHONG_CHUC_NANG"
-                            ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                            ? "bg-indigo-500/10 text-indigo-600"
                             : dept.category === "KHOA_CHUYEN_MON"
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                            : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            ? "bg-emerald-500/10 text-emerald-600"
+                            : "bg-amber-500/10 text-amber-600"
                         )}
                       >
                         <Icon className="size-4.5" strokeWidth={1.5} />
@@ -1757,7 +1757,7 @@ export function OrganizationTree({
                     </div>
 
                     {/* Biometric Online Pulse */}
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-600 shrink-0">
                       <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       <span>{dept.timekeeperSync}</span>
                     </div>
@@ -1793,7 +1793,7 @@ export function OrganizationTree({
                             <span className="font-bold text-foreground">
                               {presentToday}/{headcount}
                             </span>
-                            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            <span className="text-xs font-semibold text-emerald-600">
                               ({presentRate}%)
                             </span>
                           </div>
@@ -2113,7 +2113,7 @@ export function OrganizationTree({
                         <span className="text-xs text-muted-foreground block">
                           Chấm công hôm nay
                         </span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                        <span className="font-bold text-emerald-600 font-mono">
                           {selectedDepartment.presentToday}/{selectedDepartment.headcount} ({selectedDepartment.presentRate}%)
                         </span>
                       </div>

@@ -36,17 +36,17 @@ export function getUrgencyBadgeConfig(urgency: DocumentUrgency): {
     case "flash":
       return {
         label: "Hỏa tốc",
-        className: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30 font-bold animate-pulse",
+        className: "bg-red-500/15 text-red-700 border-red-500/30 font-bold animate-pulse",
       };
     case "top_urgent":
       return {
         label: "Thượng khẩn",
-        className: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30 font-semibold",
+        className: "bg-rose-500/15 text-rose-700 border-rose-500/30 font-semibold",
       };
     case "urgent":
       return {
         label: "Khẩn",
-        className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 font-medium",
+        className: "bg-amber-500/15 text-amber-700 border-amber-500/30 font-medium",
       };
     case "normal":
     default:
@@ -66,32 +66,32 @@ export function getStatusBadgeConfig(status: DocumentStatus): {
     case "pending_assignment":
       return {
         label: "Chờ bút phê",
-        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+        className: "bg-amber-500/10 text-amber-700 border-amber-500/20",
         icon: Clock,
       };
     case "processing":
       return {
         label: "Đang xử lý",
-        className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+        className: "bg-blue-500/10 text-blue-700 border-blue-500/20",
         icon: Clock,
       };
     case "delegated":
       return {
         label: "Đã liên thông giao việc",
-        className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 font-medium",
+        className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 font-medium",
         icon: CheckCircle2,
       };
     case "approved":
       return {
         label: "Đã ký duyệt",
-        className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20",
+        className: "bg-indigo-500/10 text-indigo-700 border-indigo-500/20",
         icon: ShieldCheck,
       };
     case "completed":
     default:
       return {
         label: "Hoàn tất & Lưu trữ",
-        className: "bg-zinc-500/10 text-zinc-700 dark:text-zinc-400 border-zinc-500/20",
+        className: "bg-zinc-500/10 text-zinc-700 border-zinc-500/20",
         icon: CheckCircle2,
       };
   }
@@ -119,12 +119,12 @@ export function DocumentDetailDialog({
   const StatusIcon = statusConfig.icon;
 
   const typeLabels: Record<string, { label: string; icon: any; color: string }> = {
-    inbox: { label: "Văn bản đến", icon: Inbox, color: "text-sky-600 dark:text-sky-400 bg-sky-500/10" },
-    outbox: { label: "Văn bản đi", icon: Send, color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10" },
-    submission: { label: "Tờ trình", icon: FileText, color: "text-purple-600 dark:text-purple-400 bg-purple-500/10" },
-    VAN_BAN_DEN: { label: "Văn bản đến", icon: Inbox, color: "text-sky-600 dark:text-sky-400 bg-sky-500/10" },
-    VAN_BAN_DI: { label: "Văn bản đi", icon: Send, color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10" },
-    TO_TRINH_NOI_BO: { label: "Tờ trình", icon: FileText, color: "text-purple-600 dark:text-purple-400 bg-purple-500/10" },
+    inbox: { label: "Văn bản đến", icon: Inbox, color: "text-sky-600 bg-sky-500/10" },
+    outbox: { label: "Văn bản đi", icon: Send, color: "text-emerald-600 bg-emerald-500/10" },
+    submission: { label: "Tờ trình", icon: FileText, color: "text-purple-600 bg-purple-500/10" },
+    VAN_BAN_DEN: { label: "Văn bản đến", icon: Inbox, color: "text-sky-600 bg-sky-500/10" },
+    VAN_BAN_DI: { label: "Văn bản đi", icon: Send, color: "text-emerald-600 bg-emerald-500/10" },
+    TO_TRINH_NOI_BO: { label: "Tờ trình", icon: FileText, color: "text-purple-600 bg-purple-500/10" },
   };
   const currentType = typeLabels[doc.type] || typeLabels.inbox;
   const TypeIcon = currentType.icon;
@@ -254,11 +254,11 @@ export function DocumentDetailDialog({
           {doc.linkedTaskId ? (
             <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
                   <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
                   Nhiệm vụ liên thông QCET Unified Task Hub
                 </span>
-                <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold">
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 font-semibold">
                   {doc.linkedTaskId}
                 </span>
               </div>
@@ -268,7 +268,7 @@ export function DocumentDetailDialog({
               <div className="pt-1 flex items-center justify-end">
                 <Link
                   href={`/?taskId=${doc.linkedTaskId}`}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:underline"
                 >
                   <span>Chuyển tới Bàn làm việc</span>
                   <ArrowRight className="size-3.5" strokeWidth={1.5} />
@@ -294,7 +294,7 @@ export function DocumentDetailDialog({
           {doc.fileAttachment && (
             <div className="p-3 rounded-xl border border-border/60 bg-muted/20 flex items-center justify-between">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="p-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 shrink-0">
+                <div className="p-2 rounded-lg bg-red-500/10 text-red-600 shrink-0">
                   <FileText className="size-4" strokeWidth={1.5} />
                 </div>
                 <div className="min-w-0">

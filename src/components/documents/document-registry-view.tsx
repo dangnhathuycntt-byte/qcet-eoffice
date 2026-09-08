@@ -466,11 +466,11 @@ export function DocumentRegistryView() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-600 border border-sky-500/20">
                 <FileText className="size-3" strokeWidth={1.5} />
                 Nghị định 30/2020/NĐ-CP
               </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                 <CheckCircle2 className="size-3" strokeWidth={1.5} />
                 Liên thông Task Hub
               </span>
@@ -535,7 +535,7 @@ export function DocumentRegistryView() {
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               VĂN BẢN ĐẾN
             </span>
-            <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 group-hover:bg-sky-500/20 transition-colors">
+            <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600 group-hover:bg-sky-500/20 transition-colors">
               <Inbox className="size-4" strokeWidth={1.5} />
             </div>
           </div>
@@ -556,7 +556,7 @@ export function DocumentRegistryView() {
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               VĂN BẢN ĐI
             </span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500/20 transition-colors">
+            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 group-hover:bg-blue-500/20 transition-colors">
               <Send className="size-4" strokeWidth={1.5} />
             </div>
           </div>
@@ -577,7 +577,7 @@ export function DocumentRegistryView() {
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               TỜ TRÌNH DUYỆT
             </span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-500/20 transition-colors">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 group-hover:bg-amber-500/20 transition-colors">
               <FileCheck className="size-4" strokeWidth={1.5} />
             </div>
           </div>
@@ -595,12 +595,12 @@ export function DocumentRegistryView() {
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               LIÊN THÔNG NHIỆM VỤ
             </span>
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
               <CheckCircle2 className="size-4" strokeWidth={1.5} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-bold font-mono tracking-tight text-emerald-600 dark:text-emerald-400">
+            <span className="text-2xl md:text-3xl font-bold font-mono tracking-tight text-emerald-600">
               {computedStats.linkedTaskCount}
             </span>
             <span className="text-xs text-muted-foreground">
@@ -944,7 +944,7 @@ export function DocumentRegistryView() {
                         {doc.linkedTaskId ? (
                           <Link
                             href={`/?taskId=${doc.linkedTaskId}`}
-                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-xs font-semibold transition-colors"
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 border border-emerald-500/20 text-xs font-semibold transition-colors"
                             title={doc.linkedTaskTitle}
                           >
                             <CheckCircle2 className="size-3" strokeWidth={1.5} />

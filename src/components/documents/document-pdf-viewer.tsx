@@ -98,7 +98,7 @@ export function DocumentPdfViewer({
       <div className="flex items-center justify-between px-3.5 py-2.5 bg-muted/30 border-b border-border/60 gap-2 flex-wrap sm:flex-nowrap">
         {/* Document Title & File Info */}
         <div className="flex items-center gap-2 min-w-0 pr-2">
-          <div className="p-1.5 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 shrink-0">
+          <div className="p-1.5 rounded-lg bg-red-500/10 text-red-600 shrink-0">
             <FileText className="size-4" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
@@ -177,7 +177,7 @@ export function DocumentPdfViewer({
       </div>
 
       {/* PDF Viewport */}
-      <div className="relative flex-1 bg-zinc-100 dark:bg-zinc-950 overflow-auto flex items-center justify-center p-2 min-h-[440px]">
+      <div className="relative flex-1 bg-zinc-100 overflow-auto flex items-center justify-center p-2 min-h-[440px]">
         <div
           className="w-full h-full flex flex-col transition-transform duration-150 origin-top"
           style={{ transform: zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined }}

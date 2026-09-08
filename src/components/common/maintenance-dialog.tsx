@@ -94,7 +94,7 @@ export function MaintenanceDialog({
         </button>
 
         <div className="flex items-start gap-4">
-          <div className="size-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+          <div className="size-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
             <Wrench className="size-6" strokeWidth={1.75} />
           </div>
 
@@ -102,7 +102,7 @@ export function MaintenanceDialog({
             <div className="flex items-center gap-2">
               <Badge
                 variant="outline"
-                className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 text-xs"
+                className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-xs"
               >
                 <Clock className="size-3 mr-1 inline-block" />
                 Đang bảo trì
@@ -132,7 +132,7 @@ export function MaintenanceDialog({
           </div>
           <div className="flex items-center justify-between">
             <span>Trạng thái:</span>
-            <span className="text-amber-600 dark:text-amber-400 font-medium">
+            <span className="text-amber-600 font-medium">
               Đang nâng cấp đồng bộ
             </span>
           </div>

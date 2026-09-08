@@ -147,50 +147,50 @@ function getActorInitials(name: string): string {
 function getPersonnelAvatarStyle(name: string): { bg: string; text: string; ring: string } {
   if (name.includes("Hùng")) {
     return {
-      bg: "bg-emerald-500/15 dark:bg-emerald-500/25",
-      text: "text-emerald-700 dark:text-emerald-300",
+      bg: "bg-emerald-500/15",
+      text: "text-emerald-700",
       ring: "ring-emerald-500/30",
     };
   }
   if (name.includes("Vinh")) {
     return {
-      bg: "bg-blue-500/15 dark:bg-blue-500/25",
-      text: "text-blue-700 dark:text-blue-300",
+      bg: "bg-blue-500/15",
+      text: "text-blue-700",
       ring: "ring-blue-500/30",
     };
   }
   if (name.includes("Xuân")) {
     return {
-      bg: "bg-purple-500/15 dark:bg-purple-500/25",
-      text: "text-purple-700 dark:text-purple-300",
+      bg: "bg-purple-500/15",
+      text: "text-purple-700",
       ring: "ring-purple-500/30",
     };
   }
   if (name.includes("Nam")) {
     return {
-      bg: "bg-amber-500/15 dark:bg-amber-500/25",
-      text: "text-amber-800 dark:text-amber-300",
+      bg: "bg-amber-500/15",
+      text: "text-amber-800",
       ring: "ring-amber-500/30",
     };
   }
   if (name.includes("Thu")) {
     return {
-      bg: "bg-teal-500/15 dark:bg-teal-500/25",
-      text: "text-teal-700 dark:text-teal-300",
+      bg: "bg-teal-500/15",
+      text: "text-teal-700",
       ring: "ring-teal-500/30",
     };
   }
   if (name.includes("Trí")) {
     return {
-      bg: "bg-rose-500/15 dark:bg-rose-500/25",
-      text: "text-rose-700 dark:text-rose-300",
+      bg: "bg-rose-500/15",
+      text: "text-rose-700",
       ring: "ring-rose-500/30",
     };
   }
   if (name.includes("Hậu")) {
     return {
-      bg: "bg-indigo-500/15 dark:bg-indigo-500/25",
-      text: "text-indigo-700 dark:text-indigo-300",
+      bg: "bg-indigo-500/15",
+      text: "text-indigo-700",
       ring: "ring-indigo-500/30",
     };
   }
@@ -205,37 +205,37 @@ function getTypeBadge(type: QCETNotification["type"]) {
   switch (type) {
     case "completed":
       return {
-        bg: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30",
+        bg: "bg-emerald-500/15 text-emerald-600 border border-emerald-500/30",
         icon: CheckCircle2,
       };
     case "progress":
       return {
-        bg: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30",
+        bg: "bg-blue-500/15 text-blue-600 border border-blue-500/30",
         icon: Activity,
       };
     case "upload":
       return {
-        bg: "bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30",
+        bg: "bg-purple-500/15 text-purple-600 border border-purple-500/30",
         icon: FileText,
       };
     case "network":
       return {
-        bg: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30",
+        bg: "bg-cyan-500/15 text-cyan-600 border border-cyan-500/30",
         icon: Wifi,
       };
     case "review":
       return {
-        bg: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30",
+        bg: "bg-amber-500/15 text-amber-700 border border-amber-500/30",
         icon: AlertTriangle,
       };
     case "created":
       return {
-        bg: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30",
+        bg: "bg-indigo-500/15 text-indigo-600 border border-indigo-500/30",
         icon: Plus,
       };
     case "report":
       return {
-        bg: "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30",
+        bg: "bg-sky-500/15 text-sky-600 border border-sky-500/30",
         icon: BarChart2,
       };
     default:
@@ -500,7 +500,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
         "group relative flex items-start gap-3 p-2.5 rounded-xl transition-all cursor-pointer border border-transparent",
         item.isRead
           ? "hover:bg-muted/50 opacity-85 hover:opacity-100"
-          : "bg-primary/[0.04] dark:bg-primary/[0.08] hover:bg-muted/70 font-medium border-l-primary"
+          : "bg-primary/[0.04] hover:bg-muted/70 font-medium border-l-primary"
       )}
     >
       {/* Avatar Container with Theme-Harmonized Initials Monogram Badge */}

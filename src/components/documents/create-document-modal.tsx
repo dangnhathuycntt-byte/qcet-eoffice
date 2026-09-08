@@ -121,7 +121,7 @@ export function CreateDocumentModal({
                 onClick={() => setDocType("inbox")}
                 className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-colors cursor-pointer ${
                   docType === "inbox"
-                    ? "border-sky-500 bg-sky-500/10 text-sky-700 dark:text-sky-300 font-semibold shadow-xs"
+                    ? "border-sky-500 bg-sky-500/10 text-sky-700 font-semibold shadow-xs"
                     : "border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40"
                 }`}
               >
@@ -132,7 +132,7 @@ export function CreateDocumentModal({
                 onClick={() => setDocType("outbox")}
                 className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-colors cursor-pointer ${
                   docType === "outbox"
-                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold shadow-xs"
+                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 font-semibold shadow-xs"
                     : "border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40"
                 }`}
               >
@@ -143,7 +143,7 @@ export function CreateDocumentModal({
                 onClick={() => setDocType("submission")}
                 className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-colors cursor-pointer ${
                   docType === "submission"
-                    ? "border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-300 font-semibold shadow-xs"
+                    ? "border-purple-500 bg-purple-500/10 text-purple-700 font-semibold shadow-xs"
                     : "border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40"
                 }`}
               >

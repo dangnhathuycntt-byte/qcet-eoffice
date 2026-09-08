@@ -114,7 +114,7 @@ export function UserProfileModal() {
                   Hồ sơ Cán bộ & Viên chức
                 </h3>
                 {user.emailVerified && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 border border-emerald-500/20">
                     <CheckCircle2 className="size-3" strokeWidth={1.5} />
                     Đã xác thực Google
                   </span>
@@ -152,7 +152,7 @@ export function UserProfileModal() {
 
         {/* Success Alert */}
         {savedSuccess && (
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300 animate-in fade-in">
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-700 animate-in fade-in">
             <CheckCircle2 className="size-4 shrink-0" strokeWidth={1.5} />
             <span>Cập nhật thông tin cán bộ thành công!</span>
           </div>
@@ -271,7 +271,7 @@ export function UserProfileModal() {
                 className={cn(
                   "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer",
                   role === "STAFF"
-                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/30"
+                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/30"
                     : "border-border/80 bg-background hover:bg-secondary text-muted-foreground"
                 )}
               >
@@ -286,7 +286,7 @@ export function UserProfileModal() {
                 className={cn(
                   "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer",
                   role === "MANAGER"
-                    ? "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300 ring-1 ring-blue-500/30"
+                    ? "border-blue-500 bg-blue-500/10 text-blue-700 ring-1 ring-blue-500/30"
                     : "border-border/80 bg-background hover:bg-secondary text-muted-foreground"
                 )}
               >
@@ -301,7 +301,7 @@ export function UserProfileModal() {
                 className={cn(
                   "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer",
                   role === "ADMIN"
-                    ? "border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-300 ring-1 ring-purple-500/30"
+                    ? "border-purple-500 bg-purple-500/10 text-purple-700 ring-1 ring-purple-500/30"
                     : "border-border/80 bg-background hover:bg-secondary text-muted-foreground"
                 )}
               >

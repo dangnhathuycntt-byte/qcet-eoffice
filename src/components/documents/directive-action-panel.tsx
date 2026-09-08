@@ -246,20 +246,20 @@ export function DirectiveActionPanel({
 
   return (
     <div
-      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${className}`}
+      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}
       data-testid="directive-action-panel"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
             <PenTool className="h-5 w-5" strokeWidth={1.5} />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <h3 className="text-sm font-semibold text-slate-900">
               Hộp Bút phê BGH 1-chạm
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500">
               Ghi ý kiến chỉ đạo điện tử & liên thông sinh Nhiệm vụ trường (Điều 23 NĐ 30/2020)
             </p>
           </div>
@@ -269,7 +269,7 @@ export function DirectiveActionPanel({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             aria-label="Đóng"
           >
             <X className="h-4 w-4" strokeWidth={1.5} />
@@ -278,24 +278,24 @@ export function DirectiveActionPanel({
       </div>
 
       {/* Target Document Context Box */}
-      <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-800/60">
+      <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold text-slate-700 dark:text-slate-300">
+          <span className="font-semibold text-slate-700">
             Văn bản số: {document.originalNumber || `#${document.registrationNumber}/${document.documentYear}`}
           </span>
           <span className="text-slate-400">|</span>
-          <span className="text-slate-600 dark:text-slate-400">
+          <span className="text-slate-600">
             {document.issuingAuthority}
           </span>
         </div>
-        <p className="mt-1 line-clamp-2 text-slate-600 dark:text-slate-300 italic">
+        <p className="mt-1 line-clamp-2 text-slate-600 italic">
           &quot;{document.summary}&quot;
         </p>
       </div>
 
       {/* 1-Touch Preset Chips */}
       <div className="mt-4">
-        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
           <Sparkles className="h-3.5 w-3.5 text-amber-500" strokeWidth={1.5} />
           <span>Mẫu bút phê chỉ đạo nhanh 1-chạm (Quick Presets):</span>
         </div>
@@ -309,12 +309,12 @@ export function DirectiveActionPanel({
                 onClick={() => handleSelectPreset(preset)}
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                   isSelected
-                    ? "border-indigo-600 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-300"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-750"
+                    ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-slate-50"
                 }`}
               >
                 <span>{preset.label}</span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">
+                <span className="text-xs text-slate-400">
                   (+{preset.offsetDays}d)
                 </span>
               </button>
@@ -327,7 +327,7 @@ export function DirectiveActionPanel({
       <form onSubmit={handleSubmit} className="mt-4 space-y-4">
         {/* Instruction Textarea */}
         <div>
-          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+          <label className="block text-xs font-medium text-slate-700">
             Nội dung bút phê chỉ đạo <span className="text-rose-500">*</span>
           </label>
           <textarea
@@ -339,7 +339,7 @@ export function DirectiveActionPanel({
               setErrorMessage(null);
             }}
             placeholder="Ghi ý kiến chỉ đạo của Ban Giám hiệu (Ví dụ: Giao Phòng Đào tạo chủ trì, rà soát chương trình đào tạo nghề trọng điểm trước ngày 15/09...)"
-            className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+            className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             required
           />
         </div>
@@ -348,7 +348,7 @@ export function DirectiveActionPanel({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {/* Main Department */}
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
               <Building2 className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.5} />
               <span>Đơn vị chủ trì thực hiện</span>
               <span className="text-rose-500">*</span>
@@ -361,7 +361,7 @@ export function DirectiveActionPanel({
                 // Remove from collaborators if previously checked
                 setCollaboratorIds((prev) => prev.filter((id) => id !== newDept));
               }}
-              className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
               {departments.map((dept) => (
                 <option key={dept.id} value={dept.id}>
@@ -373,7 +373,7 @@ export function DirectiveActionPanel({
 
           {/* Deadline & Quick Buttons */}
           <div>
-            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
               <Calendar className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.5} />
               <span>Hạn xử lý / Báo cáo hoàn thành</span>
             </label>
@@ -382,7 +382,7 @@ export function DirectiveActionPanel({
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
             {/* Quick buttons */}
@@ -390,28 +390,28 @@ export function DirectiveActionPanel({
               <button
                 type="button"
                 onClick={() => handleAddDaysToDeadline(1)}
-                className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
               >
                 +1 ngày
               </button>
               <button
                 type="button"
                 onClick={() => handleAddDaysToDeadline(3)}
-                className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
               >
                 +3 ngày
               </button>
               <button
                 type="button"
                 onClick={() => handleAddDaysToDeadline(5)}
-                className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
               >
                 +5 ngày
               </button>
               <button
                 type="button"
                 onClick={() => handleAddDaysToDeadline(7)}
-                className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
               >
                 +1 tuần
               </button>
@@ -421,7 +421,7 @@ export function DirectiveActionPanel({
 
         {/* Collaborating Departments Checkboxes */}
         <div>
-          <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+          <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
             <Users className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.5} />
             <span>Đơn vị phối hợp thực hiện (tùy chọn)</span>
           </label>
@@ -437,8 +437,8 @@ export function DirectiveActionPanel({
                     onClick={() => handleToggleCollaborator(dept.id)}
                     className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs transition-colors ${
                       isChecked
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300"
-                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                     }`}
                   >
                     <span>{dept.shortName || dept.name}</span>
@@ -451,14 +451,14 @@ export function DirectiveActionPanel({
 
         {/* Status Alerts */}
         {errorMessage && (
-          <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+          <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {successMessage && (
-          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">
             <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={1.5} />
             <span>{successMessage}</span>
           </div>
@@ -470,7 +470,7 @@ export function DirectiveActionPanel({
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-750"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
             >
               Hủy bỏ
             </button>

@@ -80,7 +80,7 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
         <span className="font-bold text-foreground">
           Đăng nhập với Google Workspace
         </span>
-        <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400 border border-blue-500/20">
+        <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-500/20">
           @cdktcnqn.edu.vn
         </span>
       </button>
@@ -111,7 +111,7 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
             </button>
 
             <div className="flex items-start gap-3.5 mb-4">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
                 <ShieldAlert className="size-5" strokeWidth={1.5} />
               </div>
               <div>
@@ -128,7 +128,7 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
             </div>
 
             <div className="space-y-3 text-xs leading-relaxed text-foreground">
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 text-amber-900 dark:text-amber-200">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 text-amber-900">
                 <p className="font-semibold">
                   Hệ thống đang chạy CSDL PostgreSQL nội bộ. Để kích hoạt đăng nhập Google Workspace trường, vui lòng cấu hình GOOGLE_CLIENT_ID trong .env.local.
                 </p>

@@ -430,17 +430,17 @@ export function getCategoryDotClass(category?: TaskCategory): string {
 export function getCategoryChipClass(category?: TaskCategory): string {
   switch (category) {
     case "CHUYEN_DOI_SO":
-      return "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300";
+      return "border-purple-500/30 bg-purple-500/10 text-purple-700";
     case "TRUYEN_THONG":
-      return "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300";
+      return "border-sky-500/30 bg-sky-500/10 text-sky-700";
     case "CNTT":
-      return "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300";
+      return "border-blue-500/30 bg-blue-500/10 text-blue-700";
     case "ATTT":
-      return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
+      return "border-red-500/30 bg-red-500/10 text-red-700";
     case "THU_VIEN":
-      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700";
     case "BAO_CAO":
-      return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+      return "border-amber-500/30 bg-amber-500/10 text-amber-700";
     default:
       return "border-border/60 bg-muted/60 text-muted-foreground";
   }
@@ -772,7 +772,7 @@ export function CalendarMonthView({
               className={cn(
                 "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer",
                 levelFilter === "TRUONG"
-                  ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800"
+                  ? "bg-blue-50 text-blue-700 font-semibold border border-blue-200"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -785,7 +785,7 @@ export function CalendarMonthView({
               className={cn(
                 "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer",
                 levelFilter === "DON_VI"
-                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
+                  ? "bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -1043,8 +1043,8 @@ export function CalendarMonthView({
                           className={cn(
                             "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold border",
                             isSchool
-                              ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800"
-                              : "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800"
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : "bg-indigo-50 text-indigo-700 border-indigo-200"
                           )}
                         >
                           {isSchool ? "Cấp Trường" : "Đơn vị"}

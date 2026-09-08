@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  Smartphone,
   X,
 } from "lucide-react";
 import {
@@ -338,7 +339,7 @@ export function AppSidebar() {
                             <div className="flex items-center gap-1.5">
                               <span>{item.label}</span>
                               {item.isComingSoon ? (
-                                <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
                                   Đang phát triển
                                 </span>
                               ) : badge ? (
@@ -426,7 +427,7 @@ export function AppSidebar() {
                           />
                           <span className="truncate flex-1">{item.label}</span>
                           {item.isComingSoon ? (
-                            <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 select-none">
+                            <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0 select-none">
                               Đang phát triển
                             </span>
                           ) : badge ? (
@@ -436,11 +437,11 @@ export function AppSidebar() {
                                 badge.variant === "primary" &&
                                   "bg-primary/15 text-primary border border-primary/20",
                                 badge.variant === "sky" &&
-                                  "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20",
+                                  "bg-sky-500/15 text-sky-600 border border-sky-500/20",
                                 badge.variant === "rose" &&
-                                  "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
+                                  "bg-rose-500/15 text-rose-600 border border-rose-500/20",
                                 badge.variant === "amber" &&
-                                  "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20",
+                                  "bg-amber-500/15 text-amber-600 border border-amber-500/20",
                                 badge.variant === "muted" &&
                                   "bg-secondary text-muted-foreground border border-border/50"
                               )}
@@ -448,7 +449,7 @@ export function AppSidebar() {
                               {badge.text}
                             </span>
                           ) : item.isMaintenance && !badge ? (
-                            <span className="ml-auto text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded leading-none select-none">
+                            <span className="ml-auto text-xs font-medium text-amber-600 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded leading-none select-none">
                               Bảo trì
                             </span>
                           ) : null}
@@ -466,6 +467,26 @@ export function AppSidebar() {
         {isCollapsed ? (
           <div className="p-2 border-t border-border/50 shrink-0 w-full flex flex-col items-center gap-1">
             <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
+                      }
+                    }}
+                    className="size-9 rounded-lg flex items-center justify-center text-primary hover:bg-primary/10 transition-colors cursor-pointer select-none"
+                    aria-label="Tải App Mobile (iOS/Android)"
+                    title="Tải App Mobile (iOS/Android)"
+                  >
+                    <Smartphone size={18} strokeWidth={1.5} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <span>Tải App Mobile (iOS / Android)</span>
+                </TooltipContent>
+              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link
@@ -508,6 +529,26 @@ export function AppSidebar() {
           </div>
         ) : (
           <div className="p-2 border-t border-border/50 shrink-0 space-y-1">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
+                }
+              }}
+              className="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 min-h-9 text-[13px] font-medium transition-colors select-none text-foreground hover:bg-primary/10 hover:text-primary cursor-pointer w-full text-left"
+            >
+              <Smartphone
+                size={18}
+                strokeWidth={1.5}
+                className="shrink-0 transition-colors text-primary"
+              />
+              <span className="truncate flex-1 font-semibold">Tải App Mobile</span>
+              <span className="text-xs uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25">
+                PWA
+              </span>
+            </button>
+
             <Link
               href="/settings"
               className={cn(
@@ -675,7 +716,7 @@ export function AppSidebar() {
                           />
                           <span className="truncate flex-1">{item.label}</span>
                           {item.isComingSoon ? (
-                            <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 select-none">
+                            <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0 select-none">
                               Đang phát triển
                             </span>
                           ) : badge ? (
@@ -685,11 +726,11 @@ export function AppSidebar() {
                                 badge.variant === "primary" &&
                                   "bg-primary/15 text-primary border border-primary/20",
                                 badge.variant === "sky" &&
-                                  "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20",
+                                  "bg-sky-500/15 text-sky-600 border border-sky-500/20",
                                 badge.variant === "rose" &&
-                                  "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20",
+                                  "bg-rose-500/15 text-rose-600 border border-rose-500/20",
                                 badge.variant === "amber" &&
-                                  "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20",
+                                  "bg-amber-500/15 text-amber-600 border border-amber-500/20",
                                 badge.variant === "muted" &&
                                   "bg-secondary text-muted-foreground border border-border/50"
                               )}
@@ -697,7 +738,7 @@ export function AppSidebar() {
                               {badge.text}
                             </span>
                           ) : item.isMaintenance && !badge ? (
-                            <span className="ml-auto text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded leading-none select-none">
+                            <span className="ml-auto text-xs font-medium text-amber-600 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded leading-none select-none">
                               Bảo trì
                             </span>
                           ) : null}
@@ -712,6 +753,24 @@ export function AppSidebar() {
 
           {/* Mobile Drawer Footer: Settings + Notion Status */}
           <div className="p-3 border-t border-border/50 shrink-0 bg-muted/20 space-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileOpen(false);
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
+                }
+              }}
+              className="flex w-full items-center justify-between px-3 py-2 rounded-lg text-[13px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5">
+                <Smartphone size={18} strokeWidth={1.5} />
+                <span>Cài đặt App vào Điện thoại</span>
+              </div>
+              <span className="text-xs uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-primary/20 text-primary">
+                PWA
+              </span>
+            </button>
             <Link
               href="/settings"
               onClick={() => setIsMobileOpen(false)}

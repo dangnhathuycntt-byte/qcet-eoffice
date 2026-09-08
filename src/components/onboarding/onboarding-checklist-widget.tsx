@@ -198,7 +198,7 @@ export function OnboardingChecklistWidget({
 
             {percentage === 100 && (
               <div className="mt-3 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5">
+                <span className="text-xs font-bold text-emerald-600 flex items-center justify-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" /> Thầy/Cô đã sẵn sàng 100%!
                 </span>
               </div>

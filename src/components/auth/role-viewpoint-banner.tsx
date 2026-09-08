@@ -52,11 +52,11 @@ export function RoleViewpointBanner({ className }: { className?: string }) {
             className={cn(
               "text-xs font-bold px-2.5 py-0.5 rounded-lg shrink-0",
               user.role === "ADMIN" &&
-                "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                "border-amber-500/30 bg-amber-500/10 text-amber-700",
               user.role === "MANAGER" &&
-                "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300",
+                "border-blue-500/30 bg-blue-500/10 text-blue-700",
               user.role === "STAFF" &&
-                "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
             )}
           >
             {user.role === "ADMIN"

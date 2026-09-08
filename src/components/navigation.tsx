@@ -386,7 +386,7 @@ export function Navigation() {
                         {user.name}
                       </p>
                       {user.emailVerified && (
-                        <span title="Đã xác thực Google Workspace" className="shrink-0 text-emerald-600 dark:text-emerald-400">
+                        <span title="Đã xác thực Google Workspace" className="shrink-0 text-emerald-600">
                           <CheckCircle2 size={13} strokeWidth={1.5} />
                         </span>
                       )}

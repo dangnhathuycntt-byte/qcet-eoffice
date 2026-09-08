@@ -168,7 +168,7 @@ export function PushOnboardingSheet({
                     : "Thông báo đã sẵn sàng"}
                 </BottomSheetTitle>
                 <BottomSheetDescription className="text-sm sm:text-base text-muted-foreground mt-0.5">
-                  Hệ thống điều hành tác nghiệp Trường CĐ Kỹ thuật Cao Thắng
+                  Hệ thống điều hành tác nghiệp Trường CĐ Kỹ thuật Công nghệ Quy Nhơn (QCET)
                 </BottomSheetDescription>
               </div>
             </div>
@@ -377,7 +377,7 @@ export function PushOnboardingSheet({
           {/* Mode D: Already Subscribed */}
           {!isModeIOS && !isModeAndroidInstall && isModeSubscribed && (
             <div className="space-y-4 text-center py-4">
-              <div className="size-16 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+              <div className="size-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
                 <CheckCircle2 size={36} />
               </div>
               <div className="space-y-1">

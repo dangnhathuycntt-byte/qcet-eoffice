@@ -65,7 +65,7 @@ function TopbarBreadcrumbs({ pathname }: { pathname: string }) {
         {pageTitle}
       </span>
       {isDocuments && (
-        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 select-none">
+        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0 select-none">
           Đang phát triển
         </span>
       )}
@@ -90,7 +90,7 @@ function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
         {pageTitle}
       </span>
       {isDocuments && (
-        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0 select-none">
+        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0 select-none">
           Đang phát triển
         </span>
       )}
@@ -361,7 +361,7 @@ export function AppTopbar() {
                         {user.name}
                       </p>
                       {user.emailVerified && (
-                        <span title="Đã xác thực Google Workspace" className="shrink-0 text-emerald-600 dark:text-emerald-400">
+                        <span title="Đã xác thực Google Workspace" className="shrink-0 text-emerald-600">
                           <CheckCircle2 size={13} strokeWidth={1.5} />
                         </span>
                       )}

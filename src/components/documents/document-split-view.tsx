@@ -51,7 +51,7 @@ export function getDocumentTypeInfo(type: DocumentType): {
         label: "Văn bản đến",
         numberPrefix: "Số đến",
         icon: Inbox,
-        badgeClass: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+        badgeClass: "bg-sky-500/10 text-sky-700 border-sky-500/20",
       };
     case "VAN_BAN_DI":
     case "outbox":
@@ -59,7 +59,7 @@ export function getDocumentTypeInfo(type: DocumentType): {
         label: "Văn bản đi",
         numberPrefix: "Số đi",
         icon: Send,
-        badgeClass: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+        badgeClass: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
       };
     case "TO_TRINH_NOI_BO":
     case "submission":
@@ -68,7 +68,7 @@ export function getDocumentTypeInfo(type: DocumentType): {
         label: "Tờ trình nội bộ",
         numberPrefix: "Số tờ trình",
         icon: FileText,
-        badgeClass: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20",
+        badgeClass: "bg-purple-500/10 text-purple-700 border-purple-500/20",
       };
   }
 }
@@ -82,19 +82,19 @@ export function getUrgencyBadge(urgency: DocumentUrgency): {
     case "flash":
       return {
         label: "Hỏa tốc",
-        className: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30 font-bold",
+        className: "bg-red-500/15 text-red-700 border-red-500/30 font-bold",
       };
     case "THUONG_KHAN":
     case "top_urgent":
       return {
         label: "Thượng khẩn",
-        className: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30 font-semibold",
+        className: "bg-rose-500/15 text-rose-700 border-rose-500/30 font-semibold",
       };
     case "KHAN":
     case "urgent":
       return {
         label: "Khẩn",
-        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-medium",
+        className: "bg-amber-500/10 text-amber-700 border-amber-500/30 font-medium",
       };
     case "THUONG":
     case "normal":
@@ -124,7 +124,7 @@ export function getSecurityBadge(security: DocumentSecurityLevel): {
     case "MAT":
       return {
         label: "Mật",
-        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 font-medium",
+        className: "bg-amber-500/10 text-amber-700 border-amber-500/20 font-medium",
       };
     case "THUONG":
     default:
@@ -144,32 +144,32 @@ export function getStatusBadge(status: DocumentStatus): {
     case "pending_assignment":
       return {
         label: "Chờ phân công",
-        className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 font-medium",
+        className: "bg-amber-500/10 text-amber-700 border-amber-500/20 font-medium",
       };
     case "DANG_XU_LY":
     case "processing":
       return {
         label: "Đang xử lý",
-        className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20 font-medium",
+        className: "bg-blue-500/10 text-blue-700 border-blue-500/20 font-medium",
       };
     case "CHO_PHE_DUYET":
       return {
         label: "Chờ phê duyệt",
-        className: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20 font-medium",
+        className: "bg-indigo-500/10 text-indigo-700 border-indigo-500/20 font-medium",
       };
     case "DA_HOAN_THANH":
     case "completed":
     case "approved":
       return {
         label: "Đã hoàn thành",
-        className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 font-medium",
+        className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 font-medium",
       };
     case "LUU_THEO_DOI":
     case "delegated":
     default:
       return {
         label: "Lưu theo dõi",
-        className: "bg-zinc-500/10 text-zinc-700 dark:text-zinc-400 border-zinc-500/20",
+        className: "bg-zinc-500/10 text-zinc-700 border-zinc-500/20",
       };
   }
 }
@@ -245,7 +245,7 @@ export function DocumentSplitView({
                       className={`text-xs px-1.5 py-0.5 rounded font-mono ${
                         isSelected
                           ? "bg-primary-foreground/20 text-primary-foreground"
-                          : "bg-red-500/10 text-red-600 dark:text-red-400"
+                          : "bg-red-500/10 text-red-600"
                       }`}
                     >
                       Gốc
@@ -412,11 +412,11 @@ export function DocumentSplitView({
             {doc.dueDate && (
               <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1 sm:col-span-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1">
+                  <span className="text-amber-700 font-bold flex items-center gap-1">
                     <AlertTriangle className="size-3.5" strokeWidth={1.5} />
                     Hạn xử lý theo quy định:
                   </span>
-                  <span className="font-mono text-amber-700 dark:text-amber-400 font-semibold tabular-nums">
+                  <span className="font-mono text-amber-700 font-semibold tabular-nums">
                     {formatDate(doc.dueDate)}
                   </span>
                 </div>
@@ -469,7 +469,7 @@ export function DocumentSplitView({
                     </span>
 
                     {dir.isTaskGenerated ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 font-semibold border border-emerald-500/20">
                         <CheckCircle2 className="size-3" strokeWidth={1.5} />
                         Đã tạo Nhiệm vụ trường
                       </span>
