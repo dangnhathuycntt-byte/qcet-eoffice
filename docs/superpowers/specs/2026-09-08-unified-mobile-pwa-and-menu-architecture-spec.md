@@ -199,6 +199,29 @@ Trên màn hình `< 768px`, chiều ngang chỉ có 390px – 430px. Topbar tuâ
 * Áp dụng `overscroll-behavior-x: contain` cho dải tab cuộn ngang và `overscroll-behavior-y: contain` cho thân modal/drawer.
 * Bổ sung Offline Status Pill thông báo nhẹ nhàng khi mất kết nối mạng trong khuôn viên trường.
 
+### 8.9 Triệt tiêu Rò rỉ Bundle Tĩnh & Tối ưu Nạp lười (Performance & Dynamic Imports)
+* **Trích xuất `QCET_DEPARTMENT_GROUPS` ra `src/lib/departments.ts`:**
+  - Cắt đứt hoàn toàn mắt xích `UserProfileModal` $\rightarrow$ `CreateTaskModal` kéo theo 52KB và 17 icon vào layout gốc.
+* **Trích xuất `isSchoolTask` ra `src/types/dashboard.ts`:**
+  - Tránh việc các trang con kéo theo 75KB mã nguồn của `TaskDetailSideSheet`.
+* **Nạp lười (Lazy-load với `next/dynamic({ ssr: false })`):**
+  - Áp dụng cho: `PushOnboardingSheet`, `MobileAppInstallModal`, `UserProfileModal`, `CalendarZone`, `OrgZone`, `DocumentsZone`.
+* **Cập nhật `next.config.ts`:**
+  - Kích hoạt `experimental: { optimizePackageImports: ["lucide-react", "qrcode", "vaul"] }`, tiết kiệm ngay ~150KB JS tải ban đầu trên di động.
+
+### 8.10 Chuyển đổi Bảng thành Thẻ (Card-List Transformation) cho `CascadingTaskTable`
+* Màn hình desktop: Giữ nguyên bảng đa cột (`hidden md:block`).
+* Màn hình mobile: Hiển thị danh sách Thẻ Di Động (`flex flex-col gap-3 md:hidden`):
+  - Mã nhiệm vụ mono + Badge trạng thái 40px.
+  - Tiêu đề 2 dòng (`line-clamp-2`), người chủ trì, hạn chót.
+  - Các nút hành động 1-chạm (`Duyệt nhanh`, `Nhận việc`) luôn hiển thị rõ ràng, không dùng hover ẩn.
+  - Phân trang dạng Stepper tinh gọn: `[Trước] Trang 1/5 [Sau]` với phím bấm 44px.
+
+### 8.11 Horizontal Snap-Carousel cho `TaskKanbanBoard` trên Mobile
+* Thay thế cơ chế xếp chồng 4 cột theo chiều dọc bằng Carousel trượt ngang (`scroll-snap-type: x mandatory`).
+* Mỗi cột rộng `86vw` (`shrink-0 snap-center`), chừa 14vw hé lộ mép cột kế tiếp.
+* Thanh Tab 4 giai đoạn phía trên giúp nhảy nhanh tới từng cột, kèm 4 chấm tròn (dots) đồng bộ vị trí.
+
 ---
 
 ## 9. BẢNG TIÊU CHÍ NGHIỆM THU (ACCEPTANCE CRITERIA)
@@ -220,7 +243,9 @@ Trên màn hình `< 768px`, chiều ngang chỉ có 390px – 430px. Topbar tuâ
 | **AC-13** | Bấm Thông báo đẩy trên điện thoại | Mở đúng Kho công việc (`/?zone=tasks`), KHÔNG mở màn hình TV Kiosk (`/portal`). |
 | **AC-14** | Màn hình chờ PWA khi mở App | Màu nền trắng sáng `#fbfbfb`, không bị chớp đen `#0f172a`. |
 | **AC-15** | Nhấn giữ Icon trên Màn hình chính | Hiện menu Shortcuts: *Tạo việc mới*, *Việc cần xử lý*, *Lịch công tác*. |
-| **AC-16** | Kiểm tra chất lượng code | `npm run typecheck` đạt 0 lỗi, `npm test` toàn bộ suites đều PASS. |
+| **AC-16** | Xem Bảng phân cấp trên điện thoại | Tự động chuyển sang dạng Thẻ dọc (Card Feed), các nút Duyệt nhanh hiển thị rõ ràng, không bị trôi cuộn ngang 920px. |
+| **AC-17** | Xem Bảng Kanban trên điện thoại | Hiển thị dạng Carousel cuộn ngang từng cột (Snap-scroll), có thanh Tab giai đoạn và chấm tròn đồng bộ. |
+| **AC-18** | Tối ưu hóa Bundle JavaScript | Dung lượng tải ban đầu giảm ~150KB gzip; không rò rỉ CreateTaskModal vào AppShell; kiểm tra `npm run typecheck` đạt 0 lỗi, `npm test` toàn bộ pass. |
 
 ---
 
