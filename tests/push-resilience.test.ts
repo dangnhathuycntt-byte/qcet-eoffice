@@ -38,22 +38,23 @@ describe("Task 3: PWA & Service Worker Resilience", () => {
   });
 });
 
-describe("Task 4: Push Circuit Breaker & Key Rotation", () => {
-  async function getOrCreateResilienceUser() {
+describe("Task 4: Push Circuit Breaker & Key Rotation", { concurrency: 1 }, () => {
+  async function getOrCreateResilienceUser(suffix: string) {
+    const id = `user-push-resilience-${suffix}`;
     return prisma.user.upsert({
-      where: { id: "user-push-resilience-circuit" },
+      where: { id },
       update: {},
       create: {
-        id: "user-push-resilience-circuit",
-        email: "push-circuit@test.com",
-        name: "Push Resilience Circuit Tester",
+        id,
+        email: `push-circuit-${suffix}@test.com`,
+        name: `Push Resilience Circuit Tester ${suffix}`,
         role: "CHUYEN_VIEN",
       },
     });
   }
 
   it("revokes subscription immediately on 404 or 410 Gone", async () => {
-    const user = await getOrCreateResilienceUser();
+    const user = await getOrCreateResilienceUser("410");
 
     // Clean up any existing active subscriptions for this test user to isolate counts
     await prisma.pushSubscription.deleteMany({
@@ -96,7 +97,7 @@ describe("Task 4: Push Circuit Breaker & Key Rotation", () => {
   });
 
   it("marks subscription as REVOKED and increments revokedCount when failureCount reaches 5", async () => {
-    const user = await getOrCreateResilienceUser();
+    const user = await getOrCreateResilienceUser("circuit");
 
     await prisma.pushSubscription.deleteMany({
       where: { userId: user.id },
@@ -140,7 +141,7 @@ describe("Task 4: Push Circuit Breaker & Key Rotation", () => {
   });
 
   it("increments failureCount and keeps status ACTIVE when failureCount < 5", async () => {
-    const user = await getOrCreateResilienceUser();
+    const user = await getOrCreateResilienceUser("sub5");
 
     await prisma.pushSubscription.deleteMany({
       where: { userId: user.id },
