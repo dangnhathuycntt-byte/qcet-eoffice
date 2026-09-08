@@ -5,19 +5,30 @@ import {
   ListDocumentsFilter,
 } from "@/lib/documents/document-service";
 import { validateDocumentCreatePayload } from "@/lib/documents/document-validator";
-import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload } from "@/lib/jwt-session";
+import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload, getSessionFromRequest } from "@/lib/jwt-session";
 import type { DocumentType, DocumentStatus, DocumentUrgency, DocumentSecurityLevel } from "@/types/document";
 
 function getSessionPayload(request: NextRequest): SessionPayload | null {
-  const authHeader = request.headers.get("authorization");
-  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null;
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value || bearerToken;
-  if (!token) return null;
-  return verifySessionToken(token);
+  return getSessionFromRequest(request);
 }
 
 export async function GET(request: NextRequest) {
   try {
+    const session = getSessionPayload(request);
+    if (!session) {
+      return NextResponse.json(
+        {
+          type: "about:blank",
+          title: "Unauthorized",
+          status: 401,
+          detail: "Vui lòng đăng nhập để truy cập tài liệu",
+          success: false,
+          error: "Vui lòng đăng nhập để truy cập tài liệu",
+        },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
 
     const type = searchParams.get("type") as DocumentType | null;
@@ -71,12 +82,24 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = getSessionPayload(request);
+    if (!session) {
+      return NextResponse.json(
+        {
+          type: "about:blank",
+          title: "Unauthorized",
+          status: 401,
+          detail: "Vui lòng đăng nhập để tạo văn bản",
+          success: false,
+          error: "Vui lòng đăng nhập để tạo văn bản",
+        },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
-    // If session is present and registeredById is not set, set from session
-    if (!body.registeredById && session?.id) {
-      body.registeredById = session.id;
-    }
+    // Luôn ghi đè registeredById từ session.id để chống mạo danh (anti-spoofing)
+    body.registeredById = session.id;
 
     const validation = validateDocumentCreatePayload(body);
     if (!validation.isValid) {

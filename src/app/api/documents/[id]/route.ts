@@ -4,16 +4,36 @@ import {
   updateDocument,
 } from "@/lib/documents/document-service";
 import { validateDocumentUpdatePayload } from "@/lib/documents/document-validator";
+import { getSessionFromRequest, SessionPayload } from "@/lib/jwt-session";
 
 interface RouteContext {
   params: { id: string } | Promise<{ id: string }>;
 }
 
+function getSessionPayload(request: NextRequest): SessionPayload | null {
+  return getSessionFromRequest(request);
+}
+
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: RouteContext
 ) {
   try {
+    const session = getSessionPayload(request);
+    if (!session) {
+      return NextResponse.json(
+        {
+          type: "about:blank",
+          title: "Unauthorized",
+          status: 401,
+          detail: "Vui lòng đăng nhập để truy cập văn bản",
+          success: false,
+          error: "Vui lòng đăng nhập để truy cập văn bản",
+        },
+        { status: 401 }
+      );
+    }
+
     const { id } = await context.params;
 
     const document = await getDocumentById(id);
@@ -43,6 +63,21 @@ export async function PATCH(
   context: RouteContext
 ) {
   try {
+    const session = getSessionPayload(request);
+    if (!session) {
+      return NextResponse.json(
+        {
+          type: "about:blank",
+          title: "Unauthorized",
+          status: 401,
+          detail: "Vui lòng đăng nhập để cập nhật văn bản",
+          success: false,
+          error: "Vui lòng đăng nhập để cập nhật văn bản",
+        },
+        { status: 401 }
+      );
+    }
+
     const { id } = await context.params;
 
     const existing = await getDocumentById(id);

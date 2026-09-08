@@ -10,10 +10,12 @@ import {
 import { GET as listDocumentsRoute, POST as createDocumentRoute } from "../src/app/api/documents/route";
 import { GET as getDocumentRoute, PATCH as patchDocumentRoute } from "../src/app/api/documents/[id]/route";
 import { POST as postDirectiveRoute } from "../src/app/api/documents/[id]/directives/route";
+import { signSessionToken } from "../src/lib/jwt-session";
 
 describe("Document Registry API & Validation Tests (ND30)", () => {
   let seededUserId: string;
   let seededDeptId: string;
+  let sessionToken: string;
   const createdDocumentIds: string[] = [];
   const createdTaskIds: string[] = [];
 
@@ -22,6 +24,13 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     const user = await prisma.user.findFirst();
     assert.ok(user, "At least one user must exist in database");
     seededUserId = user.id;
+
+    sessionToken = signSessionToken({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
 
     const dept = await prisma.department.findFirst();
     assert.ok(dept, "At least one department must exist in database");
@@ -132,7 +141,9 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
 
   describe("GET /api/documents", () => {
     test("returns list of documents with total count", async () => {
-      const req = new NextRequest("http://localhost:3000/api/documents?limit=10&page=1");
+      const req = new NextRequest("http://localhost:3000/api/documents?limit=10&page=1", {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
       const res = await listDocumentsRoute(req);
       assert.equal(res.status, 200);
 
@@ -143,7 +154,9 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     });
 
     test("supports query filtering by type and documentYear", async () => {
-      const req = new NextRequest("http://localhost:3000/api/documents?type=VAN_BAN_DEN&year=2026");
+      const req = new NextRequest("http://localhost:3000/api/documents?type=VAN_BAN_DEN&year=2026", {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
       const res = await listDocumentsRoute(req);
       assert.equal(res.status, 200);
 
@@ -161,7 +174,10 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     test("rejects invalid payload with status 400 and validation errors", async () => {
       const req = new NextRequest("http://localhost:3000/api/documents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
         body: JSON.stringify({
           type: "VAN_BAN_DEN",
           // missing originalNumber, issuingAuthority, summary, etc.
@@ -180,7 +196,10 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     test("registers incoming document with auto-assigned registration number", async () => {
       const req = new NextRequest("http://localhost:3000/api/documents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
         body: JSON.stringify({
           type: "VAN_BAN_DEN",
           originalNumber: "123/UBND-VX",
@@ -236,7 +255,9 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     });
 
     test("GET /api/documents/[id] returns 404 for non-existent ID", async () => {
-      const req = new NextRequest("http://localhost:3000/api/documents/non-existent-id-9999");
+      const req = new NextRequest("http://localhost:3000/api/documents/non-existent-id-9999", {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
       const res = await getDocumentRoute(req, { params: Promise.resolve({ id: "non-existent-id-9999" }) });
       assert.equal(res.status, 404);
 
@@ -245,7 +266,9 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     });
 
     test("GET /api/documents/[id] returns document details for valid ID", async () => {
-      const req = new NextRequest(`http://localhost:3000/api/documents/${testDocId}`);
+      const req = new NextRequest(`http://localhost:3000/api/documents/${testDocId}`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
       const res = await getDocumentRoute(req, { params: Promise.resolve({ id: testDocId }) });
       assert.equal(res.status, 200);
 
@@ -260,7 +283,10 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     test("PATCH /api/documents/[id] updates document status and fields", async () => {
       const req = new NextRequest(`http://localhost:3000/api/documents/${testDocId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
         body: JSON.stringify({
           status: "DANG_XU_LY",
           summary: "Văn bản đã được cập nhật tóm tắt qua PATCH",

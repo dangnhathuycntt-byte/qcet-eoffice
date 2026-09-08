@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listDocuments } from "@/lib/documents/document-service";
 import { generateAppendixIVCsv } from "@/lib/documents/excel-export";
+import { getSessionFromRequest } from "@/lib/jwt-session";
 import type { DocumentType } from "@/types/document";
 
 export async function GET(request: NextRequest) {
   try {
+    const session = getSessionFromRequest(request);
+    if (!session) {
+      return NextResponse.json(
+        {
+          type: "about:blank",
+          title: "Unauthorized",
+          status: 401,
+          detail: "Vui lòng đăng nhập để xuất sổ văn bản",
+          success: false,
+          error: "Vui lòng đăng nhập để xuất sổ văn bản",
+        },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const typeParam = searchParams.get("type");
 

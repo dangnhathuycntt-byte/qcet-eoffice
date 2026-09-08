@@ -9,6 +9,7 @@ import {
   openByteRangeStream,
 } from "../src/lib/storage";
 import { GET } from "../src/app/api/documents/download/route";
+import { signSessionToken } from "../src/lib/jwt-session";
 
 const TEST_UPLOADS_DIR = path.resolve("./test_storage_sandbox");
 
@@ -90,8 +91,23 @@ describe("File Storage & Streaming Security Unit Tests", () => {
   });
 
   describe("GET /api/documents/download", () => {
+    const sessionToken = signSessionToken({
+      id: "test-user-id",
+      email: "test@cdktcnqn.edu.vn",
+      name: "Test User",
+      role: "CHUYEN_VIEN",
+    });
+
+    it("should return 401 when unauthenticated", async () => {
+      const req = new NextRequest("http://localhost:3000/api/documents/download?file=docs/report.pdf");
+      const res = await GET(req);
+      assert.equal(res.status, 401);
+    });
+
     it("should serve requested file with download disposition", async () => {
-      const req = new NextRequest("http://localhost:3000/api/documents/download?file=docs/report.pdf&name=Report_Final.pdf");
+      const req = new NextRequest("http://localhost:3000/api/documents/download?file=docs/report.pdf&name=Report_Final.pdf", {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
       const res = await GET(req);
 
       assert.equal(res.status, 200);
@@ -101,21 +117,27 @@ describe("File Storage & Streaming Security Unit Tests", () => {
     });
 
     it("should return 403 when file query contains path traversal", async () => {
-      const req = new NextRequest("http://localhost:3000/api/documents/download?file=../../etc/passwd");
+      const req = new NextRequest("http://localhost:3000/api/documents/download?file=../../etc/passwd", {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
       const res = await GET(req);
 
       assert.equal(res.status, 403);
     });
 
     it("should return 404 when file does not exist", async () => {
-      const req = new NextRequest("http://localhost:3000/api/documents/download?file=docs/missing.pdf");
+      const req = new NextRequest("http://localhost:3000/api/documents/download?file=docs/missing.pdf", {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
       const res = await GET(req);
 
       assert.equal(res.status, 404);
     });
 
     it("should return 400 when ?file parameter is missing", async () => {
-      const req = new NextRequest("http://localhost:3000/api/documents/download");
+      const req = new NextRequest("http://localhost:3000/api/documents/download", {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
       const res = await GET(req);
 
       assert.equal(res.status, 400);
@@ -123,7 +145,10 @@ describe("File Storage & Streaming Security Unit Tests", () => {
 
     it("should support byte-range requests for download route", async () => {
       const req = new NextRequest("http://localhost:3000/api/documents/download?file=docs/sample.txt", {
-        headers: { range: "bytes=2-6" },
+        headers: {
+          range: "bytes=2-6",
+          Authorization: `Bearer ${sessionToken}`,
+        },
       });
       const res = await GET(req);
 

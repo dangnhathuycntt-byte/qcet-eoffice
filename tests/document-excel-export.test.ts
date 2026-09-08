@@ -8,6 +8,7 @@ import {
   generateAppendixIVCsv,
 } from "../src/lib/documents/excel-export";
 import { GET as exportExcelRoute } from "../src/app/api/documents/export-excel/route";
+import { signSessionToken } from "../src/lib/jwt-session";
 import type { DocumentItem } from "../src/types/document";
 
 describe("Appendix IV (ND 30/2020) Excel Exporter", () => {
@@ -144,10 +145,17 @@ describe("Appendix IV (ND 30/2020) Excel Exporter", () => {
 
 describe("GET /api/documents/export-excel Route Integration", () => {
   let testDocId: string;
+  let sessionToken: string;
 
   before(async () => {
     const user = await prisma.user.findFirst();
     assert.ok(user, "User must exist");
+    sessionToken = signSessionToken({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
     const dept = await prisma.department.findFirst();
 
     // Create a sample incoming document for 2026 export test
@@ -179,7 +187,9 @@ describe("GET /api/documents/export-excel Route Integration", () => {
   });
 
   test("exports incoming document registry as CSV with proper headers and content", async () => {
-    const req = new NextRequest("http://localhost:3000/api/documents/export-excel?type=VAN_BAN_DEN&year=2026");
+    const req = new NextRequest("http://localhost:3000/api/documents/export-excel?type=VAN_BAN_DEN&year=2026", {
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    });
     const res = await exportExcelRoute(req);
 
     assert.equal(res.status, 200);
@@ -200,7 +210,9 @@ describe("GET /api/documents/export-excel Route Integration", () => {
   });
 
   test("exports outgoing document registry as CSV with proper headers", async () => {
-    const req = new NextRequest("http://localhost:3000/api/documents/export-excel?type=VAN_BAN_DI&year=2026");
+    const req = new NextRequest("http://localhost:3000/api/documents/export-excel?type=VAN_BAN_DI&year=2026", {
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    });
     const res = await exportExcelRoute(req);
 
     assert.equal(res.status, 200);
@@ -221,7 +233,9 @@ describe("GET /api/documents/export-excel Route Integration", () => {
   });
 
   test("rejects invalid document type", async () => {
-    const req = new NextRequest("http://localhost:3000/api/documents/export-excel?type=INVALID_TYPE");
+    const req = new NextRequest("http://localhost:3000/api/documents/export-excel?type=INVALID_TYPE", {
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    });
     const res = await exportExcelRoute(req);
     assert.equal(res.status, 400);
     const json = await res.json();

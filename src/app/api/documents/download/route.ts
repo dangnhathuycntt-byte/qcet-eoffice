@@ -5,9 +5,25 @@ import {
   resolveSafeFilePath,
   openByteRangeStream,
 } from "../../../../lib/storage";
+import { getSessionFromRequest } from "@/lib/jwt-session";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = getSessionFromRequest(req);
+    if (!session) {
+      return NextResponse.json(
+        {
+          type: "about:blank",
+          title: "Unauthorized",
+          status: 401,
+          detail: "Vui lòng đăng nhập để tải tệp",
+          success: false,
+          error: "Vui lòng đăng nhập để tải tệp",
+        },
+        { status: 401 }
+      );
+    }
+
     const filePathParam = req.nextUrl.searchParams.get("file");
     if (!filePathParam) {
       return new NextResponse("Thiếu tham số tệp (Missing file parameter)", {
