@@ -32,8 +32,11 @@ export interface UnifiedAdaptiveWorkspaceProps {
   user: AuthUser;
   tasks: SchoolTask[];
   initialScope?: WorkspaceScope;
+  forcedScope?: WorkspaceScope;
   forcedRole?: "ADMIN" | "MANAGER" | "STAFF";
   selectedDepartment?: string;
+  contextTitle?: string;
+  contextBadge?: string;
   onSelectTask: (task: SchoolTask | StaffTask) => void;
   onReview?: (payload: ApprovalActionPayload) => Promise<void> | void;
   onSubmitDeliverable?: (payload: DeliverableSubmissionPayload) => Promise<void> | void;
@@ -42,4 +45,5 @@ export interface UnifiedAdaptiveWorkspaceProps {
   onCreateTask?: (level: "TRUONG" | "DON_VI", parentTaskId?: string) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  onAction?: (action: string, payload?: unknown) => void;
 }

@@ -307,6 +307,7 @@ export interface CascadingTaskTableProps {
   className?: string;
   hideWorkbox?: boolean;
   hideToolbar?: boolean;
+  onOpenSubmitModal?: (task: StaffTask) => void;
 }
 
 interface MobileTaskCardProps {
