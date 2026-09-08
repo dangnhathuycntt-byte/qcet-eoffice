@@ -67,6 +67,7 @@ export default function RootLayout({
     <html
       lang="vi"
       className={`light ${fontSans.variable} ${fontHeading.variable} ${fontMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
         <link rel="apple-touch-icon" href="/logo-qcet.png" />
