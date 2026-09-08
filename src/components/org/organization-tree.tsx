@@ -105,8 +105,8 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Tập thể lãnh đạo cao nhất trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn, chỉ đạo chiến lược phát triển, chuyển đổi số toàn diện và quản trị chất lượng giáo dục nghề nghiệp.",
     location: "Tòa nhà Hiệu bộ - Tầng 3",
     phone: "0256 3846 478",
-    email: "bgh@qcet.edu.vn",
-    leaderName: "TS. Nguyễn Minh Tuấn",
+    email: "bgh@cdktcnqn.edu.vn",
+    leaderName: "ThS. Phạm Văn Tường",
     leaderRole: "Hiệu trưởng",
     headcount: 5,
     presentToday: 5,
@@ -116,11 +116,11 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     groupField: "Nhóm",
     members: [
       {
-        id: "staff-tuan-nm",
-        name: "Nguyễn Minh Tuấn",
-        titlePrefix: "TS.",
-        role: "Hiệu trưởng / Chủ tịch Hội đồng trường",
-        email: "tuan.nguyen@qcet.edu.vn",
+        id: "staff-tuong-pv",
+        name: "Phạm Văn Tường",
+        titlePrefix: "ThS.",
+        role: "Hiệu trưởng / Bí thư Đảng ủy",
+        email: "tuongpv@cdktcnqn.edu.vn",
         phone: "0913 400 111",
         avatar:
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
@@ -138,11 +138,11 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         workStatus: "PRESENT",
       },
       {
-        id: "staff-dat-lt",
-        name: "Lê Thành Đạt",
+        id: "staff-kiem-tt",
+        name: "Trần Trọng Kiệm",
         titlePrefix: "ThS.",
         role: "Phó Hiệu trưởng phụ trách Đào tạo & NCKH",
-        email: "dat.le@qcet.edu.vn",
+        email: "kiemtt@cdktcnqn.edu.vn",
         phone: "0903 500 222",
         avatar:
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
@@ -159,11 +159,11 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         workStatus: "PRESENT",
       },
       {
-        id: "staff-cuc-htk",
-        name: "Hoàng Thị Kim Cúc",
+        id: "staff-nguyen-lx",
+        name: "Lê Xuân Nguyên",
         titlePrefix: "ThS.",
         role: "Phó Hiệu trưởng phụ trách Hành chính & Cơ sở vật chất",
-        email: "cuc.hoang@qcet.edu.vn",
+        email: "nguyenlx@cdktcnqn.edu.vn",
         phone: "0914 600 333",
         avatar:
           "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
@@ -196,7 +196,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Chịu trách nhiệm quản lý văn thư lưu trữ, công tác hành chính tổng hợp, an ninh trật tự, quản trị tài sản và cơ sở vật chất.",
     location: "Tòa nhà Hiệu bộ - Tầng 1, P.101",
     phone: "0256 3846 479",
-    email: "hanhchinh@qcet.edu.vn",
+    email: "hanhchinh@cdktcnqn.edu.vn",
     leaderName: "ThS. Phan Văn Thanh",
     leaderRole: "Trưởng phòng",
     headcount: 14,
@@ -212,7 +212,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Phan Văn Thanh",
         titlePrefix: "ThS.",
         role: "Trưởng phòng Hành chính - Quản trị",
-        email: "thanh.phan@qcet.edu.vn",
+        email: "thanh.phan@cdktcnqn.edu.vn",
         phone: "0912 333 444",
         avatar:
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
@@ -233,7 +233,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Lê Hoàng Nam",
         titlePrefix: "KS.",
         role: "Chuyên viên tổng hợp HCQT",
-        email: "nam.le@qcet.edu.vn",
+        email: "nam.le@cdktcnqn.edu.vn",
         phone: "0935 456 789",
         avatar:
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
@@ -254,7 +254,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Trương Thị Hồng Nhung",
         titlePrefix: "CN.",
         role: "Cán bộ Văn thư - Lưu trữ",
-        email: "nhung.truong@qcet.edu.vn",
+        email: "nhung.truong@cdktcnqn.edu.vn",
         phone: "0905 777 888",
         avatar:
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
@@ -274,8 +274,8 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
   },
   {
     id: "dept-p-tcdbcl",
-    code: "P_KTDBCL",
-    name: "Phòng Tổ chức - Đảm bảo chất lượng (Khảo thí & ĐBCL)",
+    code: "P_TCDBCL",
+    name: "Phòng Tổ chức - Đảm bảo chất lượng",
     shortName: "Tổ chức - ĐBCL",
     category: "PHONG_CHUC_NANG",
     categoryLabel: "Phòng chức năng",
@@ -283,8 +283,8 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Tham mưu kiện toàn tổ chức cán bộ, bổ nhiệm, thi đua khen thưởng, thực hiện tự đánh giá kiểm định cơ sở giáo dục nghề nghiệp và khảo thí.",
     location: "Tòa nhà Hiệu bộ - Tầng 2, P.202",
     phone: "0256 3846 481",
-    email: "tccb@qcet.edu.vn",
-    leaderName: "TS. Nguyễn Công Minh",
+    email: "tochuc@cdktcnqn.edu.vn",
+    leaderName: "ThS. Nguyễn Tiến Phong",
     leaderRole: "Trưởng phòng",
     headcount: 11,
     presentToday: 11,
@@ -296,10 +296,10 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     members: [
       {
         id: "staff-minh-nc",
-        name: "Nguyễn Công Minh",
-        titlePrefix: "TS.",
-        role: "Trưởng phòng Tổ chức - ĐBCL",
-        email: "minh.nguyen@qcet.edu.vn",
+        name: "Nguyễn Tiến Phong",
+        titlePrefix: "ThS.",
+        role: "Trưởng phòng",
+        email: "phongnt@cdktcnqn.edu.vn",
         phone: "0916 444 555",
         avatar:
           "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
@@ -320,7 +320,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Đặng Văn Hậu",
         titlePrefix: "ThS.",
         role: "Chuyên viên Khảo thí & ĐBCL",
-        email: "hau.dang@qcet.edu.vn",
+        email: "hau.dang@cdktcnqn.edu.vn",
         phone: "0977 123 456",
         avatar:
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
@@ -341,7 +341,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Lê Thị Diễm My",
         titlePrefix: "ThS.",
         role: "Chuyên viên Đảm bảo chất lượng",
-        email: "my.le@qcet.edu.vn",
+        email: "my.le@cdktcnqn.edu.vn",
         phone: "0989 333 777",
         avatar:
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
@@ -361,17 +361,17 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
   },
   {
     id: "dept-p-qldt",
-    code: "P_DTQLKH",
-    name: "Phòng Đào tạo & Quản lý Khoa học",
-    shortName: "Đào tạo & QLKH",
+    code: "P_QLDT",
+    name: "Phòng Quản lý Đào tạo",
+    shortName: "Quản lý Đào tạo",
     category: "PHONG_CHUC_NANG",
     categoryLabel: "Phòng chức năng",
     description:
       "Xây dựng kế hoạch giảng dạy, thời khóa biểu, quản lý tiến độ đào tạo, liên kết doanh nghiệp và theo dõi đề tài nghiên cứu khoa học.",
     location: "Tòa nhà Hiệu bộ - Tầng 1, P.102",
     phone: "0256 3846 477",
-    email: "daotao@qcet.edu.vn",
-    leaderName: "ThS. Trần Văn Hùng",
+    email: "daotao@cdktcnqn.edu.vn",
+    leaderName: "ThS. Lê Văn Thí",
     leaderRole: "Trưởng phòng",
     headcount: 16,
     presentToday: 15,
@@ -383,10 +383,10 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     members: [
       {
         id: "staff-hung-tv",
-        name: "Trần Văn Hùng",
+        name: "Lê Văn Thí",
         titlePrefix: "ThS.",
-        role: "Trưởng phòng Quản lý Đào tạo",
-        email: "hung.tranvan@qcet.edu.vn",
+        role: "Trưởng phòng",
+        email: "levanthi@cdktcnqn.edu.vn",
         phone: "0914 111 222",
         avatar:
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
@@ -407,7 +407,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Võ Minh Trí",
         titlePrefix: "KS.",
         role: "Chuyên viên Quản lý Đào tạo & E-Office",
-        email: "tri.vo@qcet.edu.vn",
+        email: "tri.vo@cdktcnqn.edu.vn",
         phone: "0905 123 456",
         avatar:
           "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
@@ -428,7 +428,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Nguyễn Thị Bích Thủy",
         titlePrefix: "ThS.",
         role: "Chuyên viên QLKH & Hợp tác Quốc tế",
-        email: "thuy.nguyen@qcet.edu.vn",
+        email: "thuy.nguyen@cdktcnqn.edu.vn",
         phone: "0976 555 666",
         avatar:
           "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
@@ -448,17 +448,17 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
   },
   {
     id: "dept-p-tshtqt",
-    code: "P_CTHSSV",
-    name: "Phòng Công tác HSSV & Tuyển sinh",
-    shortName: "Công tác HSSV",
+    code: "P_TSHTQT",
+    name: "Phòng Tuyển sinh - Hợp tác quốc tế",
+    shortName: "Tuyển sinh - HTQT",
     category: "PHONG_CHUC_NANG",
     categoryLabel: "Phòng chức năng",
     description:
       "Đầu mối tổ chức công tác tư vấn tuyển sinh các hệ đào tạo, quản lý ký túc xá, chế độ chính sách sinh viên và phát triển dự án hợp tác quốc tế.",
     location: "Tòa nhà Hiệu bộ - Tầng 1, P.103",
     phone: "0256 3846 482",
-    email: "tuyensinh@qcet.edu.vn",
-    leaderName: "ThS. Huỳnh Công Tuấn",
+    email: "tuyensinh@cdktcnqn.edu.vn",
+    leaderName: "ThS. Nguyễn Quốc Vỹ",
     leaderRole: "Trưởng phòng",
     headcount: 12,
     presentToday: 11,
@@ -473,7 +473,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Huỳnh Công Tuấn",
         titlePrefix: "ThS.",
         role: "Trưởng phòng Tuyển sinh - HTQT",
-        email: "tuan.huynh@qcet.edu.vn",
+        email: "vynq@cdktcnqn.edu.vn",
         phone: "0917 888 111",
         avatar:
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
@@ -494,7 +494,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Nguyễn Thị Thanh Hà",
         titlePrefix: "CN.",
         role: "Chuyên viên Chính sách & Tuyển sinh",
-        email: "ha.nguyen@qcet.edu.vn",
+        email: "ha.nguyen@cdktcnqn.edu.vn",
         phone: "0945 666 222",
         avatar:
           "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
@@ -514,17 +514,17 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
   },
   {
     id: "dept-p-tc",
-    code: "P_KHTC",
-    name: "Phòng Kế hoạch - Tài chính",
-    shortName: "Kế hoạch - Tài chính",
+    code: "P_TC",
+    name: "Phòng Tài chính",
+    shortName: "Tài chính",
     category: "PHONG_CHUC_NANG",
     categoryLabel: "Phòng chức năng",
     description:
       "Tham mưu và thực hiện công tác quản lý tài chính, phân bổ dự toán ngân sách nhà nước, kế toán tiền lương, học phí và giải ngân đầu tư công.",
     location: "Tòa nhà Hiệu bộ - Tầng 1, P.104",
     phone: "0256 3846 480",
-    email: "taichinh@qcet.edu.vn",
-    leaderName: "ThS. Trần Thị Mai Loan",
+    email: "taichinh@cdktcnqn.edu.vn",
+    leaderName: "ThS. Lê Phương Thúy Oanh",
     leaderRole: "Trưởng phòng / Kế toán trưởng",
     headcount: 9,
     presentToday: 9,
@@ -536,10 +536,10 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     members: [
       {
         id: "staff-loan-ttm",
-        name: "Trần Thị Mai Loan",
+        name: "Lê Phương Thúy Oanh",
         titlePrefix: "ThS.",
         role: "Kế toán trưởng / Trưởng phòng",
-        email: "loan.tran@qcet.edu.vn",
+        email: "lephuongthuyoanh@cdktcnqn.edu.vn",
         phone: "0915 222 333",
         avatar:
           "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
@@ -560,7 +560,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Hà Thanh Vân",
         titlePrefix: "CN.",
         role: "Kế toán viên Tổng hợp",
-        email: "van.ha@qcet.edu.vn",
+        email: "van.ha@cdktcnqn.edu.vn",
         phone: "0934 888 999",
         avatar:
           "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80",
@@ -580,16 +580,16 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
   },
   {
     id: "dept-tt-stt",
-    code: "TT_DCC",
-    name: "Trung tâm Truyền thông & Số hóa",
-    shortName: "Truyền thông & Số hóa",
+    code: "TT_STT",
+    name: "Trung tâm Số - Truyền thông",
+    shortName: "Số - Truyền thông",
     category: "TRUNG_TAM",
     categoryLabel: "Trung tâm trực thuộc",
     description:
       "Đầu mối kỹ thuật vận hành hệ thống E-Office, máy chủ, cổng thông tin trường, mạng viễn thông và sản xuất ấn phẩm truyền thông số hóa.",
     location: "Tòa nhà Thư viện & TT Số - Tầng 2, P.204",
     phone: "0256 3846 486",
-    email: "truyenthongso@qcet.edu.vn",
+    email: "quantrimang@cdktcnqn.edu.vn",
     leaderName: "ThS. Mai Đinh Thị Xuân",
     leaderRole: "Giám đốc Trung tâm",
     headcount: 8,
@@ -605,7 +605,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Mai Đinh Thị Xuân",
         titlePrefix: "ThS.",
         role: "Giám đốc Trung tâm Số - Truyền thông",
-        email: "xuan.mai@qcet.edu.vn",
+        email: "xuan.mai@cdktcnqn.edu.vn",
         phone: "0918 345 678",
         avatar:
           "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80",
@@ -627,7 +627,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Dương Quang Huy",
         titlePrefix: "KS.",
         role: "Kỹ sư Quản trị mạng & An toàn thông tin",
-        email: "huy.duong@qcet.edu.vn",
+        email: "huy.duong@cdktcnqn.edu.vn",
         phone: "0938 123 888",
         avatar:
           "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
@@ -656,7 +656,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Tổ chức đào tạo, bồi dưỡng và sát hạch cấp chứng chỉ Ngoại ngữ chuẩn quốc tế (TOEIC, IELTS) và Tin học chuẩn kỹ năng quốc gia.",
     location: "Tòa nhà Thư viện & TT Số - Tầng 1, P.105",
     phone: "0256 3846 487",
-    email: "nnth@qcet.edu.vn",
+    email: "nnth@cdktcnqn.edu.vn",
     leaderName: "ThS. Chu Đình Thắng",
     leaderRole: "Giám đốc Trung tâm",
     headcount: 7,
@@ -671,7 +671,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Chu Đình Thắng",
         titlePrefix: "ThS.",
         role: "Giám đốc Trung tâm Ngoại ngữ - Tin học",
-        email: "thang.chu@qcet.edu.vn",
+        email: "thang.chu@cdktcnqn.edu.vn",
         phone: "0913 888 777",
         avatar:
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
@@ -692,7 +692,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Phạm Thị Thu",
         titlePrefix: "ThS.",
         role: "Chuyên viên Thư viện & Học liệu số",
-        email: "thu.pham@qcet.edu.vn",
+        email: "thu.pham@cdktcnqn.edu.vn",
         phone: "0912 678 901",
         avatar:
           "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&auto=format&fit=crop&q=80",
@@ -725,7 +725,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Đào tạo kỹ sư thực hành các chuyên ngành Công nghệ thông tin, Kỹ thuật Phần mềm, An toàn mạng, Thiết kế đồ họa số và Trí tuệ nhân tạo.",
     location: "Khu Giảng đường C - Tầng 3, P.302",
     phone: "0256 3846 483",
-    email: "khoadientutinhoc@qcet.edu.vn",
+    email: "khoadientutinhoc@cdktcnqn.edu.vn",
     leaderName: "TS. Nguyễn Ngọc Vinh",
     leaderRole: "Trưởng khoa",
     headcount: 24,
@@ -741,7 +741,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Nguyễn Ngọc Vinh",
         titlePrefix: "TS.",
         role: "Trưởng khoa / Phụ trách Chuyển đổi số",
-        email: "vinh.nguyen@qcet.edu.vn",
+        email: "vinhnn@cdktcnqn.edu.vn",
         phone: "0909 234 567",
         avatar:
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
@@ -763,7 +763,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Trần Hùng",
         titlePrefix: "ThS.",
         role: "Phó Trưởng khoa / An ninh mạng & ATTT",
-        email: "hung.tran@qcet.edu.vn",
+        email: "hung.tran@cdktcnqn.edu.vn",
         phone: "0908 123 456",
         avatar:
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
@@ -784,7 +784,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Phan Đình Khôi",
         titlePrefix: "ThS.",
         role: "Giảng viên Bộ môn Phát triển phần mềm",
-        email: "khoi.phan@qcet.edu.vn",
+        email: "khoi.phan@cdktcnqn.edu.vn",
         phone: "0983 999 111",
         avatar:
           "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
@@ -813,7 +813,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Đào tạo kỹ sư thực hành chuyên ngành Cắt gọt kim loại CNC, Công nghệ Hàn công nghệ cao và Thiết kế chế tạo máy công nghiệp.",
     location: "Khu Xưởng Thực hành A - P.101",
     phone: "0256 3846 488",
-    email: "khoacokhi@qcet.edu.vn",
+    email: "khoacokhi@cdktcnqn.edu.vn",
     leaderName: "TS. Đinh Quốc Cường",
     leaderRole: "Trưởng khoa",
     headcount: 22,
@@ -829,7 +829,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Đinh Quốc Cường",
         titlePrefix: "TS.",
         role: "Trưởng khoa Cơ khí",
-        email: "cuong.dinh@qcet.edu.vn",
+        email: "cuong.dinh@cdktcnqn.edu.vn",
         phone: "0919 111 444",
         avatar:
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
@@ -850,7 +850,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Vũ Văn Nghiệp",
         titlePrefix: "ThS.",
         role: "Phó Trưởng khoa / Kỹ thuật Gia công CNC",
-        email: "nghiep.vu@qcet.edu.vn",
+        email: "nghiep.vu@cdktcnqn.edu.vn",
         phone: "0906 888 444",
         avatar:
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
@@ -870,8 +870,8 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
   },
   {
     id: "dept-k-cnoto",
-    code: "K_KTCN",
-    name: "Khoa Kỹ thuật - Công nghệ (Ô tô & Chế tạo máy)",
+    code: "K_CNOTO",
+    name: "Khoa Công nghệ Ô tô (Ô tô & Chế tạo máy)",
     shortName: "Khoa KTCN",
     category: "KHOA_CHUYEN_MON",
     categoryLabel: "Khoa chuyên môn",
@@ -879,7 +879,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Đào tạo kỹ sư thực hành chuyên ngành Công nghệ kỹ thuật ô tô, Hệ thống điều khiển điện tử ô tô và Xe điện thông minh (EV).",
     location: "Khu Xưởng Thực hành D - P.102",
     phone: "0256 3846 489",
-    email: "khoaoto@qcet.edu.vn",
+    email: "khoaoto@cdktcnqn.edu.vn",
     leaderName: "KS. Vũ Mạnh Hùng",
     leaderRole: "Phó Trưởng khoa phụ trách",
     headcount: 26,
@@ -895,7 +895,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Vũ Mạnh Hùng",
         titlePrefix: "KS.",
         role: "Phó Trưởng khoa phụ trách Xưởng Ô tô",
-        email: "hung.vu@qcet.edu.vn",
+        email: "hung.vu@cdktcnqn.edu.vn",
         phone: "0906 333 999",
         avatar:
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
@@ -916,7 +916,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Trần Bá Lộc",
         titlePrefix: "ThS.",
         role: "Giảng viên Điện ô tô & Cơ điện tử",
-        email: "loc.tran@qcet.edu.vn",
+        email: "loc.tran@cdktcnqn.edu.vn",
         phone: "0978 222 111",
         avatar:
           "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80",
@@ -945,7 +945,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Đào tạo chuyên ngành Điện công nghiệp, Kỹ thuật lắp đặt điện tử công suất, Hệ thống pin năng lượng mặt trời và Tự động hóa trạm biến áp.",
     location: "Khu Giảng đường B - Tầng 1, P.108",
     phone: "0256 3846 490",
-    email: "khoadien@qcet.edu.vn",
+    email: "khoadien@cdktcnqn.edu.vn",
     leaderName: "ThS. Nguyễn Văn Thắng",
     leaderRole: "Trưởng khoa",
     headcount: 19,
@@ -961,7 +961,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Nguyễn Văn Thắng",
         titlePrefix: "ThS.",
         role: "Trưởng khoa Điện",
-        email: "thang.nguyen@qcet.edu.vn",
+        email: "thang.nguyen@cdktcnqn.edu.vn",
         phone: "0915 777 333",
         avatar:
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
@@ -982,7 +982,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Bùi Đình Quý",
         titlePrefix: "ThS.",
         role: "Giảng viên Tự động hóa & PLC",
-        email: "quy.bui@qcet.edu.vn",
+        email: "quy.bui@cdktcnqn.edu.vn",
         phone: "0934 222 111",
         avatar:
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
@@ -1011,7 +1011,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Đào tạo các ngành Quản trị Khách sạn, Quản trị Nhà hàng & Dịch vụ ăn uống, Kỹ thuật chế biến món ăn và Hướng dẫn viên du lịch quốc tế.",
     location: "Khu Giảng đường D - Tầng 2, P.201",
     phone: "0256 3846 491",
-    email: "khoadulich@qcet.edu.vn",
+    email: "khoadulich@cdktcnqn.edu.vn",
     leaderName: "ThS. Phan Thị Phương Thảo",
     leaderRole: "Trưởng khoa",
     headcount: 15,
@@ -1027,7 +1027,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Phan Thị Phương Thảo",
         titlePrefix: "ThS.",
         role: "Trưởng khoa Du lịch",
-        email: "thao.phan@qcet.edu.vn",
+        email: "thao.phan@cdktcnqn.edu.vn",
         phone: "0918 555 999",
         avatar:
           "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
@@ -1048,7 +1048,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Hoàng Nhật Nam",
         titlePrefix: "ThS.",
         role: "Giảng viên Quản trị Khách sạn",
-        email: "nam.hoang@qcet.edu.vn",
+        email: "nam.hoang@cdktcnqn.edu.vn",
         phone: "0905 666 444",
         avatar:
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
@@ -1077,7 +1077,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Đào tạo Kế toán doanh nghiệp, Quản trị kinh doanh số, Logistics & Quản lý chuỗi cung ứng, Thương mại điện tử chất lượng cao.",
     location: "Khu Giảng đường B - Tầng 2, P.205",
     phone: "0256 3846 484",
-    email: "khoaktth@qcet.edu.vn",
+    email: "khoaktth@cdktcnqn.edu.vn",
     leaderName: "TS. Lê Thị Ánh Tuyết",
     leaderRole: "Trưởng khoa",
     headcount: 21,
@@ -1093,7 +1093,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Lê Thị Ánh Tuyết",
         titlePrefix: "TS.",
         role: "Trưởng khoa Kinh tế - Tổng hợp",
-        email: "tuyet.le@qcet.edu.vn",
+        email: "tuyet.le@cdktcnqn.edu.vn",
         phone: "0918 222 666",
         avatar:
           "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
@@ -1114,7 +1114,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Đỗ Hoàng Sơn",
         titlePrefix: "ThS.",
         role: "Phó Trưởng khoa / Trưởng bộ môn Kế toán",
-        email: "son.do@qcet.edu.vn",
+        email: "son.do@cdktcnqn.edu.vn",
         phone: "0932 777 555",
         avatar:
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
@@ -1143,7 +1143,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Đào tạo Nông nghiệp công nghệ cao, Trồng trọt thông minh, Bảo vệ thực vật và Thú y ứng dụng phục vụ kinh tế nông nghiệp miền Trung.",
     location: "Khu Giảng đường Nông nghiệp & Trại thực nghiệm",
     phone: "0256 3846 492",
-    email: "khoann@qcet.edu.vn",
+    email: "khoann@cdktcnqn.edu.vn",
     leaderName: "ThS. Nguyễn Hữu Dũng",
     leaderRole: "Trưởng khoa",
     headcount: 13,
@@ -1159,7 +1159,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Nguyễn Hữu Dũng",
         titlePrefix: "ThS.",
         role: "Trưởng khoa Kỹ thuật nông nghiệp",
-        email: "dung.nguyenhuu@qcet.edu.vn",
+        email: "dung.nguyenhuu@cdktcnqn.edu.vn",
         phone: "0913 999 123",
         avatar:
           "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
@@ -1180,7 +1180,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Phạm Ngọc Lan",
         titlePrefix: "KS.",
         role: "Giảng viên Trồng trọt & Công nghệ sinh học",
-        email: "lan.pham@qcet.edu.vn",
+        email: "lan.pham@cdktcnqn.edu.vn",
         phone: "0987 654 321",
         avatar:
           "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
@@ -1209,7 +1209,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Đào tạo Thanh nhạc, Biểu diễn nhạc cụ truyền thống, Biên đạo múa, Quản lý văn hóa cơ sở và Thiết kế mỹ thuật ứng dụng.",
     location: "Khu Giảng đường Nghệ thuật - Tòa E",
     phone: "0256 3846 493",
-    email: "khoavhnt@qcet.edu.vn",
+    email: "khoavhnt@cdktcnqn.edu.vn",
     leaderName: "ThS. Đặng Thị Bích Hạnh",
     leaderRole: "Trưởng khoa",
     headcount: 14,
@@ -1225,7 +1225,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Đặng Thị Bích Hạnh",
         titlePrefix: "ThS.",
         role: "Trưởng khoa Văn hóa nghệ thuật",
-        email: "hanh.dang@qcet.edu.vn",
+        email: "hanh.dang@cdktcnqn.edu.vn",
         phone: "0912 888 222",
         avatar:
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
@@ -1246,7 +1246,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Nguyễn Thanh Long",
         titlePrefix: "CN.",
         role: "Giảng viên Bộ môn Thanh nhạc & Nhạc cụ",
-        email: "long.nguyen@qcet.edu.vn",
+        email: "long.nguyen@cdktcnqn.edu.vn",
         phone: "0935 999 888",
         avatar:
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
@@ -1275,7 +1275,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
       "Giảng dạy các học phần khoa học cơ bản (Toán cao cấp, Vật lý đại cương), Lý luận chính trị, Giáo dục quốc phòng và Giáo dục thể chất cho toàn trường.",
     location: "Khu Giảng đường B - Tầng 3, P.305",
     phone: "0256 3846 494",
-    email: "khoadaicuong@qcet.edu.vn",
+    email: "khoadaicuong@cdktcnqn.edu.vn",
     leaderName: "ThS. Trịnh Văn Minh",
     leaderRole: "Trưởng khoa",
     headcount: 18,
@@ -1291,7 +1291,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Trịnh Văn Minh",
         titlePrefix: "ThS.",
         role: "Trưởng khoa Đại cương",
-        email: "minh.trinh@qcet.edu.vn",
+        email: "minh.trinh@cdktcnqn.edu.vn",
         phone: "0916 333 777",
         avatar:
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
@@ -1312,7 +1312,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
         name: "Trần Thị Kim Oanh",
         titlePrefix: "ThS.",
         role: "Giảng viên Bộ môn Toán & Thống kê",
-        email: "oanh.tran@qcet.edu.vn",
+        email: "oanh.tran@cdktcnqn.edu.vn",
         phone: "0982 123 456",
         avatar:
           "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
@@ -1366,6 +1366,7 @@ export function filterStaffMembers(
   }
 
   const trimmed = query.trim().toLowerCase();
+  const normalizedQuery = trimmed === "@qcet.edu.vn" ? "@cdktcnqn.edu.vn" : trimmed;
   if (!trimmed) {
     return allStaff;
   }
@@ -1373,7 +1374,7 @@ export function filterStaffMembers(
   return allStaff.filter((staff) => {
     return (
       staff.name.toLowerCase().includes(trimmed) ||
-      staff.email.toLowerCase().includes(trimmed) ||
+      staff.email.toLowerCase().includes(trimmed) || staff.email.toLowerCase().includes(normalizedQuery) ||
       staff.role.toLowerCase().includes(trimmed) ||
       staff.departmentName.toLowerCase().includes(trimmed) ||
       (staff.phone && staff.phone.includes(trimmed)) ||

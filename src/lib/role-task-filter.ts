@@ -6,33 +6,45 @@ export { type AuthUser, type UserRole } from "../types/auth";
 export const DEFAULT_DEMO_USERS: AuthUser[] = [
   {
     id: "user-admin-bgh",
-    name: "Ban Giám hiệu (Hiệu trưởng)",
-    email: "bgh@cdktcnqn.edu.vn",
+    name: "ThS. Phạm Văn Tường",
+    email: "tuongpv@cdktcnqn.edu.vn",
     role: "ADMIN",
-    roleLabel: "Ban Giám hiệu (Hiệu trưởng)",
+    roleLabel: "Ban Giám hiệu (Hiệu trưởng - ThS. Phạm Văn Tường)",
     department: "Ban Giám hiệu",
     departmentCode: "BGH",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+    title: "Hiệu trưởng",
+    aliases: ["Ban Giám hiệu", "Hiệu trưởng", "Phạm Văn Tường", "bgh@cdktcnqn.edu.vn"],
   },
   {
-    id: "user-manager-daotao",
-    name: "Trần Hùng",
-    email: "daotao@cdktcnqn.edu.vn",
+    id: "user-manager-qldt",
+    name: "ThS. Lê Văn Thí",
+    email: "levanthi@cdktcnqn.edu.vn",
     role: "MANAGER",
-    roleLabel: "Trưởng phòng Đào tạo & QLKH (Trần Hùng)",
-    department: "Phòng Đào tạo & QLKH",
-    departmentCode: "DAO_TAO",
+    roleLabel: "Trưởng phòng Quản lý Đào tạo (ThS. Lê Văn Thí)",
+    department: "Phòng Quản lý Đào tạo",
+    departmentCode: "P_QLDT",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+    title: "Trưởng phòng",
+    aliases: [
+      "Lê Văn Thí",
+      "Trần Hùng",
+      "Trưởng phòng Đào tạo & QLKH",
+      "Phòng Đào tạo & QLKH",
+      "daotao@cdktcnqn.edu.vn",
+    ],
   },
   {
     id: "user-staff-vinh",
-    name: "Nguyễn Ngọc Vinh",
+    name: "KS. Nguyễn Ngọc Vinh",
     email: "vinhnn@cdktcnqn.edu.vn",
     role: "STAFF",
-    roleLabel: "Chuyên viên CNTT (Nguyễn Ngọc Vinh)",
-    department: "Khoa Công nghệ thông tin",
-    departmentCode: "CNTT",
+    roleLabel: "Chuyên viên CNTT (KS. Nguyễn Ngọc Vinh)",
+    department: "Trung tâm Số - Truyền thông",
+    departmentCode: "TT_STT",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
+    title: "Chuyên viên CNTT",
+    aliases: ["Nguyễn Ngọc Vinh", "Vinh"],
   },
 ];
 
@@ -57,6 +69,12 @@ export function matchesUser(assigneeName?: string, user?: AuthUser | null): bool
   if (user.roleLabel) {
     const rLabel = user.roleLabel.trim().toLowerCase();
     if (rLabel.includes(a) || a.includes(rLabel)) return true;
+  }
+  if (user.aliases && Array.isArray(user.aliases)) {
+    for (const alias of user.aliases) {
+      const al = alias.trim().toLowerCase();
+      if (a === al || al.includes(a) || a.includes(al)) return true;
+    }
   }
   return false;
 }

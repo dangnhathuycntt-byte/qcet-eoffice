@@ -21,13 +21,13 @@ import {
   filterTasksHub,
 } from "../src/lib/unified-task-hub";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
-import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
+import { DEFAULT_DEMO_USERS, matchesUser } from "../src/lib/role-task-filter";
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 
 describe("UnifiedTaskToolbar Helpers", () => {
   const payload = getMockDashboardPayload();
   const staffUser = DEFAULT_DEMO_USERS[2]; // Nguyễn Ngọc Vinh (CNTT)
-  const managerUser = DEFAULT_DEMO_USERS[1]; // Trần Hùng (DAO_TAO)
+  const managerUser = DEFAULT_DEMO_USERS[1]; // Lê Văn Thí (DAO_TAO)
   const adminUser = DEFAULT_DEMO_USERS[0]; // BGH
 
   test("SCOPE_TABS defines 3 scopes: MY_TASKS, SCHOOL_TASKS, UNIT_TASKS", () => {
@@ -52,8 +52,10 @@ describe("UnifiedTaskToolbar Helpers", () => {
     assert.ok(myTasks.length > 0);
     // All returned tasks must involve staffUser
     for (const t of myTasks) {
-      const isLead = t.leadAssigneeName === staffUser.name;
-      const hasSub = t.subTasks?.some((s: StaffTask) => s.assigneeName === staffUser.name);
+      const isLead = t.leadAssigneeName === staffUser.name || matchesUser(t.leadAssigneeName, staffUser);
+      const hasSub = t.subTasks?.some(
+        (s: StaffTask) => s.assigneeName === staffUser.name || matchesUser(s.assigneeName, staffUser)
+      );
       assert.ok(isLead || hasSub, "task must be assigned to staff user");
     }
   });

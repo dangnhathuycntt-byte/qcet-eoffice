@@ -17,25 +17,43 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding QCET E-Office Database...');
 
-  // 1. Tạo và đồng bộ 11 đơn vị chuẩn của QCET
+    // 1. Tạo và đồng bộ 15 đơn vị chuẩn của QCET cùng các mã tương thích
   const departments = [
-    { id: 'ban-giam-hieu', name: 'Ban Giám hiệu', shortName: 'BGH', color: '#1E3A8A' },
-    { id: 'phong-dao-tao', name: 'Phòng Đào tạo', shortName: 'P.ĐT', color: '#2563EB' },
-    { id: 'khoa-cntt', name: 'Khoa Công nghệ Thông tin', shortName: 'K.CNTT', color: '#0284C7' },
-    { id: 'khoa-co-khi', name: 'Khoa Cơ khí', shortName: 'K.CK', color: '#0D9488' },
-    { id: 'khoa-dien', name: 'Khoa Điện - Điện tử', shortName: 'K.ĐĐT', color: '#16A34A' },
-    { id: 'khoa-oto', name: 'Khoa Kỹ thuật Ô tô', shortName: 'K.ÔTÔ', color: '#CA8A04' },
-    { id: 'phong-cthssv', name: 'Phòng Công tác Học sinh Sinh viên', shortName: 'P.CTHSSV', color: '#EA580C' },
-    { id: 'phong-qctb', name: 'Phòng Quản trị - Thiết bị', shortName: 'P.QTTB', color: '#DC2626' },
-    { id: 'phong-tckt', name: 'Phòng Tài chính - Kế toán', shortName: 'P.TCKT', color: '#9333EA' },
-    { id: 'tt-laixe', name: 'Trung tâm Đào tạo Lái xe', shortName: 'TT.LX', color: '#4F46E5' },
-    { id: 'tt-tuyensinh', name: 'Trung tâm Tuyển sinh & Truyền thông', shortName: 'TT.TS', color: '#059669' },
-    // Duy trì tương thích với dữ liệu tiền nhiệm
-    { id: 'BGH', name: 'Ban Giám hiệu Nhà trường', shortName: 'BGH', color: '#1E3A8A' },
-    { id: 'CNTT', name: 'Phòng Quản trị Mạng và CNTT', shortName: 'QTM-CNTT', color: '#0284C7' },
-    { id: 'TCHC', name: 'Phòng Tổ chức Hành chính', shortName: 'TCHC', color: '#059669' },
-    { id: 'KHTC', name: 'Phòng Kế hoạch Tài chính', shortName: 'KHTC', color: '#9333EA' },
-    { id: 'DT_QLKH', name: 'Phòng Đào tạo & Quản lý Khoa học', shortName: 'ĐT-QLKH', color: '#2563EB' },
+    // 15 Đơn vị chuẩn hóa QCET theo cdktcnqn.edu.vn
+    { id: "BGH", name: "Ban Giám hiệu", shortName: "BGH", color: "#1E3A8A" },
+    { id: "P_QLDT", name: "Phòng Quản lý Đào tạo", shortName: "P.QLĐT", color: "#2563EB" },
+    { id: "P_TC", name: "Phòng Tài chính", shortName: "P.TC", color: "#9333EA" },
+    { id: "P_TCDBCL", name: "Phòng Tổ chức - Đảm bảo chất lượng", shortName: "P.TC-ĐBCL", color: "#059669" },
+    { id: "P_HCQT", name: "Phòng Hành chính - Quản trị", shortName: "P.HC-QT", color: "#DC2626" },
+    { id: "P_TSHTQT", name: "Phòng Tuyển sinh - Hợp tác quốc tế", shortName: "P.TS-HTQT", color: "#EA580C" },
+    { id: "TT_STT", name: "Trung tâm Số - Truyền thông", shortName: "TT.S-TT", color: "#0284C7" },
+    { id: "K_CNTT", name: "Khoa Điện tử - Tin học", shortName: "K.CNTT", color: "#0284C7" },
+    { id: "K_CK", name: "Khoa Cơ khí", shortName: "K.CK", color: "#0D9488" },
+    { id: "K_DIEN", name: "Khoa Điện", shortName: "K.Đ", color: "#16A34A" },
+    { id: "K_CNOTO", name: "Khoa Công nghệ Ô tô", shortName: "K.ÔTÔ", color: "#CA8A04" },
+    { id: "K_DULICH", name: "Khoa Du lịch - Dịch vụ", shortName: "K.DL", color: "#E11D48" },
+    { id: "K_KTQT", name: "Khoa Kinh tế - Tổng hợp", shortName: "K.KTTH", color: "#7C3AED" },
+    { id: "K_KTNN", name: "Khoa Kỹ thuật Nông nghiệp", shortName: "K.KTNN", color: "#15803D" },
+    { id: "K_VHNT", name: "Khoa Văn hóa Nghệ thuật", shortName: "K.VHNT", color: "#B45309" },
+    { id: "K_DAICUONG", name: "Khoa Văn hóa THPT & Khoa học cơ bản", shortName: "K.ĐC", color: "#4B5563" },
+    { id: "TT_NNTH", name: "Trung tâm Ngoại ngữ - Tin học", shortName: "TT.NNTH", color: "#4F46E5" },
+
+    // Duy trì tương thích với dữ liệu tiền nhiệm và foreign key cũ
+    { id: "ban-giam-hieu", name: "Ban Giám hiệu (Cũ)", shortName: "BGH", color: "#1E3A8A" },
+    { id: "phong-dao-tao", name: "Phòng Đào tạo (Cũ)", shortName: "P.ĐT", color: "#2563EB" },
+    { id: "khoa-cntt", name: "Khoa Công nghệ Thông tin (Cũ)", shortName: "K.CNTT", color: "#0284C7" },
+    { id: "khoa-co-khi", name: "Khoa Cơ khí (Cũ)", shortName: "K.CK", color: "#0D9488" },
+    { id: "khoa-dien", name: "Khoa Điện - Điện tử (Cũ)", shortName: "K.ĐĐT", color: "#16A34A" },
+    { id: "khoa-oto", name: "Khoa Kỹ thuật Ô tô (Cũ)", shortName: "K.ÔTÔ", color: "#CA8A04" },
+    { id: "phong-cthssv", name: "Phòng Công tác Học sinh Sinh viên (Cũ)", shortName: "P.CTHSSV", color: "#EA580C" },
+    { id: "phong-qctb", name: "Phòng Quản trị - Thiết bị (Cũ)", shortName: "P.QTTB", color: "#DC2626" },
+    { id: "phong-tckt", name: "Phòng Tài chính - Kế toán (Cũ)", shortName: "P.TCKT", color: "#9333EA" },
+    { id: "tt-laixe", name: "Trung tâm Đào tạo L��i xe (Cũ)", shortName: "TT.LX", color: "#4F46E5" },
+    { id: "tt-tuyensinh", name: "Trung tâm Tuyển sinh & Truyền thông (Cũ)", shortName: "TT.TS", color: "#059669" },
+    { id: "CNTT", name: "Phòng Quản trị Mạng và CNTT", shortName: "QTM-CNTT", color: "#0284C7" },
+    { id: "TCHC", name: "Phòng Tổ chức Hành chính", shortName: "TCHC", color: "#059669" },
+    { id: "KHTC", name: "Phòng Kế hoạch Tài chính", shortName: "KHTC", color: "#9333EA" },
+    { id: "DT_QLKH", name: "Phòng Đào tạo & Quản lý Khoa học", shortName: "ĐT-QLKH", color: "#2563EB" },
   ];
 
   for (const dept of departments) {
@@ -46,29 +64,46 @@ async function main() {
     });
   }
 
-  // 2. Tạo Tài khoản Người dùng
-  const defaultPasswordHash = await bcrypt.hash('Qcet@123456', 10);
-  const qcet2026PasswordHash = await bcrypt.hash('Qcet@2026', 10);
+    // 2. Tạo Tài khoản Người dùng với thông tin thực tế của QCET (@cdktcnqn.edu.vn)
+  const defaultPasswordHash = await bcrypt.hash("Qcet@123456", 10);
+  const qcet2026PasswordHash = await bcrypt.hash("Qcet@2026", 10);
 
   const users = [
-    { email: 'hieutruong@qcet.edu.vn', name: 'TS. Nguyễn Văn Hiệu (Hiệu trưởng)', role: UserRole.BAN_GIAM_HIEU, departmentId: 'ban-giam-hieu', title: 'Hiệu trưởng', phone: '028.3896.8641', passwordHash: defaultPasswordHash },
-    { email: 'phohieutruong1@qcet.edu.vn', name: 'ThS. Trần Thị Phó (Phó Hiệu trưởng Đào tạo)', role: UserRole.BAN_GIAM_HIEU, departmentId: 'ban-giam-hieu', title: 'Phó Hiệu trưởng', phone: '028.3896.8642', passwordHash: defaultPasswordHash },
-    { email: 'bgh@qcet.edu.vn', name: 'TS. Nguyễn Văn Hiệu', role: UserRole.BAN_GIAM_HIEU, departmentId: 'ban-giam-hieu', title: 'Hiệu trưởng', phone: '028.3896.8641', passwordHash: qcet2026PasswordHash },
-    { email: 'admin@qcet.edu.vn', name: 'Quản trị hệ thống QCET', role: UserRole.ADMIN, departmentId: 'ban-giam-hieu', title: 'Quản trị viên', phone: '0900.000.001', passwordHash: defaultPasswordHash },
-    { email: 'vanthu@qcet.edu.vn', name: 'CN. Nguyễn Thị Văn Thư (Văn thư trường)', role: UserRole.VAN_THU, departmentId: 'ban-giam-hieu', title: 'Văn thư trường', phone: '028.3896.8643', passwordHash: defaultPasswordHash },
-    { email: 'truongphong.daotao@qcet.edu.vn', name: 'ThS. Lê Đào Tạo (Trưởng phòng ĐT)', role: UserRole.TRUONG_PHONG, departmentId: 'phong-dao-tao', title: 'Trưởng phòng Đào tạo', phone: '0908.111.222', passwordHash: defaultPasswordHash },
-    { email: 'truongkhoa.cntt@qcet.edu.vn', name: 'ThS. Hoàng Công Nghệ (Trưởng khoa CNTT)', role: UserRole.TRUONG_PHONG, departmentId: 'khoa-cntt', title: 'Trưởng khoa CNTT', phone: '0908.333.444', passwordHash: defaultPasswordHash },
-    { email: 'cntt.lead@qcet.edu.vn', name: 'ThS. Lê Hoàng Nam', role: UserRole.TRUONG_PHONG, departmentId: 'khoa-cntt', title: 'Phó Trưởng khoa CNTT', phone: '0908.123.456', passwordHash: qcet2026PasswordHash },
-    { email: 'giangvien.cntt@qcet.edu.vn', name: 'KS. Phan Lập Trình (Giảng viên CNTT)', role: UserRole.CHUYEN_VIEN, departmentId: 'khoa-cntt', title: 'Giảng viên CNTT', phone: '0912.555.666', passwordHash: defaultPasswordHash },
-    { email: 'chuyenvien@qcet.edu.vn', name: 'Kỹ sư Trần Hùng', role: UserRole.CHUYEN_VIEN, departmentId: 'khoa-cntt', title: 'Chuyên viên kỹ thuật', phone: '0912.345.678', passwordHash: qcet2026PasswordHash },
-    { email: 'truongkhoa.cokhi@qcet.edu.vn', name: 'ThS. Đinh Văn Cơ Khí (Trưởng khoa CK)', role: UserRole.TRUONG_PHONG, departmentId: 'khoa-co-khi', title: 'Trưởng khoa Cơ khí', phone: '0909.123.456', passwordHash: defaultPasswordHash },
-    { email: 'truongkhoa.dien@qcet.edu.vn', name: 'ThS. Nguyễn Văn Điện (Trưởng khoa ĐĐT)', role: UserRole.TRUONG_PHONG, departmentId: 'khoa-dien', title: 'Trưởng khoa Điện - Điện tử', phone: '0909.234.567', passwordHash: defaultPasswordHash },
-    { email: 'truongkhoa.oto@qcet.edu.vn', name: 'ThS. Vũ Kỹ Thuật Ôtô (Trưởng khoa Ôtô)', role: UserRole.TRUONG_PHONG, departmentId: 'khoa-oto', title: 'Trưởng khoa Kỹ thuật Ô tô', phone: '0909.345.678', passwordHash: defaultPasswordHash },
-    { email: 'truongphong.cthssv@qcet.edu.vn', name: 'CN. Phạm Văn Sinh Viên (Trưởng phòng CTHSSV)', role: UserRole.TRUONG_PHONG, departmentId: 'phong-cthssv', title: 'Trưởng phòng CTHSSV', phone: '0909.456.789', passwordHash: defaultPasswordHash },
-    { email: 'truongphong.qctb@qcet.edu.vn', name: 'KTS. Lê Quản Trị (Trưởng phòng QTTB)', role: UserRole.TRUONG_PHONG, departmentId: 'phong-qctb', title: 'Trưởng phòng QTTB', phone: '0909.567.890', passwordHash: defaultPasswordHash },
-    { email: 'truongphong.tckt@qcet.edu.vn', name: 'ThS. Đỗ Tài Chính (Trưởng phòng TCKT)', role: UserRole.TRUONG_PHONG, departmentId: 'phong-tckt', title: 'Trưởng phòng TCKT', phone: '0909.678.901', passwordHash: defaultPasswordHash },
-    { email: 'giamdoc.ttlaixe@qcet.edu.vn', name: 'ThS. Phạm Đào Tạo Lái Xe (GĐ TT Lái xe)', role: UserRole.TRUONG_PHONG, departmentId: 'tt-laixe', title: 'Giám đốc TT Lái xe', phone: '0909.789.012', passwordHash: defaultPasswordHash },
-    { email: 'giamdoc.tttuyensinh@qcet.edu.vn', name: 'ThS. Nguyễn Tuyển Sinh (GĐ TT Tuyển sinh)', role: UserRole.TRUONG_PHONG, departmentId: 'tt-tuyensinh', title: 'Giám đốc TT Tuyển sinh', phone: '0909.890.123', passwordHash: defaultPasswordHash },
+    // Ban Giám hiệu
+    { email: "tuongpv@cdktcnqn.edu.vn", name: "ThS. Phạm Văn Tường (Hiệu trưởng)", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: defaultPasswordHash },
+    { email: "kiemtt@cdktcnqn.edu.vn", name: "ThS. Trần Trọng Kiệm (Phó Hiệu trưởng Đào tạo & NCKH)", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Phó Hiệu trưởng", phone: "0256.3846.479", passwordHash: defaultPasswordHash },
+    { email: "nguyenlx@cdktcnqn.edu.vn", name: "ThS. Lê Xuân Nguyên (Phó Hiệu trưởng HC & CSVC)", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Phó Hiệu trưởng", phone: "0256.3846.480", passwordHash: defaultPasswordHash },
+    { email: "bgh@cdktcnqn.edu.vn", name: "ThS. Phạm Văn Tường", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: qcet2026PasswordHash },
+    { email: "admin@cdktcnqn.edu.vn", name: "Quản trị hệ thống QCET", role: UserRole.ADMIN, departmentId: "BGH", title: "Quản trị viên", phone: "0900.000.001", passwordHash: defaultPasswordHash },
+    { email: "vanthu@cdktcnqn.edu.vn", name: "CN. Trương Thị Hồng Nhung (Văn thư trường)", role: UserRole.VAN_THU, departmentId: "P_HCQT", title: "Văn thư trường", phone: "0256.3846.481", passwordHash: defaultPasswordHash },
+
+    // 6 Phòng / Trung tâm chức năng
+    { email: "levanthi@cdktcnqn.edu.vn", name: "ThS. Lê Văn Thí (Trưởng phòng QLĐT)", role: UserRole.TRUONG_PHONG, departmentId: "P_QLDT", title: "Trưởng phòng Quản lý Đào tạo", phone: "0913.789.012", passwordHash: defaultPasswordHash },
+    { email: "daotao@cdktcnqn.edu.vn", name: "Phòng Quản lý Đào tạo", role: UserRole.TRUONG_PHONG, departmentId: "P_QLDT", title: "Phòng Quản lý Đào tạo", phone: "0256.3846.477", passwordHash: qcet2026PasswordHash },
+    { email: "lephuongthuyoanh@cdktcnqn.edu.vn", name: "ThS. Lê Phương Thúy Oanh (Trưởng phòng TC)", role: UserRole.TRUONG_PHONG, departmentId: "P_TC", title: "Trưởng phòng Tài chính", phone: "0913.234.567", passwordHash: defaultPasswordHash },
+    { email: "taichinh@cdktcnqn.edu.vn", name: "Phòng Tài chính", role: UserRole.TRUONG_PHONG, departmentId: "P_TC", title: "Phòng Tài chính", phone: "0256.3846.483", passwordHash: qcet2026PasswordHash },
+    { email: "phongnt@cdktcnqn.edu.vn", name: "ThS. Nguyễn Tiến Phong (Trưởng phòng TC-ĐBCL)", role: UserRole.TRUONG_PHONG, departmentId: "P_TCDBCL", title: "Trưởng phòng TC-ĐBCL", phone: "0914.123.456", passwordHash: defaultPasswordHash },
+    { email: "tochuc@cdktcnqn.edu.vn", name: "Phòng Tổ chức - ĐBCL", role: UserRole.TRUONG_PHONG, departmentId: "P_TCDBCL", title: "Phòng Tổ chức - ĐBCL", phone: "0256.3846.480", passwordHash: qcet2026PasswordHash },
+    { email: "vynq@cdktcnqn.edu.vn", name: "ThS. Nguyễn Quốc Vỹ (Trưởng phòng TS-HTQT)", role: UserRole.TRUONG_PHONG, departmentId: "P_TSHTQT", title: "Trưởng phòng Tuyển sinh - Hợp tác quốc tế", phone: "0918.345.678", passwordHash: defaultPasswordHash },
+    { email: "tuyensinh@cdktcnqn.edu.vn", name: "Phòng Tuyển sinh - Hợp tác quốc tế", role: UserRole.TRUONG_PHONG, departmentId: "P_TSHTQT", title: "Phòng Tuyển sinh - HTQT", phone: "0256.3846.482", passwordHash: qcet2026PasswordHash },
+    { email: "hanhchinh@cdktcnqn.edu.vn", name: "ThS. Phan Văn Thanh (Trưởng phòng HC-QT)", role: UserRole.TRUONG_PHONG, departmentId: "P_HCQT", title: "Trưởng phòng Hành chính - Quản trị", phone: "0912.333.444", passwordHash: defaultPasswordHash },
+    { email: "vinhnn@cdktcnqn.edu.vn", name: "KS. Nguyễn Ngọc Vinh (Phó Giám đốc phụ trách TT Số - Truyền thông)", role: UserRole.TRUONG_PHONG, departmentId: "TT_STT", title: "Phó Giám đốc TT Số - Truyền thông", phone: "0905.111.222", passwordHash: defaultPasswordHash },
+    { email: "quantrimang@cdktcnqn.edu.vn", name: "Trung tâm Số - Truyền thông", role: UserRole.ADMIN, departmentId: "TT_STT", title: "Trung tâm Số - Truyền thông", phone: "0256.3846.484", passwordHash: qcet2026PasswordHash },
+    { email: "xuanmdt@cdktcnqn.edu.vn", name: "ThS. Mai Đinh Thị Xuân (Phó Giám đốc TT Số - Truyền thông)", role: UserRole.CHUYEN_VIEN, departmentId: "TT_STT", title: "Phó Giám đốc TT Số - Truyền thông", phone: "0914.555.666", passwordHash: defaultPasswordHash },
+
+    // 9 Khoa chuyên môn & Trung tâm Ngoại ngữ - Tin học
+    { email: "k.cntt@cdktcnqn.edu.vn", name: "TS. Nguyễn Ngọc Vinh (Trưởng khoa Điện tử - Tin học)", role: UserRole.TRUONG_PHONG, departmentId: "K_CNTT", title: "Trưởng khoa Điện tử - Tin học", phone: "0905.111.222", passwordHash: defaultPasswordHash },
+    { email: "hungth@cdktcnqn.edu.vn", name: "ThS. Trần Hùng (Phó Trưởng khoa Điện tử - Tin học)", role: UserRole.CHUYEN_VIEN, departmentId: "K_CNTT", title: "Phó Trưởng khoa (ATTT)", phone: "0914.222.333", passwordHash: qcet2026PasswordHash },
+    { email: "khoipd@cdktcnqn.edu.vn", name: "ThS. Phan Đình Khôi (Giảng viên CNTT)", role: UserRole.CHUYEN_VIEN, departmentId: "K_CNTT", title: "Giảng viên CNTT", phone: "0988.555.777", passwordHash: defaultPasswordHash },
+    { email: "cuongdq@cdktcnqn.edu.vn", name: "TS. Đinh Quốc Cường (Trưởng khoa Cơ khí)", role: UserRole.TRUONG_PHONG, departmentId: "K_CK", title: "Trưởng khoa Cơ khí", phone: "0913.999.111", passwordHash: defaultPasswordHash },
+    { email: "thangnv@cdktcnqn.edu.vn", name: "ThS. Nguyễn Văn Thắng (Trưởng khoa Điện)", role: UserRole.TRUONG_PHONG, departmentId: "K_DIEN", title: "Trưởng khoa Điện", phone: "0914.444.888", passwordHash: defaultPasswordHash },
+    { email: "hungvm@cdktcnqn.edu.vn", name: "ThS. Vũ Mạnh Hùng (Trưởng khoa Công nghệ Ô tô)", role: UserRole.TRUONG_PHONG, departmentId: "K_CNOTO", title: "Trưởng khoa Công nghệ Ô tô", phone: "0913.777.999", passwordHash: defaultPasswordHash },
+    { email: "thaoptt@cdktcnqn.edu.vn", name: "ThS. Phan Thị Thanh Thảo (Trưởng khoa Du lịch - Dịch vụ)", role: UserRole.TRUONG_PHONG, departmentId: "K_DULICH", title: "Trưởng khoa Du lịch - Dịch vụ", phone: "0913.888.222", passwordHash: defaultPasswordHash },
+    { email: "tuyetla@cdktcnqn.edu.vn", name: "ThS. Lê Thị Ánh Tuyết (Trưởng khoa Kinh tế - Tổng hợp)", role: UserRole.TRUONG_PHONG, departmentId: "K_KTQT", title: "Trưởng khoa Kinh tế - Tổng hợp", phone: "0914.999.555", passwordHash: defaultPasswordHash },
+    { email: "dungnh@cdktcnqn.edu.vn", name: "ThS. Nguyễn Hữu Dũng (Trưởng khoa Kỹ thuật Nông nghiệp)", role: UserRole.TRUONG_PHONG, departmentId: "K_KTNN", title: "Trưởng khoa Kỹ thuật Nông nghiệp", phone: "0913.123.999", passwordHash: defaultPasswordHash },
+    { email: "hanhdtm@cdktcnqn.edu.vn", name: "ThS. Đặng Thị Mỹ Hạnh (Trưởng khoa Văn hóa Nghệ thuật)", role: UserRole.TRUONG_PHONG, departmentId: "K_VHNT", title: "Trưởng khoa Văn hóa Nghệ thuật", phone: "0914.666.333", passwordHash: defaultPasswordHash },
+    { email: "minhttt@cdktcnqn.edu.vn", name: "ThS. Trịnh Thị Thu Minh (Trưởng khoa Văn hóa THPT & KHCB)", role: UserRole.TRUONG_PHONG, departmentId: "K_DAICUONG", title: "Trưởng khoa Văn hóa THPT & KHCB", phone: "0913.555.777", passwordHash: defaultPasswordHash },
+    { email: "thangcd@cdktcnqn.edu.vn", name: "ThS. Chu Đình Thắng (Giám đốc TT Ngoại ngữ - Tin học)", role: UserRole.TRUONG_PHONG, departmentId: "TT_NNTH", title: "Giám đốc TT Ngoại ngữ - Tin học", phone: "0903.999.888", passwordHash: defaultPasswordHash },
   ];
 
   const userMap: Record<string, string> = {};
@@ -89,21 +124,21 @@ async function main() {
   }
 
   // 3. Tạo 40 Nhiệm vụ mẫu trải đều qua 12 tháng học vụ và 11 đơn vị
-  const adminId = userMap['admin@qcet.edu.vn'];
-  const bghOwnerId = userMap['hieutruong@qcet.edu.vn'];
-  const pdtOwnerId = userMap['truongphong.daotao@qcet.edu.vn'];
-  const cnttOwnerId = userMap['truongkhoa.cntt@qcet.edu.vn'];
-  const gvId = userMap['giangvien.cntt@qcet.edu.vn'];
-  const ckOwnerId = userMap['truongkhoa.cokhi@qcet.edu.vn'];
-  const dienOwnerId = userMap['truongkhoa.dien@qcet.edu.vn'];
-  const otoOwnerId = userMap['truongkhoa.oto@qcet.edu.vn'];
-  const cthssvOwnerId = userMap['truongphong.cthssv@qcet.edu.vn'];
-  const qctbOwnerId = userMap['truongphong.qctb@qcet.edu.vn'];
-  const tcktOwnerId = userMap['truongphong.tckt@qcet.edu.vn'];
-  const lxOwnerId = userMap['giamdoc.ttlaixe@qcet.edu.vn'];
-  const tsOwnerId = userMap['giamdoc.tttuyensinh@qcet.edu.vn'];
-  const cvId = userMap['chuyenvien@qcet.edu.vn'];
-  const phoHieuTruongId = userMap['phohieutruong1@qcet.edu.vn'];
+    const adminId = userMap["admin@cdktcnqn.edu.vn"];
+  const bghOwnerId = userMap["tuongpv@cdktcnqn.edu.vn"] || userMap["bgh@cdktcnqn.edu.vn"];
+  const pdtOwnerId = userMap["levanthi@cdktcnqn.edu.vn"] || userMap["daotao@cdktcnqn.edu.vn"];
+  const cnttOwnerId = userMap["k.cntt@cdktcnqn.edu.vn"] || userMap["vinhnn@cdktcnqn.edu.vn"];
+  const gvId = userMap["khoipd@cdktcnqn.edu.vn"] || userMap["hungth@cdktcnqn.edu.vn"];
+  const ckOwnerId = userMap["cuongdq@cdktcnqn.edu.vn"];
+  const dienOwnerId = userMap["thangnv@cdktcnqn.edu.vn"];
+  const otoOwnerId = userMap["hungvm@cdktcnqn.edu.vn"];
+  const cthssvOwnerId = userMap["vynq@cdktcnqn.edu.vn"] || userMap["tuyensinh@cdktcnqn.edu.vn"];
+  const qctbOwnerId = userMap["hanhchinh@cdktcnqn.edu.vn"];
+  const tcktOwnerId = userMap["lephuongthuyoanh@cdktcnqn.edu.vn"] || userMap["taichinh@cdktcnqn.edu.vn"];
+  const lxOwnerId = userMap["vinhnn@cdktcnqn.edu.vn"];
+  const tsOwnerId = userMap["vynq@cdktcnqn.edu.vn"];
+  const cvId = userMap["hungth@cdktcnqn.edu.vn"] || userMap["vinhnn@cdktcnqn.edu.vn"];
+  const phoHieuTruongId = userMap["kiemtt@cdktcnqn.edu.vn"] || userMap["nguyenlx@cdktcnqn.edu.vn"];
 
   interface SampleTaskItem {
     code: string;
@@ -840,7 +875,7 @@ async function main() {
   // 5. Nạp danh mục 16 Văn bản chuẩn Nghị định 30/2020/NĐ-CP
   const taskByCode = await prisma.task.findMany({ select: { id: true, code: true } });
   const taskCodeMap = Object.fromEntries(taskByCode.map((t) => [t.code, t.id]));
-  const vanThuId = userMap['vanthu@qcet.edu.vn'] || adminId;
+  const vanThuId = userMap["vanthu@cdktcnqn.edu.vn"] || adminId;
 
   interface SampleDocumentItem {
     type: DocumentType;

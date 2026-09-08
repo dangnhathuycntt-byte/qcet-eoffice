@@ -213,18 +213,20 @@ export function filterTasksForTable(
             task.leadAssigneeName.includes("Cúc") ||
             task.leadAssigneeName.toLowerCase().includes("bgh") ||
             task.leadAssigneeName.toLowerCase().includes("hiệu trưởng"))) ||
-        (canonicalDept === "CNTT" &&
+        ((canonicalDept === "CNTT" || canonicalDept === "K_CNTT" || canonicalDept === "TT_STT") &&
           (task.category === "CNTT" ||
             task.category === "ATTT" ||
             task.category === "CHUYEN_DOI_SO" ||
             task.leadAssigneeName.includes("Vinh") ||
             task.leadAssigneeName.includes("Hùng") ||
             task.leadAssigneeName.includes("Khôi"))) ||
-        (canonicalDept === "DAO_TAO" &&
+        ((canonicalDept === "DAO_TAO" || canonicalDept === "P_QLDT") &&
           (task.category === "BAO_CAO" ||
+            task.leadAssigneeName.includes("Thí") ||
             task.leadAssigneeName.includes("Trung") ||
             task.leadAssigneeName.includes("Trí") ||
-            task.leadAssigneeName.includes("Thủy"))) ||
+            task.leadAssigneeName.includes("Thủy") ||
+            task.leadAssigneeName.includes("Hùng"))) ||
         (canonicalDept === "TRUYEN_THONG" &&
           (task.category === "TRUYEN_THONG" ||
             task.leadAssigneeName.includes("Xuân") ||
