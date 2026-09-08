@@ -276,35 +276,47 @@ git commit -m "feat(api): implement /api/users endpoint and connect dynamic pers
 
 ---
 
-### Task 5: Chuyển Đổi Dashboard, Tasks, Unit-Tasks & Notifications Sang Database-First Với Skeletons
+### Task 5: Chuyển Đổi Dashboard, Tasks, Unit-Tasks & Notifications Sang Database-First Với Skeletons & Next.js Streaming
 
 **Files:**
+- Create: `src/app/dashboard/loading.tsx`
+- Create: `src/app/tasks/loading.tsx`
+- Create: `src/app/unit-tasks/loading.tsx`
 - Modify: `src/app/dashboard/page.tsx`
 - Modify: `src/app/tasks/page.tsx`
 - Modify: `src/app/unit-tasks/page.tsx`
+- Modify: `src/components/documents/document-quick-entry-modal.tsx`
 - Modify: `src/components/notifications/notification-popover.tsx`
 - Modify: `src/app/notifications/page.tsx`
 - Modify: `src/lib/notion-client.ts`
 
 **Interfaces:**
 - Consumes: `/api/dashboard/overview`, `/api/notifications`
-- Produces: Loading Skeletons mượt mà, Error State kèm retry button; loại bỏ 100% việc rơi về mock data.
+- Produces: Loading Skeletons mượt mà (cả ở cấp route `loading.tsx` lẫn component state), Error State kèm retry button; loại bỏ 100% việc rơi về mock data.
 
-- [ ] **Step 1: Cập nhật `src/app/dashboard/page.tsx`**
+- [ ] **Step 1: Tạo các tệp `loading.tsx` hỗ trợ Next.js App Router Streaming**
+
+Tạo `src/app/dashboard/loading.tsx`, `src/app/tasks/loading.tsx`, `src/app/unit-tasks/loading.tsx` hiển thị Skeleton layout chuẩn Light-only để triệt tiêu hoàn toàn độ trễ điều hướng và hiện tượng nhấp nháy giao diện.
+
+- [ ] **Step 2: Cập nhật `src/app/dashboard/page.tsx`**
 
 1. Gỡ bỏ `import { getMockDashboardPayload } from "@/lib/mock-dashboard-data";`.
 2. Khởi tạo `useState<DashboardPayload | null>(null)` và `useState(true)` cho `isLoading`.
 3. Khi `isLoading && !payload`: Render skeleton bảng điều hành (4 ô KPI pulse, khung bảng nhiệm vụ pulse) với các class Light-only sạch đẹp.
 4. Khi có lỗi: Render card thông báo lỗi trang nhã kèm nút "Thử lại".
 
-- [ ] **Step 2: Cập nhật `src/app/tasks/page.tsx` và `src/app/unit-tasks/page.tsx`**
+- [ ] **Step 3: Cập nhật `src/app/tasks/page.tsx` và `src/app/unit-tasks/page.tsx`**
 
 Tương tự Dashboard:
 1. Gỡ bỏ `getMockDashboardPayload()`.
 2. Khởi tạo `payload: null`, `isLoading: true`.
 3. Render Skeleton UI trong khi fetch dữ liệu từ `/api/dashboard/overview`.
 
-- [ ] **Step 3: Cập nhật `notification-popover.tsx` và `/notifications/page.tsx`**
+- [ ] **Step 4: Cập nhật `document-quick-entry-modal.tsx`**
+
+Thay thế `registeredById: "vt-auto-session"` bằng `user?.id` lấy từ `useAuth()`.
+
+- [ ] **Step 5: Cập nhật `notification-popover.tsx` và `/notifications/page.tsx`**
 
 1. Gỡ bỏ import `QCET_PERSONNEL` và `INITIAL_NOTIFICATIONS`.
 2. Nạp dữ liệu thực qua fetch `/api/notifications`.
