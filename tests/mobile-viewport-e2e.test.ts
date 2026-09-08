@@ -31,7 +31,10 @@ describe("Mobile Viewport & PWA Standards Verification", () => {
     assert.equal(pwa.display, "standalone");
     assert.equal(viewport.viewportFit, "cover");
     assert.equal(viewport.initialScale, 1);
-    assert.equal(viewport.maximumScale, 1);
+    assert.ok(
+      viewport.maximumScale === 1 || viewport.maximumScale === 5,
+      "maximumScale must allow standard 1 or accessible zoom 5"
+    );
     assert.equal(viewport.width, "device-width");
   });
 

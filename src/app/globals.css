@@ -355,3 +355,30 @@
     display: none !important;
   }
 }
+
+/* Mobile Touch & Form Ergonomics */
+@layer base {
+  button, a, input, select, textarea, [role="button"], [role="tab"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (max-width: 639px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+.touch-target-expand-44 {
+  position: relative;
+}
+.touch-target-expand-44::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  min-width: 44px;
+  min-height: 44px;
+  z-index: 1;
+}
+

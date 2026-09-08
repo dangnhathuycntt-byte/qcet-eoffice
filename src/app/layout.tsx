@@ -54,7 +54,9 @@ export const viewport: Viewport = {
   themeColor: "#fbfbfb",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  interactiveWidget: "resizes-content",
   viewportFit: "cover",
 };
 
@@ -67,7 +69,6 @@ export default function RootLayout({
     <html
       lang="vi"
       className={`light ${fontSans.variable} ${fontHeading.variable} ${fontMono.variable} h-full antialiased`}
-      suppressHydrationWarning
     >
       <head>
         <link rel="apple-touch-icon" href="/logo-qcet.png" />
