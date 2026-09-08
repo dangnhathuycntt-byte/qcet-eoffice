@@ -25,6 +25,7 @@ import {
   type DepartmentRAGStatus,
 } from "@/lib/department-task-aggregator";
 import { QCET_DEPARTMENTS } from "@/components/org/organization-tree";
+import { toCanonicalUnitCode } from "@/lib/departments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -38,7 +39,11 @@ export interface DepartmentGroupedTaskViewProps {
   searchQuery?: string;
   onManageDelegation?: (departmentCode: string) => void;
   delegations?: DelegationRule[];
+  initialExpandedDeptIds?: string[];
+  initialVisibleCounts?: Record<string, number>;
 }
+
+export const DEFAULT_PAGE_SIZE = 25;
 
 function RAGBadge({ status, reason }: { status: DepartmentRAGStatus; reason: string }) {
   if (status === "RED") {
@@ -133,11 +138,58 @@ export function DepartmentGroupedTaskView({
   searchQuery = "",
   onManageDelegation,
   delegations = [],
+  initialExpandedDeptIds,
+  initialVisibleCounts,
 }: DepartmentGroupedTaskViewProps) {
   const [expandedDeptIds, setExpandedDeptIds] = React.useState<Set<string>>(() => {
+    if (initialExpandedDeptIds) {
+      return new Set(initialExpandedDeptIds);
+    }
+    if (selectedDepartmentFilter && selectedDepartmentFilter !== "ALL") {
+      const matched = QCET_DEPARTMENTS.find(
+        (d) =>
+          d.code.toUpperCase() === selectedDepartmentFilter.toUpperCase() ||
+          d.id.toUpperCase() === selectedDepartmentFilter.toUpperCase()
+      );
+      if (matched) return new Set([matched.id]);
+    }
     // Mặc định mở rộng 3 đơn vị đầu tiên
     return new Set(QCET_DEPARTMENTS.slice(0, 3).map((d) => d.id));
   });
+
+  const [visibleCounts, setVisibleCounts] = React.useState<Record<string, number>>(
+    () => initialVisibleCounts || {}
+  );
+
+  const getVisibleCount = (deptId: string, deptCode?: string) => {
+    if (visibleCounts[deptId] !== undefined) return visibleCounts[deptId];
+    if (deptCode && visibleCounts[deptCode] !== undefined) return visibleCounts[deptCode];
+    const canonicalTarget = toCanonicalUnitCode(deptCode || deptId);
+    for (const [key, count] of Object.entries(visibleCounts)) {
+      if (toCanonicalUnitCode(key) === canonicalTarget) {
+        return count;
+      }
+    }
+    return DEFAULT_PAGE_SIZE;
+  };
+
+  const handleLoadMore = (deptId: string, deptCode?: string) => {
+    setVisibleCounts((prev) => {
+      const current =
+        prev[deptId] || (deptCode ? prev[deptCode] : undefined) || DEFAULT_PAGE_SIZE;
+      return {
+        ...prev,
+        [deptId]: current + DEFAULT_PAGE_SIZE,
+      };
+    });
+  };
+
+  const handleShowAll = (deptId: string, total: number) => {
+    setVisibleCounts((prev) => ({
+      ...prev,
+      [deptId]: total,
+    }));
+  };
 
   const departmentGroups = React.useMemo(() => {
     let groups = aggregateTasksByDepartment(tasks, QCET_DEPARTMENTS);
@@ -221,6 +273,10 @@ export function DepartmentGroupedTaskView({
       <div className="space-y-3">
         {departmentGroups.map((group) => {
           const isExpanded = expandedDeptIds.has(group.departmentId);
+          const visibleCount = getVisibleCount(group.departmentId, group.departmentCode);
+          const visibleTasks = group.allTasks.slice(0, visibleCount);
+          const remaining = Math.max(0, group.allTasks.length - visibleCount);
+
           const activeDelegationCount = delegations
             ? delegations.filter((d) => {
                 const dCode = (d.departmentCode || "").toUpperCase();
@@ -235,7 +291,7 @@ export function DepartmentGroupedTaskView({
           return (
             <div
               key={group.departmentId}
-              className="rounded-xl border border-border/80 bg-card/60 backdrop-blur-xs transition-all shadow-xs overflow-hidden"
+              className="rounded-xl border border-border/80 bg-card/60 backdrop-blur-xs transition-all shadow-xs overflow-hidden content-auto"
             >
               {/* Header của Đơn vị */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-muted/40 transition-colors">
@@ -379,7 +435,7 @@ export function DepartmentGroupedTaskView({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/20">
-                          {group.allTasks.map((t) => {
+                          {visibleTasks.map((t) => {
                             const isSchool = "subTasks" in t;
                             const title = t.title;
                             const assignee = isSchool
@@ -444,6 +500,35 @@ export function DepartmentGroupedTaskView({
                           })}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+
+                  {/* Progressive Local Pagination Controls */}
+                  {group.allTasks.length > visibleCount && (
+                    <div className="flex items-center justify-between pt-3 mt-2 border-t border-border/40 text-xs text-muted-foreground flex-wrap gap-2">
+                      <span className="font-mono tabular-nums">
+                        Đang hiển thị {visibleTasks.length} / {group.allTasks.length} công việc
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleLoadMore(group.departmentId, group.departmentCode)}
+                          className="h-7 px-2.5 text-xs font-medium"
+                        >
+                          Xem thêm {Math.min(DEFAULT_PAGE_SIZE, remaining)} công việc (còn {remaining})
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleShowAll(group.departmentId, group.allTasks.length)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Tất cả ({group.allTasks.length})
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>

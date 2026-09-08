@@ -48,7 +48,7 @@ async function main() {
     { id: "phong-cthssv", name: "Phòng Công tác Học sinh Sinh viên (Cũ)", shortName: "P.CTHSSV", color: "#EA580C" },
     { id: "phong-qctb", name: "Phòng Quản trị - Thiết bị (Cũ)", shortName: "P.QTTB", color: "#DC2626" },
     { id: "phong-tckt", name: "Phòng Tài chính - Kế toán (Cũ)", shortName: "P.TCKT", color: "#9333EA" },
-    { id: "tt-laixe", name: "Trung tâm Đào tạo L��i xe (Cũ)", shortName: "TT.LX", color: "#4F46E5" },
+    { id: "tt-laixe", name: "Trung tâm Đào tạo Lái xe (Cũ)", shortName: "TT.LX", color: "#4F46E5" },
     { id: "tt-tuyensinh", name: "Trung tâm Tuyển sinh & Truyền thông (Cũ)", shortName: "TT.TS", color: "#059669" },
     { id: "CNTT", name: "Phòng Quản trị Mạng và CNTT", shortName: "QTM-CNTT", color: "#0284C7" },
     { id: "TCHC", name: "Phòng Tổ chức Hành chính", shortName: "TCHC", color: "#059669" },
@@ -420,7 +420,7 @@ async function main() {
     {
       code: 'NV-2027-01-017',
       title: 'Xây dựng kế hoạch đào tạo và phân công giảng dạy học kỳ 2 năm học 2026-2027',
-      description: 'Cân đối giờ giảng định mức cán bộ giáo viên và ban hành thời khóa biểu ch��nh thức.',
+      description: 'Cân đối giờ giảng định mức cán bộ giáo viên và ban hành thời khóa biểu chính thức.',
       scope: TaskScope.SCHOOL,
       status: TaskStatus.COMPLETED,
       priority: TaskPriority.URGENT,

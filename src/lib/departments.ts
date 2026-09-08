@@ -19,8 +19,33 @@ export interface DepartmentPersonnelGroup {
 }
 
 /**
+ * Danh sách 16 đơn vị quy chuẩn của QCET (1 BGH + 6 Phòng/TT + 9 Khoa + TT_NNTH)
+ */
+export const QCET_CANONICAL_UNITS = [
+  "BGH",
+  "P_QLDT",
+  "P_TC",
+  "P_TCDBCL",
+  "P_HCQT",
+  "P_TSHTQT",
+  "TT_STT",
+  "K_CNTT",
+  "K_CK",
+  "K_DIEN",
+  "K_CNOTO",
+  "K_DULICH",
+  "K_KTQT",
+  "K_KTNN",
+  "K_VHNT",
+  "K_DAICUONG",
+  "TT_NNTH",
+] as const;
+
+export type QCETCanonicalUnit = typeof QCET_CANONICAL_UNITS[number];
+
+/**
  * Bảng ánh xạ tương thích ngược và chuẩn hóa mã đơn vị QCET
- * Ánh xạ tất cả mã cũ / kebab-case / alias về 15 mã chuẩn quy chuẩn
+ * Ánh xạ tất cả mã cũ / kebab-case / alias về mã chuẩn quy chuẩn
  */
 export const QCET_UNIT_CANONICAL_MAP: Record<string, string> = {
   // Ban Giám hiệu
@@ -140,6 +165,8 @@ export const QCET_UNIT_CANONICAL_MAP: Record<string, string> = {
 
   K_DAICUONG: "K_DAICUONG",
   k_daicuong: "K_DAICUONG",
+  "k-daicuong": "K_DAICUONG",
+  "khoa-daicuong": "K_DAICUONG",
   K_VHTHPT: "K_DAICUONG",
   K_COBAN: "K_DAICUONG",
   "dept-k-daicuong": "K_DAICUONG",
@@ -458,12 +485,26 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
   },
 ];
 
+export function toCanonicalUnitCode(rawCode: string): string {
+  if (!rawCode) return "";
+  const trimmed = rawCode.trim();
+  return (
+    QCET_UNIT_CANONICAL_MAP[trimmed] ||
+    QCET_UNIT_CANONICAL_MAP[trimmed.toUpperCase()] ||
+    QCET_UNIT_CANONICAL_MAP[trimmed.toLowerCase()] ||
+    trimmed
+  );
+}
+
+export function isCanonicalUnitCode(code: string): boolean {
+  if (!code) return false;
+  const canonical = toCanonicalUnitCode(code);
+  return (QCET_CANONICAL_UNITS as readonly string[]).includes(canonical);
+}
+
 export function getDepartmentByCode(rawCode: string): DepartmentPersonnelGroup | undefined {
   if (!rawCode) return undefined;
-  const normalized = QCET_UNIT_CANONICAL_MAP[rawCode] ||
-    QCET_UNIT_CANONICAL_MAP[rawCode.toUpperCase()] ||
-    QCET_UNIT_CANONICAL_MAP[rawCode.toLowerCase()] ||
-    rawCode;
+  const normalized = toCanonicalUnitCode(rawCode);
 
   return QCET_DEPARTMENT_GROUPS.find((g) => {
     if (g.code.toLowerCase() === normalized.toLowerCase()) return true;
