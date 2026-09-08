@@ -403,7 +403,7 @@ export function SubmitDeliverableModal({
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in"
         onClick={submittingNow ? undefined : onClose}
       />
 

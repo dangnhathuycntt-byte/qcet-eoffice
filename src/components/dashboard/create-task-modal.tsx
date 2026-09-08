@@ -529,7 +529,7 @@ export function CreateTaskModal({
       {/* Full-screen Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity !m-0"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity !m-0"
         aria-hidden="true"
       />
 

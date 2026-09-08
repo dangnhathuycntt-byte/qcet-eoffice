@@ -301,7 +301,7 @@ export function ReviewActionDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="review-dialog-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
       onClick={handleBackdropClick}
     >
       <div className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-card border border-border/80 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
