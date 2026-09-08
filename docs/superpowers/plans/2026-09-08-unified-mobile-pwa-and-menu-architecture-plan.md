@@ -499,7 +499,6 @@ describe("PWA Manifest, Service Worker & Offline Sync Suite", () => {
   });
 });
 ```
-```
 
 - [ ] **Step 2: Run test to verify it fails**
 
