@@ -31,13 +31,21 @@ const fontMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   applicationName: "QCET E-Office",
-  title: "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn - Hệ thống Quản trị & Điều hành Văn phòng Điện tử (E-Office)",
+  title: {
+    default: "QCET E-Office",
+    template: "%s | QCET E-Office",
+  },
   description:
     "Hệ thống Quản trị & Điều hành Văn phòng Điện tử - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (QCET)",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "QCET E-Office",
+  },
+  icons: {
+    icon: "/icons/icon-192x192.png",
+    shortcut: "/icons/icon-192x192.png",
+    apple: "/apple-touch-icon.png",
   },
 };
 
@@ -58,8 +66,7 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${fontSans.variable} ${fontHeading.variable} ${fontMono.variable} h-full antialiased`}
-      suppressHydrationWarning
+      className={`light ${fontSans.variable} ${fontHeading.variable} ${fontMono.variable} h-full antialiased`}
     >
       <head>
         <link rel="apple-touch-icon" href="/logo-qcet.png" />

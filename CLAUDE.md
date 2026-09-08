@@ -33,12 +33,12 @@ Hậu quả:
 
 ---
 
-## 2. Kiến Trúc CSS & Styling (Tailwind CSS v4)
+## 2. Kiến Trúc CSS & Styling (Tailwind CSS v4 & Light-Only Standard)
 
 - Dự án sử dụng **Tailwind CSS v4** cùng `@tailwindcss/postcss`.
 - Điểm vào duy nhất: `src/app/globals.css` với `@import "tailwindcss";` và `@theme inline { ... }`.
 - Không tạo hoặc thêm `tailwind.config.js` cũ vì sẽ gây xung đột với bộ phân giải của Tailwind v4.
-- Luôn kiểm tra biến màu và token trong `globals.css` (OKLCH color space cho cả Light và Dark mode).
+- Chuẩn hóa giao diện **Light-Only**: Hệ thống sử dụng thuần túy Light mode chuẩn công sở hành chính giáo dục (OKLCH color space). Đã vô hiệu hóa hoàn toàn dark variant qua `@custom-variant dark (&:not(*));`. Tuyệt đối không thêm class `dark:`, khối `.dark`, hoặc logic chuyển đổi theme `useTheme`/`ThemeProvider`.
 
 ---
 
