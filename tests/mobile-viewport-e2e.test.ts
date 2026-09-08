@@ -65,13 +65,9 @@ describe("Mobile Viewport & PWA Standards Verification", () => {
     assert.equal(metadata.appleWebApp.title, "QCET E-Office");
   });
 
-  test("Viewport themeColor supports adaptive light and dark modes", () => {
-    assert.ok(Array.isArray(viewport.themeColor), "themeColor should support media query arrays");
-    const colors = viewport.themeColor as Array<{ media: string; color: string }>;
-    const light = colors.find((c) => c.media.includes("light"));
-    const dark = colors.find((c) => c.media.includes("dark"));
-    assert.ok(light, "Must specify light theme color");
-    assert.ok(dark, "Must specify dark theme color");
+  test("Viewport themeColor is configured for pure light mode", () => {
+    assert.equal(viewport.colorScheme, "light", "colorScheme must be light");
+    assert.equal(viewport.themeColor, "#fbfbfb", "themeColor must be #fbfbfb");
   });
 
   test("Global CSS specifies safe area insets and mobile ergonomics", () => {

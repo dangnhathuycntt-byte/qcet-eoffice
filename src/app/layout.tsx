@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/lib/auth-context";
 import { DisplayDensityProvider } from "@/components/density-provider";
 import { AppShell } from "@/components/layout/app-shell";
@@ -43,11 +42,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  colorScheme: "light dark",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fbfbfb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0c0e" },
-  ],
+  colorScheme: "light",
+  themeColor: "#fbfbfb",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -93,17 +89,15 @@ export default function RootLayout({
       </head>
       <body className="min-h-full overflow-x-hidden bg-background text-foreground font-sans">
         <AuthProvider>
-          <ThemeProvider>
-            <DisplayDensityProvider>
-              <a
-                href="#main-content"
-                className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground shadow-lg"
-              >
-                Chuyển đến nội dung chính
-              </a>
-              <AppShell>{children}</AppShell>
-            </DisplayDensityProvider>
-          </ThemeProvider>
+          <DisplayDensityProvider>
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground shadow-lg"
+            >
+              Chuyển đến nội dung chính
+            </a>
+            <AppShell>{children}</AppShell>
+          </DisplayDensityProvider>
         </AuthProvider>
       </body>
     </html>
