@@ -10,14 +10,12 @@ import {
   Menu,
   Plus,
 } from "lucide-react";
-import { useAuth } from "@/context/auth-context";
 import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { cn } from "@/lib/utils";
 
 export function MobileBottomNav({ className }: { className?: string }) {
   const pathname = usePathname() || "/";
   const searchParams = useSearchParams();
-  const { user } = useAuth();
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   const zoneParam = searchParams?.get("zone");
