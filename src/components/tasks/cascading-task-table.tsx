@@ -136,12 +136,13 @@ export function getCategoryBadgeConfig(
         className:
           "bg-amber-500/10 text-amber-700 border-amber-500/20",
       };
+    case "KHAC":
     case "OTHER":
     default:
       return {
         label: "Khác",
         className:
-          "bg-slate-500/10 text-slate-700 border-slate-500/20",
+          "border-zinc-200 bg-zinc-50 text-zinc-700",
       };
   }
 }
@@ -150,41 +151,47 @@ export function getStatusBadgeConfig(
   status: TaskStatus | string
 ): StatusBadgeConfig {
   switch (status) {
-    case "COMPLETED":
+    case "NEW":
       return {
-        label: "Hoàn thành",
+        label: "Mới",
         className:
-          "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
-        variant: "emerald",
+          "border-rose-500/20 bg-rose-500/10 text-rose-700",
+        variant: "destructive",
       };
     case "IN_PROGRESS":
       return {
-        label: "Đang làm",
+        label: "Đang thực hiện",
         className:
-          "bg-blue-500/10 text-blue-700 border-blue-500/20",
+          "border-blue-500/20 bg-blue-500/10 text-blue-700",
         variant: "sapphire",
       };
     case "NEEDS_REVIEW":
       return {
-        label: "Cần duyệt",
+        label: "Cần chỉnh sửa",
         className:
-          "bg-amber-500/10 text-amber-700 border-amber-500/20",
+          "border-amber-500/20 bg-amber-500/10 text-amber-700",
         variant: "amber",
+      };
+    case "COMPLETED":
+      return {
+        label: "Hoàn thành",
+        className:
+          "border-emerald-500/20 bg-emerald-500/10 text-emerald-700",
+        variant: "emerald",
       };
     case "OVERDUE":
       return {
         label: "Quá hạn",
         className:
-          "bg-rose-500/10 text-rose-700 border-rose-500/20",
+          "border-rose-500/20 bg-rose-500/10 text-rose-700",
         variant: "rose",
       };
-    case "NEW":
     default:
       return {
-        label: "Mới giao",
+        label: typeof status === "string" ? status : "Chưa rõ",
         className:
-          "bg-secondary text-muted-foreground border-border/60",
-        variant: "secondary",
+          "border-zinc-200 bg-zinc-50 text-zinc-700",
+        variant: "outline",
       };
   }
 }
@@ -219,18 +226,60 @@ export function filterTasksForTable(
   let result = tasks;
 
   if (department !== "ALL") {
+    const canonicalDept = resolveDepartmentId(department) || department;
     result = result.filter((task) => {
-      const matchSchoolTask =
-        resolveDepartmentId(task.leadAssigneeName) === department ||
-        task.coAssignees?.some(
-          (name) => resolveDepartmentId(name) === department
+      // Direct relational check on task department fields
+      const taskDept =
+        task.departmentId ||
+        task.leadDepartmentId ||
+        task.departmentCode ||
+        task.leadDepartmentCode ||
+        task.department ||
+        task.leadDepartment;
+
+      const matchTaskDept =
+        taskDept &&
+        (taskDept === canonicalDept ||
+          resolveDepartmentId(taskDept) === canonicalDept);
+
+      const matchCoDept =
+        task.coDepartmentCodes?.some(
+          (code) =>
+            code === canonicalDept ||
+            resolveDepartmentId(code) === canonicalDept
+        ) ||
+        task.coDepartments?.some(
+          (dept) =>
+            dept === canonicalDept ||
+            resolveDepartmentId(dept) === canonicalDept
         );
 
-      const matchSubTasks = task.subTasks?.some(
-        (sub) => resolveDepartmentId(sub.assigneeName) === department
-      );
+      const matchSchoolTask =
+        matchTaskDept ||
+        matchCoDept ||
+        resolveDepartmentId(task.leadAssigneeName) === canonicalDept ||
+        resolveDepartmentId(undefined, task.leadAssigneeName) === canonicalDept ||
+        task.coAssignees?.some(
+          (name) =>
+            resolveDepartmentId(name) === canonicalDept ||
+            resolveDepartmentId(undefined, name) === canonicalDept
+        );
 
-      return matchSchoolTask || matchSubTasks;
+      const matchSubTasks = task.subTasks?.some((sub) => {
+        const subDept = sub.departmentId || sub.departmentCode || sub.department;
+        const matchSubDept =
+          subDept &&
+          (subDept === canonicalDept ||
+            resolveDepartmentId(subDept) === canonicalDept);
+
+        return (
+          matchSubDept ||
+          resolveDepartmentId(sub.assigneeName) === canonicalDept ||
+          resolveDepartmentId(undefined, sub.assigneeName) === canonicalDept
+        );
+      });
+
+      return Boolean(matchSchoolTask || matchSubTasks);
     });
   }
 
@@ -820,8 +869,8 @@ export function CascadingTaskTable({
                 <th className="w-24 h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Mã NV</th>
                 <th className="h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Nhiệm vụ cấp Trường</th>
                 <th className="h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Danh mục</th>
-                <th className="h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Chủ trì</th>
-                <th className="h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Hạn chót</th>
+                <th className="h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Chủ trì nhiệm vụ</th>
+                <th className="h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Thời hạn hoàn thành</th>
                 <th className="w-56 h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground text-right">Tiến độ &amp; Thao tác</th>
               </tr>
             </thead>
@@ -941,7 +990,7 @@ export function CascadingTaskTable({
                               onClick={(e) => toggleExpand(task.id, e)}
                               className="inline-flex size-6 items-center justify-center rounded-lg text-muted-foreground transition-all hover:bg-secondary hover:text-foreground cursor-pointer"
                               aria-label={
-                                isExpanded ? "Thu gọn việc con" : "Mở rộng việc con"
+                                isExpanded ? "Thu gọn nhiệm vụ thành phần" : "Mở rộng nhiệm vụ thành phần"
                               }
                             >
                               {isExpanded ? (
@@ -1056,7 +1105,7 @@ export function CascadingTaskTable({
                                     onAddTask();
                                   }}
                                   className="inline-flex h-6 items-center gap-1 rounded-md border border-border/60 bg-secondary/60 px-2 text-xs font-semibold tabular-nums text-foreground hover:bg-secondary hover:text-foreground cursor-pointer active:scale-[0.98] transition-colors"
-                                  title="Phân công thêm việc con"
+                                  title="Phân công thêm nhiệm vụ thành phần"
                                 >
                                   <UserCheck className="size-3" strokeWidth={1.5} />
                                   <span>Phân công</span>
@@ -1113,7 +1162,7 @@ export function CascadingTaskTable({
                                 onStatusChange && "cursor-pointer hover:bg-muted/40 transition-colors"
                               )}
                             >
-                              {task.status === "COMPLETED" ? "Hoàn thành" : "Đang làm"}
+                              {task.status === "COMPLETED" ? "Hoàn thành" : "Đang thực hiện"}
                             </Badge>
                           </div>
                         </td>
@@ -1197,10 +1246,10 @@ export function CascadingTaskTable({
                                                   onStatusChange(subTask.id, "IN_PROGRESS");
                                                 }}
                                                 className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 text-xs font-semibold tabular-nums border border-blue-500/20 cursor-pointer active:scale-[0.98] transition-colors"
-                                                title="Tiếp nhận việc này"
+                                                title="Tiếp nhận nhiệm vụ này"
                                               >
                                                 <ArrowRight className="size-3" strokeWidth={1.5} />
-                                                <span>Nhận việc</span>
+                                                <span>Tiếp nhận</span>
                                               </button>
                                             )}
                                             {subTask.status === "IN_PROGRESS" && (
@@ -1225,10 +1274,10 @@ export function CascadingTaskTable({
                                                   onStatusChange(subTask.id, "IN_PROGRESS");
                                                 }}
                                                 className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 text-xs font-semibold tabular-nums border border-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
-                                                title="Tiếp nhận sửa lại"
+                                                title="Tiếp nhận chỉnh sửa"
                                               >
                                                 <RotateCcw className="size-3" strokeWidth={1.5} />
-                                                <span>Sửa lại</span>
+                                                <span>Chỉnh sửa</span>
                                               </button>
                                             )}
                                           </div>

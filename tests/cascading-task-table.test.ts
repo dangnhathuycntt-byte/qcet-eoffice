@@ -1,12 +1,14 @@
-import { test, describe } from "node:test";
+import { test, describe, it } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import {
   getCategoryBadgeConfig,
   getStatusBadgeConfig,
   CATEGORY_TABS,
   filterTasksForTable,
 } from "../src/components/dashboard/cascading-task-table";
-import type { SchoolTask, StaffTask } from "../src/types/dashboard";
+import type { SchoolTask } from "../src/types/dashboard";
 
 describe("CascadingTaskTable Helpers", () => {
   test("provides distinct subtle badge styling for categories", () => {
@@ -152,5 +154,81 @@ describe("CascadingTaskTable Helpers", () => {
     // Empty search match
     const searchNone = filterTasksForTable(mockTasks, "ALL", "non-existent-xyz");
     assert.equal(searchNone.length, 0);
+  });
+});
+
+describe("Task 6: Cascading Task Table Single Source of Truth", () => {
+  it("neither task table component contains hardcoded personal name checks", () => {
+    const tasksTable = path.resolve(__dirname, "../src/components/tasks/cascading-task-table.tsx");
+    const dashboardTable = path.resolve(__dirname, "../src/components/dashboard/cascading-task-table.tsx");
+
+    const content1 = fs.readFileSync(tasksTable, "utf-8");
+    const content2 = fs.readFileSync(dashboardTable, "utf-8");
+
+    const forbiddenNames = ["Xuân", "Huy", "Linh", "Thanh", "Nam", "Nhung", "Minh", "Hậu", "My"];
+    for (const name of forbiddenNames) {
+      assert.ok(
+        !content1.includes(`"${name}"`) && !content2.includes(`"${name}"`),
+        `Component must not filter by personal name '${name}'`
+      );
+    }
+  });
+
+  it("filters tasks by relational departmentId and resolveDepartmentId without name heuristics", () => {
+    const mockTasks: SchoolTask[] = [
+      {
+        id: "task-rel-1",
+        title: "Nâng cấp hạ tầng mạng Core",
+        category: "CNTT",
+        categoryLabel: "CNTT",
+        leadAssigneeName: "Nguyễn Văn A",
+        departmentId: "CNTT",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-20",
+        status: "IN_PROGRESS",
+        subTasks: [
+          {
+            id: "sub-rel-1",
+            title: "Cấu hình Switch L3",
+            assigneeName: "Kỹ thuật viên 1",
+            departmentId: "CNTT",
+            status: "IN_PROGRESS",
+            dueDate: "2026-09-15",
+            parentSchoolTaskId: "task-rel-1",
+            updatedAt: "2026-09-02",
+          },
+        ],
+        totalSubTasks: 1,
+        completedSubTasks: 0,
+        progressPercent: 50,
+      },
+      {
+        id: "task-rel-2",
+        title: "Báo cáo tuyển sinh năm 2026",
+        category: "BAO_CAO",
+        categoryLabel: "Báo cáo",
+        leadAssigneeName: "Trần Thị B",
+        departmentId: "DAO_TAO",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-10",
+        status: "COMPLETED",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 100,
+      },
+    ];
+
+    // Filter by departmentId CNTT
+    const cnttTasks = filterTasksForTable(mockTasks, "ALL", "", "CNTT");
+    assert.equal(cnttTasks.length, 1);
+    assert.equal(cnttTasks[0].id, "task-rel-1");
+
+    // Filter by departmentId DAO_TAO
+    const daoTaoTasks = filterTasksForTable(mockTasks, "ALL", "", "DAO_TAO");
+    assert.equal(daoTaoTasks.length, 1);
+    assert.equal(daoTaoTasks[0].id, "task-rel-2");
   });
 });
