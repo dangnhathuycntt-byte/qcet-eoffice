@@ -24,7 +24,8 @@ describe("MobileBottomNav Component", () => {
     // Check safe area inset padding
     assert.ok(
       content.includes("pb-[max(0.5rem,env(safe-area-inset-bottom))]") ||
-        content.includes("pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"),
+        content.includes("pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]") ||
+        content.includes("pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]"),
       "Must include safe area bottom padding"
     );
 
@@ -35,13 +36,13 @@ describe("MobileBottomNav Component", () => {
     );
   });
 
-  test("all 5 navigation items have at least 44px min-h and min-w touch targets", () => {
+  test("all 5 navigation items have at least 44px min-h and min-w touch targets (standardized to 48px)", () => {
     const content = fs.readFileSync(navPath, "utf-8");
-    const minHCount = (content.match(/min-h-\[44px\]/g) || []).length;
-    const minWCount = (content.match(/min-w-\[44px\]/g) || []).length;
+    const minHCount = (content.match(/min-h-\[(44|48)px\]/g) || []).length;
+    const minWCount = (content.match(/min-w-\[(44|48)px\]/g) || []).length;
 
-    assert.ok(minHCount >= 5, `Expected at least 5 min-h-[44px] touch targets, found ${minHCount}`);
-    assert.ok(minWCount >= 5, `Expected at least 5 min-w-[44px] touch targets, found ${minWCount}`);
+    assert.ok(minHCount >= 5, `Expected at least 5 min-h touch targets, found ${minHCount}`);
+    assert.ok(minWCount >= 5, `Expected at least 5 min-w touch targets, found ${minWCount}`);
   });
 
   test("integrates MobileMenuDrawer for item 5 ('Thêm')", () => {
