@@ -23,7 +23,6 @@ import {
 import type { TaskCategory, SchoolTask } from "@/types/dashboard";
 import type { UserRole, AuthUser } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
-import { QCET_PERSONNEL } from "@/lib/mock-dashboard-data";
 import { canAssignStaffTask, validateDueDate } from "@/lib/dacum-workflow-engine";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -87,6 +86,17 @@ export const CATEGORY_OPTIONS: { id: TaskCategory; label: string; color: string 
   { id: "BAO_CAO", label: "Báo cáo & Tổng hợp", color: "bg-cyan-500" },
   { id: "KHAC", label: "Khác", color: "bg-slate-500" },
 ];
+
+export interface ApiPersonnel {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  departmentId: string | null;
+  department: { id: string; name: string; shortName: string | null } | null;
+  title: string | null;
+  avatarUrl: string | null;
+}
 
 export interface DepartmentPersonnelGroup {
   department: string;
@@ -365,20 +375,68 @@ export function CreateTaskModal({
   const [mounted, setMounted] = React.useState(false);
   const titleInputRef = React.useRef<HTMLInputElement>(null);
 
+  const [personnelList, setPersonnelList] = React.useState<ApiPersonnel[]>([]);
+
   React.useEffect(() => {
     setMounted(true);
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.users)) {
+          setPersonnelList(data.users);
+        }
+      })
+      .catch((err) => console.error("Error loading assignees:", err));
   }, []);
+
+  const departmentGroups = React.useMemo<DepartmentPersonnelGroup[]>(() => {
+    if (personnelList.length === 0) {
+      return QCET_DEPARTMENT_GROUPS;
+    }
+    const groupMap = new Map<string, DepartmentPersonnelGroup>();
+    for (const p of personnelList) {
+      const deptName = p.department?.name || "Đơn vị khác";
+      const deptCode = p.department?.shortName || p.departmentId || "KHAC";
+      if (!groupMap.has(deptCode)) {
+        groupMap.set(deptCode, {
+          department: deptName,
+          code: deptCode,
+          icon: "",
+          members: [],
+        });
+      }
+      groupMap.get(deptCode)!.members.push({
+        name: p.name,
+        title: p.title || p.name,
+        role: p.role,
+      });
+    }
+    return Array.from(groupMap.values());
+  }, [personnelList]);
 
   // Filter department groups based on deptFilter
   const filteredGroups = React.useMemo(() => {
-    if (deptFilter === "ALL") return QCET_DEPARTMENT_GROUPS;
-    return QCET_DEPARTMENT_GROUPS.filter((g) => g.code === deptFilter);
-  }, [deptFilter]);
+    if (deptFilter === "ALL") return departmentGroups;
+    return departmentGroups.filter((g) => g.code === deptFilter);
+  }, [deptFilter, departmentGroups]);
 
   // Selected assignee department & delegation checks
   const selectedAssigneeDept = React.useMemo(() => {
+    if (personnelList.length > 0) {
+      const p = personnelList.find(
+        (u) => u.name.trim().toLowerCase() === formData.leadAssigneeName.trim().toLowerCase()
+      );
+      if (p && p.department) {
+        return {
+          department: p.department.name,
+          code: p.department.shortName || p.departmentId || "KHAC",
+          icon: "",
+          members: [],
+        };
+      }
+    }
     return getDepartmentForMember(formData.leadAssigneeName);
-  }, [formData.leadAssigneeName]);
+  }, [personnelList, formData.leadAssigneeName]);
 
   const isExternalDeptBlocked = React.useMemo(() => {
     if (isStaff) {
@@ -396,19 +454,36 @@ export function CreateTaskModal({
 
   const handleAssigneeSelect = React.useCallback(
     (assigneeName: string) => {
-      const targetDept = getDepartmentForMember(assigneeName);
+      let targetDeptCode: string | undefined;
       let autoVtvl = formData.vtvlRole;
-      if (targetDept) {
-        const member = targetDept.members.find((m) => m.name === assigneeName);
-        if (member && (!formData.vtvlRole || formData.vtvlRole.trim().length === 0)) {
-          autoVtvl = member.role;
+
+      if (personnelList.length > 0) {
+        const p = personnelList.find(
+          (u) => u.name.trim().toLowerCase() === assigneeName.trim().toLowerCase()
+        );
+        if (p) {
+          targetDeptCode = p.department?.shortName || p.departmentId || undefined;
+          if (!formData.vtvlRole || formData.vtvlRole.trim().length === 0) {
+            autoVtvl = p.title || p.role;
+          }
+        }
+      }
+
+      if (!targetDeptCode) {
+        const targetDept = getDepartmentForMember(assigneeName);
+        if (targetDept) {
+          targetDeptCode = targetDept.code;
+          const member = targetDept.members.find((m) => m.name === assigneeName);
+          if (member && (!formData.vtvlRole || formData.vtvlRole.trim().length === 0)) {
+            autoVtvl = member.role;
+          }
         }
       }
 
       const isAdminBypass =
         user?.role === "ADMIN" &&
-        targetDept !== undefined &&
-        targetDept.code !== "BGH";
+        targetDeptCode !== undefined &&
+        targetDeptCode !== "BGH";
 
       setFormData((prev) => ({
         ...prev,
@@ -425,7 +500,7 @@ export function CreateTaskModal({
         });
       }
     },
-    [formData.vtvlRole, user?.role, errors.leadAssigneeName]
+    [personnelList, formData.vtvlRole, user?.role, errors.leadAssigneeName]
   );
 
   // Sync state on open
@@ -492,11 +567,26 @@ export function CreateTaskModal({
       return;
     }
 
-    const targetDept = getDepartmentForMember(formData.leadAssigneeName);
+    let targetDeptCode: string | undefined;
+    if (personnelList.length > 0) {
+      const p = personnelList.find(
+        (u) => u.name.trim().toLowerCase() === formData.leadAssigneeName.trim().toLowerCase()
+      );
+      if (p) {
+        targetDeptCode = p.department?.shortName || p.departmentId || undefined;
+      }
+    }
+    if (!targetDeptCode) {
+      const targetDept = getDepartmentForMember(formData.leadAssigneeName);
+      if (targetDept) {
+        targetDeptCode = targetDept.code;
+      }
+    }
+
     const isAdminBypass =
       user?.role === "ADMIN" &&
-      targetDept !== undefined &&
-      targetDept.code !== "BGH";
+      targetDeptCode !== undefined &&
+      targetDeptCode !== "BGH";
 
     onSubmit({
       ...formData,
@@ -691,8 +781,8 @@ export function CreateTaskModal({
                       onChange={(e) => setDeptFilter(e.target.value)}
                       className="h-6 rounded-md border border-border/60 bg-background px-1.5 py-0 text-xs font-medium text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
                     >
-                      <option value="ALL">Toàn trường (11 đơn vị)</option>
-                      {QCET_DEPARTMENT_GROUPS.map((g) => (
+                      <option value="ALL">Toàn trường ({departmentGroups.length} đơn vị)</option>
+                      {departmentGroups.map((g) => (
                         <option key={g.code} value={g.code}>
                           {g.department}
                         </option>
