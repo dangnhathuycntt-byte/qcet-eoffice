@@ -153,7 +153,36 @@ Trên màn hình `< 768px`, chiều ngang chỉ có 390px – 430px. Topbar tuâ
 
 ---
 
-## 8. BẢNG TIÊU CHÍ NGHIỆM THU (ACCEPTANCE CRITERIA)
+## 8. CHUẨN HÓA CÔNG NGHỆ FORMS, BÀN PHÍM ẢO & SAFE AREA PWA STANDALONE
+
+### 8.1 Chống hiện tượng iOS Safari Auto-Zoom (16px Input Floor Rule)
+* **Vấn đề:** Khi ô `<input>` hoặc `<textarea>` có font-size < 16px, Safari trên iOS tự động ép zoom 133%, làm méo và lệch toàn bộ khung nhìn PWA.
+* **Giải pháp:** Bổ sung CSS quy tắc responsive bắt buộc trong `src/app/globals.css`:
+  ```css
+  @media (max-width: 639px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+  ```
+
+### 8.2 Tự động co giãn Viewport khi Bàn phím ảo xuất hiện (Virtual Keyboard API)
+* Cập nhật `src/app/layout.tsx`: Bổ sung `interactiveWidget: "resizes-content"` vào đối tượng `viewport`.
+* Khi bàn phím ảo iOS/Android bật lên, viewport tự động co lại, đảm bảo các nút "Lưu" và thanh điều hướng không bị đè khuất.
+
+### 8.3 Safe-Area Insets cho Dynamic Island & Home Indicator
+* **Đỉnh trang:** Mọi sticky header trong modal và drawer đều có `pt-[max(env(safe-area-inset-top,0px),0.75rem)]` để không bị Dynamic Island đè nút `✕`.
+* **Đáy trang:** Mọi thanh action dock đều có `pb-[max(env(safe-area-inset-bottom,0px),1rem)]` để không bị Home Indicator đè nút Lưu.
+
+### 8.4 Thông minh hóa Modal Cài đặt App PWA (`MobileAppInstallModal`)
+* Khi mở trên thiết bị di động: Ẩn mã QR (vốn chỉ dành cho máy tính quét sang điện thoại).
+* Hiển thị hướng dẫn trực tiếp theo hệ điều hành:
+  - iOS Safari: Nhấp biểu tượng Chia sẻ (Share) $\rightarrow$ Chọn "Thêm vào MH chính".
+  - Android Chrome: Nút "Cài đặt ngay" kích hoạt native install prompt.
+
+---
+
+## 9. BẢNG TIÊU CHÍ NGHIỆM THU (ACCEPTANCE CRITERIA)
 
 | Mã tiêu chí | Hạng mục kiểm tra | Tiêu chuẩn đạt |
 | :---: | :--- | :--- |
@@ -165,12 +194,15 @@ Trên màn hình `< 768px`, chiều ngang chỉ có 390px – 430px. Topbar tuâ
 | **AC-06** | Topbar trên iPhone 16 Pro Max | Không còn hiện tượng cắt cụt chữ `Quản lý cô...`; Scope Switcher thu gọn vừa vặn. |
 | **AC-07** | Dải nút lọc công việc | Cuộn ngang 1 hàng mượt mà, không rớt dòng, tone màu Muted trang nhã. |
 | **AC-08** | Lần đầu truy cập trên điện thoại | Không bị modal Onboarding đè bẹp 55% màn hình; thanh Bottom Nav luôn bấm được. |
-| **AC-09** | Vùng an toàn Safe Area | Đáy trang cách thanh Home Indicator tối thiểu 12px; không bị che nội dung. |
-| **AC-10** | Kiểm tra chất lượng code | `npm run typecheck` đạt 0 lỗi, `npm test` toàn bộ suites đều PASS. |
+| **AC-09** | Gõ phím vào ô nhập liệu trên iPhone | Safari KHÔNG tự động phóng to (font-size >= 16px), không lệch viewport. |
+| **AC-10** | Bàn phím ảo xuất hiện | Layout co giãn đúng (`interactiveWidget: "resizes-content"`), không mất nút Lưu. |
+| **AC-11** | Vùng an toàn Safe Area | Đỉnh không bị Dynamic Island che nút Đóng; đáy không bị Home Indicator che nút bấm. |
+| **AC-12** | Modal Cài đặt PWA trên mobile | Tự động ẩn mã QR, hiển thị hướng dẫn cài đặt màn hình chính 1-chạm. |
+| **AC-13** | Kiểm tra chất lượng code | `npm run typecheck` đạt 0 lỗi, `npm test` toàn bộ suites đều PASS. |
 
 ---
 
-## 9. KẾ HOẠCH BƯỚC TIẾP THEO
+## 10. KẾ HOẠCH BƯỚC TIẾP THEO
 
 Sau khi Thầy/Cô xem xét và phê duyệt Đặc tả Thiết kế này:
 1. Tạo Kế hoạch triển khai chi tiết (`writing-plans`).
