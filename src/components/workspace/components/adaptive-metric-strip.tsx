@@ -28,6 +28,9 @@ export function AdaptiveMetricStrip({
   className,
   onMetricClick,
 }: AdaptiveMetricStripProps) {
+  const formatRate = (rate: number | undefined) =>
+    typeof rate === "number" && Number.isFinite(rate) ? `${rate}%` : "0%";
+
   const getCards = (currentScope: WorkspaceScope): MetricCardConfig[] => {
     switch (currentScope) {
       case "school":
@@ -75,7 +78,7 @@ export function AdaptiveMetricStrip({
             id: "completed",
             status: "COMPLETED",
             title: "Tiến độ chung",
-            value: `${metrics.completedRate}%`,
+            value: formatRate(metrics.completedRate),
             subtitle: "Tỷ lệ hoàn thành (DACUM)",
             icon: CheckCircle2,
             iconColor: "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
@@ -115,7 +118,7 @@ export function AdaptiveMetricStrip({
             value: metrics.waitingApprovalCount,
             subtitle:
               metrics.waitingApprovalCount > 0
-                ? "Hồ sơ chờ bạn phê duyệt"
+                ? "Hồ sơ chờ Thầy/Cô phê duyệt"
                 : "Không có việc tồn đọng",
             icon: Clock,
             iconColor:
@@ -126,8 +129,8 @@ export function AdaptiveMetricStrip({
           {
             id: "completed",
             status: "COMPLETED",
-            title: "Tiến độ khoa",
-            value: `${metrics.completedRate}%`,
+            title: "Tiến độ đơn vị",
+            value: formatRate(metrics.completedRate),
             subtitle: "Đã nghiệm thu (DACUM)",
             icon: CheckCircle2,
             iconColor: "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
@@ -180,7 +183,7 @@ export function AdaptiveMetricStrip({
             id: "completed",
             status: "COMPLETED",
             title: "Hoàn tất kỳ này",
-            value: `${metrics.completedRate}%`,
+            value: formatRate(metrics.completedRate),
             subtitle: "Tỷ lệ hoàn thành (DACUM)",
             icon: CheckCircle2,
             iconColor: "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
@@ -199,12 +202,17 @@ export function AdaptiveMetricStrip({
     >
       {cards.map((card) => {
         const Icon = card.icon;
+        const cardAriaLabel = isInteractive
+          ? `Lọc theo: ${card.title}, ${card.value}`
+          : `${card.title}: ${card.value}`;
+
         return (
           <div
             key={card.id}
             data-slot={`metric-card-${card.id}`}
             data-metric-status={card.status}
-            role={isInteractive ? "button" : undefined}
+            role={isInteractive ? "button" : "region"}
+            aria-label={cardAriaLabel}
             tabIndex={isInteractive ? 0 : undefined}
             onClick={isInteractive ? () => onMetricClick(card.status) : undefined}
             onKeyDown={
@@ -218,33 +226,33 @@ export function AdaptiveMetricStrip({
                 : undefined
             }
             className={cn(
-              "p-3.5 rounded-xl border border-border/70 bg-card/80 backdrop-blur-xs flex flex-col justify-between space-y-2 shadow-2xs select-none",
+              "p-3.5 rounded-xl bg-card border border-border/70 flex flex-col justify-between space-y-2 shadow-2xs",
               isInteractive &&
                 "cursor-pointer transition-all hover:border-border hover:shadow-xs active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             )}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground truncate">
+              <span className="text-xs font-medium text-muted-foreground line-clamp-1 leading-snug">
                 {card.title}
               </span>
               <div
                 className={cn(
-                  "p-1.5 rounded-lg border flex items-center justify-center shrink-0",
+                  "p-1.5 rounded-lg border flex items-center justify-center shrink-0 select-none",
                   card.iconColor
                 )}
               >
                 <Icon
-                  className="size-3.5 select-none"
+                  className="size-3.5"
                   strokeWidth={1.5}
                   aria-hidden="true"
                 />
               </div>
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-foreground">
+              <div className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-foreground select-text">
                 {card.value}
               </div>
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
+              <p className="text-xs text-muted-foreground line-clamp-1 leading-snug mt-0.5">
                 {card.subtitle}
               </p>
             </div>

@@ -268,7 +268,7 @@ export function AppTopbar() {
           {/* Notification Bell: Direct Link to /notifications */}
           <Link
             href="/notifications"
-            className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+            className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer touch-manipulation"
             title="Thông báo điều hành"
             aria-label="Thông báo điều hành"
           >
@@ -290,7 +290,7 @@ export function AppTopbar() {
             }}
             aria-label="Cài đặt ứng dụng di động"
             title="Cài đặt ứng dụng di động"
-            className="size-9 rounded-lg text-muted-foreground hover:bg-secondary hover:text-primary transition-colors cursor-pointer"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-primary transition-colors cursor-pointer touch-manipulation"
           >
             <Smartphone size={16} strokeWidth={1.5} />
           </Button>
@@ -301,7 +301,7 @@ export function AppTopbar() {
             <button
               type="button"
               onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
-              className="flex items-center gap-2 pl-2 border-l border-border/50 transition-opacity hover:opacity-90 group cursor-pointer focus:outline-none"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center sm:justify-start gap-2 pl-2 border-l border-border/50 transition-opacity hover:opacity-90 group cursor-pointer focus:outline-none touch-manipulation"
               title={`Hồ sơ cá nhân: ${user.name}`}
               aria-expanded={isProfileDropdownOpen}
             >

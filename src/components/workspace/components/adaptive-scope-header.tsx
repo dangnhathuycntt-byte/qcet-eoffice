@@ -117,7 +117,11 @@ export function AdaptiveScopeHeader({
       className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-border/60"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/70">
+        <div
+          role="tablist"
+          aria-label="Phạm vi công việc"
+          className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/70"
+        >
           {scopes
             .filter((s) => s.visible)
             .map((s) => {
@@ -130,10 +134,14 @@ export function AdaptiveScopeHeader({
                 <button
                   key={s.id}
                   type="button"
+                  role="tab"
+                  id={`scope-tab-${s.id}`}
+                  aria-selected={isActive}
+                  tabIndex={isActive ? 0 : -1}
                   data-scope={s.id}
                   onClick={() => handleScopeClick(s.id)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer min-h-[36px] sm:min-h-[32px] touch-manipulation border",
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer min-h-[44px] sm:min-h-[36px] touch-manipulation border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                     isActive
                       ? scopeActiveStyles[s.id]
                       : "text-muted-foreground border-transparent hover:text-foreground hover:bg-card/50"
@@ -145,8 +153,9 @@ export function AdaptiveScopeHeader({
                   {showBadge && (
                     <span
                       data-slot="scope-badge"
+                      aria-label={`${count} nhiệm vụ`}
                       className={cn(
-                        "inline-flex items-center justify-center min-w-[18px] h-4 px-1 rounded-full text-[10px] font-mono tabular-nums font-semibold border ml-0.5",
+                        "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-mono tabular-nums font-semibold border ml-0.5",
                         isActive
                           ? scopeBadgeActiveStyles[s.id]
                           : "bg-muted text-muted-foreground border-border/60"
@@ -182,7 +191,7 @@ export function AdaptiveScopeHeader({
           <Button
             size="sm"
             onClick={onCreateTask}
-            className="h-8 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 cursor-pointer"
+            className="hidden sm:inline-flex h-8 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 cursor-pointer"
           >
             <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
             <span>Giao nhiệm vụ</span>

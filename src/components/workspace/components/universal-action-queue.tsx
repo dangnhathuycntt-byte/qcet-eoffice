@@ -65,7 +65,7 @@ export function UniversalActionQueue({
         </div>
         <div className="space-y-1">
           <h4 className="text-sm font-semibold text-foreground">
-            Không có tác vụ nào cần xử lý khẩn cấp
+            Không có nhiệm vụ cần xử lý gấp
           </h4>
           <p className="text-xs text-muted-foreground">
             Tất cả công việc đều đúng tiến độ và không có hồ sơ tồn đọng cần phê duyệt.
@@ -80,7 +80,7 @@ export function UniversalActionQueue({
     switch (scope) {
       case "school":
         return {
-          label: "Duyệt nhanh",
+          label: "Phê duyệt",
           icon: CheckCheck,
           variant: "outline" as const,
           btnClass:
@@ -88,7 +88,7 @@ export function UniversalActionQueue({
         };
       case "unit":
         return {
-          label: "Giao việc",
+          label: "Phân công",
           icon: Send,
           variant: "outline" as const,
           btnClass:
@@ -123,14 +123,18 @@ export function UniversalActionQueue({
     >
       {/* Critical deadline warning banner when overdue > 0 */}
       {totalOverdue > 0 && (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/[0.04] p-3 flex items-center justify-between text-rose-900 gap-3">
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-xl border border-rose-500/30 bg-rose-500/[0.04] p-3 flex items-center justify-between text-rose-900 gap-3"
+        >
           <div className="flex items-center gap-2.5">
             <div className="size-8 rounded-lg bg-rose-500/10 text-rose-700 flex items-center justify-center shrink-0">
               <AlertTriangle className="size-4" strokeWidth={1.75} />
             </div>
             <div>
               <div className="text-xs font-bold tracking-tight text-rose-950">
-                Cảnh báo hạn chót khẩn c��p
+                Cảnh báo hạn chót khẩn cấp
               </div>
               <div className="text-xs text-rose-800">
                 Có{" "}
@@ -174,19 +178,22 @@ export function UniversalActionQueue({
                 return (
                   <div
                     key={idx}
-                    onClick={() => onSelectTask(item.task)}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-amber-500/20 hover:border-amber-500/40 transition-all cursor-pointer shadow-2xs group"
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-amber-500/20 hover:border-amber-500/40 transition-all shadow-2xs group gap-2"
                   >
-                    <div className="min-w-0 pr-2">
-                      <div className="text-xs font-semibold text-foreground truncate group-hover:text-amber-900 transition-colors">
+                    <div className="min-w-0 flex-1 pr-1">
+                      <button
+                        type="button"
+                        onClick={() => onSelectTask(item.task)}
+                        className="text-left text-xs font-semibold text-foreground hover:text-amber-900 focus-visible:underline focus-visible:outline-none transition-colors truncate block w-full cursor-pointer"
+                      >
                         {item.task.title}
-                      </div>
+                      </button>
                       <div className="text-xs text-muted-foreground truncate flex items-center gap-2 mt-0.5">
                         <span>
                           Người nộp: {item.submittedBy || "Cán bộ chuyên trách"}
                         </span>
                         {item.complianceScore !== undefined && (
-                          <span className="font-mono tabular-nums text-emerald-700 bg-emerald-500/10 px-1.5 py-0.2 rounded text-[11px] font-semibold border border-emerald-500/20">
+                          <span className="font-mono tabular-nums text-emerald-700 bg-emerald-500/10 px-1.5 py-0.5 rounded text-xs font-semibold border border-emerald-500/20 shrink-0">
                             DACUM: {item.complianceScore}%
                           </span>
                         )}
@@ -196,11 +203,10 @@ export function UniversalActionQueue({
                       size="xs"
                       variant={approvalConfig.variant}
                       className={cn(
-                        "h-7 px-2.5 rounded-lg text-xs font-semibold shrink-0 gap-1",
+                        "min-h-[44px] touch-manipulation px-3.5 rounded-lg text-xs font-semibold shrink-0 gap-1.5 cursor-pointer",
                         approvalConfig.btnClass
                       )}
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      onClick={() => {
                         if (onReview && scope === "school") {
                           onReview({
                             taskId: item.task.id,
@@ -227,7 +233,8 @@ export function UniversalActionQueue({
               <Button
                 variant="ghost"
                 size="xs"
-                className="w-full text-xs font-semibold text-amber-800 hover:bg-amber-500/10 justify-center h-6.5"
+                aria-expanded={isApprovalsExpanded}
+                className="w-full text-xs font-semibold text-amber-800 hover:bg-amber-500/10 justify-center h-8 min-h-[32px] cursor-pointer"
                 onClick={() => setIsApprovalsExpanded(!isApprovalsExpanded)}
               >
                 {isApprovalsExpanded ? (
@@ -259,7 +266,7 @@ export function UniversalActionQueue({
               <div className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-blue-500 animate-pulse" />
                 <h3 className="text-xs font-bold text-blue-900 tracking-tight">
-                  Nhiệm vụ cá nhân cần nộp (
+                  Nhiệm vụ cần nộp hồ sơ minh chứng (
                   <span className="font-mono tabular-nums">
                     {myPendingSubmissions.length}
                   </span>
@@ -275,13 +282,16 @@ export function UniversalActionQueue({
               {displayedSubmissions.map((item, idx) => (
                 <div
                   key={idx}
-                  onClick={() => onSelectTask(item.task)}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-blue-500/20 hover:border-blue-500/40 transition-all cursor-pointer shadow-2xs group"
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-blue-500/20 hover:border-blue-500/40 transition-all shadow-2xs group gap-2"
                 >
-                  <div className="min-w-0 pr-2">
-                    <div className="text-xs font-semibold text-foreground truncate group-hover:text-blue-900 transition-colors">
+                  <div className="min-w-0 flex-1 pr-1">
+                    <button
+                      type="button"
+                      onClick={() => onSelectTask(item.task)}
+                      className="text-left text-xs font-semibold text-foreground hover:text-blue-900 focus-visible:underline focus-visible:outline-none transition-colors truncate block w-full cursor-pointer"
+                    >
                       {item.task.title}
-                    </div>
+                    </button>
                     <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
                       {item.isOverdue ? (
                         <span className="text-rose-700 font-semibold flex items-center gap-1">
@@ -303,9 +313,8 @@ export function UniversalActionQueue({
                   </div>
                   <Button
                     size="xs"
-                    className="h-7 px-2.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shrink-0 gap-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    className="min-h-[44px] touch-manipulation px-3.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shrink-0 gap-1.5 cursor-pointer"
+                    onClick={() => {
                       if (onSubmitDeliverable) {
                         onSubmitDeliverable({
                           taskId: item.task.id,
@@ -328,7 +337,8 @@ export function UniversalActionQueue({
               <Button
                 variant="ghost"
                 size="xs"
-                className="w-full text-xs font-semibold text-blue-800 hover:bg-blue-500/10 justify-center h-6.5"
+                aria-expanded={isSubmissionsExpanded}
+                className="w-full text-xs font-semibold text-blue-800 hover:bg-blue-500/10 justify-center h-8 min-h-[32px] cursor-pointer"
                 onClick={() => setIsSubmissionsExpanded(!isSubmissionsExpanded)}
               >
                 {isSubmissionsExpanded ? (

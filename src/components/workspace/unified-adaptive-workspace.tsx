@@ -59,12 +59,14 @@ export function UnifiedAdaptiveWorkspace({
     <div
       data-slot="unified-adaptive-workspace"
       data-active-scope={activeScope}
-      className="space-y-4"
+      className="space-y-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:pb-8"
     >
       {/* Context banner when provided by adapter shims */}
       {(contextTitle || contextBadge) && (
-        <div
+        <aside
           data-slot="workspace-context-banner"
+          role="region"
+          aria-label="Thông tin ngữ cảnh không gian làm việc"
           className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 bg-muted/40 rounded-xl border border-border/70 text-xs"
         >
           <div className="flex items-center gap-2">
@@ -85,7 +87,7 @@ export function UnifiedAdaptiveWorkspace({
               </span>
             )}
           </div>
-        </div>
+        </aside>
       )}
 
       {/* 1. Adaptive Scope Switcher Header */}
@@ -96,7 +98,7 @@ export function UnifiedAdaptiveWorkspace({
         onRefresh={onRefresh}
         onCreateTask={
           onCreateTask
-            ? () => onCreateTask(activeScope === "school" ? "TRUONG" : "DON_VI")
+            ? () => onCreateTask(activeScope)
             : undefined
         }
         isRefreshing={isRefreshing}
@@ -123,7 +125,7 @@ export function UnifiedAdaptiveWorkspace({
           onRefresh={onRefresh}
           onAddTask={
             onCreateTask
-              ? () => onCreateTask(activeScope === "school" ? "TRUONG" : "DON_VI")
+              ? () => onCreateTask(activeScope)
               : undefined
           }
           onOpenSubmitModal={
