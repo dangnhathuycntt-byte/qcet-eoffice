@@ -35,6 +35,18 @@ function TasksFocusLandingComponent() {
 
   const { openTaskDetail, openCreateModal } = useDashboardModal();
 
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border border-dashed border-border bg-card/50">
+        <h3 className="text-base font-semibold text-foreground mb-1">Chưa đăng nhập</h3>
+        <p className="text-xs text-muted-foreground mb-4">Vui lòng đăng nhập để truy cập không gian công việc.</p>
+        <Button onClick={() => router.push("/login")} size="sm">
+          Đăng nhập ngay
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4" data-slot="role-workspace-landing" id="tour-tasks-landing">
       {/* Role-Based Dispatching: Executive, Manager, or Staff Workspace */}
@@ -52,7 +64,7 @@ function TasksFocusLandingComponent() {
         />
       ) : isUnitView ? (
         <DepartmentManagerWorkspace
-          user={effectiveManagerUser}
+          user={effectiveManagerUser || user}
           tasks={tasks}
           onSelectTask={(task) => openTaskDetail(task)}
           onReview={handleReviewAction}

@@ -42,14 +42,17 @@ describe("Login Page Demo Credentials", () => {
 
   test("resolves demo user correctly by role", () => {
     const admin = resolveDemoUserByRole("ADMIN");
+    assert.ok(admin);
     assert.equal(admin.role, "ADMIN");
     assert.equal(admin.email, "bgh@cdktcnqn.edu.vn");
 
     const manager = resolveDemoUserByRole("MANAGER");
+    assert.ok(manager);
     assert.equal(manager.role, "MANAGER");
     assert.equal(manager.email, "daotao@cdktcnqn.edu.vn");
 
     const staff = resolveDemoUserByRole("STAFF");
+    assert.ok(staff);
     assert.equal(staff.role, "STAFF");
     assert.equal(staff.email, "vinhnn@cdktcnqn.edu.vn");
   });

@@ -70,16 +70,33 @@ export function resolveStaffLandingMode({
 /**
  * Parse URL ?scope= parameter into validated TaskScope.
  * Accepts shorthand ("my", "school", "unit") or full keys.
+ * Guards against non-executive users accessing school-level scope.
  */
 export function parseScopeParam(
   param: string | null | undefined,
-  defaultScope: TaskScope = "MY_TASKS"
+  defaultScope: TaskScope = "MY_TASKS",
+  userRole?: string | { role?: string } | null
 ): TaskScope {
   if (!param) return defaultScope;
   const normalized = param.trim().toLowerCase();
 
   if (normalized === "my" || normalized === "my_tasks") return "MY_TASKS";
-  if (normalized === "school" || normalized === "school_tasks") return "SCHOOL_TASKS";
+  if (normalized === "school" || normalized === "school_tasks") {
+    if (userRole !== undefined && userRole !== null) {
+      const rawRole = typeof userRole === "object" ? userRole.role : userRole;
+      const role = String(rawRole || "").toUpperCase();
+      const isExec =
+        role === "ADMIN" ||
+        role === "BGH" ||
+        role === "BAN_GIAM_HIEU" ||
+        role === "HIEU_TRUONG" ||
+        role === "PHO_HIEU_TRUONG";
+      if (!isExec) {
+        return defaultScope;
+      }
+    }
+    return "SCHOOL_TASKS";
+  }
   if (normalized === "unit" || normalized === "unit_tasks") return "UNIT_TASKS";
 
   return defaultScope;
@@ -126,7 +143,7 @@ export function parseViewModeParam(
 export function filterTasksByWorkbox(
   tasks: SchoolTask[],
   filter: WorkboxFilter,
-  user?: AuthUser,
+  user?: AuthUser | null,
   referenceDate: string = TODAY_ISO
 ): SchoolTask[] {
   if (filter === "ALL") {
@@ -253,7 +270,7 @@ export interface FilterTasksHubOptions {
   priority?: string; // "ALL" | "URGENT" | "HIGH" | "NORMAL"
   department?: string; // "ALL" or department code
   searchQuery?: string;
-  user?: AuthUser;
+  user?: AuthUser | null;
   referenceDate?: string;
   academicMonth?: number | "ALL";
   academicYear?: string;

@@ -36,17 +36,19 @@ export const DEFAULT_DEMO_USERS: AuthUser[] = [
   },
 ];
 
-export function canCreateSchoolTask(roleOrUser: UserRole | AuthUser): boolean {
+export function canCreateSchoolTask(roleOrUser?: UserRole | AuthUser | null): boolean {
+  if (!roleOrUser) return false;
   const role = typeof roleOrUser === "string" ? roleOrUser : roleOrUser.role;
   return role === "ADMIN";
 }
 
-export function canAssignUnitTask(roleOrUser: UserRole | AuthUser): boolean {
+export function canAssignUnitTask(roleOrUser?: UserRole | AuthUser | null): boolean {
+  if (!roleOrUser) return false;
   const role = typeof roleOrUser === "string" ? roleOrUser : roleOrUser.role;
   return role === "ADMIN" || role === "MANAGER";
 }
 
-export function matchesUser(assigneeName?: string, user?: AuthUser): boolean {
+export function matchesUser(assigneeName?: string, user?: AuthUser | null): boolean {
   if (!assigneeName || !user) return false;
   const a = assigneeName.trim().toLowerCase();
   const uName = user.name.trim().toLowerCase();
@@ -59,7 +61,11 @@ export function matchesUser(assigneeName?: string, user?: AuthUser): boolean {
   return false;
 }
 
-export function filterTasksByRole(tasks: SchoolTask[], user: AuthUser): SchoolTask[] {
+export function filterTasksByRole(tasks: SchoolTask[], user?: AuthUser | null): SchoolTask[] {
+  if (!user) {
+    return [];
+  }
+
   if (user.role === "ADMIN") {
     return [...tasks];
   }
@@ -130,9 +136,13 @@ export function filterTasksByRole(tasks: SchoolTask[], user: AuthUser): SchoolTa
 
 export function filterUpcomingByRole(
   items: UpcomingItem[],
-  user: AuthUser,
+  user?: AuthUser | null,
   visibleTasks?: SchoolTask[]
 ): UpcomingItem[] {
+  if (!user) {
+    return [];
+  }
+
   if (user.role === "ADMIN") {
     return [...items];
   }

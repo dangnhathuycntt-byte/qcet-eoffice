@@ -120,7 +120,7 @@ export const PRIORITY_FILTER_OPTIONS: { id: string; label: string }[] = [
 export function filterTasksByScope(
   tasks: SchoolTask[],
   scope: TaskScope,
-  user?: AuthUser,
+  user?: AuthUser | null,
   departmentCode?: string
 ): SchoolTask[] {
   if (scope === "MY_TASKS") {

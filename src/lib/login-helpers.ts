@@ -94,7 +94,6 @@ export function validateLoginForm(email: string, password?: string): LoginValida
   };
 }
 
-export function resolveDemoUserByRole(role: UserRole): AuthUser {
-  const match = DEFAULT_DEMO_USERS.find((u) => u.role === role);
-  return match || DEFAULT_DEMO_USERS[0];
+export function resolveDemoUserByRole(role: UserRole): AuthUser | undefined {
+  return DEFAULT_DEMO_USERS.find((u) => u.role === role);
 }

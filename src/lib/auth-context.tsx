@@ -24,7 +24,7 @@ export interface RegisterPayload {
 }
 
 export interface AuthContextType {
-  user: AuthUser;
+  user: AuthUser | null;
   switchRole: (role: UserRole) => void;
   switchUser: (userId: string) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
@@ -108,17 +108,25 @@ export function mapDbUserToAuthUser(dbUser: {
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: DEFAULT_DEMO_USERS[0],
+  user: null,
   switchRole: () => {},
   switchUser: () => {},
   login: async () => ({ success: false, error: "Not initialized" }),
   register: async () => ({ success: false, error: "Not initialized" }),
-  loginWithGoogle: () => DEFAULT_DEMO_USERS[0],
+  loginWithGoogle: () => ({
+    id: "uninitialized",
+    name: "",
+    email: "",
+    role: "STAFF",
+    roleLabel: "",
+    department: "",
+    departmentCode: "",
+  }),
   updateProfile: () => {},
   logout: async () => {},
   isProfileModalOpen: false,
   setIsProfileModalOpen: () => {},
-  isLoading: false,
+  isLoading: true,
 });
 
 export function useAuth(): AuthContextType {
@@ -130,7 +138,7 @@ export function useAuth(): AuthContextType {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser>(DEFAULT_DEMO_USERS[0]);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -205,6 +213,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
             if (found) {
               setUser(found);
+              setIsLoading(false);
+              return;
             }
           }
         } catch {
@@ -212,7 +222,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Unauthenticated visitor: user remains null without auto-establishing demo session
       if (isMounted) {
+        setUser(null);
         setIsLoading(false);
       }
     }
@@ -300,7 +312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn("Logout request error:", err);
     }
 
-    setUser(DEFAULT_DEMO_USERS[0]);
+    setUser(null);
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -321,6 +333,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         // ignore
       }
+      fetch("/api/auth/demo-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: targetUser.role, userId: targetUser.id }),
+      }).catch((e) => console.warn("switchRole demo-session sync failed:", e));
     }
   }, []);
 
@@ -334,6 +351,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         // ignore
       }
+      fetch("/api/auth/demo-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: targetUser.id, role: targetUser.role }),
+      }).catch((e) => console.warn("switchUser demo-session sync failed:", e));
     }
   }, []);
 
@@ -427,6 +449,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = useCallback((updates: Partial<AuthUser>) => {
     setUser((prev) => {
+      if (!prev) return null;
       const updated: AuthUser = {
         ...prev,
         ...updates,
