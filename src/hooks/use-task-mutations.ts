@@ -16,6 +16,7 @@ import type { CreateTaskFormData } from "@/components/dashboard/create-task-moda
 import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
 import type { DelegationRule } from "@/types/delegation";
 import type { AuthUser } from "@/types/auth";
+import { isOnline, enqueueOfflineMutation } from "@/lib/offline-sync";
 
 export const EMPTY_DASHBOARD_PAYLOAD: DashboardPayload = {
   stats: {
@@ -80,7 +81,7 @@ export interface TaskMutationsReturn {
 }
 
 export function useTaskMutations(
-  user?: AuthUser,
+  user?: AuthUser | null,
   onOpenCreateModal?: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void
 ): TaskMutationsReturn {
   const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(EMPTY_DASHBOARD_PAYLOAD);
@@ -170,7 +171,18 @@ export function useTaskMutations(
         };
       });
 
-      // API call with rollback on failure
+      // API call or offline enqueue
+      if (!isOnline()) {
+        enqueueOfflineMutation({
+          url: `/api/tasks/${taskId}`,
+          method: "PATCH",
+          body: { status: newStatus, note },
+          description: `Cập nhật trạng thái nhiệm vụ ${taskId} sang ${newStatus}`,
+        });
+        setErrorMessage("Đang ngoại tuyến. Thay đổi đã được lưu tạm và sẽ tự động gửi khi có mạng.");
+        return;
+      }
+
       try {
         const res = await fetch(`/api/tasks/${taskId}`, {
           method: "PATCH",
@@ -183,8 +195,14 @@ export function useTaskMutations(
           setErrorMessage(errData?.error || "Cập nhật trạng thái nhiệm vụ thất bại. Đã khôi phục dữ liệu.");
         }
       } catch (err: any) {
-        setDashboardData(previousData);
-        setErrorMessage(err?.message || "Lỗi mạng khi cập nhật trạng thái. Đã khôi phục dữ liệu.");
+        // Network drop during request: enqueue mutation and preserve optimistic state
+        enqueueOfflineMutation({
+          url: `/api/tasks/${taskId}`,
+          method: "PATCH",
+          body: { status: newStatus, note },
+          description: `Cập nhật trạng thái nhiệm vụ ${taskId} sang ${newStatus}`,
+        });
+        setErrorMessage("Mất kết nối mạng. Thao tác đã được lưu tạm và sẽ tự động gửi khi có kết nối.");
       }
     },
     [dashboardData]
@@ -245,7 +263,23 @@ export function useTaskMutations(
         };
       });
 
-      // API call with rollback on failure
+      // API call or offline enqueue
+      if (!isOnline()) {
+        enqueueOfflineMutation({
+          url: `/api/tasks/${payload.taskId}/deliverables`,
+          method: "POST",
+          body: {
+            title: payload.deliverableName || "Tài liệu minh chứng",
+            fileUrl: payload.url || "#",
+            fileType: payload.fileType || "LINK",
+            uploadedById: user?.id,
+          },
+          description: `Nộp minh chứng nhiệm vụ ${payload.taskId}`,
+        });
+        setErrorMessage("Đang ngoại tuyến. Minh chứng đã được lưu tạm và sẽ tự động gửi khi có mạng.");
+        return;
+      }
+
       try {
         const res = await fetch(`/api/tasks/${payload.taskId}/deliverables`, {
           method: "POST",
@@ -263,8 +297,19 @@ export function useTaskMutations(
           setErrorMessage(errData?.error || "Nộp minh chứng thất bại. Đã khôi phục dữ liệu.");
         }
       } catch (err: any) {
-        setDashboardData(previousData);
-        setErrorMessage(err?.message || "Lỗi mạng khi nộp minh chứng. Đã khôi phục dữ liệu.");
+        // Network drop: enqueue mutation and preserve optimistic state
+        enqueueOfflineMutation({
+          url: `/api/tasks/${payload.taskId}/deliverables`,
+          method: "POST",
+          body: {
+            title: payload.deliverableName || "Tài liệu minh chứng",
+            fileUrl: payload.url || "#",
+            fileType: payload.fileType || "LINK",
+            uploadedById: user?.id,
+          },
+          description: `Nộp minh chứng nhiệm vụ ${payload.taskId}`,
+        });
+        setErrorMessage("Mất kết nối mạng. Minh chứng đã được lưu tạm và sẽ tự động nộp khi có mạng.");
       }
     },
     [dashboardData, user?.id, user?.name]
@@ -318,7 +363,24 @@ export function useTaskMutations(
         };
       });
 
-      // API call with rollback on failure
+      // API call or offline enqueue
+      if (!isOnline()) {
+        enqueueOfflineMutation({
+          url: `/api/tasks/${payload.taskId}`,
+          method: "PATCH",
+          body: {
+            status: statusToSet,
+            note: payload.comment,
+            decision: payload.decision,
+            reviewedByRole: payload.reviewedByRole,
+            reviewedByName: payload.reviewedByName,
+          },
+          description: `Phê duyệt nhiệm vụ ${payload.taskId} (${payload.decision})`,
+        });
+        setErrorMessage("Đang ngoại tuyến. Quyết định phê duyệt đã được lưu tạm và sẽ tự động gửi khi có mạng.");
+        return;
+      }
+
       try {
         const res = await fetch(`/api/tasks/${payload.taskId}`, {
           method: "PATCH",
@@ -337,8 +399,20 @@ export function useTaskMutations(
           setErrorMessage(errData?.error || "Phê duyệt nhiệm vụ thất bại. Đã khôi phục dữ liệu.");
         }
       } catch (err: any) {
-        setDashboardData(previousData);
-        setErrorMessage(err?.message || "Lỗi mạng khi phê duyệt nhiệm vụ. Đã khôi phục dữ liệu.");
+        // Network drop: enqueue mutation and preserve optimistic state
+        enqueueOfflineMutation({
+          url: `/api/tasks/${payload.taskId}`,
+          method: "PATCH",
+          body: {
+            status: statusToSet,
+            note: payload.comment,
+            decision: payload.decision,
+            reviewedByRole: payload.reviewedByRole,
+            reviewedByName: payload.reviewedByName,
+          },
+          description: `Phê duyệt nhiệm vụ ${payload.taskId} (${payload.decision})`,
+        });
+        setErrorMessage("Mất kết nối mạng. Quyết định phê duyệt đã được lưu tạm và sẽ tự động gửi khi có kết nối.");
       }
     },
     [dashboardData]

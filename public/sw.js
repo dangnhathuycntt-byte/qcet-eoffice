@@ -1,12 +1,20 @@
 // QCET E-Office Service Worker
-// Version: 1.0.0
-// Handles push notifications, badge counts, client navigation, and offline fallback cache
+// Version: 2.0.0 - Unified Mobile PWA Modernization
+// Handles push notifications, badge counts, client navigation, and two-tier offline caching
 
-const CACHE_NAME = 'qcet-eoffice-v1';
-const OFFLINE_FALLBACK_URL = '/';
+const CACHE_NAME = 'qcet-eoffice-v3';
+const API_CACHE_NAME = 'qcet-api-v1';
+const OFFLINE_FALLBACK_URL = '/?zone=tasks';
+const API_TIMEOUT_MS = 2500;
+
 const PRECACHE_ASSETS = [
   '/',
+  '/?zone=tasks',
   '/manifest.webmanifest',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
   '/logo-qcet.png',
 ];
 
@@ -31,7 +39,7 @@ self.addEventListener('activate', (event) => {
         .then((cacheNames) =>
           Promise.all(
             cacheNames
-              .filter((name) => name !== CACHE_NAME)
+              .filter((name) => name !== CACHE_NAME && name !== API_CACHE_NAME)
               .map((name) => caches.delete(name))
           )
         )
@@ -41,15 +49,135 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests, bypass API calls and non-http schemes
   if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http')) return;
+
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith('/api/')) return;
 
   if (typeof caches === 'undefined') {
     return;
   }
 
+  // 1. Static Assets: Cache-First Strategy for Next.js chunks and static files
+  if (url.pathname.startsWith('/_next/static/') || url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|woff2|woff)$/)) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return fetch(event.request).then((networkResponse) => {
+          if (networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone).catch(() => {});
+            });
+          }
+          return networkResponse;
+        });
+      })
+    );
+    return;
+  }
+
+  // 2. Dashboard & Tasks APIs: Network-First with 2.5s Timeout fallback
+  if (url.pathname.startsWith('/api/dashboard/') || url.pathname.startsWith('/api/tasks')) {
+    event.respondWith(
+      new Promise((resolve) => {
+        let isTimedOut = false;
+        const timer = setTimeout(() => {
+          isTimedOut = true;
+          // Timeout reached: attempt cache fallback
+          caches.open(API_CACHE_NAME).then((cache) => {
+            cache.match(event.request).then((cached) => {
+              if (cached) {
+                const headers = new Headers(cached.headers);
+                headers.set('X-QCET-Offline-Cache', 'true');
+                resolve(
+                  new Response(cached.body, {
+                    status: cached.status,
+                    statusText: cached.statusText,
+                    headers,
+                  })
+                );
+              } else {
+                resolve(
+                  new Response(
+                    JSON.stringify({
+                      error: 'Yêu cầu hết hạn thời gian (2.5s). Máy chủ đang phản hồi chậm.',
+                      offline: true,
+                    }),
+                    {
+                      status: 504,
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'X-QCET-Offline-Cache': 'true',
+                      },
+                    }
+                  )
+                );
+              }
+            });
+          });
+        }, API_TIMEOUT_MS);
+
+        fetch(event.request)
+          .then((networkResponse) => {
+            clearTimeout(timer);
+            if (!isTimedOut) {
+              if (networkResponse.status === 200) {
+                const responseClone = networkResponse.clone();
+                caches.open(API_CACHE_NAME).then((cache) => {
+                  cache.put(event.request, responseClone).catch(() => {});
+                });
+              }
+              resolve(networkResponse);
+            }
+          })
+          .catch(() => {
+            clearTimeout(timer);
+            if (!isTimedOut) {
+              caches.open(API_CACHE_NAME).then((cache) => {
+                cache.match(event.request).then((cached) => {
+                  if (cached) {
+                    const headers = new Headers(cached.headers);
+                    headers.set('X-QCET-Offline-Cache', 'true');
+                    resolve(
+                      new Response(cached.body, {
+                        status: cached.status,
+                        statusText: cached.statusText,
+                        headers,
+                      })
+                    );
+                  } else {
+                    resolve(
+                      new Response(
+                        JSON.stringify({
+                          error: 'Mất kết nối mạng. Không có dữ liệu lưu tạm cho yêu cầu này.',
+                          offline: true,
+                        }),
+                        {
+                          status: 503,
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'X-QCET-Offline-Cache': 'true',
+                          },
+                        }
+                      )
+                    );
+                  }
+                });
+              });
+            }
+          });
+      })
+    );
+    return;
+  }
+
+  // Bypass other APIs
+  if (url.pathname.startsWith('/api/')) return;
+
+  // 3. Navigation & Document Requests: Network-First with Offline Page Fallback
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
@@ -73,7 +201,7 @@ self.addEventListener('fetch', (event) => {
           const fallback = await caches.match(OFFLINE_FALLBACK_URL);
           if (fallback) return fallback;
         }
-        return new Response('He thong dang ngoai tuyen. Vui long kiem tra lai ket noi mang.', {
+        return new Response('Hệ thống đang ngoại tuyến. Vui lòng kiểm tra lại kết nối mạng.', {
           status: 503,
           statusText: 'Service Unavailable',
           headers: { 'Content-Type': 'text/plain; charset=utf-8' },
@@ -86,7 +214,7 @@ self.addEventListener('push', (event) => {
   let payload = {
     title: 'QCET E-Office',
     body: 'Bạn có thông báo mới từ hệ thống điều hành',
-    data: { linkHref: '/portal' },
+    data: { linkHref: '/?zone=tasks' },
   };
 
   if (event.data) {
@@ -96,7 +224,7 @@ self.addEventListener('push', (event) => {
       payload = {
         title: 'QCET E-Office',
         body: event.data.text() || 'Bạn có thông báo mới từ hệ thống điều hành',
-        data: { linkHref: '/portal' },
+        data: { linkHref: '/?zone=tasks' },
       };
     }
   }
@@ -106,7 +234,7 @@ self.addEventListener('push', (event) => {
     body: payload.body || '',
     icon: payload.icon || '/logo-qcet.png',
     badge: payload.badge || '/logo-qcet.png',
-    data: payload.data || { linkHref: '/portal' },
+    data: payload.data || { linkHref: '/?zone=tasks' },
     vibrate: payload.vibrate || [100, 50, 100],
     tag: payload.tag || 'qcet-notification',
     renotify: typeof payload.renotify === 'boolean' ? payload.renotify : true,
@@ -144,7 +272,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const data = event.notification.data || {};
-  const rawTargetUrl = data.linkHref || '/portal';
+  const rawTargetUrl = data.linkHref || '/?zone=tasks'; // Default navigation fallback (/portal or /?zone=tasks)
 
   // Build target URL relative or absolute
   let targetUrl = rawTargetUrl;
@@ -167,7 +295,6 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   // Focus existing matching window or open a new one
-  const clientsScope = self.clients || (typeof clients !== 'undefined' ? clients : null);
   const windowPromise = self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     .then((clientList) => {
       // Check if there is already an open window

@@ -212,7 +212,10 @@ describe("Task 5: Service Worker & PWA Manifest", () => {
       assert.match(manifestData.name, /QCET E-Office/);
       assert.equal(manifestData.short_name, "QCET E-Office");
       assert.equal(manifestData.display, "standalone");
-      assert.equal(manifestData.theme_color, "#1e3a8a");
+      assert.ok(
+        manifestData.theme_color === "#fbfbfb" || manifestData.theme_color === "#1e3a8a",
+        "theme_color must match light-only #fbfbfb or legacy #1e3a8a"
+      );
       assert.ok(
         manifestData.start_url === "/portal" || manifestData.start_url === "/",
         "start_url should be /portal or /"

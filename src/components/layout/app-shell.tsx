@@ -10,6 +10,8 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { PushOnboardingSheet } from "@/components/pwa/push-onboarding-sheet";
+import { MobileAppInstallModal } from "@/components/pwa/mobile-app-install-modal";
+import { OfflineBanner } from "@/components/layout/offline-banner";
 import { WelcomeModal } from "@/components/onboarding/welcome-modal";
 import { SpotlightTour } from "@/components/onboarding/spotlight-tour";
 import { OnboardingChecklistWidget } from "@/components/onboarding/onboarding-checklist-widget";
@@ -66,6 +68,7 @@ export function OnboardingHub() {
           onToggleExpand={() => onboarding.setIsChecklistExpanded((v) => !v)}
           onDismiss={onboarding.dismissOnboarding}
           onCompleteStep={onboarding.completeStep}
+          onStartTour={onboarding.startTour}
         />
       )}
     </>
@@ -94,6 +97,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <React.Suspense fallback={<header className="sticky top-0 z-30 w-full h-[52px] border-b border-border/50 bg-background/80" />}>
           <AppTopbar />
         </React.Suspense>
+        <OfflineBanner />
         <main id="main-content" className="flex-1 py-4 md:py-8 pb-28 md:pb-8" tabIndex={-1}>
           <div className="max-w-[1440px] w-full mx-auto px-3.5 sm:px-6">
             {children}
@@ -106,6 +110,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       </React.Suspense>
 
       <PushOnboardingSheet />
+      <MobileAppInstallModal />
       <OnboardingHub />
     </div>
   );
