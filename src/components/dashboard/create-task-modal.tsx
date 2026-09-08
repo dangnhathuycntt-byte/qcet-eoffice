@@ -622,7 +622,11 @@ export function CreateTaskModal({
 
             {/* 1. Title Input (Large, Prominent, Auto-focused) */}
             <div className="space-y-1">
+              <label htmlFor="task-title-input" className="sr-only">
+                {isStaff ? "Tên công việc hoặc kế hoạch cá nhân" : "Tiêu đề nhiệm vụ cần tạo hoặc giao"}
+              </label>
               <input
+                id="task-title-input"
                 ref={titleInputRef}
                 type="text"
                 placeholder={isStaff ? "Tên công việc hoặc kế hoạch cá nhân..." : "Tiêu đề nhiệm vụ cần tạo / giao..."}
@@ -632,7 +636,7 @@ export function CreateTaskModal({
                   if (errors.title) clearError("title");
                 }}
                 className={cn(
-                  "w-full bg-transparent text-base sm:text-lg font-bold text-foreground placeholder:text-muted-foreground/40 placeholder:font-normal focus:outline-none transition-all",
+                  "w-full bg-transparent text-base sm:text-lg font-bold text-foreground placeholder:text-muted-foreground/75 placeholder:font-normal focus:outline-none transition-all",
                   errors.title && "text-destructive"
                 )}
               />
@@ -646,12 +650,16 @@ export function CreateTaskModal({
 
             {/* 2. Description Textarea (Subtle, Clean) */}
             <div>
+              <label htmlFor="task-description-input" className="sr-only">
+                Yêu cầu chi tiết hoặc mô tả nhiệm vụ
+              </label>
               <textarea
+                id="task-description-input"
                 rows={3}
                 placeholder="Yêu cầu chi tiết, kết quả mong đợi, hoặc ghi chú thực hiện (tùy chọn)..."
                 value={formData.description}
                 onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                className="w-full bg-transparent text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none resize-none leading-relaxed"
+                className="w-full bg-transparent text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/75 focus:outline-none resize-none leading-relaxed"
               />
             </div>
 
@@ -724,10 +732,11 @@ export function CreateTaskModal({
                     <div className="flex items-center gap-2 flex-1">
                       <input
                         type="text"
+                        aria-label="Họ và tên cán bộ chủ trì"
                         placeholder="Họ và tên cán bộ (VD: Nguyễn Văn Tuấn)..."
                         value={formData.leadAssigneeName}
                         onChange={(e) => handleAssigneeSelect(e.target.value)}
-                        className="w-full h-8.5 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="w-full h-8.5 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary"
                       />
                       <button
                         type="button"
@@ -797,12 +806,13 @@ export function CreateTaskModal({
                 <div className="relative flex-1 sm:max-w-[280px]">
                   <input
                     type="text"
+                    aria-label="Vị trí việc làm (VTVL)"
                     placeholder="VD: Chuyên viên Quản lý Đào tạo, Giảng viên CNTT..."
                     value={formData.vtvlRole || ""}
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, vtvlRole: e.target.value }))
                     }
-                    className="w-full h-8 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full h-8 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -896,7 +906,7 @@ export function CreateTaskModal({
                     if (errors.requiredDeliverables) clearError("requiredDeliverables");
                   }}
                   className={cn(
-                    "w-full rounded-lg border bg-card p-2 text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed",
+                    "w-full rounded-lg border bg-card p-2 text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed",
                     errors.requiredDeliverables ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
                   )}
                 />
