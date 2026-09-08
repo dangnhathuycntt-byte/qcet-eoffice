@@ -399,7 +399,7 @@ export function SubmitDeliverableModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="submit-deliverable-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
     >
       {/* Backdrop */}
       <div
@@ -408,7 +408,10 @@ export function SubmitDeliverableModal({
       />
 
       {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-xl flex flex-col rounded-2xl border border-border/80 bg-card shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden my-auto max-h-[92vh]">
+      <div className="relative w-full max-w-xl rounded-t-2xl sm:rounded-2xl bg-card border border-border/80 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden my-0 sm:my-auto animate-in zoom-in-95 duration-200">
+        {/* Mobile Drag Handle */}
+        <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-4 sm:px-6 bg-muted/20">
           <div className="flex items-center gap-3">
@@ -464,7 +467,11 @@ export function SubmitDeliverableModal({
 
             {/* Error Banner */}
             {errorMessage && (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive flex items-center gap-2 animate-in fade-in">
+              <div
+                role="alert"
+                aria-live="polite"
+                className="rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive flex items-center gap-2 animate-in fade-in"
+              >
                 <AlertCircle className="size-4 shrink-0" strokeWidth={1.5} />
                 <span>{errorMessage}</span>
               </div>
@@ -478,12 +485,21 @@ export function SubmitDeliverableModal({
               </label>
 
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Khu vực tải lên tệp minh chứng. Bấm hoặc kéo thả tệp vào đây"
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
                 className={cn(
-                  "relative flex flex-col items-center justify-center p-4 sm:p-5 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center",
+                  "relative flex flex-col items-center justify-center p-4 sm:p-5 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                   isDragging
                     ? "border-primary bg-primary/5 scale-[0.99]"
                     : "border-border/70 hover:border-primary/50 hover:bg-muted/30 bg-muted/10"
@@ -617,7 +633,7 @@ export function SubmitDeliverableModal({
                 htmlFor="deliverable-note"
                 className="text-xs font-semibold text-foreground flex items-center justify-between"
               >
-                <span>Ghi chú gửi Trưởng đơn vị / Người phê duyệt</span>
+                <span>Nội dung giải trình / Ghi chú gửi cấp phê duyệt</span>
                 <span className="text-xs font-normal text-muted-foreground">Tùy chọn</span>
               </label>
               <textarea
@@ -632,14 +648,14 @@ export function SubmitDeliverableModal({
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2.5 border-t border-border/60 px-5 py-3.5 sm:px-6 bg-muted/20 mt-auto">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-border/60 px-5 py-3.5 sm:px-6 bg-muted/20 mt-auto pb-safe">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={onClose}
               disabled={submittingNow}
-              className="text-xs rounded-xl"
+              className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] text-xs rounded-xl"
             >
               Hủy bỏ
             </Button>
@@ -647,7 +663,7 @@ export function SubmitDeliverableModal({
               type="submit"
               size="sm"
               disabled={submittingNow}
-              className="text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
             >
               {submittingNow ? (
                 <>
@@ -657,7 +673,7 @@ export function SubmitDeliverableModal({
               ) : (
                 <>
                   <Send className="size-3.5" strokeWidth={1.5} />
-                  <span>Gửi Trưởng đơn vị duyệt</span>
+                  <span>Gửi hồ sơ thẩm định</span>
                 </>
               )}
             </Button>

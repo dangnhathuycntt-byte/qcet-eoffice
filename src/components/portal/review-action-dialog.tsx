@@ -301,10 +301,13 @@ export function ReviewActionDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="review-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
       onClick={handleBackdropClick}
     >
-      <div className="relative w-full max-w-2xl rounded-2xl border border-border bg-card shadow-2xl overflow-hidden flex flex-col max-h-[92vh] transition-all">
+      <div className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-card border border-border/80 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
+        {/* Mobile Drag Handle */}
+        <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto my-2 sm:hidden shrink-0" />
+
         {/* Header */}
         <div className="flex items-start justify-between border-b border-border/80 px-6 py-4 bg-muted/30">
           <div className="flex items-center gap-3">
@@ -384,10 +387,17 @@ export function ReviewActionDialog({
 
           {/* 3 Decision States Selector */}
           <div className="space-y-2.5">
-            <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+            <label
+              id="decision-group-label"
+              className="text-xs font-semibold tracking-wider uppercase text-muted-foreground"
+            >
               Quyết định thẩm định <span className="text-rose-500">*</span>
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div
+              role="radiogroup"
+              aria-labelledby="decision-group-label"
+              className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+            >
               {DECISION_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
                 const isSelected = decision === opt.id;
@@ -396,11 +406,14 @@ export function ReviewActionDialog({
                   <button
                     key={opt.id}
                     type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    tabIndex={isSelected ? 0 : -1}
                     onClick={() => handleDecisionChange(opt.id)}
                     disabled={isProcessing}
                     className={cn(
                       "relative flex flex-col items-start p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer select-none",
-                      "hover:border-primary/50 focus:outline-hidden focus:ring-2 focus:ring-primary/20",
+                      "hover:border-primary/50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
                       isSelected
                         ? opt.accentColor === "emerald"
                           ? "border-emerald-600 bg-emerald-500/10 text-emerald-950 shadow-xs"
@@ -477,7 +490,7 @@ export function ReviewActionDialog({
                     : "text-muted-foreground"
                 )}
               >
-                {commentCharCount} ký tự {isCommentRequired && "(Tối thiểu 5)"}
+                <span className="font-mono tabular-nums font-medium">{commentCharCount}</span> ký tự {isCommentRequired && "(Tối thiểu 5)"}
               </span>
             </div>
 
@@ -496,7 +509,7 @@ export function ReviewActionDialog({
               }
               className={cn(
                 "w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm transition-colors",
-                "placeholder:text-muted-foreground/60 focus:outline-hidden focus:ring-2 focus:ring-primary/20",
+                "placeholder:text-muted-foreground/60 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
                 validationError
                   ? "border-rose-500 focus:border-rose-500"
                   : isCommentRequired && commentCharCount === 0
@@ -507,7 +520,11 @@ export function ReviewActionDialog({
 
             {/* Validation Error Message */}
             {validationError && (
-              <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-600 flex items-start gap-2 animate-in fade-in duration-150">
+              <div
+                role="alert"
+                aria-live="polite"
+                className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-600 flex items-start gap-2 animate-in fade-in duration-150"
+              >
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>{validationError}</span>
               </div>
@@ -536,24 +553,24 @@ export function ReviewActionDialog({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-border/80 px-6 py-4 bg-muted/30">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between border-t border-border/80 px-4 py-3 sm:px-6 sm:py-4 bg-muted/30 gap-2 pb-safe">
           <Button
             type="button"
             variant="ghost"
             onClick={onClose}
             disabled={isProcessing}
-            className="text-muted-foreground hover:text-foreground"
+            className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] text-muted-foreground hover:text-foreground"
           >
             Hủy bỏ
           </Button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
               type="button"
               onClick={handleSubmit}
               disabled={isProcessing}
               className={cn(
-                "min-w-36 font-medium text-white shadow-xs transition-all",
+                "w-full sm:w-auto min-h-[44px] sm:min-h-[38px] min-w-36 font-medium text-white shadow-xs transition-all",
                 activeDecisionConfig.accentColor === "emerald" &&
                   "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800",
                 activeDecisionConfig.accentColor === "amber" &&
