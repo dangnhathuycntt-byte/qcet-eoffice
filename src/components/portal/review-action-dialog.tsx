@@ -403,10 +403,10 @@ export function ReviewActionDialog({
                       "hover:border-primary/50 focus:outline-hidden focus:ring-2 focus:ring-primary/20",
                       isSelected
                         ? opt.accentColor === "emerald"
-                          ? "border-emerald-600 bg-emerald-500/10 text-emerald-950 dark:text-emerald-200 dark:border-emerald-500 shadow-xs"
+                          ? "border-emerald-600 bg-emerald-500/10 text-emerald-950 shadow-xs"
                           : opt.accentColor === "amber"
-                          ? "border-amber-600 bg-amber-500/10 text-amber-950 dark:text-amber-200 dark:border-amber-500 shadow-xs"
-                          : "border-rose-600 bg-rose-500/10 text-rose-950 dark:text-rose-200 dark:border-rose-500 shadow-xs"
+                          ? "border-amber-600 bg-amber-500/10 text-amber-950 shadow-xs"
+                          : "border-rose-600 bg-rose-500/10 text-rose-950 shadow-xs"
                         : "border-border/80 bg-background hover:bg-muted/40 text-foreground"
                     )}
                   >
@@ -430,10 +430,10 @@ export function ReviewActionDialog({
                           "text-xs font-semibold px-1.5 py-0.5 rounded-md",
                           isSelected
                             ? opt.accentColor === "emerald"
-                              ? "bg-emerald-600/20 text-emerald-800 dark:text-emerald-300"
+                              ? "bg-emerald-600/20 text-emerald-800"
                               : opt.accentColor === "amber"
-                              ? "bg-amber-600/20 text-amber-800 dark:text-amber-300"
-                              : "bg-rose-600/20 text-rose-800 dark:text-rose-300"
+                              ? "bg-amber-600/20 text-amber-800"
+                              : "bg-rose-600/20 text-rose-800"
                             : "bg-muted/80 text-muted-foreground"
                         )}
                       >
@@ -473,7 +473,7 @@ export function ReviewActionDialog({
                 className={cn(
                   "text-xs",
                   isCommentRequired && commentCharCount < 5
-                    ? "text-amber-600 dark:text-amber-400 font-medium"
+                    ? "text-amber-600 font-medium"
                     : "text-muted-foreground"
                 )}
               >
@@ -507,7 +507,7 @@ export function ReviewActionDialog({
 
             {/* Validation Error Message */}
             {validationError && (
-              <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-600 dark:text-rose-400 flex items-start gap-2 animate-in fade-in duration-150">
+              <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-600 flex items-start gap-2 animate-in fade-in duration-150">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>{validationError}</span>
               </div>

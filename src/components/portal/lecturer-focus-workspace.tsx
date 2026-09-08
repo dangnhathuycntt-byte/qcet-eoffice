@@ -372,7 +372,7 @@ export function renderStatusBadge(
       return (
         <Badge
           variant="outline"
-          className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 text-xs font-medium"
+          className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-xs font-medium"
         >
           Chờ BGH duyệt
         </Badge>
@@ -381,7 +381,7 @@ export function renderStatusBadge(
       return (
         <Badge
           variant="outline"
-          className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 text-xs font-medium"
+          className="bg-blue-500/10 text-blue-700 border-blue-500/30 text-xs font-medium"
         >
           Đang thực hiện
         </Badge>
@@ -390,7 +390,7 @@ export function renderStatusBadge(
       return (
         <Badge
           variant="outline"
-          className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30 text-xs font-medium"
+          className="bg-purple-500/10 text-purple-700 border-purple-500/30 text-xs font-medium"
         >
           Chờ thẩm định
         </Badge>
@@ -399,7 +399,7 @@ export function renderStatusBadge(
       return (
         <Badge
           variant="outline"
-          className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 text-xs font-medium"
+          className="bg-rose-500/10 text-rose-700 border-rose-500/30 text-xs font-medium"
         >
           Bị nghẽn
         </Badge>
@@ -408,7 +408,7 @@ export function renderStatusBadge(
       return (
         <Badge
           variant="outline"
-          className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-xs font-medium"
+          className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 text-xs font-medium"
         >
           Đã hoàn thành
         </Badge>
@@ -822,7 +822,7 @@ export function LecturerFocusWorkspace({
               className={cn(
                 "p-1.5 rounded-lg",
                 summary.todayCount > 0
-                  ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                  ? "bg-rose-500/10 text-rose-600"
                   : "bg-muted text-muted-foreground"
               )}
             >
@@ -859,7 +859,7 @@ export function LecturerFocusWorkspace({
               className={cn(
                 "p-1.5 rounded-lg",
                 summary.thisWeekCount > 0
-                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                  ? "bg-blue-500/10 text-blue-600"
                   : "bg-muted text-muted-foreground"
               )}
             >
@@ -896,7 +896,7 @@ export function LecturerFocusWorkspace({
               className={cn(
                 "p-1.5 rounded-lg",
                 summary.waitingApprovalCount > 0
-                  ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                  ? "bg-purple-500/10 text-purple-600"
                   : "bg-muted text-muted-foreground"
               )}
             >
@@ -933,7 +933,7 @@ export function LecturerFocusWorkspace({
               className={cn(
                 "p-1.5 rounded-lg",
                 summary.revisionRequestedCount > 0
-                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                  ? "bg-amber-500/10 text-amber-600"
                   : "bg-muted text-muted-foreground"
               )}
             >
@@ -966,7 +966,7 @@ export function LecturerFocusWorkspace({
             <span className="text-xs font-medium text-muted-foreground">
               Đã hoàn thành
             </span>
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600">
               <CheckCircle2 className="size-4" strokeWidth={1.5} />
             </div>
           </div>
@@ -1107,7 +1107,7 @@ export function LecturerFocusWorkspace({
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "TODAY"
                 ? "bg-rose-600 text-white font-semibold shadow-xs"
-                : "bg-rose-500/10 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20"
+                : "bg-rose-500/10 text-rose-700 hover:bg-rose-500/20"
             )}
           >
             <span>Khẩn cấp / Quá hạn</span>
@@ -1121,7 +1121,7 @@ export function LecturerFocusWorkspace({
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "THIS_WEEK"
                 ? "bg-blue-600 text-white font-semibold shadow-xs"
-                : "bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20"
+                : "bg-blue-500/10 text-blue-700 hover:bg-blue-500/20"
             )}
           >
             <span>Trong tuần này</span>
@@ -1148,7 +1148,7 @@ export function LecturerFocusWorkspace({
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "NEEDS_REVIEW"
                 ? "bg-purple-600 text-white font-semibold shadow-xs"
-                : "bg-purple-500/10 text-purple-700 dark:text-purple-400 hover:bg-purple-500/20"
+                : "bg-purple-500/10 text-purple-700 hover:bg-purple-500/20"
             )}
           >
             <span>Chờ duyệt</span>
@@ -1164,7 +1164,7 @@ export function LecturerFocusWorkspace({
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "REVISION"
                 ? "bg-amber-600 text-white font-semibold shadow-xs"
-                : "bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+                : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20"
             )}
           >
             <span>Cần bổ sung</span>
@@ -1180,7 +1180,7 @@ export function LecturerFocusWorkspace({
               "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "COMPLETED"
                 ? "bg-emerald-600 text-white font-semibold shadow-xs"
-                : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20"
+                : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20"
             )}
           >
             <span>Đã xong</span>
@@ -1270,14 +1270,14 @@ export function LecturerFocusWorkspace({
                       {group.parentTask.origin === "SELF_INITIATED" ? (
                         <Badge
                           variant="outline"
-                          className="border-amber-500/30 text-amber-700 bg-amber-500/10 dark:text-amber-400 dark:bg-amber-500/15 text-xs font-medium"
+                          className="border-amber-500/30 text-amber-700 bg-amber-500/10 text-xs font-medium"
                         >
                           Tự khởi xướng
                         </Badge>
                       ) : (
                         <Badge
                           variant="outline"
-                          className="border-blue-500/30 text-blue-700 bg-blue-500/10 dark:text-blue-400 dark:bg-blue-500/15 text-xs font-medium"
+                          className="border-blue-500/30 text-blue-700 bg-blue-500/10 text-xs font-medium"
                         >
                           BGH giao
                         </Badge>
@@ -1307,9 +1307,9 @@ export function LecturerFocusWorkspace({
                         className={cn(
                           "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-semibold",
                           parentCountdown.variant === "urgent"
-                            ? "bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/20"
+                            ? "bg-rose-500/15 text-rose-700 border border-rose-500/20"
                             : parentCountdown.variant === "warning"
-                            ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                            ? "bg-amber-500/15 text-amber-700 border border-amber-500/20"
                             : "bg-muted text-muted-foreground border border-border/70"
                         )}
                       >
@@ -1430,17 +1430,17 @@ export function LecturerFocusWorkspace({
                     </div>
 
                     {group.isAwaitingAssignment ? (
-                      <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-3.5 text-xs text-blue-900 dark:text-blue-200">
+                      <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-3.5 text-xs text-blue-900">
                         <div className="flex items-start gap-2.5">
                           <AlertCircle
-                            className="size-4 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5"
+                            className="size-4 shrink-0 text-blue-600 mt-0.5"
                             strokeWidth={1.5}
                           />
                           <div className="space-y-0.5">
-                            <p className="font-semibold text-blue-800 dark:text-blue-300">
+                            <p className="font-semibold text-blue-800">
                               Chờ phân công nhiệm vụ cụ thể
                             </p>
-                            <p className="text-blue-900/90 dark:text-blue-200/90">
+                            <p className="text-blue-900/90">
                               Bạn đang trong danh sách phối hợp. Đang chờ người
                               chủ trì phân công công việc chi tiết.
                             </p>
@@ -1452,7 +1452,7 @@ export function LecturerFocusWorkspace({
                         Chưa có công việc chi tiết nào được phân công.
                       </div>
                     ) : (
-                      <div className="border-l-2 border-primary/20 dark:border-primary/30 pl-3 sm:pl-4 ml-1 sm:ml-2 space-y-2.5">
+                      <div className="border-l-2 border-primary/20 pl-3 sm:pl-4 ml-1 sm:ml-2 space-y-2.5">
                         {subTasksToRender.map((subTask) => {
                           const countdownInfo = getDeadlineBadgeInfo(
                             subTask.dueDate,
@@ -1502,9 +1502,9 @@ export function LecturerFocusWorkspace({
                                     className={cn(
                                       "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-semibold",
                                       countdownInfo.variant === "urgent"
-                                        ? "bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/20"
+                                        ? "bg-rose-500/15 text-rose-700 border border-rose-500/20"
                                         : countdownInfo.variant === "warning"
-                                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                                        ? "bg-amber-500/15 text-amber-700 border border-amber-500/20"
                                         : "bg-muted text-muted-foreground border border-border/70"
                                     )}
                                   >
@@ -1526,17 +1526,17 @@ export function LecturerFocusWorkspace({
 
                               {/* Revision requested alert */}
                               {hasRevision && (
-                                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200">
+                                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900">
                                   <div className="flex items-start gap-2">
                                     <AlertTriangle
-                                      className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5"
+                                      className="size-4 shrink-0 text-amber-600 mt-0.5"
                                       strokeWidth={1.5}
                                     />
                                     <div className="space-y-0.5">
-                                      <p className="font-semibold text-amber-800 dark:text-amber-300">
+                                      <p className="font-semibold text-amber-800">
                                         Yêu cầu chỉnh sửa từ Trưởng đơn vị:
                                       </p>
-                                      <p className="text-amber-900/90 dark:text-amber-200/90">
+                                      <p className="text-amber-900/90">
                                         {subTask.rejectionReason}
                                       </p>
                                     </div>
@@ -1546,17 +1546,17 @@ export function LecturerFocusWorkspace({
 
                               {/* Blocked alert */}
                               {hasBlocked && subTask.blockedReason && (
-                                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-900 dark:text-rose-200">
+                                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-900">
                                   <div className="flex items-start gap-2">
                                     <AlertCircle
-                                      className="size-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5"
+                                      className="size-4 shrink-0 text-rose-600 mt-0.5"
                                       strokeWidth={1.5}
                                     />
                                     <div className="space-y-0.5">
-                                      <p className="font-semibold text-rose-800 dark:text-rose-300">
+                                      <p className="font-semibold text-rose-800">
                                         Lý do tắc nghẽn công việc:
                                       </p>
-                                      <p className="text-rose-900/90 dark:text-rose-200/90">
+                                      <p className="text-rose-900/90">
                                         {subTask.blockedReason}
                                       </p>
                                     </div>

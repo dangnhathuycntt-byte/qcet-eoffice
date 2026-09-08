@@ -180,7 +180,7 @@ export function ExecutiveResolutionDrawer({
         {/* Header */}
         <div className="flex items-start justify-between border-b border-border/80 px-5 py-4 bg-muted/20 shrink-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 shrink-0 border border-rose-500/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 shrink-0 border border-rose-500/20">
               <Sparkles className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
@@ -250,8 +250,8 @@ export function ExecutiveResolutionDrawer({
             {/* Blocked Reason callout if available */}
             {bottleneck.blockedReason && (
               <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-2.5 flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-                <div className="text-xs leading-relaxed text-rose-700 dark:text-rose-300">
+                <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="text-xs leading-relaxed text-rose-700">
                   <span className="font-semibold">Vướng mắc: </span>
                   {bottleneck.blockedReason}
                 </div>
@@ -445,7 +445,7 @@ export function ExecutiveResolutionDrawer({
                         </Badge>
                       </div>
                       {selectedType === "DEMAND_EXPLANATION" && (
-                        <CheckCircle2 className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                        <CheckCircle2 className="h-4 w-4 text-rose-600 shrink-0" />
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -454,7 +454,7 @@ export function ExecutiveResolutionDrawer({
 
                     {/* Sub-controls for Demand Explanation */}
                     {selectedType === "DEMAND_EXPLANATION" && (
-                      <div className="mt-3 rounded-lg bg-rose-500/10 border border-rose-500/20 p-2.5 text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
+                      <div className="mt-3 rounded-lg bg-rose-500/10 border border-rose-500/20 p-2.5 text-xs text-rose-700 leading-relaxed">
                         Lệnh giải trình sẽ gửi trực tiếp đến Trưởng đơn vị{" "}
                         <strong>{bottleneck.departmentName}</strong>. Thời hạn phản hồi được giám sát tự động trong vòng 24 giờ kể từ khi ban hành.
                       </div>
@@ -502,7 +502,7 @@ export function ExecutiveResolutionDrawer({
 
                     {/* Sub-controls for Direct Directive */}
                     {selectedType === "DIRECT_DIRECTIVE" && (
-                      <div className="mt-3 space-y-1.5 pt-2 border-t border-border/50">
+                      <div className="mt-3 space-y-2 pt-2 border-t border-border/50">
                         <label className="text-xs font-semibold text-foreground block">
                           Nội dung bút phê chỉ đạo của BGH:
                         </label>
@@ -518,6 +518,29 @@ export function ExecutiveResolutionDrawer({
                           autoFocus
                           onClick={(e) => e.stopPropagation()}
                         />
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground font-medium">Gợi ý chỉ đạo nhanh:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              "Giao Trưởng đơn vị chủ trì giải quyết dứt điểm trước 17h ngày mai.",
+                              "Tập trung tối đa nhân sự hoàn thành đúng tiến độ, báo cáo BGH.",
+                              "Ưu tiên tháo gỡ dứt điểm điểm nghẽn này trước các việc phát sinh.",
+                            ].map((preset) => (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDirectiveNote(preset);
+                                  if (error) setError(null);
+                                }}
+                                className="text-xs px-2 py-1 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/60 transition-colors text-left"
+                              >
+                                {preset}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

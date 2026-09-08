@@ -21,6 +21,7 @@ import {
   Layers,
   X,
   CheckCircle,
+  RefreshCw,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
@@ -74,6 +75,8 @@ export interface DepartmentManagerWorkspaceProps {
   referenceDate?: string;
   tasksUrl?: string;
   className?: string;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 // ============================================================================
@@ -336,7 +339,7 @@ function renderStatusBadge(status: TaskStatus) {
       return (
         <Badge
           variant="outline"
-          className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 text-xs font-medium"
+          className="bg-blue-500/10 text-blue-700 border-blue-500/30 text-xs font-medium"
         >
           Đang thực hiện
         </Badge>
@@ -345,7 +348,7 @@ function renderStatusBadge(status: TaskStatus) {
       return (
         <Badge
           variant="outline"
-          className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30 text-xs font-medium"
+          className="bg-purple-500/10 text-purple-700 border-purple-500/30 text-xs font-medium"
         >
           Chờ thẩm định
         </Badge>
@@ -354,7 +357,7 @@ function renderStatusBadge(status: TaskStatus) {
       return (
         <Badge
           variant="outline"
-          className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 text-xs font-medium"
+          className="bg-rose-500/10 text-rose-700 border-rose-500/30 text-xs font-medium"
         >
           Đang tắc nghẽn
         </Badge>
@@ -363,7 +366,7 @@ function renderStatusBadge(status: TaskStatus) {
       return (
         <Badge
           variant="outline"
-          className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-xs font-medium"
+          className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 text-xs font-medium"
         >
           Đã hoàn thành
         </Badge>
@@ -397,6 +400,8 @@ export function DepartmentManagerWorkspace({
   referenceDate,
   tasksUrl = "/tasks",
   className,
+  onRefresh,
+  isRefreshing,
 }: DepartmentManagerWorkspaceProps) {
   const [activeTab, setActiveTab] =
     React.useState<ManagerWorkspaceTab>("APPROVAL_QUEUE");
@@ -523,28 +528,24 @@ export function DepartmentManagerWorkspace({
       className={cn("w-full space-y-6", className)}
       data-slot="department-manager-workspace"
     >
-      {/* 1. Header & Context */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-5">
+      {/* 1. Header & Context (Single Tier, Enterprise Hierarchy) */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-              Xin chào, {user.name}
-            </h1>
-            <Badge
-              variant="outline"
-              className="bg-primary/5 text-primary border-primary/20 text-xs px-2 py-0.5"
-            >
-              {deptCode}
-            </Badge>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
+            {user.department || "Phòng Quản trị Mạng và CNTT"}
+          </h1>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-primary/10 text-primary border border-primary/20 font-mono">
+              {user.roleLabel || "Trưởng đơn vị"}
+            </span>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="font-medium text-foreground">{user.name}</span>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="font-mono tabular-nums">Năm học 2026 – 2027</span>
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2">
-            <span>{user.roleLabel || "Trưởng đơn vị"}</span>
-            <span className="text-muted-foreground/40">•</span>
-            <span>{user.department || "Khoa / Ban đơn vị"}</span>
-          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           <Button
             type="button"
             size="sm"
@@ -562,26 +563,115 @@ export function DepartmentManagerWorkspace({
             asChild
             variant="outline"
             size="sm"
-            className="text-xs h-8 gap-1.5 whitespace-nowrap rounded-xl border-border/80"
+            className="text-xs h-8 gap-1.5 whitespace-nowrap rounded-xl border-border/80 hover:bg-muted/80"
           >
             <Link href={tasksUrl} className="inline-flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 shrink-0" />
-              <span>Kho nhiệm vụ toàn trường</span>
+              <span>Kho nhiệm vụ</span>
               <ArrowRight className="w-3 h-3 ml-0.5 shrink-0" />
             </Link>
           </Button>
+
+          {onRefresh && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="text-xs h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80"
+              title="Làm mới dữ liệu đơn vị"
+            >
+              <RefreshCw
+                size={13}
+                strokeWidth={1.5}
+                className={cn("shrink-0", isRefreshing ? "animate-spin text-primary" : "")}
+              />
+              <span className="hidden sm:inline">Làm mới</span>
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* 2. Executive Strip for Unit Manager */}
+      {/* 2. Executive Strip for Unit Manager (4 Dynamic Actionable Metric Cards) */}
       <div
         className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4"
         data-slot="executive-stat-strip"
       >
-        {/* Metric 1: Chờ thẩm định (Highest Priority) */}
+        {/* Metric 1: CẦN TÔI XỬ LÝ */}
+        <button
+          type="button"
+          onClick={() => setActiveTab("MY_TASKS")}
+          title="Nhiệm vụ trực tiếp cần tôi xử lý"
+          className={cn(
+            "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer",
+            activeTab === "MY_TASKS"
+              ? "border-blue-500/50 bg-blue-500/10 shadow-xs ring-1 ring-blue-500/30"
+              : "border-border bg-card hover:bg-muted/40 hover:border-border/80"
+          )}
+        >
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Cần tôi xử lý
+            </span>
+            <div
+              className={cn(
+                "p-1.5 rounded-lg",
+                metrics.myDirectTasksCount > 0
+                  ? "bg-blue-500/20 text-blue-600"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              <User className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold tracking-tight text-foreground font-heading">
+              {metrics.myDirectTasksCount}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              nhiệm vụ
+            </p>
+          </div>
+        </button>
+
+        {/* Metric 2: ĐƠN VỊ ĐANG CHẠY */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("UNIT_PROGRESS");
+            setUnitFilter("ALL");
+          }}
+          className={cn(
+            "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer",
+            activeTab === "UNIT_PROGRESS" && unitFilter === "ALL"
+              ? "border-amber-500/50 bg-amber-500/10 shadow-xs ring-1 ring-amber-500/30"
+              : "border-border bg-card hover:bg-muted/40 hover:border-border/80"
+          )}
+        >
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Đơn vị đang chạy
+            </span>
+            <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600">
+              <Building2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold tracking-tight text-foreground font-heading">
+              {metrics.totalDepartmentTasks}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              nhiệm vụ
+            </p>
+          </div>
+        </button>
+
+        {/* Metric 3: CHỜ DUYỆT */}
         <button
           type="button"
           onClick={() => setActiveTab("APPROVAL_QUEUE")}
+          title="Hồ sơ chờ thẩm định và phê duyệt"
           className={cn(
             "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer",
             activeTab === "APPROVAL_QUEUE"
@@ -590,14 +680,14 @@ export function DepartmentManagerWorkspace({
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium text-foreground">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Chờ thẩm định
             </span>
             <div
               className={cn(
                 "p-1.5 rounded-lg",
                 metrics.waitingReviewCount > 0
-                  ? "bg-purple-500/20 text-purple-600 dark:text-purple-400"
+                  ? "bg-purple-500/20 text-purple-600"
                   : "bg-muted text-muted-foreground"
               )}
             >
@@ -605,102 +695,53 @@ export function DepartmentManagerWorkspace({
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold tracking-tight text-foreground">
+            <div className="text-2xl font-bold tracking-tight text-foreground font-heading">
               {metrics.waitingReviewCount}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Hồ sơ cần phê duyệt
+              hồ sơ
             </p>
           </div>
         </button>
 
-        {/* Metric 2: Đang chậm tiến độ */}
-        <button
-          type="button"
+        {/* Metric 4: TIẾN ĐỘ ĐƠN VỊ (kèm inline overdue alert) */}
+        <div
           onClick={() => {
-            setActiveTab("UNIT_PROGRESS");
-            setUnitFilter("OVERDUE");
+            if (metrics.overdueCount > 0) {
+              setActiveTab("UNIT_PROGRESS");
+              setUnitFilter("OVERDUE");
+            }
           }}
           className={cn(
-            "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer",
-            activeTab === "UNIT_PROGRESS" && unitFilter === "OVERDUE"
-              ? "border-rose-500/50 bg-rose-500/10 shadow-xs ring-1 ring-rose-500/30"
-              : "border-border bg-card hover:bg-muted/40 hover:border-border/80"
+            "flex flex-col gap-2 rounded-xl border border-border bg-card p-4 transition-all duration-150",
+            metrics.overdueCount > 0 && "cursor-pointer hover:border-rose-500/40 hover:bg-rose-500/5"
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium text-foreground">
-              Đang chậm tiến độ
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Tiến độ đơn vị
             </span>
-            <div
-              className={cn(
-                "p-1.5 rounded-lg",
-                metrics.overdueCount > 0
-                  ? "bg-rose-500/20 text-rose-600 dark:text-rose-400"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold tracking-tight text-foreground">
-              {metrics.overdueCount}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Nhiệm vụ quá hạn
-            </p>
-          </div>
-        </button>
-
-        {/* Metric 3: Nhiệm vụ trọng tâm */}
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab("UNIT_PROGRESS");
-            setUnitFilter("IN_PROGRESS");
-          }}
-          className={cn(
-            "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer",
-            activeTab === "UNIT_PROGRESS" && unitFilter === "IN_PROGRESS"
-              ? "border-amber-500/50 bg-amber-500/10 shadow-xs ring-1 ring-amber-500/30"
-              : "border-border bg-card hover:bg-muted/40 hover:border-border/80"
-          )}
-        >
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium text-foreground">
-              Nhiệm vụ trọng tâm
-            </span>
-            <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
-              <Sparkles className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold tracking-tight text-foreground">
-              {metrics.focusTaskCount}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Cần ưu tiên xử lý
-            </p>
-          </div>
-        </button>
-
-        {/* Metric 4: Tiến độ chung đơn vị */}
-        <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium text-foreground">
-              Tiến độ chung đơn vị
-            </span>
-            <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-600">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold tracking-tight text-foreground">
-              {metrics.averageProgressPercent}%
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold tracking-tight text-foreground font-heading">
+                {metrics.averageProgressPercent}%
+              </span>
+              {metrics.overdueCount > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-md"
+                  title="Click để lọc các nhiệm vụ đang chậm tiến độ"
+                >
+                  <AlertTriangle className="w-3 h-3 shrink-0" />
+                  <span>{metrics.overdueCount} trễ hạn</span>
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {metrics.completedDepartmentTasks}/{metrics.totalDepartmentTasks} việc hoàn thành
+              hoàn thành
             </p>
           </div>
         </div>
@@ -802,7 +843,7 @@ export function DepartmentManagerWorkspace({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <FileCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <FileCheck className="w-4 h-4 text-purple-600" />
                 <span>Danh sách hồ sơ minh chứng cần Trưởng đơn vị thẩm định</span>
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -816,7 +857,7 @@ export function DepartmentManagerWorkspace({
 
           {approvalQueueTasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center rounded-xl border border-dashed bg-card/50">
-              <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-3">
+              <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-600 mb-3">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
               <h3 className="text-sm font-semibold text-foreground">
@@ -858,9 +899,9 @@ export function DepartmentManagerWorkspace({
                           className={cn(
                             "text-xs font-medium",
                             deadline.variant === "urgent" &&
-                              "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30",
+                              "bg-rose-500/10 text-rose-700 border-rose-500/30",
                             deadline.variant === "warning" &&
-                              "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30",
+                              "bg-amber-500/10 text-amber-700 border-amber-500/30",
                             deadline.variant === "neutral" &&
                               "bg-muted text-muted-foreground border-border"
                           )}
@@ -874,11 +915,11 @@ export function DepartmentManagerWorkspace({
                             className={cn(
                               "text-xs font-medium",
                               task.aiReview.status === "CLEAN" &&
-                                "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
+                                "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
                               task.aiReview.status === "NEEDS_ATTENTION" &&
-                                "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30",
+                                "bg-amber-500/10 text-amber-700 border-amber-500/30",
                               task.aiReview.status === "HIGH_RISK" &&
-                                "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30"
+                                "bg-rose-500/10 text-rose-700 border-rose-500/30"
                             )}
                           >
                             <ShieldCheck className="w-3 h-3 mr-1 inline" />
@@ -999,9 +1040,9 @@ export function DepartmentManagerWorkspace({
                             className={cn(
                               "text-xs",
                               deadline.variant === "urgent" &&
-                                "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30",
+                                "bg-rose-500/10 text-rose-700 border-rose-500/30",
                               deadline.variant === "warning" &&
-                                "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                                "bg-amber-500/10 text-amber-700 border-amber-500/30"
                             )}
                           >
                             <Clock className="w-3 h-3 mr-1 inline" />
@@ -1138,9 +1179,9 @@ export function DepartmentManagerWorkspace({
                             className={cn(
                               "text-xs",
                               deadline.variant === "urgent" &&
-                                "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30",
+                                "bg-rose-500/10 text-rose-700 border-rose-500/30",
                               deadline.variant === "warning" &&
-                                "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                                "bg-amber-500/10 text-amber-700 border-amber-500/30"
                             )}
                           >
                             {deadline.label}
@@ -1153,11 +1194,27 @@ export function DepartmentManagerWorkspace({
                           {task.title}
                         </h4>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span>
-                            Người làm:{" "}
-                            <strong className="text-foreground">
-                              {task.assigneeName}
-                            </strong>
+                          <span className="flex items-center gap-1.5">
+                            <span>
+                              Người làm:{" "}
+                              <strong className="text-foreground">
+                                {task.assigneeName}
+                              </strong>
+                            </span>
+                            {task.collaborators && task.collaborators.length > 0 && (
+                              <div className="flex -space-x-1">
+                                {task.collaborators.slice(0, 3).map(c => (
+                                  <span key={c.id} className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center text-xs leading-none font-bold">
+                                    {c.name.charAt(0)}
+                                  </span>
+                                ))}
+                                {task.collaborators.length > 3 && (
+                                  <span className="w-5 h-5 rounded-full bg-muted border border-background flex items-center justify-center text-xs leading-none">
+                                    +{task.collaborators.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </span>
                           {task.parentTaskTitle && (
                             <span className="truncate max-w-[200px]">
@@ -1236,7 +1293,7 @@ export function DepartmentManagerWorkspace({
           {/* Revision Banner if any of manager's tasks require revision */}
           {revisionNeededTasks.length > 0 && (
             <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-2">
-              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-semibold text-xs">
+              <div className="flex items-center gap-2 text-amber-700 font-semibold text-xs">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>Yêu cầu chỉnh sửa từ Lãnh đạo cấp trên</span>
               </div>
@@ -1286,9 +1343,9 @@ export function DepartmentManagerWorkspace({
                           className={cn(
                             "text-xs",
                             deadline.variant === "urgent" &&
-                              "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30",
+                              "bg-rose-500/10 text-rose-700 border-rose-500/30",
                             deadline.variant === "warning" &&
-                              "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                              "bg-amber-500/10 text-amber-700 border-amber-500/30"
                           )}
                         >
                           <Clock className="w-3 h-3 mr-1 inline" />

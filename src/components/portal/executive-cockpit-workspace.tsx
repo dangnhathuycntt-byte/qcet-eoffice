@@ -51,6 +51,7 @@ import { SubmitDeliverableModal } from "./submit-deliverable-modal";
 import { ExecutiveResolutionDrawer } from "./executive-resolution-drawer";
 import { ExecutiveBottleneckCard } from "./executive-bottleneck-card";
 import { ExecutiveUnitRadar } from "./executive-unit-radar";
+import { ExecutiveBriefingModal } from "./executive-briefing-modal";
 import {
   getDaysRemaining,
   getDeadlineBadgeInfo,
@@ -257,7 +258,7 @@ export function computeExecutiveCockpitMetrics(
     totalTasksCount > 0 ? Math.round(totalProgressSum / totalTasksCount) : 0;
 
   // Calculate health radar to get count of delayed departments
-  const radar = computeElevenDepartmentRadar(tasks, staffTasks, referenceDate);
+  const radar = computeElevenDepartmentRadar(tasks, referenceDate);
   const delayedDepartmentsCount = radar.filter(
     (d) => d.healthStatus !== "GREEN"
   ).length;
@@ -279,24 +280,10 @@ export function computeExecutiveCockpitMetrics(
  */
 export function computeElevenDepartmentRadar(
   tasks: SchoolTask[] = [],
-  staffTasks: StaffTask[] = [],
   referenceDate: string = TODAY_ISO
 ): ElevenDepartmentRadarItem[] {
   // Use aggregator matrix as baseline
   const matrixData = computeDepartmentHealthMatrix(tasks, referenceDate);
-
-  // Group staff tasks by department
-  const subTaskMap = new Map<string, StaffTask[]>();
-  for (const sub of staffTasks) {
-    const deptId =
-      resolveDepartmentId(sub.departmentCode) ||
-      resolveDepartmentId(sub.triageSourceDept) ||
-      resolveDepartmentId(undefined, sub.assigneeName) ||
-      "CNTT";
-    const existing = subTaskMap.get(deptId) || [];
-    existing.push(sub);
-    subTaskMap.set(deptId, existing);
-  }
 
   const radarItems: ElevenDepartmentRadarItem[] =
     QCET_DEPARTMENT_DEFINITIONS.map((def) => {
@@ -354,11 +341,9 @@ export function computeElevenDepartmentRadar(
  */
 export function extractSchoolBottlenecks(
   tasks: SchoolTask[] = [],
-  staffTasks: StaffTask[] = [],
   referenceDate: string = TODAY_ISO
 ): SchoolBottleneckItem[] {
   const bottlenecks: SchoolBottleneckItem[] = [];
-  const seenSubIds = new Set<string>();
 
   // Check SchoolTasks
   for (const task of tasks) {
@@ -373,7 +358,7 @@ export function extractSchoolBottlenecks(
         title: task.title,
         departmentCode: task.leadDepartmentCode || "BGH",
         departmentName: task.leadDepartment || "Ban Giám hiệu",
-        assigneeName: task.leadAssigneeName,
+        assigneeName: task.leadDepartment || "Ban Giám hiệu",
         dueDate: task.dueDate,
         daysRemaining: daysLeft,
         daysOverdue:
@@ -384,77 +369,10 @@ export function extractSchoolBottlenecks(
               : undefined,
         isOverdue: isPastDue,
         isBlocked,
+        blockedReason: (task as any).blockedReason,
         progressPercent: task.progressPercent || 0,
         taskType: "SCHOOL_TASK",
         originalTask: task,
-      });
-    }
-
-    // Check nested subTasks
-    for (const sub of task.subTasks || []) {
-      seenSubIds.add(sub.id);
-      if (sub.status === "COMPLETED") continue;
-      const subPastDue = isTaskPastDue(sub.dueDate, referenceDate);
-      const subBlocked = sub.status === "BLOCKED";
-      const subDaysLeft = getDaysRemaining(sub.dueDate, referenceDate);
-
-      if (subPastDue || subBlocked) {
-        bottlenecks.push({
-          id: sub.id,
-          title: sub.title,
-          departmentCode: sub.departmentCode || task.leadDepartmentCode || "CNTT",
-          departmentName: task.leadDepartment || "Khoa / Đơn vị",
-          assigneeName: sub.assigneeName,
-          dueDate: sub.dueDate,
-          daysRemaining: subDaysLeft,
-          daysOverdue:
-            subDaysLeft !== null && subDaysLeft < 0
-              ? Math.abs(subDaysLeft)
-              : subPastDue
-                ? 1
-                : undefined,
-          isOverdue: subPastDue,
-          isBlocked: subBlocked,
-          blockedReason: sub.blockedReason,
-          progressPercent: sub.status === "NEEDS_REVIEW" ? 90 : 40,
-          taskType: "STAFF_TASK",
-          parentSchoolTaskId: task.id,
-          originalTask: sub,
-        });
-      }
-    }
-  }
-
-  // Check external staff tasks
-  for (const sub of staffTasks) {
-    if (seenSubIds.has(sub.id)) continue;
-    if (sub.status === "COMPLETED") continue;
-    const subPastDue = isTaskPastDue(sub.dueDate, referenceDate);
-    const subBlocked = sub.status === "BLOCKED";
-    const subDaysLeft = getDaysRemaining(sub.dueDate, referenceDate);
-
-    if (subPastDue || subBlocked) {
-      bottlenecks.push({
-        id: sub.id,
-        title: sub.title,
-        departmentCode: sub.departmentCode || "CNTT",
-        departmentName: "Khoa / Đơn vị",
-        assigneeName: sub.assigneeName,
-        dueDate: sub.dueDate,
-        daysRemaining: subDaysLeft,
-        daysOverdue:
-          subDaysLeft !== null && subDaysLeft < 0
-            ? Math.abs(subDaysLeft)
-            : subPastDue
-              ? 1
-              : undefined,
-        isOverdue: subPastDue,
-        isBlocked: subBlocked,
-        blockedReason: sub.blockedReason,
-        progressPercent: sub.status === "NEEDS_REVIEW" ? 90 : 30,
-        taskType: "STAFF_TASK",
-        parentSchoolTaskId: sub.parentSchoolTaskId,
-        originalTask: sub,
       });
     }
   }
@@ -473,11 +391,9 @@ export function extractSchoolBottlenecks(
  * Extracts items waiting for institutional/school-level approval.
  */
 export function extractInstitutionalApprovalQueue(
-  tasks: SchoolTask[] = [],
-  staffTasks: StaffTask[] = []
+  tasks: SchoolTask[] = []
 ): InstitutionalApprovalItem[] {
   const queue: InstitutionalApprovalItem[] = [];
-  const seenSubIds = new Set<string>();
 
   // SchoolTasks with 100% progress or PENDING_EXECUTIVE_APPROVAL
   for (const task of tasks) {
@@ -492,7 +408,7 @@ export function extractInstitutionalApprovalQueue(
         title: task.title,
         departmentCode: task.leadDepartmentCode || "BGH",
         departmentName: task.leadDepartment || "Ban Giám hiệu",
-        submittedByName: task.completionReport?.submittedBy || task.leadAssigneeName,
+        submittedByName: task.leadDepartment || "Ban Giám hiệu",
         submittedDate: task.completionReport?.submittedAt || task.assignedDate,
         dueDate: task.dueDate,
         progressPercent: task.progressPercent || 100,
@@ -510,52 +426,6 @@ export function extractInstitutionalApprovalQueue(
         executiveCriteria: task.executiveCriteria,
         taskType: "SCHOOL_TASK",
         originalTask: task,
-      });
-    }
-
-    // Nested subTasks requiring review
-    for (const sub of task.subTasks || []) {
-      seenSubIds.add(sub.id);
-      if (sub.status === "COMPLETED") continue;
-      if (sub.status === "NEEDS_REVIEW" || sub.requiresReview === true) {
-        queue.push({
-          id: sub.id,
-          title: sub.title,
-          departmentCode: sub.departmentCode || task.leadDepartmentCode || "CNTT",
-          departmentName: task.leadDepartment || "Khoa / Đơn vị",
-          submittedByName: sub.assigneeName,
-          submittedDate: sub.updatedAt,
-          dueDate: sub.dueDate,
-          progressPercent: 95,
-          deliverablesCount: (sub.deliverables || []).length,
-          deliverables: sub.deliverables,
-          deliverableDescription: sub.deliverableDescription,
-          taskType: "STAFF_TASK",
-          originalTask: sub,
-        });
-      }
-    }
-  }
-
-  // External staff tasks requiring review
-  for (const sub of staffTasks) {
-    if (seenSubIds.has(sub.id)) continue;
-    if (sub.status === "COMPLETED") continue;
-    if (sub.status === "NEEDS_REVIEW" || sub.requiresReview === true) {
-      queue.push({
-        id: sub.id,
-        title: sub.title,
-        departmentCode: sub.departmentCode || "CNTT",
-        departmentName: "Khoa / Đơn vị",
-        submittedByName: sub.assigneeName,
-        submittedDate: sub.updatedAt,
-        dueDate: sub.dueDate,
-        progressPercent: 95,
-        deliverablesCount: (sub.deliverables || []).length,
-        deliverables: sub.deliverables,
-        deliverableDescription: sub.deliverableDescription,
-        taskType: "STAFF_TASK",
-        originalTask: sub,
       });
     }
   }
@@ -739,8 +609,8 @@ export function ExecutiveCockpitWorkspace({
 
   // Initial bottlenecks extracted from props
   const initialBottlenecks = React.useMemo(() => {
-    return extractSchoolBottlenecks(tasks, staffTasks, referenceDate);
-  }, [tasks, staffTasks, referenceDate]);
+    return extractSchoolBottlenecks(tasks, referenceDate);
+  }, [tasks, referenceDate]);
 
   // Active bottlenecks and resolved IDs for optimistic update flow
   const [activeBottlenecks, setActiveBottlenecks] =
@@ -853,10 +723,9 @@ export function ExecutiveCockpitWorkspace({
   const radarItems = React.useMemo(() => {
     return computeElevenDepartmentRadar(
       activeTasks,
-      activeStaffTasks,
       referenceDate
     );
-  }, [activeTasks, activeStaffTasks, referenceDate]);
+  }, [activeTasks, referenceDate]);
 
   // Matrix data for DepartmentProgressMatrix
   const matrixDepartments = React.useMemo(() => {
@@ -865,8 +734,23 @@ export function ExecutiveCockpitWorkspace({
 
   // Institutional approval queue
   const approvalQueue = React.useMemo(() => {
-    return extractInstitutionalApprovalQueue(activeTasks, activeStaffTasks);
-  }, [activeTasks, activeStaffTasks]);
+    return extractInstitutionalApprovalQueue(activeTasks);
+  }, [activeTasks]);
+
+  // Sub-filtering states for Bottlenecks tab
+  const [bottleneckSearch, setBottleneckSearch] = React.useState("");
+  const [bottleneckFilter, setBottleneckFilter] = React.useState<"ALL" | "OVERDUE_3D" | "BLOCKED">("ALL");
+
+  // Sub-filtering state for Approval Queue tab
+  const [approvalSearch, setApprovalSearch] = React.useState("");
+  const [approvalCategory, setApprovalCategory] = React.useState<string>("ALL");
+
+  // Sub-filtering state for 11 Units Radar tab
+  const [unitCategoryFilter, setUnitCategoryFilter] = React.useState<"ALL" | "FACULTY" | "ADMIN" | "CENTER">("ALL");
+  const [unitSortBy, setUnitSortBy] = React.useState<"PRIORITY" | "COMPLETION" | "NAME">("PRIORITY");
+
+  // Briefing modal state for Executive Meeting Review
+  const [showBriefingModal, setShowBriefingModal] = React.useState(false);
 
   // Affected units count
   const affectedUnitsCount = React.useMemo(() => {
@@ -896,13 +780,113 @@ export function ExecutiveCockpitWorkspace({
     return QCET_DEPARTMENT_DEFINITIONS.find((d) => d.id === selectedDepartment);
   }, [selectedDepartment]);
 
-  // Displayed bottlenecks filtered by department
+  // Displayed bottlenecks filtered by department, status and search
   const displayedBottlenecks = React.useMemo(() => {
-    if (selectedDepartment === "ALL") return activeBottlenecks;
-    return activeBottlenecks.filter(
-      (b) => b.departmentCode === selectedDepartment
+    let list = activeBottlenecks;
+    if (selectedDepartment !== "ALL") {
+      list = list.filter((b) => b.departmentCode === selectedDepartment);
+    }
+    if (bottleneckFilter === "OVERDUE_3D") {
+      list = list.filter((b) => (b.daysOverdue ?? 0) >= 3 || b.isOverdue);
+    } else if (bottleneckFilter === "BLOCKED") {
+      list = list.filter((b) => b.isBlocked);
+    }
+    if (bottleneckSearch.trim()) {
+      const q = bottleneckSearch.trim().toLowerCase();
+      list = list.filter(
+        (b) =>
+          b.title.toLowerCase().includes(q) ||
+          (b.assigneeName && b.assigneeName.toLowerCase().includes(q)) ||
+          (b.departmentName && b.departmentName.toLowerCase().includes(q)) ||
+          (b.departmentCode && b.departmentCode.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [activeBottlenecks, selectedDepartment, bottleneckFilter, bottleneckSearch]);
+
+  // Filtered approval queue with category filter and search
+  const filteredApprovalQueue = React.useMemo(() => {
+    let list = approvalQueue;
+    if (approvalCategory !== "ALL") {
+      list = list.filter((item) => {
+        const cat = (item.originalTask as any)?.category || "";
+        if (approvalCategory === "DE_AN") {
+          return (
+            cat === "CHUYEN_DOI_SO" ||
+            cat === "DAI_TRA" ||
+            cat === "CHIEN_LUOC" ||
+            item.title.toLowerCase().includes("đề án") ||
+            item.title.toLowerCase().includes("kế hoạch")
+          );
+        }
+        if (approvalCategory === "KHAO_THI") {
+          return (
+            cat === "BAO_CAO" ||
+            cat === "KHAO_THI" ||
+            item.departmentCode === "KHAO_THI" ||
+            item.title.toLowerCase().includes("kiểm định") ||
+            item.title.toLowerCase().includes("khảo thí")
+          );
+        }
+        if (approvalCategory === "CO_SO") {
+          return (
+            item.departmentCode === "QTTB" ||
+            item.departmentCode === "HC_QT" ||
+            item.title.toLowerCase().includes("thiết bị") ||
+            item.title.toLowerCase().includes("cơ sở")
+          );
+        }
+        return true;
+      });
+    }
+    if (!approvalSearch.trim()) return list;
+    const q = approvalSearch.trim().toLowerCase();
+    return list.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q) ||
+        item.departmentName.toLowerCase().includes(q) ||
+        item.departmentCode.toLowerCase().includes(q) ||
+        item.submittedByName.toLowerCase().includes(q)
     );
-  }, [activeBottlenecks, selectedDepartment]);
+  }, [approvalQueue, approvalSearch, approvalCategory]);
+
+  // Filtered radar items
+  const filteredRadarItems = React.useMemo(() => {
+    if (unitCategoryFilter === "ALL") return radarItems;
+    if (unitCategoryFilter === "FACULTY") {
+      return radarItems.filter((item) =>
+        ["CNTT", "CO_KHI", "DIEN", "KT_DL", "KHCB"].includes(item.departmentCode)
+      );
+    }
+    if (unitCategoryFilter === "ADMIN") {
+      return radarItems.filter((item) =>
+        ["DAO_TAO", "HC_QT", "QTTB"].includes(item.departmentCode)
+      );
+    }
+    if (unitCategoryFilter === "CENTER") {
+      return radarItems.filter((item) =>
+        ["TT_TT_SH", "TT_NC_XH", "BGH"].includes(item.departmentCode)
+      );
+    }
+    return radarItems;
+  }, [radarItems, unitCategoryFilter]);
+
+  // Sorted and filtered radar items
+  const sortedFilteredRadarItems = React.useMemo(() => {
+    const list = [...filteredRadarItems];
+    if (unitSortBy === "PRIORITY") {
+      return list;
+    }
+    if (unitSortBy === "COMPLETION") {
+      return list.sort((a, b) => b.completionRate - a.completionRate);
+    }
+    if (unitSortBy === "NAME") {
+      return list.sort((a, b) =>
+        a.departmentName.localeCompare(b.departmentName, "vi")
+      );
+    }
+    return list;
+  }, [filteredRadarItems, unitSortBy]);
 
   // Handler: Send reminder to unit
   const handleTriggerReminder = (deptCode: string, reason?: string) => {
@@ -957,17 +941,21 @@ export function ExecutiveCockpitWorkspace({
         <div className="space-y-1">
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1
-              className="text-base font-extrabold tracking-wider uppercase text-foreground"
+              className="text-base font-bold tracking-tight text-foreground"
               aria-label="Khoang điều hành BGH"
+              data-title="KHOANG ĐIỀU HÀNH BGH"
             >
-              KHOANG ĐIỀU HÀNH BGH
+              Khoang điều hành BGH
             </h1>
             <Badge
               variant="outline"
-              className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30 text-xs px-2.5 py-0.5 font-semibold"
+              className="bg-indigo-500/10 text-indigo-700 border-indigo-500/30 text-xs px-2.5 py-0.5 font-semibold"
             >
               Ban Giám Hiệu
             </Badge>
+            <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 text-xs font-medium text-muted-foreground border border-border/50">
+              Năm học 2026-2027 · Học kỳ I
+            </span>
           </div>
           <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
             <span className="font-medium text-foreground/80">{user.name}</span>
@@ -978,8 +966,8 @@ export function ExecutiveCockpitWorkspace({
               className={cn(
                 "font-semibold",
                 activeBottlenecks.length > 0
-                  ? "text-rose-600 dark:text-rose-400"
-                  : "text-emerald-600 dark:text-emerald-400"
+                  ? "text-rose-600"
+                  : "text-emerald-600"
               )}
             >
               {activeBottlenecks.length} điểm nghẽn
@@ -1009,6 +997,18 @@ export function ExecutiveCockpitWorkspace({
           >
             <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
             <span>+ Giao nhiệm vụ</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowBriefingModal(true)}
+            className="text-xs h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted cursor-pointer"
+            title="Xem báo cáo giao ban điều hành BGH"
+          >
+            <FileText className="w-3.5 h-3.5 shrink-0 text-indigo-600" strokeWidth={1.5} />
+            <span>Báo cáo giao ban</span>
           </Button>
 
           <Button
@@ -1044,11 +1044,11 @@ export function ExecutiveCockpitWorkspace({
       {undoState && (
         <div
           role="status"
-          className="flex items-center justify-between gap-3 p-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-200 text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200"
+          className="flex items-center justify-between gap-3 p-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-950 text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200"
         >
           <div className="flex items-center gap-2 min-w-0">
             <CheckCircle2
-              className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+              className="w-4 h-4 shrink-0 text-emerald-600"
               strokeWidth={1.5}
             />
             <span className="truncate">
@@ -1081,11 +1081,11 @@ export function ExecutiveCockpitWorkspace({
       {reminderNotice && (
         <div
           role="status"
-          className="flex items-center justify-between gap-2 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-xs font-medium animate-in fade-in duration-200"
+          className="flex items-center justify-between gap-2 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 text-xs font-medium animate-in fade-in duration-200"
         >
           <div className="flex items-center gap-2">
             <CheckCircle2
-              className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+              className="w-4 h-4 shrink-0 text-emerald-600"
               strokeWidth={1.5}
             />
             <span>{reminderNotice}</span>
@@ -1111,7 +1111,7 @@ export function ExecutiveCockpitWorkspace({
           type="button"
           onClick={() => setActiveTab("BOTTLENECKS")}
           className={cn(
-            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer min-h-[110px]",
+            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs",
             metrics.bottlenecksCount > 0
               ? activeTab === "BOTTLENECKS"
                 ? "border-rose-500/60 bg-rose-500/[0.06] ring-1 ring-rose-500/20 text-rose-600 shadow-xs"
@@ -1129,8 +1129,8 @@ export function ExecutiveCockpitWorkspace({
               className={cn(
                 "p-1.5 rounded-lg",
                 metrics.bottlenecksCount > 0
-                  ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
-                  : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  ? "bg-rose-500/15 text-rose-600"
+                  : "bg-emerald-500/15 text-emerald-600"
               )}
             >
               {metrics.bottlenecksCount > 0 ? (
@@ -1146,8 +1146,8 @@ export function ExecutiveCockpitWorkspace({
               className={cn(
                 "text-3xl font-extrabold tracking-tight tabular-nums",
                 metrics.bottlenecksCount > 0
-                  ? "text-rose-600 dark:text-rose-400"
-                  : "text-emerald-600 dark:text-emerald-400"
+                  ? "text-rose-600"
+                  : "text-emerald-600"
               )}
             >
               {metrics.bottlenecksCount}
@@ -1156,8 +1156,8 @@ export function ExecutiveCockpitWorkspace({
               className={cn(
                 "text-xs font-medium",
                 metrics.bottlenecksCount > 0
-                  ? "text-rose-600/80 dark:text-rose-400/80"
-                  : "text-emerald-600/80 dark:text-emerald-400/80"
+                  ? "text-rose-600/80"
+                  : "text-emerald-600/80"
               )}
             >
               điểm nghẽn
@@ -1168,14 +1168,14 @@ export function ExecutiveCockpitWorkspace({
             {metrics.bottlenecksCount > 0 ? (
               <>
                 <span className="inline-block w-2 h-2 rounded-full bg-rose-600 animate-pulse shrink-0" />
-                <span className="text-rose-600 dark:text-rose-400 truncate">
+                <span className="text-rose-600 truncate">
                   {affectedUnitsCount} đơn vị bị ảnh hưởng
                 </span>
               </>
             ) : (
               <>
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
-                <span className="text-emerald-600 dark:text-emerald-400 truncate">
+                <span className="text-emerald-600 truncate">
                   Tiến độ toàn trường thông suốt
                 </span>
               </>
@@ -1183,26 +1183,28 @@ export function ExecutiveCockpitWorkspace({
           </div>
         </button>
 
-        {/* Metric 2: Hồ sơ chờ phê duyệt cấp Trường */}
+        {/* Metric 2: Hồ sơ chờ phê duyệt cấp Trường (Operational Priority Tier) */}
         <button
           type="button"
           onClick={() => setActiveTab("APPROVAL_QUEUE")}
           className={cn(
-            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer min-h-[110px]",
+            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs",
             activeTab === "APPROVAL_QUEUE"
-              ? "border-indigo-500/60 bg-indigo-500/10 shadow-xs ring-1 ring-indigo-500/30 text-indigo-600"
+              ? "border-indigo-500/60 bg-indigo-500/15 shadow-xs ring-1 ring-indigo-500/30 text-indigo-600"
+              : metrics.pendingInstitutionalApprovalCount > 0
+              ? "border-indigo-500/40 bg-indigo-500/[0.08] text-foreground hover:bg-indigo-500/[0.12] hover:border-indigo-500/60 shadow-xs"
               : "border-border/70 bg-card text-foreground hover:bg-muted/40 hover:border-border"
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium text-foreground">
+            <span className="text-xs font-semibold text-foreground">
               Hồ sơ chờ phê duyệt cấp Trường
             </span>
             <div
               className={cn(
                 "p-1.5 rounded-lg",
                 metrics.pendingInstitutionalApprovalCount > 0
-                  ? "bg-indigo-500/20 text-indigo-600 dark:text-indigo-400"
+                  ? "bg-indigo-500/20 text-indigo-600"
                   : "bg-muted text-muted-foreground"
               )}
             >
@@ -1212,21 +1214,30 @@ export function ExecutiveCockpitWorkspace({
           <div className="flex items-baseline gap-2">
             <span
               className={cn(
-                "text-2xl sm:text-3xl font-bold tracking-tight tabular-nums",
+                "text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums",
                 metrics.pendingInstitutionalApprovalCount > 0
-                  ? "text-indigo-600 dark:text-indigo-400"
+                  ? "text-indigo-600"
                   : "text-foreground"
               )}
             >
               {metrics.pendingInstitutionalApprovalCount}
             </span>
-            <span className="text-xs text-muted-foreground">tờ trình</span>
+            <span className="text-xs font-medium text-muted-foreground">tờ trình</span>
           </div>
-          <p className="text-xs text-muted-foreground line-clamp-1">
-            {metrics.pendingInstitutionalApprovalCount > 0
-              ? "Chờ BGH thẩm định & ký duyệt"
-              : "Không có tờ trình tồn đọng"}
-          </p>
+          <div className="flex items-center gap-1.5 text-xs font-medium">
+            {metrics.pendingInstitutionalApprovalCount > 0 ? (
+              <>
+                <span className="inline-block w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
+                <span className="text-indigo-600 truncate">
+                  Chờ BGH thẩm định & ký duyệt
+                </span>
+              </>
+            ) : (
+              <span className="text-muted-foreground truncate">
+                Không có tờ trình tồn đọng
+              </span>
+            )}
+          </div>
         </button>
 
         {/* Metric 3: Chỉ số hoàn thành toàn trường */}
@@ -1234,30 +1245,39 @@ export function ExecutiveCockpitWorkspace({
           type="button"
           onClick={() => setActiveTab("HEALTH_RADAR")}
           className={cn(
-            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer min-h-[110px]",
+            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs",
             activeTab === "HEALTH_RADAR"
-              ? "border-emerald-500/60 bg-emerald-500/10 shadow-xs ring-1 ring-emerald-500/30 text-emerald-600"
-              : "border-border/70 bg-card text-foreground hover:bg-muted/40 hover:border-border"
+              ? "border-emerald-500/60 bg-emerald-500/15 shadow-xs ring-1 ring-emerald-500/30 text-emerald-600"
+              : "border-emerald-500/30 bg-emerald-500/[0.04] text-foreground hover:bg-emerald-500/[0.08] hover:border-emerald-500/50 shadow-2xs"
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-medium text-foreground">
               Chỉ số hoàn thành toàn trường
             </span>
-            <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-600">
               <TrendingUp className="w-4 h-4" strokeWidth={1.5} />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
+            <span className="text-2xl sm:text-3xl font-bold tracking-tight text-emerald-600 tabular-nums">
               {metrics.totalSchoolCompletionRate}%
             </span>
             <span className="text-xs text-muted-foreground">kế hoạch</span>
           </div>
-          <p className="text-xs text-muted-foreground line-clamp-1">
-            {metrics.completedTasksCount}/{metrics.totalTasksCount} nhiệm vụ
-            đã hoàn thành
-          </p>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground line-clamp-1">
+              {metrics.completedTasksCount}/{metrics.totalTasksCount} nhiệm vụ đã hoàn thành
+            </p>
+            <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                style={{
+                  width: `${Math.min(100, Math.max(0, metrics.totalSchoolCompletionRate))}%`,
+                }}
+              />
+            </div>
+          </div>
         </button>
 
         {/* Metric 4: Tổng số nhiệm vụ đang chạy */}
@@ -1265,17 +1285,17 @@ export function ExecutiveCockpitWorkspace({
           type="button"
           onClick={() => setActiveTab("STRATEGIC_TASKS")}
           className={cn(
-            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer min-h-[110px]",
+            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs",
             activeTab === "STRATEGIC_TASKS"
-              ? "border-blue-500/60 bg-blue-500/10 shadow-xs ring-1 ring-blue-500/30 text-blue-600"
-              : "border-border/70 bg-card text-foreground hover:bg-muted/40 hover:border-border"
+              ? "border-blue-500/60 bg-blue-500/15 shadow-xs ring-1 ring-blue-500/30 text-blue-600"
+              : "border-border/80 bg-muted/30 text-foreground hover:bg-muted/50 hover:border-border"
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-medium text-foreground">
               Tổng số nhiệm vụ đang chạy
             </span>
-            <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-600 dark:text-blue-400">
+            <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-600">
               <Layers className="w-4 h-4" strokeWidth={1.5} />
             </div>
           </div>
@@ -1296,15 +1316,16 @@ export function ExecutiveCockpitWorkspace({
         <button
           type="button"
           onClick={() => setActiveTab("BOTTLENECKS")}
+          title="Cảnh báo thắt nút cổ chai & Tắc nghẽn"
           className={cn(
             "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer",
             activeTab === "BOTTLENECKS"
-              ? "border-rose-600 text-rose-600 dark:text-rose-400 font-semibold"
+              ? "border-rose-600 text-rose-600 font-semibold"
               : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
           )}
         >
-          <AlertTriangle className="w-4 h-4" strokeWidth={1.5} />
-          <span>Cảnh báo thắt nút cổ chai & Tắc nghẽn</span>
+          <span className="hidden xl:inline">Cảnh báo thắt nút cổ chai & Tắc nghẽn</span>
+          <span className="xl:hidden">Điểm nghẽn</span>
           {metrics.bottlenecksCount > 0 && (
             <Badge
               variant="destructive"
@@ -1318,15 +1339,16 @@ export function ExecutiveCockpitWorkspace({
         <button
           type="button"
           onClick={() => setActiveTab("APPROVAL_QUEUE")}
+          title="Hàng đợi Phê duyệt Chiến lược"
           className={cn(
             "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer",
             activeTab === "APPROVAL_QUEUE"
-              ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold"
+              ? "border-indigo-600 text-indigo-600 font-semibold"
               : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
           )}
         >
-          <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
-          <span>Hàng đợi Phê duyệt Chiến lược</span>
+          <span className="hidden xl:inline">Hàng đợi Phê duyệt Chiến lược</span>
+          <span className="xl:hidden">Chờ phê duyệt</span>
           {metrics.pendingInstitutionalApprovalCount > 0 && (
             <Badge className="text-xs px-1.5 py-0 h-4 bg-indigo-600 text-white tabular-nums">
               {metrics.pendingInstitutionalApprovalCount}
@@ -1337,20 +1359,22 @@ export function ExecutiveCockpitWorkspace({
         <button
           type="button"
           onClick={() => setActiveTab("HEALTH_RADAR")}
+          title="Radar Sức Khỏe 11 Đơn Vị"
           className={cn(
             "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer",
             activeTab === "HEALTH_RADAR"
-              ? "border-emerald-600 text-emerald-600 dark:text-emerald-400 font-semibold"
+              ? "border-emerald-600 text-emerald-600 font-semibold"
               : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
           )}
         >
-          <Building2 className="w-4 h-4" strokeWidth={1.5} />
-          <span>Radar Sức Khỏe 11 Đơn Vị</span>
+          <span className="hidden xl:inline">Radar Sức Khỏe 11 Đơn Vị</span>
+          <span className="xl:hidden">Sức khỏe 11 đơn vị</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("STRATEGIC_TASKS")}
+          title="Nhiệm vụ Chiến lược cấp Trường"
           className={cn(
             "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer",
             activeTab === "STRATEGIC_TASKS"
@@ -1358,8 +1382,8 @@ export function ExecutiveCockpitWorkspace({
               : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
           )}
         >
-          <Layers className="w-4 h-4" strokeWidth={1.5} />
-          <span>Nhiệm vụ Chiến lược cấp Trường</span>
+          <span className="hidden xl:inline">Nhiệm vụ Chiến lược cấp Trường</span>
+          <span className="xl:hidden">Nhiệm vụ chiến lược</span>
         </button>
       </div>
 
@@ -1368,9 +1392,38 @@ export function ExecutiveCockpitWorkspace({
       {/* ==================================================================== */}
       {activeTab === "BOTTLENECKS" && (
         <div className="space-y-4" data-slot="bottlenecks-section">
+          {activeBottlenecks.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-rose-500/25 bg-rose-500/[0.04]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-rose-500/10 text-rose-600 shrink-0">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div className="text-xs">
+                  <span className="font-semibold text-foreground">
+                    Phân luồng can thiệp lãnh đạo:{" "}
+                  </span>
+                  <span className="text-muted-foreground">
+                    BGH có thẩm quyền ban hành chỉ đạo khẩn, gia hạn nhiệm vụ, điều phối bổ sung nhân lực hoặc chấp thuận giải tỏa đặc cách.
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRemindAll}
+                className="text-xs h-7.5 gap-1.5 border-rose-500/30 text-rose-700 hover:bg-rose-500/10 shrink-0 whitespace-nowrap cursor-pointer"
+              >
+                <Send className="w-3 h-3" />
+                <span>Đôn đốc tất cả ({affectedUnitsCount} đơn vị)</span>
+              </Button>
+            </div>
+          )}
+
           {activeBottlenecks.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-10 text-center border border-emerald-500/30 rounded-xl bg-emerald-500/[0.04]">
-              <div className="p-3 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded-full mb-3">
+              <div className="p-3 bg-emerald-500/15 text-emerald-600 rounded-full mb-3">
                 <CheckCircle2 className="w-8 h-8" strokeWidth={1.5} />
               </div>
               <h3 className="text-base font-bold text-foreground">
@@ -1388,7 +1441,7 @@ export function ExecutiveCockpitWorkspace({
                   <div>
                     <h2 className="text-sm sm:text-base font-bold tracking-tight text-foreground flex items-center gap-2">
                       <AlertTriangle
-                        className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0"
+                        className="w-4 h-4 text-rose-600 shrink-0"
                         strokeWidth={1.5}
                       />
                       <span>Dòng tác vụ điểm nghẽn cần tháo gỡ</span>
@@ -1397,14 +1450,61 @@ export function ExecutiveCockpitWorkspace({
                       Xử lý trực tiếp các điểm nghẽn bằng cách gia hạn, điều chuyển nhân sự hoặc ban hành chỉ đạo.
                     </p>
                   </div>
-                  {displayedBottlenecks.length > 0 && (
+                  {activeBottlenecks.length > 0 && (
                     <Badge
                       variant="destructive"
                       className="self-start text-xs font-semibold bg-rose-600 tabular-nums"
                     >
-                      {displayedBottlenecks.length} điểm nghẽn
+                      {displayedBottlenecks.length}/{activeBottlenecks.length} điểm nghẽn
                     </Badge>
                   )}
+                </div>
+
+                {/* Sub-search & filter bar for bottlenecks */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={bottleneckSearch}
+                      onChange={(e) => setBottleneckSearch(e.target.value)}
+                      placeholder="Tìm theo tên việc, cán bộ, đơn vị..."
+                      className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-rose-500/30"
+                    />
+                    {bottleneckSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setBottleneckSearch("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                        aria-label="Xóa tìm kiếm"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                    {[
+                      { id: "ALL", label: "Tất cả" },
+                      { id: "OVERDUE_3D", label: "Quá hạn >3 ngày" },
+                      { id: "BLOCKED", label: "Bị tắc nghẽn" },
+                    ].map((btn) => (
+                      <Button
+                        key={btn.id}
+                        type="button"
+                        variant={bottleneckFilter === btn.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setBottleneckFilter(btn.id as any)}
+                        className={cn(
+                          "text-xs h-7.5 px-2.5 whitespace-nowrap",
+                          bottleneckFilter === btn.id &&
+                            "bg-rose-600 hover:bg-rose-700 text-white border-rose-600"
+                        )}
+                      >
+                        {btn.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Filter chip if unit selected */}
@@ -1485,7 +1585,7 @@ export function ExecutiveCockpitWorkspace({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
               <h2 className="text-base sm:text-lg font-semibold tracking-tight text-foreground flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <CheckCircle2 className="w-5 h-5 text-indigo-600" />
                 <span>Hồ sơ và tờ trình chờ Ban Giám Hiệu phê duyệt</span>
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground">
@@ -1493,10 +1593,58 @@ export function ExecutiveCockpitWorkspace({
               </p>
             </div>
             {approvalQueue.length > 0 && (
-              <Badge className="self-start text-xs bg-indigo-600 text-white">
-                {approvalQueue.length} hồ sơ chờ duyệt
+              <Badge className="self-start text-xs bg-indigo-600 text-white tabular-nums">
+                {filteredApprovalQueue.length}/{approvalQueue.length} hồ sơ
               </Badge>
             )}
+          </div>
+
+          {/* Search bar & Category filters for Approval Queue */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={approvalSearch}
+                onChange={(e) => setApprovalSearch(e.target.value)}
+                placeholder="Tìm tờ trình theo tên, đơn vị, người trình..."
+                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-indigo-500/30"
+              />
+              {approvalSearch && (
+                <button
+                  type="button"
+                  onClick={() => setApprovalSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  aria-label="Xóa tìm kiếm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {[
+                { id: "ALL", label: "Tất cả hồ sơ" },
+                { id: "DE_AN", label: "Đề án & Kế hoạch" },
+                { id: "KHAO_THI", label: "Kiểm định & Khảo thí" },
+                { id: "CO_SO", label: "Cơ sở & Thiết bị" },
+              ].map((c) => (
+                <Button
+                  key={c.id}
+                  type="button"
+                  variant={approvalCategory === c.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setApprovalCategory(c.id)}
+                  className={cn(
+                    "text-xs h-7.5 px-2.5 whitespace-nowrap",
+                    approvalCategory === c.id &&
+                      "bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
+                  )}
+                >
+                  {c.label}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {approvalQueue.length === 0 ? (
@@ -1511,14 +1659,20 @@ export function ExecutiveCockpitWorkspace({
                 Hiện tại không có tờ trình hoặc hồ sơ nào chờ ký duyệt ban hành. Các quyết định đã được cập nhật đầy đủ.
               </p>
             </div>
+          ) : filteredApprovalQueue.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-10 text-center border rounded-xl bg-card border-dashed">
+              <p className="text-xs text-muted-foreground">
+                Không tìm thấy tờ trình nào khớp với từ khóa &ldquo;{approvalSearch}&rdquo;.
+              </p>
+            </div>
           ) : (
             <div className="space-y-3">
-              {approvalQueue.map((item) => (
+              {filteredApprovalQueue.map((item) => (
                 <div
                   key={item.id}
                   className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl border bg-card hover:border-indigo-500/40 hover:shadow-xs transition-all"
                 >
-                  <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="space-y-2 flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge
                         variant="outline"
@@ -1528,7 +1682,7 @@ export function ExecutiveCockpitWorkspace({
                       </Badge>
                       <Badge
                         variant="outline"
-                        className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30 text-xs"
+                        className="bg-indigo-500/10 text-indigo-700 border-indigo-500/30 text-xs"
                       >
                         {item.departmentCode}
                       </Badge>
@@ -1541,6 +1695,18 @@ export function ExecutiveCockpitWorkspace({
                       {item.title}
                     </h4>
 
+                    {(() => {
+                      const task = item.originalTask as any;
+                      const summary = task.description || task.deliverableDescription;
+                      if (!summary) return null;
+                      return (
+                        <p className="text-xs p-2 rounded-lg bg-muted/40 border border-border/50 text-foreground/80 line-clamp-2">
+                          <span className="font-semibold text-foreground">Trích yếu: </span>
+                          <span>{summary}</span>
+                        </p>
+                      );
+                    })()}
+
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                       <span className="flex items-center gap-1">
                         <User className="w-3.5 h-3.5" />
@@ -1551,7 +1717,7 @@ export function ExecutiveCockpitWorkspace({
                       {item.deliverablesCount > 0 && (
                         <>
                           <span>•</span>
-                          <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-medium">
+                          <span className="flex items-center gap-1 text-indigo-600 font-medium">
                             <FileText className="w-3.5 h-3.5" />
                             {item.deliverablesCount} tệp minh chứng đính kèm
                           </span>
@@ -1631,7 +1797,7 @@ export function ExecutiveCockpitWorkspace({
 
           {/* Bottom section: Detailed 11-Unit Health Radar Table */}
           <div className="space-y-3 pt-4 border-t">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <h3 className="text-sm sm:text-base font-semibold text-foreground flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-primary" />
@@ -1643,16 +1809,72 @@ export function ExecutiveCockpitWorkspace({
               </div>
             </div>
 
+            {/* Controls bar: Category filter and Sorting */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+              {/* Category filter pills for 11 units */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                {[
+                  { id: "ALL", label: "Tất cả 11 đơn vị" },
+                  { id: "FACULTY", label: "5 Khoa chuyên môn" },
+                  { id: "ADMIN", label: "3 Phòng chức năng" },
+                  { id: "CENTER", label: "3 Trung tâm & BGH" },
+                ].map((btn) => (
+                  <Button
+                    key={btn.id}
+                    type="button"
+                    variant={unitCategoryFilter === btn.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setUnitCategoryFilter(btn.id as any)}
+                    className={cn(
+                      "text-xs h-7.5 px-3 whitespace-nowrap",
+                      unitCategoryFilter === btn.id &&
+                        "bg-primary text-primary-foreground font-semibold"
+                    )}
+                  >
+                    {btn.label}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Sort controls */}
+              <div className="flex items-center gap-1.5 self-end md:self-center">
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  Sắp xếp:
+                </span>
+                {[
+                  { id: "PRIORITY", label: "Cảnh báo (Đỏ trước)" },
+                  { id: "COMPLETION", label: "Tiến độ cao nhất" },
+                  { id: "NAME", label: "Tên A-Z" },
+                ].map((s) => (
+                  <Button
+                    key={s.id}
+                    type="button"
+                    variant={unitSortBy === s.id ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setUnitSortBy(s.id as any)}
+                    className={cn(
+                      "text-xs h-7 px-2 border cursor-pointer",
+                      unitSortBy === s.id
+                        ? "bg-muted font-semibold border-border"
+                        : "text-muted-foreground border-transparent hover:border-border"
+                    )}
+                  >
+                    {s.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {radarItems.map((dept) => {
+              {sortedFilteredRadarItems.map((dept) => {
                 const isSelected = selectedDepartment === dept.departmentCode;
 
                 const healthBadgeClass =
                   dept.healthStatus === "RED"
-                    ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30"
+                    ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
                     : dept.healthStatus === "YELLOW"
-                      ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                      : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30";
+                      ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                      : "bg-emerald-500/10 text-emerald-700 border-emerald-500/30";
 
                 const healthText =
                   dept.healthStatus === "RED"
@@ -1732,7 +1954,7 @@ export function ExecutiveCockpitWorkspace({
                           </div>
                         </div>
                         <div className="p-1.5 rounded bg-emerald-500/10">
-                          <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          <div className="font-semibold text-emerald-600">
                             {dept.completedTasks}
                           </div>
                           <div className="text-xs text-muted-foreground">
@@ -1743,7 +1965,7 @@ export function ExecutiveCockpitWorkspace({
                           className={cn(
                             "p-1.5 rounded",
                             dept.delayedTasks + dept.blockedTasks > 0
-                              ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold"
+                              ? "bg-rose-500/10 text-rose-600 font-semibold"
                               : "bg-muted/40 text-muted-foreground"
                           )}
                         >
@@ -1780,7 +2002,7 @@ export function ExecutiveCockpitWorkspace({
                               "Đôn đốc tiến độ"
                             )
                           }
-                          className="text-xs h-7 gap-1 hover:bg-rose-500/10 hover:text-rose-700 dark:hover:text-rose-400"
+                          className="text-xs h-7 gap-1 hover:bg-rose-500/10 hover:text-rose-700"
                         >
                           <Send className="w-3 h-3" />
                           <span>Nhắc nhở</span>
@@ -2057,6 +2279,18 @@ export function ExecutiveCockpitWorkspace({
         onClose={() => setActiveResolvingBottleneck(null)}
         bottleneck={activeResolvingBottleneck}
         onConfirm={handleConfirmResolution}
+      />
+
+      {/* Executive Briefing Modal (Báo cáo Giao ban Lãnh đạo BGH) */}
+      <ExecutiveBriefingModal
+        isOpen={showBriefingModal}
+        onClose={() => setShowBriefingModal(false)}
+        user={user}
+        metrics={metrics}
+        radarItems={radarItems}
+        bottlenecks={activeBottlenecks}
+        approvalQueue={approvalQueue}
+        referenceDate={referenceDate}
       />
     </div>
   );

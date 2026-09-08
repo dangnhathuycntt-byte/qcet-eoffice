@@ -447,15 +447,15 @@ export function SubmitDeliverableModal({
           <div className="p-5 sm:p-6 space-y-4">
             {/* Restored Draft Alert */}
             {hasDraftRestored && (
-              <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3.5 py-2.5 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between gap-2 animate-in fade-in">
+              <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3.5 py-2.5 text-xs text-blue-700 flex items-center justify-between gap-2 animate-in fade-in">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-blue-600 dark:text-blue-400 shrink-0" strokeWidth={1.5} />
+                  <CheckCircle2 className="size-4 text-blue-600 shrink-0" strokeWidth={1.5} />
                   <span>Đã khôi phục nội dung bản nháp lưu tạm trước đó.</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleClearDraft}
-                  className="font-medium underline hover:text-blue-900 dark:hover:text-blue-100 cursor-pointer shrink-0"
+                  className="font-medium underline hover:text-blue-900 cursor-pointer shrink-0"
                 >
                   Xóa nháp
                 </button>

@@ -541,7 +541,7 @@ describe("LecturerFocusWorkspace - UX/UI Polish & Ergonomics (Task 7)", () => {
 
     // Verifies the exact tree connector styling
     assert.ok(
-      html.includes("border-l-2 border-primary/20 dark:border-primary/30 pl-3 sm:pl-4 ml-1 sm:ml-2 space-y-2.5"),
+      html.includes("border-l-2 border-primary/20 pl-3 sm:pl-4 ml-1 sm:ml-2 space-y-2.5"),
       "Subtasks container must render clear tree connector classes"
     );
   });

@@ -164,13 +164,13 @@ export function BentoPortalHub({
           </div>
           <div className="flex flex-col p-3 rounded-2xl bg-background/80 border border-border/60">
             <span className="text-xs font-medium text-muted-foreground">Đang tiến hành</span>
-            <span className="text-xl font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5">
+            <span className="text-xl font-black text-amber-600 font-mono mt-0.5">
               {inProgressTasksCount}
             </span>
           </div>
           <div className="flex flex-col p-3 rounded-2xl bg-background/80 border border-border/60">
             <span className="text-xs font-medium text-muted-foreground">Tỷ lệ hoàn thành</span>
-            <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+            <span className="text-xl font-black text-emerald-600 font-mono mt-0.5">
               {completionRate}%
             </span>
           </div>
@@ -284,11 +284,11 @@ export function BentoPortalHub({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="flex size-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <div className="flex size-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
                   <CheckSquare size={18} strokeWidth={1.5} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">
                     Phân khu 2
                   </span>
                   <h2 className="text-base font-bold text-foreground">
@@ -296,7 +296,7 @@ export function BentoPortalHub({
                   </h2>
                 </div>
               </div>
-              <Badge variant="outline" className="text-xs font-bold border-blue-500/30 text-blue-600 dark:text-blue-400">
+              <Badge variant="outline" className="text-xs font-bold border-blue-500/30 text-blue-600">
                 {tasks.length} nhiệm vụ
               </Badge>
             </div>
@@ -336,7 +336,7 @@ export function BentoPortalHub({
                         className={cn(
                           "shrink-0 text-xs font-mono font-bold",
                           p === "URGENT" && "border-destructive text-destructive bg-destructive/10",
-                          p === "HIGH" && "border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-500/10"
+                          p === "HIGH" && "border-amber-500 text-amber-600 bg-amber-500/10"
                         )}
                       >
                         {p === "URGENT" ? "Khẩn" : p === "HIGH" ? "Cao" : "Tiêu chuẩn"}
@@ -379,11 +379,11 @@ export function BentoPortalHub({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <div className="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
                   <Calendar size={18} strokeWidth={1.5} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">
                     Phân khu 3
                   </span>
                   <h2 className="text-base font-bold text-foreground">
@@ -414,7 +414,7 @@ export function BentoPortalHub({
                     <span className="truncate text-foreground font-medium pr-2">
                       {item.title}
                     </span>
-                    <span className="shrink-0 font-mono text-xs text-amber-600 dark:text-amber-400 font-bold">
+                    <span className="shrink-0 font-mono text-xs text-amber-600 font-bold">
                       {item.dueDate}
                     </span>
                   </div>
@@ -442,11 +442,11 @@ export function BentoPortalHub({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="flex size-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                <div className="flex size-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600">
                   <Network size={18} strokeWidth={1.5} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">
                     Phân khu 4
                   </span>
                   <h2 className="text-base font-bold text-foreground">
@@ -491,11 +491,11 @@ export function BentoPortalHub({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
                   <TrendingUp size={18} strokeWidth={1.5} />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                  <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
                     Tiện ích
                   </span>
                   <h2 className="text-base font-bold text-foreground">
@@ -540,7 +540,7 @@ export function BentoPortalHub({
               </button>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-700 font-medium">
               <span className="size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               <span>Dữ liệu đồng bộ trực tiếp • 0s trễ</span>
             </div>

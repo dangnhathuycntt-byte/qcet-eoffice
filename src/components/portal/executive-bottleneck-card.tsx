@@ -77,7 +77,7 @@ export function ExecutiveBottleneckCard({
     >
       {/* Line 1: Status badge & Department */}
       <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-700 dark:text-rose-400 border border-rose-500/20">
+        <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-700 border border-rose-500/20">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
           <span className="tabular-nums uppercase tracking-wide">{badgeLabel}</span>
         </span>
@@ -93,13 +93,13 @@ export function ExecutiveBottleneckCard({
       {/* Line 2: Task Title (NO technical IDs) */}
       <div className="min-w-0">
         <h4
-          className="text-sm font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors"
+          className="text-sm font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-rose-600 transition-colors"
           title={item.title}
         >
           {item.title}
         </h4>
         {item.blockedReason && (
-          <p className="mt-1 text-xs text-rose-600/90 dark:text-rose-400/90 line-clamp-1 italic flex items-center gap-1">
+          <p className="mt-1 text-xs text-rose-600/90 line-clamp-1 italic flex items-center gap-1">
             <AlertCircle className="w-3 h-3 shrink-0" />
             <span>Vướng mắc: {item.blockedReason}</span>
           </p>
