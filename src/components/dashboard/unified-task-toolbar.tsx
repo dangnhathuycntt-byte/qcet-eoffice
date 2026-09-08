@@ -29,6 +29,7 @@ export type TaskViewMode = "table" | "kanban" | "calendar" | "department" | "exe
 export interface ScopeTab {
   id: TaskScope;
   label: string;
+  shortLabel?: string;
 }
 
 export interface ViewModeOption {
@@ -67,9 +68,9 @@ export interface UnifiedTaskToolbarProps {
 // ============================================================================
 
 export const SCOPE_TABS: ScopeTab[] = [
-  { id: "MY_TASKS", label: "Việc của tôi" },
-  { id: "SCHOOL_TASKS", label: "Nhiệm vụ cấp Trường" },
-  { id: "UNIT_TASKS", label: "Công việc Đơn vị" },
+  { id: "MY_TASKS", label: "Việc của tôi", shortLabel: "Cá nhân" },
+  { id: "SCHOOL_TASKS", label: "Nhiệm vụ cấp Trường", shortLabel: "Cấp Trường" },
+  { id: "UNIT_TASKS", label: "Công việc Đơn vị", shortLabel: "Đơn vị" },
 ];
 
 export const VIEW_MODE_OPTIONS: ViewModeOption[] = [
@@ -246,7 +247,24 @@ export function UnifiedTaskToolbar({
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <span>{tab.label}</span>
+                  {tab.id === "MY_TASKS" ? (
+                    <>
+                      <span className="sm:hidden">Cá nhân</span>
+                      <span className="hidden sm:inline">Việc của tôi</span>
+                    </>
+                  ) : tab.id === "SCHOOL_TASKS" ? (
+                    <>
+                      <span className="sm:hidden">Cấp Trường</span>
+                      <span className="hidden sm:inline">Nhiệm vụ cấp Trường</span>
+                    </>
+                  ) : tab.id === "UNIT_TASKS" ? (
+                    <>
+                      <span className="sm:hidden">Đơn vị</span>
+                      <span className="hidden sm:inline">Công việc Đơn vị</span>
+                    </>
+                  ) : (
+                    <span>{tab.label}</span>
+                  )}
                 </button>
               );
             })}
@@ -326,7 +344,11 @@ export function UnifiedTaskToolbar({
 
       {/* Middle Row: 12 Academic Month Operational Cycle Pill Bar */}
       <div
-        className="flex items-center gap-2 overflow-x-auto pt-2 pb-0.5 border-t border-border/50 scrollbar-none"
+        className="flex items-center gap-2 overflow-x-auto overscroll-x-contain pt-2 pb-0.5 border-t border-border/50 scrollbar-none"
+        style={{
+          maskImage: "linear-gradient(to right, black 88%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to right, black 88%, transparent 100%)",
+        }}
         role="tablist"
         aria-label="Chu kỳ 12 tháng công tác năm học"
       >
@@ -344,7 +366,7 @@ export function UnifiedTaskToolbar({
             aria-selected={activeAcademicMonth === "ALL"}
             onClick={() => onAcademicMonthChange?.("ALL")}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
+              "inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
               activeAcademicMonth === "ALL"
                 ? "bg-card text-foreground shadow-xs font-semibold"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/40"
@@ -379,7 +401,7 @@ export function UnifiedTaskToolbar({
                 aria-selected={isSelected}
                 onClick={() => onAcademicMonthChange?.(period.monthNumber)}
                 className={cn(
-                  "group inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
+                  "group inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
                   isSelected
                     ? "bg-card text-foreground shadow-xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-card/40"
