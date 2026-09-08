@@ -54,13 +54,13 @@ describe("Theme Standardization & Zero-Leak Audit", () => {
     );
   });
 
-  it("ensures layout.tsx has light className, no suppressHydrationWarning, and no ThemeProvider", () => {
+  it("ensures layout.tsx has light className, suppressHydrationWarning for data-density, and no ThemeProvider", () => {
     const layoutContent = fs.readFileSync(layoutPath, "utf-8");
     assert.ok(layoutContent.includes('lang="vi"'), "layout.tsx must specify lang='vi'");
     assert.ok(layoutContent.includes("light"), "layout.tsx html tag must include 'light' class");
     assert.ok(
-      !layoutContent.includes("suppressHydrationWarning"),
-      "layout.tsx must not contain suppressHydrationWarning"
+      layoutContent.includes("suppressHydrationWarning"),
+      "layout.tsx must contain suppressHydrationWarning to prevent data-density hydration mismatch"
     );
     assert.ok(
       !layoutContent.includes("ThemeProvider"),
@@ -132,5 +132,78 @@ describe("Theme Standardization & Zero-Leak Audit", () => {
       0,
       `Found Tailwind dark: classes in: ${JSON.stringify(tailwindDarkMatches)}`
     );
+  });
+
+  it("ensures globals.css has no forced composite layers and defines .content-auto utility", () => {
+    const css = fs.readFileSync(globalsCssPath, "utf-8");
+    assert.ok(
+      !css.includes("transform: translateZ(0)"),
+      "globals.css must not contain forced translateZ(0) composite layer"
+    );
+    assert.ok(
+      !css.includes("will-change: transform"),
+      "globals.css must not contain unneeded will-change: transform"
+    );
+    assert.ok(
+      css.includes("content-auto") &&
+        css.includes("content-visibility: auto") &&
+        css.includes("contain-intrinsic-size: 1px 64px"),
+      "globals.css must define .content-auto utility with content-visibility: auto and contain-intrinsic-size: 1px 64px"
+    );
+  });
+
+  it("ensures Vietnamese typography tracking, line-height, and text-wrap standards in globals.css", () => {
+    const css = fs.readFileSync(globalsCssPath, "utf-8");
+    assert.ok(
+      css.includes("letter-spacing: -0.01em;"),
+      "headings must use relaxed letter-spacing: -0.01em to prevent diacritic collision"
+    );
+    assert.ok(
+      !css.includes("letter-spacing: -0.025em;"),
+      "headings must not use overly tight letter-spacing: -0.025em"
+    );
+    assert.ok(
+      css.includes("line-height: 1.35;"),
+      "headings must have line-height: 1.35"
+    );
+    assert.ok(
+      css.includes("text-wrap: balance;"),
+      "headings must maintain text-wrap: balance"
+    );
+    assert.ok(
+      css.includes("p, td, li") && css.includes("text-wrap: pretty;"),
+      "p, td, li elements must have text-wrap: pretty"
+    );
+  });
+});
+
+describe("Task 7: Design System Contrast & Accessibility", () => {
+  it("tokens.ts uses WCAG 2.1 AA compliant status text classes (700 shades)", () => {
+    const tokensPath = path.resolve(__dirname, "../src/lib/tokens.ts");
+    const content = fs.readFileSync(tokensPath, "utf-8");
+    assert.ok(content.includes("text-emerald-700"), "Completed status should use text-emerald-700 (5.25:1)");
+    assert.ok(content.includes("text-amber-700"), "NeedsReview status should use text-amber-700 (5.02:1)");
+    assert.ok(
+      content.includes("Be Vietnam Pro"),
+      "QCET design tokens typography must include 'Be Vietnam Pro'"
+    );
+  });
+
+  it("login and portal pages provide id='main-content' for keyboard skip-link", () => {
+    const loginPath = path.resolve(__dirname, "../src/app/login/page.tsx");
+    const portalPath = path.resolve(__dirname, "../src/app/portal/page.tsx");
+
+    const loginContent = fs.readFileSync(loginPath, "utf-8");
+    const portalContent = fs.readFileSync(portalPath, "utf-8");
+
+    assert.ok(loginContent.includes('id="main-content"'), "login page must contain id='main-content'");
+    assert.ok(portalContent.includes('id="main-content"'), "portal page must contain id='main-content'");
+  });
+
+  it(".gitignore ignores SQLite database artifacts", () => {
+    const gitignorePath = path.resolve(__dirname, "../.gitignore");
+    const content = fs.readFileSync(gitignorePath, "utf-8");
+    assert.ok(content.includes("*.db"), ".gitignore must ignore *.db");
+    assert.ok(content.includes("dev.db"), ".gitignore must ignore dev.db");
   });
 });

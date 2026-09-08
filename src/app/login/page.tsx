@@ -104,6 +104,7 @@ function LoginFormContent() {
 
   return (
     <main
+      id="main-content"
       role="main"
       aria-label="Trang đăng nhập QCET E-Office"
       className="relative flex min-h-[100dvh] w-full flex-col justify-between bg-background selection:bg-primary/15 selection:text-primary"

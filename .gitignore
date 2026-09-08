@@ -29,6 +29,11 @@ yarn-error.log*
 .cache/
 *.log
 
+# sqlite database artifacts
+*.db
+*.db-journal
+dev.db
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

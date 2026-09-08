@@ -70,9 +70,9 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.equal(QCET_TOKENS.statusColors.completed.name, "Emerald Green");
       assert.equal(
         QCET_TOKENS.statusColors.completed.classes,
-        "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+        "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
       );
-      assert.equal(QCET_TOKENS.statusColors.completed.text, "text-emerald-600");
+      assert.equal(QCET_TOKENS.statusColors.completed.text, "text-emerald-700");
 
       // Overdue: Crimson Rose
       assert.equal(QCET_TOKENS.statusColors.overdue.name, "Crimson Rose");
@@ -86,9 +86,9 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.equal(QCET_TOKENS.statusColors.needsReview.name, "Warm Amber");
       assert.equal(
         QCET_TOKENS.statusColors.needsReview.classes,
-        "bg-amber-500/10 text-amber-600 border-amber-500/20"
+        "bg-amber-500/10 text-amber-700 border-amber-500/20"
       );
-      assert.equal(QCET_TOKENS.statusColors.needsReview.text, "text-amber-600");
+      assert.equal(QCET_TOKENS.statusColors.needsReview.text, "text-amber-700");
 
       // New: Purple Violet
       assert.equal(QCET_TOKENS.statusColors.new.name, "Purple Violet");

@@ -32,9 +32,9 @@ export const QCET_TOKENS = {
     },
     completed: {
       name: "Emerald Green",
-      classes: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+      classes: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
       bg: "bg-emerald-500/10",
-      text: "text-emerald-600",
+      text: "text-emerald-700",
       border: "border-emerald-500/20",
       label: "Hoàn thành",
       hex: "#10B981",
@@ -52,9 +52,9 @@ export const QCET_TOKENS = {
     },
     needsReview: {
       name: "Warm Amber",
-      classes: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+      classes: "bg-amber-500/10 text-amber-700 border-amber-500/20",
       bg: "bg-amber-500/10",
-      text: "text-amber-600",
+      text: "text-amber-700",
       border: "border-amber-500/20",
       label: "Cần chỉnh sửa",
       hex: "#F59E0B",
@@ -84,7 +84,7 @@ export const QCET_TOKENS = {
     glowPrimary: "shadow-glow-primary",
   },
   typography: {
-    fontSans: "var(--font-sans), 'Plus Jakarta Sans', system-ui, sans-serif",
+    fontSans: "var(--font-sans), 'Be Vietnam Pro', 'Plus Jakarta Sans', system-ui, sans-serif",
     fontMono: "var(--font-mono), 'JetBrains Mono', monospace",
   },
 } as const;
