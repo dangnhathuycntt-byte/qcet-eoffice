@@ -136,15 +136,18 @@ describe("AppTopbar Component Contracts", () => {
     assert.ok(content.includes('data-slot="app-topbar"'), "Must define data-slot app-topbar");
     assert.ok(content.includes("h-[52px]"), "Must set height to exactly 52px (h-[52px])");
     assert.ok(content.includes("sticky top-0"), "Must be sticky top-0");
+    assert.ok(
+      content.includes("pt-[env(safe-area-inset-top,0px)]"),
+      "Must include pt-[env(safe-area-inset-top,0px)] for iOS safe area"
+    );
   });
 
-  it("includes mobile menu toggle and desktop collapse toggle buttons", () => {
+  it("includes desktop collapse toggle button and preserves single drawer pattern", () => {
     const content = fs.readFileSync(topbarPath, "utf-8");
-    assert.ok(content.includes("toggleMobile"), "Must wire toggleMobile on mobile trigger");
     assert.ok(content.includes("toggleCollapse"), "Must wire toggleCollapse on desktop trigger");
     assert.ok(content.includes("PanelLeftOpen"), "Must render PanelLeftOpen when collapsed");
     assert.ok(content.includes("PanelLeftClose"), "Must render PanelLeftClose when expanded");
-    assert.ok(content.includes("Menu"), "Must render Menu icon for mobile");
+    assert.ok(!content.includes("toggleMobile"), "Must not include redundant mobile hamburger toggle button");
   });
 
   it("wires dynamic breadcrumbs trail with resolveBreadcrumb", () => {

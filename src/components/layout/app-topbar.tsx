@@ -7,7 +7,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   PanelLeftClose,
   PanelLeftOpen,
-  Menu,
   ChevronDown,
   ChevronRight,
   User,
@@ -21,6 +20,7 @@ import {
   Plus,
   Compass,
   Smartphone,
+  LogIn,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
@@ -101,7 +101,7 @@ function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
 export function AppTopbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { isCollapsed, toggleCollapse, toggleMobile, badgeCounts } = useSidebar();
+  const { isCollapsed, toggleCollapse, badgeCounts } = useSidebar();
   const { user, switchRole, logout, setIsProfileModalOpen } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
@@ -193,21 +193,12 @@ export function AppTopbar() {
   return (
     <header
       data-slot="app-topbar"
-      className="sticky top-0 z-30 w-full h-[52px] border-b border-border/50 bg-background/80 backdrop-blur-md transition-colors"
+      className="sticky top-0 z-30 w-full h-[52px] border-b border-border/50 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] transition-colors"
     >
       <div className="h-full w-full px-3.5 sm:px-6 flex items-center justify-between gap-3">
         {/* Left Zone: Mobile Menu, Desktop Collapse Toggle, Dynamic Breadcrumbs & Scope Switcher */}
         <div className="flex items-center min-w-0 gap-2 sm:gap-3">
-          {/* Mobile Menu Trigger (< 768px) */}
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="md:hidden size-8 mr-1 shrink-0"
-            onClick={toggleMobile}
-            aria-label="Mở menu điều hướng"
-          >
-            <Menu size={16} />
-          </Button>
+          {/* Mobile Menu Trigger (< 768px) đã được thay thế bằng tab 'Thêm' ở Bottom Nav để tránh xung đột 2 drawer */}
 
           {/* Desktop Sidebar Toggle (>= 768px) */}
           <Button
@@ -310,6 +301,7 @@ export function AppTopbar() {
           </Button>
 
           {/* User Avatar + Profile Dropdown */}
+          {user ? (
           <div className="relative" ref={profileDropdownRef}>
             <button
               type="button"
@@ -495,6 +487,15 @@ export function AppTopbar() {
               </div>
             )}
           </div>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs ml-1"
+            >
+              <LogIn size={13} strokeWidth={1.5} />
+              <span>Đăng nhập</span>
+            </Link>
+          )}
         </div>
       </div>
 
