@@ -124,10 +124,10 @@ export function getRoleTourSteps(role: string, dbRole?: string): TourStepConfig[
     },
     {
       id: "staff-deliverable",
-      title: "Nộp Minh Chứng (Deliverable)",
-      description: "Đính kèm file báo cáo, sản phẩm hoàn thành để Trưởng đơn vị kiểm tra và phê duyệt.",
-      targetSelector: "#tour-deliverable-action",
-      fallbackSelector: "#tour-empty-state-cta",
+      title: "Đề Xuất Nhiệm Vụ & Nộp Báo Cáo",
+      description: "Chủ động tạo tờ trình đề xuất việc mới, hoặc đính kèm file minh chứng khi hoàn thành nhiệm vụ.",
+      targetSelector: "#tour-empty-state-cta",
+      fallbackSelector: "#tour-create-task-btn",
       zone: "tasks",
     },
     {
@@ -179,4 +179,87 @@ export function getRoleChecklist(role: string, dbRole?: string): ChecklistTaskCo
       actionType: "OPEN_SEARCH",
     },
   ];
+}
+
+export const ONBOARDING_FEATURES = {
+  adminSteps: getRoleTourSteps("ADMIN"),
+  managerSteps: getRoleTourSteps("MANAGER"),
+  staffSteps: getRoleTourSteps("STAFF"),
+  adminChecklist: getRoleChecklist("ADMIN"),
+  managerChecklist: getRoleChecklist("MANAGER"),
+  staffChecklist: getRoleChecklist("STAFF"),
+};
+
+export interface OnboardingState {
+  hasSeenWelcome: boolean;
+  hasCompletedTour: boolean;
+  completedSteps: string[];
+  isDismissed: boolean;
+  snoozedUntil: string | null;
+}
+
+export const LEGACY_ONBOARDING_STORAGE_KEY = "qcet_onboarding_state";
+
+export function getOnboardingStorageKey(userId?: string | null): string {
+  return userId ? `qcet_onboarding_state_${userId}` : "qcet_onboarding_state_guest";
+}
+
+export const DEFAULT_ONBOARDING_STATE: OnboardingState = {
+  hasSeenWelcome: false,
+  hasCompletedTour: false,
+  completedSteps: ["step-profile"],
+  isDismissed: false,
+  snoozedUntil: null,
+};
+
+export function resolveOnboardingState(
+  user: {
+    id?: string;
+    onboardedAt?: string | Date | null;
+    onboardingData?: Partial<OnboardingState> | null;
+  } | null,
+  storedState: Partial<OnboardingState> | null
+): OnboardingState {
+  // 1. Trường hợp người dùng đã hoàn thành onboarding trước đó (ghi nhận qua onboardedAt)
+  if (user?.onboardedAt) {
+    return {
+      hasSeenWelcome: true,
+      hasCompletedTour: true,
+      completedSteps: user.onboardingData?.completedSteps || [
+        "step-profile",
+        "step-push",
+        "step-action",
+        "step-search",
+      ],
+      isDismissed: true,
+      snoozedUntil: null,
+    };
+  }
+
+  // 2. Tài khoản mới hoặc onboarding đã được xoá/reset từ Database (onboardedAt: null và onboardingData: null)
+  // Ưu tiên trạng thái mặc định từ server, không để localStorage cũ ghi đè
+  if (user?.id && !user.onboardedAt && !user.onboardingData) {
+    return {
+      ...DEFAULT_ONBOARDING_STATE,
+    };
+  }
+
+  // 3. Dữ liệu từ database (source of truth cao nhất khi có onboardingData)
+  const serverData = user?.onboardingData;
+  const initialSteps =
+    serverData?.completedSteps ||
+    storedState?.completedSteps ||
+    ["step-profile"];
+
+  return {
+    hasSeenWelcome:
+      serverData?.hasSeenWelcome ?? storedState?.hasSeenWelcome ?? false,
+    hasCompletedTour:
+      serverData?.hasCompletedTour ?? storedState?.hasCompletedTour ?? false,
+    completedSteps: Array.from(new Set([...initialSteps, "step-profile"])),
+    isDismissed:
+      serverData?.isDismissed ?? storedState?.isDismissed ?? false,
+    snoozedUntil:
+      serverData?.snoozedUntil ?? storedState?.snoozedUntil ?? null,
+  };
 }
