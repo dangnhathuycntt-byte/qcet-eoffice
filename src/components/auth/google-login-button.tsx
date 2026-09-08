@@ -52,6 +52,9 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const isDev = process.env.NODE_ENV === "development";
 
+  const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3001";
+  const callbackUrl = `${origin}/api/auth/callback/google`;
+
   const handleStartOAuth = () => {
     setIsLoading(true);
     if (typeof window !== "undefined") {
@@ -69,7 +72,6 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
 
   const handleCopyCallback = async () => {
     try {
-      const callbackUrl = "http://localhost:3001/api/auth/callback/google";
       await navigator.clipboard.writeText(callbackUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -85,26 +87,24 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
         type="button"
         disabled={isLoading}
         onClick={handleClick}
+        aria-label="Đăng nhập bằng email trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (@cdktcnqn.edu.vn)"
         className={cn(
-          "group relative flex w-full items-center justify-center gap-3 rounded-xl border border-border/80 bg-background px-4 py-3 text-xs font-semibold text-foreground shadow-xs transition-all hover:bg-secondary/70 hover:border-primary/40 hover:shadow-card active:scale-[0.99] cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed",
+          "relative flex h-12 w-full select-none items-center justify-center gap-3 rounded-xl border border-border/90 bg-card px-4 text-sm font-semibold text-foreground shadow-xs transition-colors hover:bg-secondary/70 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed",
           className
         )}
       >
         {isLoading ? (
           <>
             <Loader2 className="size-5 shrink-0 animate-spin text-primary" strokeWidth={1.5} />
-            <span className="font-bold text-foreground">
-              Đang chuyển hướng tới Google Workspace...
+            <span className="font-semibold text-foreground whitespace-nowrap">
+              Đang chuyển hướng đăng nhập...
             </span>
           </>
         ) : (
           <>
-            <GoogleIcon className="size-5 shrink-0 transition-transform group-hover:scale-105" />
-            <span className="font-bold text-foreground">
-              Đăng nhập với Google Workspace
-            </span>
-            <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-500/20">
-              @cdktcnqn.edu.vn
+            <GoogleIcon className="size-5 shrink-0" />
+            <span className="font-semibold text-foreground whitespace-nowrap">
+              Đăng nhập bằng Email trường
             </span>
           </>
         )}
@@ -144,10 +144,10 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
                   id="google-dialog-title"
                   className="text-sm font-bold text-foreground"
                 >
-                  Cấu hình Google Workspace OAuth
+                  Cấu hình dịch vụ đăng nhập Google
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Dịch vụ xác thực định danh tập trung dành cho trường Cao đẳng
+                  Dịch vụ xác thực tài khoản tập trung dành cho Nhà trường
                 </p>
               </div>
             </div>
@@ -169,7 +169,7 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
                 </div>
                 <div className="flex items-center gap-2 rounded-lg border border-border bg-background p-2">
                   <code className="flex-1 font-mono text-xs text-foreground select-all break-all">
-                    http://localhost:3001/api/auth/callback/google
+                    {callbackUrl}
                   </code>
                   <button
                     type="button"
@@ -195,14 +195,14 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
               <div className="rounded-xl border border-border/80 bg-secondary/30 p-3 space-y-2">
                 <div className="flex items-center gap-2 font-medium text-foreground">
                   <Database className="size-4 text-primary shrink-0" strokeWidth={1.5} />
-                  <span>Hướng dẫn tài khoản đăng nhập:</span>
+                  <span>Quy định tài khoản đăng nhập:</span>
                 </div>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1 text-xs">
                   <li>
-                    Sử dụng form đăng nhập email / mật khẩu nội bộ với các tài khoản thử nghiệm của nhà trường.
+                    Đăng nhập bằng tài khoản email trường do Nhà trường quản lý.
                   </li>
                   <li>
-                    Tài khoản cán bộ, giảng viên có đuôi miền @cdktcnqn.edu.vn được hỗ trợ tự động định danh và phân quyền theo phòng ban.
+                    Tài khoản cán bộ, giảng viên có đuôi @cdktcnqn.edu.vn được tự động phân quyền theo đơn vị công tác.
                   </li>
                 </ul>
               </div>
