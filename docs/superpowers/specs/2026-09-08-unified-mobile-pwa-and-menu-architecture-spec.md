@@ -180,6 +180,25 @@ Trên màn hình `< 768px`, chiều ngang chỉ có 390px – 430px. Topbar tuâ
   - iOS Safari: Nhấp biểu tượng Chia sẻ (Share) $\rightarrow$ Chọn "Thêm vào MH chính".
   - Android Chrome: Nút "Cài đặt ngay" kích hoạt native install prompt.
 
+### 8.5 Sửa lỗi Điều hướng Service Worker khi Bấm Thông báo đẩy
+* **Vị trí:** `public/sw.js` (dòng 90, 100, 110, 148).
+* **Khắc phục:** Đổi địa chỉ fallback mặc định từ `/portal` (trang Kiosk TV) thành `/?zone=tasks` (Kho công việc di động).
+
+### 8.6 Đồng bộ Màu Màn hình chờ (Splash Screen) sang Light-Only Standard
+* **Vị trí:** `src/app/manifest.ts` và `public/manifest.webmanifest`.
+* **Khắc phục:** Thay đổi `background_color` và `theme_color` từ `#0f172a` (đen tối cũ) sang `#fbfbfb` (trắng sáng công sở), triệt tiêu hoàn toàn hiện tượng chớp đen khi khởi động ứng dụng trên điện thoại.
+
+### 8.7 Bổ sung App Shortcuts cho Menu Nhấn giữ Icon Ứng dụng
+* **Vị trí:** `src/app/manifest.ts` và `public/manifest.webmanifest`.
+* **Khai báo 3 Shortcuts:**
+  1. `Tạo việc mới` $\rightarrow$ `/?action=create_task`
+  2. `Việc cần xử lý` $\rightarrow$ `/?zone=tasks&filter=needs_review`
+  3. `Lịch công tác` $\rightarrow$ `/calendar`
+
+### 8.8 Ngăn chặn Scroll Chaining & Quản lý Trạng thái Ngoại tuyến (Offline UX)
+* Áp dụng `overscroll-behavior-x: contain` cho dải tab cuộn ngang và `overscroll-behavior-y: contain` cho thân modal/drawer.
+* Bổ sung Offline Status Pill thông báo nhẹ nhàng khi mất kết nối mạng trong khuôn viên trường.
+
 ---
 
 ## 9. BẢNG TIÊU CHÍ NGHIỆM THU (ACCEPTANCE CRITERIA)
@@ -192,13 +211,16 @@ Trên màn hình `< 768px`, chiều ngang chỉ có 390px – 430px. Topbar tuâ
 | **AC-04** | Bấm "Cơ cấu tổ chức" trong menu Thêm | Chuyển hướng tới `/org` thành công, không gặp lỗi 404. |
 | **AC-05** | Bấm Avatar trên Topbar điện thoại | Mở User Profile Bottom Sheet trượt từ đáy, không mở popover máy tính. |
 | **AC-06** | Topbar trên iPhone 16 Pro Max | Không còn hiện tượng cắt cụt chữ `Quản lý cô...`; Scope Switcher thu gọn vừa vặn. |
-| **AC-07** | Dải nút lọc công việc | Cuộn ngang 1 hàng mượt mà, không rớt dòng, tone màu Muted trang nhã. |
+| **AC-07** | Dải nút lọc công việc | Cuộn ngang 1 hàng mượt mà, không rớt dòng, tone màu Muted trang nhã; không bị vuốt nhầm sang trang trước. |
 | **AC-08** | Lần đầu truy cập trên điện thoại | Không bị modal Onboarding đè bẹp 55% màn hình; thanh Bottom Nav luôn bấm được. |
 | **AC-09** | Gõ phím vào ô nhập liệu trên iPhone | Safari KHÔNG tự động phóng to (font-size >= 16px), không lệch viewport. |
 | **AC-10** | Bàn phím ảo xuất hiện | Layout co giãn đúng (`interactiveWidget: "resizes-content"`), không mất nút Lưu. |
 | **AC-11** | Vùng an toàn Safe Area | Đỉnh không bị Dynamic Island che nút Đóng; đáy không bị Home Indicator che nút bấm. |
 | **AC-12** | Modal Cài đặt PWA trên mobile | Tự động ẩn mã QR, hiển thị hướng dẫn cài đặt màn hình chính 1-chạm. |
-| **AC-13** | Kiểm tra chất lượng code | `npm run typecheck` đạt 0 lỗi, `npm test` toàn bộ suites đều PASS. |
+| **AC-13** | Bấm Thông báo đẩy trên điện thoại | Mở đúng Kho công việc (`/?zone=tasks`), KHÔNG mở màn hình TV Kiosk (`/portal`). |
+| **AC-14** | Màn hình chờ PWA khi mở App | Màu nền trắng sáng `#fbfbfb`, không bị chớp đen `#0f172a`. |
+| **AC-15** | Nhấn giữ Icon trên Màn hình chính | Hiện menu Shortcuts: *Tạo việc mới*, *Việc cần xử lý*, *Lịch công tác*. |
+| **AC-16** | Kiểm tra chất lượng code | `npm run typecheck` đạt 0 lỗi, `npm test` toàn bộ suites đều PASS. |
 
 ---
 
