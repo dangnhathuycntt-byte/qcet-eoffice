@@ -193,7 +193,7 @@ export function AppTopbar() {
   return (
     <header
       data-slot="app-topbar"
-      className="sticky top-0 z-30 w-full h-[52px] border-b border-border/50 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] transition-colors"
+      className="sticky top-0 z-30 w-full h-[calc(52px+env(safe-area-inset-top,0px))] border-b border-border/50 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] transition-colors"
     >
       <div className="h-full w-full px-3.5 sm:px-6 flex items-center justify-between gap-3">
         {/* Left Zone: Mobile Menu, Desktop Collapse Toggle, Dynamic Breadcrumbs & Scope Switcher */}

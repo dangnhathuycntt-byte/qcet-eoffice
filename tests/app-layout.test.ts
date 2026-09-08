@@ -134,7 +134,10 @@ describe("AppTopbar Component Contracts", () => {
   it("conforms to 52px height and slot specifications", () => {
     const content = fs.readFileSync(topbarPath, "utf-8");
     assert.ok(content.includes('data-slot="app-topbar"'), "Must define data-slot app-topbar");
-    assert.ok(content.includes("h-[52px]"), "Must set height to exactly 52px (h-[52px])");
+    assert.ok(
+      content.includes("h-[calc(52px+env(safe-area-inset-top,0px))]"),
+      "Must set height to 52px plus safe area (h-[calc(52px+env(safe-area-inset-top,0px))])"
+    );
     assert.ok(content.includes("sticky top-0"), "Must be sticky top-0");
     assert.ok(
       content.includes("pt-[env(safe-area-inset-top,0px)]"),
