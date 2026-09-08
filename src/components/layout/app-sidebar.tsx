@@ -36,17 +36,10 @@ export function AppSidebar() {
   const {
     isCollapsed,
     toggleCollapse,
-    isMobileOpen,
-    setIsMobileOpen,
     badgeCounts,
   } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
-  // Close mobile drawer on route change
-  React.useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname, searchParams, setIsMobileOpen]);
 
   // Maintenance dialog state for items undergoing maintenance
   const [maintenanceDialog, setMaintenanceDialog] = React.useState<{
@@ -86,29 +79,6 @@ export function AppSidebar() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleCollapse]);
-
-  // Close mobile drawer on Escape
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsMobileOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setIsMobileOpen]);
-
-  // Lock body scroll when mobile drawer is open
-  React.useEffect(() => {
-    if (isMobileOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isMobileOpen]);
 
   // Helper to determine if a nav item is active
   const isItemActive = React.useCallback(
@@ -269,6 +239,7 @@ export function AppSidebar() {
                         <Tooltip key={item.id}>
                           <TooltipTrigger asChild>
                             <Link
+                              id={item.id === "documents" ? "tour-nav-documents" : undefined}
                               href={item.href}
                               onClick={(e) => {
                                 if (item.isMaintenance) {
@@ -382,6 +353,7 @@ export function AppSidebar() {
                       const badge = getBadgeInfo(item);
                       return (
                         <Link
+                          id={item.id === "documents" ? "tour-nav-documents" : undefined}
                           key={item.id}
                           href={item.href}
                           onClick={(e) => {
@@ -571,6 +543,10 @@ export function AppSidebar() {
               />
               <span className="truncate flex-1">Cài đặt</span>
             </Link>
+            <div className="flex items-center justify-center gap-2 px-2.5 py-1 rounded-md border border-border/40 bg-card text-xs text-muted-foreground">
+              <span className="size-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+              <span className="truncate font-medium text-xs">Notion: Đang kết nối</span>
+            </div>
             <button
               type="button"
               onClick={toggleCollapse}
@@ -589,208 +565,6 @@ export function AppSidebar() {
           </div>
         )}
       </aside>
-
-      {/* Mobile Navigation Drawer (<= md) */}
-      <div className="md:hidden">
-        {/* Backdrop Overlay */}
-        <div
-          className={cn(
-            "fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-200",
-            isMobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-          )}
-          onClick={() => setIsMobileOpen(false)}
-          aria-hidden={!isMobileOpen}
-        />
-
-        {/* Sliding Drawer */}
-        <aside
-          data-slot="mobile-sidebar-drawer"
-          className={cn(
-            "fixed left-0 top-0 bottom-0 z-50 w-72 sm:w-80 bg-background border-r border-border flex flex-col transition-transform duration-200 ease-in-out shadow-2xl select-none overflow-hidden",
-            isMobileOpen ? "translate-x-0" : "-translate-x-full"
-          )}
-          aria-label="Điều hướng di động"
-          aria-hidden={!isMobileOpen}
-        >
-          {/* Mobile Drawer Header: 48px height */}
-          <div className="h-12 px-4 border-b border-border/50 flex items-center justify-between shrink-0 bg-muted/20">
-            <Link
-              href="/"
-              onClick={() => setIsMobileOpen(false)}
-              className="flex items-center gap-2.5 min-w-0"
-              aria-label="QCET Trang chủ"
-            >
-              <Image
-                src="/logo-qcet.png"
-                alt="QCET Logo"
-                width={28}
-                height={28}
-                className="shrink-0 rounded object-contain"
-              />
-              <div className="flex flex-col min-w-0">
-                <span className="text-[13px] font-semibold tracking-tight text-foreground truncate">
-                  QUẢN LÝ CÔNG VIỆC
-                </span>
-                <span className="font-mono text-xs text-muted-foreground truncate">
-                  Năm học 2026–2027
-                </span>
-              </div>
-            </Link>
-            <button
-              type="button"
-              onClick={() => setIsMobileOpen(false)}
-              className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer active:scale-95 shrink-0"
-              aria-label="Đóng menu"
-              title="Đóng menu"
-            >
-              <X size={18} strokeWidth={2} />
-            </button>
-          </div>
-
-          {/* Mobile Navigation List */}
-          <nav
-            aria-label="Danh mục điều hướng di động"
-            className="flex-1 overflow-y-auto p-3 space-y-4 thin-scrollbar"
-          >
-            {SECTIONS.map((sec) => {
-              const items = SINGLE_TIER_NAV_ITEMS.filter(
-                (item) => item.section === sec.key
-              );
-              if (items.length === 0) return null;
-              return (
-                <div key={sec.key} className="space-y-1">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2.5 py-1 select-none">
-                    {sec.label}
-                  </div>
-                  <div className="space-y-0.5">
-                    {items.map((item) => {
-                      const active = isItemActive(item);
-                      const Icon = item.icon;
-                      const badge = getBadgeInfo(item);
-                      return (
-                        <Link
-                          key={item.id}
-                          href={item.href}
-                          onClick={(e) => {
-                            if (item.isMaintenance) {
-                              e.preventDefault();
-                              setIsMobileOpen(false);
-                              setMaintenanceDialog({
-                                isOpen: true,
-                                title: item.label,
-                                feature: item.id,
-                              });
-                              return;
-                            }
-                            setIsMobileOpen(false);
-                            if (item.href === "/notifications") {
-                              e.preventDefault();
-                              window.dispatchEvent(
-                                new CustomEvent("qcet:toggle-notifications")
-                              );
-                            }
-                          }}
-                          aria-current={active ? "page" : undefined}
-                          className={cn(
-                            "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 min-h-10 text-[13.5px] font-medium transition-colors active:scale-[0.98]",
-                            active
-                              ? "bg-primary/10 text-primary font-semibold shadow-2xs"
-                              : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
-                          )}
-                        >
-                          {active && (
-                            <span
-                              className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-primary rounded-r-full"
-                              aria-hidden="true"
-                            />
-                          )}
-                          <Icon
-                            size={18}
-                            strokeWidth={active ? 2 : 1.5}
-                            className={cn(
-                              "shrink-0 transition-colors",
-                              active
-                                ? "text-primary"
-                                : "text-muted-foreground group-hover:text-foreground"
-                            )}
-                          />
-                          <span className="truncate flex-1">{item.label}</span>
-                          {item.isComingSoon ? (
-                            <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0 select-none">
-                              Đang phát triển
-                            </span>
-                          ) : badge ? (
-                            <span
-                              className={cn(
-                                "ml-auto inline-flex items-center justify-center px-1.5 py-0.5 rounded-md text-xs font-mono font-semibold leading-none select-none tracking-tight",
-                                badge.variant === "primary" &&
-                                  "bg-primary/15 text-primary border border-primary/20",
-                                badge.variant === "sky" &&
-                                  "bg-sky-500/15 text-sky-600 border border-sky-500/20",
-                                badge.variant === "rose" &&
-                                  "bg-rose-500/15 text-rose-600 border border-rose-500/20",
-                                badge.variant === "amber" &&
-                                  "bg-amber-500/15 text-amber-600 border border-amber-500/20",
-                                badge.variant === "muted" &&
-                                  "bg-secondary text-muted-foreground border border-border/50"
-                              )}
-                            >
-                              {badge.text}
-                            </span>
-                          ) : item.isMaintenance && !badge ? (
-                            <span className="ml-auto text-xs font-medium text-amber-600 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded leading-none select-none">
-                              Bảo trì
-                            </span>
-                          ) : null}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </nav>
-
-          {/* Mobile Drawer Footer: Settings + Notion Status */}
-          <div className="p-3 border-t border-border/50 shrink-0 bg-muted/20 space-y-2">
-            <button
-              type="button"
-              onClick={() => {
-                setIsMobileOpen(false);
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
-                }
-              }}
-              className="flex w-full items-center justify-between px-3 py-2 rounded-lg text-[13px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5">
-                <Smartphone size={18} strokeWidth={1.5} />
-                <span>Cài đặt App vào Điện thoại</span>
-              </div>
-              <span className="text-xs uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-primary/20 text-primary">
-                PWA
-              </span>
-            </button>
-            <Link
-              href="/settings"
-              onClick={() => setIsMobileOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-            >
-              <Settings size={18} strokeWidth={1.5} />
-              <span>Cài đặt hệ thống</span>
-            </Link>
-            <div className="flex items-center justify-center gap-2 px-2.5 py-1 rounded-md border border-border/40 bg-card text-xs text-muted-foreground">
-              <span className="size-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
-              <span className="truncate font-medium text-xs">Notion: Đang kết nối</span>
-            </div>
-            <div className="text-center">
-              <span className="text-xs font-semibold text-rose-500 font-mono tracking-wider">
-                Version: 2.4.3
-              </span>
-            </div>
-          </div>
-        </aside>
-      </div>
 
       {/* Maintenance Dialog Modal */}
       <MaintenanceDialog

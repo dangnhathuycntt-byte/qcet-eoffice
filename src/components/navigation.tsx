@@ -3,11 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
   Network,
+  Calendar,
+  Menu,
   Bell,
   Clock,
   Plus,
@@ -16,9 +18,12 @@ import {
   ChevronDown,
   LogOut,
   Settings,
+  LogIn,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { triggerHaptic } from "@/lib/haptics";
+import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import {
   CreateTaskModal,
   CreateTaskFormData,
@@ -119,54 +124,129 @@ export function ZoomToggle() {
   );
 }
 
-export function MobileNav({ pathname }: { pathname: string }) {
+export function MobileNav({ pathname: initialPathname }: { pathname?: string } = {}) {
+  const currentPathname = usePathname();
+  const searchParams = useSearchParams();
+  const pathname = initialPathname ?? currentPathname ?? "/";
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+
+  const zoneParam = searchParams?.get("zone");
+  const isOverviewActive =
+    (pathname === "/" && (!zoneParam || zoneParam === "dashboard" || zoneParam === "overview")) ||
+    pathname === "/dashboard";
+  const isTasksActive =
+    (pathname === "/" && zoneParam === "tasks") || pathname === "/tasks";
+  const isCalendarActive =
+    (pathname === "/" && zoneParam === "calendar") || pathname === "/calendar";
+  const isOrgActive =
+    (pathname === "/" && zoneParam === "org") || pathname === "/org";
+
+  const tabs = [
+    {
+      id: "overview",
+      label: "Tổng quan",
+      href: "/?zone=dashboard",
+      icon: LayoutDashboard,
+      active: isOverviewActive,
+    },
+    {
+      id: "tasks",
+      label: "Nhiệm vụ",
+      href: "/?zone=tasks",
+      icon: CheckSquare,
+      active: isTasksActive,
+    },
+    {
+      id: "calendar",
+      label: "Lịch",
+      href: "/?zone=calendar",
+      icon: Calendar,
+      active: isCalendarActive,
+    },
+    {
+      id: "org",
+      label: "Tổ chức",
+      href: "/?zone=org",
+      icon: Network,
+      active: isOrgActive,
+    },
+  ];
+
   return (
-    <nav
-      data-slot="mobile-nav"
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/90 backdrop-blur-md border-t border-border/50 px-2 py-1.5 shadow-lg"
-      aria-label="Điều hướng di động"
-    >
-      <div className="flex items-center justify-around">
-        {NAVIGATION_ITEMS.map((item) => {
-          const active =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href + "/"));
-          const Icon = item.icon;
-          const shortLabel =
-            item.label === "Quản lý công việc"
-              ? "Công việc"
-              : item.label === "Cơ cấu & Danh bạ" || item.label === "Cơ cấu tổ chức"
-              ? "Tổ chức"
-              : item.label === "Báo cáo KPI"
-              ? "KPI"
-              : item.label === "Thông báo"
-              ? "Thông báo"
-              : item.label;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center justify-center py-1.5 px-2 min-h-10 rounded-lg text-xs font-medium transition-colors",
-                active
-                  ? "text-primary font-semibold bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon
-                size={16}
-                strokeWidth={1.5}
+    <>
+      <nav
+        data-slot="mobile-nav"
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-md border-t border-border/70 shadow-lg",
+          "pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
+        )}
+        aria-label="Điều hướng di động"
+      >
+        <div className="grid grid-cols-5 items-stretch h-14 px-1 max-w-lg mx-auto">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                onClick={() => triggerHaptic("light")}
                 className={cn(
-                  "mb-0.5",
-                  active ? "text-primary" : "text-muted-foreground"
+                  "relative flex flex-col items-center justify-center min-h-[48px] min-w-[48px] rounded-lg text-xs font-medium transition-colors active:scale-95 touch-manipulation select-none",
+                  tab.active
+                    ? "text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
+                aria-current={tab.active ? "page" : undefined}
+              >
+                {tab.active && (
+                  <span
+                    className="absolute top-0 w-8 h-0.5 bg-primary rounded-full"
+                    aria-hidden="true"
+                  />
+                )}
+                <Icon
+                  size={19}
+                  strokeWidth={tab.active ? 2 : 1.6}
+                  className={cn(
+                    "mb-0.5 transition-colors",
+                    tab.active ? "text-primary" : "text-muted-foreground"
+                  )}
+                />
+                <span className="text-xs leading-tight truncate max-w-[64px]">
+                  {tab.label}
+                </span>
+              </Link>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic("light");
+              setDrawerOpen(true);
+            }}
+            className={cn(
+              "relative flex flex-col items-center justify-center min-h-[48px] min-w-[48px] rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors active:scale-95 touch-manipulation cursor-pointer select-none",
+              drawerOpen && "text-primary font-semibold"
+            )}
+            aria-label="Menu mở rộng và tài khoản"
+          >
+            {drawerOpen && (
+              <span
+                className="absolute top-0 w-8 h-0.5 bg-primary rounded-full"
+                aria-hidden="true"
               />
-              <span className="truncate max-w-[68px]">{shortLabel}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+            )}
+            <Menu size={19} strokeWidth={1.6} className="mb-0.5" />
+            <span className="text-xs leading-tight truncate max-w-[64px]">
+              Thêm
+            </span>
+          </button>
+        </div>
+      </nav>
+
+      <MobileMenuDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
+    </>
   );
 }
 
@@ -328,7 +408,7 @@ export function Navigation() {
             size="sm"
             onClick={() => setIsCreateModalOpen(true)}
             className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all cursor-pointer active:scale-[0.98]"
-            title={user.role === "STAFF" ? "Tạo việc cá nhân mới (phím ⌘K hoặc N)" : "Tạo việc / Giao việc mới (phím ⌘K hoặc N)"}
+            title={user?.role === "STAFF" ? "Tạo việc cá nhân mới (phím ⌘K hoặc N)" : "Tạo việc / Giao việc mới (phím ⌘K hoặc N)"}
           >
             <Plus size={14} strokeWidth={1.5} className="shrink-0" />
             <span className="hidden sm:inline font-medium">Tạo việc</span>
@@ -337,7 +417,8 @@ export function Navigation() {
             </kbd>
           </Button>
 
-          {/* User Avatar + Profile Dropdown */}
+          {/* User Avatar + Profile Dropdown or Login */}
+          {user ? (
           <div className="relative" ref={profileDropdownRef}>
             <button
               type="button"
@@ -447,6 +528,15 @@ export function Navigation() {
               </div>
             )}
           </div>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs ml-1"
+            >
+              <LogIn size={13} strokeWidth={1.5} />
+              <span>Đăng nhập</span>
+            </Link>
+          )}
         </div>
       </div>
 

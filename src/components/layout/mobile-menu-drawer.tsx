@@ -7,6 +7,9 @@ import {
   Building2,
   Calendar,
   FileText,
+  BarChart3,
+  Tv,
+  User,
   Settings,
   LogOut,
   X,
@@ -31,6 +34,7 @@ import {
 import { useAuth } from "@/context/auth-context";
 import { usePushNotification } from "@/hooks/use-push-notification";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
+import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 export interface MobileMenuDrawerProps {
@@ -39,7 +43,7 @@ export interface MobileMenuDrawerProps {
 }
 
 export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, setIsProfileModalOpen } = useAuth();
   const pathname = usePathname();
   const [isTestingPush, setIsTestingPush] = React.useState(false);
   const [testPushResult, setTestPushResult] = React.useState<"success" | "failed" | null>(null);
@@ -79,65 +83,160 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 </BottomSheetDescription>
               </div>
             </div>
-            <BottomSheetClose className="flex items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors">
+            <BottomSheetClose className="flex items-center justify-center min-w-[48px] min-h-[48px] p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer">
               <X size={18} />
             </BottomSheetClose>
           </div>
         </BottomSheetHeader>
 
         <div className="p-4 space-y-4">
-          {/* Core App Navigation Shortcuts */}
-          <div className="space-y-1">
-            <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1 pb-1">
+          {/* Core App Navigation Shortcuts - 2-Column Grid with 48px targets */}
+          <div className="space-y-2">
+            <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1 pb-0.5">
               LỐI TẮT HỆ THỐNG
             </div>
-            <Link
-              href="/schedule"
-              onClick={() => onOpenChange(false)}
-              className="flex items-center justify-between p-3 min-h-[44px] rounded-xl hover:bg-muted text-xs font-medium text-foreground transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Calendar size={17} className="text-primary" />
-                <span>Lịch công tác tuần</span>
-              </div>
-              <ChevronRight size={14} className="text-muted-foreground" />
-            </Link>
-            <Link
-              href="/organization"
-              onClick={() => onOpenChange(false)}
-              className="flex items-center justify-between p-3 min-h-[44px] rounded-xl hover:bg-muted text-xs font-medium text-foreground transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Building2 size={17} className="text-primary" />
-                <span>Cơ cấu tổ chức & Đơn vị</span>
-              </div>
-              <ChevronRight size={14} className="text-muted-foreground" />
-            </Link>
-            <Link
-              href="/documents"
-              onClick={() => onOpenChange(false)}
-              className="flex items-center justify-between p-3 min-h-[44px] rounded-xl hover:bg-muted text-xs font-medium text-foreground transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <FileText size={17} className="text-primary" />
-                <span>Văn bản & Điều hành</span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0">
-                  Đang phát triển
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                href="/documents"
+                onClick={() => {
+                  triggerHaptic("light");
+                  onOpenChange(false);
+                }}
+                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <FileText size={16} />
+                  </div>
+                  <span className="text-xs font-semibold truncate">Văn bản</span>
+                  <span className="sr-only">Đang phát triển</span>
+                </div>
+                <span className="text-xs text-muted-foreground truncate">
+                  Sổ công văn, tờ trình
                 </span>
-              </div>
-              <ChevronRight size={14} className="text-muted-foreground" />
-            </Link>
-            <Link
-              href="/settings"
-              onClick={() => onOpenChange(false)}
-              className="flex items-center justify-between p-3 min-h-[44px] rounded-xl hover:bg-muted text-xs font-medium text-foreground transition-colors"
+              </Link>
+
+              <Link
+                href="/dashboard"
+                onClick={() => {
+                  triggerHaptic("light");
+                  onOpenChange(false);
+                }}
+                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <BarChart3 size={16} />
+                  </div>
+                  <span className="text-xs font-semibold truncate">Báo cáo KPI</span>
+                </div>
+                <span className="text-xs text-muted-foreground truncate">
+                  Tiến độ & chỉ số
+                </span>
+              </Link>
+
+              <Link
+                href="/calendar"
+                onClick={() => {
+                  triggerHaptic("light");
+                  onOpenChange(false);
+                }}
+                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <Calendar size={16} />
+                  </div>
+                  <span className="text-xs font-semibold truncate">Lịch công tác</span>
+                </div>
+                <span className="text-xs text-muted-foreground truncate">
+                  Lịch tuần, sự kiện
+                </span>
+              </Link>
+
+              <Link
+                href="/org"
+                onClick={() => {
+                  triggerHaptic("light");
+                  onOpenChange(false);
+                }}
+                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <Building2 size={16} />
+                  </div>
+                  <span className="text-xs font-semibold truncate">Cơ cấu tổ chức</span>
+                </div>
+                <span className="text-xs text-muted-foreground truncate">
+                  Đơn vị & danh bạ
+                </span>
+              </Link>
+
+              <Link
+                href="/kiosk"
+                onClick={() => {
+                  triggerHaptic("light");
+                  onOpenChange(false);
+                }}
+                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <Tv size={16} />
+                  </div>
+                  <span className="text-xs font-semibold truncate">Kiosk TV</span>
+                </div>
+                <span className="text-xs text-muted-foreground truncate">
+                  Màn hình điều hành
+                </span>
+              </Link>
+
+              <Link
+                href="/settings"
+                onClick={() => {
+                  triggerHaptic("light");
+                  onOpenChange(false);
+                }}
+                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <Settings size={16} />
+                  </div>
+                  <span className="text-xs font-semibold truncate">Cài đặt</span>
+                </div>
+                <span className="text-xs text-muted-foreground truncate">
+                  Hệ thống & tùy chọn
+                </span>
+              </Link>
+            </div>
+
+            {/* Profile Quick Link */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic("light");
+                onOpenChange(false);
+                if (setIsProfileModalOpen) {
+                  setIsProfileModalOpen(true);
+                } else if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("qcet:open-profile-modal"));
+                }
+              }}
+              className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <Settings size={17} className="text-primary" />
-                <span>Cài đặt hệ thống</span>
+                <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <User size={16} />
+                </div>
+                <div className="text-left">
+                  <div className="text-xs font-semibold">Hồ sơ cá nhân</div>
+                  <div className="text-xs text-muted-foreground">Xem chi tiết tài khoản & phân quyền</div>
+                </div>
               </div>
-              <ChevronRight size={14} className="text-muted-foreground" />
-            </Link>
+              <ChevronRight size={15} className="text-muted-foreground" />
+            </button>
           </div>
 
           {/* Mobile Push Notification & App Section */}
@@ -179,7 +278,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     }
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between p-3 min-h-[44px] rounded-xl text-xs font-medium transition-colors border cursor-pointer",
+                    "w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl text-xs font-medium transition-colors border cursor-pointer",
                     isSubscribed
                       ? "bg-muted/40 hover:bg-muted/60 border-border/50 text-foreground"
                       : "bg-primary/10 hover:bg-primary/15 border-primary/30 text-primary font-semibold"
@@ -221,7 +320,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                       setIsTestingPush(false);
                     }
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[44px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors cursor-pointer border border-border/40"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors cursor-pointer border border-border/40"
                 >
                   <div className="flex items-center gap-3">
                     {isTestingPush ? (
@@ -249,7 +348,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     await installApp();
                     onOpenChange(false);
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[44px] rounded-xl bg-primary text-primary-foreground font-semibold text-xs transition-colors cursor-pointer shadow-sm"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary text-primary-foreground font-semibold text-xs transition-colors cursor-pointer shadow-sm"
                 >
                   <div className="flex items-center gap-3">
                     <Download size={17} />
@@ -271,7 +370,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                       window.dispatchEvent(new CustomEvent("qcet:open-push-onboarding"));
                     }
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[44px] rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-medium text-xs transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-medium text-xs transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <Smartphone size={17} />
@@ -291,7 +390,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 logout();
                 onOpenChange(false);
               }}
-              className="w-full flex items-center justify-center gap-2 p-3 min-h-[44px] rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 p-3 min-h-[48px] rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold transition-colors cursor-pointer"
             >
               <LogOut size={16} />
               <span>Đăng xuất</span>
