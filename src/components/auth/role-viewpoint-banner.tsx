@@ -4,7 +4,6 @@ import * as React from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AuthUser } from "@/types/auth";
 import { Badge } from "@/components/ui/badge";
-import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
 import { cn } from "@/lib/utils";
 import { Landmark, Building2, User } from "lucide-react";
 
@@ -33,6 +32,7 @@ export function getViewpointEmoji(role: string): string {
 
 export function RoleViewpointBanner({ className }: { className?: string }) {
   const { user } = useAuth();
+  if (!user) return null;
   const Icon = getViewpointIcon(user.role);
   const viewpointText = getViewpointText(user);
 
@@ -69,13 +69,6 @@ export function RoleViewpointBanner({ className }: { className?: string }) {
             {viewpointText}
           </span>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-        <span className="text-xs text-muted-foreground hidden md:inline font-medium">
-          Chuyển góc nhìn:
-        </span>
-        <RoleSwitcherPill />
       </div>
     </div>
   );

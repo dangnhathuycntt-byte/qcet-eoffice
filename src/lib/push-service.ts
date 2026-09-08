@@ -85,7 +85,13 @@ const DEFAULT_VAPID_SUBJECT = "mailto:admin@qcet.edu.vn";
 
 let isVapidConfigured = false;
 
-function ensureVapidConfigured(): { publicKey: string; privateKey: string; subject: string } {
+export function ensureVapidConfigured(): { publicKey: string; privateKey: string; subject: string } {
+  if (process.env.NODE_ENV === "production") {
+    if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+      throw new Error("Missing required VAPID credentials in production environment");
+    }
+  }
+
   let publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || FALLBACK_VAPID_PUBLIC_KEY;
   let privateKey = process.env.VAPID_PRIVATE_KEY || FALLBACK_VAPID_PRIVATE_KEY;
   const subject = process.env.VAPID_SUBJECT || DEFAULT_VAPID_SUBJECT;
@@ -95,6 +101,9 @@ function ensureVapidConfigured(): { publicKey: string; privateKey: string; subje
       webpush.setVapidDetails(subject, publicKey, privateKey);
       isVapidConfigured = true;
     } catch (err) {
+      if (process.env.NODE_ENV === "production") {
+        throw err;
+      }
       // In case the configured keys are malformed, fallback to deterministic keys
       console.warn("Invalid VAPID credentials in environment. Falling back to test keys.", err);
       publicKey = FALLBACK_VAPID_PUBLIC_KEY;
@@ -306,13 +315,17 @@ export async function sendPushNotificationToUser(
           }).catch(() => {});
         } else {
           failedCount++;
+          const nextFailureCount = (sub.failureCount || 0) + 1;
+          const isThresholdExceeded = nextFailureCount >= 5;
           await prisma.pushSubscription.update({
             where: { id: sub.id },
             data: {
-              failureCount: { increment: 1 },
+              failureCount: nextFailureCount,
               lastFailureCode: statusCode ?? 500,
+              status: isThresholdExceeded ? "REVOKED" : sub.status,
             },
           }).catch(() => {});
+          if (isThresholdExceeded) revokedCount++;
         }
 
         details.push({

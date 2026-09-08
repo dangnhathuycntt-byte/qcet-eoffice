@@ -34,6 +34,29 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuf
 }
 
 /**
+ * Compares an existing subscription applicationServerKey against a new target Uint8Array public key.
+ * Used to detect VAPID key rotations and trigger automatic client-side re-subscription.
+ */
+export function areServerKeysEqual(
+  existingKey: ArrayBuffer | ArrayBufferView | null | undefined,
+  newKeyBytes: Uint8Array
+): boolean {
+  if (!existingKey) return false;
+  const existingBytes =
+    existingKey instanceof ArrayBuffer
+      ? new Uint8Array(existingKey)
+      : ArrayBuffer.isView(existingKey)
+      ? new Uint8Array(existingKey.buffer, existingKey.byteOffset, existingKey.byteLength)
+      : null;
+
+  if (!existingBytes || existingBytes.length !== newKeyBytes.length) return false;
+  for (let i = 0; i < existingBytes.length; i++) {
+    if (existingBytes[i] !== newKeyBytes[i]) return false;
+  }
+  return true;
+}
+
+/**
  * Detects device category for telemetry and notification targeting.
  */
 function detectDeviceType(): string {
@@ -206,15 +229,31 @@ export function usePushNotification(): UsePushNotificationReturn {
         throw new Error(keyData?.error || 'Khóa VAPID không hợp lệ');
       }
 
+      const targetServerKey = urlBase64ToUint8Array(keyData.publicKey);
+
       // Check for existing subscription or create new one
       let activeSub = await withTimeout(reg.pushManager.getSubscription(), 4000, null);
 
+      if (activeSub) {
+        // VAPID key rotation detection: if subscription key does not match target VAPID public key,
+        // unsubscribe stale subscription and recreate with updated key
+        const existingKey = activeSub.options?.applicationServerKey;
+        const isKeyMatching = areServerKeysEqual(existingKey, targetServerKey);
+        if (!isKeyMatching) {
+          try {
+            await activeSub.unsubscribe();
+          } catch {
+            // Ignore unsubscribe error and proceed to re-subscribe with new key
+          }
+          activeSub = null;
+        }
+      }
+
       if (!activeSub) {
-        const applicationServerKey = urlBase64ToUint8Array(keyData.publicKey);
         activeSub = await withTimeout(
           reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey,
+            applicationServerKey: targetServerKey,
           }),
           4000,
           null as unknown as PushSubscription
