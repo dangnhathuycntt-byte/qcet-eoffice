@@ -120,6 +120,11 @@ export interface SchoolTask {
   };
 }
 
+export function isSchoolTask(task: unknown): task is SchoolTask {
+  if (!task || typeof task !== "object") return false;
+  return "taskCode" in task || ("subTasks" in task && Array.isArray((task as { subTasks: unknown }).subTasks));
+}
+
 export interface CollaborationRequest {
   id: string;
   schoolTaskId: string;

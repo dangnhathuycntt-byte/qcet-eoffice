@@ -24,6 +24,11 @@ import type { TaskCategory, SchoolTask } from "@/types/dashboard";
 import type { UserRole, AuthUser } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
 import { canAssignStaffTask, validateDueDate } from "@/lib/dacum-workflow-engine";
+import {
+  type DepartmentPersonnelGroup,
+  QCET_DEPARTMENT_GROUPS,
+  getDepartmentForMember,
+} from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -98,133 +103,11 @@ export interface ApiPersonnel {
   avatarUrl: string | null;
 }
 
-export interface DepartmentPersonnelGroup {
-  department: string;
-  code: string;
-  icon: string;
-  members: { name: string; title: string; role: string }[];
-}
-
-export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
-  {
-    department: "Ban Giám hiệu",
-    code: "BGH",
-    icon: "",
-    members: [
-      { name: "Nguyễn Minh Tuấn", title: "TS. Nguyễn Minh Tuấn", role: "Hiệu trưởng" },
-      { name: "Lê Thành Đạt", title: "ThS. Lê Thành Đạt", role: "Phó Hiệu trưởng" },
-      { name: "Hoàng Thị Kim Cúc", title: "ThS. Hoàng Thị Kim Cúc", role: "Phó Hiệu trưởng" },
-    ],
-  },
-  {
-    department: "Khoa Công nghệ thông tin",
-    code: "CNTT",
-    icon: "",
-    members: [
-      { name: "Nguyễn Ngọc Vinh", title: "TS. Nguyễn Ngọc Vinh", role: "Trưởng khoa (CĐS)" },
-      { name: "Trần Hùng", title: "ThS. Trần Hùng", role: "Phó Trưởng khoa (ATTT)" },
-      { name: "Phan Đình Khôi", title: "ThS. Phan Đình Khôi", role: "Giảng viên CNTT" },
-    ],
-  },
-  {
-    department: "Phòng Đào tạo & Quản lý Khoa học",
-    code: "DAO_TAO",
-    icon: "",
-    members: [
-      { name: "Đỗ Quang Trung", title: "ThS. Đỗ Quang Trung", role: "Trưởng phòng" },
-      { name: "Võ Minh Trí", title: "ThS. Võ Minh Trí", role: "Phó Trưởng phòng" },
-      { name: "Nguyễn Thị Bích Thủy", title: "CN. Nguyễn Thị Bích Thủy", role: "Chuyên viên" },
-    ],
-  },
-  {
-    department: "Trung tâm Truyền thông & Số hóa (DCC)",
-    code: "TRUYEN_THONG",
-    icon: "",
-    members: [
-      { name: "Mai Đinh Thị Xuân", title: "ThS. Mai Đinh Thị Xuân", role: "Giám đốc TT" },
-      { name: "Dương Quang Huy", title: "CN. Dương Quang Huy", role: "Chuyên viên CNTT" },
-      { name: "Hoàng Thùy Linh", title: "CN. Hoàng Thùy Linh", role: "Chuyên viên nội dung" },
-    ],
-  },
-  {
-    department: "Phòng Hành chính - Quản trị",
-    code: "HANH_CHINH",
-    icon: "",
-    members: [
-      { name: "Phan Văn Thanh", title: "ThS. Phan Văn Thanh", role: "Trưởng phòng" },
-      { name: "Lê Hoàng Nam", title: "ThS. Lê Hoàng Nam", role: "Phó Trưởng phòng" },
-      { name: "Trương Thị Hồng Nhung", title: "CN. Trương Thị Hồng Nhung", role: "Văn thư" },
-    ],
-  },
-  {
-    department: "Phòng Khảo thí & Đảm bảo chất lượng",
-    code: "KHAO_THI",
-    icon: "",
-    members: [
-      { name: "Nguyễn Công Minh", title: "ThS. Nguyễn Công Minh", role: "Trưởng phòng" },
-      { name: "Đặng Văn Hậu", title: "ThS. Đặng Văn Hậu", role: "Phó Trưởng phòng" },
-      { name: "Lê Thị Diễm My", title: "ThS. Lê Thị Diễm My", role: "Chuyên viên" },
-    ],
-  },
-  {
-    department: "Trung tâm Ngoại ngữ - Tin học & Thư viện",
-    code: "THU_VIEN",
-    icon: "",
-    members: [
-      { name: "Chu Đình Thắng", title: "ThS. Chu Đình Thắng", role: "Giám đốc TT" },
-      { name: "Phạm Thị Thu", title: "CN. Phạm Thị Thu", role: "Phụ trách Thư viện" },
-      { name: "Trần Bảo Ngọc", title: "ThS. Trần Bảo Ngọc", role: "Giảng viên" },
-    ],
-  },
-  {
-    department: "Khoa Kinh tế - Quản trị",
-    code: "KINH_TE",
-    icon: "",
-    members: [
-      { name: "Lê Thị Ánh Tuyết", title: "ThS. Lê Thị Ánh Tuyết", role: "Trưởng khoa" },
-      { name: "Đỗ Hoàng Sơn", title: "ThS. Đỗ Hoàng Sơn", role: "Phó Trưởng khoa" },
-      { name: "Nguyễn Hồng Phượng", title: "ThS. Nguyễn Hồng Phượng", role: "Giảng viên" },
-    ],
-  },
-  {
-    department: "Khoa Kỹ thuật - Công nghệ",
-    code: "KY_THUAT",
-    icon: "",
-    members: [
-      { name: "Đinh Quốc Cường", title: "TS. Đinh Quốc Cường", role: "Trưởng khoa" },
-      { name: "Vũ Mạnh Hùng", title: "ThS. Vũ Mạnh Hùng", role: "Phó Trưởng khoa" },
-      { name: "Trần Bá Lộc", title: "ThS. Trần Bá Lộc", role: "Giảng viên" },
-    ],
-  },
-  {
-    department: "Phòng Kế hoạch - Tài chính",
-    code: "TAI_CHINH",
-    icon: "",
-    members: [
-      { name: "Trần Thị Mai Loan", title: "ThS. Trần Thị Mai Loan", role: "Trưởng phòng" },
-      { name: "Hà Thanh Vân", title: "ThS. Hà Thanh Vân", role: "Kế toán trưởng" },
-      { name: "Bùi Văn Hào", title: "CN. Bùi Văn Hào", role: "Kế toán viên" },
-    ],
-  },
-  {
-    department: "Phòng Công tác học sinh sinh viên",
-    code: "CTHSSV",
-    icon: "",
-    members: [
-      { name: "Huỳnh Công Tuấn", title: "ThS. Huỳnh Công Tuấn", role: "Trưởng phòng" },
-      { name: "Nguyễn Thị Thanh Hà", title: "ThS. Nguyễn Thị Thanh Hà", role: "Phó Trưởng phòng" },
-      { name: "Lâm Vĩnh Phúc", title: "CN. Lâm Vĩnh Phúc", role: "Chuyên viên" },
-    ],
-  },
-];
-
-export function getDepartmentForMember(
-  memberName: string
-): DepartmentPersonnelGroup | undefined {
-  return QCET_DEPARTMENT_GROUPS.find((group) =>
-    group.members.some((m) => m.name === memberName)
-  );
-}
+export {
+  type DepartmentPersonnelGroup,
+  QCET_DEPARTMENT_GROUPS,
+  getDepartmentForMember,
+};
 
 export function canRoleSelectAssignee(
   user: AuthUser,
@@ -399,13 +282,22 @@ export function CreateTaskModal({
       const deptCode = p.department?.shortName || p.departmentId || "KHAC";
       if (!groupMap.has(deptCode)) {
         groupMap.set(deptCode, {
+          id: deptCode.toLowerCase(),
+          name: deptName,
           department: deptName,
           code: deptCode,
           icon: "",
+          personnel: [],
           members: [],
         });
       }
-      groupMap.get(deptCode)!.members.push({
+      const grp = groupMap.get(deptCode)!;
+      grp.members.push({
+        name: p.name,
+        title: p.title || p.name,
+        role: p.role,
+      });
+      grp.personnel.push({
         name: p.name,
         title: p.title || p.name,
         role: p.role,

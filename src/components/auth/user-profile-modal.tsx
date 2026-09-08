@@ -17,18 +17,18 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { UserRole } from "@/types/auth";
-import { QCET_DEPARTMENT_GROUPS } from "@/components/dashboard/create-task-modal";
+import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
 import { cn } from "@/lib/utils";
 
 export function UserProfileModal() {
   const { user, updateProfile, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
 
-  const [name, setName] = React.useState(user.name || "");
-  const [department, setDepartment] = React.useState(user.department || "");
-  const [departmentCode, setDepartmentCode] = React.useState(user.departmentCode || "QCET");
-  const [title, setTitle] = React.useState(user.title || "Viên chức");
-  const [phone, setPhone] = React.useState(user.phone || "");
-  const [role, setRole] = React.useState<UserRole>(user.role || "STAFF");
+  const [name, setName] = React.useState(user?.name || "");
+  const [department, setDepartment] = React.useState(user?.department || "");
+  const [departmentCode, setDepartmentCode] = React.useState(user?.departmentCode || "QCET");
+  const [title, setTitle] = React.useState(user?.title || "Viên chức");
+  const [phone, setPhone] = React.useState(user?.phone || "");
+  const [role, setRole] = React.useState<UserRole>(user?.role || "STAFF");
   const [savedSuccess, setSavedSuccess] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
 
@@ -38,7 +38,7 @@ export function UserProfileModal() {
 
   // Sync state with current user when modal opens
   React.useEffect(() => {
-    if (isProfileModalOpen) {
+    if (isProfileModalOpen && user) {
       setName(user.name || "");
       setDepartment(user.department || "");
       setDepartmentCode(user.departmentCode || "QCET");
@@ -49,13 +49,13 @@ export function UserProfileModal() {
     }
   }, [isProfileModalOpen, user]);
 
-  if (!isProfileModalOpen) return null;
+  if (!isProfileModalOpen || !user) return null;
 
   const handleDepartmentChange = (code: string) => {
     setDepartmentCode(code);
     const found = QCET_DEPARTMENT_GROUPS.find((g) => g.code === code);
     if (found) {
-      setDepartment(found.department);
+      setDepartment(found.name || found.department || "");
     }
   };
 
@@ -205,7 +205,7 @@ export function UserProfileModal() {
                 <option value="QCET">-- Chọn đơn vị trực thuộc trường --</option>
                 {QCET_DEPARTMENT_GROUPS.map((g) => (
                   <option key={g.code} value={g.code}>
-                    {g.department}
+                    {g.name || g.department}
                   </option>
                 ))}
               </select>
