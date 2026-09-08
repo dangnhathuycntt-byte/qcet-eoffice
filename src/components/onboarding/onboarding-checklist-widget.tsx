@@ -7,11 +7,12 @@ import {
   ChevronUp,
   ChevronDown,
   X,
-  Rocket,
+  ListChecks,
+  CheckCheck,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { ChecklistTaskConfig } from "@/lib/onboarding-constants";
-import { CelebrationConfetti } from "./celebration-confetti";
 import { usePushNotification } from "@/hooks/use-push-notification";
 
 interface OnboardingChecklistWidgetProps {
@@ -23,6 +24,7 @@ interface OnboardingChecklistWidgetProps {
   onToggleExpand: () => void;
   onDismiss: () => void;
   onCompleteStep: (stepId: string) => void;
+  onStartTour?: () => void;
 }
 
 export function OnboardingChecklistWidget({
@@ -34,62 +36,73 @@ export function OnboardingChecklistWidget({
   onToggleExpand,
   onDismiss,
   onCompleteStep,
+  onStartTour,
 }: OnboardingChecklistWidgetProps) {
-  const [showConfetti, setShowConfetti] = React.useState(false);
   const { subscribeToPush } = usePushNotification();
 
-  React.useEffect(() => {
-    if (percentage === 100) {
-      setShowConfetti(true);
-      const timer = setTimeout(() => setShowConfetti(false), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [percentage]);
+  const [activeTaskId, setActiveTaskId] = React.useState<string | null>(null);
+  const [pushNotice, setPushNotice] = React.useState<string | null>(null);
 
   if (isDismissed) return null;
 
   const nextIncomplete = tasks.find((t) => !completedSteps.includes(t.id));
 
   const handleAction = async (task: ChecklistTaskConfig) => {
-    if (task.actionType === "REQUEST_PUSH") {
-      try {
-        const sub = await subscribeToPush();
-        if (sub) onCompleteStep(task.id);
-      } catch {
-        onCompleteStep(task.id); // Graceful fallback
+    if (activeTaskId) return;
+    setActiveTaskId(task.id);
+
+    try {
+      if (task.actionType === "REQUEST_PUSH") {
+        try {
+          const pushPromise = subscribeToPush();
+          const timeoutPromise = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000));
+          const granted = await Promise.race([pushPromise, timeoutPromise]);
+
+          if (granted) {
+            setPushNotice("Đã bật nhận thông báo đẩy thành công!");
+          } else if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+            setPushNotice("Trình duyệt đang chặn thông báo. Đã đánh dấu hoàn tất để bạn tiếp tục.");
+          }
+        } catch {
+          // Graceful fallback
+        } finally {
+          onCompleteStep(task.id);
+          setTimeout(() => setPushNotice(null), 4000);
+        }
+      } else if (task.actionType === "OPEN_SEARCH") {
+        const searchBtn = document.querySelector<HTMLButtonElement>("#tour-topbar-search");
+        if (searchBtn) {
+          searchBtn.click();
+        } else {
+          window.dispatchEvent(
+            new KeyboardEvent("keydown", { key: "k", metaKey: true, ctrlKey: true, bubbles: true })
+          );
+        }
+        onCompleteStep(task.id);
+      } else if (task.actionType === "NAVIGATE" || task.id === "step-action") {
+        window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
+        onCompleteStep(task.id);
+      } else {
+        onCompleteStep(task.id);
       }
-    } else if (task.actionType === "OPEN_SEARCH") {
-      window.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true })
-      );
-      onCompleteStep(task.id);
-    } else {
-      onCompleteStep(task.id);
+    } finally {
+      setActiveTaskId(null);
     }
   };
 
   return (
-    <>
-      <CelebrationConfetti active={showConfetti} />
-
-      <div className="fixed bottom-6 right-6 z-40">
+    <div className="fixed bottom-6 right-6 z-40">
         {!isExpanded ? (
           /* Mini Pill Badge */
           <button
             onClick={onToggleExpand}
-            className="group flex items-center gap-2.5 px-4 py-2 rounded-full bg-card/95 border border-primary/30 shadow-xl hover:shadow-2xl hover:border-primary text-xs font-semibold text-foreground transition-all duration-200 backdrop-blur-md"
+            className="group flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-card/95 border border-border/80 shadow-lg hover:shadow-xl hover:border-primary/50 text-xs font-semibold text-foreground transition-all duration-200 backdrop-blur-md"
             aria-label={`Khởi động hệ thống: ${percentage}% hoàn thành`}
           >
-            <span className="relative flex h-2 w-2">
-              {percentage < 100 && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-              )}
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Rocket className="w-3.5 h-3.5 text-primary" />
-              <span>Khởi động QCET</span>
-            </span>
+            <div className="flex items-center gap-1.5 text-primary">
+              <ListChecks className="w-4 h-4" />
+              <span className="text-foreground">Thiết lập hệ thống</span>
+            </div>
             <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">
               {percentage}%
             </span>
@@ -98,29 +111,29 @@ export function OnboardingChecklistWidget({
         ) : (
           /* Expanded Card */
           <div
-            className="w-80 sm:w-96 bg-card border border-border/80 rounded-2xl shadow-2xl p-5 backdrop-blur-md animate-in slide-in-from-bottom-3 duration-200"
+            className="w-80 sm:w-96 bg-card border border-border/80 rounded-2xl shadow-xl p-5 backdrop-blur-md animate-in slide-in-from-bottom-3 duration-200"
             role="region"
             aria-label="Danh mục khởi động cho cán bộ mới"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-border/40">
+            <div className="flex items-center justify-between pb-3 border-b border-border/50">
               <div className="flex items-center gap-2">
-                <Rocket className="w-4 h-4 text-primary" />
-                <h4 className="text-sm font-bold text-foreground">Khởi động nhanh</h4>
-                <span className="text-xs font-semibold text-primary px-2 py-0.5 rounded-full bg-primary/10">
+                <ListChecks className="w-4 h-4 text-primary" />
+                <h4 className="text-sm font-semibold text-foreground">Thiết lập khởi đầu</h4>
+                <span className="text-xs font-medium text-primary px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
                   {percentage}%
                 </span>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={onToggleExpand}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   aria-label="Thu nhỏ"
                 >
                   <ChevronDown className="w-4 h-4" />
                 </button>
                 <button
                   onClick={onDismiss}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   aria-label="Ẩn checklist"
                 >
                   <X className="w-4 h-4" />
@@ -128,13 +141,30 @@ export function OnboardingChecklistWidget({
               </div>
             </div>
 
-            {/* Progress Bar */}
-            <div className="my-3">
-              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all duration-500 ease-out"
-                  style={{ width: `${percentage}%` }}
-                />
+            {/* Segmented Progress Bar */}
+            <div className="my-3 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Tiến độ hoàn thành</span>
+                <span className="font-semibold text-foreground">
+                  {completedSteps.length}/{tasks.length} mục
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {tasks.map((t, idx) => {
+                  const isDone = completedSteps.includes(t.id);
+                  return (
+                    <div
+                      key={t.id}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        isDone
+                          ? "bg-primary"
+                          : idx === completedSteps.length
+                          ? "bg-primary/35"
+                          : "bg-muted"
+                      }`}
+                    />
+                  );
+                })}
               </div>
             </div>
 
@@ -173,8 +203,8 @@ export function OnboardingChecklistWidget({
                             {task.title}
                           </p>
                           {isNext && !isDone && (
-                            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
-                              Tiếp theo
+                            <span className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground">
+                              Ưu tiên
                             </span>
                           )}
                         </div>
@@ -184,10 +214,19 @@ export function OnboardingChecklistWidget({
                       </div>
                       {!isDone && (
                         <button
+                          type="button"
                           onClick={() => handleAction(task)}
-                          className="px-2 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0"
+                          disabled={activeTaskId === task.id}
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0 cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
                         >
-                          {task.actionLabel}
+                          {activeTaskId === task.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                              <span>Đang xử lý...</span>
+                            </>
+                          ) : (
+                            task.actionLabel
+                          )}
                         </button>
                       )}
                     </div>
@@ -196,16 +235,30 @@ export function OnboardingChecklistWidget({
               })}
             </div>
 
-            {percentage === 100 && (
-              <div className="mt-3 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
-                <span className="text-xs font-bold text-emerald-600 flex items-center justify-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" /> Thầy/Cô đã sẵn sàng 100%!
-                </span>
+            {pushNotice && (
+              <div className="mt-2.5 p-2 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary font-medium text-center animate-in fade-in slide-in-from-bottom-1">
+                {pushNotice}
               </div>
             )}
+
+            {percentage === 100 ? (
+              <div className="mt-3 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                <span className="text-xs font-semibold text-emerald-600 flex items-center justify-center gap-1.5">
+                  <CheckCheck className="w-4 h-4" /> Thầy/Cô đã hoàn tất thiết lập ban đầu!
+                </span>
+              </div>
+            ) : onStartTour ? (
+              <button
+                type="button"
+                onClick={onStartTour}
+                className="mt-3 w-full py-1.5 px-3 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Xem hướng dẫn trực quan (Tour)</span>
+              </button>
+            ) : null}
           </div>
         )}
       </div>
-    </>
   );
 }
