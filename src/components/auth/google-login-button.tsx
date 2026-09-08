@@ -41,7 +41,6 @@ export function GoogleIcon({ className = "size-5" }: { className?: string }) {
 }
 
 interface GoogleLoginButtonProps {
-  onSuccess?: () => void;
   className?: string;
 }
 
