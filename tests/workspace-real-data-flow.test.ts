@@ -179,7 +179,7 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
       assert.ok(htmlStaff.includes("data-active-scope=\"my\""));
     });
 
-    test("staff user renders personal task indicator instead of tablist", () => {
+    test("staff user renders unified segmented tablist with unit and my scopes", () => {
       const htmlStaff = renderToStaticMarkup(
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: staffUser,
@@ -188,9 +188,10 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
         })
       );
 
-      assert.ok(htmlStaff.includes("data-slot=\"staff-scope-indicator\""));
-      assert.ok(htmlStaff.includes("Nhiệm vụ cá nhân"));
-      assert.ok(!htmlStaff.includes("role=\"tablist\""));
+      assert.ok(!htmlStaff.includes("data-slot=\"staff-scope-indicator\""));
+      assert.ok(htmlStaff.includes("role=\"tablist\""));
+      assert.ok(htmlStaff.includes("data-scope=\"unit\""));
+      assert.ok(htmlStaff.includes("data-scope=\"my\""));
     });
   });
 

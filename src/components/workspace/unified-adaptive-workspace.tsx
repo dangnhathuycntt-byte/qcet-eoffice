@@ -3,7 +3,10 @@
 import * as React from "react";
 import { Inbox, AlertTriangle, Loader2 } from "lucide-react";
 import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope } from "./types";
-import { useAdaptiveWorkspaceData } from "./hooks/use-adaptive-workspace-data";
+import {
+  useAdaptiveWorkspaceData,
+  deriveAdaptiveWorkspaceData,
+} from "./hooks/use-adaptive-workspace-data";
 import { AdaptiveScopeHeader } from "./components/adaptive-scope-header";
 import { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 import { UniversalActionQueue } from "./components/universal-action-queue";
@@ -78,7 +81,7 @@ export function UnifiedAdaptiveWorkspace({
 
   // Interactive dialog states for task review and deliverable submission
   const [reviewingTask, setReviewingTask] = React.useState<SchoolTask | StaffTask | null>(null);
-  const [submittingTask, setSubmittingTask] = React.useState<StaffTask | null>(null);
+  const [submittingTask, setSubmittingTask] = React.useState<SchoolTask | StaffTask | null>(null);
 
   const effectiveReviewerRole: "ADMIN" | "MANAGER" | "STAFF" = React.useMemo(() => {
     if (forcedRole) return forcedRole;
@@ -102,8 +105,45 @@ export function UnifiedAdaptiveWorkspace({
     forcedScope !== "school" &&
     forcedScope !== "unit";
 
-  const effectiveHideScopeSwitcher =
-    hideScopeSwitcher !== undefined ? hideScopeSwitcher : isStaff;
+  // Compute scope badge counts for AdaptiveScopeHeader tabs
+  const badgeCounts = React.useMemo<Partial<Record<WorkspaceScope, number>>>(() => {
+    const schoolCount = tasks.length;
+    const unitCount = deriveAdaptiveWorkspaceData({
+      tasks,
+      user,
+      scope: "unit",
+      selectedDepartment,
+    }).scopedTasks.length;
+    const myCount = deriveAdaptiveWorkspaceData({
+      tasks,
+      user,
+      scope: "my",
+      selectedDepartment,
+    }).scopedTasks.length;
+
+    return {
+      school: schoolCount,
+      unit: unitCount,
+      my: myCount,
+    };
+  }, [tasks, user, selectedDepartment]);
+
+  // Unified task creation handler: defaults staff to "DON_VI" or "my"
+  const handleCreateTask = React.useCallback(() => {
+    if (onCreateTask) {
+      if (isStaff) {
+        const staffScope = activeScope === "unit" ? "DON_VI" : "my";
+        onCreateTask(staffScope);
+      } else {
+        onCreateTask(activeScope);
+      }
+    } else if (onAction) {
+      const staffScope = activeScope === "unit" ? "DON_VI" : "my";
+      onAction("CREATE_TASK", { scope: isStaff ? staffScope : activeScope });
+    }
+  }, [onCreateTask, onAction, isStaff, activeScope]);
+
+  const canCreateTask = Boolean(onCreateTask || onAction);
 
   return (
     <div
@@ -111,32 +151,15 @@ export function UnifiedAdaptiveWorkspace({
       data-active-scope={activeScope}
       className="space-y-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:pb-8"
     >
-      {/* Context banner when provided by adapter shims */}
+      {/* Screen-reader accessible context info when provided by adapter shims (visual banner removed for clean unified canvas) */}
       {(contextTitle || contextBadge) && (
         <aside
-          data-slot="workspace-context-banner"
           role="region"
           aria-label="Thông tin ngữ cảnh không gian làm việc"
-          className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 bg-muted/40 rounded-xl border border-border/70 text-xs"
+          className="sr-only"
         >
-          <div className="flex items-center gap-2">
-            {contextBadge && (
-              <span
-                data-slot="workspace-context-badge"
-                className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-primary/10 text-primary border border-primary/20"
-              >
-                {contextBadge}
-              </span>
-            )}
-            {contextTitle && (
-              <span
-                data-slot="workspace-context-title"
-                className="font-medium text-foreground"
-              >
-                {contextTitle}
-              </span>
-            )}
-          </div>
+          {contextBadge && <span>{contextBadge}</span>}
+          {contextTitle && <span>{contextTitle}</span>}
         </aside>
       )}
 
@@ -179,13 +202,12 @@ export function UnifiedAdaptiveWorkspace({
         activeScope={activeScope}
         onScopeChange={setActiveScope}
         onRefresh={onRefresh}
-        onCreateTask={
-          onCreateTask
-            ? () => onCreateTask(activeScope)
-            : undefined
-        }
+        onCreateTask={canCreateTask ? handleCreateTask : undefined}
+        badgeCounts={badgeCounts}
         isRefreshing={isRefreshing}
-        hideScopeSwitcher={effectiveHideScopeSwitcher}
+        hideScopeSwitcher={hideScopeSwitcher}
+        contextTitle={contextTitle}
+        contextBadge={contextBadge}
       />
 
       {/* Loading state when fetching initial data */}
@@ -214,7 +236,7 @@ export function UnifiedAdaptiveWorkspace({
         onReview={onReview}
         onSubmitDeliverable={onSubmitDeliverable}
         onOpenReview={onReview ? (task) => setReviewingTask(task) : undefined}
-        onOpenSubmit={(task) => setSubmittingTask(task)}
+        onOpenSubmit={onSubmitDeliverable ? (task) => setSubmittingTask(task) : undefined}
       />
 
       {/* 4. Single Shared Task Canvas or Authentic Empty State */}
@@ -233,10 +255,10 @@ export function UnifiedAdaptiveWorkspace({
             Hiện tại không có nhiệm vụ nào trong cơ sở dữ liệu. Thầy/Cô có thể tạo nhiệm vụ mới hoặc làm mới dữ liệu từ máy chủ.
           </p>
           <div className="flex items-center gap-2">
-            {onCreateTask && (
+            {canCreateTask && (
               <Button
                 size="sm"
-                onClick={() => onCreateTask(activeScope)}
+                onClick={handleCreateTask}
                 className="text-xs h-8 px-3"
               >
                 Tạo nhiệm vụ mới
@@ -262,17 +284,11 @@ export function UnifiedAdaptiveWorkspace({
             onSelectTask={onSelectTask}
             onStatusChange={onStatusChange}
             onRefresh={onRefresh}
-            onAddTask={
-              onCreateTask
-                ? () => onCreateTask(activeScope)
-                : undefined
-            }
+            onAddTask={canCreateTask ? handleCreateTask : undefined}
             onOpenSubmitModal={
-              (st) => {
-                if (onSubmitDeliverable) {
-                  setSubmittingTask(st);
-                }
-              }
+              onSubmitDeliverable
+                ? (st) => setSubmittingTask(st)
+                : undefined
             }
           />
         </div>
@@ -300,7 +316,7 @@ export function UnifiedAdaptiveWorkspace({
         <SubmitDeliverableModal
           isOpen={Boolean(submittingTask)}
           onClose={() => setSubmittingTask(null)}
-          task={submittingTask}
+          task={submittingTask as any}
           taskId={submittingTask.id}
           taskTitle={submittingTask.title}
           onSubmit={async (payload) => {

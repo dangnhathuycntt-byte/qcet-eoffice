@@ -23,7 +23,9 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
 
   before(async () => {
     // Obtain valid user and department from database
-    const user = await prisma.user.findFirst();
+    const user = (await prisma.user.findFirst({
+      where: { NOT: { email: { contains: "test" } } },
+    })) || (await prisma.user.findFirst());
     assert.ok(user, "At least one user must exist in database");
     seededUserId = user.id;
 

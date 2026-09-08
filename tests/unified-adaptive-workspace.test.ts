@@ -60,7 +60,7 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
     assert.ok(htmlInitial.includes("data-active-scope=\"unit\""));
   });
 
-  test("renders contextual banner when contextTitle and contextBadge are provided", () => {
+  test("omits redundant context banner for clean canvas across all roles", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: adminUser,
@@ -71,9 +71,10 @@ describe("UnifiedAdaptiveWorkspace Entrypoint Component", () => {
       })
     );
 
-    assert.ok(html.includes("data-slot=\"workspace-context-banner\""));
-    assert.ok(html.includes("Khoang chỉ huy điều hành"));
-    assert.ok(html.includes("Ban Giám Hiệu (BGH)"));
+    assert.ok(
+      !html.includes("data-slot=\"workspace-context-banner\""),
+      "Context banner must be omitted to provide a unified clean canvas starting directly with the header"
+    );
   });
 
   test("zero emojis in rendered markup", () => {

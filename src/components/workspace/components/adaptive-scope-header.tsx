@@ -17,6 +17,8 @@ export interface AdaptiveScopeHeaderProps {
   onCreateTask?: () => void;
   isRefreshing?: boolean;
   hideScopeSwitcher?: boolean;
+  contextTitle?: string;
+  contextBadge?: string;
 }
 
 const scopeActiveStyles: Record<WorkspaceScope, string> = {
@@ -52,12 +54,12 @@ export function AdaptiveScopeHeader({
   onRefresh,
   onCreateTask,
   isRefreshing,
-  hideScopeSwitcher,
+  hideScopeSwitcher: _hideScopeSwitcher,
+  contextTitle,
+  contextBadge,
 }: AdaptiveScopeHeaderProps) {
   const isExecutive = isExecutiveUser(user);
   const isManager = isManagerUser(user) || isExecutive;
-  const isStaffOnly = !isExecutive && !isManager;
-  const shouldHideSwitcher = Boolean(hideScopeSwitcher || isStaffOnly);
   const unitLabel = user.department || user.departmentCode || "Đơn vị";
 
   // Check URL search params on mount if not matching current activeScope
@@ -72,13 +74,12 @@ export function AdaptiveScopeHeader({
         scopeParam !== activeScope
       ) {
         if (scopeParam === "school" && !isExecutive) return;
-        if (scopeParam === "unit" && !isManager) return;
         onScopeChange(scopeParam);
       }
     } catch {
       // Ignore errors in non-standard window environments
     }
-  }, [isExecutive, isManager, activeScope, onScopeChange]);
+  }, [isExecutive, activeScope, onScopeChange]);
 
   const handleScopeClick = (scope: WorkspaceScope) => {
     syncScopeToUrl(scope);
@@ -104,7 +105,7 @@ export function AdaptiveScopeHeader({
       label: unitLabel,
       shortLabel: unitLabel,
       icon: Building2,
-      visible: isManager,
+      visible: true,
     },
     {
       id: "my",
@@ -120,69 +121,72 @@ export function AdaptiveScopeHeader({
       data-slot="adaptive-scope-header"
       className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-border/60"
     >
-      <div className="flex items-center gap-3 min-w-0">
-        {!shouldHideSwitcher ? (
-          <div
-            role="tablist"
-            aria-label="Phạm vi công việc"
-            className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/70"
-          >
-            {scopes
-              .filter((s) => s.visible)
-              .map((s) => {
-                const Icon = s.icon;
-                const isActive = activeScope === s.id;
-                const count = badgeCounts?.[s.id];
-                const showBadge = typeof count === "number" && count > 0;
-
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    role="tab"
-                    id={`scope-tab-${s.id}`}
-                    aria-selected={isActive}
-                    tabIndex={isActive ? 0 : -1}
-                    data-scope={s.id}
-                    onClick={() => handleScopeClick(s.id)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer min-h-[44px] sm:min-h-[36px] touch-manipulation border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                      isActive
-                        ? scopeActiveStyles[s.id]
-                        : "text-muted-foreground border-transparent hover:text-foreground hover:bg-card/50"
-                    )}
-                  >
-                    <Icon className="size-3.5 shrink-0 select-none" strokeWidth={1.5} aria-hidden="true" />
-                    <span className="hidden sm:inline">{s.label}</span>
-                    <span className="sm:hidden">{s.shortLabel}</span>
-                    {showBadge && (
-                      <span
-                        data-slot="scope-badge"
-                        aria-label={`${count} nhiệm vụ`}
-                        className={cn(
-                          "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-mono tabular-nums font-semibold border ml-0.5",
-                          isActive
-                            ? scopeBadgeActiveStyles[s.id]
-                            : "bg-muted text-muted-foreground border-border/60"
-                        )}
-                      >
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-          </div>
-        ) : (
-          <div
-            data-slot="staff-scope-indicator"
-            data-scope="my"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-500/10 border border-emerald-500/20"
-          >
-            <User className="size-3.5 shrink-0 select-none" strokeWidth={1.5} aria-hidden="true" />
-            <span>Nhiệm vụ cá nhân</span>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 min-w-0">
+        {(contextTitle || contextBadge) && (
+          <div className="flex items-center gap-2 min-w-0 mr-1">
+            {contextBadge && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+                {contextBadge}
+              </span>
+            )}
+            {contextTitle && (
+              <h2 className="text-sm font-bold text-foreground truncate">
+                {contextTitle}
+              </h2>
+            )}
           </div>
         )}
+        <div
+          role="tablist"
+          aria-label="Phạm vi công việc"
+          className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/70"
+        >
+          {scopes
+            .filter((s) => s.visible)
+            .map((s) => {
+              const Icon = s.icon;
+              const isActive = activeScope === s.id;
+              const count = badgeCounts?.[s.id];
+              const showBadge = typeof count === "number" && count > 0;
+
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="tab"
+                  id={`scope-tab-${s.id}`}
+                  aria-selected={isActive}
+                  tabIndex={isActive ? 0 : -1}
+                  data-scope={s.id}
+                  onClick={() => handleScopeClick(s.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer min-h-[44px] sm:min-h-[36px] touch-manipulation border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                    isActive
+                      ? scopeActiveStyles[s.id]
+                      : "text-muted-foreground border-transparent hover:text-foreground hover:bg-card/50"
+                  )}
+                >
+                  <Icon className="size-3.5 shrink-0 select-none" strokeWidth={1.5} aria-hidden="true" />
+                  <span className="hidden sm:inline">{s.label}</span>
+                  <span className="sm:hidden">{s.shortLabel}</span>
+                  {showBadge && (
+                    <span
+                      data-slot="scope-badge"
+                      aria-label={`${count} nhiệm vụ`}
+                      className={cn(
+                        "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-mono tabular-nums font-semibold border ml-0.5",
+                        isActive
+                          ? scopeBadgeActiveStyles[s.id]
+                          : "bg-muted text-muted-foreground border-border/60"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+        </div>
       </div>
 
       <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
@@ -206,10 +210,11 @@ export function AdaptiveScopeHeader({
           <Button
             size="sm"
             onClick={onCreateTask}
+            aria-label="Thêm nhiệm vụ / Giao nhiệm vụ"
             className="hidden sm:inline-flex h-8 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 cursor-pointer"
           >
             <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
-            <span>Giao nhiệm vụ</span>
+            <span>Thêm nhiệm vụ</span>
           </Button>
         )}
       </div>

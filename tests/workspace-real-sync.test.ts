@@ -72,7 +72,8 @@ describe("Workspace & Onboarding Real Sync Suite", () => {
       })
     );
     assert.ok(htmlStaff.includes("data-active-scope=\"my\""));
-    assert.ok(htmlStaff.includes("data-slot=\"staff-scope-indicator\""));
+    assert.ok(htmlStaff.includes("role=\"tablist\""));
+    assert.ok(!htmlStaff.includes("data-slot=\"staff-scope-indicator\""));
   });
 
   test("2. Trạng thái onboarding gắn theo ID người dùng thật trong CSDL", () => {

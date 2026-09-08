@@ -155,8 +155,15 @@ export function UniversalActionQueue({
         </div>
       )}
 
-      {/* Triage strip grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+      {/* Triage strip grid: auto-fits to full width when only 1 lane has items */}
+      <div
+        className={cn(
+          "grid gap-3.5",
+          pendingApprovals.length > 0 && myPendingSubmissions.length > 0
+            ? "grid-cols-1 lg:grid-cols-2"
+            : "grid-cols-1"
+        )}
+      >
         {/* Lane 1: Incoming Approvals */}
         {pendingApprovals.length > 0 && (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.03] p-3.5 space-y-2.5">
@@ -316,7 +323,20 @@ export function UniversalActionQueue({
                     className="min-h-[44px] touch-manipulation px-3.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shrink-0 gap-1.5 cursor-pointer"
                     onClick={() => {
                       if (onOpenSubmit) {
-                        onOpenSubmit(item.task);
+                        const staffTask: StaffTask = ("assigneeName" in item.task)
+                          ? (item.task as StaffTask)
+                          : {
+                              id: item.task.id,
+                              title: item.task.title,
+                              assigneeName: (item.task as any).assignee || (item.task as any).assignedTo || "",
+                              department: (item.task as any).assignedDepartment || "",
+                              status: item.task.status as any,
+                              dueDate: item.task.dueDate || "",
+                              parentSchoolTaskId: item.task.id,
+                              updatedAt: new Date().toISOString(),
+                              deliverables: (item.task as any).deliverables || [],
+                            };
+                        onOpenSubmit(staffTask);
                       } else if (onSubmitDeliverable) {
                         onSubmitDeliverable({
                           taskId: item.task.id,

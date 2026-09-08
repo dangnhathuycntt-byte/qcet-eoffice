@@ -148,7 +148,9 @@ describe("GET /api/documents/export-excel Route Integration", () => {
   let sessionToken: string;
 
   before(async () => {
-    const user = await prisma.user.findFirst();
+    const user = (await prisma.user.findFirst({
+      where: { NOT: { email: { contains: "test" } } },
+    })) || (await prisma.user.findFirst());
     assert.ok(user, "User must exist");
     sessionToken = signSessionToken({
       id: user.id,
@@ -162,7 +164,7 @@ describe("GET /api/documents/export-excel Route Integration", () => {
     const created = await prisma.document.create({
       data: {
         type: "VAN_BAN_DEN",
-        registrationNumber: 9999,
+        registrationNumber: 7777,
         documentYear: 2026,
         registeredDate: new Date("2026-09-07T08:00:00Z"),
         originalNumber: "TEST-9999/UBND",
@@ -182,7 +184,7 @@ describe("GET /api/documents/export-excel Route Integration", () => {
 
   after(async () => {
     if (testDocId) {
-      await prisma.document.delete({ where: { id: testDocId } }).catch(() => {});
+      await prisma.document.deleteMany({ where: { id: testDocId } });
     }
   });
 
