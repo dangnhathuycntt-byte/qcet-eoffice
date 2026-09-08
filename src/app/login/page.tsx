@@ -1,16 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
-  Building2,
   User,
   Mail,
   Lock,
   ArrowRight,
   ShieldCheck,
   AlertCircle,
+  AlertTriangle,
+  Info,
+  X,
   Eye,
   EyeOff,
   CheckCircle2,
@@ -20,6 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
+import { resolveOAuthError } from "@/lib/login-helpers";
 import { cn } from "@/lib/utils";
 
 const DEPARTMENTS = [
@@ -30,8 +33,32 @@ const DEPARTMENTS = [
   { id: "DT_QLKH", name: "Phòng Đào tạo & Quản lý Khoa học" },
 ];
 
-export default function LoginPage() {
+function LoginSkeleton() {
+  return (
+    <div className="flex min-h-[calc(100vh-140px)] w-full items-center justify-center py-6 sm:py-10 px-4">
+      <div className="w-full max-w-lg space-y-6">
+        <div className="text-center space-y-3">
+          <div className="inline-flex p-2.5 rounded-2xl bg-card border border-border/80 shadow-xs ring-1 ring-primary/10">
+            <div className="size-14 rounded-xl bg-secondary/60 animate-pulse" />
+          </div>
+          <div className="space-y-2 flex flex-col items-center">
+            <div className="h-7 w-48 bg-secondary/60 rounded-lg animate-pulse" />
+            <div className="h-4 w-64 bg-secondary/50 rounded-md animate-pulse" />
+          </div>
+        </div>
+        <div className="rounded-2xl border border-border/60 bg-card/90 p-6 shadow-card sm:p-8 space-y-4">
+          <div className="h-10 w-full bg-secondary/60 rounded-xl animate-pulse" />
+          <div className="h-12 w-full bg-secondary/40 rounded-xl animate-pulse" />
+          <div className="h-32 w-full bg-secondary/30 rounded-xl animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, register } = useAuth();
 
   const [activeTab, setActiveTab] = React.useState<"login" | "register">("login");
@@ -51,6 +78,21 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // OAuth Error handling from URL params
+  const errorParam = searchParams.get("error");
+  const emailParam = searchParams.get("email");
+  const [dismissedOAuthError, setDismissedOAuthError] = React.useState(false);
+
+  const oauthError = React.useMemo(() => {
+    return resolveOAuthError(errorParam, emailParam);
+  }, [errorParam, emailParam]);
+
+  React.useEffect(() => {
+    if (errorParam) {
+      setDismissedOAuthError(false);
+    }
+  }, [errorParam]);
 
   const handleStandardLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,6 +212,77 @@ export default function LoginPage() {
 
         {/* Main Auth Card */}
         <div className="rounded-2xl border border-border/60 bg-card/90 backdrop-blur-md p-6 shadow-card sm:p-8">
+          {/* Visual OAuth Error Banner */}
+          {oauthError && !dismissedOAuthError && (
+            <div
+              role={oauthError.variant === "neutral" ? "status" : "alert"}
+              className={cn(
+                "mb-6 rounded-xl border p-4 text-xs shadow-xs animate-in fade-in transition-all",
+                oauthError.variant === "amber" &&
+                  "border-amber-300/80 bg-amber-50/90 text-amber-950",
+                oauthError.variant === "red" &&
+                  "border-red-200 bg-red-50/90 text-red-950",
+                oauthError.variant === "neutral" &&
+                  "border-border/80 bg-secondary/60 text-secondary-foreground"
+              )}
+            >
+              <div className="flex items-start gap-3">
+                {oauthError.variant === "amber" && (
+                  <AlertTriangle
+                    className="size-5 shrink-0 text-amber-600 mt-0.5"
+                    strokeWidth={1.5}
+                  />
+                )}
+                {oauthError.variant === "red" && (
+                  <AlertCircle
+                    className="size-5 shrink-0 text-red-600 mt-0.5"
+                    strokeWidth={1.5}
+                  />
+                )}
+                {oauthError.variant === "neutral" && (
+                  <Info
+                    className="size-5 shrink-0 text-muted-foreground mt-0.5"
+                    strokeWidth={1.5}
+                  />
+                )}
+
+                <div className="flex-1 space-y-1.5">
+                  <div className="font-bold text-xs">{oauthError.title}</div>
+                  <div className="leading-relaxed opacity-90">{oauthError.message}</div>
+
+                  {oauthError.email && (
+                    <div className="pt-0.5">
+                      <span className="inline-block rounded-md bg-amber-100/90 border border-amber-300/60 px-2 py-0.5 font-mono text-xs font-semibold text-amber-900">
+                        {oauthError.email}
+                      </span>
+                    </div>
+                  )}
+
+                  {oauthError.actionText && oauthError.actionHref && (
+                    <div className="pt-2">
+                      <a
+                        href={oauthError.actionHref}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition-colors"
+                      >
+                        <span>{oauthError.actionText}</span>
+                        <ArrowRight className="size-3.5" strokeWidth={1.5} />
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setDismissedOAuthError(true)}
+                  className="shrink-0 p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-black/5 transition-colors cursor-pointer"
+                  aria-label="Đóng thông báo"
+                >
+                  <X className="size-4" strokeWidth={1.5} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Tab Selector: Login vs Register */}
           <div className="mb-6 flex rounded-xl bg-secondary/60 p-1 border border-border/50">
             <button
@@ -206,7 +319,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Error Message Display */}
+          {/* Form Error Message Display */}
           {errorMessage && (
             <div
               role="alert"
@@ -217,7 +330,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Success Message Display */}
+          {/* Form Success Message Display */}
           {successMessage && (
             <div
               role="status"
@@ -246,7 +359,7 @@ export default function LoginPage() {
                 </div>
                 <div className="relative flex justify-center text-xs uppercase tracking-wider font-semibold">
                   <span className="bg-card px-3 text-muted-foreground">
-                    Hoặc đăng nhập mật khẩu nội bộ
+                    HOẶC ĐĂNG NHẬP MẬT KHẨU NỘI BỘ
                   </span>
                 </div>
               </div>
@@ -270,7 +383,7 @@ export default function LoginPage() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="vidu: bgh@qcet.edu.vn"
+                      placeholder="vidu: bgh@cdktcnqn.edu.vn"
                       className="block w-full rounded-xl border border-border/80 bg-background pl-9 pr-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-mono"
                     />
                   </div>
@@ -337,7 +450,7 @@ export default function LoginPage() {
                   Đăng ký tài khoản nội bộ mới
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Tài khoản sẽ được khởi tạo trong CSDL PostgreSQL của trường
+                  Tài khoản sẽ được khởi tạo trong CSDL của trường
                 </p>
               </div>
 
@@ -369,7 +482,7 @@ export default function LoginPage() {
                   htmlFor="regEmail"
                   className="block text-xs font-semibold text-foreground"
                 >
-                  Email công vụ <span className="text-red-500">*</span>
+                  Email công vụ (@cdktcnqn.edu.vn) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
@@ -381,7 +494,7 @@ export default function LoginPage() {
                     required
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="canbo@qcet.edu.vn"
+                    placeholder="canbo@cdktcnqn.edu.vn"
                     className="block w-full rounded-xl border border-border/80 bg-background pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-mono"
                   />
                 </div>
@@ -490,5 +603,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<LoginSkeleton />}>
+      <LoginFormContent />
+    </React.Suspense>
   );
 }

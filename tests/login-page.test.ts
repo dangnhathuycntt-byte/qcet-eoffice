@@ -7,6 +7,7 @@ import {
   DEMO_LOGIN_CARDS,
   validateLoginForm,
   resolveDemoUserByRole,
+  resolveOAuthError,
 } from "../src/lib/login-helpers";
 
 describe("Login Page Demo Credentials", () => {
@@ -124,3 +125,131 @@ describe("Login Form Validation & Authentication Logic", () => {
     assert.ok(!drawerContent.includes("DEMO_USERS"), "DEMO_USERS must not be imported in mobile menu drawer");
   });
 });
+
+describe("OAuth Error Mapping & Resolution", () => {
+  test("returns null when no error code is provided", () => {
+    assert.equal(resolveOAuthError(null), null);
+    assert.equal(resolveOAuthError(undefined), null);
+    assert.equal(resolveOAuthError(""), null);
+  });
+
+  test("maps domain_not_allowed with amber variant, message, email, and retry action", () => {
+    const errorInfo = resolveOAuthError("domain_not_allowed", "user@gmail.com");
+    assert.ok(errorInfo, "errorInfo should not be null");
+    assert.equal(errorInfo.code, "domain_not_allowed");
+    assert.equal(errorInfo.variant, "amber");
+    assert.ok(
+      errorInfo.message.includes("Tài khoản không thuộc miền @cdktcnqn.edu.vn"),
+      "Message must mention @cdktcnqn.edu.vn"
+    );
+    assert.ok(errorInfo.message.includes("user@gmail.com"), "Message should include the violating email");
+    assert.equal(errorInfo.email, "user@gmail.com");
+    assert.equal(errorInfo.actionText, "Thử lại bằng tài khoản trường");
+    assert.equal(errorInfo.actionHref, "/api/auth/google");
+  });
+
+  test("maps account_disabled with red variant and IT department contact guidance", () => {
+    const errorInfo = resolveOAuthError("account_disabled");
+    assert.ok(errorInfo);
+    assert.equal(errorInfo.code, "account_disabled");
+    assert.equal(errorInfo.variant, "red");
+    assert.ok(
+      errorInfo.message.includes("Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa"),
+      "Message must state account is locked or disabled"
+    );
+    assert.ok(
+      errorInfo.message.includes("Phòng Quản trị Mạng và CNTT"),
+      "Message must instruct contacting IT department"
+    );
+  });
+
+  test("maps oauth_cancelled with neutral variant", () => {
+    const errorInfo = resolveOAuthError("oauth_cancelled");
+    assert.ok(errorInfo);
+    assert.equal(errorInfo.code, "oauth_cancelled");
+    assert.equal(errorInfo.variant, "neutral");
+    assert.ok(
+      errorInfo.message.includes("Bạn đã hủy quá trình đăng nhập bằng Google"),
+      "Message must state user cancelled"
+    );
+  });
+
+  test("maps oauth_state_invalid with red variant and expired/invalid message", () => {
+    const errorInfo = resolveOAuthError("oauth_state_invalid");
+    assert.ok(errorInfo);
+    assert.equal(errorInfo.code, "oauth_state_invalid");
+    assert.equal(errorInfo.variant, "red");
+    assert.ok(
+      errorInfo.message.includes("Phiên đăng nhập đã hết hạn hoặc không hợp lệ"),
+      "Message must state session expired or invalid"
+    );
+  });
+
+  test("maps oauth_not_configured with red variant and unconfigured message", () => {
+    const errorInfo = resolveOAuthError("oauth_not_configured");
+    assert.ok(errorInfo);
+    assert.equal(errorInfo.code, "oauth_not_configured");
+    assert.equal(errorInfo.variant, "red");
+    assert.ok(
+      errorInfo.message.includes("Hệ thống chưa cấu hình Google OAuth"),
+      "Message must state Google OAuth is unconfigured"
+    );
+  });
+
+  test("maps generic or unknown oauth errors (oauth_failed, etc.) with default message", () => {
+    const errorInfo = resolveOAuthError("oauth_failed");
+    assert.ok(errorInfo);
+    assert.equal(errorInfo.variant, "red");
+    assert.ok(
+      errorInfo.message.includes("Đã xảy ra lỗi trong quá trình xác thực với Google"),
+      "Message must provide generic Google authentication error notice"
+    );
+
+    const unknownInfo = resolveOAuthError("unknown_error_xyz");
+    assert.ok(unknownInfo);
+    assert.equal(unknownInfo.variant, "red");
+    assert.ok(
+      unknownInfo.message.includes("Đã xảy ra lỗi trong quá trình xác thực với Google"),
+      "Message must provide generic Google authentication error notice"
+    );
+  });
+});
+
+describe("Login Page UI Structure & Standards", () => {
+  const loginContent = fs.readFileSync(
+    path.resolve(__dirname, "../src/app/login/page.tsx"),
+    "utf8"
+  );
+
+  test("wraps content in React.Suspense boundary for useSearchParams compatibility", () => {
+    assert.ok(
+      loginContent.includes("Suspense"),
+      "Login page must import or use React.Suspense"
+    );
+    assert.ok(
+      loginContent.includes("useSearchParams"),
+      "Login page must use useSearchParams to extract error and email"
+    );
+  });
+
+  test("includes GoogleLoginButton and uppercase HOẶC divider", () => {
+    assert.ok(
+      loginContent.includes("<GoogleLoginButton"),
+      "Login page must render GoogleLoginButton component"
+    );
+    assert.ok(
+      loginContent.includes("HOẶC") || loginContent.includes("Hoặc"),
+      "Login page must include 'HOẶC' divider"
+    );
+  });
+
+  test("adheres strictly to Light-Only Standard without dark: classes or decorative emojis", () => {
+    const darkClasses = loginContent.match(/dark:[a-zA-Z0-9_-]+/g);
+    assert.equal(darkClasses, null, "Login page must not contain dark: classes");
+
+    // Ensure no decorative emojis in login page
+    const emojiRegex = /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+    assert.ok(!emojiRegex.test(loginContent), "Login page must not contain decorative emojis");
+  });
+});
+
