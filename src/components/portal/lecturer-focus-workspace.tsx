@@ -481,6 +481,10 @@ export function LecturerFocusWorkspace({
     return computeStaffUrgencySummary(resolvedTasks, referenceDate);
   }, [resolvedTasks, referenceDate]);
 
+  const inProgressCount = React.useMemo(() => {
+    return resolvedTasks.filter((t) => t.status === "IN_PROGRESS").length;
+  }, [resolvedTasks]);
+
   // 3. Filter & search state
   const [activeFilter, setActiveFilter] =
     React.useState<LecturerFilterTab>("ALL");
@@ -741,51 +745,19 @@ export function LecturerFocusWorkspace({
             <span className="font-medium text-foreground">{user.name}</span>
             <span className="text-muted-foreground/40">·</span>
             <span>{user.department || user.departmentCode || "Bộ môn"}</span>
-            <span className="text-muted-foreground/40">·</span>
-            <span className="font-mono tabular-nums">Năm học 2026 – 2027</span>
           </div>
         </div>
 
-        {/* Actions: Quick Create Task & Global Task Warehouse Link */}
-        <div className="flex items-center gap-2 self-start md:self-auto flex-wrap shrink-0">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              window.dispatchEvent(
-                new CustomEvent("qcet:open-create-task", {
-                  detail: { leadAssigneeName: user.name },
-                })
-              );
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer active:scale-95"
-            title="Tự tạo công việc cá nhân mới"
-          >
-            <Plus className="size-3.5" strokeWidth={2} />
-            <span>Tạo việc mới</span>
-          </Button>
-
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="text-xs h-8 gap-1.5 whitespace-nowrap rounded-xl border-border/80 hover:bg-muted/80"
-          >
-            <Link href={tasksUrl} className="inline-flex items-center gap-1.5">
-              <Layers className="size-3.5" strokeWidth={1.5} />
-              <span>Kho nhiệm vụ</span>
-              <ArrowRight className="size-3 ml-0.5 shrink-0" strokeWidth={1.5} />
-            </Link>
-          </Button>
-
-          {onRefresh && (
+        {/* Actions: Refresh */}
+        {onRefresh && (
+          <div className="flex items-center gap-2 self-start md:self-auto flex-wrap shrink-0">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="text-xs h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80"
+              className="text-xs h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80 cursor-pointer"
               title="Làm mới dữ liệu cá nhân"
             >
               <RefreshCw
@@ -795,229 +767,99 @@ export function LecturerFocusWorkspace({
               />
               <span className="hidden sm:inline">Làm mới</span>
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Section 2: Executive Stat Strip (5 Metrics Cards) */}
+      {/* Section 2: Unified Interactive Toolbar */}
       {/* ------------------------------------------------------------------ */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {/* Card 1: Today */}
-        <button
-          type="button"
-          onClick={() => handleStatCardClick("TODAY")}
-          className={cn(
-            "group relative text-left rounded-2xl border p-4 transition-all duration-200 cursor-pointer",
-            activeFilter === "TODAY"
-              ? "border-rose-500 bg-rose-500/10 ring-2 ring-rose-500/30 shadow-xs"
-              : "border-border/70 bg-card hover:bg-muted/40 hover:border-border"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              Hôm nay cần làm
-            </span>
-            <div
+      <div className="space-y-3 bg-card/40 p-3 rounded-2xl border border-border/70">
+        {/* Row 1: Ownership Tabs + Search + Bulk Toggle + Task Counter */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          {/* Segmented ownership tabs */}
+          <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-xl border border-border/70 w-fit shrink-0">
+            <button
+              type="button"
+              onClick={() => setOwnershipFilter("ALL")}
               className={cn(
-                "p-1.5 rounded-lg",
-                summary.todayCount > 0
-                  ? "bg-rose-500/10 text-rose-600"
-                  : "bg-muted text-muted-foreground"
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                ownershipFilter === "ALL"
+                  ? "bg-background text-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Clock className="size-4" strokeWidth={1.5} />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-foreground">
-              {summary.todayCount}
-            </span>
-            <span className="text-xs text-muted-foreground">việc</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
-            Quá hạn hoặc đến hạn
-          </p>
-        </button>
-
-        {/* Card 2: This Week */}
-        <button
-          type="button"
-          onClick={() => handleStatCardClick("THIS_WEEK")}
-          className={cn(
-            "group relative text-left rounded-2xl border p-4 transition-all duration-200 cursor-pointer",
-            activeFilter === "THIS_WEEK"
-              ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30 shadow-xs"
-              : "border-border/70 bg-card hover:bg-muted/40 hover:border-border"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              Trong tuần này
-            </span>
-            <div
+              <span>Tất cả</span>
+              {groupedTasks.length > 0 && (
+                <span className="text-xs font-bold ml-1">({groupedTasks.length})</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOwnershipFilter("LEADING")}
               className={cn(
-                "p-1.5 rounded-lg",
-                summary.thisWeekCount > 0
-                  ? "bg-blue-500/10 text-blue-600"
-                  : "bg-muted text-muted-foreground"
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
+                ownershipFilter === "LEADING"
+                  ? "bg-background text-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Calendar className="size-4" strokeWidth={1.5} />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-foreground">
-              {summary.thisWeekCount}
-            </span>
-            <span className="text-xs text-muted-foreground">việc</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
-            Hạn chót trong 7 ngày tới
-          </p>
-        </button>
-
-        {/* Card 3: Awaiting Approval */}
-        <button
-          type="button"
-          onClick={() => handleStatCardClick("NEEDS_REVIEW")}
-          className={cn(
-            "group relative text-left rounded-2xl border p-4 transition-all duration-200 cursor-pointer",
-            activeFilter === "NEEDS_REVIEW"
-              ? "border-purple-500 bg-purple-500/10 ring-2 ring-purple-500/30 shadow-xs"
-              : "border-border/70 bg-card hover:bg-muted/40 hover:border-border"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              Chờ lãnh đạo duyệt
-            </span>
-            <div
+              <User className="size-3.5" strokeWidth={1.5} />
+              <span>Tôi chủ trì (DRI)</span>
+              {countLeading > 0 && (
+                <span className="text-xs font-bold">({countLeading})</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOwnershipFilter("PARTICIPATING")}
               className={cn(
-                "p-1.5 rounded-lg",
-                summary.waitingApprovalCount > 0
-                  ? "bg-purple-500/10 text-purple-600"
-                  : "bg-muted text-muted-foreground"
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
+                ownershipFilter === "PARTICIPATING"
+                  ? "bg-background text-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Layers className="size-4" strokeWidth={1.5} />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-foreground">
-              {summary.waitingApprovalCount}
-            </span>
-            <span className="text-xs text-muted-foreground">hồ sơ</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
-            Đang trong luồng thẩm định
-          </p>
-        </button>
-
-        {/* Card 4: Revision Requested */}
-        <button
-          type="button"
-          onClick={() => handleStatCardClick("REVISION")}
-          className={cn(
-            "group relative text-left rounded-2xl border p-4 transition-all duration-200 cursor-pointer",
-            activeFilter === "REVISION"
-              ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/30 shadow-xs"
-              : "border-border/70 bg-card hover:bg-muted/40 hover:border-border"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              Cần chỉnh sửa
-            </span>
-            <div
-              className={cn(
-                "p-1.5 rounded-lg",
-                summary.revisionRequestedCount > 0
-                  ? "bg-amber-500/10 text-amber-600"
-                  : "bg-muted text-muted-foreground"
+              <Users className="size-3.5" strokeWidth={1.5} />
+              <span>Tôi tham gia (Phối hợp)</span>
+              {countParticipating > 0 && (
+                <span className="text-xs font-bold">({countParticipating})</span>
               )}
-            >
-              <AlertTriangle className="size-4" strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Search, bulk toggle & counter */}
+          <div className="flex items-center justify-between lg:justify-end gap-2.5 flex-wrap">
+            {/* Compact search input */}
+            <div className="relative w-56 sm:w-64">
+              <Search
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
+                strokeWidth={1.5}
+              />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm việc, mã số..."
+                className="w-full h-8 rounded-xl border border-border/70 bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-all"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded-md"
+                >
+                  <X className="size-3.5" strokeWidth={1.5} />
+                </button>
+              )}
             </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-foreground">
-              {summary.revisionRequestedCount}
-            </span>
-            <span className="text-xs text-muted-foreground">việc</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
-            Cần bổ sung minh chứng
-          </p>
-        </button>
 
-        {/* Card 5: Completed */}
-        <button
-          type="button"
-          onClick={() => handleStatCardClick("COMPLETED")}
-          className={cn(
-            "group relative text-left rounded-2xl border p-4 transition-all duration-200 cursor-pointer col-span-2 sm:col-span-1",
-            activeFilter === "COMPLETED"
-              ? "border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/30 shadow-xs"
-              : "border-border/70 bg-card hover:bg-muted/40 hover:border-border"
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              Đã hoàn thành
-            </span>
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600">
-              <CheckCircle2 className="size-4" strokeWidth={1.5} />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-foreground">
-              {summary.completedCount}
-            </span>
-            <span className="text-xs text-muted-foreground">việc</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
-            Đã nghiệm thu đạt chuẩn
-          </p>
-        </button>
-      </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Section 3: Search & Quick Pill Filters */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="space-y-3 pt-2">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Search Box */}
-          <div className="relative flex-1 max-w-md">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
-              strokeWidth={1.5}
-            />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm theo tên nhiệm vụ, mã công việc..."
-              className="w-full rounded-xl border border-border/70 bg-background pl-9 pr-8 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-all"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded-md"
-              >
-                <X className="size-3.5" strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
-
-          {/* Bulk Expand/Collapse & Active Filter Counter */}
-          <div className="flex items-center justify-end gap-2.5">
+            {/* Bulk Toggle Button */}
             <button
               type="button"
               onClick={handleToggleAllVisible}
               disabled={paginatedGroupedTasks.length === 0}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border/70 bg-card hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-border/70 bg-card hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
               title={
                 allVisibleCollapsed
                   ? "Mở rộng tất cả nhiệm vụ trên trang này"
@@ -1037,64 +879,18 @@ export function LecturerFocusWorkspace({
               )}
             </button>
 
+            {/* Task counter */}
             <div className="flex items-center text-xs text-muted-foreground gap-1.5 shrink-0 pl-1 border-l border-border/60">
               <Filter className="size-3.5" strokeWidth={1.5} />
               <span>
-                Hiển thị <strong>{filteredGroupedTasks.length}</strong> /{" "}
-                {groupedTasks.length} nhiệm vụ
+                Hiển thị {filteredGroupedTasks.length} / {groupedTasks.length} nhiệm vụ
               </span>
             </div>
           </div>
         </div>
 
-        {/* Ownership Role Segmented Tabs */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-xl border border-border/70 w-fit">
-            <button
-              type="button"
-              onClick={() => setOwnershipFilter("ALL")}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer",
-                ownershipFilter === "ALL"
-                  ? "bg-background text-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Tất cả ({groupedTasks.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setOwnershipFilter("LEADING")}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
-                ownershipFilter === "LEADING"
-                  ? "bg-background text-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <User className="size-3.5" strokeWidth={1.5} />
-              <span>Tôi chủ trì (DRI)</span>
-              <span className="text-xs font-bold">({countLeading})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setOwnershipFilter("PARTICIPATING")}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
-                ownershipFilter === "PARTICIPATING"
-                  ? "bg-background text-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Users className="size-3.5" strokeWidth={1.5} />
-              <span>Tôi tham gia (Phối hợp)</span>
-              <span className="text-xs font-bold">({countParticipating})</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Status Filter Pills (Without redundant 'Tất cả' button) */}
-        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1">
+        {/* Row 2: Interactive Status Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pt-1 border-t border-border/50">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-1 shrink-0 pr-1">
             <Filter className="size-3" strokeWidth={1.5} />
             <span>Lọc trạng thái:</span>
@@ -1110,8 +906,10 @@ export function LecturerFocusWorkspace({
                 : "bg-rose-500/10 text-rose-700 hover:bg-rose-500/20"
             )}
           >
-            <span>Khẩn cấp / Quá hạn</span>
-            <span className="text-xs font-bold">({summary.todayCount})</span>
+            <span>Hôm nay cần làm</span>
+            {summary.todayCount > 0 && (
+              <span className="text-xs font-bold">({summary.todayCount})</span>
+            )}
           </button>
 
           <button
@@ -1125,20 +923,25 @@ export function LecturerFocusWorkspace({
             )}
           >
             <span>Trong tuần này</span>
-            <span className="text-xs font-bold">({summary.thisWeekCount})</span>
+            {summary.thisWeekCount > 0 && (
+              <span className="text-xs font-bold">({summary.thisWeekCount})</span>
+            )}
           </button>
 
           <button
             type="button"
             onClick={() => handlePillClick(activeFilter === "IN_PROGRESS" ? "ALL" : "IN_PROGRESS")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer",
+              "px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
               activeFilter === "IN_PROGRESS"
                 ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                 : "bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground"
             )}
           >
-            Đang làm
+            <span>Đang làm</span>
+            {inProgressCount > 0 && (
+              <span className="text-xs font-bold">({inProgressCount})</span>
+            )}
           </button>
 
           <button
@@ -1151,10 +954,10 @@ export function LecturerFocusWorkspace({
                 : "bg-purple-500/10 text-purple-700 hover:bg-purple-500/20"
             )}
           >
-            <span>Chờ duyệt</span>
-            <span className="text-xs font-bold">
-              ({summary.waitingApprovalCount})
-            </span>
+            <span>Chờ lãnh đạo duyệt</span>
+            {summary.waitingApprovalCount > 0 && (
+              <span className="text-xs font-bold">({summary.waitingApprovalCount})</span>
+            )}
           </button>
 
           <button
@@ -1167,10 +970,10 @@ export function LecturerFocusWorkspace({
                 : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20"
             )}
           >
-            <span>Cần bổ sung</span>
-            <span className="text-xs font-bold">
-              ({summary.revisionRequestedCount})
-            </span>
+            <span>Cần chỉnh sửa</span>
+            {summary.revisionRequestedCount > 0 && (
+              <span className="text-xs font-bold">({summary.revisionRequestedCount})</span>
+            )}
           </button>
 
           <button
@@ -1183,10 +986,10 @@ export function LecturerFocusWorkspace({
                 : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20"
             )}
           >
-            <span>Đã xong</span>
-            <span className="text-xs font-bold">
-              ({summary.completedCount})
-            </span>
+            <span>Đã hoàn thành</span>
+            {summary.completedCount > 0 && (
+              <span className="text-xs font-bold">({summary.completedCount})</span>
+            )}
           </button>
 
           {activeFilter !== "ALL" && (
@@ -1207,18 +1010,29 @@ export function LecturerFocusWorkspace({
       {/* Section 4: 2-Tier Task List Cards */}
       {/* ------------------------------------------------------------------ */}
       {filteredGroupedTasks.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-card/40">
-          <div className="mx-auto size-12 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground mb-3">
-            <Inbox className="size-6" strokeWidth={1.5} />
+        groupedTasks.length === 0 && !searchTerm && activeFilter === "ALL" && ownershipFilter === "ALL" ? (
+          <div className="rounded-2xl border border-border/70 p-12 text-center bg-card/50 shadow-xs">
+            <div className="mx-auto size-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 mb-3">
+              <CheckCircle2 className="size-6" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-sm sm:text-base font-semibold text-foreground">
+              Tuyệt vời! Bạn không có công việc nào tồn đọng
+            </h3>
+            <p className="mt-1 text-xs sm:text-sm text-muted-foreground max-w-sm mx-auto">
+              Tất cả nhiệm vụ được giao đã hoàn thành hoặc đang chờ phân công mới.
+            </p>
           </div>
-          <h3 className="text-sm font-semibold text-foreground">
-            Không tìm thấy nhiệm vụ nào
-          </h3>
-          <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
-            Không có công việc nào thỏa mãn tiêu chí tìm kiếm hoặc bộ lọc hiện
-            tại.
-          </p>
-          {(ownershipFilter !== "ALL" || activeFilter !== "ALL" || searchTerm) && (
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-card/40">
+            <div className="mx-auto size-12 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground mb-3">
+              <Inbox className="size-6" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">
+              Không tìm thấy nhiệm vụ nào
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
+              Không có công việc nào thỏa mãn tiêu chí tìm kiếm hoặc bộ lọc hiện tại.
+            </p>
             <div className="mt-4">
               <Button
                 variant="outline"
@@ -1228,13 +1042,13 @@ export function LecturerFocusWorkspace({
                   setActiveFilter("ALL");
                   setSearchTerm("");
                 }}
-                className="text-xs rounded-xl"
+                className="text-xs h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80 cursor-pointer"
               >
-                Xóa bộ lọc &amp; xem tất cả
+                <span>Xóa bộ lọc &amp; tìm kiếm</span>
               </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )
       ) : (
         <div className="space-y-4">
           {paginatedGroupedTasks.map((group) => {
