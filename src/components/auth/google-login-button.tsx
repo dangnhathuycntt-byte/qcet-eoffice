@@ -6,7 +6,9 @@ import {
   X,
   Database,
   ArrowRight,
-  ExternalLink,
+  Loader2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,24 +46,36 @@ interface GoogleLoginButtonProps {
 }
 
 export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
+  const [isLoading, setIsLoading] = React.useState(false);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
 
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const isDev = process.env.NODE_ENV === "development";
+
+  const handleStartOAuth = () => {
+    setIsLoading(true);
+    if (typeof window !== "undefined") {
+      window.location.href = "/api/auth/google";
+    }
+  };
 
   const handleClick = () => {
-    if (!googleClientId) {
+    if (isDev && !googleClientId) {
       setIsModalOpen(true);
       return;
     }
+    handleStartOAuth();
+  };
 
-    // When GOOGLE_CLIENT_ID is configured, redirect to Google OAuth
-    const redirectUri = typeof window !== "undefined" ? `${window.location.origin}/api/auth/callback/google` : "";
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(
-      redirectUri
-    )}&response_type=code&scope=openid%20email%20profile&access_type=offline&prompt=consent`;
-
-    if (typeof window !== "undefined") {
-      window.location.href = authUrl;
+  const handleCopyCallback = async () => {
+    try {
+      const callbackUrl = "http://localhost:3001/api/auth/callback/google";
+      await navigator.clipboard.writeText(callbackUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard write failed or not supported in current environment
     }
   };
 
@@ -70,22 +84,34 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
       {/* Google Login Trigger Button */}
       <button
         type="button"
+        disabled={isLoading}
         onClick={handleClick}
         className={cn(
-          "group relative flex w-full items-center justify-center gap-3 rounded-xl border border-border/80 bg-background px-4 py-3 text-xs font-semibold text-foreground shadow-xs transition-all hover:bg-secondary/70 hover:border-primary/40 hover:shadow-card active:scale-[0.99] cursor-pointer",
+          "group relative flex w-full items-center justify-center gap-3 rounded-xl border border-border/80 bg-background px-4 py-3 text-xs font-semibold text-foreground shadow-xs transition-all hover:bg-secondary/70 hover:border-primary/40 hover:shadow-card active:scale-[0.99] cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed",
           className
         )}
       >
-        <GoogleIcon className="size-5 shrink-0 transition-transform group-hover:scale-105" />
-        <span className="font-bold text-foreground">
-          Đăng nhập với Google Workspace
-        </span>
-        <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-500/20">
-          @cdktcnqn.edu.vn
-        </span>
+        {isLoading ? (
+          <>
+            <Loader2 className="size-5 shrink-0 animate-spin text-primary" strokeWidth={1.5} />
+            <span className="font-bold text-foreground">
+              Đang chuyển hướng tới Google Workspace...
+            </span>
+          </>
+        ) : (
+          <>
+            <GoogleIcon className="size-5 shrink-0 transition-transform group-hover:scale-105" />
+            <span className="font-bold text-foreground">
+              Đăng nhập với Google Workspace
+            </span>
+            <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-500/20">
+              @cdktcnqn.edu.vn
+            </span>
+          </>
+        )}
       </button>
 
-      {/* Guidance Dialog when GOOGLE_CLIENT_ID is unconfigured */}
+      {/* Guidance Dialog when GOOGLE_CLIENT_ID is unconfigured in development */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
           <div
@@ -119,10 +145,10 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
                   id="google-dialog-title"
                   className="text-sm font-bold text-foreground"
                 >
-                  Thông báo xác thực Google Workspace
+                  Cấu hình Google Workspace OAuth
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Cấu hình dịch vụ định danh liên kết trường
+                  Dịch vụ xác thực định danh tập trung dành cho trường Cao đẳng
                 </p>
               </div>
             </div>
@@ -130,33 +156,77 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
             <div className="space-y-3 text-xs leading-relaxed text-foreground">
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 text-amber-900">
                 <p className="font-semibold">
-                  Hệ thống đang chạy CSDL PostgreSQL nội bộ. Để kích hoạt đăng nhập Google Workspace trường, vui lòng cấu hình GOOGLE_CLIENT_ID trong .env.local.
+                  Môi trường phát triển chưa cấu hình NEXT_PUBLIC_GOOGLE_CLIENT_ID trong tệp .env.local.
                 </p>
+                <p className="mt-1 text-amber-800">
+                  Vui lòng đăng ký OAuth 2.0 Client ID trên Google Cloud Console với Authorized redirect URI bên dưới:
+                </p>
+              </div>
+
+              {/* Callback URL Box with Copy Button */}
+              <div className="rounded-xl border border-border/80 bg-secondary/30 p-3 space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                  <span>Authorized redirect URI (Callback URL):</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-background p-2">
+                  <code className="flex-1 font-mono text-xs text-foreground select-all break-all">
+                    http://localhost:3001/api/auth/callback/google
+                  </code>
+                  <button
+                    type="button"
+                    onClick={handleCopyCallback}
+                    className="flex items-center gap-1 shrink-0 rounded-md bg-secondary px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+                    title="Sao chép địa chỉ callback"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="size-3.5 text-emerald-600" strokeWidth={1.5} />
+                        <span className="text-emerald-600 font-semibold">Đã copy</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="rounded-xl border border-border/80 bg-secondary/30 p-3 space-y-2">
                 <div className="flex items-center gap-2 font-medium text-foreground">
                   <Database className="size-4 text-primary shrink-0" strokeWidth={1.5} />
-                  <span>Hướng dẫn đăng nhập hiện hành:</span>
+                  <span>Hướng dẫn tài khoản đăng nhập:</span>
                 </div>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1 text-xs">
                   <li>
-                    Sử dụng form đăng nhập email / mật khẩu bên dưới với các tài khoản nội bộ nhà trường.
+                    Sử dụng form đăng nhập email / mật khẩu nội bộ với các tài khoản thử nghiệm của nhà trường.
                   </li>
                   <li>
-                    Cán bộ, giảng viên sử dụng email công vụ nhà trường (@qcet.edu.vn) để đăng nhập hoặc liên hệ Bộ phận Quản trị mạng & CNTT để được cấp tài khoản.
+                    Tài khoản cán bộ, giảng viên có đuôi miền @cdktcnqn.edu.vn được hỗ trợ tự động định danh và phân quyền theo phòng ban.
                   </li>
                 </ul>
               </div>
             </div>
 
-            <div className="mt-5 flex items-center justify-end gap-2.5">
+            <div className="mt-5 flex items-center justify-between gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  handleStartOAuth();
+                }}
+                className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer"
+              >
+                <span>Vẫn thử tới /api/auth/google</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
               >
-                <span>Đã hiểu, quay lại đăng nhập</span>
+                <span>Đã hiểu, đóng</span>
                 <ArrowRight className="size-3.5" strokeWidth={1.5} />
               </button>
             </div>
