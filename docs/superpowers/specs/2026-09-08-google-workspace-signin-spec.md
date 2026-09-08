@@ -34,29 +34,32 @@ Hiện tại, giao diện đăng nhập của QCET E-Office đã có nút *"Đă
          ▼
 [ Next.js API: GET /api/auth/google ]
          │
-         │  2. Sinh state = crypto.randomUUID()
-         │  3. Ghi cookie HttpOnly: qcet_oauth_state
-         │  4. HTTP 302 Redirect sang Google (kèm hd=cdktcnqn.edu.vn)
+         │  2. Phân giải Base URL (NEXTAUTH_URL / x-forwarded-host / origin)
+         │  3. Sinh state = crypto.randomUUID()
+         │  4. Ghi cookie HttpOnly: qcet_oauth_state
+         │  5. HTTP 302 Redirect sang Google (kèm hd=cdktcnqn.edu.vn)
          ▼
 [ Google OAuth 2.0 Authorization Server ]
          │
-         │  5. Cán bộ chọn tài khoản @cdktcnqn.edu.vn & cấp quyền
-         │  6. Chuyển hướng về /api/auth/callback/google?code=...&state=...
+         │  6. Cán bộ chọn tài khoản @cdktcnqn.edu.vn & cấp quyền
+         │  7. Chuyển hướng về /api/auth/callback/google?code=...&state=...
          ▼
 [ Next.js API: GET /api/auth/callback/google ]
          │
-         │  7. Xác thực state chống CSRF
-         │  8. POST https://oauth2.googleapis.com/token (đổi code lấy tokens)
-         │  9. GET https://www.googleapis.com/oauth2/v3/userinfo
-         │  10. KIỂM TRA TÊN MIỀN: email.endsWith("@cdktcnqn.edu.vn")
-         │      - Thất bại -> 302 Redirect /login?error=domain_not_allowed
-         │  11. Đối soát Prisma DB (User & Account):
+         │  8. Xác thực state chống CSRF (so khớp cookie qcet_oauth_state)
+         │  9. POST https://oauth2.googleapis.com/token (đổi code lấy tokens)
+         │  10. GET https://www.googleapis.com/oauth2/v3/userinfo
+         │  11. KIỂM TRA ĐA TẦNG TÊN MIỀN (Dual-layer check):
+         │      - email_verified === true
+         │      - email.endsWith("@cdktcnqn.edu.vn") & hd === "cdktcnqn.edu.vn"
+         │      - Thất bại -> 302 Redirect /login?error=domain_not_allowed&email=...
+         │  12. Đối soát & Đồng bộ Prisma DB qua Atomic Transaction (prisma.$transaction):
          │      - Tìm Account(provider='google', providerAccountId=sub)
          │      - Hoặc tìm User(email) -> Tạo Account liên kết
          │      - Hoặc tạo mới User(CHUYEN_VIEN) + Account
-         │  12. Kiểm tra user.isActive === true
-         │  13. Ký JWT qcet_session & xóa qcet_oauth_state
-         │  14. 302 Redirect về "/" (Trang điều hành E-Office)
+         │  13. Kiểm tra user.isActive === true
+         │  14. Ký JWT qcet_session & xóa qcet_oauth_state
+         │  15. 302 Redirect về "/" (Trang điều hành E-Office)
          ▼
 [ Trang Chủ E-Office / ]
 ```
@@ -66,19 +69,24 @@ Hiện tại, giao diện đăng nhập của QCET E-Office đã có nút *"Đă
 ## 3. Đặc Tả Chi Tiết Các Endpoint
 
 ### 3.1. Endpoint Khởi Tạo: `GET /api/auth/google`
-- **Mục đích:** Khởi tạo phiên OAuth 2.0 an toàn từ server, b��o vệ Secret và sinh tham số chống giả mạo.
-- **Quy trình:**
+- **Mục đích:** Khởi tạo phiên OAuth 2.0 an toàn từ server, bảo vệ Secret và sinh tham số chống giả mạo.
+- **Quy tr��nh:**
   1. Đọc biến môi trường `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET`.
   2. Nếu thiếu cấu hình: Trả về HTTP 302 Redirect `/login?error=oauth_not_configured`.
-  3. Sinh `state = crypto.randomUUID()`.
-  4. Lưu cookie `qcet_oauth_state`:
+  3. **Phân giải Base URL an toàn (Tránh lệch Redirect URI khi chạy Docker/Reverse Proxy):**
+     - Thứ tự ưu tiên:
+       1. `process.env.NEXTAUTH_URL` hoặc `process.env.NEXT_PUBLIC_APP_URL` (nếu có).
+       2. Header `x-forwarded-proto` + `://` + `x-forwarded-host` (khi chạy sau Nginx/Caddy/Docker).
+       3. `request.nextUrl.origin` (môi trường dev local).
+  4. Sinh `state = crypto.randomUUID()`.
+  5. Lưu cookie `qcet_oauth_state`:
      - `value`: `state`
      - `httpOnly`: `true`
      - `sameSite`: `"lax"`
      - `secure`: `process.env.NODE_ENV === "production"`
      - `maxAge`: `300` (5 phút)
      - `path`: `/api/auth`
-  5. Xây dựng Google Authorization URL:
+  6. Xây dựng Google Authorization URL:
      ```
      https://accounts.google.com/o/oauth2/v2/auth?
        client_id=${GOOGLE_CLIENT_ID}&
@@ -90,7 +98,7 @@ Hiện tại, giao diện đăng nhập của QCET E-Office đã có nút *"Đă
        prompt=select_account&
        access_type=offline
      ```
-  6. Phản hồi HTTP 302 Redirect tới URL trên.
+  7. Phản hồi HTTP 302 Redirect tới URL trên.
 
 ### 3.2. Endpoint Tiếp Nhận Callback: `GET /api/auth/callback/google`
 - **Mục đích:** Xử lý kết quả trả về từ Google, xác minh thông tin, liên kết dữ liệu và cấp phát phiên đăng nhập.
@@ -115,23 +123,25 @@ Hiện tại, giao diện đăng nhập của QCET E-Office đã có nút *"Đă
        - `name` (Họ và tên đầy đủ)
        - `picture` (Ảnh đại diện Google)
        - `hd` (Hosted domain)
-  5. **Thẩm định Tên miền & Trạng thái email:**
-     - Yêu cầu: `email_verified === true`.
-     - Yêu cầu: `email.toLowerCase().endsWith("@cdktcnqn.edu.vn")`.
+  5. **Th��m định Tên miền & Trạng thái email (Dual-layer check):**
+     - Yêu cầu 1: `email_verified === true`.
+     - Yêu cầu 2: `email.toLowerCase().endsWith("@cdktcnqn.edu.vn")`.
+     - Yêu cầu 3: `hd === "cdktcnqn.edu.vn"` (khi tài khoản thuộc Google Workspace).
      - Nếu vi phạm (ví dụ dùng `@gmail.com` hoặc trường khác):
        - Redirect: `/login?error=domain_not_allowed&email=${encodeURIComponent(email)}`.
-  6. **Cập nhật & Đồng bộ CSDL (Prisma Transaction):**
-     - Bước A: Kiểm tra xem đã có bản ghi `Account` với `provider = "google"` và `providerAccountId = sub` chưa.
-     - Bước B: Nếu chưa có `Account`, kiểm tra `User` qua `email.toLowerCase()`:
-       - **Nếu đã có User:** Tạo bản ghi `Account` mới trỏ đến `userId = user.id`. Nếu `user.avatarUrl` rỗng thì cập nhật bằng `picture`.
-       - **Nếu chưa có User:** Tạo mới `User`:
-         - `email`: `email.toLowerCase()`
-         - `name`: `googleUserInfo.name || email.split("@")[0]`
-         - `role`: `UserRole.CHUYEN_VIEN`
-         - `avatarUrl`: `googleUserInfo.picture`
-         - `provider`: `"google"`
-         - `isActive`: `true`
-         - Đồng thời tạo bản ghi `Account` liên kết.
+  6. **Cập nhật & Đồng bộ CSDL qua Atomic Transaction (`prisma.$transaction`):**
+     - Đảm bảo tính nhất quán dữ liệu, chống race condition khi click đúp:
+       - **Bước A:** Kiểm tra bản ghi `Account` (`provider = "google"`, `providerAccountId = sub`).
+       - **Bước B:** Nếu chưa có `Account`, kiểm tra `User` qua `email.toLowerCase()`:
+         - **Nếu đã có User:** Tạo bản ghi `Account` mới liên kết vào `userId = user.id`. Cập nhật `avatarUrl = picture` nếu user chưa có ảnh.
+         - **Nếu chưa có User:** Tạo mới `User`:
+           - `email`: `email.toLowerCase()`
+           - `name`: `googleUserInfo.name || email.split("@")[0]`
+           - `role`: `UserRole.CHUYEN_VIEN`
+           - `avatarUrl`: `googleUserInfo.picture`
+           - `provider`: `"google"`
+           - `isActive`: `true`
+           - Đồng thời tạo bản ghi `Account` liên kết với đầy đủ tokens.
   7. **Kiểm tra trạng thái kích hoạt:**
      - Nếu `user.isActive === false`: Redirect `/login?error=account_disabled`.
   8. **Cấp phát Session:**
