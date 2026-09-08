@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/icons/icon-192x192.png",
     shortcut: "/icons/icon-192x192.png",
-    apple: "/apple-touch-icon.png",
+    apple: "/logo-qcet.png", // apple-touch-icon
   },
 };
 
@@ -85,26 +85,11 @@ export default function RootLayout({
                   }
                 } catch (e) {}
                 if ('serviceWorker' in navigator) {
-                  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    navigator.serviceWorker.getRegistrations().then(function(regs) {
-                      for (var r of regs) {
-                        r.unregister();
-                      }
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                      console.error('ServiceWorker registration failed:', err);
                     });
-                    if (typeof caches !== 'undefined') {
-                      caches.keys().then(function(names) {
-                        for (var n of names) {
-                          caches.delete(n);
-                        }
-                      });
-                    }
-                  } else {
-                    window.addEventListener('load', function() {
-                      navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                        console.error('ServiceWorker registration failed:', err);
-                      });
-                    });
-                  }
+                  });
                 }
               })();
             `,

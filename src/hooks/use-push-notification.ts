@@ -48,6 +48,25 @@ function detectDeviceType(): string {
   return 'desktop';
 }
 
+/**
+ * Race a promise against a safety timeout to prevent deadlocks on unsupported or unresponsive browsers.
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs = 4000, fallbackVal: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallbackVal), timeoutMs);
+  });
+  return Promise.race([
+    promise.then((val) => {
+      if (timer) clearTimeout(timer);
+      return val;
+    }),
+    timeoutPromise,
+  ]);
+}
+
+const runWithTimeout = withTimeout;
+
 export interface UsePushNotificationReturn {
   isSupported: boolean;
   permission: NotificationPermission | 'unsupported';
@@ -96,14 +115,18 @@ export function usePushNotification(): UsePushNotificationReturn {
     const initializeRegistration = async () => {
       try {
         let reg: ServiceWorkerRegistration | null =
-          (await navigator.serviceWorker.getRegistration('/')) ?? null;
+          (await withTimeout(navigator.serviceWorker.getRegistration('/'), 4000, null)) ?? null;
         if (!reg) {
-          reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+          reg = await withTimeout(
+            navigator.serviceWorker.register('/sw.js', { scope: '/' }),
+            4000,
+            null
+          );
         }
-        if (!isMounted) return;
+        if (!isMounted || !reg) return;
         setRegistration(reg);
 
-        const existingSub = await reg.pushManager.getSubscription();
+        const existingSub = await withTimeout(reg.pushManager.getSubscription(), 4000, null);
         if (!isMounted) return;
 
         if (existingSub) {
@@ -155,16 +178,22 @@ export function usePushNotification(): UsePushNotificationReturn {
       // Ensure service worker registration is available
       let reg: ServiceWorkerRegistration | null = registration;
       if (!reg) {
-        reg = (await navigator.serviceWorker.getRegistration('/')) ?? null;
+        reg = (await withTimeout(navigator.serviceWorker.getRegistration('/'), 4000, null)) ?? null;
         if (!reg) {
-          reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+          reg = await withTimeout(
+            navigator.serviceWorker.register('/sw.js', { scope: '/' }),
+            4000,
+            null
+          );
         }
-        const swReadyPromise = navigator.serviceWorker.ready;
-        const swTimeout = new Promise<ServiceWorkerRegistration>((resolve) => {
-          setTimeout(() => resolve(reg!), 2500);
-        });
-        reg = await Promise.race([swReadyPromise, swTimeout]);
-        setRegistration(reg);
+        if (reg) {
+          reg = await withTimeout(navigator.serviceWorker.ready, 4000, reg);
+          setRegistration(reg);
+        }
+      }
+
+      if (!reg) {
+        throw new Error('Không thể đăng ký Service Worker cho thông báo');
       }
 
       // Fetch VAPID public key
@@ -178,14 +207,22 @@ export function usePushNotification(): UsePushNotificationReturn {
       }
 
       // Check for existing subscription or create new one
-      let activeSub = await reg.pushManager.getSubscription();
+      let activeSub = await withTimeout(reg.pushManager.getSubscription(), 4000, null);
 
       if (!activeSub) {
         const applicationServerKey = urlBase64ToUint8Array(keyData.publicKey);
-        activeSub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey,
-        });
+        activeSub = await withTimeout(
+          reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey,
+          }),
+          4000,
+          null as unknown as PushSubscription
+        );
+      }
+
+      if (!activeSub) {
+        throw new Error('Không thể tạo thông tin đăng ký Push');
       }
 
       const subJson = activeSub.toJSON();
@@ -254,7 +291,7 @@ export function usePushNotification(): UsePushNotificationReturn {
     try {
       let activeSub = subscription;
       if (!activeSub && registration) {
-        activeSub = await registration.pushManager.getSubscription();
+        activeSub = await withTimeout(registration.pushManager.getSubscription(), 4000, null);
       }
 
       if (!activeSub) {
