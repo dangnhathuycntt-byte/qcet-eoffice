@@ -142,19 +142,16 @@ export default function LoginPage() {
       <div className="w-full max-w-lg space-y-6">
         {/* Institutional Header */}
         <div className="text-center space-y-3">
-          <div className="inline-flex p-3 rounded-2xl bg-card border border-border/80 shadow-glow-primary ring-1 ring-primary/20">
-            <div className="relative size-12 flex items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold shadow-xs overflow-hidden">
+          <div className="inline-flex p-2.5 rounded-2xl bg-card border border-border/80 shadow-xs ring-1 ring-primary/10">
+            <div className="relative size-14 flex items-center justify-center rounded-xl overflow-hidden">
               <Image
                 src="/logo-qcet.png"
                 alt="Logo QCET"
-                width={48}
-                height={48}
+                width={56}
+                height={56}
                 className="object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
+                priority
               />
-              <Building2 className="size-6 absolute" aria-hidden="true" strokeWidth={1.5} />
             </div>
           </div>
 
