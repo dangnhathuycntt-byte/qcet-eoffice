@@ -2,61 +2,18 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
 import {
-  DEMO_LOGIN_CARDS,
   validateLoginForm,
   resolveDemoUserByRole,
   resolveOAuthError,
   sanitizeRedirectUrl,
 } from "../src/lib/login-helpers";
 
-describe("Login Page Demo Credentials", () => {
-  test("provides credentials and shortcuts for BGH, HOD, and Staff", () => {
-    assert.equal(DEFAULT_DEMO_USERS.length, 3);
-    assert.equal(DEFAULT_DEMO_USERS[0].email, "bgh@cdktcnqn.edu.vn");
-  });
-
-  test("contains authentic QCET demo cards configuration matching brief verbatim", () => {
-    assert.equal(DEMO_LOGIN_CARDS.length, 3);
-
-    // 1. Ban Giám hiệu
-    const bghCard = DEMO_LOGIN_CARDS.find((c) => c.role === "ADMIN");
-    assert.ok(bghCard, "BGH card must exist");
-    assert.equal(bghCard?.title, "Ban Giám hiệu");
-    assert.equal(bghCard?.subtitle, "Hiệu trưởng / bgh@cdktcnqn.edu.vn");
-    assert.equal(bghCard?.email, "bgh@cdktcnqn.edu.vn");
-
-    // 2. Trưởng đơn vị
-    const hodCard = DEMO_LOGIN_CARDS.find((c) => c.role === "MANAGER");
-    assert.ok(hodCard, "HOD card must exist");
-    assert.equal(hodCard?.title, "Trưởng đơn vị");
-    assert.equal(hodCard?.subtitle, "Trưởng phòng Đào tạo & QLKH / daotao@cdktcnqn.edu.vn");
-    assert.equal(hodCard?.email, "daotao@cdktcnqn.edu.vn");
-
-    // 3. Chuyên viên
-    const staffCard = DEMO_LOGIN_CARDS.find((c) => c.role === "STAFF");
-    assert.ok(staffCard, "Staff card must exist");
-    assert.equal(staffCard?.title, "Chuyên viên");
-    assert.equal(staffCard?.subtitle, "Cán bộ CNTT - Nguyễn Ngọc Vinh / vinhnn@cdktcnqn.edu.vn");
-    assert.equal(staffCard?.email, "vinhnn@cdktcnqn.edu.vn");
-  });
-
-  test("resolves demo user correctly by role", () => {
-    const admin = resolveDemoUserByRole("ADMIN");
-    assert.ok(admin);
-    assert.equal(admin.role, "ADMIN");
-    assert.equal(admin.email, "bgh@cdktcnqn.edu.vn");
-
-    const manager = resolveDemoUserByRole("MANAGER");
-    assert.ok(manager);
-    assert.equal(manager.role, "MANAGER");
-    assert.equal(manager.email, "daotao@cdktcnqn.edu.vn");
-
-    const staff = resolveDemoUserByRole("STAFF");
-    assert.ok(staff);
-    assert.equal(staff.role, "STAFF");
-    assert.equal(staff.email, "vinhnn@cdktcnqn.edu.vn");
+describe("Login Form Validation & Safe Fallback Contract", () => {
+  test("resolveDemoUserByRole safely returns undefined in zero-mock environment", () => {
+    assert.equal(resolveDemoUserByRole("ADMIN"), undefined);
+    assert.equal(resolveDemoUserByRole("MANAGER"), undefined);
+    assert.equal(resolveDemoUserByRole("STAFF"), undefined);
   });
 });
 
@@ -82,39 +39,32 @@ describe("Login Form Validation & Authentication Logic", () => {
     assert.ok(result.error?.includes("ít nhất 4 ký tự"));
   });
 
-  test("authenticates known demo emails with corresponding demo user payload", () => {
+  test("validates properly formatted credentials without synthesizing mock users", () => {
     const resultAdmin = validateLoginForm("bgh@cdktcnqn.edu.vn", "password123");
     assert.equal(resultAdmin.valid, true);
-    assert.equal(resultAdmin.user?.role, "ADMIN");
-    assert.equal(resultAdmin.user?.email, "bgh@cdktcnqn.edu.vn");
+    assert.equal(resultAdmin.user, undefined, "Must not synthesize mock user");
 
     const resultManager = validateLoginForm("daotao@cdktcnqn.edu.vn", "password123");
     assert.equal(resultManager.valid, true);
-    assert.equal(resultManager.user?.role, "MANAGER");
-    assert.equal(resultManager.user?.email, "daotao@cdktcnqn.edu.vn");
+    assert.equal(resultManager.user, undefined);
 
     const resultStaff = validateLoginForm("vinhnn@cdktcnqn.edu.vn", "password123");
     assert.equal(resultStaff.valid, true);
-    assert.equal(resultStaff.user?.role, "STAFF");
-    assert.equal(resultStaff.user?.email, "vinhnn@cdktcnqn.edu.vn");
+    assert.equal(resultStaff.user, undefined);
   });
 
-  test("does not infer privileges from email substrings and defaults unknown emails to STAFF and Chuyên viên", () => {
-    // Attempting privilege escalation via substring matching in email
-    const fakeBgh = validateLoginForm("bgh-hacker@cdktcnqn.edu.vn");
+  test("validates unknown emails without synthesizing fake privilege or staff users", () => {
+    const fakeBgh = validateLoginForm("bgh-hacker@cdktcnqn.edu.vn", "pass1234");
     assert.equal(fakeBgh.valid, true);
-    assert.equal(fakeBgh.user?.role, "STAFF");
-    assert.equal(fakeBgh.user?.roleLabel, "Chuyên viên");
+    assert.equal(fakeBgh.user, undefined);
 
-    const fakeDaotao = validateLoginForm("phong.daotao.fake@cdktcnqn.edu.vn");
+    const fakeDaotao = validateLoginForm("phong.daotao.fake@cdktcnqn.edu.vn", "pass1234");
     assert.equal(fakeDaotao.valid, true);
-    assert.equal(fakeDaotao.user?.role, "STAFF");
-    assert.equal(fakeDaotao.user?.roleLabel, "Chuyên viên");
+    assert.equal(fakeDaotao.user, undefined);
 
-    const standardUnknown = validateLoginForm("nguyenvana@cdktcnqn.edu.vn");
+    const standardUnknown = validateLoginForm("nguyenvana@cdktcnqn.edu.vn", "pass1234");
     assert.equal(standardUnknown.valid, true);
-    assert.equal(standardUnknown.user?.role, "STAFF");
-    assert.equal(standardUnknown.user?.roleLabel, "Chuyên viên");
+    assert.equal(standardUnknown.user, undefined);
   });
 
   test("login page route file exists in src/app/login/page.tsx", () => {

@@ -55,7 +55,11 @@ export async function POST(req: Request) {
 
     const response = NextResponse.json({
       success: true,
-      user: sessionPayload,
+      user: {
+        ...sessionPayload,
+        onboardedAt: user.onboardedAt ? user.onboardedAt.toISOString() : null,
+        onboardingData: user.onboardingData || null,
+      },
     });
 
     response.cookies.set({

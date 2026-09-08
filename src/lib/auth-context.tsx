@@ -9,7 +9,6 @@ import React, {
   ReactNode,
 } from "react";
 import { AuthUser, UserRole, OnboardingData } from "../types/auth";
-import { DEFAULT_DEMO_USERS } from "./role-task-filter";
 
 export const AUTH_STORAGE_KEY = "qcet_active_user";
 export const REGISTERED_USERS_KEY = "qcet_registered_users";
@@ -208,14 +207,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } catch {
               // not JSON
             }
-            const found = DEFAULT_DEMO_USERS.find(
-              (u) => u.role === saved || u.id === saved
-            );
-            if (found) {
-              setUser(found);
-              setIsLoading(false);
-              return;
-            }
           }
         } catch {
           // localStorage unavailable
@@ -324,38 +315,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const switchRole = useCallback((role: UserRole) => {
-    const targetUser =
-      DEFAULT_DEMO_USERS.find((u) => u.role === role) || DEFAULT_DEMO_USERS[0];
-    setUser(targetUser);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(targetUser));
-      } catch {
-        // ignore
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated: AuthUser = {
+        ...prev,
+        role,
+        roleLabel:
+          role === "ADMIN"
+            ? "Ban Giám hiệu"
+            : role === "MANAGER"
+            ? "Trưởng đơn vị"
+            : "Chuyên viên",
+      };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
       }
-      fetch("/api/auth/demo-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: targetUser.role, userId: targetUser.id }),
-      }).catch((e) => console.warn("switchRole demo-session sync failed:", e));
-    }
+      return updated;
+    });
   }, []);
 
   const switchUser = useCallback((userId: string) => {
-    const targetUser =
-      DEFAULT_DEMO_USERS.find((u) => u.id === userId || u.role === userId) || DEFAULT_DEMO_USERS[0];
-    setUser(targetUser);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(targetUser));
-      } catch {
-        // ignore
+    const registered = getRegisteredUsers();
+    const targetUser = registered.find((u) => u.id === userId || u.email === userId);
+    if (targetUser) {
+      setUser(targetUser);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(targetUser));
+        } catch {
+          // ignore
+        }
       }
-      fetch("/api/auth/demo-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: targetUser.id, role: targetUser.role }),
-      }).catch((e) => console.warn("switchUser demo-session sync failed:", e));
     }
   }, []);
 
@@ -381,23 +375,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return updated;
       }
 
-      // 2. Check if email matches one of the demo users
-      const matchingDemo = DEFAULT_DEMO_USERS.find(
-        (u) => u.email.toLowerCase() === normalizedEmail
-      );
-      if (matchingDemo) {
-        const demoWithAvatar = {
-          ...matchingDemo,
-          avatar: payload.avatar || matchingDemo.avatar,
-        };
-        setUser(demoWithAvatar);
-        if (typeof window !== "undefined") {
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(demoWithAvatar));
-        }
-        return demoWithAvatar;
-      }
-
-      // 3. Auto-provision new AuthUser
+      // 2. Auto-provision new AuthUser
       const emailPrefix = normalizedEmail.split("@")[0];
       const formattedName =
         payload.name ||

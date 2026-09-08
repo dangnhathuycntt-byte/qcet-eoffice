@@ -71,6 +71,14 @@ export async function POST(req: Request) {
         role: PrismaUserRole.CHUYEN_VIEN,
         departmentId: assignedDepartmentId,
         title: title?.trim() || "Chuyên viên",
+        onboardedAt: null,
+        onboardingData: {
+          hasSeenWelcome: false,
+          hasCompletedTour: false,
+          completedSteps: ["step-profile"],
+          isDismissed: false,
+          snoozedUntil: null,
+        },
       },
       select: {
         id: true,
@@ -79,6 +87,8 @@ export async function POST(req: Request) {
         role: true,
         departmentId: true,
         title: true,
+        onboardedAt: true,
+        onboardingData: true,
       },
     });
 
@@ -86,8 +96,17 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Register error:", error);
     return NextResponse.json(
-      { error: "Đã xảy ra lỗi khi tạo tài khoản" },
-      { status: 500 }
+      {
+        type: "https://tools.ietf.org/html/rfc7807",
+        title: "Internal Server Error",
+        status: 500,
+        detail: "Đã xảy ra lỗi khi tạo tài khoản",
+        error: "Đã xảy ra lỗi khi tạo tài khoản",
+      },
+      {
+        status: 500,
+        headers: { "Content-Type": "application/problem+json" },
+      }
     );
   }
 }
