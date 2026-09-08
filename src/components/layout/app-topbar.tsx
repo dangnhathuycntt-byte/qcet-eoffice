@@ -27,7 +27,6 @@ import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-conte
 import { ScopeSwitcher } from "@/components/layout/scope-switcher";
 import { useAuth } from "@/lib/auth-context";
 import { UserRole } from "@/types/auth";
-import { UserProfileModal } from "@/components/auth/user-profile-modal";
 import { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -35,6 +34,11 @@ import { cn } from "@/lib/utils";
 // Lazy-loaded modal to avoid loading on initial topbar render
 const CreateTaskModal = dynamic(
   () => import("@/components/dashboard/create-task-modal").then((m) => m.CreateTaskModal),
+  { ssr: false }
+);
+
+const UserProfileModal = dynamic(
+  () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
   { ssr: false }
 );
 

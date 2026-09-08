@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   SidebarProvider,
   useSidebar,
@@ -9,14 +10,34 @@ import {
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
-import { PushOnboardingSheet } from "@/components/pwa/push-onboarding-sheet";
-import { MobileAppInstallModal } from "@/components/pwa/mobile-app-install-modal";
 import { OfflineBanner } from "@/components/layout/offline-banner";
-import { WelcomeModal } from "@/components/onboarding/welcome-modal";
-import { SpotlightTour } from "@/components/onboarding/spotlight-tour";
-import { OnboardingChecklistWidget } from "@/components/onboarding/onboarding-checklist-widget";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { cn } from "@/lib/utils";
+
+const PushOnboardingSheet = dynamic(
+  () => import("@/components/pwa/push-onboarding-sheet").then((m) => m.PushOnboardingSheet),
+  { ssr: false }
+);
+
+const MobileAppInstallModal = dynamic(
+  () => import("@/components/pwa/mobile-app-install-modal").then((m) => m.MobileAppInstallModal),
+  { ssr: false }
+);
+
+const WelcomeModal = dynamic(
+  () => import("@/components/onboarding/welcome-modal").then((m) => m.WelcomeModal),
+  { ssr: false }
+);
+
+const SpotlightTour = dynamic(
+  () => import("@/components/onboarding/spotlight-tour").then((m) => m.SpotlightTour),
+  { ssr: false }
+);
+
+const OnboardingChecklistWidget = dynamic(
+  () => import("@/components/onboarding/onboarding-checklist-widget").then((m) => m.OnboardingChecklistWidget),
+  { ssr: false }
+);
 
 export function OnboardingHub() {
   const onboarding = useOnboarding();

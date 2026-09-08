@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import {
   DashboardStateProvider,
   useDashboardNav,
@@ -8,12 +9,24 @@ import {
 } from "@/components/dashboard/dashboard-context";
 import { DashboardZone } from "@/components/dashboard/zones/dashboard-zone";
 import { TasksZone } from "@/components/dashboard/zones/tasks-zone";
-import { CalendarZone } from "@/components/dashboard/zones/calendar-zone";
-import { OrgZone } from "@/components/dashboard/zones/org-zone";
-import { DocumentsZone } from "@/components/dashboard/zones/documents-zone";
 import { DashboardModalsHost } from "@/components/dashboard/dashboard-modals-host";
 import type { DelegationRule } from "@/types/delegation";
 import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
+
+const CalendarZone = dynamic(
+  () => import("@/components/dashboard/zones/calendar-zone").then((m) => m.CalendarZone),
+  { ssr: false }
+);
+
+const OrgZone = dynamic(
+  () => import("@/components/dashboard/zones/org-zone").then((m) => m.OrgZone),
+  { ssr: false }
+);
+
+const DocumentsZone = dynamic(
+  () => import("@/components/dashboard/zones/documents-zone").then((m) => m.DocumentsZone),
+  { ssr: false }
+);
 
 function DashboardLoadingFallback() {
   return (
