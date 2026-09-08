@@ -37,12 +37,17 @@ export interface UnifiedAdaptiveWorkspaceProps {
   selectedDepartment?: string;
   contextTitle?: string;
   contextBadge?: string;
+  initialLoading?: boolean;
+  isLoading?: boolean;
+  isOffline?: boolean;
+  errorMessage?: string | null;
+  hideScopeSwitcher?: boolean;
   onSelectTask: (task: SchoolTask | StaffTask) => void;
   onReview?: (payload: ApprovalActionPayload) => Promise<void> | void;
   onSubmitDeliverable?: (payload: DeliverableSubmissionPayload) => Promise<void> | void;
   onStatusChange?: (taskId: string, status: TaskStatus, note?: string) => void;
   onSendReminder?: (targetDeptOrUser: string, reason: string) => void;
-  onCreateTask?: (level: "TRUONG" | "DON_VI", parentTaskId?: string) => void;
+  onCreateTask?: (scope: WorkspaceScope | "TRUONG" | "DON_VI", parentTaskId?: string) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   onAction?: (action: string, payload?: unknown) => void;

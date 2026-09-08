@@ -16,6 +16,7 @@ export interface AdaptiveScopeHeaderProps {
   onRefresh?: () => void;
   onCreateTask?: () => void;
   isRefreshing?: boolean;
+  hideScopeSwitcher?: boolean;
 }
 
 const scopeActiveStyles: Record<WorkspaceScope, string> = {
@@ -51,9 +52,12 @@ export function AdaptiveScopeHeader({
   onRefresh,
   onCreateTask,
   isRefreshing,
+  hideScopeSwitcher,
 }: AdaptiveScopeHeaderProps) {
   const isExecutive = isExecutiveUser(user);
   const isManager = isManagerUser(user) || isExecutive;
+  const isStaffOnly = !isExecutive && !isManager;
+  const shouldHideSwitcher = Boolean(hideScopeSwitcher || isStaffOnly);
   const unitLabel = user.department || user.departmentCode || "Đơn vị";
 
   // Check URL search params on mount if not matching current activeScope
@@ -117,57 +121,68 @@ export function AdaptiveScopeHeader({
       className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-border/60"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div
-          role="tablist"
-          aria-label="Phạm vi công việc"
-          className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/70"
-        >
-          {scopes
-            .filter((s) => s.visible)
-            .map((s) => {
-              const Icon = s.icon;
-              const isActive = activeScope === s.id;
-              const count = badgeCounts?.[s.id];
-              const showBadge = typeof count === "number" && count > 0;
+        {!shouldHideSwitcher ? (
+          <div
+            role="tablist"
+            aria-label="Phạm vi công việc"
+            className="flex items-center p-1 bg-muted/60 rounded-xl border border-border/70"
+          >
+            {scopes
+              .filter((s) => s.visible)
+              .map((s) => {
+                const Icon = s.icon;
+                const isActive = activeScope === s.id;
+                const count = badgeCounts?.[s.id];
+                const showBadge = typeof count === "number" && count > 0;
 
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  role="tab"
-                  id={`scope-tab-${s.id}`}
-                  aria-selected={isActive}
-                  tabIndex={isActive ? 0 : -1}
-                  data-scope={s.id}
-                  onClick={() => handleScopeClick(s.id)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer min-h-[44px] sm:min-h-[36px] touch-manipulation border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                    isActive
-                      ? scopeActiveStyles[s.id]
-                      : "text-muted-foreground border-transparent hover:text-foreground hover:bg-card/50"
-                  )}
-                >
-                  <Icon className="size-3.5 shrink-0 select-none" strokeWidth={1.5} aria-hidden="true" />
-                  <span className="hidden sm:inline">{s.label}</span>
-                  <span className="sm:hidden">{s.shortLabel}</span>
-                  {showBadge && (
-                    <span
-                      data-slot="scope-badge"
-                      aria-label={`${count} nhiệm vụ`}
-                      className={cn(
-                        "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-mono tabular-nums font-semibold border ml-0.5",
-                        isActive
-                          ? scopeBadgeActiveStyles[s.id]
-                          : "bg-muted text-muted-foreground border-border/60"
-                      )}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-        </div>
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    role="tab"
+                    id={`scope-tab-${s.id}`}
+                    aria-selected={isActive}
+                    tabIndex={isActive ? 0 : -1}
+                    data-scope={s.id}
+                    onClick={() => handleScopeClick(s.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer min-h-[44px] sm:min-h-[36px] touch-manipulation border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                      isActive
+                        ? scopeActiveStyles[s.id]
+                        : "text-muted-foreground border-transparent hover:text-foreground hover:bg-card/50"
+                    )}
+                  >
+                    <Icon className="size-3.5 shrink-0 select-none" strokeWidth={1.5} aria-hidden="true" />
+                    <span className="hidden sm:inline">{s.label}</span>
+                    <span className="sm:hidden">{s.shortLabel}</span>
+                    {showBadge && (
+                      <span
+                        data-slot="scope-badge"
+                        aria-label={`${count} nhiệm vụ`}
+                        className={cn(
+                          "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-mono tabular-nums font-semibold border ml-0.5",
+                          isActive
+                            ? scopeBadgeActiveStyles[s.id]
+                            : "bg-muted text-muted-foreground border-border/60"
+                        )}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+          </div>
+        ) : (
+          <div
+            data-slot="staff-scope-indicator"
+            data-scope="my"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-500/10 border border-emerald-500/20"
+          >
+            <User className="size-3.5 shrink-0 select-none" strokeWidth={1.5} aria-hidden="true" />
+            <span>Nhiệm vụ cá nhân</span>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">

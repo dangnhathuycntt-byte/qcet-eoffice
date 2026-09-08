@@ -28,6 +28,16 @@ export function AdaptiveMetricStrip({
   className,
   onMetricClick,
 }: AdaptiveMetricStripProps) {
+  const safeMetrics: AdaptiveWorkspaceMetrics = {
+    totalTasks: metrics?.totalTasks ?? 0,
+    urgentOverdueCount: metrics?.urgentOverdueCount ?? 0,
+    waitingApprovalCount: metrics?.waitingApprovalCount ?? 0,
+    completedRate: metrics?.completedRate ?? 0,
+    labelScope:
+      metrics?.labelScope ??
+      (scope === "school" ? "Toàn trường" : scope === "unit" ? "Đơn vị" : "Cá nhân"),
+  };
+
   const formatRate = (rate: number | undefined) =>
     typeof rate === "number" && Number.isFinite(rate) ? `${rate}%` : "0%";
 
@@ -39,7 +49,7 @@ export function AdaptiveMetricStrip({
             id: "total",
             status: "ALL",
             title: "Khối lượng công việc",
-            value: metrics.totalTasks,
+            value: safeMetrics.totalTasks,
             subtitle: "Nhiệm vụ toàn trường",
             icon: Layers,
             iconColor: "text-blue-700 bg-blue-500/10 border-blue-500/20",
@@ -48,14 +58,14 @@ export function AdaptiveMetricStrip({
             id: "urgent",
             status: "OVERDUE",
             title: "Quá hạn",
-            value: metrics.urgentOverdueCount,
+            value: safeMetrics.urgentOverdueCount,
             subtitle:
-              metrics.urgentOverdueCount > 0
+              safeMetrics.urgentOverdueCount > 0
                 ? "Cần ưu tiên xử lý"
                 : "Tiến độ đúng hạn",
             icon: AlertCircle,
             iconColor:
-              metrics.urgentOverdueCount > 0
+              safeMetrics.urgentOverdueCount > 0
                 ? "text-rose-700 bg-rose-500/10 border-rose-500/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
@@ -63,14 +73,14 @@ export function AdaptiveMetricStrip({
             id: "waiting",
             status: "NEEDS_REVIEW",
             title: "Đang chờ duyệt",
-            value: metrics.waitingApprovalCount,
+            value: safeMetrics.waitingApprovalCount,
             subtitle:
-              metrics.waitingApprovalCount > 0
+              safeMetrics.waitingApprovalCount > 0
                 ? "Hồ sơ chờ BGH phê duyệt"
                 : "Không có hồ sơ chờ",
             icon: Clock,
             iconColor:
-              metrics.waitingApprovalCount > 0
+              safeMetrics.waitingApprovalCount > 0
                 ? "text-amber-700 bg-amber-500/10 border-amber-500/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
@@ -78,7 +88,7 @@ export function AdaptiveMetricStrip({
             id: "completed",
             status: "COMPLETED",
             title: "Tiến độ chung",
-            value: formatRate(metrics.completedRate),
+            value: formatRate(safeMetrics.completedRate),
             subtitle: "Tỷ lệ hoàn thành (DACUM)",
             icon: CheckCircle2,
             iconColor: "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
@@ -91,8 +101,8 @@ export function AdaptiveMetricStrip({
             id: "total",
             status: "ALL",
             title: "Khối lượng công việc",
-            value: metrics.totalTasks,
-            subtitle: `Nhiệm vụ đơn vị (${metrics.labelScope})`,
+            value: safeMetrics.totalTasks,
+            subtitle: `Nhiệm vụ đơn vị (${safeMetrics.labelScope})`,
             icon: Layers,
             iconColor: "text-blue-700 bg-blue-500/10 border-blue-500/20",
           },
@@ -100,14 +110,14 @@ export function AdaptiveMetricStrip({
             id: "urgent",
             status: "OVERDUE",
             title: "Quá hạn đơn vị",
-            value: metrics.urgentOverdueCount,
+            value: safeMetrics.urgentOverdueCount,
             subtitle:
-              metrics.urgentOverdueCount > 0
+              safeMetrics.urgentOverdueCount > 0
                 ? "Cần ưu tiên xử lý"
                 : "Tiến độ đúng hạn",
             icon: AlertCircle,
             iconColor:
-              metrics.urgentOverdueCount > 0
+              safeMetrics.urgentOverdueCount > 0
                 ? "text-rose-700 bg-rose-500/10 border-rose-500/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
@@ -115,14 +125,14 @@ export function AdaptiveMetricStrip({
             id: "waiting",
             status: "NEEDS_REVIEW",
             title: "Chờ phân công/duyệt",
-            value: metrics.waitingApprovalCount,
+            value: safeMetrics.waitingApprovalCount,
             subtitle:
-              metrics.waitingApprovalCount > 0
+              safeMetrics.waitingApprovalCount > 0
                 ? "Hồ sơ chờ Thầy/Cô phê duyệt"
                 : "Không có việc tồn đọng",
             icon: Clock,
             iconColor:
-              metrics.waitingApprovalCount > 0
+              safeMetrics.waitingApprovalCount > 0
                 ? "text-amber-700 bg-amber-500/10 border-amber-500/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
@@ -130,7 +140,7 @@ export function AdaptiveMetricStrip({
             id: "completed",
             status: "COMPLETED",
             title: "Tiến độ đơn vị",
-            value: formatRate(metrics.completedRate),
+            value: formatRate(safeMetrics.completedRate),
             subtitle: "Đã nghiệm thu (DACUM)",
             icon: CheckCircle2,
             iconColor: "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
@@ -144,7 +154,7 @@ export function AdaptiveMetricStrip({
             id: "total",
             status: "ALL",
             title: "Việc cần làm ngay",
-            value: metrics.totalTasks,
+            value: safeMetrics.totalTasks,
             subtitle: "Nhiệm vụ cá nhân",
             icon: Layers,
             iconColor: "text-blue-700 bg-blue-500/10 border-blue-500/20",
@@ -153,14 +163,14 @@ export function AdaptiveMetricStrip({
             id: "urgent",
             status: "OVERDUE",
             title: "Đang thực hiện",
-            value: metrics.urgentOverdueCount,
+            value: safeMetrics.urgentOverdueCount,
             subtitle:
-              metrics.urgentOverdueCount > 0
+              safeMetrics.urgentOverdueCount > 0
                 ? "Hạn gấp & Quá hạn"
                 : "Tiến độ đúng hạn",
             icon: AlertCircle,
             iconColor:
-              metrics.urgentOverdueCount > 0
+              safeMetrics.urgentOverdueCount > 0
                 ? "text-rose-700 bg-rose-500/10 border-rose-500/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
@@ -168,14 +178,14 @@ export function AdaptiveMetricStrip({
             id: "waiting",
             status: "NEEDS_REVIEW",
             title: "Chờ phản hồi",
-            value: metrics.waitingApprovalCount,
+            value: safeMetrics.waitingApprovalCount,
             subtitle:
-              metrics.waitingApprovalCount > 0
+              safeMetrics.waitingApprovalCount > 0
                 ? "Đã nộp chờ thẩm định"
                 : "Không có hồ sơ chờ",
             icon: Clock,
             iconColor:
-              metrics.waitingApprovalCount > 0
+              safeMetrics.waitingApprovalCount > 0
                 ? "text-amber-700 bg-amber-500/10 border-amber-500/20"
                 : "text-muted-foreground bg-muted/30 border-border/40",
           },
@@ -183,7 +193,7 @@ export function AdaptiveMetricStrip({
             id: "completed",
             status: "COMPLETED",
             title: "Hoàn tất kỳ này",
-            value: formatRate(metrics.completedRate),
+            value: formatRate(safeMetrics.completedRate),
             subtitle: "Tỷ lệ hoàn thành (DACUM)",
             icon: CheckCircle2,
             iconColor: "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
