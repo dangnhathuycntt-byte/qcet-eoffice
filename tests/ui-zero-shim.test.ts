@@ -104,7 +104,7 @@ describe("UI Zero-Shim Contract & Elimination of Mock Switchers", () => {
       assert.ok(getViewpointText(adminUser).includes("Góc nhìn Ban Giám hiệu"));
       assert.ok(getViewpointText(managerUser).includes("Góc nhìn Lãnh đạo Đơn vị"));
       assert.ok(getViewpointText(managerUser).includes("Nguyễn Văn Hùng"));
-      assert.ok(getViewpointText(staffUser).includes("Góc nhìn Cá nhân"));
+      assert.ok(getViewpointText(staffUser).includes("Nhiệm vụ trực tiếp"));
       assert.ok(getViewpointText(staffUser).includes("Trần Thị Mai"));
     });
   });

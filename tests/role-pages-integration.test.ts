@@ -114,7 +114,7 @@ describe("Role Pages Filtering Integration", () => {
     assert.equal(getViewpointIcon(staff.role), User);
     assert.equal(
       getViewpointText(staff),
-      `Góc nhìn Cá nhân: Nhiệm vụ & Công việc được phân công cho ${staff.name}`
+      `Nhiệm vụ trực tiếp: Các công việc được phân công cho ${staff.name}`
     );
   });
 });

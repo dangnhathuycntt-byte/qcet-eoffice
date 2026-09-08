@@ -24,7 +24,7 @@ interface OnboardingChecklistWidgetProps {
   onToggleExpand: () => void;
   onDismiss: () => void;
   onCompleteStep: (stepId: string) => void;
-  [key: string]: unknown;
+  onStartTour?: () => void;
 }
 
 export function OnboardingChecklistWidget({
@@ -36,12 +36,8 @@ export function OnboardingChecklistWidget({
   onToggleExpand,
   onDismiss,
   onCompleteStep,
-  ...restProps
+  onStartTour,
 }: OnboardingChecklistWidgetProps) {
-  const onStartInteractiveGuide = (restProps.onStartGuide ||
-    (restProps as Record<string, unknown>)[
-      String.fromCharCode(111, 110, 83, 116, 97, 114, 116, 84, 111, 117, 114)
-    ]) as (() => void) | undefined;
   const { subscribeToPush } = usePushNotification();
 
   const [activeTaskId, setActiveTaskId] = React.useState<string | null>(null);
@@ -251,10 +247,10 @@ export function OnboardingChecklistWidget({
                   <CheckCheck className="w-4 h-4" /> Thầy/Cô đã hoàn tất thiết lập ban đầu!
                 </span>
               </div>
-            ) : onStartInteractiveGuide ? (
+            ) : onStartTour ? (
               <button
                 type="button"
-                onClick={onStartInteractiveGuide}
+                onClick={onStartTour}
                 className="mt-3 w-full py-1.5 px-3 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />

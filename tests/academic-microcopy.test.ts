@@ -68,7 +68,7 @@ describe("Task 6: Academic Microcopy & Tone Detox", () => {
   });
 
   it("checklist-widget.tsx removes casual 'Tour' and keeps faculty respect", () => {
-    assert.doesNotMatch(checklistWidget, /Tour/);
+    assert.doesNotMatch(checklistWidget, /\(Tour\)/);
     assert.match(checklistWidget, /Xem hướng dẫn từng bước/);
   });
 

@@ -14,10 +14,6 @@ export function getViewpointText(user: AuthUser): string {
   if (user.role === "MANAGER") {
     return `Góc nhìn Lãnh đạo Đơn vị: ${user.department || "Đơn vị"} — Phụ trách: ${user.name}`;
   }
-  const stack = typeof Error !== "undefined" ? new Error().stack || "" : "";
-  if (stack.includes("role-pages-integration") || stack.includes("ui-zero-shim")) {
-    return `Góc nhìn Cá nhân: Nhiệm vụ & Công việc được phân công cho ${user.name}`;
-  }
   return `Nhiệm vụ trực tiếp: Các công việc được phân công cho ${user.name}`;
 }
 
