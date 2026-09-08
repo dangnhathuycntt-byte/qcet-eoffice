@@ -6,13 +6,11 @@ import { usePathname, useSearchParams } from "next/navigation";
 import {
   Home,
   CheckSquare,
-  Zap,
   Bell,
   Menu,
   Plus,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
-import { isExecutiveUser, isManagerUser } from "@/lib/auth/roles";
 import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { cn } from "@/lib/utils";
 
@@ -22,26 +20,14 @@ export function MobileBottomNav({ className }: { className?: string }) {
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = React.useState(false);
 
-  const isExecutive = isExecutiveUser(user);
-  const isManager = isManagerUser(user);
-  const isApprover = isExecutive || isManager;
-
   const zoneParam = searchParams?.get("zone");
   const isHomeActive = pathname === "/" && !zoneParam;
   const isTasksActive = pathname === "/" && zoneParam === "tasks";
   const isNotificationsActive = pathname.startsWith("/notifications");
 
   const handleCenterAction = () => {
-    if (isApprover) {
-      // BGH / Trưởng đơn vị: mở Hàng đợi duyệt nhanh
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("qcet:open-briefing-modal"));
-      }
-    } else {
-      // Giảng viên: Tạo việc / báo cáo nhanh
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("qcet:open-submit-deliverable"));
-      }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
     }
   };
 
@@ -51,7 +37,7 @@ export function MobileBottomNav({ className }: { className?: string }) {
         aria-label="Thanh điều hướng di động"
         className={cn(
           "fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-lg border-t border-border/70 shadow-lg",
-          "pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+          "pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]",
           className
         )}
       >
@@ -84,20 +70,18 @@ export function MobileBottomNav({ className }: { className?: string }) {
             <span className="text-xs tracking-tight">Công việc</span>
           </Link>
 
-          {/* 3. Center Action Pill (Duyệt nhanh / Tạo việc) */}
+          {/* 3. Center Action Pill (Tạo việc mới) */}
           <div className="flex items-center justify-center -mt-4">
             <button
               type="button"
               onClick={handleCenterAction}
-              aria-label={isApprover ? "Phê duyệt nhanh" : "Tạo việc mới"}
+              aria-label="Tạo việc mới"
               className={cn(
-                "size-12 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 cursor-pointer touch-manipulation",
-                isApprover
-                  ? "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/25"
-                  : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/25"
+                "size-12 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center shadow-md shadow-primary/20 transition-transform active:scale-90 cursor-pointer touch-manipulation",
+                "bg-primary hover:bg-primary/90 text-primary-foreground"
               )}
             >
-              {isApprover ? <Zap size={22} className="fill-current" /> : <Plus size={24} />}
+              <Plus size={24} strokeWidth={1.75} />
             </button>
           </div>
 

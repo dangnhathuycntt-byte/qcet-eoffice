@@ -23,7 +23,8 @@ describe("MobileBottomNav Component", () => {
 
     // Check safe area inset padding
     assert.ok(
-      content.includes("pb-[max(0.5rem,env(safe-area-inset-bottom))]"),
+      content.includes("pb-[max(0.5rem,env(safe-area-inset-bottom))]") ||
+        content.includes("pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"),
       "Must include safe area bottom padding"
     );
 
@@ -59,19 +60,27 @@ describe("MobileBottomNav Component", () => {
     );
   });
 
-  test("implements center action pill with role-aware dispatching", () => {
+  test("implements center action pill with unified create-task dispatching", () => {
     const content = fs.readFileSync(navPath, "utf-8");
     assert.ok(
       content.includes("handleCenterAction"),
       "Must define handleCenterAction handler"
     );
     assert.ok(
-      content.includes("qcet:open-briefing-modal"),
-      "Approvers must trigger qcet:open-briefing-modal"
+      content.includes("qcet:open-create-task"),
+      "Center action must trigger qcet:open-create-task"
     );
     assert.ok(
-      content.includes("qcet:open-submit-deliverable"),
-      "Staff must trigger qcet:open-submit-deliverable"
+      !content.includes("qcet:open-briefing-modal"),
+      "Must not contain orphaned qcet:open-briefing-modal"
+    );
+    assert.ok(
+      !content.includes("Zap"),
+      "Must not contain gaming Zap icon"
+    );
+    assert.ok(
+      content.includes("bg-primary"),
+      "Center button must use bg-primary"
     );
   });
 
