@@ -565,7 +565,7 @@ export function ExecutiveCockpitWorkspace({
         tasks={tasks}
         initialScope="school"
         forcedRole="ADMIN"
-        contextTitle="Khoang chỉ huy Ban Giám Hiệu"
+        contextTitle="Trung tâm điều hành Ban Giám hiệu"
         contextBadge="BGH"
         onSelectTask={onSelectTask || (() => {})}
         onReview={onReview}
@@ -988,10 +988,10 @@ export function LegacyExecutiveCockpitWorkspace({
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1
               className="text-base font-bold tracking-tight text-foreground"
-              aria-label="Khoang điều hành BGH"
-              data-title="KHOANG ĐIỀU HÀNH BGH"
+              aria-label="Trung tâm điều hành Ban Giám hiệu"
+              data-title="TRUNG TÂM ĐIỀU HÀNH BGH"
             >
-              Khoang điều hành BGH
+              Trung tâm điều hành Ban Giám hiệu
             </h1>
             <Badge
               variant="outline"
@@ -1019,7 +1019,7 @@ export function LegacyExecutiveCockpitWorkspace({
               {activeBottlenecks.length} điểm nghẽn
             </span>
             <span className="text-muted-foreground/40">·</span>
-            <span>{metrics.pendingInstitutionalApprovalCount} chờ duyệt</span>
+            <span>{metrics.pendingInstitutionalApprovalCount} chờ phê duyệt</span>
             <span className="text-muted-foreground/40">·</span>
             <span className="text-muted-foreground/70">
               Đồng bộ lúc {lastSyncTime}
@@ -1065,7 +1065,7 @@ export function LegacyExecutiveCockpitWorkspace({
           >
             <Link href={tasksUrl} className="inline-flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
-              <span>Kho nhiệm vụ</span>
+              <span>Danh mục nhiệm vụ</span>
             </Link>
           </Button>
 
@@ -1075,7 +1075,7 @@ export function LegacyExecutiveCockpitWorkspace({
             size="sm"
             onClick={handleRefresh}
             className="text-xs h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted cursor-pointer"
-            title="Làm mới dữ liệu khoang điều hành"
+            title="Làm mới dữ liệu điều hành"
           >
             <RefreshCw
               className={cn("w-3.5 h-3.5 shrink-0", isRefreshing && "animate-spin")}
@@ -1338,8 +1338,11 @@ export function LegacyExecutiveCockpitWorkspace({
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium text-foreground">
-              Tổng số nhiệm vụ đang chạy
+            <span
+              title="Tổng số nhiệm vụ đang chạy"
+              className="text-xs font-medium text-foreground"
+            >
+              Tổng số nhiệm vụ đang triển khai
             </span>
             <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-600">
               <Layers className="w-4 h-4" strokeWidth={1.5} />
@@ -1476,7 +1479,7 @@ export function LegacyExecutiveCockpitWorkspace({
                 Tất cả 11 đơn vị đang vận hành thông suốt — 0 điểm nghẽn
               </h3>
               <p className="text-xs text-muted-foreground max-w-lg mt-1.5">
-                Không có đầu việc nào bị chậm hạn hoặc tắc nghẽn cần BGH can thiệp tháo gỡ.
+                Không có nhiệm vụ nào bị chậm hạn hoặc ách tắc cần Ban Giám hiệu chỉ đạo tháo gỡ.
               </p>
             </div>
           ) : (
@@ -1514,7 +1517,7 @@ export function LegacyExecutiveCockpitWorkspace({
                       type="text"
                       value={bottleneckSearch}
                       onChange={(e) => setBottleneckSearch(e.target.value)}
-                      placeholder="Tìm theo tên việc, cán bộ, đơn vị..."
+                      placeholder="Tìm theo tên nhiệm vụ, cán bộ, đơn vị..."
                       className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-rose-500/30"
                     />
                     {bottleneckSearch && (
@@ -1835,16 +1838,16 @@ export function LegacyExecutiveCockpitWorkspace({
                     <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                       <span className="flex items-center gap-1">
                         <User className="w-3.5 h-3.5" />
-                        Người trình: {item.submittedByName}
+                        Cán bộ trình: {item.submittedByName}
                       </span>
                       <span>•</span>
-                      <span>Ngày gửi: {item.submittedDate || "Mới cập nhật"}</span>
+                      <span>Ngày trình: {item.submittedDate || "Mới cập nhật"}</span>
                       {item.deliverablesCount > 0 && (
                         <>
                           <span>•</span>
                           <span className="flex items-center gap-1 text-indigo-600 font-medium">
                             <FileText className="w-3.5 h-3.5" />
-                            {item.deliverablesCount} tệp minh chứng đính kèm
+                            {item.deliverablesCount} hồ sơ minh chứng kèm theo
                           </span>
                         </>
                       )}
@@ -1929,7 +1932,7 @@ export function LegacyExecutiveCockpitWorkspace({
                   <span>Radar Sức Khỏe 11 Đơn Vị (Được sắp xếp theo mức độ ưu tiên)</span>
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Các đơn vị có chỉ số Đỏ (nhiều việc chậm trễ) được xếp lên trên cùng kèm chức năng phát thông điệp nhắc nhở.
+                  Các đơn vị có chỉ số Cảnh báo (nhiều nhiệm vụ chậm tiến độ) được xếp lên trên cùng kèm chức năng phát thông báo đôn đốc.
                 </p>
               </div>
             </div>
@@ -2112,7 +2115,7 @@ export function LegacyExecutiveCockpitWorkspace({
                         }
                         className="text-xs h-7 flex-1"
                       >
-                        {isSelected ? "Bỏ chọn" : "Xem việc"}
+                        {isSelected ? "Bỏ chọn" : "Xem nhiệm vụ"}
                       </Button>
 
                       {(dept.healthStatus === "RED" ||
@@ -2130,7 +2133,7 @@ export function LegacyExecutiveCockpitWorkspace({
                           className="text-xs h-7 gap-1 hover:bg-rose-500/10 hover:text-rose-700"
                         >
                           <Send className="w-3 h-3" />
-                          <span>Nhắc nhở</span>
+                          <span>Đôn đốc</span>
                         </Button>
                       )}
                     </div>
@@ -2183,7 +2186,7 @@ export function LegacyExecutiveCockpitWorkspace({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tìm nhiệm vụ chiến lược, mã số, người chủ trì..."
+                placeholder="Tìm nhiệm vụ chiến lược, mã số, chủ trì nhiệm vụ..."
                 className="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary"
               />
               {searchTerm && (
@@ -2299,18 +2302,18 @@ export function LegacyExecutiveCockpitWorkspace({
                       <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1">
                           <User className="w-3.5 h-3.5" />
-                          Chủ trì: {task.leadAssigneeName}
+                          Chủ trì nhiệm vụ: {task.leadAssigneeName}
                         </span>
                         <span>•</span>
                         <span>Đơn vị: {task.leadDepartment}</span>
                         <span>•</span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
-                          Hạn: {task.dueDate}
+                          Thời hạn: {task.dueDate}
                         </span>
                         <span>•</span>
                         <span>
-                          {task.completedSubTasks}/{task.totalSubTasks} đầu việc con
+                          {task.completedSubTasks}/{task.totalSubTasks} nhiệm vụ thành phần
                         </span>
                       </div>
 

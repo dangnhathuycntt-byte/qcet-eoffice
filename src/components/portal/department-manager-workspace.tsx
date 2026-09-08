@@ -591,10 +591,10 @@ export function LegacyDepartmentManagerWorkspace({
               window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
             }}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
-            title="Tạo việc mới hoặc giao việc cho nhân sự trong đơn vị"
+            title="Khởi tạo nhiệm vụ mới hoặc phân công cho nhân sự trong đơn vị"
           >
             <Plus className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
-            <span>Tạo việc / Giao việc</span>
+            <span>Khởi tạo / Phân công</span>
           </Button>
 
           <Button
@@ -605,7 +605,7 @@ export function LegacyDepartmentManagerWorkspace({
           >
             <Link href={tasksUrl} className="inline-flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 shrink-0" />
-              <span>Kho nhiệm vụ</span>
+              <span>Danh mục nhiệm vụ</span>
               <ArrowRight className="w-3 h-3 ml-0.5 shrink-0" />
             </Link>
           </Button>
@@ -650,7 +650,7 @@ export function LegacyDepartmentManagerWorkspace({
         >
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Cần tôi xử lý
+              Nhiệm vụ trực tiếp
             </span>
             <div
               className={cn(
@@ -673,7 +673,7 @@ export function LegacyDepartmentManagerWorkspace({
           </div>
         </button>
 
-        {/* Metric 2: ĐƠN VỊ ĐANG CHẠY */}
+        {/* Metric 2: NHIỆM VỤ ĐƠN VỊ */}
         <button
           type="button"
           onClick={() => {
@@ -858,7 +858,7 @@ export function LegacyDepartmentManagerWorkspace({
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Tìm theo tên việc, người làm..."
+            placeholder="Tìm theo mã, tên nhiệm vụ, cán bộ thực hiện..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full h-8 pl-8 pr-3 text-xs bg-background border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
@@ -889,7 +889,7 @@ export function LegacyDepartmentManagerWorkspace({
               </p>
             </div>
             <Badge variant="outline" className="text-xs font-medium">
-              {approvalQueueTasks.length} hồ sơ chờ duyệt
+              {approvalQueueTasks.length} hồ sơ chờ thẩm định
             </Badge>
           </div>
 
@@ -902,7 +902,7 @@ export function LegacyDepartmentManagerWorkspace({
                 Hàng đợi thẩm định trống
               </h3>
               <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                Hiện không có hồ sơ nào đang chờ duyệt từ các giảng viên / chuyên viên trong đơn vị.
+                Hiện không có hồ sơ nào đang chờ thẩm định từ cán bộ, giảng viên trong đơn vị.
               </p>
             </div>
           ) : (
@@ -976,7 +976,7 @@ export function LegacyDepartmentManagerWorkspace({
                       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1.5">
                           <User className="w-3.5 h-3.5" />
-                          <span>Người nộp:</span>
+                          <span>Cán bộ báo cáo:</span>
                           <strong className="text-foreground font-medium">
                             {task.assigneeName}
                           </strong>
@@ -994,7 +994,7 @@ export function LegacyDepartmentManagerWorkspace({
                         <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 border text-xs">
                           <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="text-muted-foreground shrink-0">
-                            Minh chứng đính kèm:
+                            Hồ sơ minh chứng:
                           </span>
                           <span className="font-medium text-foreground truncate">
                             {firstDeliverable?.name || task.deliverableDescription}
@@ -1006,7 +1006,7 @@ export function LegacyDepartmentManagerWorkspace({
                               rel="noopener noreferrer"
                               className="ml-auto text-primary hover:underline flex items-center gap-0.5 text-xs shrink-0"
                             >
-                              <span>Xem file</span>
+                              <span>Xem tài liệu</span>
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           )}
@@ -1120,12 +1120,12 @@ export function LegacyDepartmentManagerWorkspace({
 
                         <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
                           <span>
-                            Việc con:{" "}
+                            Nhiệm vụ thành phần:{" "}
                             <strong className="text-foreground">
                               {st.completedSubTasks}/{st.totalSubTasks}
                             </strong>
                           </span>
-                          <span>Chủ trì: {st.leadAssigneeName}</span>
+                          <span>Chủ trì nhiệm vụ: {st.leadAssigneeName}</span>
                         </div>
                       </div>
 
@@ -1145,7 +1145,7 @@ export function LegacyDepartmentManagerWorkspace({
                           className="text-xs h-7 px-2 gap-1"
                         >
                           <Plus className="w-3 h-3" />
-                          <span>+ Giao việc con</span>
+                          <span>+ Phân công nhiệm vụ</span>
                         </Button>
                       </div>
                     </div>
@@ -1161,10 +1161,10 @@ export function LegacyDepartmentManagerWorkspace({
               <div>
                 <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Layers className="w-4 h-4 text-muted-foreground" />
-                  <span>Danh sách chi tiết các đầu việc trong đơn vị</span>
+                  <span>Danh mục chi tiết nhiệm vụ trong đơn vị</span>
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Theo dõi tiến độ thực hiện của từng giảng viên và chuyên viên.
+                  Theo dõi tiến độ thực hiện của từng cán bộ, giảng viên và chuyên viên.
                 </p>
               </div>
 
@@ -1172,7 +1172,7 @@ export function LegacyDepartmentManagerWorkspace({
               <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border text-xs">
                 {[
                   { id: "ALL", label: "Tất cả" },
-                  { id: "IN_PROGRESS", label: "Đang làm" },
+                  { id: "IN_PROGRESS", label: "Đang thực hiện" },
                   { id: "OVERDUE", label: "Quá hạn" },
                   { id: "COMPLETED", label: "Hoàn thành" },
                 ].map((tab) => (
@@ -1195,7 +1195,7 @@ export function LegacyDepartmentManagerWorkspace({
 
             {unitStaffTasks.length === 0 ? (
               <div className="p-8 text-center rounded-xl border border-dashed text-xs text-muted-foreground">
-                Không có đầu việc nào phù hợp với bộ lọc hiện tại.
+                Không có nhiệm vụ nào phù hợp với bộ lọc hiện tại.
               </div>
             ) : (
               <div className="space-y-2">
@@ -1234,7 +1234,7 @@ export function LegacyDepartmentManagerWorkspace({
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1.5">
                             <span>
-                              Người làm:{" "}
+                              Người thực hiện:{" "}
                               <strong className="text-foreground">
                                 {task.assigneeName}
                               </strong>
@@ -1256,7 +1256,7 @@ export function LegacyDepartmentManagerWorkspace({
                           </span>
                           {task.parentTaskTitle && (
                             <span className="truncate max-w-[200px]">
-                              Nhiệm vụ cha: {task.parentTaskTitle}
+                              Nhiệm vụ cấp trên: {task.parentTaskTitle}
                             </span>
                           )}
                         </div>
@@ -1300,15 +1300,15 @@ export function LegacyDepartmentManagerWorkspace({
                 <span>Nhiệm vụ trực tiếp giao cho Trưởng đơn vị</span>
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Các đầu việc mà bạn là người trực tiếp chịu trách nhiệm thực hiện và nộp minh chứng.
+                Các nhiệm vụ mà bạn là người trực tiếp chịu trách nhiệm thực hiện và nộp hồ sơ minh chứng.
               </p>
             </div>
 
             <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border text-xs">
               {[
                 { id: "ALL", label: "Tất cả" },
-                { id: "IN_PROGRESS", label: "Đang làm" },
-                { id: "NEEDS_REVIEW", label: "Chờ duyệt" },
+                { id: "IN_PROGRESS", label: "Đang thực hiện" },
+                { id: "NEEDS_REVIEW", label: "Chờ thẩm định" },
                 { id: "COMPLETED", label: "Hoàn thành" },
               ].map((tab) => (
                 <button
@@ -1358,7 +1358,7 @@ export function LegacyDepartmentManagerWorkspace({
                 Không có nhiệm vụ trực tiếp nào
               </h3>
               <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                Bạn không có đầu việc cá nhân nào cần xử lý hoặc nộp minh chứng tại thời điểm này.
+                Không có nhiệm vụ trực tiếp nào cần xử lý hoặc nộp hồ sơ minh chứng tại thời điểm này.
               </p>
             </div>
           ) : (

@@ -263,9 +263,9 @@ export function getTaskAuditTimeline(
   if (isSchool && task.totalSubTasks > 0) {
     events.push({
       id: "event-progress",
-      label: "Tiến độ công việc trực thuộc",
+      label: "Tiến độ nhiệm vụ thành phần",
       timestamp: formatDetailDate(task.assignedDate),
-      actor: `${task.completedSubTasks}/${task.totalSubTasks} việc con`,
+      actor: `${task.completedSubTasks}/${task.totalSubTasks} nhiệm vụ thành phần`,
       description: `Đạt ${task.progressPercent}% tổng khối lượng công việc được giao`,
       type: "progress",
     });
@@ -280,14 +280,14 @@ export function getTaskAuditTimeline(
     actor: isSchool ? task.leadAssigneeName : task.assigneeName,
     description:
       task.status === "COMPLETED"
-        ? "Công việc đã được nghiệm thu hoàn thành"
+        ? "Nhiệm vụ đã được nghiệm thu hoàn thành"
         : task.status === "NEEDS_REVIEW"
-        ? "Đã nộp minh chứng / Yêu cầu rà soát và hiệu chỉnh nội dung"
+        ? "Đã nộp minh chứng / Yêu cầu rà soát và thẩm định nội dung"
         : task.status === "IN_PROGRESS"
         ? "Đang triển khai thực hiện theo kế hoạch"
         : task.status === "BLOCKED"
         ? "Đang bị nghẽn hoặc chờ phối hợp liên đơn vị"
-        : "Tiếp nhận vào danh sách công việc cần xử lý",
+        : "Tiếp nhận vào danh mục nhiệm vụ cần xử lý",
     type: "status",
   });
 
@@ -295,10 +295,10 @@ export function getTaskAuditTimeline(
   if (task.dueDate) {
     events.push({
       id: "event-due",
-      label: "Hạn chót hoàn thành",
+      label: "Thời hạn hoàn thành",
       timestamp: formatDetailDate(task.dueDate),
       actor: isSchool ? task.leadAssigneeName : task.assigneeName,
-      description: "Thời hạn báo cáo kết quả và kết thúc công việc",
+      description: "Thời hạn báo cáo kết quả và kết thúc nhiệm vụ",
       type: "due",
     });
   }
@@ -666,7 +666,7 @@ export function TaskDetailSideSheet({
                     : "border-blue-500/20 bg-blue-500/10 text-blue-600"
                 )}
               >
-                {(task as StaffTask).requiresReview ? "Trọng điểm (DACUM)" : "Thường quy (Tự xong)"}
+                {(task as StaffTask).requiresReview ? "Trọng điểm (DACUM)" : "Thường quy (Tự nghiệm thu)"}
               </span>
             )}
           </div>
@@ -739,7 +739,7 @@ export function TaskDetailSideSheet({
             {!isSchool && parentSchoolTaskTitle && (
               <div className="mt-2.5 flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/30 border border-border/40 rounded-xl px-3 py-2">
                 <Layers className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
-                <span className="shrink-0">Nhiệm vụ cha:</span>
+                <span className="shrink-0">Nhiệm vụ cấp trên:</span>
                 <span className="font-semibold text-foreground truncate">
                   {parentSchoolTaskTitle}
                 </span>
@@ -833,7 +833,7 @@ export function TaskDetailSideSheet({
                             ? "border-amber-500/20 bg-amber-500/10 text-amber-700"
                             : "border-rose-500/20 bg-rose-500/10 text-rose-700"
                         )}>
-                          Diem tuan thu: {aiReview.complianceScore}/100
+                          Điểm tuân thủ: {aiReview.complianceScore}/100
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">
@@ -916,7 +916,7 @@ export function TaskDetailSideSheet({
                       <div className="w-full flex items-start gap-2 p-2.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-xs text-rose-700 font-medium">
                         <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" strokeWidth={1.5} />
                         <div className="space-y-0.5">
-                          <p className="font-semibold">Phân lập thẩm quyền (Separation of Duties)</p>
+                          <p className="font-semibold">Phân lập thẩm quyền công vụ</p>
                           <p className="text-xs text-rose-600/90 leading-relaxed">
                             Theo chuẩn quản trị đại học (Separation of Duties), bạn không thể tự nghiệm thu công việc do chính mình phụ trách.
                           </p>
@@ -1017,16 +1017,16 @@ export function TaskDetailSideSheet({
                 HIGH_RISK: "bg-rose-50 text-rose-700 border-rose-200",
               };
               const riskLabel: Record<string, string> = {
-                CLEAN: "An toan",
-                NEEDS_ATTENTION: "Can luu y",
-                HIGH_RISK: "Rui ro cao",
+                CLEAN: "An toàn",
+                NEEDS_ATTENTION: "Cần lưu ý",
+                HIGH_RISK: "Rủi ro cao",
               };
               return (
                 <div className="mt-3.5 rounded-xl border border-border/50 bg-card p-4 text-xs space-y-3 shadow-xs" data-testid="ai-executive-brief">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-foreground flex items-center gap-1.5">
                       <ShieldCheck className="size-4 text-primary" strokeWidth={1.5} />
-                      Tong hop AI Executive Brief
+                      Trạng thái thẩm định hồ sơ (AI Executive Brief)
                     </h4>
                     <span className={cn(
                       "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border",
@@ -1039,7 +1039,7 @@ export function TaskDetailSideSheet({
                   {/* Compliance Score */}
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">
-                      Diem tuan thu (complianceScore):
+                      Điểm tuân thủ quy chuẩn:
                     </span>
                     <span className={cn(
                       "font-mono font-bold tabular-nums",
@@ -1060,7 +1060,7 @@ export function TaskDetailSideSheet({
                   {aiReview.dacumCriteriaMatched.length > 0 && (
                     <div className="space-y-1">
                       <span className="text-xs font-semibold text-muted-foreground">
-                        Tieu chi DACUM dat:
+                        Tiêu chí DACUM đạt:
                       </span>
                       <ul className="list-disc list-inside text-xs text-foreground space-y-0.5 pl-1">
                         {aiReview.dacumCriteriaMatched.map((c, i) => (
@@ -1074,7 +1074,7 @@ export function TaskDetailSideSheet({
                   {aiReview.flags.length > 0 && (
                     <div className="space-y-1">
                       <span className="text-xs font-semibold text-muted-foreground">
-                        Canh bao:
+                        Cảnh báo:
                       </span>
                       <ul className="space-y-0.5 pl-1">
                         {aiReview.flags.map((f, i) => (
@@ -1157,7 +1157,7 @@ export function TaskDetailSideSheet({
                       Nghiệm thu cấp 2: Chờ Ban Giám hiệu phê duyệt
                     </h4>
                     <p className="text-purple-600/90 leading-relaxed">
-                      Tất cả công việc đơn vị trực thuộc ({task.completedSubTasks}/{task.totalSubTasks}) đã hoàn thành 100%. Nhiệm vụ cấp Trường sẵn sàng để Ban Giám hiệu nghiệm thu và đóng nhiệm vụ.
+                      Tất cả nhiệm vụ thành phần trực thuộc ({task.completedSubTasks}/{task.totalSubTasks}) đã hoàn thành 100%. Nhiệm vụ cấp Trường sẵn sàng để Ban Giám hiệu nghiệm thu và đóng nhiệm vụ.
                     </p>
                   </div>
                 </div>
@@ -1192,7 +1192,7 @@ export function TaskDetailSideSheet({
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <User className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-                Cán bộ chủ trì
+                Chủ trì nhiệm vụ
               </span>
               <div className="flex items-center gap-2">
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary border border-primary/20">
@@ -1208,7 +1208,7 @@ export function TaskDetailSideSheet({
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-                Người giao việc
+                Người giao nhiệm vụ
               </span>
               <span className="font-semibold text-foreground truncate">
                 {isSchool ? "Ban Giám hiệu QCET" : "Trưởng đơn vị quản lý"}
@@ -1219,7 +1219,7 @@ export function TaskDetailSideSheet({
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <Calendar className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-                Hạn hoàn thành
+                Thời hạn hoàn thành
               </span>
               <div className="flex items-center gap-2">
                 <span className="font-mono font-semibold text-foreground tabular-nums">
@@ -1246,11 +1246,11 @@ export function TaskDetailSideSheet({
                 ) : (
                   <Clock className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                 )}
-                {isSchool ? "Tiến độ công việc" : "Cập nhật lần cuối"}
+                {isSchool ? "Tiến độ thực hiện" : "Cập nhật lần cuối"}
               </span>
               {isSchool ? (
                 <span className="font-mono font-semibold text-foreground tabular-nums">
-                  {task.completedSubTasks}/{task.totalSubTasks} việc ({task.progressPercent}%)
+                  {task.completedSubTasks}/{task.totalSubTasks} nhiệm vụ ({task.progressPercent}%)
                 </span>
               ) : (
                 <span className="font-mono font-semibold text-foreground tabular-nums">
@@ -1309,7 +1309,7 @@ export function TaskDetailSideSheet({
                   <FileCheck className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                   {(task as StaffTask).requiresReview
                     ? "Sản phẩm minh chứng (Bắt buộc nghiệm thu - DACUM)"
-                    : "Tài liệu đính kèm (Việc thường quy - Tùy chọn)"}
+                    : "Tài liệu đính kèm (Nhiệm vụ thường quy - Tùy chọn)"}
                 </h3>
                 {((task as StaffTask).deliverables?.length || 0) > 0 && (
                   <span className="text-xs font-mono text-muted-foreground tabular-nums">
@@ -1484,10 +1484,10 @@ export function TaskDetailSideSheet({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-sans text-sm font-semibold text-foreground tracking-tight">
-                    Tiến độ công việc trực thuộc
+                    Nhiệm vụ thành phần trực thuộc
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Theo dõi tỷ lệ hoàn thành các đầu việc thành phần
+                    Theo dõi tiến độ hoàn thành các nhiệm vụ thành phần
                   </p>
                 </div>
                 {onAddSubTask && (
@@ -1499,7 +1499,7 @@ export function TaskDetailSideSheet({
                     className="h-7 text-xs gap-1 border-dashed border-border/80 hover:border-border hover:bg-secondary/60 rounded-lg cursor-pointer"
                   >
                     <Plus className="size-3.5" strokeWidth={1.5} />
-                    <span>Giao việc con</span>
+                    <span>Giao nhiệm vụ thành phần</span>
                   </Button>
                 )}
               </div>
@@ -1514,7 +1514,7 @@ export function TaskDetailSideSheet({
                     type="text"
                     value={newSubtaskTitle}
                     onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    placeholder="Nhập tên việc con cần phân công..."
+                    placeholder="Nhập tên nhiệm vụ thành phần cần phân công..."
                     className="flex-1 text-xs bg-background border border-border/60 rounded-lg px-2.5 py-1.5 outline-none focus:border-ring focus:ring-1 focus:ring-ring"
                     autoFocus
                   />
@@ -1542,7 +1542,7 @@ export function TaskDetailSideSheet({
               <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden shadow-xs">
                 {task.subTasks.length === 0 ? (
                   <div className="py-6 text-center text-xs text-muted-foreground">
-                    Chưa có công việc đơn vị trực thuộc
+                    Chưa có nhiệm vụ thành phần trực thuộc
                   </div>
                 ) : (
                   task.subTasks.map((sub) => {
@@ -1562,7 +1562,7 @@ export function TaskDetailSideSheet({
                         }}
                         className="group flex items-center justify-between gap-3 p-3 transition-colors hover:bg-secondary/40 cursor-pointer"
                         role="button"
-                        aria-label={`Chi tiết việc con: ${sub.title}`}
+                        aria-label={`Chi tiết nhiệm vụ thành phần: ${sub.title}`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {subDone ? (
