@@ -47,13 +47,13 @@ describe("Dashboard Data Provider", () => {
     assert.ok(hasWifiTask, "Missing wifi review task");
   });
 
-  test("fetchNotionDashboardData returns a valid payload with stats and tasks", async () => {
+  test("fetchNotionDashboardData returns a safe empty payload without mock fallback when token is unset", async () => {
     const payload = await fetchNotionDashboardData();
-    assert.ok(payload.stats.totalSchoolTasks > 0);
-    assert.ok(payload.stats.totalStaffTasks > 0);
-    assert.ok(payload.tasks.length > 0);
-    assert.ok(payload.upcoming.length > 0);
-    assert.ok(payload.activities.length > 0);
-    assert.ok(payload.source === "notion-live" || payload.source === "mock-fallback");
+    assert.ok(payload !== null && typeof payload === "object");
+    assert.ok(Array.isArray(payload.tasks));
+    assert.ok(Array.isArray(payload.upcoming));
+    assert.ok(Array.isArray(payload.activities));
+    assert.equal(payload.source, "notion-missing-token");
+    assert.equal(payload.tasks.length, 0);
   });
 });

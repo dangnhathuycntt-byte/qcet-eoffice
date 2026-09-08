@@ -9,7 +9,6 @@ import {
   TaskCategory,
   TaskStatus,
 } from "@/types/dashboard";
-import { getMockDashboardPayload } from "@/lib/mock-dashboard-data";
 import {
   computeSchoolTaskRollup,
   computeDashboardStats,
@@ -41,40 +40,25 @@ import {
   Plus,
   Search,
   RefreshCw,
-  Building2,
-  Users,
   X,
+  AlertCircle,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export type ViewMode = "table" | "kanban";
 
 export default function TasksPage() {
   const { user } = useAuth();
 
-  // 1. Synchronous optimistic initial state
-  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(
-    () => getMockDashboardPayload()
-  );
+  const [dashboardData, setDashboardData] = React.useState<DashboardPayload | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [selectedTask, setSelectedTask] = React.useState<
     SchoolTask | StaffTask | null
   >(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-  // Filter tasks dynamically by active role viewpoint
-  const visibleTasks = React.useMemo(
-    () => filterTasksByRole(dashboardData.tasks, user),
-    [dashboardData.tasks, user]
-  );
-
-  const parentSchoolTaskTitle = React.useMemo(() => {
-    if (!selectedTask || isSchoolTask(selectedTask)) return undefined;
-    const parent = dashboardData.tasks.find(
-      (t) => t.id === selectedTask.parentSchoolTaskId
-    );
-    return parent?.title;
-  }, [selectedTask, dashboardData.tasks]);
-
-  // 2. View Mode & Filtering States
+  // View Mode & Filtering States
   const [viewMode, setViewMode] = React.useState<ViewMode>("kanban");
   const [activeCategory, setActiveCategory] = React.useState<
     TaskCategory | "ALL"
@@ -82,7 +66,7 @@ export default function TasksPage() {
   const [levelFilter, setLevelFilter] = React.useState<TaskLevelFilter>("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // 3. Create Task Modal States
+  // Create Task Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [createInitialLevel, setCreateInitialLevel] =
     React.useState<TaskLevel>("TRUONG");
@@ -90,30 +74,31 @@ export default function TasksPage() {
     string | undefined
   >(undefined);
 
-  // 4. Background Sync
-  React.useEffect(() => {
-    let isMounted = true;
-
-    async function syncTasks() {
-      try {
-        const response = await fetch("/api/dashboard/overview");
-        if (response.ok && isMounted) {
-          const liveData: DashboardPayload = await response.json();
-          if (liveData && liveData.tasks) {
-            setDashboardData(liveData);
-          }
-        }
-      } catch {
-        // Retain optimistic payload
+  const fetchData = React.useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/dashboard/overview");
+      if (!response.ok) {
+        throw new Error("Không thể kết nối đến máy chủ danh sách công việc");
       }
+      const liveData: DashboardPayload = await response.json();
+      if (liveData?.tasks) {
+        setDashboardData(liveData);
+      } else {
+        throw new Error("Dữ liệu nhận được từ máy chủ không hợp lệ");
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu công việc";
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
-
-    syncTasks();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  React.useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
@@ -121,8 +106,9 @@ export default function TasksPage() {
       const response = await fetch("/api/dashboard/overview");
       if (response.ok) {
         const liveData: DashboardPayload = await response.json();
-        if (liveData && liveData.tasks) {
+        if (liveData?.tasks) {
           setDashboardData(liveData);
+          setError(null);
         }
       }
     } catch {
@@ -132,9 +118,24 @@ export default function TasksPage() {
     }
   };
 
-  // 5. Status Transition Handler (SideSheet + Kanban Quick Move)
+  // Filter tasks dynamically by active role viewpoint
+  const visibleTasks = React.useMemo(
+    () => (dashboardData ? filterTasksByRole(dashboardData.tasks, user) : []),
+    [dashboardData, user]
+  );
+
+  const parentSchoolTaskTitle = React.useMemo(() => {
+    if (!selectedTask || isSchoolTask(selectedTask) || !dashboardData) return undefined;
+    const parent = dashboardData.tasks.find(
+      (t) => t.id === selectedTask.parentSchoolTaskId
+    );
+    return parent?.title;
+  }, [selectedTask, dashboardData]);
+
+  // Status Transition Handler (SideSheet + Kanban Quick Move)
   const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
     setDashboardData((prev) => {
+      if (!prev) return prev;
       const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
         if (st.id === taskId) {
           const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
@@ -166,11 +167,12 @@ export default function TasksPage() {
     });
   };
 
-  // 6. Handle Task Creation
+  // Handle Task Creation
   const handleCreateTask = (data: CreateTaskFormData) => {
-    const todayStr = "2026-09-04";
+    const todayStr = new Date().toISOString().split("T")[0];
 
     setDashboardData((prev) => {
+      if (!prev) return prev;
       let updatedTasks = [...prev.tasks];
 
       if (data.level === "TRUONG") {
@@ -247,6 +249,105 @@ export default function TasksPage() {
     (acc, t) => acc + (t.subTasks ? t.subTasks.length : 0),
     0
   );
+
+  // Error State
+  if (error && !dashboardData) {
+    return (
+      <div className="max-w-[1440px] w-full mx-auto py-12 px-4">
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6 text-center max-w-md mx-auto space-y-4">
+          <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+            <AlertCircle className="size-6" strokeWidth={1.5} />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-foreground font-heading">
+              Không thể tải danh sách công việc
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">{error}</p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={fetchData}
+            className="gap-1.5 text-xs font-medium"
+          >
+            <RefreshCw className="size-3.5" strokeWidth={1.5} />
+            <span>Thử lại</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading Skeleton State
+  if (isLoading && !dashboardData) {
+    return (
+      <div
+        className="max-w-[1440px] w-full mx-auto space-y-4 pb-24 md:pb-10 animate-pulse"
+        aria-label="Đang nạp dữ liệu công việc..."
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-2">
+            <div className="h-4 w-28 rounded bg-muted/60" />
+            <div className="h-7 w-56 rounded-md bg-muted/80" />
+            <div className="h-4 w-80 max-w-full rounded bg-muted/50" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-8.5 w-32 rounded-lg bg-muted/60 border border-border/60" />
+            <div className="h-8.5 w-24 rounded-lg bg-muted/60 border border-border/60" />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/70 bg-card p-3 shadow-2xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-7 w-20 rounded-md bg-muted/50 shrink-0" />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="h-6 w-44 rounded-md bg-muted/40 border border-border/50" />
+              <div className="h-7 w-24 rounded-lg bg-muted/50 border border-border/60" />
+            </div>
+          </div>
+          <div className="pt-2 border-t border-border/40">
+            <div className="h-8 w-full rounded-lg bg-muted/30 border border-border/50" />
+          </div>
+        </div>
+
+        <section className="min-h-[420px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((col) => (
+              <div
+                key={col}
+                className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-3 min-h-[380px]"
+              >
+                <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                  <div className="h-4 w-28 rounded bg-muted/70" />
+                  <div className="size-5 rounded-full bg-muted/50" />
+                </div>
+                <div className="space-y-2.5">
+                  {[1, 2, 3].map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-lg border border-border/60 bg-card p-3 space-y-2 shadow-2xs"
+                    >
+                      <div className="h-4 w-3/4 rounded bg-muted/70" />
+                      <div className="h-3 w-1/2 rounded bg-muted/40" />
+                      <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                        <div className="size-6 rounded-full bg-muted/50" />
+                        <div className="h-3 w-16 rounded bg-muted/40" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div

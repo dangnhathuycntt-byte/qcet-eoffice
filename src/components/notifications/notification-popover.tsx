@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   Bell,
   Check,
@@ -18,7 +17,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { QCET_PERSONNEL, Personnel } from "@/lib/mock-dashboard-data";
 import { useSidebar } from "@/components/layout/sidebar-context";
 
 export interface QCETNotification {
@@ -30,111 +28,46 @@ export interface QCETNotification {
   category: string;
   isRead: boolean;
   timeGroup: "new" | "earlier";
-  type: "completed" | "progress" | "upload" | "review" | "created" | "report" | "network";
+  type: "completed" | "progress" | "upload" | "review" | "created" | "report" | "network" | "assigned" | "directive" | "test";
   linkHref: string;
 }
 
-export const INITIAL_NOTIFICATIONS: QCETNotification[] = [
-  {
-    id: "notif-1",
-    actorName: "Trần Hùng",
-    action: "đã nộp minh chứng hoàn thành",
-    targetTitle: "Báo cáo an toàn thông tin định kỳ tháng 9/2026",
-    timestamp: "10 phút trước",
-    category: "ATTT",
-    isRead: false,
-    timeGroup: "new",
-    type: "completed",
-    linkHref: "/?category=ATTT",
-  },
-  {
-    id: "notif-2",
-    actorName: "Nguyễn Ngọc Vinh",
-    action: "trình phê duyệt tờ trình",
-    targetTitle: "Theo dõi kênh theo dõi chỉ đạo của UBND Tỉnh tháng 9/2026",
-    timestamp: "25 phút trước",
-    category: "KHAC",
-    isRead: false,
-    timeGroup: "new",
-    type: "progress",
-    linkHref: "/?category=KHAC",
-  },
-  {
-    id: "notif-3",
-    actorName: "Mai Đinh Thị Xuân",
-    action: "đăng tải bài viết truyền thông",
-    targetTitle: "Bài viết MỚI VÀO QCET – NHỮNG NGÀY ĐẦU TIÊN SẼ CÓ GÌ?",
-    timestamp: "45 phút trước",
-    category: "TRUYEN_THONG",
-    isRead: false,
-    timeGroup: "new",
-    type: "upload",
-    linkHref: "/?category=TRUYEN_THONG",
-  },
-  {
-    id: "notif-4",
-    actorName: "Trần Hùng",
-    action: "hoàn thành đo kiểm mạng",
-    targetTitle: "Khảo sát và đo kiểm tín hiệu wifi khu nhà A và nhà B",
-    timestamp: "1 giờ trước",
-    category: "CNTT",
-    isRead: false,
-    timeGroup: "new",
-    type: "network",
-    linkHref: "/?category=CNTT",
-  },
-  {
-    id: "notif-5",
-    actorName: "Lê Hoàng Nam",
-    action: "yêu cầu bổ sung tài liệu",
-    targetTitle: "Phân luồng và nhắc nhở các đơn vị xử lý nhiệm vụ tồn đọng",
-    timestamp: "2 giờ trước",
-    category: "KHAC",
-    isRead: false,
-    timeGroup: "earlier",
-    type: "review",
-    linkHref: "/?category=KHAC",
-  },
-  {
-    id: "notif-6",
-    actorName: "Phạm Thị Thu",
-    action: "đã số hóa vào kho học liệu",
-    targetTitle: "Quét và OCR 150 đầu giáo trình chuyên ngành kỹ thuật",
-    timestamp: "3 giờ trước",
-    category: "THU_VIEN",
-    isRead: true,
-    timeGroup: "earlier",
-    type: "completed",
-    linkHref: "/?category=THU_VIEN",
-  },
-  {
-    id: "notif-7",
-    actorName: "Võ Minh Trí",
-    action: "gửi thống kê tuyển sinh tuần 37",
-    targetTitle: "Thống kê số liệu nhập học các ngành công nghệ và kinh tế",
-    timestamp: "4 giờ trước",
-    category: "BAO_CAO",
-    isRead: true,
-    timeGroup: "earlier",
-    type: "report",
-    linkHref: "/?category=BAO_CAO",
-  },
-  {
-    id: "notif-8",
-    actorName: "Đặng Văn Hậu",
-    action: "giao chỉ đạo thẩm định",
-    targetTitle: "Hoàn thiện báo cáo tự đánh giá tiêu chuẩn 1 đến 5",
-    timestamp: "5 giờ trước",
-    category: "BAO_CAO",
-    isRead: true,
-    timeGroup: "earlier",
-    type: "created",
-    linkHref: "/?category=BAO_CAO",
-  },
-];
+export function formatRelativeTime(dateInput: string | Date): string {
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-function getActorPersonnel(name: string): Personnel | undefined {
-  return QCET_PERSONNEL.find((p) => p.name.trim().toLowerCase() === name.trim().toLowerCase());
+  if (isNaN(diffSec) || diffSec < 60) return "Vừa xong";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} phút trước`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours} giờ trước`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays} ngày trước`;
+  return date.toLocaleDateString("vi-VN");
+}
+
+export function getTimeGroup(dateInput: string | Date): "new" | "earlier" {
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  const now = new Date();
+  const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+  return isNaN(diffHours) || diffHours < 2 ? "new" : "earlier";
+}
+
+export function mapDbNotification(raw: any): QCETNotification {
+  const dateVal = raw.createdAt || new Date();
+  return {
+    id: raw.id,
+    actorName: raw.actorName || "Hệ thống QCET",
+    action: raw.body || raw.action || "",
+    targetTitle: raw.title || raw.targetTitle || "",
+    timestamp: raw.timestamp || formatRelativeTime(dateVal),
+    category: (raw.category || "QCET").toUpperCase(),
+    isRead: Boolean(raw.isRead),
+    timeGroup: raw.timeGroup || getTimeGroup(dateVal),
+    type: raw.type || "completed",
+    linkHref: raw.linkHref || "/",
+  };
 }
 
 function getActorInitials(name: string): string {
@@ -211,32 +144,43 @@ function getTypeBadge(type: QCETNotification["type"]) {
     case "progress":
       return {
         bg: "bg-blue-500/15 text-blue-600 border border-blue-500/30",
-        icon: Activity,
+        icon: Clock,
       };
     case "upload":
       return {
         bg: "bg-purple-500/15 text-purple-600 border border-purple-500/30",
         icon: FileText,
       };
-    case "network":
-      return {
-        bg: "bg-cyan-500/15 text-cyan-600 border border-cyan-500/30",
-        icon: Wifi,
-      };
     case "review":
       return {
-        bg: "bg-amber-500/15 text-amber-700 border border-amber-500/30",
+        bg: "bg-amber-500/15 text-amber-600 border border-amber-500/30",
         icon: AlertTriangle,
       };
     case "created":
       return {
-        bg: "bg-indigo-500/15 text-indigo-600 border border-indigo-500/30",
+        bg: "bg-teal-500/15 text-teal-600 border border-teal-500/30",
         icon: Plus,
       };
     case "report":
       return {
+        bg: "bg-indigo-500/15 text-indigo-600 border border-indigo-500/30",
+        icon: Activity,
+      };
+    case "network":
+      return {
         bg: "bg-sky-500/15 text-sky-600 border border-sky-500/30",
-        icon: BarChart2,
+        icon: Wifi,
+      };
+    case "assigned":
+    case "directive":
+      return {
+        bg: "bg-amber-500/15 text-amber-700 border border-amber-500/30",
+        icon: FileText,
+      };
+    case "test":
+      return {
+        bg: "bg-purple-500/15 text-purple-700 border border-purple-500/30",
+        icon: Activity,
       };
     default:
       return {
@@ -253,10 +197,38 @@ interface NotificationPopoverProps {
 }
 
 export function NotificationPopover({ isOpen, onClose, containerRef }: NotificationPopoverProps) {
-  const [notifications, setNotifications] = React.useState<QCETNotification[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = React.useState<QCETNotification[]>([]);
   const [filter, setFilter] = React.useState<"all" | "unread">("all");
+  const [, setIsLoading] = React.useState(false);
   const popoverRef = React.useRef<HTMLDivElement>(null);
   const { setBadgeCounts } = useSidebar();
+
+  const fetchNotifications = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.notifications)) {
+          setNotifications(data.notifications.map(mapDbNotification));
+        }
+      }
+    } catch {
+      // Best effort fallback
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      fetchNotifications();
+    }
+  }, [isOpen, fetchNotifications]);
 
   const unreadCount = React.useMemo(() => {
     return notifications.filter((n) => !n.isRead).length;
@@ -297,14 +269,24 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, isRead: true } : item))
     );
+    try {
+      await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+    } catch {
+      // Best effort
+    }
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    try {
+      await fetch("/api/notifications", { method: "PATCH" });
+    } catch {
+      // Best effort
+    }
   };
 
   const filteredNotifications = React.useMemo(() => {
@@ -327,53 +309,55 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
   return (
     <div
       ref={popoverRef}
-      data-slot="notification-popover"
-      className="absolute right-0 sm:right-0 top-full mt-2 w-[calc(100vw-24px)] sm:w-[410px] max-w-[420px] max-h-[min(580px,85vh)] flex flex-col rounded-2xl border border-border bg-card shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 overflow-hidden select-none"
+      role="dialog"
+      aria-label="Trung tâm thông báo"
+      className="fixed inset-x-2 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-[420px] max-h-[85vh] sm:max-h-[580px] bg-card rounded-2xl border border-border/80 shadow-2xl z-50 flex flex-col overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150 select-none"
     >
-      {/* Top Header */}
-      <div className="p-3.5 pb-2.5 border-b border-border/50 shrink-0 bg-muted/20">
+      {/* Header Container */}
+      <div className="p-3.5 pb-2.5 border-b border-border/50 bg-muted/20 shrink-0">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <h2 className="text-sm font-bold tracking-tight text-foreground font-heading">
+            <h2 className="text-sm font-bold text-foreground tracking-tight font-heading">
               Thông báo điều hành
             </h2>
             {unreadCount > 0 ? (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/20 tabular-nums">
+              <span className="inline-flex items-center px-1.5 py-0.2 rounded font-mono text-xs font-bold bg-primary/10 text-primary border border-primary/20 tabular-nums">
                 {unreadCount} mới
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                <Check size={12} strokeWidth={1.5} className="text-emerald-500" />
-                <span>Đã đọc hết</span>
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground font-medium">
+                <Check size={11} strokeWidth={1.5} className="text-emerald-500" />
+                <span>Đã cập nhật</span>
               </span>
             )}
           </div>
 
-          {/* Direct Action: Mark all as read button */}
-          {unreadCount > 0 && (
-            <button
-              type="button"
-              onClick={markAllAsRead}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
-              title="Đánh dấu tất cả thông báo là đã đọc"
-            >
-              <CheckCheck size={13} strokeWidth={1.5} className="text-primary" />
-              <span>Đã đọc tất cả</span>
-            </button>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={markAllAsRead}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+                title="Đánh dấu tất cả là đã đọc"
+              >
+                <CheckCheck size={13} strokeWidth={1.5} className="text-primary" />
+                <span>Đã đọc</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Theme-Synchronized Segmented Filter Control */}
-        <div className="flex items-center justify-between gap-2 mt-2.5">
-          <div className="inline-flex items-center p-0.5 rounded-xl bg-muted/70 border border-border/50 text-xs">
+        {/* Filter Segmented Control */}
+        <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-border/40">
+          <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/80 border border-border/40 text-xs">
             <button
               type="button"
               onClick={() => setFilter("all")}
               className={cn(
-                "px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                "px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer",
                 filter === "all"
-                  ? "bg-card text-foreground shadow-xs border border-border/60"
-                  : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                  ? "bg-card text-foreground shadow-2xs border border-border/60"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               Tất cả ({notifications.length})
@@ -382,10 +366,10 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
               type="button"
               onClick={() => setFilter("unread")}
               className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer",
                 filter === "unread"
-                  ? "bg-card text-foreground shadow-xs border border-border/60"
-                  : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                  ? "bg-card text-foreground shadow-2xs border border-border/60"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               <span>Chưa đọc</span>
@@ -414,8 +398,16 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
             <div className="size-10 rounded-full bg-secondary/80 text-muted-foreground flex items-center justify-center mx-auto mb-2.5">
               <Check size={18} strokeWidth={1.5} />
             </div>
-            <p className="text-xs font-semibold text-foreground">Không có thông báo chưa đọc nào</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Bạn đã nắm bắt hết mọi thông tin điều hành</p>
+            <p className="text-xs font-semibold text-foreground">
+              {filter === "unread"
+                ? "Không có thông báo chưa đọc nào"
+                : "Hiện tại Đồng chí không có thông báo mới nào"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {filter === "unread"
+                ? "Bạn đã xử lý và cập nhật toàn bộ hoạt động điều hành"
+                : "Bạn đã nắm bắt hết mọi thông tin điều hành"}
+            </p>
           </div>
         ) : (
           <>
@@ -482,7 +474,6 @@ interface NotificationRowProps {
 }
 
 function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
-  const personnel = getActorPersonnel(item.actorName);
   const badge = getTypeBadge(item.type);
   const BadgeIcon = badge.icon;
   const avatarStyle = getPersonnelAvatarStyle(item.actorName);
@@ -512,7 +503,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
             avatarStyle.text,
             avatarStyle.ring
           )}
-          title={`${item.actorName} (${personnel?.dept || "QCET"})`}
+          title={`${item.actorName} (QCET)`}
         >
           {getActorInitials(item.actorName)}
         </div>
@@ -557,17 +548,14 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
               onRead();
             }}
             className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-card hover:shadow-xs text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-            title="Đánh dấu đã đọc"
-            aria-label="Đánh dấu đã đọc"
+            title="Đánh dấu là đã đọc"
           >
-            <Check size={12} strokeWidth={1.5} />
+            <Check size={14} strokeWidth={1.5} />
           </button>
-          <span
-            className="block size-2 rounded-full bg-primary ring-2 ring-primary/20"
-            title="Chưa đọc"
-          />
+          <span className="size-2 rounded-full bg-primary ring-2 ring-primary/20 group-hover:hidden" />
         </div>
       ) : null}
     </Link>
   );
 }
+export { NotificationRow };

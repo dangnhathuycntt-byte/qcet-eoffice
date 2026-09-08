@@ -2,8 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Check,
@@ -17,18 +15,14 @@ import {
   BarChart2,
   Wifi,
   Bell,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { QCET_PERSONNEL, Personnel } from "@/lib/mock-dashboard-data";
 import {
   QCETNotification,
-  INITIAL_NOTIFICATIONS,
+  mapDbNotification,
 } from "@/components/notifications/notification-popover";
-
-function getActorPersonnel(name: string): Personnel | undefined {
-  return QCET_PERSONNEL.find((p) => p.name.trim().toLowerCase() === name.trim().toLowerCase());
-}
 
 function getActorInitials(name: string): string {
   if (!name || !name.trim()) return "QC";
@@ -104,32 +98,43 @@ function getTypeBadge(type: QCETNotification["type"]) {
     case "progress":
       return {
         bg: "bg-blue-500/15 text-blue-600 border border-blue-500/30",
-        icon: Activity,
+        icon: Clock,
       };
     case "upload":
       return {
         bg: "bg-purple-500/15 text-purple-600 border border-purple-500/30",
         icon: FileText,
       };
-    case "network":
-      return {
-        bg: "bg-cyan-500/15 text-cyan-600 border border-cyan-500/30",
-        icon: Wifi,
-      };
     case "review":
       return {
-        bg: "bg-amber-500/15 text-amber-700 border border-amber-500/30",
+        bg: "bg-amber-500/15 text-amber-600 border border-amber-500/30",
         icon: AlertTriangle,
       };
     case "created":
       return {
-        bg: "bg-indigo-500/15 text-indigo-600 border border-indigo-500/30",
+        bg: "bg-teal-500/15 text-teal-600 border border-teal-500/30",
         icon: Plus,
       };
     case "report":
       return {
+        bg: "bg-indigo-500/15 text-indigo-600 border border-indigo-500/30",
+        icon: Activity,
+      };
+    case "network":
+      return {
         bg: "bg-sky-500/15 text-sky-600 border border-sky-500/30",
-        icon: BarChart2,
+        icon: Wifi,
+      };
+    case "assigned":
+    case "directive":
+      return {
+        bg: "bg-amber-500/15 text-amber-700 border border-amber-500/30",
+        icon: FileText,
+      };
+    case "test":
+      return {
+        bg: "bg-purple-500/15 text-purple-700 border border-purple-500/30",
+        icon: Activity,
       };
     default:
       return {
@@ -140,22 +145,53 @@ function getTypeBadge(type: QCETNotification["type"]) {
 }
 
 export default function NotificationsPage() {
-  const router = useRouter();
-  const [notifications, setNotifications] = React.useState<QCETNotification[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = React.useState<QCETNotification[]>([]);
   const [filter, setFilter] = React.useState<"all" | "unread">("all");
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  const fetchNotifications = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.notifications)) {
+          setNotifications(data.notifications.map(mapDbNotification));
+        }
+      }
+    } catch {
+      // Best-effort
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const unreadCount = React.useMemo(() => {
     return notifications.filter((n) => !n.isRead).length;
   }, [notifications]);
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, isRead: true } : item))
     );
+    try {
+      await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+    } catch {
+      // Best-effort
+    }
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    try {
+      await fetch("/api/notifications", { method: "PATCH" });
+    } catch {
+      // Best-effort
+    }
   };
 
   const filteredNotifications = React.useMemo(() => {
@@ -183,6 +219,17 @@ export default function NotificationsPage() {
             <span>Quay lại Bảng điều hành</span>
           </Button>
         </Link>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchNotifications}
+          disabled={isLoading}
+          className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8"
+        >
+          <RefreshCw size={13} strokeWidth={1.5} className={isLoading ? "animate-spin" : ""} />
+          <span>Làm mới</span>
+        </Button>
       </div>
 
       {/* Card Container */}
@@ -266,14 +313,32 @@ export default function NotificationsPage() {
 
         {/* List Content */}
         <div className="p-2 divide-y divide-border/30">
-          {filteredNotifications.length === 0 ? (
+          {isLoading && notifications.length === 0 ? (
+            <div className="py-12 space-y-3 px-4 animate-pulse">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-start gap-3.5 p-3 rounded-xl bg-muted/20">
+                  <div className="size-11 rounded-full bg-muted/60 shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-3/4 rounded bg-muted/60" />
+                    <div className="h-3 w-1/3 rounded bg-muted/40" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredNotifications.length === 0 ? (
             <div className="py-16 text-center">
               <div className="size-12 rounded-full bg-secondary/80 text-muted-foreground flex items-center justify-center mx-auto mb-3">
                 <Check size={20} strokeWidth={1.5} />
               </div>
-              <p className="text-sm font-semibold text-foreground">Không có thông báo chưa đọc nào</p>
+              <p className="text-sm font-semibold text-foreground">
+                {filter === "unread"
+                  ? "Không có thông báo chưa đọc nào"
+                  : "Hiện tại Đồng chí không có thông báo mới nào"}
+              </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Bạn đã xử lý và cập nhật toàn bộ hoạt động điều hành
+                {filter === "unread"
+                  ? "Bạn đã xử lý và cập nhật toàn bộ hoạt động điều hành"
+                  : "Bạn đã nắm bắt hết mọi thông tin điều hành"}
               </p>
             </div>
           ) : (
@@ -328,7 +393,6 @@ function PageNotificationRow({
   item: QCETNotification;
   onRead: () => void;
 }) {
-  const personnel = getActorPersonnel(item.actorName);
   const badge = getTypeBadge(item.type);
   const BadgeIcon = badge.icon;
   const avatarStyle = getPersonnelAvatarStyle(item.actorName);
@@ -353,12 +417,11 @@ function PageNotificationRow({
             avatarStyle.text,
             avatarStyle.ring
           )}
-          title={`${item.actorName} (${personnel?.dept || "QCET"})`}
+          title={`${item.actorName} (QCET)`}
         >
           {getActorInitials(item.actorName)}
         </div>
 
-        {/* Micro overlay icon badge */}
         <div
           className={cn(
             "absolute -bottom-1 -right-1 size-5 rounded-full ring-2 ring-card flex items-center justify-center shadow-2xs",
@@ -369,15 +432,15 @@ function PageNotificationRow({
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 pr-1">
+      {/* Main Content Area */}
+      <div className="flex-1 min-w-0 pr-2">
         <p className="text-xs sm:text-sm text-foreground leading-snug line-clamp-2">
           <span className="font-bold text-foreground">{item.actorName}</span>{" "}
           <span className="text-muted-foreground">{item.action}</span>{" "}
           <span className="font-semibold text-foreground">&ldquo;{item.targetTitle}&rdquo;</span>
         </p>
-        <div className="flex items-center gap-2 mt-1.5">
-          <span className="px-1.5 py-0.2 rounded text-xs font-mono font-semibold bg-muted text-muted-foreground border border-border/50">
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          <span className="px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-muted text-muted-foreground border border-border/50">
             {item.category}
           </span>
           <span className="text-xs text-muted-foreground font-mono tabular-nums flex items-center gap-1">
@@ -387,9 +450,9 @@ function PageNotificationRow({
         </div>
       </div>
 
-      {/* Unread dot or Quick Mark Read Button */}
+      {/* Unread Indicator or Quick Mark Read Button on hover */}
       {!item.isRead ? (
-        <div className="self-center shrink-0 flex items-center gap-1.5 pr-2">
+        <div className="self-center shrink-0 flex items-center gap-1.5 pr-1">
           <button
             type="button"
             onClick={(e) => {
@@ -398,15 +461,11 @@ function PageNotificationRow({
               onRead();
             }}
             className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-card hover:shadow-xs text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-            title="Đánh dấu đã đọc"
-            aria-label="Đánh dấu đã đọc"
+            title="Đánh dấu là đã đọc"
           >
-            <Check size={13} strokeWidth={1.5} />
+            <Check size={16} strokeWidth={1.5} />
           </button>
-          <span
-            className="block size-2.5 rounded-full bg-primary ring-2 ring-primary/20"
-            title="Chưa đọc"
-          />
+          <span className="size-2.5 rounded-full bg-primary ring-2 ring-primary/20 group-hover:hidden" />
         </div>
       ) : null}
     </Link>

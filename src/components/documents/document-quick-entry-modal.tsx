@@ -25,6 +25,7 @@ import type {
   DocumentItem
 } from "@/types/document";
 import { DEFAULT_QCET_DEPARTMENTS } from "./directive-action-panel";
+import { useAuth } from "@/lib/auth-context";
 
 export interface DocumentQuickEntryModalProps {
   isOpen: boolean;
@@ -62,6 +63,7 @@ export function DocumentQuickEntryModal({
   defaultType = "VAN_BAN_DEN",
   departments = DEFAULT_QCET_DEPARTMENTS,
 }: DocumentQuickEntryModalProps) {
+  const { user } = useAuth();
   const [docType, setDocType] = React.useState<DocumentType>(defaultType);
   const [originalNumber, setOriginalNumber] = React.useState<string>("");
   const [issuedDate, setIssuedDate] = React.useState<string>(() => {
@@ -174,7 +176,7 @@ export function DocumentQuickEntryModal({
         leadDepartmentId: docType === "VAN_BAN_DEN" ? leadDepartmentId : undefined,
         draftingDeptId: docType === "VAN_BAN_DI" ? leadDepartmentId : undefined,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-        registeredById: "vt-auto-session",
+        registeredById: user?.id || "system",
       };
 
       if (docType === "VAN_BAN_DI") {

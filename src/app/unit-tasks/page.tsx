@@ -9,7 +9,6 @@ import {
   TaskCategory,
   TaskStatus,
 } from "@/types/dashboard";
-import { getMockDashboardPayload } from "@/lib/mock-dashboard-data";
 import {
   computeSchoolTaskRollup,
   computeDashboardStats,
@@ -41,39 +40,25 @@ import {
   Plus,
   Search,
   RefreshCw,
-  Users,
   X,
+  AlertCircle,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export type ViewMode = "table" | "kanban";
 
 export default function UnitTasksPage() {
   const { user } = useAuth();
 
-  // 1. Synchronous optimistic initial state
-  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(
-    () => getMockDashboardPayload()
-  );
+  const [dashboardData, setDashboardData] = React.useState<DashboardPayload | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [selectedTask, setSelectedTask] = React.useState<
     SchoolTask | StaffTask | null
   >(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-  // Filter tasks dynamically by active role viewpoint
-  const visibleTasks = React.useMemo(
-    () => filterTasksByRole(dashboardData.tasks, user),
-    [dashboardData.tasks, user]
-  );
-
-  const parentSchoolTaskTitle = React.useMemo(() => {
-    if (!selectedTask || isSchoolTask(selectedTask)) return undefined;
-    const parent = dashboardData.tasks.find(
-      (t) => t.id === selectedTask.parentSchoolTaskId
-    );
-    return parent?.title;
-  }, [selectedTask, dashboardData.tasks]);
-
-  // 2. View Mode & Filtering States (default level filter to DON_VI for Unit tasks)
+  // View Mode & Filtering States (default level filter to DON_VI for Unit tasks)
   const [viewMode, setViewMode] = React.useState<ViewMode>("kanban");
   const [activeCategory, setActiveCategory] = React.useState<
     TaskCategory | "ALL"
@@ -82,7 +67,7 @@ export default function UnitTasksPage() {
     React.useState<TaskLevelFilter>("DON_VI");
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // 3. Create Task Modal States (default initialLevel to DON_VI)
+  // Create Task Modal States (default initialLevel to DON_VI)
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [createInitialLevel, setCreateInitialLevel] =
     React.useState<TaskLevel>("DON_VI");
@@ -90,30 +75,31 @@ export default function UnitTasksPage() {
     string | undefined
   >(undefined);
 
-  // 4. Background Sync
-  React.useEffect(() => {
-    let isMounted = true;
-
-    async function syncTasks() {
-      try {
-        const response = await fetch("/api/dashboard/overview");
-        if (response.ok && isMounted) {
-          const liveData: DashboardPayload = await response.json();
-          if (liveData && liveData.tasks) {
-            setDashboardData(liveData);
-          }
-        }
-      } catch {
-        // Retain optimistic payload
+  const fetchData = React.useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/dashboard/overview");
+      if (!response.ok) {
+        throw new Error("Không thể kết nối đến máy chủ danh sách công việc đơn vị");
       }
+      const liveData: DashboardPayload = await response.json();
+      if (liveData?.tasks) {
+        setDashboardData(liveData);
+      } else {
+        throw new Error("Dữ liệu nhận được từ máy chủ không hợp lệ");
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu công việc đơn vị";
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
-
-    syncTasks();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  React.useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
@@ -121,8 +107,9 @@ export default function UnitTasksPage() {
       const response = await fetch("/api/dashboard/overview");
       if (response.ok) {
         const liveData: DashboardPayload = await response.json();
-        if (liveData && liveData.tasks) {
+        if (liveData?.tasks) {
           setDashboardData(liveData);
+          setError(null);
         }
       }
     } catch {
@@ -132,9 +119,24 @@ export default function UnitTasksPage() {
     }
   };
 
-  // 5. Status Transition Handler (SideSheet + Kanban Quick Move)
+  // Filter tasks dynamically by active role viewpoint
+  const visibleTasks = React.useMemo(
+    () => (dashboardData ? filterTasksByRole(dashboardData.tasks, user) : []),
+    [dashboardData, user]
+  );
+
+  const parentSchoolTaskTitle = React.useMemo(() => {
+    if (!selectedTask || isSchoolTask(selectedTask) || !dashboardData) return undefined;
+    const parent = dashboardData.tasks.find(
+      (t) => t.id === selectedTask.parentSchoolTaskId
+    );
+    return parent?.title;
+  }, [selectedTask, dashboardData]);
+
+  // Status Transition Handler (SideSheet + Kanban Quick Move)
   const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
     setDashboardData((prev) => {
+      if (!prev) return prev;
       const updatedTasks: SchoolTask[] = prev.tasks.map((st) => {
         if (st.id === taskId) {
           const schoolStatus: "IN_PROGRESS" | "COMPLETED" =
@@ -166,11 +168,12 @@ export default function UnitTasksPage() {
     });
   };
 
-  // 6. Handle Task Creation
+  // Handle Task Creation (Optimistic)
   const handleCreateTask = (data: CreateTaskFormData) => {
-    const todayStr = "2026-09-04";
+    const todayStr = new Date().toISOString().split("T")[0];
 
     setDashboardData((prev) => {
+      if (!prev) return prev;
       let updatedTasks = [...prev.tasks];
 
       if (data.level === "TRUONG") {
@@ -241,11 +244,111 @@ export default function UnitTasksPage() {
     setIsCreateModalOpen(true);
   };
 
+  // Counts for quick stats
   const totalSchoolTasksCount = visibleTasks.length;
   const totalSubTasksCount = visibleTasks.reduce(
     (acc, t) => acc + (t.subTasks ? t.subTasks.length : 0),
     0
   );
+
+  // Error State
+  if (error && !dashboardData) {
+    return (
+      <div className="max-w-[1440px] w-full mx-auto py-12 px-4">
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6 text-center max-w-md mx-auto space-y-4">
+          <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+            <AlertCircle className="size-6" strokeWidth={1.5} />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-foreground font-heading">
+              Không thể tải danh sách công việc đơn vị
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">{error}</p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={fetchData}
+            className="gap-1.5 text-xs font-medium"
+          >
+            <RefreshCw className="size-3.5" strokeWidth={1.5} />
+            <span>Thử lại</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading Skeleton State
+  if (isLoading && !dashboardData) {
+    return (
+      <div
+        className="max-w-[1440px] w-full mx-auto space-y-4 pb-24 md:pb-10 animate-pulse"
+        aria-label="Đang nạp dữ liệu công việc đơn vị..."
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-2">
+            <div className="h-4 w-28 rounded bg-muted/60" />
+            <div className="h-7 w-60 rounded-md bg-muted/80" />
+            <div className="h-4 w-88 max-w-full rounded bg-muted/50" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-8.5 w-32 rounded-lg bg-muted/60 border border-border/60" />
+            <div className="h-8.5 w-24 rounded-lg bg-muted/60 border border-border/60" />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/70 bg-card p-3 shadow-2xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-7 w-20 rounded-md bg-muted/50 shrink-0" />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="h-6 w-44 rounded-md bg-muted/40 border border-border/50" />
+              <div className="h-7 w-24 rounded-lg bg-muted/50 border border-border/60" />
+            </div>
+          </div>
+          <div className="pt-2 border-t border-border/40">
+            <div className="h-8 w-full rounded-lg bg-muted/30 border border-border/50" />
+          </div>
+        </div>
+
+        <section className="min-h-[420px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((col) => (
+              <div
+                key={col}
+                className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-3 min-h-[380px]"
+              >
+                <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                  <div className="h-4 w-28 rounded bg-muted/70" />
+                  <div className="size-5 rounded-full bg-muted/50" />
+                </div>
+                <div className="space-y-2.5">
+                  {[1, 2, 3].map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-lg border border-border/60 bg-card p-3 space-y-2 shadow-2xs"
+                    >
+                      <div className="h-4 w-3/4 rounded bg-muted/70" />
+                      <div className="h-3 w-1/2 rounded bg-muted/40" />
+                      <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                        <div className="size-6 rounded-full bg-muted/50" />
+                        <div className="h-3 w-16 rounded bg-muted/40" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -265,7 +368,7 @@ export default function UnitTasksPage() {
         </Link>
         <span className="text-muted-foreground/40">/</span>
         <span className="text-foreground font-medium">
-          Nhiệm vụ Đơn vị
+          Nhiệm vụ cấp Đơn vị
         </span>
       </nav>
 
@@ -273,18 +376,18 @@ export default function UnitTasksPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 font-mono">
-              Khoa / Phòng / Ban
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono">
+              Đơn vị cơ sở
             </span>
             <span className="text-xs text-muted-foreground font-medium">
-              Năm học 2025 - 2026
+              Thực thi & Tác nghiệp
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
-            Nhiệm vụ & Phân công Đơn vị
+            Quản lý Nhiệm vụ Đơn vị
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Quản lý và theo dõi các nhiệm vụ cụ thể phân bổ cho từng khoa, phòng, ban
+            Chi tiết nhiệm vụ phân rã, phân công cán bộ và theo dõi tiến độ công việc nội bộ đơn vị
           </p>
         </div>
 
@@ -309,10 +412,16 @@ export default function UnitTasksPage() {
           <button
             type="button"
             onClick={() => openCreateModal("DON_VI")}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer shadow-2xs"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer shadow-2xs active:scale-95"
           >
             <Plus strokeWidth={1.5} className="size-3.5" />
-            <span>Phân công việc</span>
+            <span>
+              {user?.role === "STAFF"
+                ? "Tạo việc mới"
+                : user?.role === "MANAGER"
+                ? "Giao việc đơn vị"
+                : "Tạo việc mới"}
+            </span>
           </button>
         </div>
       </div>
@@ -348,18 +457,6 @@ export default function UnitTasksPage() {
             <div className="hidden sm:flex items-center gap-1 border-r border-border/60 pr-2">
               <button
                 type="button"
-                onClick={() => setLevelFilter("DON_VI")}
-                className={cn(
-                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
-                  levelFilter === "DON_VI"
-                    ? "bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Chỉ việc Đơn vị ({totalSubTasksCount})
-              </button>
-              <button
-                type="button"
                 onClick={() => setLevelFilter("ALL")}
                 className={cn(
                   "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
@@ -369,6 +466,30 @@ export default function UnitTasksPage() {
                 )}
               >
                 Tất cả ({totalSchoolTasksCount + totalSubTasksCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setLevelFilter("DON_VI")}
+                className={cn(
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
+                  levelFilter === "DON_VI"
+                    ? "bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Đơn vị ({totalSubTasksCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setLevelFilter("TRUONG")}
+                className={cn(
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
+                  levelFilter === "TRUONG"
+                    ? "bg-blue-50 text-blue-700 font-semibold border border-blue-200"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Cấp Trường ({totalSchoolTasksCount})
               </button>
             </div>
 
@@ -415,7 +536,7 @@ export default function UnitTasksPage() {
             />
             <input
               type="text"
-              placeholder="Tìm kiếm công việc đơn vị theo tiêu đề, người phụ trách..."
+              placeholder="Tìm kiếm nhiệm vụ đơn vị hoặc cán bộ thực hiện..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-8 pl-9 pr-8 rounded-lg border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary transition-all"
