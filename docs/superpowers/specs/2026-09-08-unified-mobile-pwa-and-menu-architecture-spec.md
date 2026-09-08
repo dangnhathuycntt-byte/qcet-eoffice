@@ -222,6 +222,29 @@ Trên màn hình `< 768px`, chiều ngang chỉ có 390px – 430px. Topbar tuâ
 * Mỗi cột rộng `86vw` (`shrink-0 snap-center`), chừa 14vw hé lộ mép cột kế tiếp.
 * Thanh Tab 4 giai đoạn phía trên giúp nhảy nhanh tới từng cột, kèm 4 chấm tròn (dots) đồng bộ vị trí.
 
+### 8.12 Chuẩn hóa Touch Target $\ge$ 44px (Apple HIG & Material Design 3)
+* **Khắc phục vi phạm trực tiếp WCAG 2.2 SC 2.5.8 (< 24px):**
+  - Nâng các nút nhận việc/hoàn thành việc con từ `h-5.5` (22px) lên tối thiểu `h-8` (32px) trên desktop và `min-h-[44px]` trên di động.
+* **Chuẩn hóa nút đóng modal (`X`):**
+  - Đồng bộ tất cả nút đóng (`CreateTaskModal`, `TaskDetailSideSheet`, `UserProfileModal`, `MobileAppInstallModal`, `WelcomeModal`) đạt chuẩn `min-w-[44px] min-h-[44px]` (giống như `PushOnboardingSheet` và `MobileMenuDrawer`).
+* **Bổ sung CSS Công thái học trong `src/app/globals.css`:**
+  - `touch-action: manipulation`: Triệt tiêu hoàn toàn độ trễ 300ms chạm kép phóng to.
+  - `-webkit-tap-highlight-color: transparent`: Xóa lớp phủ xám nhấp nháy trên trình duyệt di động.
+
+### 8.13 Gia cố Độ tương phản Ánh sáng Ngoài trời (5.000 - 10.000 Lux)
+* **Triệt tiêu Opacity Bleed:**
+  - Thay thế toàn bộ `text-muted-foreground/50` và `text-muted-foreground/60` trên ngày hạn chót, mã nhiệm vụ, người phối hợp bằng `text-muted-foreground font-medium`, bảo toàn tỷ lệ tương phản gốc 5.8:1 (vượt chuẩn WCAG AA 4.5:1).
+* **Nâng độ đậm và viền Badge trạng thái:**
+  - Nâng chữ từ cấp `*-700` lên `*-800 font-semibold` và viền `border-*-300` để không bị rửa trôi màu dưới ánh nắng gắt sân trường.
+
+### 8.14 Bộ tiện ích Rung Xúc giác PWA Native (`src/lib/haptics.ts`)
+* Xây dựng module `src/lib/haptics.ts` sử dụng W3C Vibration API với safe-fallback cho iOS Safari và tôn trọng `prefers-reduced-motion`.
+* **Kịch bản rung:**
+  - `light` (12ms): Chạm tab Bottom Nav, dải lọc tháng, chuyển đổi vai trò.
+  - `medium` (22ms): Mở modal tạo việc, mở chi tiết nhiệm vụ.
+  - `success` ([15, 45, 30]ms): Duyệt nhanh nhiệm vụ, báo cáo hoàn thành.
+  - `warning` ([25, 50, 25]ms): Nhiệm vụ trễ hạn, cảnh báo rủi ro.
+
 ---
 
 ## 9. BẢNG TIÊU CHÍ NGHIỆM THU (ACCEPTANCE CRITERIA)
@@ -245,7 +268,10 @@ Trên màn hình `< 768px`, chiều ngang chỉ có 390px – 430px. Topbar tuâ
 | **AC-15** | Nhấn giữ Icon trên Màn hình chính | Hiện menu Shortcuts: *Tạo việc mới*, *Việc cần xử lý*, *Lịch công tác*. |
 | **AC-16** | Xem Bảng phân cấp trên điện thoại | Tự động chuyển sang dạng Thẻ dọc (Card Feed), các nút Duyệt nhanh hiển thị rõ ràng, không bị trôi cuộn ngang 920px. |
 | **AC-17** | Xem Bảng Kanban trên điện thoại | Hiển thị dạng Carousel cuộn ngang từng cột (Snap-scroll), có thanh Tab giai đoạn và chấm tròn đồng bộ. |
-| **AC-18** | Tối ưu hóa Bundle JavaScript | Dung lượng tải ban đầu giảm ~150KB gzip; không rò rỉ CreateTaskModal vào AppShell; kiểm tra `npm run typecheck` đạt 0 lỗi, `npm test` toàn bộ pass. |
+| **AC-18** | Tối ưu hóa Bundle JavaScript | Dung lượng tải ban đầu giảm ~150KB gzip; không rò rỉ CreateTaskModal vào AppShell. |
+| **AC-19** | Chuẩn hóa Touch Target & Tương phản | 100% nút tương tác đạt $\ge$ 44px trên mobile; không còn chữ mờ `muted-foreground/50` khó đọc dưới nắng ngoài trời. |
+| **AC-20** | Phản hồi rung xúc giác (Haptics) | Có rung nhẹ khi bấm chuyển tab, rung 2 nhịp khi duyệt thành công nhiệm vụ (`src/lib/haptics.ts`). |
+| **AC-21** | Kiểm tra chất lượng hệ thống | `npm run typecheck` đạt 0 lỗi, `npm test` toàn bộ suites đều PASS. |
 
 ---
 
