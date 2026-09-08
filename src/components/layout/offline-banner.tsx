@@ -84,7 +84,7 @@ export function OfflineBanner() {
       aria-live="polite"
       className={cn(
         "fixed z-50 transition-all duration-300 pointer-events-auto",
-        "bottom-20 left-1/2 -translate-x-1/2 sm:bottom-6 max-w-[92vw] sm:max-w-md w-full"
+        "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 sm:bottom-6 max-w-[92vw] sm:max-w-md w-full"
       )}
     >
       <div

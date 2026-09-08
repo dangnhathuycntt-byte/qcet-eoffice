@@ -22,9 +22,11 @@ self.addEventListener('install', (event) => {
   const installTasks = [self.skipWaiting()];
   if (typeof caches !== 'undefined') {
     installTasks.push(
-      caches
-        .open(CACHE_NAME)
-        .then((cache) => cache.addAll(PRECACHE_ASSETS).catch(() => {}))
+      caches.open(CACHE_NAME).then(async (cache) => {
+        await Promise.allSettled(
+          PRECACHE_ASSETS.map((asset) => cache.add(asset).catch(() => {}))
+        );
+      })
     );
   }
   event.waitUntil(Promise.all(installTasks));
@@ -55,6 +57,11 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   if (typeof caches === 'undefined') {
+    return;
+  }
+
+  // Never cache static Next.js assets on localhost/dev to prevent cache poisoning
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
     return;
   }
 
@@ -233,7 +240,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: payload.body || '',
     icon: payload.icon || '/logo-qcet.png',
-    badge: payload.badge || '/logo-qcet.png',
+    badge: payload.badge || '/icons/badge-72x72.png',
     data: payload.data || { linkHref: '/?zone=tasks' },
     vibrate: payload.vibrate || [100, 50, 100],
     tag: payload.tag || 'qcet-notification',

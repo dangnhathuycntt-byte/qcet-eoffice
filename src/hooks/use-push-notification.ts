@@ -96,7 +96,7 @@ export function usePushNotification(): UsePushNotificationReturn {
     const initializeRegistration = async () => {
       try {
         let reg: ServiceWorkerRegistration | null =
-          (await navigator.serviceWorker.getRegistration('/sw.js')) ?? null;
+          (await navigator.serviceWorker.getRegistration('/')) ?? null;
         if (!reg) {
           reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
         }
@@ -155,11 +155,15 @@ export function usePushNotification(): UsePushNotificationReturn {
       // Ensure service worker registration is available
       let reg: ServiceWorkerRegistration | null = registration;
       if (!reg) {
-        reg = (await navigator.serviceWorker.getRegistration('/sw.js')) ?? null;
+        reg = (await navigator.serviceWorker.getRegistration('/')) ?? null;
         if (!reg) {
           reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
         }
-        await navigator.serviceWorker.ready;
+        const swReadyPromise = navigator.serviceWorker.ready;
+        const swTimeout = new Promise<ServiceWorkerRegistration>((resolve) => {
+          setTimeout(() => resolve(reg!), 2500);
+        });
+        reg = await Promise.race([swReadyPromise, swTimeout]);
         setRegistration(reg);
       }
 
@@ -211,6 +215,23 @@ export function usePushNotification(): UsePushNotificationReturn {
 
       setSubscription(activeSub);
       setIsSubscribed(true);
+
+      // Trigger immediate welcome notification via active registration
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && reg) {
+        try {
+          reg.showNotification('QCET E-Office', {
+            body: 'Chuông thông báo đẩy đã kích hoạt thành công!',
+            icon: '/logo-qcet.png',
+            badge: '/icons/badge-72x72.png',
+            tag: 'qcet-welcome-notification',
+            vibrate: [200, 100, 200],
+            data: { linkHref: '/?zone=tasks' },
+          } as any);
+        } catch {
+          // ignore notification display error
+        }
+      }
+
       return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Lỗi không xác định khi kích hoạt thông báo';
@@ -280,6 +301,33 @@ export function usePushNotification(): UsePushNotificationReturn {
       setIsLoading(true);
       setError(null);
 
+      const title = options?.title || 'Thử nghiệm thông báo QCET';
+      const body =
+        options?.body ||
+        'Đây là thông báo đẩy thử nghiệm kiểm tra tính năng chuông trên thiết bị.';
+      const linkHref = options?.linkHref || '/?zone=tasks';
+
+      // If notification permission is granted, immediately trigger a local notification
+      // via the active service worker registration for instant tactile feedback
+      if (
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted' &&
+        registration
+      ) {
+        try {
+          (registration as any).showNotification(title, {
+            body,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/badge-72x72.png',
+            tag: `qcet-test-${Date.now()}`,
+            vibrate: [200, 100, 200],
+            data: { linkHref },
+          });
+        } catch {
+          // ignore display error
+        }
+      }
+
       try {
         const res = await fetch('/api/notifications/push/test', {
           method: 'POST',
@@ -287,9 +335,9 @@ export function usePushNotification(): UsePushNotificationReturn {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            title: options?.title || 'Thử nghiệm thông báo QCET',
-            body: options?.body || 'Đây là thông báo đẩy thử nghiệm kiểm tra tính năng chuông trên thiết bị.',
-            linkHref: options?.linkHref || '/?zone=tasks',
+            title,
+            body,
+            linkHref,
           }),
         });
 
@@ -309,7 +357,7 @@ export function usePushNotification(): UsePushNotificationReturn {
         setIsLoading(false);
       }
     },
-    []
+    [registration]
   );
 
   return {

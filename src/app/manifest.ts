@@ -7,6 +7,10 @@ export default function manifest(): MetadataRoute.Manifest {
     description:
       "Hệ thống Quản lý và Điều hành Công việc Điện tử - Trường Cao đẳng Kỹ thuật Quy Nhơn (QCET)",
     start_url: "/",
+    scope: "/",
+    id: "/?source=pwa",
+    lang: "vi",
+    dir: "ltr",
     display: "standalone",
     orientation: "portrait-primary",
     background_color: "#fbfbfb",
