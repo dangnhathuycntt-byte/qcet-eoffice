@@ -38,6 +38,8 @@ import { useDisplayDensity } from "@/components/density-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useSwipeAction } from "@/hooks/use-swipe-action";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 
 export interface CategoryBadgeConfig {
   label: string;
@@ -327,6 +329,7 @@ export function CascadingTaskTable({
   const [expandedTaskIds, setExpandedTaskIds] = React.useState<Set<string>>(
     () => new Set()
   );
+  const expandedIds = expandedTaskIds;
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   // Keyboard shortcut (⌘K or Ctrl+K) to focus search
@@ -355,6 +358,7 @@ export function CascadingTaskTable({
   };
 
   const [activeWorkbox, setActiveWorkbox] = React.useState<WorkboxFilter>("ALL");
+  const pullToRefresh = usePullToRefresh();
 
   // Filter tasks by active E-Office Workbox (Việc tôi nhận, Việc tôi giao, v.v.)
   const workboxTasks = React.useMemo(() => {
@@ -651,7 +655,7 @@ export function CascadingTaskTable({
       )}
 
       {/* Main Table Container */}
-      <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-card">
+      <div className="hidden md:block overflow-hidden rounded-2xl border border-border/50 bg-card shadow-card">
         <div className="overflow-x-auto">
           <table className="w-full text-left table-row-dense">
             {/* Table Header */}
@@ -860,8 +864,8 @@ export function CascadingTaskTable({
                         {/* Progress Bar & Metric with Quick Actions */}
                         <td className={cn("table-cell-dense px-4 align-middle text-right whitespace-nowrap", density === "compact" ? "py-1.5" : "py-3")}>
                           <div className="flex items-center justify-end gap-2">
-                            {/* Micro-ghost Quick Actions revealed on row hover */}
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                            {/* Micro-ghost Quick Actions */}
+                            <div className="flex items-center gap-1">
                               {onStatusChange && task.status === "IN_PROGRESS" && (
                                 <button
                                   type="button"
@@ -1031,7 +1035,7 @@ export function CascadingTaskTable({
 
                                         {/* 1-Click Fast Workflow Action for Subtask */}
                                         {onStatusChange && (
-                                          <div className="shrink-0 opacity-0 group-hover/sub:opacity-100 transition-opacity duration-150">
+                                          <div className="shrink-0">
                                             {subTask.status === "NEW" && (
                                               <button
                                                 type="button"
@@ -1210,6 +1214,157 @@ export function CascadingTaskTable({
                 <ChevronRight className="size-3.5" strokeWidth={1.5} />
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Card Feed */}
+      <div
+        className="flex flex-col gap-3 md:hidden"
+        role="feed"
+        aria-label="Danh sách nhiệm vụ di động"
+        style={pullToRefresh.containerProps.style}
+        onTouchStart={pullToRefresh.containerProps.onTouchStart}
+        onTouchMove={pullToRefresh.containerProps.onTouchMove}
+        onTouchEnd={pullToRefresh.containerProps.onTouchEnd}
+      >
+        {filteredTasks.length === 0 ? (
+          <div className="p-6 text-center rounded-2xl border border-border/60 bg-card">
+            <div className="inline-flex p-3 rounded-2xl bg-muted/60 text-muted-foreground border border-border/60 mb-2">
+              <Inbox className="size-8" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-sm font-bold text-foreground">
+              {activeWorkbox === "MY_RECEIVED"
+                ? "Hòm việc cá nhân chưa có nhiệm vụ"
+                : activeWorkbox === "MY_ASSIGNED"
+                ? "Bạn chưa tạo hoặc giao nhiệm vụ nào"
+                : "Không tìm thấy nhiệm vụ phù hợp"}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+              {searchQuery
+                ? `Không có kết quả khớp với "${searchQuery}".`
+                : "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm."}
+            </p>
+          </div>
+        ) : (
+          paginatedTasks.map((task) => {
+            const isExpanded = expandedIds.has(task.id);
+            return (
+              <article
+                key={task.id}
+                className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-xs space-y-2.5"
+              >
+                {/* Card Header: Task code & Status Badge */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-bold text-primary">
+                    {task.taskCode || "NV-QCET"}
+                  </span>
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border">
+                    {task.status}
+                  </span>
+                </div>
+
+                {/* Card Title */}
+                <h4
+                  onClick={() => onSelectTask?.(task)}
+                  className="text-sm font-semibold text-foreground line-clamp-2 leading-snug cursor-pointer active:text-primary"
+                >
+                  {task.title}
+                </h4>
+
+                {/* Metadata Row */}
+                <div className="flex items-center justify-between text-xs text-muted-foreground font-medium pt-1 border-t border-border/40">
+                  <span>{task.leadAssigneeName || "QCET"}</span>
+                  <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString("vi-VN") : "Chưa có hạn"}</span>
+                </div>
+
+                {/* Quick Action Buttons - Always Visible on Mobile */}
+                {onStatusChange && (
+                  <div className="flex items-center gap-2 pt-1">
+                    {task.status === "IN_PROGRESS" && (
+                      <button
+                        type="button"
+                        onClick={() => onStatusChange(task.id, "COMPLETED")}
+                        className="flex-1 min-h-[40px] inline-flex items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold text-xs active:scale-[0.98]"
+                      >
+                        Duyệt nhanh
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Subtask Accordion Trigger */}
+                {task.subTasks && task.subTasks.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => toggleExpand(task.id, e)}
+                      className="w-full min-h-[44px] flex items-center justify-between px-3 rounded-xl bg-muted/50 text-xs font-semibold text-foreground active:bg-muted"
+                    >
+                      <span>Nhiệm vụ con ({task.subTasks.length})</span>
+                      <ChevronDown className={cn("size-4 transition-transform", isExpanded && "rotate-180")} />
+                    </button>
+
+                    {isExpanded && (
+                      <div className="space-y-2 pt-1 border-t border-border/40 pl-2">
+                        {task.subTasks.map((subTask) => (
+                          <div
+                            key={subTask.id}
+                            onClick={() => onSelectTask?.(subTask)}
+                            className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs cursor-pointer active:bg-secondary"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-mono text-xs text-muted-foreground font-semibold">
+                                {subTask.id.toUpperCase()}
+                              </span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border">
+                                {subTask.status}
+                              </span>
+                            </div>
+                            <p className="text-xs font-medium text-foreground line-clamp-2">
+                              {subTask.title}
+                            </p>
+                            <div className="flex items-center justify-between text-muted-foreground text-xs pt-1">
+                              <span>{subTask.assigneeName}</span>
+                              <span>{formatDate(subTask.dueDate)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </article>
+            );
+          })
+        )}
+
+        {/* Mobile Stepper Pagination */}
+        {totalTasks > 0 && (
+          <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-card rounded-2xl border border-border/50 text-xs text-muted-foreground shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="inline-flex min-h-[40px] px-3 items-center gap-1 rounded-xl border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors active:scale-95"
+              title="Trang trước"
+            >
+              <ChevronLeft className="size-3.5" strokeWidth={1.5} />
+              <span>Trước</span>
+            </button>
+            <span className="font-semibold text-foreground tabular-nums">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="inline-flex min-h-[40px] px-3 items-center gap-1 rounded-xl border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors active:scale-95"
+              title="Trang kế tiếp"
+            >
+              <span>Sau</span>
+              <ChevronRight className="size-3.5" strokeWidth={1.5} />
+            </button>
           </div>
         )}
       </div>

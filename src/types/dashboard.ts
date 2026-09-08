@@ -91,6 +91,7 @@ export type TaskOrigin = 'SCHOOL' | 'SELF_INITIATED';
 
 export interface SchoolTask {
   id: string;
+  taskCode?: string;
   title: string;
   category: TaskCategory;
   categoryLabel: string;
