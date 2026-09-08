@@ -108,8 +108,8 @@ test("AppTopbar provides restart-onboarding trigger and OnboardingHub handles ev
 
   // Verify AppTopbar contains trigger and dispatches custom event
   assert.ok(
-    topbarContent.includes("Hướng dẫn làm quen (Onboarding)"),
-    "AppTopbar must include 'Hướng dẫn làm quen (Onboarding)' menu item"
+    topbarContent.includes("Hướng dẫn sử dụng hệ thống"),
+    "AppTopbar must include 'Hướng dẫn sử dụng hệ thống' menu item"
   );
   assert.ok(
     topbarContent.includes('"qcet:restart-onboarding"'),

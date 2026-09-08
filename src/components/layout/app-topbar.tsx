@@ -288,8 +288,8 @@ export function AppTopbar() {
                 window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
               }
             }}
-            aria-label="Cài đặt App Mobile (iOS/Android/PWA)"
-            title="Cài đặt App Mobile (iOS/Android/PWA)"
+            aria-label="Cài đặt ứng dụng di động"
+            title="Cài đặt ứng dụng di động"
             className="size-9 rounded-lg text-muted-foreground hover:bg-secondary hover:text-primary transition-colors cursor-pointer"
           >
             <Smartphone size={16} strokeWidth={1.5} />
