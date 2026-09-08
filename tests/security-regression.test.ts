@@ -202,6 +202,27 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
         departmentId: "dept-cntt",
       },
     });
+    await prisma.user.upsert({
+      where: { id: "user-lead-cntt" },
+      update: {},
+      create: {
+        id: "user-lead-cntt",
+        email: "lead-cntt@test.com",
+        name: "CNTT Lead",
+        role: "TRUONG_PHONG",
+        departmentId: "dept-cntt",
+      },
+    });
+    await prisma.user.upsert({
+      where: { id: "user-bgh" },
+      update: {},
+      create: {
+        id: "user-bgh",
+        email: "bgh@test.com",
+        name: "BGH User",
+        role: "BAN_GIAM_HIEU",
+      },
+    });
 
     // Setup test tasks
     await prisma.task.upsert({
@@ -253,7 +274,7 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
       where: { id: { in: ["task-daotao-1", "task-cntt-1"] } },
     });
     await prisma.user.deleteMany({
-      where: { id: { in: ["user-creator-1", "user-assignee", "user-cntt"] } },
+      where: { id: { in: ["user-creator-1", "user-assignee", "user-cntt", "user-lead-cntt", "user-bgh"] } },
     });
     await prisma.department.deleteMany({
       where: { id: { in: ["dept-daotao", "dept-cntt"] } },
@@ -279,6 +300,74 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     assert.match(body.error, /không có quyền|Forbidden/i);
   });
 
+  it("PATCH /api/tasks/[id] allows task creator to update task", async () => {
+    const token = createTestToken({ id: "user-creator-1", role: "TRUONG_PHONG", departmentId: "dept-daotao" });
+    const req = new NextRequest("http://localhost:3001/api/tasks/task-daotao-1", {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: "Updated by creator" }),
+    });
+    const res = await patchTask(req, { params: Promise.resolve({ id: "task-daotao-1" }) });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.success, true);
+    assert.equal(body.data.title, "Updated by creator");
+  });
+
+  it("PATCH /api/tasks/[id] allows assigned user to update task", async () => {
+    const token = createTestToken({ id: "user-assignee", role: "CHUYEN_VIEN", departmentId: "dept-cntt" });
+    const req = new NextRequest("http://localhost:3001/api/tasks/task-cntt-1", {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ progressPercent: 50 }),
+    });
+    const res = await patchTask(req, { params: Promise.resolve({ id: "task-cntt-1" }) });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.success, true);
+    assert.equal(body.data.progress, 50);
+  });
+
+  it("PATCH /api/tasks/[id] allows department leader (TRUONG_PHONG with matching departmentId) to update task", async () => {
+    const token = createTestToken({ id: "user-lead-cntt", role: "TRUONG_PHONG", departmentId: "dept-cntt" });
+    const req = new NextRequest("http://localhost:3001/api/tasks/task-cntt-1", {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: "Updated by dept lead" }),
+    });
+    const res = await patchTask(req, { params: Promise.resolve({ id: "task-cntt-1" }) });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.success, true);
+    assert.equal(body.data.title, "Updated by dept lead");
+  });
+
+  it("PATCH /api/tasks/[id] allows BGH/ADMIN to update task", async () => {
+    const token = createTestToken({ id: "user-bgh", role: "BAN_GIAM_HIEU" });
+    const req = new NextRequest("http://localhost:3001/api/tasks/task-daotao-1", {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: "Updated by BGH" }),
+    });
+    const res = await patchTask(req, { params: Promise.resolve({ id: "task-daotao-1" }) });
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.success, true);
+    assert.equal(body.data.title, "Updated by BGH");
+  });
+
   it("DELETE /api/tasks/[id] returns 403 when user is regular assignee (not creator or BGH/ADMIN)", async () => {
     const token = createTestToken({ id: "user-assignee", role: "GIANG_VIEN", departmentId: "dept-cntt" });
     const req = new NextRequest("http://localhost:3001/api/tasks/task-cntt-1", {
@@ -287,6 +376,72 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     });
     const res = await deleteTask(req, { params: Promise.resolve({ id: "task-cntt-1" }) });
     assert.equal(res.status, 403);
+  });
+
+  it("DELETE /api/tasks/[id] allows task creator to delete task", async () => {
+    // Create dedicated task for creator deletion test
+    const tempTask = await prisma.task.create({
+      data: {
+        id: "task-temp-delete-creator",
+        code: "TASK-TEMP-DEL-1",
+        title: "Nhiệm vụ xóa bởi creator",
+        status: "NOT_STARTED",
+        departmentId: "dept-daotao",
+        createdById: "user-creator-1",
+        dueDate: new Date("2026-10-01"),
+        academicMonth: 9,
+        academicYear: "2026-2027",
+      },
+    });
+
+    const token = createTestToken({ id: "user-creator-1", role: "TRUONG_PHONG", departmentId: "dept-daotao" });
+    const req = new NextRequest(`http://localhost:3001/api/tasks/${tempTask.id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    const res = await deleteTask(req, { params: Promise.resolve({ id: tempTask.id }) });
+    assert.equal(res.status, 200);
+    const check = await prisma.task.findUnique({ where: { id: tempTask.id } });
+    assert.equal(check, null);
+  });
+
+  it("DELETE /api/tasks/[id] allows BGH/ADMIN to delete task", async () => {
+    // Create dedicated task for BGH deletion test
+    const tempTask = await prisma.task.create({
+      data: {
+        id: "task-temp-delete-bgh",
+        code: "TASK-TEMP-DEL-2",
+        title: "Nhiệm vụ xóa bởi BGH",
+        status: "NOT_STARTED",
+        departmentId: "dept-daotao",
+        createdById: "user-creator-1",
+        dueDate: new Date("2026-10-01"),
+        academicMonth: 9,
+        academicYear: "2026-2027",
+      },
+    });
+
+    const token = createTestToken({ id: "user-bgh", role: "BAN_GIAM_HIEU" });
+    const req = new NextRequest(`http://localhost:3001/api/tasks/${tempTask.id}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    const res = await deleteTask(req, { params: Promise.resolve({ id: tempTask.id }) });
+    assert.equal(res.status, 200);
+    const check = await prisma.task.findUnique({ where: { id: tempTask.id } });
+    assert.equal(check, null);
+  });
+
+  it("POST /api/documents/[id]/directives returns 401 when unauthenticated", async () => {
+    const req = new NextRequest("http://localhost:3001/api/documents/doc-1/directives", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ assignedDeptId: "dept-cntt", instruction: "Chỉ đạo mẫu" }),
+    });
+    const res = await postDirective(req, { params: Promise.resolve({ id: "doc-1" }) });
+    assert.equal(res.status, 401);
   });
 
   it("POST /api/documents/[id]/directives returns 403 if role is not BAN_GIAM_HIEU or ADMIN", async () => {
