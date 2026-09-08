@@ -1,82 +1,145 @@
-# KẾ HOẠCH TRIỂN KHAI: TINH GIẢN KHÔNG GIAN CÁ NHÂN & LOẠI BỎ AI SLOP (LINEAR-GRADE ANTI-SLOP WORKSPACE)
+# Personal Workspace Anti-Slop Implementation Plan
 
-**Ngày lập:** 08/09/2026  
-**Dựa trên đặc tả:** `docs/superpowers/specs/2026-09-08-personal-workspace-anti-slop-design.md`  
-**File mục tiêu chính:** `src/components/portal/lecturer-focus-workspace.tsx`  
-**Mục tiêu:** Loại bỏ sự thừa thãi, trùng lặp nút bấm và bộ lọc; gom 5 tầng widget thành 1 thanh Toolbar tinh gọn; triệt tiêu rác số 0; đưa trải nghiệm đạt chuẩn mực Linear/Notion.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
----
+**Goal:** Refactor `LecturerFocusWorkspace` in `src/components/portal/lecturer-focus-workspace.tsx` to eliminate redundant buttons, consolidate duplicate KPI cards and pill filters into a single-tier interactive toolbar, suppress zero-count noise, and introduce an empathetic Inbox Zero empty state.
 
-## 1. Các Hạng mục Thay Đổi Cụ Thể (Proposed Changes)
+**Architecture:** Replace the 5 stacked visual tiers with 2 clean rows: Row 1 holds the personal identity and manual refresh button in the header; Row 2 holds the unified filter toolbar (segmented ownership tabs, embedded compact search input, bulk expand/collapse, and task counter); Row 3 holds the interactive status pills with contract-preserving labels ("Hôm nay cần làm", "Trong tuần này", "Chờ lãnh đạo duyệt", "Cần chỉnh sửa", "Đã hoàn thành"). When zero tasks exist in a state, suppress the `(0)` badge; when all tasks are cleared, display an encouraging Inbox Zero view.
 
-### 1.1 Tinh gọn Header trang (`Section 1: Page Header`)
-- **Vấn đề:** 
-  - Nút `+ Tạo việc mới` trùng lặp với nút `+ Tạo việc` trên Topbar.
-  - Nút `Kho nhiệm vụ ->` trùng lặp với mục `Kho nhiệm vụ` trong Sidebar.
-  - Dòng thông tin tiểu sử `Chuyên viên CNTT · Nguyễn Ngọc Vinh · Khoa CNTT · Năm học 2026 - 2027` gây thừa thãi.
-- **Giải pháp:**
-  - Xóa nút `+ Tạo việc mới` trong header trang.
-  - Xóa nút `Kho nhiệm vụ ->` trong header trang.
-  - Giữ lại nút `Làm mới (↻)` gọn gàng bên phải tiêu đề.
-  - Rút gọn subtitle thành dạng thanh lịch, chứa đủ: Tên người dùng, Đơn vị, Vai trò (đảm bảo pass test `test("renders welcome header with user name and department")`).
+**Tech Stack:** Next.js 15 App Router, React 19, Tailwind CSS v4, Lucide Icons, Node.js test runner (`tsx --test`).
 
-### 1.2 Hợp nhất Thẻ KPI và Dải Pill Lọc (`Section 2 & Section 3 -> Unified Toolbar`)
-- **Vấn đề:** 
-  - 5 Thẻ KPI to (`Hôm nay cần làm`, `Trong tuần này`, `Chờ lãnh đạo duyệt`, `Cần chỉnh sửa`, `Đã hoàn thành`) chiếm 150px chiều cao màn hình chỉ để hiển thị con số `0`.
-  - Ngay bên dưới là dải 6 nút Pill lọc trạng thái lặp lại 100% cùng chức năng và cùng đếm số lượng.
-  - Ô tìm kiếm to chiếm nguyên một hàng ngang.
-  - Các badge `(0)` rải khắp nơi.
-- **Giải pháp:**
-  - Thay vì để 5 thẻ to đùng độc lập bên trên rồi lại lặp lại bên dưới, ta gom thành **1 thanh Toolbar tích hợp chuẩn Linear**:
-    - **Hàng 1 (Chức năng cốt lõi):**
-      - Bên trái: Cụm Segmented Tabs theo quyền sở hữu: `Tất cả` | `Tôi chủ trì (DRI)` | `Tôi tham gia (Phối hợp)`.
-        - Triệt tiêu số 0: Chỉ hiển thị `(X)` khi $X > 0$, nếu bằng 0 chỉ hiển thị nhãn chữ.
-      - Bên phải:
-        - Ô tìm kiếm cục bộ tích hợp nhỏ gọn (`w-56 sm:w-64`, icon kính lúp 14px, có nút clear `x`).
-        - Nút `Thu gọn tất cả / Mở rộng tất cả`.
-        - Bộ đếm: `Hiển thị X / Y nhiệm vụ`.
-    - **Hàng 2 (Dải lọc trạng thái tương tác):**
-      - Dải `Lọc trạng thái:` chứa trực tiếp các nhãn lọc theo hợp đồng test:
-        - `Hôm nay cần làm`
-        - `Trong tuần này`
-        - `Chờ lãnh đạo duyệt`
-        - `Cần chỉnh sửa`
-        - `Đã hoàn thành`
-      - Nếu số đếm tương ứng $> 0$, hiển thị badge nổi bật (vd: `Hôm nay cần làm (3)`). Nếu bằng 0, hiển thị nhãn phẳng dịu nhẹ, không gây áp lực số 0.
-      - Có nút `[Xóa lọc]` khi `activeFilter !== "ALL"`.
+**Spec:** `docs/superpowers/specs/2026-09-08-personal-workspace-anti-slop-design.md`
 
-### 1.3 Nâng cấp Empty State kép (Dual Contextual Empty State)
-- **Vấn đề:** Khi nhân sự không có việc tồn đọng (hoặc chưa được phân công việc), màn hình hiển thị icon rỗng cùng thông điệp như bị lỗi tìm kiếm: *"Không tìm thấy nhiệm vụ nào / Không có công việc nào thỏa mãn tiêu chí tìm kiếm..."*.
-- **Giải pháp:**
-  - Phân tách rõ 2 ngữ cảnh:
-    - **Ngữ cảnh 1 (Inbox Zero - Hoàn thành hết việc):** Khi `groupedTasks.length === 0` và không có từ khóa tìm kiếm (`searchTerm === ""`) và `activeFilter === "ALL"`:
-      - Icon: `CheckCircle2` dịu mát (`text-emerald-600` hoặc `text-primary/80`).
-      - Tiêu đề: `"Tuyệt vời! Bạn không có công việc nào tồn đọng"`.
-      - Mô tả: `"Tất cả nhiệm vụ được giao đã hoàn thành hoặc đang chờ phê duyệt."`.
-    - **Ngữ cảnh 2 (Không tìm thấy do bộ lọc hoặc tìm kiếm):** Khi có `searchTerm` hoặc `activeFilter !== "ALL"`:
-      - Icon: `Search` hoặc `Inbox` tinh tế.
-      - Tiêu đề: `"Không tìm thấy nhiệm vụ phù hợp"`.
-      - Mô tả: `"Không có công việc nào khớp với từ khóa hoặc bộ lọc đã chọn."`.
-      - Nút hành động: `[Xóa bộ lọc & tìm kiếm]`.
+## Global Constraints
+
+- Never run `next build` over `.next` while `next dev` is running (Build rule from CLAUDE.md).
+- Strict light-only theme: OKLCH color space, no `dark:` classes or ThemeProvider (Theme rule from CLAUDE.md).
+- Preserve contract strings in `src/components/portal/lecturer-focus-workspace.tsx`:
+  - User identity tokens: `user.name`, `user.department` (or `user.departmentCode`), and `cleanRoleLabel` / role title.
+  - Metric filter labels: `"Hôm nay cần làm"`, `"Trong tuần này"`, `"Chờ lãnh đạo duyệt"`, `"Cần chỉnh sửa"`, `"Đã hoàn thành"`.
+  - Filter prefix: `"Lọc trạng thái:"`.
+  - Tree connector classes: `"border-l-2 border-primary/20 pl-3 sm:pl-4 ml-1 sm:ml-2 space-y-2.5"`.
+  - Bulk toggle labels: `"Thu gọn tất cả"` / `"Mở rộng tất cả"`.
 
 ---
 
-## 2. Kế hoạch Kiểm thử & Bảo toàn Hệ thống (Testing & Safety Plan)
+### Task 1: Refactor LecturerFocusWorkspace Header and Remove Duplicate Action Buttons
 
-Theo quy tắc kỹ thuật trong `CLAUDE.md`:
-1. **Không chạy `next build` khi dev server đang chạy** để tránh làm hỏng cache CSS.
-2. Kiểm tra tính tương thích ngược và tính đúng đắn bằng:
-   - `npm test tests/task-ownership-model.test.ts`
-   - `npm test tests/role-based-workspace-workflow.test.ts`
-   - `npm test tests/staff-focus-view.test.ts`
-   - `npm run typecheck`
-3. Kiểm tra preview trực tiếp trên giao diện để bảo đảm không có lỗi vỡ layout hoặc styling.
+**Files:**
+- Modify: `src/components/portal/lecturer-focus-workspace.tsx:730-802`
+- Test: `tests/role-based-workspace-workflow.test.ts:862-875`
+
+**Interfaces:**
+- Consumes: `user` (AuthUser), `cleanRoleLabel` (string), `onRefresh` (() => void), `isRefreshing` (boolean).
+- Produces: Clean, single-tier header without duplicate `+ Tạo việc mới` or `Kho nhiệm vụ ->` buttons.
+
+- [ ] **Step 1: Check existing header test**
+
+Run: `npx tsx --test tests/role-based-workspace-workflow.test.ts`
+Expected: PASS
+
+- [ ] **Step 2: Remove redundant buttons and streamline subtitle in header**
+
+In `src/components/portal/lecturer-focus-workspace.tsx`:
+- Remove the blue button `Tạo việc mới` (redundant with Topbar's `+ Tạo việc`).
+- Remove the outline button `Kho nhiệm vụ` (redundant with Sidebar's `Kho nhiệm vụ`).
+- Keep `onRefresh` button (`Làm mới (↻)`).
+- Ensure subtitle retains `{cleanRoleLabel}`, `{user.name}`, and `{user.department || user.departmentCode || "Bộ môn"}` separated by `·` dots.
+
+- [ ] **Step 3: Run test to verify compatibility**
+
+Run: `npx tsx --test tests/role-based-workspace-workflow.test.ts`
+Expected: PASS
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/components/portal/lecturer-focus-workspace.tsx
+git commit -m "refactor(workspace): remove redundant header actions and streamline profile banner"
+```
 
 ---
 
-## 3. Các bước thực hiện (Execution Steps)
+### Task 2: Consolidate KPI Cards and Pill Filters into a Unified Interactive Status Strip with Zero-Count Suppression
 
-1. [x] Lập Kế hoạch Triển khai (Implementation Plan) & Commit tài liệu.
-2. [ ] Refactor `src/components/portal/lecturer-focus-workspace.tsx` theo chuẩn Linear anti-slop.
-3. [ ] Chạy kiểm thử tự động với Node/tsx test runner và TypeScript typecheck.
-4. [ ] Xác nhận giao diện trực quan sạch đẹp, trực quan, không còn rác thị giác.
+**Files:**
+- Modify: `src/components/portal/lecturer-focus-workspace.tsx:803-1205`
+- Test: `tests/task-ownership-model.test.ts:684-725`
+- Test: `tests/role-based-workspace-workflow.test.ts:876-891`
+
+**Interfaces:**
+- Consumes: `summary` (TaskSummaryMetrics), `activeFilter` (TaskFilterType), `handleStatCardClick` / `handlePillClick`, `ownershipFilter`, `setOwnershipFilter`, `searchTerm`, `setSearchTerm`, `allVisibleCollapsed`, `handleToggleAllVisible`.
+- Produces: Integrated 2-tier toolbar preserving metric strings ("Hôm nay cần làm", "Trong tuần này", "Chờ lãnh đạo duyệt", "Cần chỉnh sửa", "Đã hoàn thành", "Lọc trạng thái:", "Thu gọn tất cả") with zero-count suppression (`count > 0 ? (count) : null`).
+
+- [ ] **Step 1: Inspect test expectations for status strip and filters**
+
+Verify that tests require:
+- `"Hôm nay cần làm"`, `"Trong tuần này"`, `"Chờ lãnh đạo duyệt"`, `"Cần chỉnh sửa"`, `"Đã hoàn thành"`
+- `"Lọc trạng thái:"`
+- `"Thu gọn tất cả"` / `"Mở rộng tất cả"`
+
+- [ ] **Step 2: Replace the dual KPI-card + Pill block with unified toolbar**
+
+In `src/components/portal/lecturer-focus-workspace.tsx`:
+- Replace the huge 5 KPI grid cards and separate redundant pill bar with:
+  1. A unified toolbar top row containing:
+     - Ownership segmented buttons (`Tất cả`, `Tôi chủ trì (DRI)`, `Tôi tham gia (Phối hợp)`). If count > 0, show count; if 0, suppress count badge.
+     - An integrated compact search bar (`w-56 sm:w-64`) with clear button.
+     - Bulk collapse toggle button (`Thu gọn tất cả` / `Mở rộng tất cả`).
+     - Counter text: `Hiển thị {filteredGroupedTasks.length} / {groupedTasks.length} nhiệm vụ`.
+  2. An interactive status filter row:
+     - Label: `Lọc trạng thái:`
+     - Filter buttons for each category:
+       - `Hôm nay cần làm` (mapped to `TODAY`)
+       - `Trong tuần này` (mapped to `THIS_WEEK`)
+       - `Đang làm` (mapped to `IN_PROGRESS`)
+       - `Chờ lãnh đạo duyệt` (mapped to `NEEDS_REVIEW`)
+       - `Cần chỉnh sửa` (mapped to `REVISION`)
+       - `Đã hoàn thành` (mapped to `COMPLETED`)
+     - If count > 0, show `({count})`; if 0, show text only (no zero noise).
+     - Show `[Xóa lọc]` button when `activeFilter !== "ALL"`.
+
+- [ ] **Step 3: Run unit tests**
+
+Run: `npx tsx --test tests/task-ownership-model.test.ts tests/role-based-workspace-workflow.test.ts`
+Expected: PASS
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/components/portal/lecturer-focus-workspace.tsx
+git commit -m "refactor(workspace): consolidate KPI cards into unified toolbar with zero-count suppression"
+```
+
+---
+
+### Task 3: Implement Empathetic Dual Empty State (Inbox Zero vs Filter Empty) and Run Full QA
+
+**Files:**
+- Modify: `src/components/portal/lecturer-focus-workspace.tsx:1206-1240`
+- Test: `tests/task-ownership-model.test.ts`
+- Test: `tests/role-based-workspace-workflow.test.ts`
+
+**Interfaces:**
+- Consumes: `filteredGroupedTasks`, `groupedTasks`, `searchTerm`, `activeFilter`, `ownershipFilter`.
+- Produces: Rewarding "Inbox Zero" display when `groupedTasks.length === 0` vs descriptive filter empty state when filtering.
+
+- [ ] **Step 1: Update empty state logic in LecturerFocusWorkspace**
+
+In `src/components/portal/lecturer-focus-workspace.tsx`:
+- When `groupedTasks.length === 0 && !searchTerm && activeFilter === "ALL" && ownershipFilter === "ALL"`:
+  - Render an "Inbox Zero" card with `CheckCircle2` icon, title "Tuyệt vời! Bạn không có công việc nào tồn đọng", subtitle "Tất cả nhiệm vụ được giao đã hoàn thành hoặc đang chờ phân công mới."
+- When `filteredGroupedTasks.length === 0` (due to active search or filter):
+  - Render "Không tìm thấy nhiệm vụ nào", descriptive message, and a clean "Xóa bộ lọc & tìm kiếm" button.
+
+- [ ] **Step 2: Run full test suite & TypeScript typecheck**
+
+Run: `npm run typecheck && npm test`
+Expected: 0 errors, 100% tests passing.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/components/portal/lecturer-focus-workspace.tsx
+git commit -m "feat(workspace): implement empathetic inbox zero state and verify full QA"
+```
