@@ -8,7 +8,7 @@ import { AppShell } from "@/components/layout/app-shell";
 const fontSans = Be_Vietnam_Pro({
   variable: "--font-sans",
   subsets: ["latin", "vietnamese"],
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
   fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
   display: "swap",
 });
@@ -16,7 +16,7 @@ const fontSans = Be_Vietnam_Pro({
 const fontHeading = Plus_Jakarta_Sans({
   variable: "--font-heading",
   subsets: ["latin", "vietnamese"],
-  weight: ["600", "700", "800"],
+  weight: ["600", "700"],
   fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
   display: "swap",
 });
@@ -24,7 +24,7 @@ const fontHeading = Plus_Jakarta_Sans({
 const fontMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "600"],
   fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
   display: "swap",
 });
@@ -69,9 +69,9 @@ export default function RootLayout({
     <html
       lang="vi"
       className={`light ${fontSans.variable} ${fontHeading.variable} ${fontMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
-        <link rel="apple-touch-icon" href="/logo-qcet.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -85,11 +85,26 @@ export default function RootLayout({
                   }
                 } catch (e) {}
                 if ('serviceWorker' in navigator) {
-                  window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                      console.error('ServiceWorker registration failed:', err);
+                  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    navigator.serviceWorker.getRegistrations().then(function(regs) {
+                      for (var r of regs) {
+                        r.unregister();
+                      }
                     });
-                  });
+                    if (typeof caches !== 'undefined') {
+                      caches.keys().then(function(names) {
+                        for (var n of names) {
+                          caches.delete(n);
+                        }
+                      });
+                    }
+                  } else {
+                    window.addEventListener('load', function() {
+                      navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                        console.error('ServiceWorker registration failed:', err);
+                      });
+                    });
+                  }
                 }
               })();
             `,

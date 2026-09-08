@@ -105,13 +105,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground">
+    <div className="relative min-h-[100dvh] bg-background text-foreground">
       <React.Suspense fallback={<aside className="hidden md:flex w-[248px] shrink-0 border-r border-border/50 bg-card" />}>
         <AppSidebar />
       </React.Suspense>
       <div
         className={cn(
-          "min-h-screen flex flex-col transition-all duration-200 ease-in-out",
+          "min-h-[100dvh] flex flex-col transition-all duration-200 ease-in-out",
           isCollapsed ? "md:pl-16" : "md:pl-[248px]"
         )}
       >

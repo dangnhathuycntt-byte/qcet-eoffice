@@ -30,6 +30,18 @@ export async function POST(
   context: RouteContext
 ) {
   try {
+    const session = getSessionPayload(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!["BAN_GIAM_HIEU", "ADMIN"].includes(session.role)) {
+      return NextResponse.json(
+        { success: false, error: "Bạn không có quyền ban hành chỉ đạo" },
+        { status: 403 }
+      );
+    }
+
     const { id } = await context.params;
 
     // 1. Check document existence
@@ -41,13 +53,10 @@ export async function POST(
       );
     }
 
-    const session = getSessionPayload(request);
     const body = await request.json();
 
-    // Default leaderId from session if absent
-    if (!body.leaderId && session?.id) {
-      body.leaderId = session.id;
-    }
+    // Strict leaderId binding from session (anti-spoofing)
+    body.leaderId = session.id;
 
     // 2. Validate directive payload
     const validation = validateDirectivePayload(body);
@@ -59,21 +68,8 @@ export async function POST(
     }
 
     // 3. Resolve leader user and assigned department for naming & DB constraints
-    let effectiveLeaderId = body.leaderId;
-    let leaderUser = effectiveLeaderId
-      ? await prisma.user.findUnique({ where: { id: effectiveLeaderId } })
-      : null;
-
-    if (!leaderUser) {
-      // Fallback to first available leader or user in database
-      const fallbackLeader =
-        (await prisma.user.findFirst({ where: { role: "BAN_GIAM_HIEU" } })) ||
-        (await prisma.user.findFirst());
-      if (fallbackLeader) {
-        effectiveLeaderId = fallbackLeader.id;
-        leaderUser = fallbackLeader;
-      }
-    }
+    const effectiveLeaderId = session.id;
+    const leaderUser = await prisma.user.findUnique({ where: { id: effectiveLeaderId } });
 
     const assignedDept = await prisma.department.findUnique({
       where: { id: body.assignedDeptId },
@@ -90,7 +86,7 @@ export async function POST(
       id: "",
       documentId: id,
       leaderId: effectiveLeaderId,
-      leaderName: leaderUser?.name || "Ban Giám hiệu",
+      leaderName: leaderUser?.name || session.name || "Ban Giám hiệu",
       instruction: body.instruction,
       deadline: body.deadline ? new Date(body.deadline).toISOString() : null,
       assignedDeptId: body.assignedDeptId,

@@ -14,8 +14,10 @@ import { signSessionToken } from "../src/lib/jwt-session";
 
 describe("Document Registry API & Validation Tests (ND30)", () => {
   let seededUserId: string;
+  let seededBghUserId: string;
   let seededDeptId: string;
   let sessionToken: string;
+  let bghSessionToken: string;
   const createdDocumentIds: string[] = [];
   const createdTaskIds: string[] = [];
 
@@ -32,9 +34,26 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
       role: user.role,
     });
 
+    const bghUser = (await prisma.user.findFirst({ where: { role: { in: ["BAN_GIAM_HIEU", "ADMIN"] } } })) || user;
+    seededBghUserId = bghUser.id;
+    bghSessionToken = signSessionToken({
+      id: bghUser.id,
+      email: bghUser.email,
+      name: bghUser.name,
+      role: "BAN_GIAM_HIEU",
+    });
+
     const dept = await prisma.department.findFirst();
     assert.ok(dept, "At least one department must exist in database");
     seededDeptId = dept.id;
+
+    // Clean up any lingering test documents from previous runs
+    await prisma.documentDirective.deleteMany({
+      where: { document: { registrationNumber: { in: [8888, 9999] } } },
+    });
+    await prisma.document.deleteMany({
+      where: { registrationNumber: { in: [8888, 9999] } },
+    });
   });
 
   after(async () => {
@@ -333,7 +352,10 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     test("rejects directive on non-existent document with status 404", async () => {
       const req = new NextRequest("http://localhost:3000/api/documents/fake-doc/directives", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${bghSessionToken}`,
+        },
         body: JSON.stringify({
           instruction: "Chỉ đạo mẫu",
           assignedDeptId: seededDeptId,
@@ -347,7 +369,10 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     test("rejects invalid directive payload with status 400", async () => {
       const req = new NextRequest(`http://localhost:3000/api/documents/${directiveDocId}/directives`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${bghSessionToken}`,
+        },
         body: JSON.stringify({
           instruction: "", // empty
           assignedDeptId: "",
@@ -365,9 +390,12 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     test("records directive, generates School Task, links them and sets status to DANG_XU_LY", async () => {
       const req = new NextRequest(`http://localhost:3000/api/documents/${directiveDocId}/directives`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${bghSessionToken}`,
+        },
         body: JSON.stringify({
-          leaderId: seededUserId,
+          leaderId: seededBghUserId,
           instruction: "Giao Phòng Đào tạo chủ trì, thông báo rộng rãi đến toàn thể giảng viên đăng ký đề tài",
           assignedDeptId: seededDeptId,
           deadline: "2026-09-20T17:00:00.000Z",

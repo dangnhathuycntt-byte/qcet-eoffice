@@ -83,13 +83,29 @@ export async function PATCH(
     const { id } = await Promise.resolve(context.params);
     const existing = await prisma.task.findUnique({
       where: { id },
-      select: { id: true, status: true }
+      include: {
+        assignees: { select: { userId: true } },
+      },
     });
 
     if (!existing) {
       return NextResponse.json(
         { success: false, error: 'Không tìm thấy nhiệm vụ' },
         { status: 404 }
+      );
+    }
+
+    const isPrivileged = ["BAN_GIAM_HIEU", "ADMIN"].includes(session.role);
+    const isCreator = existing.createdById === session.id;
+    const isAssignee = existing.assignees.some((a) => a.userId === session.id);
+    const isDepartmentLeader =
+      session.role === "TRUONG_PHONG" &&
+      Boolean(session.departmentId && existing.departmentId === session.departmentId);
+
+    if (!isPrivileged && !isCreator && !isAssignee && !isDepartmentLeader) {
+      return NextResponse.json(
+        { success: false, error: "Bạn không có quyền chỉnh sửa nhiệm vụ này" },
+        { status: 403 }
       );
     }
 
@@ -242,13 +258,23 @@ export async function DELETE(
     const { id } = await Promise.resolve(context.params);
     const existing = await prisma.task.findUnique({
       where: { id },
-      select: { id: true }
+      select: { id: true, createdById: true }
     });
 
     if (!existing) {
       return NextResponse.json(
         { success: false, error: 'Không tìm thấy nhiệm vụ' },
         { status: 404 }
+      );
+    }
+
+    const isPrivileged = ["BAN_GIAM_HIEU", "ADMIN"].includes(session.role);
+    const isCreator = existing.createdById === session.id;
+
+    if (!isPrivileged && !isCreator) {
+      return NextResponse.json(
+        { success: false, error: "Bạn không có quyền xóa nhiệm vụ này" },
+        { status: 403 }
       );
     }
 
