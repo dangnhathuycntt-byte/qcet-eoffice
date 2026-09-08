@@ -26,6 +26,7 @@ import {
   CATEGORY_TABS,
 } from "@/components/dashboard/cascading-task-table";
 import { cn } from "@/lib/utils";
+import { triggerHaptic } from "@/lib/haptics";
 
 export type TaskLevelFilter = "ALL" | "TRUONG" | "DON_VI";
 
@@ -322,6 +323,31 @@ export function TaskKanbanBoard({
     COMPLETED: 30,
   });
 
+  const [activeColumnIndex, setActiveColumnIndex] = React.useState(0);
+  const columnRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+  const carouselRef = React.useRef<HTMLDivElement | null>(null);
+
+  const scrollToColumn = (idx: number) => {
+    setActiveColumnIndex(idx);
+    triggerHaptic("selection");
+    columnRefs.current[idx]?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!el || el.clientWidth === 0) return;
+    const scrollLeft = el.scrollLeft;
+    const itemWidth = el.scrollWidth / KANBAN_COLUMNS.length;
+    const newIdx = Math.round(scrollLeft / itemWidth);
+    if (newIdx >= 0 && newIdx < KANBAN_COLUMNS.length && newIdx !== activeColumnIndex) {
+      setActiveColumnIndex(newIdx);
+    }
+  };
+
   const groupedTasks = React.useMemo(() => {
     return groupTasksByStatus(
       tasks,
@@ -336,8 +362,32 @@ export function TaskKanbanBoard({
       className={cn("w-full overflow-x-auto pb-4", className)}
       data-slot="task-kanban-board"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 min-w-[320px]">
-        {KANBAN_COLUMNS.map((col) => {
+      {/* Mobile Stage Tab Bar */}
+      <div className="flex md:hidden items-center gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none">
+        {KANBAN_COLUMNS.map((col, idx) => (
+          <button
+            key={col.id}
+            type="button"
+            onClick={() => scrollToColumn(idx)}
+            className={cn(
+              "min-h-[40px] px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer active:scale-95",
+              activeColumnIndex === idx
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted"
+            )}
+          >
+            {col.title} ({groupedTasks[col.id]?.length || 0})
+          </button>
+        ))}
+      </div>
+
+      {/* Responsive Board: Carousel on mobile, Grid on tablet/desktop */}
+      <div
+        ref={carouselRef}
+        onScroll={handleScroll}
+        className="flex md:grid md:grid-cols-2 xl:grid-cols-4 gap-3.5 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-3.5 px-3.5 md:mx-0 md:px-0"
+      >
+        {KANBAN_COLUMNS.map((col, idx) => {
           const colTasks = groupedTasks[col.id] || [];
           const count = colTasks.length;
           const limit = colLimits[col.id] || 30;
@@ -347,8 +397,11 @@ export function TaskKanbanBoard({
           return (
             <div
               key={col.id}
+              ref={(el) => {
+                columnRefs.current[idx] = el;
+              }}
               className={cn(
-                "flex flex-col rounded-xl border border-border/60 bg-muted/20 backdrop-blur-xs p-3.5 transition-all",
+                "w-[86vw] max-w-[340px] shrink-0 snap-center flex flex-col md:w-auto md:max-w-none rounded-2xl border border-border/60 bg-muted/20 backdrop-blur-xs p-3.5 transition-all",
                 col.bgClass
               )}
             >
@@ -535,6 +588,7 @@ export function TaskKanbanBoard({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (prevStatus && onStatusChange) {
+                                      triggerHaptic("selection");
                                       onStatusChange(item.id, prevStatus);
                                     }
                                   }}
@@ -544,7 +598,7 @@ export function TaskKanbanBoard({
                                       : "Không thể lùi"
                                   }
                                   className={cn(
-                                    "size-6 flex items-center justify-center rounded border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer",
+                                    "size-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95",
                                     !prevStatus &&
                                       "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
                                   )}
@@ -561,6 +615,7 @@ export function TaskKanbanBoard({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (nextStatus && onStatusChange) {
+                                      triggerHaptic("selection");
                                       onStatusChange(item.id, nextStatus);
                                     }
                                   }}
@@ -570,7 +625,7 @@ export function TaskKanbanBoard({
                                       : "Không thể tiến"
                                   }
                                   className={cn(
-                                    "size-6 flex items-center justify-center rounded border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer",
+                                    "size-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95",
                                     !nextStatus &&
                                       "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
                                   )}
@@ -607,6 +662,24 @@ export function TaskKanbanBoard({
             </div>
           );
         })}
+      </div>
+
+      {/* Mobile Active Column Indicator Dots */}
+      <div className="flex md:hidden items-center justify-center gap-1.5 pt-3">
+        {KANBAN_COLUMNS.map((col, idx) => (
+          <button
+            key={col.id}
+            type="button"
+            onClick={() => scrollToColumn(idx)}
+            aria-label={`Chuyển tới cột ${col.title}`}
+            className={cn(
+              "h-1.5 rounded-full transition-all cursor-pointer",
+              activeColumnIndex === idx
+                ? "w-6 bg-primary"
+                : "w-2 bg-border hover:bg-muted-foreground/40"
+            )}
+          />
+        ))}
       </div>
     </div>
   );
