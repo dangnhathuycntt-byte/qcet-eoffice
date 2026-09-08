@@ -10,8 +10,6 @@ import {
   Network,
   Bell,
   Clock,
-  Sun,
-  Moon,
   Plus,
   User,
   CheckCircle2,
@@ -19,7 +17,6 @@ import {
   LogOut,
   Settings,
 } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -180,7 +177,6 @@ export function MobileNav({ pathname }: { pathname: string }) {
  */
 export function Navigation() {
   const pathname = usePathname();
-  const { resolved, toggleTheme } = useTheme();
   const { user, logout, setIsProfileModalOpen } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
@@ -339,22 +335,6 @@ export function Navigation() {
             <kbd className="ml-0.5 hidden items-center gap-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1.5 py-0.5 text-xs font-mono leading-none sm:inline-flex opacity-90">
               ⌘K
             </kbd>
-          </Button>
-
-          {/* Theme Switcher Button */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={toggleTheme}
-            aria-label="Chuyển đổi giao diện sáng/tối"
-            className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-          >
-            {resolved === "dark" ? (
-              <Sun size={15} strokeWidth={1.5} className="text-amber-400" />
-            ) : (
-              <Moon size={15} strokeWidth={1.5} className="text-muted-foreground" />
-            )}
           </Button>
 
           {/* User Avatar + Profile Dropdown */}

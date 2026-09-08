@@ -8,8 +8,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
-  Sun,
-  Moon,
   ChevronDown,
   ChevronRight,
   User,
@@ -22,11 +20,11 @@ import {
   Check,
   Plus,
   Compass,
+  Smartphone,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
 import { ScopeSwitcher } from "@/components/layout/scope-switcher";
-import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth-context";
 import { UserRole } from "@/types/auth";
 import { UserProfileModal } from "@/components/auth/user-profile-modal";
@@ -104,7 +102,6 @@ export function AppTopbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isCollapsed, toggleCollapse, toggleMobile, badgeCounts } = useSidebar();
-  const { resolved, toggleTheme } = useTheme();
   const { user, switchRole, logout, setIsProfileModalOpen } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
@@ -295,21 +292,21 @@ export function AppTopbar() {
             )}
           </Link>
 
-          {/* Theme Switcher Button */}
+          {/* Mobile App Install Button */}
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            onClick={toggleTheme}
-            aria-label="Chuyển đổi giao diện sáng/tối"
-            title="Chuyển đổi giao diện sáng/tối"
-            className="size-9 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
+              }
+            }}
+            aria-label="Cài đặt App Mobile (iOS/Android/PWA)"
+            title="Cài đặt App Mobile (iOS/Android/PWA)"
+            className="size-9 rounded-lg text-muted-foreground hover:bg-secondary hover:text-primary transition-colors cursor-pointer"
           >
-            {resolved === "dark" ? (
-              <Sun size={15} strokeWidth={1.5} className="text-amber-400" />
-            ) : (
-              <Moon size={15} strokeWidth={1.5} className="text-muted-foreground" />
-            )}
+            <Smartphone size={16} strokeWidth={1.5} />
           </Button>
 
           {/* User Avatar + Profile Dropdown */}
@@ -399,6 +396,25 @@ export function AppTopbar() {
                   >
                     <Settings size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
                     <span>Hồ sơ cá nhân</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
+                      }
+                    }}
+                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Smartphone size={14} strokeWidth={1.5} className="text-primary shrink-0" />
+                      <span>Cài đặt App Mobile</span>
+                    </div>
+                    <span className="text-xs uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25">
+                      PWA
+                    </span>
                   </button>
 
                   <button

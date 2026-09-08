@@ -11,12 +11,9 @@ import {
   Activity,
   CheckCircle2,
   Clock,
-  Sun,
-  Moon,
   Briefcase,
   Users,
 } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
@@ -91,7 +88,6 @@ function PortalZoomToggle() {
 }
 
 export default function PortalPage() {
-  const { resolved, toggleTheme } = useTheme();
   const { user } = useAuth();
 
   return (
@@ -136,17 +132,6 @@ export default function PortalPage() {
             </div>
 
             <PortalZoomToggle />
-
-            {/* Theme Toggle Button */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="size-8 rounded-full bg-card/80 hover:bg-card border border-border/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-2xs"
-              title="Chuyển đổi giao diện sáng / tối"
-              aria-label="Chuyển đổi giao diện"
-            >
-              {resolved === "dark" ? <Sun size={15} strokeWidth={1.5} /> : <Moon size={15} strokeWidth={1.5} />}
-            </button>
           </div>
         </div>
       </header>

@@ -8,8 +8,6 @@ import {
   Calendar,
   FileText,
   Settings,
-  Moon,
-  Sun,
   LogOut,
   X,
   ChevronRight,
@@ -45,7 +43,6 @@ export interface MobileMenuDrawerProps {
 export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) {
   const { user, switchUser, logout } = useAuth();
   const pathname = usePathname();
-  const [isDark, setIsDark] = React.useState(false);
   const [isTestingPush, setIsTestingPush] = React.useState(false);
   const [testPushResult, setTestPushResult] = React.useState<"success" | "failed" | null>(null);
 
@@ -66,22 +63,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
     installApp,
   } = usePWAInstall();
 
-  React.useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  const toggleTheme = () => {
-    const next = !isDark;
-    setIsDark(next);
-    if (next) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
-
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange}>
       <BottomSheetContent className="max-h-[85vh] overflow-y-auto">
@@ -96,7 +77,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                   {user?.name || "Người dùng QCET"}
                 </BottomSheetTitle>
                 <BottomSheetDescription className="text-xs truncate">
-                  {user?.title || "Cán bộ giảng viên"} • {user?.department || "Trường CĐ Kỹ thuật Cao Thắng"}
+                  {user?.title || "Cán bộ giảng viên"} • {user?.department || "Trường CĐ Kỹ thuật Công nghệ Quy Nhơn"}
                 </BottomSheetDescription>
               </div>
             </div>
@@ -345,22 +326,6 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
 
           {/* Preferences & Actions */}
           <div className="space-y-2 pt-2 border-t border-border/40">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="w-full flex items-center justify-between p-3 min-h-[44px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                {isDark ? (
-                  <Sun size={17} className="text-amber-500" />
-                ) : (
-                  <Moon size={17} className="text-indigo-500" />
-                )}
-                <span>Giao diện: {isDark ? "Tối (Dark Mode)" : "Sáng (Light Mode)"}</span>
-              </div>
-              <span className="text-xs text-muted-foreground font-mono">Đổi</span>
-            </button>
-
             <button
               type="button"
               onClick={() => {

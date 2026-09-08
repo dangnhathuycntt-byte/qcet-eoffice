@@ -168,11 +168,11 @@ describe("AppTopbar Component Contracts", () => {
     );
   });
 
-  it("integrates right utilities: notification bell, theme toggle, and user profile", () => {
+  it("integrates right utilities: notification bell, mobile install, and user profile", () => {
     const content = fs.readFileSync(topbarPath, "utf-8");
     assert.ok(content.includes("Bell"), "Must render Bell icon");
     assert.ok(content.includes("/notifications"), "Must link to /notifications");
-    assert.ok(content.includes("toggleTheme"), "Must wire theme toggle");
+    assert.ok(!content.includes("toggleTheme"), "Theme toggle button must be retired");
     assert.ok(content.includes("UserProfileModal"), "Must render UserProfileModal");
   });
 
