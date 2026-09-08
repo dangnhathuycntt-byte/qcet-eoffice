@@ -49,10 +49,10 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Mới / Tiếp nhận",
     emoji: "",
     dotColor: "bg-slate-500",
-    iconColor: "text-slate-500 dark:text-slate-400",
+    iconColor: "text-slate-500",
     accentBorder: "border-t-slate-500",
     headerAccent: "border-t-2 border-t-slate-500",
-    badgeClass: "border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+    badgeClass: "border-slate-500/20 bg-slate-500/10 text-slate-600",
     bgClass: "bg-muted/10",
   },
   {
@@ -61,10 +61,10 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Đang thực hiện",
     emoji: "",
     dotColor: "bg-blue-500",
-    iconColor: "text-blue-500 dark:text-blue-400",
+    iconColor: "text-blue-500",
     accentBorder: "border-t-blue-500",
     headerAccent: "border-t-2 border-t-blue-500",
-    badgeClass: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    badgeClass: "border-blue-500/20 bg-blue-500/10 text-blue-600",
     bgClass: "bg-muted/10",
   },
   {
@@ -73,10 +73,10 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Cần chỉnh sửa",
     emoji: "",
     dotColor: "bg-amber-500",
-    iconColor: "text-amber-500 dark:text-amber-400",
+    iconColor: "text-amber-500",
     accentBorder: "border-t-amber-500",
     headerAccent: "border-t-2 border-t-amber-500",
-    badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-600",
     bgClass: "bg-muted/10",
   },
   {
@@ -85,10 +85,10 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Hoàn thành",
     emoji: "",
     dotColor: "bg-emerald-500",
-    iconColor: "text-emerald-500 dark:text-emerald-400",
+    iconColor: "text-emerald-500",
     accentBorder: "border-t-emerald-500",
     headerAccent: "border-t-2 border-t-emerald-500",
-    badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600",
     bgClass: "bg-muted/10",
   },
 ];
@@ -417,7 +417,7 @@ export function TaskKanbanBoard({
                             <div className="flex items-center justify-between gap-1.5 flex-wrap">
                               <div className="flex items-center gap-1.5">
                                 {item.level === "TRUONG" ? (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20">
                                     <Building2
                                       strokeWidth={1.5}
                                       className="size-3"
@@ -425,7 +425,7 @@ export function TaskKanbanBoard({
                                     <span>Cấp Trường</span>
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
                                     <Users
                                       strokeWidth={1.5}
                                       className="size-3"

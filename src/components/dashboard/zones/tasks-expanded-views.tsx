@@ -83,7 +83,7 @@ function TasksExpandedViewsComponent() {
               Năm học 2026 - 2027
             </span>
             {selectedMonthPeriod ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 shadow-2xs font-mono">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-sky-500/10 text-sky-600 border border-sky-500/20 shadow-2xs font-mono">
                 <span className="size-1.5 rounded-full bg-sky-500 animate-pulse" />
                 <span>{selectedMonthPeriod.label} ({selectedMonthPeriod.shortDateSpan})</span>
               </span>
@@ -176,7 +176,7 @@ function TasksExpandedViewsComponent() {
                     setActiveWorkbox("NEEDS_REVIEW");
                   }
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-700 border border-amber-500/30 hover:bg-amber-500/20 transition-colors cursor-pointer"
               >
                 <FileCheck size={13} strokeWidth={1.5} />
                 <span>Hàng đợi phê duyệt</span>

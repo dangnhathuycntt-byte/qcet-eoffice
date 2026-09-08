@@ -111,7 +111,7 @@ export function UpcomingDeadlinesWidget({
       {/* Header */}
       <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
             <Calendar className="size-4" strokeWidth={1.5} />
           </div>
           <div>
@@ -141,8 +141,8 @@ export function UpcomingDeadlinesWidget({
             const displayDate = formatDisplayDate(item.dueDate);
             const isSchool = item.level === "Trường";
             const levelBg = isSchool
-              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
-              : "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20";
+              ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+              : "bg-violet-500/10 text-violet-600 border-violet-500/20";
 
             return (
               <div

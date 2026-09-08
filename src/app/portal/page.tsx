@@ -156,22 +156,22 @@ export default function PortalPage() {
             className="lg:col-span-7 relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-7 md:p-8 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
           >
             {/* Subtle background ambient tint */}
-            <div className="absolute -top-20 -right-20 size-64 bg-blue-500/10 dark:bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -top-20 -right-20 size-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
             {/* Top header within card */}
             <div>
               <div className="flex items-center justify-between gap-4">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                  <span className="size-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                  <span className="size-1.5 rounded-full bg-blue-600 animate-pulse" />
                   Màn hình Điều hành BGH
                 </span>
-                <div className="size-12 rounded-2xl bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+                <div className="size-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
                   <Tv size={22} strokeWidth={1.75} />
                 </div>
               </div>
 
               {/* Title & Description */}
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mt-6 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mt-6 group-hover:text-blue-600 transition-colors">
                 Dashboard Điều Hành & Báo Cáo KPI
               </h2>
               <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
@@ -180,8 +180,8 @@ export default function PortalPage() {
 
               {/* Two Micro Feature Pills */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-7">
-                <div className="p-3.5 rounded-2xl bg-background/80 dark:bg-card/80 border border-border/70 flex items-center gap-3 shadow-2xs">
-                  <div className="size-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                <div className="p-3.5 rounded-2xl bg-background/80 border border-border/70 flex items-center gap-3 shadow-2xs">
+                  <div className="size-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
                     <Activity size={17} strokeWidth={1.75} />
                   </div>
                   <div className="min-w-0">
@@ -190,8 +190,8 @@ export default function PortalPage() {
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-background/80 dark:bg-card/80 border border-border/70 flex items-center gap-3 shadow-2xs">
-                  <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <div className="p-3.5 rounded-2xl bg-background/80 border border-border/70 flex items-center gap-3 shadow-2xs">
+                  <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
                     <CheckCircle2 size={17} strokeWidth={1.75} />
                   </div>
                   <div className="min-w-0">
@@ -204,7 +204,7 @@ export default function PortalPage() {
 
             {/* Bottom Action */}
             <div className="mt-8 pt-6 border-t border-border/50 flex items-center justify-between">
-              <span className="text-xs font-bold tracking-wider text-blue-600 dark:text-blue-400 uppercase">
+              <span className="text-xs font-bold tracking-wider text-blue-600 uppercase">
                 KHỞI CHẠY DASHBOARD ĐIỀU HÀNH
               </span>
               <span className="size-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 active:scale-95 transition-all">
@@ -222,16 +222,16 @@ export default function PortalPage() {
             >
               <div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                     <Briefcase size={12} strokeWidth={1.75} />
                     Dành cho Khoa / Phòng
                   </span>
-                  <div className="size-11 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+                  <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
                     <CheckSquare size={20} strokeWidth={1.75} />
                   </div>
                 </div>
 
-                <h3 className="text-xl font-bold tracking-tight text-foreground mt-4 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                <h3 className="text-xl font-bold tracking-tight text-foreground mt-4 group-hover:text-emerald-600 transition-colors">
                   Quản Lý Công Việc 2 Cấp
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
@@ -239,7 +239,7 @@ export default function PortalPage() {
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between text-xs font-semibold text-emerald-600">
                 <span>Vào bảng công việc</span>
                 <ArrowUpRight size={15} strokeWidth={2.2} />
               </div>
@@ -252,16 +252,16 @@ export default function PortalPage() {
             >
               <div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-600 border border-slate-500/20">
                     <Users size={12} strokeWidth={1.75} />
                     Toàn thể Cán bộ & Giảng viên
                   </span>
-                  <div className="size-11 rounded-2xl bg-slate-500/10 dark:bg-slate-500/15 border border-slate-500/20 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+                  <div className="size-11 rounded-2xl bg-slate-500/10 border border-slate-500/20 text-slate-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
                     <Calendar size={20} strokeWidth={1.75} />
                   </div>
                 </div>
 
-                <h3 className="text-xl font-bold tracking-tight text-foreground mt-4 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <h3 className="text-xl font-bold tracking-tight text-foreground mt-4 group-hover:text-blue-600 transition-colors">
                   Lịch Công Tác & Cơ Cấu Tổ Chức
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
@@ -269,7 +269,7 @@ export default function PortalPage() {
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between text-xs font-semibold text-blue-600 dark:text-blue-400">
+              <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between text-xs font-semibold text-blue-600">
                 <span>Xem lịch công tác & danh bạ</span>
                 <ArrowUpRight size={15} strokeWidth={2.2} />
               </div>

@@ -371,7 +371,7 @@ export default function TasksPage() {
                 className={cn(
                   "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
                   levelFilter === "TRUONG"
-                    ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800"
+                    ? "bg-blue-50 text-blue-700 font-semibold border border-blue-200"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -383,7 +383,7 @@ export default function TasksPage() {
                 className={cn(
                   "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
                   levelFilter === "DON_VI"
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
+                    ? "bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >

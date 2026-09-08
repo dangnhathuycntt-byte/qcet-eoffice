@@ -289,10 +289,10 @@ export function ExecutiveStatStrip({
                   className={cn(
                     "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono shrink-0",
                     isOverdueAlert
-                      ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
+                      ? "bg-rose-500/10 text-rose-700 border border-rose-500/20"
                       : (stats?.needsReviewTasksCount ?? 0) > 0
-                        ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
-                        : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
+                        ? "bg-amber-500/10 text-amber-700 border border-amber-500/20"
+                        : "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
                   )}
                 >
                   <span className={cn("size-1.5 rounded-full shrink-0", dotColor)} />

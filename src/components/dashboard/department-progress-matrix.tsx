@@ -125,7 +125,7 @@ export function DepartmentProgressMatrix({
                   className={cn(
                     "font-semibold font-mono tabular-nums",
                     dept.overdueTasksCount > 0
-                      ? "text-rose-600 dark:text-rose-400"
+                      ? "text-rose-600"
                       : "text-foreground"
                   )}
                 >

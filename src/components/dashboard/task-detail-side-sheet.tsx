@@ -76,7 +76,7 @@ export const TASK_LEVEL_CONFIG = {
     label: "Nhiệm vụ cấp Trường",
     variant: "secondary" as const,
     className:
-      "border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-300 font-semibold px-2.5 py-0.5",
+      "border-blue-500/20 bg-blue-500/10 text-blue-700 font-semibold px-2.5 py-0.5",
   },
   DON_VI: {
     label: "Công việc Đơn vị",
@@ -97,31 +97,31 @@ export const TASK_STATUS_CONFIG: Record<
   NEW: {
     label: "Mới",
     className:
-      "border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+      "border-slate-500/20 bg-slate-500/10 text-slate-700",
     variant: "outline",
   },
   IN_PROGRESS: {
     label: "Đang thực hiện",
     className:
-      "border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-300",
+      "border-blue-500/20 bg-blue-500/10 text-blue-700",
     variant: "progress",
   },
   NEEDS_REVIEW: {
     label: "Cần chỉnh sửa",
     className:
-      "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+      "border-amber-500/20 bg-amber-500/10 text-amber-700",
     variant: "warning",
   },
   COMPLETED: {
     label: "Hoàn thành",
     className:
-      "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+      "border-emerald-500/20 bg-emerald-500/10 text-emerald-700",
     variant: "success",
   },
   BLOCKED: {
     label: "Bị nghẽn / Phối hợp",
     className:
-      "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+      "border-rose-500/20 bg-rose-500/10 text-rose-700",
     variant: "destructive",
   },
 };
@@ -135,7 +135,7 @@ export function getDetailStatusConfig(status: TaskStatus | string) {
     return {
       label: "Chờ BGH nghiệm thu",
       className:
-        "border-purple-500/20 bg-purple-500/10 text-purple-700 dark:text-purple-300",
+        "border-purple-500/20 bg-purple-500/10 text-purple-700",
       variant: "outline" as const,
     };
   }
@@ -196,7 +196,7 @@ function getRelativeTimeString(
   if (isCompleted) {
     return {
       text: "Đã hoàn thành",
-      color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20",
     };
   }
   if (!dueDateStr) return null;
@@ -209,24 +209,24 @@ function getRelativeTimeString(
     if (diffDays < 0) {
       return {
         text: `Quá hạn ${Math.abs(diffDays)} ngày`,
-        color: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20 font-bold",
+        color: "text-rose-600 bg-rose-500/10 border-rose-500/20 font-bold",
       };
     }
     if (diffDays === 0) {
       return {
         text: "Hạn hôm nay",
-        color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20 font-bold",
+        color: "text-amber-600 bg-amber-500/10 border-amber-500/20 font-bold",
       };
     }
     if (diffDays <= 3) {
       return {
         text: `Còn ${diffDays} ngày`,
-        color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20 font-medium",
+        color: "text-amber-600 bg-amber-500/10 border-amber-500/20 font-medium",
       };
     }
     return {
       text: `Còn ${diffDays} ngày`,
-      color: "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20 font-medium",
+      color: "text-blue-600 bg-blue-500/10 border-blue-500/20 font-medium",
     };
   } catch {
     return null;
@@ -631,7 +631,7 @@ export function TaskDetailSideSheet({
               className={cn(
                 "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0",
                 isOverdue
-                  ? "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                  ? "border-rose-500/20 bg-rose-500/10 text-rose-600"
                   : statusConfig.className
               )}
             >
@@ -666,8 +666,8 @@ export function TaskDetailSideSheet({
                 className={cn(
                   "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden sm:inline font-medium",
                   (task as StaffTask).requiresReview
-                    ? "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                    : "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                    ? "border-amber-500/20 bg-amber-500/10 text-amber-600"
+                    : "border-blue-500/20 bg-blue-500/10 text-blue-600"
                 )}
               >
                 {(task as StaffTask).requiresReview ? "Trọng điểm (DACUM)" : "Thường quy (Tự xong)"}
@@ -807,7 +807,7 @@ export function TaskDetailSideSheet({
                       <button
                         type="button"
                         onClick={() => setIsRejectionModalOpen(true)}
-                        className="h-8.5 px-3 text-xs font-medium border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                        className="h-8.5 px-3 text-xs font-medium border border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                         title="Chuyển sang trạng thái cần chỉnh sửa"
                       >
                         <AlertTriangle className="size-3.5" strokeWidth={1.5} />
@@ -825,17 +825,17 @@ export function TaskDetailSideSheet({
                   {aiReview && canReview && (
                     <div className="w-full rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-2">
                       <div className="flex items-center gap-2">
-                        <ShieldCheck className="size-4 text-indigo-600 dark:text-indigo-400 shrink-0" strokeWidth={1.5} />
-                        <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                        <ShieldCheck className="size-4 text-indigo-600 shrink-0" strokeWidth={1.5} />
+                        <span className="text-xs font-semibold text-indigo-700">
                           Kết quả sàng lọc tự động
                         </span>
                         <span className={cn(
                           "ml-auto text-xs font-mono tabular-nums px-1.5 py-0.5 rounded-md border",
                           aiReview.complianceScore >= 80
-                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
                             : aiReview.complianceScore >= 50
-                            ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                            : "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                            ? "border-amber-500/20 bg-amber-500/10 text-amber-700"
+                            : "border-rose-500/20 bg-rose-500/10 text-rose-700"
                         )}>
                           Diem tuan thu: {aiReview.complianceScore}/100
                         </span>
@@ -849,10 +849,10 @@ export function TaskDetailSideSheet({
                             <li key={idx} className={cn(
                               "text-xs flex items-start gap-1.5",
                               flag.type === "CRITICAL"
-                                ? "text-rose-600 dark:text-rose-400"
+                                ? "text-rose-600"
                                 : flag.type === "WARNING"
-                                ? "text-amber-600 dark:text-amber-400"
-                                : "text-blue-600 dark:text-blue-400"
+                                ? "text-amber-600"
+                                : "text-blue-600"
                             )}>
                               <AlertTriangle className="size-3 shrink-0 mt-0.5" strokeWidth={1.5} />
                               <span>{flag.message}</span>
@@ -861,13 +861,13 @@ export function TaskDetailSideSheet({
                         </ul>
                       )}
                       {aiReview.suggestedAction === "QUICK_APPROVE" && (
-                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
                           <CheckCircle2 className="size-3" strokeWidth={1.5} />
                           <span>Khuyến nghị: Duyệt nhanh</span>
                         </div>
                       )}
                       {aiReview.suggestedAction === "REQUEST_CHANGES" && (
-                        <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                        <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
                           <RotateCcw className="size-3" strokeWidth={1.5} />
                           <span>Khuyến nghị: Yêu cầu bổ sung</span>
                         </div>
@@ -876,8 +876,8 @@ export function TaskDetailSideSheet({
                   )}
                   {/* Delegation notice if acting under delegated authority */}
                   {approvalResult.isDelegated && (
-                    <div className="w-full flex items-center gap-2 p-2.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs text-purple-700 dark:text-purple-300 font-medium">
-                      <ShieldCheck className="size-4 shrink-0 text-purple-600 dark:text-purple-400" strokeWidth={1.5} />
+                    <div className="w-full flex items-center gap-2 p-2.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs text-purple-700 font-medium">
+                      <ShieldCheck className="size-4 shrink-0 text-purple-600" strokeWidth={1.5} />
                       <span>
                         Phê duyệt theo thẩm quyền ủy quyền của {approvalResult.rule?.grantorName || "Trưởng đơn vị"}
                       </span>
@@ -909,7 +909,7 @@ export function TaskDetailSideSheet({
                         type="button"
                         variant="outline"
                         onClick={() => setIsRejectionModalOpen(true)}
-                        className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                        className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                       >
                         <RotateCcw className="size-3.5" strokeWidth={1.5} />
                         <span>Trả lại Yêu cầu Sửa</span>
@@ -917,11 +917,11 @@ export function TaskDetailSideSheet({
                     </div>
                   ) : isSeparationOfDutiesBlocked ? (
                     <div className="space-y-2 w-full">
-                      <div className="w-full flex items-start gap-2 p-2.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-xs text-rose-700 dark:text-rose-300 font-medium">
-                        <AlertTriangle className="size-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" strokeWidth={1.5} />
+                      <div className="w-full flex items-start gap-2 p-2.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-xs text-rose-700 font-medium">
+                        <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" strokeWidth={1.5} />
                         <div className="space-y-0.5">
                           <p className="font-semibold">Phân lập thẩm quyền (Separation of Duties)</p>
-                          <p className="text-xs text-rose-600/90 dark:text-rose-400/90 leading-relaxed">
+                          <p className="text-xs text-rose-600/90 leading-relaxed">
                             Theo chuẩn quản trị đại học (Separation of Duties), bạn không thể tự nghiệm thu công việc do chính mình phụ trách.
                           </p>
                         </div>
@@ -947,7 +947,7 @@ export function TaskDetailSideSheet({
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300 font-medium">
+                    <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 font-medium">
                       <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
                       <span>Đã nộp minh chứng. Đang chờ Trưởng đơn vị kiểm tra và nghiệm thu.</span>
                     </div>
@@ -957,7 +957,7 @@ export function TaskDetailSideSheet({
 
               {/* If task is COMPLETED */}
               {task.status === "COMPLETED" && (
-                <div className="flex items-center justify-between w-full p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+                <div className="flex items-center justify-between w-full p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-xs text-emerald-700 font-medium">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="size-3.5 shrink-0" strokeWidth={1.5} />
                     <span>Nhiệm vụ đã được nghiệm thu hoàn thành</span>
@@ -981,12 +981,12 @@ export function TaskDetailSideSheet({
             {task.status === "BLOCKED" && (
               <div className="mt-3.5 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs">
                 <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="size-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" strokeWidth={1.5} />
+                  <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" strokeWidth={1.5} />
                   <div className="space-y-1">
-                    <h4 className="font-semibold text-rose-700 dark:text-rose-300">
+                    <h4 className="font-semibold text-rose-700">
                       Cảnh báo cản trở: Nhiệm vụ đang bị ách tắc / Cần phối hợp
                     </h4>
-                    <p className="text-rose-600/90 dark:text-rose-400/90 leading-relaxed">
+                    <p className="text-rose-600/90 leading-relaxed">
                       {("blockedReason" in task && task.blockedReason) ||
                         "Công việc đang bị nghẽn tiến độ. Vui lòng kiểm tra vướng mắc hoặc tạo Phiếu phối hợp liên đơn vị để tháo gỡ."}
                     </p>
@@ -999,12 +999,12 @@ export function TaskDetailSideSheet({
             {"rejectionReason" in task && task.rejectionReason && task.status === "IN_PROGRESS" && (
               <div className="mt-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
                 <div className="flex items-start gap-2.5">
-                  <RotateCcw className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" strokeWidth={1.5} />
+                  <RotateCcw className="size-4 shrink-0 text-amber-600 mt-0.5" strokeWidth={1.5} />
                   <div className="space-y-1">
-                    <h4 className="font-semibold text-amber-700 dark:text-amber-300">
+                    <h4 className="font-semibold text-amber-700">
                       Yêu cầu chỉnh sửa từ Trưởng đơn vị
                     </h4>
-                    <p className="text-amber-600/90 dark:text-amber-400/90 leading-relaxed">
+                    <p className="text-amber-600/90 leading-relaxed">
                       {task.rejectionReason}
                     </p>
                   </div>
@@ -1116,7 +1116,7 @@ export function TaskDetailSideSheet({
                         }
                         setIsRejectionModalOpen(true);
                       }}
-                      className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                      className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                     >
                       <AlertTriangle className="size-3.5" strokeWidth={1.5} />
                       <span>Yêu cầu chỉnh sửa</span>
@@ -1155,12 +1155,12 @@ export function TaskDetailSideSheet({
             {isSchool && task.status === "PENDING_EXECUTIVE_APPROVAL" && (
               <div className="mt-3.5 rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-xs space-y-3">
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="size-4 shrink-0 text-purple-600 dark:text-purple-400 mt-0.5" strokeWidth={1.5} />
+                  <CheckCircle2 className="size-4 shrink-0 text-purple-600 mt-0.5" strokeWidth={1.5} />
                   <div className="space-y-1 flex-1">
-                    <h4 className="font-semibold text-purple-700 dark:text-purple-300">
+                    <h4 className="font-semibold text-purple-700">
                       Nghiệm thu cấp 2: Chờ Ban Giám hiệu phê duyệt
                     </h4>
-                    <p className="text-purple-600/90 dark:text-purple-400/90 leading-relaxed">
+                    <p className="text-purple-600/90 leading-relaxed">
                       Tất cả công việc đơn vị trực thuộc ({task.completedSubTasks}/{task.totalSubTasks}) đã hoàn thành 100%. Nhiệm vụ cấp Trường sẵn sàng để Ban Giám hiệu nghiệm thu và đóng nhiệm vụ.
                     </p>
                   </div>
@@ -1182,7 +1182,7 @@ export function TaskDetailSideSheet({
                 )}
 
                 {executiveActionFeedback && (
-                  <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  <p className="text-xs font-medium text-emerald-600">
                     {executiveActionFeedback}
                   </p>
                 )}
@@ -1452,13 +1452,13 @@ export function TaskDetailSideSheet({
                   </div>
 
                   {deliverableError && (
-                    <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
+                    <p className="text-xs font-medium text-rose-600">
                       {deliverableError}
                     </p>
                   )}
 
                   {deliverableSuccess && (
-                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <p className="text-xs font-medium text-emerald-600">
                       {deliverableSuccess}
                     </p>
                   )}
@@ -1570,7 +1570,7 @@ export function TaskDetailSideSheet({
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {subDone ? (
-                            <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" strokeWidth={1.5} />
+                            <CheckCircle2 className="size-4 shrink-0 text-emerald-600" strokeWidth={1.5} />
                           ) : (
                             <Circle className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.5} />
                           )}
@@ -1664,7 +1664,7 @@ export function TaskDetailSideSheet({
           <div className="w-full max-w-md rounded-xl border border-border/60 bg-card p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-border/50 pb-3">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" strokeWidth={1.5} />
+                <AlertTriangle className="size-4 text-amber-600" strokeWidth={1.5} />
                 <h3 id="rejection-dialog-title" className="text-sm font-semibold text-foreground">
                   Trả lại yêu cầu chỉnh sửa minh chứng
                 </h3>
@@ -1709,7 +1709,7 @@ export function TaskDetailSideSheet({
               </div>
 
               {rejectionError && (
-                <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
+                <p className="text-xs font-medium text-rose-600">
                   {rejectionError}
                 </p>
               )}

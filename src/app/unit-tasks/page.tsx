@@ -273,7 +273,7 @@ export default function UnitTasksPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-mono">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 font-mono">
               Khoa / Phòng / Ban
             </span>
             <span className="text-xs text-muted-foreground font-medium">
@@ -352,7 +352,7 @@ export default function UnitTasksPage() {
                 className={cn(
                   "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer font-mono tabular-nums",
                   levelFilter === "DON_VI"
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
+                    ? "bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >

@@ -43,7 +43,7 @@ export interface DepartmentGroupedTaskViewProps {
 function RAGBadge({ status, reason }: { status: DepartmentRAGStatus; reason: string }) {
   if (status === "RED") {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/60 font-mono">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 font-mono">
         <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
         Cảnh báo trễ ({reason})
       </span>
@@ -51,14 +51,14 @@ function RAGBadge({ status, reason }: { status: DepartmentRAGStatus; reason: str
   }
   if (status === "AMBER") {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900/60 font-mono">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 font-mono">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
         Cần lưu ý
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900/60 font-mono">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
       Bình thường
     </span>
@@ -79,7 +79,7 @@ function formatTaskStatus(
     return {
       label: "Quá hạn",
       className:
-        "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/60",
+        "bg-rose-50 text-rose-700 border border-rose-200",
     };
   }
 
@@ -88,38 +88,38 @@ function formatTaskStatus(
       return {
         label: "Hoàn thành",
         className:
-          "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900/60",
+          "bg-emerald-50 text-emerald-700 border border-emerald-200",
       };
     case "PENDING_EXECUTIVE_APPROVAL":
       return {
         label: "Chờ BGH duyệt",
         className:
-          "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-900/60",
+          "bg-purple-50 text-purple-700 border border-purple-200",
       };
     case "NEEDS_REVIEW":
       return {
         label: "Cần đánh giá",
         className:
-          "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900/60",
+          "bg-amber-50 text-amber-700 border border-amber-200",
       };
     case "BLOCKED":
       return {
         label: "Bị nghẽn",
         className:
-          "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/60",
+          "bg-rose-50 text-rose-700 border border-rose-200",
       };
     case "IN_PROGRESS":
       return {
         label: "Đang thực hiện",
         className:
-          "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-900/60",
+          "bg-blue-50 text-blue-700 border border-blue-200",
       };
     case "NEW":
     default:
       return {
         label: "Mới giao",
         className:
-          "bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700",
+          "bg-slate-50 text-slate-700 border border-slate-200",
       };
   }
 }
@@ -317,7 +317,7 @@ export function DepartmentGroupedTaskView({
                   {onManageDelegation && (
                     <div className="flex items-center gap-1.5">
                       {activeDelegationCount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-900/60 font-mono">
+                        <span className="px-1.5 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono">
                           {activeDelegationCount} ủy quyền
                         </span>
                       )}
@@ -329,7 +329,7 @@ export function DepartmentGroupedTaskView({
                           e.stopPropagation();
                           onManageDelegation(group.departmentCode);
                         }}
-                        className="h-8 px-2.5 text-xs gap-1.5 rounded-lg border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 dark:border-indigo-900/60 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
+                        className="h-8 px-2.5 text-xs gap-1.5 rounded-lg border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
                         title={`Quản lý ủy quyền đơn vị ${group.departmentCode}`}
                       >
                         <ShieldCheck size={13} strokeWidth={1.5} />

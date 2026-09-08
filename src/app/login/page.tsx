@@ -236,7 +236,7 @@ export default function LoginPage() {
         </div>
 
         {/* Main Auth Card */}
-        <div className="rounded-2xl border border-border/60 bg-card/90 backdrop-blur-md p-6 shadow-card dark:border-border/40 sm:p-8">
+        <div className="rounded-2xl border border-border/60 bg-card/90 backdrop-blur-md p-6 shadow-card sm:p-8">
           {/* Tab Selector: Login vs Register */}
           <div className="mb-6 flex rounded-xl bg-secondary/60 p-1 border border-border/50">
             <button
@@ -277,9 +277,9 @@ export default function LoginPage() {
           {errorMessage && (
             <div
               role="alert"
-              className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 animate-in fade-in"
+              className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-800 animate-in fade-in"
             >
-              <AlertCircle className="size-4 shrink-0 text-red-600 dark:text-red-400 mt-0.5" strokeWidth={1.5} />
+              <AlertCircle className="size-4 shrink-0 text-red-600 mt-0.5" strokeWidth={1.5} />
               <div className="flex-1 leading-relaxed">{errorMessage}</div>
             </div>
           )}
@@ -288,9 +288,9 @@ export default function LoginPage() {
           {successMessage && (
             <div
               role="status"
-              className="mb-5 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300 animate-in fade-in"
+              className="mb-5 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-xs text-emerald-800 animate-in fade-in"
             >
-              <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" strokeWidth={1.5} />
+              <CheckCircle2 className="size-4 shrink-0 text-emerald-600 mt-0.5" strokeWidth={1.5} />
               <div className="flex-1 leading-relaxed">{successMessage}</div>
             </div>
           )}
@@ -583,10 +583,10 @@ export default function LoginPage() {
                       className={cn(
                         "flex size-8 shrink-0 items-center justify-center rounded-xl text-xs font-semibold shadow-xs",
                         account.role === "ADMIN"
-                          ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                          ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
                           : account.role === "MANAGER"
-                          ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                          : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
                       )}
                     >
                       <RoleIcon className="size-4" strokeWidth={1.5} />
@@ -601,7 +601,7 @@ export default function LoginPage() {
                           {account.badge}
                         </span>
                         {isSelected && (
-                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-600">
                             <CheckCircle2 className="size-3" strokeWidth={1.5} />
                             Hiện tại
                           </span>
@@ -625,7 +625,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-5 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-            <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.5} />
+            <ShieldCheck className="size-4 text-emerald-600" strokeWidth={1.5} />
             <span>Xác thực an toàn đa quyền (BGH / Trưởng đơn vị / Giảng viên)</span>
           </div>
         </div>

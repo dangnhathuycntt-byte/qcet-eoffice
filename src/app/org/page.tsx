@@ -154,7 +154,7 @@ export default function OrgPage() {
 
         {/* Metric 2: Total Staff */}
         <div className="flex items-center gap-3.5 rounded-xl border border-border/60 bg-card p-3.5 shadow-2xs hover:shadow-xs transition-all">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 shrink-0">
             <Users className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
@@ -170,7 +170,7 @@ export default function OrgPage() {
 
         {/* Metric 3: Active Delegated Tasks */}
         <div className="flex items-center gap-3.5 rounded-xl border border-border/60 bg-card p-3.5 shadow-2xs hover:shadow-xs transition-all">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 shrink-0">
             <Briefcase className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">
@@ -188,7 +188,7 @@ export default function OrgPage() {
 
         {/* Metric 4: Digital Identity Coverage */}
         <div className="flex items-center gap-3.5 rounded-xl border border-border/60 bg-card p-3.5 shadow-2xs hover:shadow-xs transition-all">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 shrink-0">
             <CheckCircle2 className="size-4.5" strokeWidth={1.5} />
           </div>
           <div className="min-w-0">

@@ -102,44 +102,44 @@ export function getCategoryBadgeConfig(
       return {
         label: "Chuyển đổi số",
         className:
-          "bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20",
+          "bg-indigo-500/10 text-indigo-700 border-indigo-500/20",
       };
     case "TRUYEN_THONG":
       return {
         label: "Truyền thông",
         className:
-          "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+          "bg-sky-500/10 text-sky-700 border-sky-500/20",
       };
     case "CNTT":
       return {
         label: "CNTT",
         className:
-          "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+          "bg-blue-500/10 text-blue-700 border-blue-500/20",
       };
     case "ATTT":
       return {
         label: "An toàn thông tin",
         className:
-          "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20",
+          "bg-rose-500/10 text-rose-700 border-rose-500/20",
       };
     case "THU_VIEN":
       return {
         label: "Thư viện",
         className:
-          "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
+          "bg-teal-500/10 text-teal-700 border-teal-500/20",
       };
     case "BAO_CAO":
       return {
         label: "Báo cáo",
         className:
-          "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+          "bg-amber-500/10 text-amber-700 border-amber-500/20",
       };
     case "OTHER":
     default:
       return {
         label: "Khác",
         className:
-          "bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20",
+          "bg-slate-500/10 text-slate-700 border-slate-500/20",
       };
   }
 }
@@ -152,28 +152,28 @@ export function getStatusBadgeConfig(
       return {
         label: "Hoàn thành",
         className:
-          "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+          "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
         variant: "emerald",
       };
     case "IN_PROGRESS":
       return {
         label: "Đang làm",
         className:
-          "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+          "bg-blue-500/10 text-blue-700 border-blue-500/20",
         variant: "sapphire",
       };
     case "NEEDS_REVIEW":
       return {
         label: "Cần duyệt",
         className:
-          "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+          "bg-amber-500/10 text-amber-700 border-amber-500/20",
         variant: "amber",
       };
     case "OVERDUE":
       return {
         label: "Quá hạn",
         className:
-          "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20",
+          "bg-rose-500/10 text-rose-700 border-rose-500/20",
         variant: "rose",
       };
     case "NEW":
@@ -515,7 +515,7 @@ export function CascadingTaskTable({
               <span className="size-2 rounded-full bg-emerald-500" />
               Việc tôi nhận
             </span>
-            <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+            <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-emerald-700 font-semibold border border-emerald-500/20">
               {workboxCounts.received}
             </span>
           </button>
@@ -534,7 +534,7 @@ export function CascadingTaskTable({
               <span className="size-2 rounded-full bg-blue-500" />
               Việc tôi giao
             </span>
-            <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-blue-700 dark:text-blue-400 font-semibold border border-blue-500/20">
+            <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-blue-700 font-semibold border border-blue-500/20">
               {workboxCounts.assigned}
             </span>
           </button>
@@ -545,7 +545,7 @@ export function CascadingTaskTable({
             className={cn(
               "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
               activeWorkbox === "URGENT"
-                ? "bg-card text-rose-700 dark:text-rose-400 font-bold shadow-xs border border-rose-500/30"
+                ? "bg-card text-rose-700 font-bold shadow-xs border border-rose-500/30"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/40"
             )}
           >
@@ -554,7 +554,7 @@ export function CascadingTaskTable({
               Khẩn &amp; Chậm tiến độ
             </span>
             {workboxCounts.urgent > 0 && (
-              <span className="rounded-md bg-rose-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-rose-700 dark:text-rose-400 font-semibold border border-rose-500/30">
+              <span className="rounded-md bg-rose-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-rose-700 font-semibold border border-rose-500/30">
                 {workboxCounts.urgent}
               </span>
             )}
@@ -869,7 +869,7 @@ export function CascadingTaskTable({
                                     e.stopPropagation();
                                     onStatusChange(task.id, "COMPLETED");
                                   }}
-                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 text-xs font-semibold tabular-nums text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 text-xs font-semibold tabular-nums text-emerald-700 hover:bg-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                   title="Duyệt nhanh hoàn thành nhiệm vụ"
                                 >
                                   <Check className="size-3" strokeWidth={1.5} />
@@ -883,7 +883,7 @@ export function CascadingTaskTable({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                   }}
-                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 text-xs font-semibold tabular-nums text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 text-xs font-semibold tabular-nums text-amber-700 hover:bg-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                   title="Đôn đốc tiến độ thực hiện"
                                 >
                                   <Bell className="size-3" strokeWidth={1.5} />
@@ -919,7 +919,7 @@ export function CascadingTaskTable({
                               />
                               {task.progressPercent > 0 && task.progressPercent < 100 && (
                                 <div
-                                  className="h-full bg-blue-500/30 dark:bg-blue-400/30 transition-all duration-500 ease-out"
+                                  className="h-full bg-blue-500/30 transition-all duration-500 ease-out"
                                   style={{
                                     width: `${
                                       100 -
@@ -951,8 +951,8 @@ export function CascadingTaskTable({
                               className={cn(
                                 "h-5.5 px-2.5 text-xs font-semibold tabular-nums leading-none shrink-0",
                                 task.status === "COMPLETED"
-                                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
-                                  : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+                                  ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                                  : "bg-blue-500/10 text-blue-700 border-blue-500/20",
                                 onStatusChange && "cursor-pointer transition-transform hover:scale-105 active:scale-95"
                               )}
                             >
@@ -1039,7 +1039,7 @@ export function CascadingTaskTable({
                                                   e.stopPropagation();
                                                   onStatusChange(subTask.id, "IN_PROGRESS");
                                                 }}
-                                                className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 text-xs font-semibold tabular-nums border border-blue-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                                className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 text-xs font-semibold tabular-nums border border-blue-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                                 title="Tiếp nhận việc này"
                                               >
                                                 <ArrowRight className="size-3" strokeWidth={1.5} />
@@ -1053,7 +1053,7 @@ export function CascadingTaskTable({
                                                   e.stopPropagation();
                                                   onStatusChange(subTask.id, "COMPLETED");
                                                 }}
-                                                className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 text-xs font-semibold tabular-nums border border-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                                className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 text-xs font-semibold tabular-nums border border-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                                 title="Báo cáo hoàn thành"
                                               >
                                                 <Check className="size-3" strokeWidth={1.5} />
@@ -1067,7 +1067,7 @@ export function CascadingTaskTable({
                                                   e.stopPropagation();
                                                   onStatusChange(subTask.id, "IN_PROGRESS");
                                                 }}
-                                                className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 text-xs font-semibold tabular-nums border border-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                                className="inline-flex items-center gap-1 h-5.5 px-2 rounded-md bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 text-xs font-semibold tabular-nums border border-amber-500/20 cursor-pointer active:scale-[0.98] transition-colors"
                                                 title="Tiếp nhận sửa lại"
                                               >
                                                 <RotateCcw className="size-3" strokeWidth={1.5} />

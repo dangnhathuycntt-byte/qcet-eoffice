@@ -91,7 +91,7 @@ export function getRAGBadgeConfig(status: ExecutiveRAGStatus): {
       return {
         label: "Báo động trễ",
         className:
-          "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/60",
+          "bg-rose-50 text-rose-700 border-rose-200",
         dotColor: "bg-rose-500",
         pulse: true,
       };
@@ -99,7 +99,7 @@ export function getRAGBadgeConfig(status: ExecutiveRAGStatus): {
       return {
         label: "Cần chú ý",
         className:
-          "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-900/60",
+          "bg-amber-50 text-amber-700 border-amber-200",
         dotColor: "bg-amber-500",
         pulse: false,
       };
@@ -108,7 +108,7 @@ export function getRAGBadgeConfig(status: ExecutiveRAGStatus): {
       return {
         label: "Đúng hạn",
         className:
-          "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900/60",
+          "bg-emerald-50 text-emerald-700 border-emerald-200",
         dotColor: "bg-emerald-500",
         pulse: false,
       };
@@ -127,20 +127,20 @@ export function getPriorityBadgeConfig(priority: "HIGH" | "MEDIUM" | "LOW"): {
       return {
         label: "Ưu tiên cao",
         className:
-          "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800",
+          "bg-rose-50 text-rose-700 border-rose-200",
       };
     case "MEDIUM":
       return {
         label: "Trung bình",
         className:
-          "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800",
+          "bg-amber-50 text-amber-700 border-amber-200",
       };
     case "LOW":
     default:
       return {
         label: "Tiêu chuẩn",
         className:
-          "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700",
+          "bg-slate-50 text-slate-700 border-slate-200",
       };
   }
 }
@@ -157,38 +157,38 @@ export function getTaskStatusConfig(status: string): {
       return {
         label: "Hoàn thành",
         className:
-          "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-900/60",
+          "bg-emerald-50 text-emerald-700 border-emerald-200",
       };
     case "PENDING_EXECUTIVE_APPROVAL":
       return {
         label: "Chờ BGH duyệt",
         className:
-          "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-900/60",
+          "bg-purple-50 text-purple-700 border-purple-200",
       };
     case "NEEDS_REVIEW":
       return {
         label: "Chờ duyệt",
         className:
-          "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-900/60",
+          "bg-purple-50 text-purple-700 border-purple-200",
       };
     case "BLOCKED":
       return {
         label: "Bị nghẽn",
         className:
-          "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/60",
+          "bg-rose-50 text-rose-700 border-rose-200",
       };
     case "NEW":
       return {
         label: "Mới tạo",
         className:
-          "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700",
+          "bg-slate-50 text-slate-700 border-slate-200",
       };
     case "IN_PROGRESS":
     default:
       return {
         label: "Đang thực hiện",
         className:
-          "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-900/60",
+          "bg-blue-50 text-blue-700 border-blue-200",
       };
   }
 }
@@ -338,8 +338,8 @@ export function DepartmentCommandCard({
         "group relative flex flex-col justify-between rounded-xl border bg-card p-4 transition-all duration-200 cursor-pointer",
         "border-border/40 hover:border-border/80 hover:shadow-md hover:-translate-y-0.5",
         "focus-within:ring-2 focus-within:ring-primary/20",
-        summary.ragStatus === "RED" && "border-rose-300/60 dark:border-rose-900/60",
-        summary.ragStatus === "AMBER" && "border-amber-300/60 dark:border-amber-900/60",
+        summary.ragStatus === "RED" && "border-rose-300/60",
+        summary.ragStatus === "AMBER" && "border-amber-300/60",
         isSelected && "ring-2 ring-primary/40 border-primary/60 shadow-md bg-accent/15"
       )}
     >
@@ -352,7 +352,7 @@ export function DepartmentCommandCard({
                 {summary.departmentCode}
               </span>
               {summary.pendingApprovalCount > 0 && (
-                <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 text-xs font-mono font-semibold tabular-nums bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/60 dark:text-purple-400 dark:border-purple-800">
+                <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 text-xs font-mono font-semibold tabular-nums bg-purple-50 text-purple-700 border border-purple-200">
                   <FileCheck size={10} strokeWidth={1.5} />
                   {summary.pendingApprovalCount} chờ duyệt
                 </span>
@@ -405,7 +405,7 @@ export function DepartmentCommandCard({
           className={cn(
             "relative rounded-lg border p-2.5 transition-colors",
             focus
-              ? "bg-slate-50/80 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800/80 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer"
+              ? "bg-slate-50/80 border-slate-200/80 hover:bg-slate-100/80 cursor-pointer"
               : "bg-muted/20 border-dashed border-border/50"
           )}
         >
@@ -500,7 +500,7 @@ export function DepartmentCommandCard({
               className={cn(
                 "text-xs font-bold font-mono tabular-nums mt-0.5",
                 summary.metrics.dueSoon > 0
-                  ? "text-amber-600 dark:text-amber-400 font-extrabold"
+                  ? "text-amber-600 font-extrabold"
                   : "text-foreground"
               )}
             >
@@ -513,7 +513,7 @@ export function DepartmentCommandCard({
               className={cn(
                 "text-xs font-bold font-mono tabular-nums mt-0.5",
                 summary.metrics.overdue > 0
-                  ? "text-rose-600 dark:text-rose-400 font-extrabold"
+                  ? "text-rose-600 font-extrabold"
                   : "text-foreground"
               )}
             >
@@ -679,25 +679,25 @@ export function DepartmentDrillDownPanel({
             {summary.metrics.totalTasks}
           </span>
         </div>
-        <div className="inline-flex items-center gap-1.5 rounded-md bg-sky-50 dark:bg-sky-950/40 px-2.5 py-1 text-xs border border-sky-200 dark:border-sky-900/60 text-sky-800 dark:text-sky-300">
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-sky-50 px-2.5 py-1 text-xs border border-sky-200 text-sky-800">
           <span>Đang làm:</span>
           <span className="font-mono tabular-nums font-bold">
             {summary.metrics.inProgress}
           </span>
         </div>
-        <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 text-xs border border-emerald-200 dark:border-emerald-900/60 text-emerald-800 dark:text-emerald-300">
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1 text-xs border border-emerald-200 text-emerald-800">
           <span>Hoàn thành:</span>
           <span className="font-mono tabular-nums font-bold">
             {summary.metrics.completed}
           </span>
         </div>
-        <div className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 text-xs border border-amber-200 dark:border-amber-900/60 text-amber-800 dark:text-amber-300">
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1 text-xs border border-amber-200 text-amber-800">
           <span>Sắp hạn:</span>
           <span className="font-mono tabular-nums font-bold">
             {summary.metrics.dueSoon}
           </span>
         </div>
-        <div className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 dark:bg-rose-950/40 px-2.5 py-1 text-xs border border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-300">
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 px-2.5 py-1 text-xs border border-rose-200 text-rose-800">
           <span>Trễ hạn:</span>
           <span className="font-mono tabular-nums font-bold">
             {summary.metrics.overdue}
@@ -710,7 +710,7 @@ export function DepartmentDrillDownPanel({
           </span>
         </div>
         {summary.pendingApprovalCount > 0 && (
-          <div className="inline-flex items-center gap-1.5 rounded-md bg-purple-50 dark:bg-purple-950/40 px-2.5 py-1 text-xs border border-purple-200 dark:border-purple-900/60 text-purple-800 dark:text-purple-300">
+          <div className="inline-flex items-center gap-1.5 rounded-md bg-purple-50 px-2.5 py-1 text-xs border border-purple-200 text-purple-800">
             <span>Chờ BGH duyệt:</span>
             <span className="font-mono tabular-nums font-bold">
               {summary.pendingApprovalCount}
@@ -987,7 +987,7 @@ export function ExecutiveDepartmentCommandCenter({
             className={cn(
               "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
               activeFilter === "BOTTLENECKS"
-                ? "bg-background text-rose-700 dark:text-rose-400 shadow-xs border border-rose-200 dark:border-rose-900/60"
+                ? "bg-background text-rose-700 shadow-xs border border-rose-200"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -996,7 +996,7 @@ export function ExecutiveDepartmentCommandCenter({
               strokeWidth={1.5}
               className={
                 triageCounts.bottlenecks > 0
-                  ? "text-rose-600 dark:text-rose-400"
+                  ? "text-rose-600"
                   : "text-muted-foreground"
               }
             />
@@ -1005,7 +1005,7 @@ export function ExecutiveDepartmentCommandCenter({
               className={cn(
                 "rounded-full px-1.5 py-0.2 font-mono text-xs tabular-nums border",
                 triageCounts.bottlenecks > 0
-                  ? "bg-rose-100/80 text-rose-800 border-rose-300 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800"
+                  ? "bg-rose-100/80 text-rose-800 border-rose-300"
                   : "bg-muted text-muted-foreground border-border/40"
               )}
             >
@@ -1019,7 +1019,7 @@ export function ExecutiveDepartmentCommandCenter({
             className={cn(
               "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer",
               activeFilter === "PENDING_APPROVAL"
-                ? "bg-background text-purple-700 dark:text-purple-400 shadow-xs border border-purple-200 dark:border-purple-900/60"
+                ? "bg-background text-purple-700 shadow-xs border border-purple-200"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -1028,7 +1028,7 @@ export function ExecutiveDepartmentCommandCenter({
               strokeWidth={1.5}
               className={
                 triageCounts.pendingApproval > 0
-                  ? "text-purple-600 dark:text-purple-400"
+                  ? "text-purple-600"
                   : "text-muted-foreground"
               }
             />
@@ -1037,7 +1037,7 @@ export function ExecutiveDepartmentCommandCenter({
               className={cn(
                 "rounded-full px-1.5 py-0.2 font-mono text-xs tabular-nums border",
                 triageCounts.pendingApproval > 0
-                  ? "bg-purple-100/80 text-purple-800 border-purple-300 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-800"
+                  ? "bg-purple-100/80 text-purple-800 border-purple-300"
                   : "bg-muted text-muted-foreground border-border/40"
               )}
             >

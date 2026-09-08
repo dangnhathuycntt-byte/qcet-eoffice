@@ -103,7 +103,7 @@ export function ActivityFeedWidget({
       {/* Header */}
       <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
             <Zap className="size-4 fill-amber-500/20" strokeWidth={1.5} />
           </div>
           <div>
@@ -115,7 +115,7 @@ export function ActivityFeedWidget({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold">
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-semibold">
           <span className="relative flex size-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />

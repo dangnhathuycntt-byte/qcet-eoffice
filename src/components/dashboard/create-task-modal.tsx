@@ -630,7 +630,7 @@ export function CreateTaskModal({
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 thin-scrollbar">
             {/* Informational Mode Banner for STAFF */}
             {isStaff && (
-              <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-xs text-primary dark:text-primary/90">
+              <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-xs text-primary">
                 <CheckCircle2 className="size-4 shrink-0 text-primary" strokeWidth={1.5} />
                 <span>
                   Chế độ tạo việc cá nhân: Công việc sẽ được gán cho chính bạn (<strong>{user?.name || "Giảng viên"}</strong>) để chủ động lập kế hoạch và báo cáo tiến độ.
@@ -763,9 +763,9 @@ export function CreateTaskModal({
 
                 {/* Manager Cross-Department Guard Banner */}
                 {isExternalDeptBlocked && selectedAssigneeDept && (
-                  <div className="rounded-xl border border-amber-300 bg-amber-50/90 dark:border-amber-700/60 dark:bg-amber-950/40 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-2">
+                  <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900 space-y-2">
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" strokeWidth={1.5} />
+                      <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" strokeWidth={1.5} />
                       <div className="space-y-1 leading-relaxed">
                         <p className="font-bold">Không thể giao việc trực tiếp ngoài đơn vị</p>
                         <p className="text-xs opacity-90">
@@ -796,8 +796,8 @@ export function CreateTaskModal({
 
                 {/* Admin Direct Assignment Bypass Notification */}
                 {isAdminBypassActive && selectedAssigneeDept && (
-                  <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50/80 dark:border-blue-800 dark:bg-blue-950/40 p-2.5 text-xs text-blue-900 dark:text-blue-200">
-                    <ShieldAlert className="size-4 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" strokeWidth={1.5} />
+                  <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50/80 p-2.5 text-xs text-blue-900">
+                    <ShieldAlert className="size-4 shrink-0 text-blue-600 mt-0.5" strokeWidth={1.5} />
                     <p className="text-xs leading-relaxed">
                       <span className="font-bold">Chỉ đạo trực tiếp Ban Giám hiệu:</span> Hệ thống sẽ tự động gửi thông báo gắn cờ [CHỈ ĐẠO BGH] tới Lãnh đạo {selectedAssigneeDept.department} để phối hợp quản lý nhân sự.
                     </p>
@@ -875,7 +875,7 @@ export function CreateTaskModal({
                     </label>
                   </div>
                   {formData.requiresReview ? (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 p-2 rounded-lg">
+                    <p className="text-xs text-amber-600 bg-amber-500/10 border border-amber-500/20 p-2 rounded-lg">
                       Nhiệm vụ trọng điểm: Viên chức phải nộp sản phẩm minh chứng để chuyển sang Chờ duyệt. Trưởng phòng trực tiếp nghiệm thu.
                     </p>
                   ) : (

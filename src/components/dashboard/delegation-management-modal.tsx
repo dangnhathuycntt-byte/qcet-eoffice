@@ -306,8 +306,8 @@ export function DelegationManagementModal({
 
         {/* Success Alert Banner */}
         {successMessage && (
-          <div className="mx-5 mt-4 sm:mx-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
-            <UserCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" strokeWidth={1.5} />
+          <div className="mx-5 mt-4 sm:mx-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-xs text-emerald-700 flex items-center gap-2">
+            <UserCheck className="size-4 shrink-0 text-emerald-600" strokeWidth={1.5} />
             <span className="font-medium">{successMessage}</span>
           </div>
         )}
