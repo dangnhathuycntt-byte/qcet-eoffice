@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import { UserRole } from "@/types/auth";
 
 export const SESSION_COOKIE_NAME = "qcet_session";
-export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
+export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
 export const SESSION_COOKIE_MAX_AGE = SESSION_MAX_AGE_SECONDS;
 
 export function getJwtSecret(): string {
@@ -26,7 +26,7 @@ export interface SessionPayload {
 }
 
 export function signSessionToken(payload: SessionPayload): string {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: "7d" });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: "30d" });
 }
 
 export function verifySessionToken(token: string): SessionPayload | null {

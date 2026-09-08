@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const oauthError = searchParams.get("error");
   if (oauthError) {
     const response = NextResponse.redirect(new URL("/login?error=oauth_cancelled", baseUrl));
-    response.cookies.delete("qcet_oauth_state");
+    response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
     return response;
   }
 
@@ -25,15 +25,15 @@ export async function GET(req: NextRequest) {
   const stateCookie = req.cookies.get("qcet_oauth_state")?.value;
 
   if (!stateQuery || !stateCookie || stateQuery !== stateCookie) {
-    const response = NextResponse.redirect(new URL("/login?error=invalid_state", baseUrl));
-    response.cookies.delete("qcet_oauth_state");
+    const response = NextResponse.redirect(new URL("/login?error=oauth_state_invalid", baseUrl));
+    response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
     return response;
   }
 
   const code = searchParams.get("code");
   if (!code) {
     const response = NextResponse.redirect(new URL("/login?error=missing_code", baseUrl));
-    response.cookies.delete("qcet_oauth_state");
+    response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
     return response;
   }
 
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
   if (!clientId || !clientSecret) {
     const response = NextResponse.redirect(new URL("/login?error=oauth_not_configured", baseUrl));
-    response.cookies.delete("qcet_oauth_state");
+    response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
     return response;
   }
 
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
           baseUrl
         )
       );
-      response.cookies.delete("qcet_oauth_state");
+      response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
       return response;
     }
 
@@ -142,6 +142,7 @@ export async function GET(req: NextRequest) {
           provider: "google",
           isActive: true,
           title: "Chuyên viên",
+          onboardedAt: null,
           accounts: {
             create: {
               type: "oauth",
@@ -166,7 +167,7 @@ export async function GET(req: NextRequest) {
     // 7. Kiểm tra trạng thái tài khoản
     if (!user.isActive) {
       const response = NextResponse.redirect(new URL("/login?error=account_disabled", baseUrl));
-      response.cookies.delete("qcet_oauth_state");
+      response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
       return response;
     }
 
@@ -190,13 +191,13 @@ export async function GET(req: NextRequest) {
       path: "/",
     });
 
-    response.cookies.delete("qcet_oauth_state");
+    response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
 
     return response;
   } catch (error) {
     console.error("[Google OAuth Callback Error]", error);
     const response = NextResponse.redirect(new URL("/login?error=oauth_failed", baseUrl));
-    response.cookies.delete("qcet_oauth_state");
+    response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
     return response;
   }
 }

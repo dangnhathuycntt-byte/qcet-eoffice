@@ -29,12 +29,12 @@ describe("GET /api/auth/callback/google", () => {
     assert.ok(res.headers.get("location")?.includes("/login?error=oauth_cancelled"));
   });
 
-  test("redirects to /login?error=invalid_state on state mismatch or missing cookie", async () => {
+  test("redirects to /login?error=oauth_state_invalid on state mismatch or missing cookie", async () => {
     const req = new NextRequest("http://localhost:3000/api/auth/callback/google?code=fake_code&state=fake_state");
     const res = await googleCallbackGet(req);
 
     assert.strictEqual(res.status, 307);
-    assert.ok(res.headers.get("location")?.includes("/login?error=invalid_state"));
+    assert.ok(res.headers.get("location")?.includes("/login?error=oauth_state_invalid"));
   });
 
   test("redirects to /login?error=missing_code when code parameter is missing", async () => {
@@ -418,11 +418,13 @@ describe("GET /api/auth/callback/google", () => {
     assert.strictEqual(createdUserData.role, "CHUYEN_VIEN");
     assert.strictEqual(createdUserData.provider, "google");
     assert.strictEqual(createdUserData.isActive, true);
+    assert.strictEqual(createdUserData.onboardedAt, null);
     assert.strictEqual(createdUserData.accounts.create.providerAccountId, "google-sub-new");
 
     // Check session cookie
     const sessionCookie = res.cookies.get(SESSION_COOKIE_NAME);
     assert.ok(sessionCookie, "Session cookie must be set");
+    assert.strictEqual(sessionCookie.maxAge, 30 * 24 * 60 * 60, "Session cookie maxAge must be 30 days");
     const payload = verifySessionToken(sessionCookie.value);
     assert.strictEqual(payload?.email, "newstaff@cdktcnqn.edu.vn");
     assert.strictEqual(payload?.role, "CHUYEN_VIEN");

@@ -1021,6 +1021,19 @@ export function LecturerFocusWorkspace({
             <p className="mt-1 text-xs sm:text-sm text-muted-foreground max-w-sm mx-auto">
               Tất cả nhiệm vụ được giao đã hoàn thành hoặc đang chờ phân công mới.
             </p>
+            <div className="mt-4 flex items-center justify-center">
+              <Button
+                id="tour-empty-state-cta"
+                size="sm"
+                className="text-xs h-8 px-3.5 gap-1.5"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
+                }}
+              >
+                <Plus className="size-3.5" />
+                <span>Đề xuất nhiệm vụ / Tờ trình mới</span>
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center bg-card/40">
@@ -1267,7 +1280,7 @@ export function LecturerFocusWorkspace({
                       </div>
                     ) : (
                       <div className="border-l-2 border-primary/20 pl-3 sm:pl-4 ml-1 sm:ml-2 space-y-2.5">
-                        {subTasksToRender.map((subTask) => {
+                        {subTasksToRender.map((subTask, subIdx) => {
                           const countdownInfo = getDeadlineBadgeInfo(
                             subTask.dueDate,
                             referenceDate
@@ -1444,6 +1457,7 @@ export function LecturerFocusWorkspace({
                                   <Button
                                     type="button"
                                     size="sm"
+                                    id={subIdx === 0 ? "tour-deliverable-action" : undefined}
                                     variant={subTask.status === "COMPLETED" ? "outline" : "default"}
                                     onClick={() => handleOpenSubmitModal(subTask)}
                                     className={cn(
