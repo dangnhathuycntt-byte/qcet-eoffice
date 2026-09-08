@@ -931,32 +931,32 @@ export function CreateTaskModal({
                   />
 
                   {/* Inline Quick Presets */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5">
                     <button
                       type="button"
                       onClick={() => handleDatePreset(0)}
-                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0"
                     >
                       Hôm nay
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDatePreset(3)}
-                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0"
                     >
                       +3 ngày
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDatePreset(7)}
-                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0"
                     >
                       +1 tuần
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDatePreset(-1)}
-                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95"
+                      className="rounded-md border border-border/60 bg-card/60 px-2 py-1 text-xs font-medium text-foreground hover:bg-secondary hover:border-border cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0"
                     >
                       Cuối tháng
                     </button>
@@ -1037,7 +1037,7 @@ export function CreateTaskModal({
           </div>
 
           {/* Sticky Bottom Actions Bar */}
-          <div className="sticky bottom-0 z-10 flex items-center justify-between px-5 sm:px-6 py-3.5 border-t border-border/50 bg-card/95 backdrop-blur-md shrink-0">
+          <div className="sticky bottom-0 z-10 flex items-center justify-between px-5 sm:px-6 py-3.5 border-t border-border/50 bg-card/95 backdrop-blur-md shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
             {/* Keyboard hint */}
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
               <kbd className="rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-xs font-bold">

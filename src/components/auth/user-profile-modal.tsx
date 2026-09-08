@@ -250,6 +250,7 @@ export function UserProfileModal() {
                 <input
                   id="profilePhone"
                   type="tel"
+                  inputMode="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="09xx xxx xxx"
@@ -313,7 +314,7 @@ export function UserProfileModal() {
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-border/60 pt-4">
+          <div className="sticky bottom-0 z-10 mt-6 flex items-center justify-end gap-2.5 border-t border-border/60 bg-card/95 backdrop-blur-md pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={() => setIsProfileModalOpen(false)}
