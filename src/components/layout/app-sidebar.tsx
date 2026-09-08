@@ -544,7 +544,7 @@ export function AppSidebar() {
               <span className="truncate flex-1">Cài đặt</span>
             </Link>
             <div className="flex items-center justify-center gap-2 px-2.5 py-1 rounded-md border border-border/40 bg-card text-xs text-muted-foreground">
-              <span className="size-2 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+              <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
               <span className="truncate font-medium text-xs">Notion: Đang kết nối</span>
             </div>
             <button

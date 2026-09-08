@@ -20,7 +20,6 @@ import {
   TrendingUp,
   AlertTriangle,
   Clock,
-  Sparkles,
   RefreshCw,
   Kanban,
   FileSpreadsheet,
@@ -111,13 +110,7 @@ export function BentoPortalHub({
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-1.5 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
-                <Sparkles size={12} strokeWidth={1.5} className="shrink-0" />
-                Hệ thống E-Office v1.2 Enterprise
-              </span>
-              <span className="hidden sm:inline-flex text-xs text-muted-foreground">
-                Năm học 2025 - 2026
-              </span>
+              <span className="text-xs font-semibold text-primary">Năm học 2025-2026 - Cơ sở Quy Nhơn</span>
             </div>
             <h1 className="text-xl md:text-2xl font-black text-foreground tracking-tight truncate">
               {greeting}
@@ -541,7 +534,7 @@ export function BentoPortalHub({
             </div>
 
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-700 font-medium">
-              <span className="size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
               <span>Dữ liệu đồng bộ trực tiếp • 0s trễ</span>
             </div>
           </div>

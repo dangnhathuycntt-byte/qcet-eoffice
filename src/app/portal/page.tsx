@@ -162,10 +162,10 @@ export default function PortalPage() {
             <div>
               <div className="flex items-center justify-between gap-4">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 border border-blue-500/20">
-                  <span className="size-1.5 rounded-full bg-blue-600 animate-pulse" />
+                  <span className="size-1.5 rounded-full bg-blue-600" />
                   Màn hình Điều hành BGH
                 </span>
-                <div className="size-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+                <div className="size-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center shrink-0 transition-colors">
                   <Tv size={22} strokeWidth={1.75} />
                 </div>
               </div>
@@ -207,7 +207,7 @@ export default function PortalPage() {
               <span className="text-xs font-bold tracking-wider text-blue-600 uppercase">
                 KHỞI CHẠY DASHBOARD ĐIỀU HÀNH
               </span>
-              <span className="size-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 active:scale-95 transition-all">
+              <span className="size-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs group-hover:bg-blue-700 transition-colors">
                 <ArrowUpRight size={18} strokeWidth={2.2} />
               </span>
             </div>
@@ -226,7 +226,7 @@ export default function PortalPage() {
                     <Briefcase size={12} strokeWidth={1.75} />
                     Dành cho Khoa / Phòng
                   </span>
-                  <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+                  <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0 transition-colors">
                     <CheckSquare size={20} strokeWidth={1.75} />
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export default function PortalPage() {
                     <Users size={12} strokeWidth={1.75} />
                     Toàn thể Cán bộ & Giảng viên
                   </span>
-                  <div className="size-11 rounded-2xl bg-slate-500/10 border border-slate-500/20 text-slate-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+                  <div className="size-11 rounded-2xl bg-slate-500/10 border border-slate-500/20 text-slate-600 flex items-center justify-center shrink-0 transition-colors">
                     <Calendar size={20} strokeWidth={1.75} />
                   </div>
                 </div>

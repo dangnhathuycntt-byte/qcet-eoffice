@@ -356,7 +356,7 @@ export function Navigation() {
                 QCET E-Office
               </span>
               <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium text-muted-foreground bg-muted border border-border/50 select-none">
-                v1.2 Enterprise
+                Năm học 2025-2026
               </span>
             </div>
           </Link>

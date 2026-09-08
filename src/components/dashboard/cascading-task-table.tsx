@@ -583,7 +583,7 @@ export function CascadingTaskTable({
             )}
           >
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-rose-500 animate-pulse" />
+              <span className="size-2 rounded-full bg-rose-500" />
               Cần xử lý gấp & Quá hạn
             </span>
             {workboxCounts.urgent > 0 && (
@@ -968,7 +968,7 @@ export function CascadingTaskTable({
                                 task.status === "COMPLETED"
                                   ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
                                   : "bg-blue-500/10 text-blue-700 border-blue-500/20",
-                                onStatusChange && "cursor-pointer transition-transform hover:scale-105 active:scale-95"
+                                onStatusChange && "cursor-pointer hover:bg-muted/40 transition-colors"
                               )}
                             >
                               {task.status === "COMPLETED" ? "Hoàn thành" : "Đang làm"}
@@ -1031,7 +1031,7 @@ export function CascadingTaskTable({
                                           className={cn(
                                             "h-5.5 px-2 text-xs font-semibold leading-none shrink-0",
                                             onStatusChange &&
-                                              "cursor-pointer transition-transform hover:scale-105 active:scale-95",
+                                              "cursor-pointer hover:bg-muted/40 transition-colors",
                                             statusConfig.className
                                           )}
                                         >

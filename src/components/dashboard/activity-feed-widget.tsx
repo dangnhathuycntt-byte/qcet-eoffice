@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Zap, Activity, CheckCircle2, Upload, RefreshCw, PlusCircle, AlertCircle, Clock } from "lucide-react";
+import { History, Activity, CheckCircle2, Upload, RefreshCw, PlusCircle, AlertCircle, Clock } from "lucide-react";
 import type { ActivityEvent } from "@/types/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,7 @@ export interface ActivityFeedWidgetProps {
 export interface ActivityActionConfig {
   type: "completed" | "assigned" | "upload" | "updated" | "created" | "review" | "default";
   badgeVariant: "default" | "secondary" | "destructive" | "outline" | "ghost" | "success" | "progress" | "warning";
-  iconName: "CheckCircle2" | "Zap" | "Upload" | "RefreshCw" | "PlusCircle" | "AlertCircle" | "Activity";
+  iconName: "CheckCircle2" | "History" | "Upload" | "RefreshCw" | "PlusCircle" | "AlertCircle" | "Activity";
 }
 
 export function getActorInitials(name: string): string {
@@ -40,7 +40,7 @@ export function getActivityActionConfig(action: string): ActivityActionConfig {
     return {
       type: "assigned",
       badgeVariant: "secondary",
-      iconName: "Zap",
+      iconName: "History",
     };
   }
   if (act.includes("tải lên") || act.includes("upload") || act.includes("đính kèm")) {
@@ -81,7 +81,7 @@ export function getActivityActionConfig(action: string): ActivityActionConfig {
 
 const actionIcons = {
   CheckCircle2,
-  Zap,
+  History,
   Upload,
   RefreshCw,
   PlusCircle,
@@ -103,8 +103,8 @@ export function ActivityFeedWidget({
       {/* Header */}
       <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
-            <Zap className="size-4 fill-amber-500/20" strokeWidth={1.5} />
+          <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <History className="size-4" strokeWidth={1.5} />
           </div>
           <div>
             <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
@@ -116,10 +116,7 @@ export function ActivityFeedWidget({
           </div>
         </div>
         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-semibold">
-          <span className="relative flex size-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-          </span>
+          <span className="size-1.5 rounded-full bg-emerald-500" />
           <span>Live</span>
         </div>
       </div>
