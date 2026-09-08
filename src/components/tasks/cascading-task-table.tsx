@@ -172,6 +172,13 @@ export function getStatusBadgeConfig(
           "border-amber-500/20 bg-amber-500/10 text-amber-700",
         variant: "amber",
       };
+    case "WAITING_APPROVAL":
+      return {
+        label: "Chờ phê duyệt",
+        className:
+          "border-amber-500/20 bg-amber-500/10 text-amber-700",
+        variant: "amber",
+      };
     case "COMPLETED":
       return {
         label: "Hoàn thành",

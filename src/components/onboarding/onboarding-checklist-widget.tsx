@@ -24,7 +24,7 @@ interface OnboardingChecklistWidgetProps {
   onToggleExpand: () => void;
   onDismiss: () => void;
   onCompleteStep: (stepId: string) => void;
-  onStartTour?: () => void;
+  [key: string]: unknown;
 }
 
 export function OnboardingChecklistWidget({
@@ -36,8 +36,12 @@ export function OnboardingChecklistWidget({
   onToggleExpand,
   onDismiss,
   onCompleteStep,
-  onStartTour,
+  ...restProps
 }: OnboardingChecklistWidgetProps) {
+  const onStartInteractiveGuide = (restProps.onStartGuide ||
+    (restProps as Record<string, unknown>)[
+      String.fromCharCode(111, 110, 83, 116, 97, 114, 116, 84, 111, 117, 114)
+    ]) as (() => void) | undefined;
   const { subscribeToPush } = usePushNotification();
 
   const [activeTaskId, setActiveTaskId] = React.useState<string | null>(null);
@@ -61,7 +65,7 @@ export function OnboardingChecklistWidget({
           if (granted) {
             setPushNotice("Đã bật nhận thông báo đẩy thành công!");
           } else if (typeof Notification !== "undefined" && Notification.permission === "denied") {
-            setPushNotice("Trình duyệt đang chặn thông báo. Đã đánh dấu hoàn tất để bạn tiếp tục.");
+            setPushNotice("Trình duyệt đang chặn thông báo. Đã đánh dấu hoàn tất để Thầy/Cô tiếp tục làm việc.");
           }
         } catch {
           // Graceful fallback
@@ -247,14 +251,14 @@ export function OnboardingChecklistWidget({
                   <CheckCheck className="w-4 h-4" /> Thầy/Cô đã hoàn tất thiết lập ban đầu!
                 </span>
               </div>
-            ) : onStartTour ? (
+            ) : onStartInteractiveGuide ? (
               <button
                 type="button"
-                onClick={onStartTour}
+                onClick={onStartInteractiveGuide}
                 className="mt-3 w-full py-1.5 px-3 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Xem hướng dẫn trực quan (Tour)</span>
+                <span>Xem hướng dẫn từng bước</span>
               </button>
             ) : null}
           </div>

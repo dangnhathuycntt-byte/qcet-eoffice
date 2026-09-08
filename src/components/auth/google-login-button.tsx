@@ -104,7 +104,7 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
           <>
             <GoogleIcon className="size-5 shrink-0" />
             <span className="font-semibold text-foreground whitespace-nowrap">
-              Đăng nhập bằng Email trường
+              Đăng nhập bằng Email công vụ Nhà trường
             </span>
           </>
         )}
@@ -180,12 +180,12 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
                     {copied ? (
                       <>
                         <Check className="size-3.5 text-emerald-600" strokeWidth={1.5} />
-                        <span className="text-emerald-600 font-semibold">Đã copy</span>
+                        <span className="text-emerald-600 font-semibold">Đã sao chép</span>
                       </>
                     ) : (
                       <>
                         <Copy className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                        <span>Copy</span>
+                        <span>Sao chép</span>
                       </>
                     )}
                   </button>
@@ -217,7 +217,7 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
                 }}
                 className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer"
               >
-                <span>Vẫn thử tới /api/auth/google</span>
+                <span>Tiếp tục kết nối xác thực Google</span>
               </button>
 
               <button
@@ -225,7 +225,7 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
                 onClick={() => setIsModalOpen(false)}
                 className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
               >
-                <span>Đã hiểu, đóng</span>
+                <span>Đóng thông báo</span>
                 <ArrowRight className="size-3.5" strokeWidth={1.5} />
               </button>
             </div>

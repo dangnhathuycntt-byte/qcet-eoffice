@@ -142,7 +142,7 @@ export function UserProfileModal() {
             <Sparkles className="size-4 shrink-0 text-primary mt-0.5" strokeWidth={1.5} />
             <div className="leading-relaxed">
               <strong className="font-semibold text-primary">
-                Chào mừng bạn đến với QCET E-Office!
+                Kính chào Quý Thầy/Cô đến với QCET E-Office!
               </strong>{" "}
               Tài khoản email trường của bạn đã được kích hoạt thành công. Vui lòng
               hoàn thiện thông tin đơn vị và chức danh để thuận tiện trong điều hành công việc.
@@ -278,7 +278,7 @@ export function UserProfileModal() {
               >
                 <User className="size-4 mb-1" strokeWidth={1.5} />
                 <span className="text-xs font-bold">Viên chức</span>
-                <span className="text-xs opacity-80">Xem việc trực tiếp</span>
+                <span className="text-xs opacity-80">Thực hiện nhiệm vụ & Nộp minh chứng</span>
               </button>
 
               <button
@@ -293,7 +293,7 @@ export function UserProfileModal() {
               >
                 <Building2 className="size-4 mb-1" strokeWidth={1.5} />
                 <span className="text-xs font-bold">Trưởng đơn vị</span>
-                <span className="text-xs opacity-80">Quản trị khoa/phòng</span>
+                <span className="text-xs opacity-80">Lãnh đạo đơn vị & Phê duyệt</span>
               </button>
 
               <button
@@ -308,7 +308,7 @@ export function UserProfileModal() {
               >
                 <Award className="size-4 mb-1" strokeWidth={1.5} />
                 <span className="text-xs font-bold">Ban Giám hiệu</span>
-                <span className="text-xs opacity-80">Điều hành toàn trường</span>
+                <span className="text-xs opacity-80">Chỉ đạo & Điều hành toàn trường</span>
               </button>
             </div>
           </div>

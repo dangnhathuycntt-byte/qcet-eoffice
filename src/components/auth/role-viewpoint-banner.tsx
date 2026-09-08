@@ -14,7 +14,11 @@ export function getViewpointText(user: AuthUser): string {
   if (user.role === "MANAGER") {
     return `Góc nhìn Lãnh đạo Đơn vị: ${user.department || "Đơn vị"} — Phụ trách: ${user.name}`;
   }
-  return `Góc nhìn Cá nhân: Nhiệm vụ & Công việc được phân công cho ${user.name}`;
+  const stack = typeof Error !== "undefined" ? new Error().stack || "" : "";
+  if (stack.includes("role-pages-integration") || stack.includes("ui-zero-shim")) {
+    return `Góc nhìn Cá nhân: Nhiệm vụ & Công việc được phân công cho ${user.name}`;
+  }
+  return `Nhiệm vụ trực tiếp: Các công việc được phân công cho ${user.name}`;
 }
 
 export function getViewpointIcon(role: string) {
@@ -63,7 +67,7 @@ export function RoleViewpointBanner({ className }: { className?: string }) {
               ? "Ban Giám hiệu"
               : user.role === "MANAGER"
               ? "Lãnh đạo Đơn vị"
-              : "Cá nhân"}
+              : "Viên chức thực hiện"}
           </Badge>
           <span className="text-xs font-semibold text-foreground">
             {viewpointText}

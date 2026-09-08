@@ -128,11 +128,12 @@ export function WelcomeModal({ isOpen, onStartTour, onDismiss }: WelcomeModalPro
           >
             Vào bàn làm việc ngay
           </Button>
+          {/* Hướng dẫn khởi đầu - Tiền thân: KHÁM PHÁ TRONG 45 GIÂY */}
           <Button
             onClick={onStartTour}
             className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 px-4 font-medium flex items-center justify-center gap-1.5 shadow-sm"
           >
-            Khám phá trong 45 giây <ArrowRight className="w-3.5 h-3.5" />
+            Xem hướng dẫn sử dụng <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>

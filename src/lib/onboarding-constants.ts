@@ -46,16 +46,16 @@ export function getRoleTourSteps(role: string, dbRole?: string): TourStepConfig[
       },
       {
         id: "bgh-radar",
-        title: "Radar & Điểm Nghẽn Đơn Vị",
-        description: "Nhận diện tức thời các phòng ban có khối lượng quá hạn cao để ban hành Nghị quyết can thiệp.",
+        title: "Tiến Độ & Hồ Sơ Tồn Đọng Đơn Vị",
+        description: "Theo dõi tiến độ các đơn vị trực thuộc, kịp thời đôn đốc và chỉ đạo xử lý.",
         targetSelector: "#tour-radar-card",
         fallbackSelector: "#tour-cockpit-metrics",
         zone: "portal",
       },
       {
         id: "bgh-search",
-        title: "Tìm Kiếm Toàn Năng",
-        description: "Bấm phím tắt Cmd+K để tra cứu thần tốc bất kỳ văn bản, tờ trình hay nhân sự.",
+        title: "Tra Cứu Nhanh",
+        description: "Hỗ trợ cán bộ tra cứu nhanh văn bản, tờ trình và hồ sơ công việc.",
         targetSelector: "#tour-topbar-search",
       },
     ];
@@ -72,8 +72,8 @@ export function getRoleTourSteps(role: string, dbRole?: string): TourStepConfig[
       },
       {
         id: "manager-assign",
-        title: "Giao Việc & Phê Duyệt",
-        description: "Phân công công việc theo quy trình DACUM và duyệt các minh chứng sản phẩm được nộp.",
+        title: "Phân Công & Nghiệm Thu",
+        description: "Giao nhiệm vụ cho viên chức và thẩm định hồ sơ minh chứng hoàn thành.",
         targetSelector: "#tour-create-task-btn",
         fallbackSelector: "#tour-manager-workspace",
         zone: "portal",
@@ -100,7 +100,7 @@ export function getRoleTourSteps(role: string, dbRole?: string): TourStepConfig[
       {
         id: "vt-numbering",
         title: "Cấp Số Văn Bản Tự Động",
-        description: "Hệ sinh thái số hóa tự động sinh mã số và lưu trữ hồ sơ theo niên khóa.",
+        description: "Tự động cấp số văn bản và lưu trữ hồ sơ theo Nghị định 30/2020/NĐ-CP.",
         targetSelector: "#tour-nav-documents",
       },
       {
@@ -132,7 +132,7 @@ export function getRoleTourSteps(role: string, dbRole?: string): TourStepConfig[
     },
     {
       id: "staff-search",
-      title: "Phím Tắt Toàn Năng (Cmd+K)",
+      title: "Tra Cứu Nhanh (Cmd+K)",
       description: "Mở hộp tìm kiếm nhanh mọi lúc, mọi nơi trên toàn hệ thống.",
       targetSelector: "#tour-topbar-search",
     },
@@ -147,13 +147,13 @@ export function getRoleChecklist(role: string, dbRole?: string): ChecklistTaskCo
       id: "step-profile",
       title: "Định danh tài khoản & vai trò",
       description: "Đã hoàn thành xác thực danh tính vào hệ thống QCET E-Office.",
-      actionLabel: "Đã nhận vai trò",
+      actionLabel: "Đã xác nhận vai trò",
       actionType: "MODAL",
     },
     {
       id: "step-push",
       title: "Bật nhận thông báo chỉ đạo khẩn",
-      description: "Nhận Web Push tức thì khi có nhiệm vụ mới hoặc chỉ đạo từ cấp trên.",
+      description: "Nhận thông báo trực tiếp khi có nhiệm vụ hoặc chỉ đạo mới.",
       actionLabel: "Bật thông báo ngay",
       actionType: "REQUEST_PUSH",
     },
@@ -174,7 +174,7 @@ export function getRoleChecklist(role: string, dbRole?: string): ChecklistTaskCo
     {
       id: "step-search",
       title: "Trải nghiệm tìm kiếm nhanh Cmd+K",
-      description: "Sử dụng phím tắt Cmd+K (hoặc Ctrl+K) để tra cứu thần tốc.",
+      description: "Sử dụng phím tắt Cmd+K (hoặc Ctrl+K) để tra cứu nhanh thông tin.",
       actionLabel: "Thử tìm kiếm",
       actionType: "OPEN_SEARCH",
     },
