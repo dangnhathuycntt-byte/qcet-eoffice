@@ -79,15 +79,15 @@ export function validateLoginForm(email: string, password?: string): LoginValida
     return { valid: true, user: foundUser };
   }
 
-  // If not a demo user, check if it's an educational email or domain match
+  // If not a demo user, default to standard staff role without privilege inference
   return {
     valid: true,
     user: {
       id: `user-custom-${Date.now()}`,
       name: trimmedEmail.split("@")[0].toUpperCase(),
       email: trimmedEmail,
-      role: trimmedEmail.includes("bgh") ? "ADMIN" : trimmedEmail.includes("daotao") ? "MANAGER" : "STAFF",
-      roleLabel: "Người dùng hệ thống",
+      role: "STAFF",
+      roleLabel: "Chuyên viên",
       department: "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
       departmentCode: "QCET",
     },
@@ -96,6 +96,26 @@ export function validateLoginForm(email: string, password?: string): LoginValida
 
 export function resolveDemoUserByRole(role: UserRole): AuthUser | undefined {
   return DEFAULT_DEMO_USERS.find((u) => u.role === role);
+}
+
+/**
+ * Sanitizes redirect target URLs to prevent Open Redirect attacks (OWASP A01/A07).
+ * Only allows safe relative paths starting with a single '/' and strictly disallows
+ * protocol-relative URLs ('//'), backslashes ('/\'), URI schemes (http:, javascript:), and control characters.
+ */
+export function sanitizeRedirectUrl(url: string | null | undefined): string {
+  if (!url) return "/";
+  const trimmed = url.trim();
+  if (
+    trimmed.startsWith("/") &&
+    !trimmed.startsWith("//") &&
+    !trimmed.startsWith("/\\") &&
+    !trimmed.includes("://") &&
+    !/[\r\n\t]/.test(trimmed)
+  ) {
+    return trimmed;
+  }
+  return "/";
 }
 
 export type OAuthErrorVariant = "amber" | "red" | "neutral";
@@ -120,9 +140,9 @@ export function resolveOAuthError(
     case "domain_not_allowed":
       return {
         code: "domain_not_allowed",
-        title: "Tài khoản không thuộc miền cho phép",
+        title: "Email không thuộc hệ thống Nhà trường",
         message: email
-          ? `Tài khoản không thuộc miền @cdktcnqn.edu.vn (email của bạn: ${email}). Vui lòng đăng nhập bằng tài khoản Google Workspace chính thức của nhà trường.`
+          ? `Tài khoản không thuộc miền @cdktcnqn.edu.vn (email của Thầy/Cô: ${email}). Vui lòng sử dụng địa chỉ email do Nhà trường cấp để đăng nhập.`
           : "Tài khoản không thuộc miền @cdktcnqn.edu.vn được cấp phép. Vui lòng sử dụng email công vụ nhà trường được cấp để đăng nhập.",
         variant: "amber",
         email: email || undefined,
@@ -133,7 +153,7 @@ export function resolveOAuthError(
     case "account_disabled":
       return {
         code: "account_disabled",
-        title: "Tài khoản bị vô hiệu hóa",
+        title: "Tài khoản bị tạm khóa",
         message:
           "Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa. Vui lòng liên hệ Phòng Quản trị Mạng và CNTT (email: qtm@cdktcnqn.edu.vn) để được hỗ trợ.",
         variant: "red",
@@ -142,7 +162,7 @@ export function resolveOAuthError(
     case "oauth_cancelled":
       return {
         code: "oauth_cancelled",
-        title: "Hủy thao tác đăng nhập",
+        title: "Đã dừng thao tác đăng nhập",
         message: "Bạn đã hủy quá trình đăng nhập bằng Google. Vui lòng thử lại khi sẵn sàng.",
         variant: "neutral",
       };
@@ -158,8 +178,9 @@ export function resolveOAuthError(
     case "oauth_not_configured":
       return {
         code: "oauth_not_configured",
-        title: "Chưa cấu hình đăng nhập Google",
-        message: "Hệ thống chưa cấu hình Google OAuth. Vui lòng liên hệ quản trị viên.",
+        title: "Hệ thống đăng nhập chưa kích hoạt",
+        message:
+          "Hệ thống chưa cấu hình Google OAuth. Thầy/Cô vui lòng liên hệ Trung tâm Số & Truyền thông hoặc Quản trị mạng Nhà trường để được hỗ trợ.",
         variant: "red",
       };
 
@@ -168,8 +189,9 @@ export function resolveOAuthError(
     default:
       return {
         code: error,
-        title: "Lỗi xác thực Google",
-        message: "Đã xảy ra lỗi trong quá trình xác thực với Google. Vui lòng thử lại sau.",
+        title: "Đăng nhập không thành công",
+        message:
+          "Đã xảy ra lỗi trong quá trình xác thực với Google. Thầy/Cô vui lòng thử lại sau hoặc liên hệ hỗ trợ.",
         variant: "red",
       };
   }
