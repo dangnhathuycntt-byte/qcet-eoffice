@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { DelegationRule, DelegationScope } from "@/types/delegation";
 import { QCET_DEPARTMENTS, type DepartmentNode } from "@/components/org/organization-tree";
+import { QCET_UNIT_CANONICAL_MAP } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -52,8 +53,10 @@ export const DELEGATION_SCOPES: DelegationScopeConfig[] = [
 export function findDepartment(code: string): DepartmentNode | undefined {
   if (!code) return undefined;
   const norm = code.trim().toUpperCase();
+  const canonical = QCET_UNIT_CANONICAL_MAP[code] || QCET_UNIT_CANONICAL_MAP[norm];
   return (
     QCET_DEPARTMENTS.find((d) => d.code.toUpperCase() === norm) ||
+    (canonical ? QCET_DEPARTMENTS.find((d) => d.code === canonical) : undefined) ||
     QCET_DEPARTMENTS.find((d) => d.id.toUpperCase() === norm) ||
     QCET_DEPARTMENTS.find((d) => {
       const pureCode = d.code.toUpperCase().replace(/^(K_|P_|TT_)/, "");
@@ -62,6 +65,7 @@ export function findDepartment(code: string): DepartmentNode | undefined {
         pureCode === pureNorm ||
         (norm === "CNTT" && d.code === "K_CNTT") ||
         (norm === "KHOA_CNTT" && d.code === "K_CNTT") ||
+        (norm === "DCC" && (d.code === "TT_STT" || d.code === "TT_DCC")) ||
         d.code.toUpperCase().includes(norm) ||
         norm.includes(d.code.toUpperCase())
       );
@@ -76,6 +80,7 @@ export interface DelegationFormData {
   startDate: string;
   endDate: string;
   reason: string;
+  documentRef?: string;
 }
 
 export function validateDelegationForm(
@@ -153,6 +158,7 @@ export function DelegationManagementModal({
   const [startDate, setStartDate] = React.useState(todayStr);
   const [endDate, setEndDate] = React.useState("");
   const [reason, setReason] = React.useState("");
+  const [documentRef, setDocumentRef] = React.useState("");
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
@@ -208,6 +214,7 @@ export function DelegationManagementModal({
       startDate,
       endDate,
       reason,
+      documentRef,
     };
 
     const validationErrors = validateDelegationForm(formData, grantorName);
@@ -236,6 +243,7 @@ export function DelegationManagementModal({
       endDate,
       status: "ACTIVE",
       reason: reason.trim(),
+      documentRef: documentRef.trim() || undefined,
     };
 
     onSaveDelegation(newRule);
@@ -247,6 +255,7 @@ export function DelegationManagementModal({
     setStartDate(todayStr);
     setEndDate("");
     setReason("");
+    setDocumentRef("");
     setIsSubmitting(false);
     setSuccessMessage("Quyết định ủy quyền đã được kích hoạt thành công!");
     setTimeout(() => setSuccessMessage(null), 4000);
@@ -535,6 +544,20 @@ export function DelegationManagementModal({
                   )}
                 </div>
 
+                {/* 7. Số Quyết định ủy quyền (Nghị định 30/2020) */}
+                <div className="space-y-1.5">
+                  <label className="font-medium text-foreground">
+                    Số Quyết định ủy quyền (NĐ 30/2020/NĐ-CP)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: 142/QĐ-CĐKTCN (hoặc để trống)"
+                    value={documentRef}
+                    onChange={(e) => setDocumentRef(e.target.value)}
+                    className="w-full font-mono rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
                 {/* Submit button */}
                 <Button
                   type="submit"
@@ -624,6 +647,11 @@ export function DelegationManagementModal({
                             <p className="text-xs font-medium text-primary">
                               {scopeInfo?.label || del.scope}
                             </p>
+                            {del.documentRef && (
+                              <p className="text-xs font-mono text-muted-foreground">
+                                Căn cứ QĐ: <span className="text-foreground font-semibold">{del.documentRef}</span>
+                              </p>
+                            )}
                           </div>
 
                           {/* Revoke button */}

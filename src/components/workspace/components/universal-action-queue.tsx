@@ -60,20 +60,22 @@ export function UniversalActionQueue({
       <div
         data-slot="universal-action-queue"
         className={cn(
-          "rounded-xl border border-border/50 bg-card p-6 text-center shadow-xs flex flex-col items-center justify-center gap-2.5",
+          "rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 flex items-center justify-between gap-3 shadow-2xs transition-all",
           className
         )}
       >
-        <div className="size-10 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center">
-          <CheckCircle2 className="size-5" strokeWidth={1.75} />
-        </div>
-        <div className="space-y-1">
-          <h4 className="text-sm font-semibold text-foreground">
-            Không có nhiệm vụ cần xử lý gấp
-          </h4>
-          <p className="text-xs text-muted-foreground">
-            Tất cả công việc đều đúng tiến độ và không có hồ sơ tồn đọng cần phê duyệt.
-          </p>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="size-8 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="size-4" strokeWidth={2} />
+          </div>
+          <div className="space-y-0.5 min-w-0">
+            <h4 className="text-xs sm:text-sm font-semibold text-foreground">
+              Không có nhiệm vụ cần xử lý gấp
+            </h4>
+            <p className="text-xs text-muted-foreground truncate">
+              Tất cả công việc đều đúng tiến độ và không có hồ sơ tồn đọng cần phê duyệt.
+            </p>
+          </div>
         </div>
       </div>
     );
