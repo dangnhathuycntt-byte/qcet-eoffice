@@ -11,7 +11,6 @@ import {
   LogOut,
   X,
   ChevronRight,
-  ShieldCheck,
   Bell,
   BellRing,
   BellOff,
@@ -33,7 +32,6 @@ import { useAuth } from "@/context/auth-context";
 import { usePushNotification } from "@/hooks/use-push-notification";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { cn } from "@/lib/utils";
-import { DEMO_USERS } from "@/lib/auth/roles";
 
 export interface MobileMenuDrawerProps {
   open: boolean;
@@ -41,7 +39,7 @@ export interface MobileMenuDrawerProps {
 }
 
 export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) {
-  const { user, switchUser, logout } = useAuth();
+  const { user, logout } = useAuth();
   const pathname = usePathname();
   const [isTestingPush, setIsTestingPush] = React.useState(false);
   const [testPushResult, setTestPushResult] = React.useState<"success" | "failed" | null>(null);
@@ -88,47 +86,8 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
         </BottomSheetHeader>
 
         <div className="p-4 space-y-4">
-          {/* Quick Demo Role Switcher */}
-          <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <ShieldCheck size={13} className="text-primary" />
-              CHUYỂN VAI TRÒ TRẢI NGHIỆM
-            </div>
-            <div className="grid grid-cols-1 gap-1.5">
-              {DEMO_USERS.map((demo) => {
-                const isCurrent = user?.id === demo.id;
-                return (
-                  <button
-                    key={demo.id}
-                    type="button"
-                    onClick={() => {
-                      switchUser(demo.id);
-                      onOpenChange(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between p-2.5 min-h-[44px] rounded-xl text-left text-xs transition-colors border cursor-pointer",
-                      isCurrent
-                        ? "bg-primary/10 border-primary/40 text-primary font-semibold"
-                        : "bg-muted/30 hover:bg-muted/60 border-border/40 text-foreground"
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">{demo.name}</div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {demo.title} • {demo.department}
-                      </div>
-                    </div>
-                    {isCurrent && (
-                      <span className="size-2 rounded-full bg-primary shrink-0 ml-2" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Core App Navigation Shortcuts */}
-          <div className="space-y-1 pt-1 border-t border-border/40">
+          <div className="space-y-1">
             <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1 pb-1">
               LỐI TẮT HỆ THỐNG
             </div>

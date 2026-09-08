@@ -92,4 +92,32 @@ describe("Login Form Validation & Authentication Logic", () => {
       "src/app/login directory must exist"
     );
   });
+
+  test("login page, google login modal, and mobile drawer do not contain hardcoded seed accounts or passwords (CWE-798)", () => {
+    const loginContent = fs.readFileSync(
+      path.resolve(__dirname, "../src/app/login/page.tsx"),
+      "utf8"
+    );
+    assert.ok(!loginContent.includes("SEED_ACCOUNTS"), "SEED_ACCOUNTS must be removed from login page");
+    assert.ok(!loginContent.includes("handleQuickSeedLogin"), "handleQuickSeedLogin must be removed from login page");
+    assert.ok(!loginContent.includes("Qcet@2026"), "Hardcoded password Qcet@2026 must be removed from login page");
+    assert.ok(
+      !loginContent.includes("Tài khoản kiểm thử CSDL hạt nhân"),
+      "1-Click test accounts UI must be removed from login page"
+    );
+
+    const googleBtnContent = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/auth/google-login-button.tsx"),
+      "utf8"
+    );
+    assert.ok(!googleBtnContent.includes("Qcet@2026"), "Hardcoded password Qcet@2026 must be removed from google button modal");
+    assert.ok(!googleBtnContent.includes("tài khoản kiểm thử hạt nhân"), "Test accounts mention must be removed from google button modal");
+
+    const drawerContent = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/layout/mobile-menu-drawer.tsx"),
+      "utf8"
+    );
+    assert.ok(!drawerContent.includes("CHUYỂN VAI TRÒ TRẢI NGHIỆM"), "Demo role switcher must be removed from mobile menu drawer");
+    assert.ok(!drawerContent.includes("DEMO_USERS"), "DEMO_USERS must not be imported in mobile menu drawer");
+  });
 });

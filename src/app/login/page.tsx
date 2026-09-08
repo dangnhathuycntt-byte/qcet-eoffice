@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Building2,
-  Landmark,
   User,
   Mail,
   Lock,
@@ -23,36 +22,6 @@ import { useAuth } from "@/lib/auth-context";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import { cn } from "@/lib/utils";
 
-const SEED_ACCOUNTS = [
-  {
-    role: "ADMIN" as const,
-    badge: "BGH",
-    title: "Ban Giám hiệu",
-    name: "TS. Nguyễn Văn Hiệu",
-    subtitle: "Hiệu trưởng",
-    email: "bgh@qcet.edu.vn",
-    department: "Ban Giám hiệu",
-  },
-  {
-    role: "MANAGER" as const,
-    badge: "Trưởng đơn vị",
-    title: "Trưởng đơn vị",
-    name: "ThS. Lê Hoàng Nam",
-    subtitle: "Trưởng phòng QTM & CNTT",
-    email: "cntt.lead@qcet.edu.vn",
-    department: "Phòng Quản trị Mạng & CNTT",
-  },
-  {
-    role: "STAFF" as const,
-    badge: "Chuyên viên",
-    title: "Chuyên viên",
-    name: "Kỹ sư Trần Hùng",
-    subtitle: "Chuyên viên Mạng & ATTT",
-    email: "chuyenvien@qcet.edu.vn",
-    department: "Phòng Quản trị Mạng & CNTT",
-  },
-];
-
 const DEPARTMENTS = [
   { id: "BGH", name: "Ban Giám hiệu Nhà trường" },
   { id: "CNTT", name: "Phòng Quản trị Mạng và CNTT" },
@@ -63,7 +32,7 @@ const DEPARTMENTS = [
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, login, register, switchRole } = useAuth();
+  const { login, register } = useAuth();
 
   const [activeTab, setActiveTab] = React.useState<"login" | "register">("login");
 
@@ -82,7 +51,6 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [loadingSeedEmail, setLoadingSeedEmail] = React.useState<string | null>(null);
 
   const handleStandardLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,38 +134,6 @@ export default function LoginPage() {
     } catch {
       setErrorMessage("Đã xảy ra lỗi khi tạo tài khoản. Vui lòng thử lại.");
       setIsSubmitting(false);
-    }
-  };
-
-  const handleQuickSeedLogin = async (seedEmail: string, role: "ADMIN" | "MANAGER" | "STAFF") => {
-    setErrorMessage(null);
-    setSuccessMessage(null);
-    setEmail(seedEmail);
-    setPassword("Qcet@2026");
-    setLoadingSeedEmail(seedEmail);
-
-    try {
-      const res = await login(seedEmail, "Qcet@2026");
-      if (res.success) {
-        setSuccessMessage("Đăng nhập thành công! Đang chuyển tiếp...");
-        setTimeout(() => {
-          router.push("/");
-        }, 200);
-        return;
-      }
-
-      // Fallback if local server or DB connection is unreachable
-      switchRole(role);
-      setTimeout(() => {
-        router.push("/");
-      }, 200);
-    } catch {
-      switchRole(role);
-      setTimeout(() => {
-        router.push("/");
-      }, 200);
-    } finally {
-      setLoadingSeedEmail(null);
     }
   };
 
@@ -540,91 +476,7 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* Divider */}
-          <div className="relative my-5">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border/60" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase tracking-wider font-semibold">
-              <span className="bg-card px-3 text-muted-foreground">
-                Tài khoản kiểm thử CSDL hạt nhân (1-Click)
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Access Seed Cards */}
-          <div className="space-y-2">
-            {SEED_ACCOUNTS.map((account) => {
-              const isSelected = user.role === account.role && user.email === account.email;
-              const isLoadingThis = loadingSeedEmail === account.email;
-
-              const RoleIcon =
-                account.role === "ADMIN"
-                  ? Landmark
-                  : account.role === "MANAGER"
-                  ? Building2
-                  : User;
-
-              return (
-                <button
-                  key={account.email}
-                  type="button"
-                  onClick={() => handleQuickSeedLogin(account.email, account.role)}
-                  disabled={loadingSeedEmail !== null || isSubmitting}
-                  className={cn(
-                    "group relative flex w-full items-center justify-between rounded-xl border p-2.5 text-left transition-all cursor-pointer glass-card",
-                    isSelected
-                      ? "border-primary bg-primary/[0.06] shadow-card ring-1 ring-primary/30"
-                      : "border-border/60 hover:border-primary/40 hover:shadow-card active:scale-[0.99]"
-                  )}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-xl text-xs font-semibold shadow-xs",
-                        account.role === "ADMIN"
-                          ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
-                          : account.role === "MANAGER"
-                          ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
-                          : "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                      )}
-                    >
-                      <RoleIcon className="size-4" strokeWidth={1.5} />
-                    </div>
-
-                    <div className="space-y-0.5 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-bold text-foreground truncate">
-                          {account.name}
-                        </span>
-                        <span className="rounded bg-secondary px-1.5 py-0.2 text-xs font-semibold text-muted-foreground border border-border/70">
-                          {account.badge}
-                        </span>
-                        {isSelected && (
-                          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-600">
-                            <CheckCircle2 className="size-3" strokeWidth={1.5} />
-                            Hiện tại
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {account.subtitle} &bull; <span className="font-mono">{account.email}</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center pl-2 shrink-0">
-                    <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold text-muted-foreground transition-all group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-xs">
-                      {isLoadingThis ? "Đang vào..." : "Đăng nhập"}
-                      <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-5 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+          <div className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
             <ShieldCheck className="size-4 text-emerald-600" strokeWidth={1.5} />
             <span>Xác thực an toàn đa quyền (BGH / Trưởng đơn vị / Giảng viên)</span>
           </div>

@@ -144,10 +144,7 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
                     Sử dụng form đăng nhập email / mật khẩu bên dưới với các tài khoản nội bộ nhà trường.
                   </li>
                   <li>
-                    Hoặc click trực tiếp các tài khoản kiểm thử hạt nhân (Ban Giám hiệu, Trưởng đơn vị, Chuyên viên) để truy cập nhanh.
-                  </li>
-                  <li>
-                    Mật khẩu mặc định cho toàn bộ tài khoản nội bộ là: <span className="font-mono font-semibold text-foreground">Qcet@2026</span>
+                    Cán bộ, giảng viên sử dụng email công vụ nhà trường (@qcet.edu.vn) để đăng nhập hoặc liên hệ Bộ phận Quản trị mạng & CNTT để được cấp tài khoản.
                   </li>
                 </ul>
               </div>
