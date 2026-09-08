@@ -335,7 +335,7 @@ describe("Role Task Filter - STAFF DRI and Co-Assignee Support", () => {
   });
 });
 
-import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 
 describe("Mock Dashboard Data - Origin and Ownership Cases", () => {
   test("mock payload includes both SCHOOL and SELF_INITIATED tasks", () => {

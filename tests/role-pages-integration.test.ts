@@ -6,7 +6,7 @@ import {
   DEFAULT_DEMO_USERS,
   matchesUser,
 } from "../src/lib/role-task-filter";
-import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { computeDashboardStats } from "../src/lib/dashboard-aggregator";
 import {
   getViewpointText,

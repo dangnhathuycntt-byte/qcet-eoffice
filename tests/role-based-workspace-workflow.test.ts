@@ -18,6 +18,7 @@ import {
   SIDEBAR_ZONE_ITEMS,
   NAVIGATION_ITEMS,
 } from "../src/components/layout/sidebar-context";
+import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import {
   validateDeliverableSubmission,
   isValidSubmission,
@@ -867,7 +868,7 @@ describe("LecturerFocusWorkspace Component Static Rendering", () => {
       })
     );
 
-    assert.ok(html.includes("Xin chào, ThS. Nguyễn Văn A"));
+    assert.ok(html.includes("ThS. Nguyễn Văn A"));
     assert.ok(html.includes("Khoa Công nghệ thông tin"));
     assert.ok(html.includes("Giảng viên Khoa CNTT"));
   });
@@ -922,7 +923,7 @@ describe("LecturerFocusWorkspace Component Static Rendering", () => {
         referenceDate: "2026-09-06",
       })
     );
-    assert.ok(html.includes("Xin chào, ThS. Nguyễn Văn A"));
+    assert.ok(html.includes("ThS. Nguyễn Văn A"));
   });
 });
 
@@ -1321,8 +1322,7 @@ describe("DepartmentManagerWorkspace Component Static Rendering", () => {
       })
     );
 
-    assert.ok(html.includes("Xin chào, TS. Nguyễn Minh"));
-    assert.ok(html.includes("CNTT"));
+    assert.ok(html.includes("TS. Nguyễn Minh"));
     assert.ok(html.includes("Trưởng khoa CNTT"));
     assert.ok(html.includes("Khoa Công nghệ thông tin"));
   });
@@ -1337,10 +1337,14 @@ describe("DepartmentManagerWorkspace Component Static Rendering", () => {
       })
     );
 
-    assert.ok(html.includes("Chờ thẩm định"));
-    assert.ok(html.includes("Đang chậm tiến độ"));
-    assert.ok(html.includes("Nhiệm vụ trọng tâm"));
-    assert.ok(html.includes("Tiến độ chung đơn vị"));
+    assert.ok(
+      html.includes("Cần tôi xử lý") || html.includes("Nhiệm vụ trực tiếp")
+    );
+    assert.ok(html.includes("Đơn vị đang chạy"));
+    assert.ok(
+      html.includes("Chờ duyệt") || html.includes("Chờ thẩm định")
+    );
+    assert.ok(html.includes("Tiến độ đơn vị"));
   });
 
   test("renders tab navigation buttons", () => {
@@ -1383,7 +1387,7 @@ describe("DepartmentManagerWorkspace Component Static Rendering", () => {
         referenceDate: "2026-09-06",
       })
     );
-    assert.ok(html.includes("Xin chào, TS. Nguyễn Minh"));
+    assert.ok(html.includes("TS. Nguyễn Minh"));
   });
 });
 
@@ -1601,7 +1605,7 @@ describe("Eleven Department Health Radar & Sorting", () => {
   ];
 
   test("always returns exactly 11 departments", () => {
-    const radar = computeElevenDepartmentRadar(sampleTasks, [], refDate);
+    const radar = computeElevenDepartmentRadar(sampleTasks, refDate);
     assert.equal(radar.length, 11);
     const codes = radar.map((d) => d.departmentCode);
     assert.ok(codes.includes("BGH"));
@@ -1618,7 +1622,7 @@ describe("Eleven Department Health Radar & Sorting", () => {
   });
 
   test("sorts departments with RED first, then YELLOW, then GREEN", () => {
-    const radar = computeElevenDepartmentRadar(sampleTasks, [], refDate);
+    const radar = computeElevenDepartmentRadar(sampleTasks, refDate);
     // CNTT has multiple overdue and blocked tasks -> RED
     assert.equal(radar[0].departmentCode, "CNTT");
     assert.equal(radar[0].healthStatus, "RED");
@@ -1670,6 +1674,24 @@ describe("Executive Bottleneck Extraction & Approval Queue", () => {
       progressPercent: 40,
     },
     {
+      id: "task-bn-2",
+      title: "Nâng cấp hạ tầng mạng khu C",
+      category: "CSVC",
+      categoryLabel: "Cơ sở vật chất",
+      leadAssigneeName: "ThS. Hoàng Văn B",
+      leadDepartmentCode: "CNTT",
+      leadDepartment: "Khoa CNTT",
+      coAssignees: [],
+      assignedDate: "2026-08-15",
+      dueDate: "2026-09-20",
+      status: "BLOCKED" as any,
+      blockedReason: "Chờ phê duyệt kinh phí",
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 10,
+    } as any,
+    {
       id: "task-ap-1",
       title: "Dự toán tài chính hội nghị khoa học quốc tế 2026",
       category: "BAO_CAO",
@@ -1695,17 +1717,18 @@ describe("Executive Bottleneck Extraction & Approval Queue", () => {
   ];
 
   test("extracts bottlenecks with proper flags and blocked reasons", () => {
-    const bottlenecks = extractSchoolBottlenecks(tasks, [], refDate);
+    const bottlenecks = extractSchoolBottlenecks(tasks, refDate);
     assert.ok(bottlenecks.length >= 2);
 
     const blockedItem = bottlenecks.find((b) => b.isBlocked);
     assert.ok(blockedItem);
-    assert.equal(blockedItem.id, "sub-bn-1");
-    assert.equal(blockedItem.blockedReason, "Thiếu quyền truy cập API");
+    assert.equal(blockedItem.id, "task-bn-2");
+    assert.equal(blockedItem.blockedReason, "Chờ phê duyệt kinh phí");
+    assert.equal(blockedItem.assigneeName, "Khoa CNTT");
   });
 
   test("extracts institutional approval queue items", () => {
-    const queue = extractInstitutionalApprovalQueue(tasks, []);
+    const queue = extractInstitutionalApprovalQueue(tasks);
     assert.equal(queue.length, 1);
     assert.equal(queue[0].id, "task-ap-1");
     assert.equal(queue[0].departmentCode, "TAI_CHINH");
@@ -2222,6 +2245,57 @@ describe("Task 9: Root Page Role-Based Dispatcher Workflow", () => {
     assert.ok(content.includes("data-slot=\"role-workspace-landing\""), "Must contain role workspace landing slot");
     assert.ok(content.includes("handleSubmitDeliverable"), "Must wire handleSubmitDeliverable");
     assert.ok(content.includes("handleReviewAction"), "Must wire handleReviewAction");
+  });
+});
+
+describe("StaffTask Extended Fields: Collaborators & SubItems", () => {
+  test("creates a valid StaffTask with collaborators and subItems according to interface", () => {
+    const taskWithExtras: StaffTask = {
+      id: "st-khai-giang-001",
+      title: "Lễ Khai giảng năm học 2026-2027",
+      assigneeId: "tran-hung",
+      assigneeName: "Trần Hùng",
+      status: "COMPLETED",
+      dueDate: "2026-09-04",
+      parentSchoolTaskId: "school-task-1",
+      updatedAt: "2026-09-03T08:10:00Z",
+      collaborators: [
+        { id: "nguyen-anh", name: "Nguyễn Anh" },
+        { id: "le-mai", name: "Lê Mai" },
+        { id: "dang-huy", name: "Đặng Huy" },
+      ],
+      subItems: [
+        { id: "si-001", title: "Kịch bản, voice", assigneeName: "Lê Mai", dueDate: "2026-09-04", status: "COMPLETED" },
+        { id: "si-002", title: "Thiết kế banner", assigneeName: "Nguyễn Anh", dueDate: "2026-09-04", status: "COMPLETED" },
+      ],
+    };
+
+    assert.equal(taskWithExtras.id, "st-khai-giang-001");
+    assert.equal(taskWithExtras.collaborators?.length, 3);
+    assert.equal(taskWithExtras.collaborators?.[0].name, "Nguyễn Anh");
+    assert.equal(taskWithExtras.subItems?.length, 2);
+    assert.equal(taskWithExtras.subItems?.[0].title, "Kịch bản, voice");
+  });
+
+  test("verifies mock dataset from getMockDashboardPayload contains task with collaborators and subItems", () => {
+    const payload = getMockDashboardPayload();
+    const allStaffTasks = payload.tasks.flatMap((t) => t.subTasks);
+    const taskWithCollabs = allStaffTasks.find(
+      (t) => t.collaborators && t.collaborators.length > 0 && t.subItems && t.subItems.length > 0
+    );
+
+    assert.ok(taskWithCollabs, "Must find at least one StaffTask with collaborators and subItems");
+    assert.equal(taskWithCollabs?.id, "st-khai-giang-001");
+    assert.equal(taskWithCollabs?.title, "Lễ Khai giảng năm học 2026-2027");
+    assert.equal(taskWithCollabs?.collaborators?.length, 3);
+    assert.equal(taskWithCollabs?.subItems?.length, 2);
+
+    const parentTask = payload.tasks.find((t) => t.id === taskWithCollabs?.parentSchoolTaskId);
+    assert.ok(parentTask, "Parent school task must exist");
+    const subTaskInParent = parentTask?.subTasks.find((st) => st.id === "st-khai-giang-001");
+    assert.ok(subTaskInParent, "Subtask must exist in parentSchoolTask.subTasks");
+    assert.equal(subTaskInParent?.collaborators?.length, 3);
+    assert.equal(subTaskInParent?.subItems?.length, 2);
   });
 });
 

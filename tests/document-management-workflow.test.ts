@@ -3,7 +3,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { OfficialDocument, DocumentUrgency, DocumentStatus } from "../src/types/document";
-import { MOCK_DOCUMENTS, getDocumentStats } from "../src/lib/mock-document-data";
+import { MOCK_DOCUMENTS, getDocumentStats } from "./fixtures/document-fixtures";
 import {
   getUrgencyBadgeConfig,
   getStatusBadgeConfig,
@@ -144,7 +144,10 @@ describe("Official Documents & Dispatches Test Suite (Decree 30/2020/ND-CP)", ()
     test("Documents components and mock data contain 0% decorative emojis", () => {
       const filesToCheck = [
         "src/types/document.ts",
-        "src/lib/mock-document-data.ts",
+        ...(fs.existsSync(path.join(process.cwd(), "src/lib/mock-document-data.ts"))
+          ? ["src/lib/mock-document-data.ts"]
+          : []),
+        "tests/fixtures/document-fixtures.ts",
         "src/components/documents/document-registry-view.tsx",
         "src/components/documents/document-detail-dialog.tsx",
         "src/components/documents/create-document-modal.tsx",

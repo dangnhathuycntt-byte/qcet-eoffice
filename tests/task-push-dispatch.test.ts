@@ -170,7 +170,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
       createdNotificationIds.push(notif.id);
       assert.strictEqual(notif.actorName, adminUser.name);
       assert.match(notif.title, /\[GIAO VIỆC\]/);
-      assert.match(notif.body, new RegExp(adminUser.name));
+      assert.ok(notif.body.includes(adminUser.name));
     });
 
     test('gracefully handles task with no assignees', async () => {

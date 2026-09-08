@@ -17,7 +17,7 @@ import {
 import { LecturerFocusWorkspace } from "../src/components/portal/lecturer-focus-workspace";
 import { DepartmentManagerWorkspace } from "../src/components/portal/department-manager-workspace";
 import { ExecutiveCockpitWorkspace } from "../src/components/portal/executive-cockpit-workspace";
-import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
 import type { AuthUser } from "../src/types/auth";
 

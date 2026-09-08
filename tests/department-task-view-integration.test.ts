@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { aggregateTasksByDepartment } from "../src/lib/department-task-aggregator";
 import { QCET_DEPARTMENTS } from "../src/components/org/organization-tree";
-import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { parseViewModeParam } from "../src/lib/unified-task-hub";
 
 describe("Department Grouped Task View Integration", () => {

@@ -13,7 +13,7 @@ import {
   computeSchoolTaskRollup,
   computeDashboardStats,
 } from "../src/lib/dashboard-aggregator";
-import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 
 describe("Sprint 2 Integration & Navigation", () => {

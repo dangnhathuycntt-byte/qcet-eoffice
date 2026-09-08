@@ -20,7 +20,7 @@ import {
   computeMonthlyTaskCounts,
   filterTasksHub,
 } from "../src/lib/unified-task-hub";
-import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 

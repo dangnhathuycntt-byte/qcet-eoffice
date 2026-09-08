@@ -7,7 +7,7 @@ import {
   resolveDepartmentId,
   QCET_DEPARTMENT_DEFINITIONS,
 } from "../src/lib/executive-matrix-aggregator";
-import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 
 describe("Executive Matrix Aggregator", () => {
   const REF_DATE = "2026-09-04";
