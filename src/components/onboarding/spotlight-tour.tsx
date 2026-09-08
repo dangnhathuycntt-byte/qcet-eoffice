@@ -39,6 +39,7 @@ export function SpotlightTour({
   onClose,
 }: SpotlightTourProps) {
   const [targetRect, setTargetRect] = React.useState<DOMRect | null>(null);
+  const [targetRadius, setTargetRadius] = React.useState<number>(8);
   const [isMobile, setIsMobile] = React.useState(false);
   const currentStep = steps[currentIndex];
 
@@ -50,9 +51,19 @@ export function SpotlightTour({
     checkDevice();
 
     const updateRect = () => {
-      const el =
+      let el =
         document.querySelector(currentStep.targetSelector) ||
         (currentStep.fallbackSelector ? document.querySelector(currentStep.fallbackSelector) : null);
+
+      // Nếu không tìm thấy target và fallback của step, tự động fallback an toàn
+      // để không bao giờ bị tình trạng màn hình đen tối hoàn toàn
+      if (!el) {
+        el =
+          document.querySelector("#tour-create-task-btn") ||
+          document.querySelector("#tour-tasks-landing") ||
+          document.querySelector("#tour-scope-switcher") ||
+          document.querySelector("#tour-topbar-search");
+      }
 
       if (el) {
         const rect = el.getBoundingClientRect();
@@ -61,17 +72,31 @@ export function SpotlightTour({
           el.scrollIntoView({ behavior: "smooth", block: "center" });
         }
         setTargetRect(el.getBoundingClientRect());
+
+        // Đo chính xác góc bo của phần tử để viền spotlight bo tròn khớp 100%
+        try {
+          const cs = window.getComputedStyle(el);
+          const r = parseFloat(cs.borderRadius);
+          setTargetRadius(isNaN(r) ? 8 : r);
+        } catch {
+          setTargetRadius(8);
+        }
       } else {
         setTargetRect(null);
+        setTargetRadius(8);
       }
     };
 
     updateRect();
+    // Chạy lại updateRect sau một khoảng ngắn đề phòng animation hoặc lazy-render
+    const timer = setTimeout(updateRect, 100);
+
     window.addEventListener("resize", checkDevice);
     window.addEventListener("resize", updateRect);
     window.addEventListener("scroll", updateRect, { passive: true });
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("resize", checkDevice);
       window.removeEventListener("resize", updateRect);
       window.removeEventListener("scroll", updateRect);
@@ -92,7 +117,8 @@ export function SpotlightTour({
 
   if (!isActive || !currentStep) return null;
 
-  const padding = 8;
+  // Với card lớn có bo viền sâu, padding viền ôm sát (3px) thay vì nhảy ra xa
+  const padding = targetRadius >= 14 ? 3 : 6;
   const isLastStep = currentIndex === steps.length - 1;
 
   return (
@@ -108,12 +134,22 @@ export function SpotlightTour({
         <defs>
           <mask id="qcet-spotlight-mask">
             <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            {targetRect && (
+            {targetRect ? (
               <rect
                 x={targetRect.x - padding}
                 y={targetRect.y - padding}
                 width={targetRect.width + padding * 2}
                 height={targetRect.height + padding * 2}
+                rx="8"
+                style={{ rx: targetRadius }}
+                fill="black"
+              />
+            ) : (
+              <rect
+                x="5%"
+                y="5%"
+                width="90%"
+                height="90%"
                 rx="8"
                 fill="black"
               />
@@ -125,7 +161,7 @@ export function SpotlightTour({
           y="0"
           width="100%"
           height="100%"
-          fill="rgba(0, 0, 0, 0.65)"
+          fill="rgba(15, 23, 42, 0.45)"
           mask="url(#qcet-spotlight-mask)"
           className="pointer-events-auto cursor-pointer"
           onClick={onClose}
@@ -135,12 +171,13 @@ export function SpotlightTour({
       {/* 2. Viền phát sáng xung quanh phần tử được chọn */}
       {targetRect && (
         <div
-          className="absolute border-2 border-primary rounded-lg pointer-events-none transition-all duration-300 ring-4 ring-primary/20 animate-pulse"
+          className="absolute border-2 border-primary pointer-events-none transition-all duration-300 ring-4 ring-primary/20"
           style={{
             top: targetRect.y - padding,
             left: targetRect.x - padding,
             width: targetRect.width + padding * 2,
             height: targetRect.height + padding * 2,
+            borderRadius: `${targetRadius + padding}px`,
           }}
         />
       )}
@@ -149,56 +186,59 @@ export function SpotlightTour({
       <div
         className={`pointer-events-auto transition-all duration-300 ${
           isMobile
-            ? "fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border rounded-t-2xl shadow-2xl z-50"
-            : "absolute w-80 bg-card border border-border/80 rounded-2xl p-5 shadow-2xl z-50"
+            ? "fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border rounded-t-2xl shadow-xl z-50 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+            : "absolute w-80 bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xl z-50"
         }`}
         style={
-          !isMobile && targetRect
-            ? {
-                top: Math.min(
-                  targetRect.bottom + 16,
-                  typeof window !== "undefined" ? window.innerHeight - 240 : 500
-                ),
-                left: clampTooltip(
-                  targetRect.left,
-                  320,
-                  typeof window !== "undefined" ? window.innerWidth : 1024,
-                  16
-                ),
-              }
+          !isMobile
+            ? targetRect
+              ? {
+                  top: Math.min(
+                    targetRect.bottom + 12,
+                    typeof window !== "undefined" ? window.innerHeight - 240 : 500
+                  ),
+                  left: clampTooltip(
+                    targetRect.left,
+                    320,
+                    typeof window !== "undefined" ? window.innerWidth : 1024,
+                    16
+                  ),
+                }
+              : {
+                  top: "40%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                }
             : undefined
         }
       >
         <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>
-              Bước {currentIndex + 1} / {steps.length}
-            </span>
-          </div>
+          <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+            Bước {currentIndex + 1} / {steps.length}
+          </span>
           <button
             onClick={onClose}
             aria-label="Đóng hướng dẫn"
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <h3 id="tour-step-title" className="text-sm font-bold text-foreground mb-1.5">
+        <h3 id="tour-step-title" className="text-sm font-semibold text-foreground mb-1">
           {currentStep.title}
         </h3>
         <p id="tour-step-desc" className="text-xs text-muted-foreground leading-relaxed mb-4">
           {currentStep.description}
         </p>
 
-        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40">
+        <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-border/50">
           <Button
             variant="ghost"
             size="sm"
             onClick={onPrev}
             disabled={currentIndex === 0}
-            className="text-xs h-8 px-2.5"
+            className="text-xs h-8 sm:h-7 px-3 sm:px-2 text-muted-foreground min-h-[36px] sm:min-h-[28px]"
           >
             <ArrowLeft className="w-3 h-3 mr-1" /> Trước
           </Button>
@@ -206,9 +246,9 @@ export function SpotlightTour({
           <Button
             size="sm"
             onClick={onNext}
-            className="text-xs h-8 px-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+            className="text-xs h-8 sm:h-7 px-4 sm:px-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium min-h-[36px] sm:min-h-[28px]"
           >
-            {isLastStep ? "Hoàn thành" : "Tiếp theo"}
+            {isLastStep ? "Hoàn tất" : "Tiếp tục"}
             {!isLastStep && <ArrowRight className="w-3 h-3 ml-1" />}
           </Button>
         </div>
