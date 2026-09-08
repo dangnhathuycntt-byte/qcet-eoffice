@@ -103,6 +103,14 @@
   - `src/lib/mock-document-data.ts`
 - Cập nhật toàn bộ file trong `tests/*.test.ts` để import từ `tests/fixtures/`.
 
+### 3.10. Khắc Phục Lộ Mật Khẩu ở Modal Google Login (`google-login-button.tsx`)
+- Rà soát phát hiện: `src/components/auth/google-login-button.tsx` hiển thị thông báo chứa mật khẩu văn bản thô `Qcet@2026` và gợi ý click tài khoản kiểm thử 1-Click.
+- Thay thế bằng thông báo hướng dẫn chuẩn: Cán bộ sử dụng email công vụ được cấp bởi Ban Giám hiệu hoặc liên hệ Bộ phận Quản trị mạng & CNTT để được cấp quyền truy cập.
+
+### 3.11. Rà Soát CSDL Seed Script (`prisma/seed.ts` - Tuân thủ CWE-798 & CWE-1188)
+- Gỡ bỏ nhóm 3 tài khoản demo kiểm thử tĩnh tại mục 2.1 (`user-admin-bgh`, `user-manager-daotao`, `user-staff-vinh`).
+- Giữ lại danh sách 11 phòng/khoa/trung tâm chuẩn và danh mục cán bộ công vụ ban đầu phục vụ vận hành. Mật khẩu khởi tạo được quản lý qua biến môi trường hoặc chính sách bảo mật thay vì nhúng cứng vào giao diện client.
+
 ---
 
 ## 4. Kế Hoạch Triển Khai & Kiểm Thử (Verification Plan)
