@@ -53,9 +53,10 @@ Qua khảo sát thực tế và đối chiếu bộ quy tắc thiết kế chố
 1. **Gỡ bỏ nút Hamburger trên di động:**
    - Xóa bỏ nút `md:hidden` kích hoạt `toggleMobile()` của `sidebar-context`.
    - Giữ lại `toggleCollapse()` trên Desktop (`hidden md:flex`).
-2. **Chuẩn hóa Header Mobile 44px thanh mảnh:**
+2. **Chuẩn hóa Header Mobile 44px thanh mảnh & Safe Area:**
+   - Hỗ trợ vùng an toàn tai thỏ/Dynamic Island: `pt-[env(safe-area-inset-top,0px)]` để không bị đè bởi camera trước khi chạy PWA Standalone.
    - **Bên trái:** Logo QCET thu nhỏ 24px + Huy hiệu đơn vị gọn gàng.
-   - **Ở giữa:** Nút chuyển đổi góc nhìn / đơn vị `ScopeSwitcher` dạng Pill bo tròn trang nhã.
+   - **Ở giữa:** Nút chuyển đổi góc nhìn / đơn vị `ScopeSwitcher` dạng Pill bo tròn trang nhã. Trên mobile, khi mở rộng sẽ hiển thị dạng modal/sheet thân thiện, không bị tràn viền màn hình.
    - **Bên phải:** Chuông thông báo (`Bell`) kèm chấm đỏ số lượng việc chờ xử lý.
 
 ### 3.2 Thanh Điều Hướng Đáy (`src/components/layout/mobile-bottom-nav.tsx`)
@@ -63,7 +64,9 @@ Qua khảo sát thực tế và đối chiếu bộ quy tắc thiết kế chố
    - Màu sắc: `bg-primary text-primary-foreground shadow-md` (triệt tiêu hoàn toàn `bg-amber-500`).
    - Icon: `Plus` với `strokeWidth={1.5}`.
    - Tương tác: Luôn kích hoạt đúng sự kiện chuẩn `qcet:open-create-task` để mở modal tạo công việc/chỉ đạo mới của hệ thống.
-2. **Hệ 5 Tab Chuẩn mực:**
+2. **Hỗ trợ Safe Area đáy cho iOS Standalone PWA:**
+   - Đệm đáy tự động: `pb-[max(env(safe-area-inset-bottom,0px),0.5rem)]` tránh bị đè bởi thanh gạch ngang Home Indicator của iPhone.
+3. **Hệ 5 Tab Chuẩn mực:**
    - Tab 1: **Tổng quan** (`LayoutDashboard`) — Góc nhìn điều hành / công việc của tôi.
    - Tab 2: **Công việc** (`CheckSquare`) — Danh sách nhiệm vụ chi tiết theo bộ lọc.
    - Tab 3: **Tạo việc (+)** — Nút trung tâm nổi bật.
@@ -76,6 +79,7 @@ Khi phát hiện kích thước màn hình nhỏ (`< md` hoặc `block md:hidden
    - Ẩn dòng tiểu sử dài dòng và các nút bấm macro cồng kềnh.
    - Thay bằng 1 dòng tóm tắt chỉ số nhẹ nhàng: `3 Điểm nghẽn · 5 Chờ duyệt · 11 Đơn vị`.
 2. **Chuyển đổi Bảng thành Thẻ Danh Sách Một Cột (Compact Card Stack):**
+   - Kích thước điểm chạm chuẩn công thái học: Nút bấm đạt chiều cao tối thiểu `h-10` (`min-h-[40px] px-3.5`) chống chạm nhầm khi thao tác 1 tay khi đi lại.
    - **Thẻ Điểm Nghẽn Khẩn Cấp:**
      - Huy hiệu trạng thái: `bg-rose-500/10 text-rose-700 border-rose-500/20` (Quá hạn X ngày).
      - Tiêu đề công việc chữ to, đậm, rõ nét (`text-sm font-semibold`).
@@ -88,7 +92,8 @@ Khi phát hiện kích thước màn hình nhỏ (`< md` hoặc `block md:hidden
    - **Khối Tiến độ 11 Đơn vị:**
      - Thu gọn thành danh sách phẳng dạng accordion gập/mở: Tên đơn vị kèm tỷ lệ hoàn thành dạng số font mono (`tabular-nums`) và thanh micro-progress 2px.
 3. **Định vị Banner Hoàn tác (`undoState`):**
-   - Di chuyển vị trí banner từ trong luồng cuộn thành dạng ghim nổi phía trên thanh đáy di động (`fixed bottom-20 left-4 right-4 z-40 md:relative md:bottom-auto`).
+   - Neo nổi phía trên thanh đáy di động có tính toán Safe Area:  
+     `fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 z-40 md:relative md:bottom-auto`.
    - Đảm bảo banner không bị che khuất và ngón tay cái có thể bấm nút "Hoàn tác (5s)" dễ dàng.
 
 ---
