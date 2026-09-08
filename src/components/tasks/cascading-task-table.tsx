@@ -303,9 +303,160 @@ export interface CascadingTaskTableProps {
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onAddTask?: () => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
+  onRefresh?: () => Promise<void> | void;
   className?: string;
   hideWorkbox?: boolean;
   hideToolbar?: boolean;
+}
+
+interface MobileTaskCardProps {
+  task: SchoolTask;
+  isExpanded: boolean;
+  onToggleExpand: (id: string, e: React.MouseEvent) => void;
+  onSelectTask?: (task: SchoolTask | StaffTask) => void;
+  onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
+}
+
+function MobileTaskCard({
+  task,
+  isExpanded,
+  onToggleExpand,
+  onSelectTask,
+  onStatusChange,
+}: MobileTaskCardProps) {
+  const statusConfig = getStatusBadgeConfig(task.status);
+
+  const swipe = useSwipeAction({
+    threshold: 72,
+    onSwipeRight: () => {
+      if (task.status === "IN_PROGRESS" && onStatusChange) {
+        onStatusChange(task.id, "COMPLETED");
+      }
+    },
+  });
+
+  return (
+    <article
+      className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-xs space-y-2.5 touch-pan-y relative overflow-hidden transition-transform duration-150 ease-out"
+      style={{
+        transform: swipe.offset > 0 ? `translateX(${Math.min(swipe.offset, 48)}px)` : undefined,
+      }}
+      onTouchStart={swipe.onTouchStart}
+      onTouchMove={swipe.onTouchMove}
+      onTouchEnd={swipe.onTouchEnd}
+    >
+      {/* Swipe reveal background hint */}
+      {swipe.offset > 12 && task.status === "IN_PROGRESS" && (
+        <div
+          className="absolute inset-y-0 left-0 bg-emerald-500/15 flex items-center px-3 text-emerald-700 font-semibold text-xs transition-opacity"
+          style={{ width: `${Math.min(swipe.offset, 64)}px` }}
+        >
+          <CheckCircle2 className="size-4 shrink-0" />
+        </div>
+      )}
+
+      {/* Card Header: Task code & Status Badge */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-xs font-bold text-primary">
+          {task.taskCode || "NV-QCET"}
+        </span>
+        <span
+          className={cn(
+            "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border",
+            statusConfig.className
+          )}
+        >
+          {statusConfig.label}
+        </span>
+      </div>
+
+      {/* Card Title */}
+      <h4
+        onClick={() => onSelectTask?.(task)}
+        className="text-sm font-semibold text-foreground line-clamp-2 leading-snug cursor-pointer active:text-primary"
+      >
+        {task.title}
+      </h4>
+
+      {/* Metadata Row */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground font-medium pt-1 border-t border-border/40">
+        <span>{task.leadAssigneeName || "QCET"}</span>
+        <span>
+          {task.dueDate ? formatDate(task.dueDate) : "Chưa có hạn"}
+        </span>
+      </div>
+
+      {/* Quick Action Buttons - Always Visible on Mobile */}
+      {onStatusChange && (
+        <div className="flex items-center gap-2 pt-1">
+          {task.status === "IN_PROGRESS" && (
+            <button
+              type="button"
+              onClick={() => onStatusChange(task.id, "COMPLETED")}
+              className="flex-1 min-h-[40px] inline-flex items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold text-xs active:scale-[0.98]"
+            >
+              Duyệt nhanh
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Subtask Accordion Trigger */}
+      {task.subTasks && task.subTasks.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => onToggleExpand(task.id, e)}
+            className="w-full min-h-[44px] flex items-center justify-between px-3 rounded-xl bg-muted/50 text-xs font-semibold text-foreground active:bg-muted"
+          >
+            <span>Nhiệm vụ con ({task.subTasks.length})</span>
+            <ChevronDown
+              className={cn(
+                "size-4 transition-transform",
+                isExpanded && "rotate-180"
+              )}
+            />
+          </button>
+
+          {isExpanded && (
+            <div className="space-y-2 pt-1 border-t border-border/40 pl-2">
+              {task.subTasks.map((subTask: StaffTask) => {
+                const subStatusConfig = getStatusBadgeConfig(subTask.status);
+                return (
+                  <div
+                    key={subTask.id}
+                    onClick={() => onSelectTask?.(subTask)}
+                    className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs cursor-pointer active:bg-secondary"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs text-muted-foreground font-semibold">
+                        {subTask.id.toUpperCase()}
+                      </span>
+                      <span
+                        className={cn(
+                          "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border",
+                          subStatusConfig.className
+                        )}
+                      >
+                        {subStatusConfig.label}
+                      </span>
+                    </div>
+                    <p className="text-xs font-medium text-foreground line-clamp-2">
+                      {subTask.title}
+                    </p>
+                    <div className="flex items-center justify-between text-muted-foreground text-xs pt-1">
+                      <span>{subTask.assigneeName}</span>
+                      <span>{formatDate(subTask.dueDate)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </article>
+  );
 }
 
 export function CascadingTaskTable({
@@ -313,6 +464,7 @@ export function CascadingTaskTable({
   onSelectTask,
   onAddTask,
   onStatusChange,
+  onRefresh,
   className,
   hideWorkbox = false,
   hideToolbar = false,
@@ -358,7 +510,7 @@ export function CascadingTaskTable({
   };
 
   const [activeWorkbox, setActiveWorkbox] = React.useState<WorkboxFilter>("ALL");
-  const pullToRefresh = usePullToRefresh();
+  const pullToRefresh = usePullToRefresh({ onRefresh });
 
   // Filter tasks by active E-Office Workbox (Việc tôi nhận, Việc tôi giao, v.v.)
   const workboxTasks = React.useMemo(() => {
@@ -1228,6 +1380,11 @@ export function CascadingTaskTable({
         onTouchMove={pullToRefresh.containerProps.onTouchMove}
         onTouchEnd={pullToRefresh.containerProps.onTouchEnd}
       >
+        {pullToRefresh.pullDistance > 0 && (
+          <div className="flex items-center justify-center py-2 text-xs text-muted-foreground font-medium transition-opacity">
+            {pullToRefresh.isRefreshing ? "Đang làm mới..." : "Kéo để làm mới"}
+          </div>
+        )}
         {filteredTasks.length === 0 ? (
           <div className="p-6 text-center rounded-2xl border border-border/60 bg-card">
             <div className="inline-flex p-3 rounded-2xl bg-muted/60 text-muted-foreground border border-border/60 mb-2">
@@ -1247,96 +1404,16 @@ export function CascadingTaskTable({
             </p>
           </div>
         ) : (
-          paginatedTasks.map((task) => {
-            const isExpanded = expandedIds.has(task.id);
-            return (
-              <article
-                key={task.id}
-                className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-xs space-y-2.5"
-              >
-                {/* Card Header: Task code & Status Badge */}
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs font-bold text-primary">
-                    {task.taskCode || "NV-QCET"}
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border">
-                    {task.status}
-                  </span>
-                </div>
-
-                {/* Card Title */}
-                <h4
-                  onClick={() => onSelectTask?.(task)}
-                  className="text-sm font-semibold text-foreground line-clamp-2 leading-snug cursor-pointer active:text-primary"
-                >
-                  {task.title}
-                </h4>
-
-                {/* Metadata Row */}
-                <div className="flex items-center justify-between text-xs text-muted-foreground font-medium pt-1 border-t border-border/40">
-                  <span>{task.leadAssigneeName || "QCET"}</span>
-                  <span>{task.dueDate ? new Date(task.dueDate).toLocaleDateString("vi-VN") : "Chưa có hạn"}</span>
-                </div>
-
-                {/* Quick Action Buttons - Always Visible on Mobile */}
-                {onStatusChange && (
-                  <div className="flex items-center gap-2 pt-1">
-                    {task.status === "IN_PROGRESS" && (
-                      <button
-                        type="button"
-                        onClick={() => onStatusChange(task.id, "COMPLETED")}
-                        className="flex-1 min-h-[40px] inline-flex items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold text-xs active:scale-[0.98]"
-                      >
-                        Duyệt nhanh
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Subtask Accordion Trigger */}
-                {task.subTasks && task.subTasks.length > 0 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={(e) => toggleExpand(task.id, e)}
-                      className="w-full min-h-[44px] flex items-center justify-between px-3 rounded-xl bg-muted/50 text-xs font-semibold text-foreground active:bg-muted"
-                    >
-                      <span>Nhiệm vụ con ({task.subTasks.length})</span>
-                      <ChevronDown className={cn("size-4 transition-transform", isExpanded && "rotate-180")} />
-                    </button>
-
-                    {isExpanded && (
-                      <div className="space-y-2 pt-1 border-t border-border/40 pl-2">
-                        {task.subTasks.map((subTask) => (
-                          <div
-                            key={subTask.id}
-                            onClick={() => onSelectTask?.(subTask)}
-                            className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs cursor-pointer active:bg-secondary"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-xs text-muted-foreground font-semibold">
-                                {subTask.id.toUpperCase()}
-                              </span>
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border">
-                                {subTask.status}
-                              </span>
-                            </div>
-                            <p className="text-xs font-medium text-foreground line-clamp-2">
-                              {subTask.title}
-                            </p>
-                            <div className="flex items-center justify-between text-muted-foreground text-xs pt-1">
-                              <span>{subTask.assigneeName}</span>
-                              <span>{formatDate(subTask.dueDate)}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </article>
-            );
-          })
+          paginatedTasks.map((task) => (
+            <MobileTaskCard
+              key={task.id}
+              task={task}
+              isExpanded={expandedIds.has(task.id)}
+              onToggleExpand={toggleExpand}
+              onSelectTask={onSelectTask}
+              onStatusChange={onStatusChange}
+            />
+          ))
         )}
 
         {/* Mobile Stepper Pagination */}

@@ -82,6 +82,9 @@ export function useSwipeAction({
       }
 
       if (axisLocked.current === "horizontal") {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
         setOffset(deltaX);
         const currentDir = deltaX > 0 ? "right" : deltaX < 0 ? "left" : null;
         setDirection(currentDir);
