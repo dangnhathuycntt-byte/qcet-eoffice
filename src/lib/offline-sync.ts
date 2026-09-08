@@ -147,13 +147,19 @@ export async function flushOfflineMutations(): Promise<{
         removeOfflineMutation(item.id);
         failed++;
       } else {
-        // 5xx Server error, increment retry count
+        // 5xx Server error, increment retry count or discard if exceeded
         item.retryCount += 1;
+        if (item.retryCount >= 5) {
+          removeOfflineMutation(item.id);
+        } else {
+          saveOfflineMutationQueue(queue);
+        }
         failed++;
       }
     } catch {
       // Network failure during sync
       item.retryCount += 1;
+      saveOfflineMutationQueue(queue);
       failed++;
       break; // Stop loop if still offline
     }
