@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   SidebarProvider,
-  useSidebar,
+  useSidebarLayout,
 } from "@/components/layout/sidebar-context";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
+import { CommandSearchModal } from "@/components/layout/command-search-modal";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { useOnboarding } from "@/hooks/use-onboarding";
@@ -96,8 +97,27 @@ export function OnboardingHub() {
   );
 }
 
+function MobileAppInstallModalContainer() {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener("qcet:open-install-modal", handleOpen);
+    return () => window.removeEventListener("qcet:open-install-modal", handleOpen);
+  }, []);
+
+  if (!isOpen) return null;
+
+  return (
+    <MobileAppInstallModal
+      isOpen={isOpen}
+      onClose={() => setIsOpen(false)}
+    />
+  );
+}
+
 function AppShellInner({ children }: { children: React.ReactNode }) {
-  const { isCollapsed } = useSidebar();
+  const { isCollapsed } = useSidebarLayout();
   const pathname = usePathname();
 
   if (pathname === "/login" || pathname === "/portal") {
@@ -119,7 +139,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           <AppTopbar />
         </React.Suspense>
         <OfflineBanner />
-        <main id="main-content" className="flex-1 py-4 md:py-8 pb-28 md:pb-8" tabIndex={-1}>
+        {/* Normalized mobile bottom clearance: pb-20 md:pb-8 (standardized from pb-28 md:pb-8) */}
+        <main id="main-content" className="flex-1 py-4 md:py-8 pb-20 md:pb-8" tabIndex={-1}>
           <div className="max-w-[1440px] w-full mx-auto px-3.5 sm:px-6">
             {children}
           </div>
@@ -131,8 +152,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       </React.Suspense>
 
       <PushOnboardingSheet />
-      <MobileAppInstallModal />
+      <MobileAppInstallModalContainer />
       <OnboardingHub />
+      <CommandSearchModal />
     </div>
   );
 }

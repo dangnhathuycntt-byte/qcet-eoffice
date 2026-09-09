@@ -131,7 +131,7 @@ export function AppTopbar() {
   }, []);
 
   const handleOpenSearch = React.useCallback(() => {
-    window.dispatchEvent(new CustomEvent("qcet:open-command-search"));
+    window.dispatchEvent(new CustomEvent("qcet:open-command-search", { detail: { open: true } }));
   }, []);
 
   // Global keyboard shortcuts: '⌘K' / 'Ctrl+K' to quick search
@@ -147,7 +147,8 @@ export function AppTopbar() {
       ) {
         return;
       }
-      if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
+      const isKeyK = e.key === "k" || e.key === "K" || e.code === "KeyK";
+      if (isKeyK && (e.metaKey || e.ctrlKey) && !e.altKey) {
         e.preventDefault();
         handleOpenSearch();
       }
