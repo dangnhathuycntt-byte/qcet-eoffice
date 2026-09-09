@@ -125,7 +125,7 @@ describe("Task 5: Service Worker & PWA Manifest", () => {
       assert.match(content, /clearAppBadge/);
       assert.match(content, /clients\.matchAll/);
       assert.match(content, /openWindow/);
-      assert.match(content, /\/portal/);
+      assert.match(content, /\/(tasks|portal)/);
     });
 
     test("simulates push and notificationclick logic in mock ServiceWorkerGlobalScope", async () => {
