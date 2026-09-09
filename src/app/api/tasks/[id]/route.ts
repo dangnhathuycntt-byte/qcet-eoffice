@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { mapPrismaTaskToSchoolTask } from '@/lib/adapters/task-db-adapter';
-import { TaskStatus, TaskPriority, AssigneeRole } from '@prisma/client';
-import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload } from '@/lib/jwt-session';
+import { TaskScope, TaskStatus, TaskPriority, AssigneeRole } from '@prisma/client';
+import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload, getSessionFromRequest } from '@/lib/jwt-session';
 
 function getSessionPayload(request: NextRequest): SessionPayload | null {
-  const authHeader = request.headers.get('authorization');
-  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value || bearerToken;
-  if (!token) return null;
-  return verifySessionToken(token);
+  return getSessionFromRequest(request);
 }
 
 interface RouteContext {
@@ -204,12 +200,68 @@ export async function PATCH(
       const mappedStatus = statusMap[status];
       if (mappedStatus) {
         if (mappedStatus === TaskStatus.COMPLETED) {
-          const canApprove = isPrivileged || isDepartmentLeader || (isCreator && !isAssignee);
-          if (!canApprove) {
+          const now = new Date();
+          const activeDelegation = await prisma.dacumDelegation.findFirst({
+            where: {
+              delegateId: session.id,
+              isActive: true,
+              expiresAt: { gte: now },
+              OR: [
+                { startDate: null },
+                { startDate: { lte: now } },
+              ],
+              AND: [
+                {
+                  OR: [
+                    { taskId: id },
+                    ...(existing.departmentId ? [{ departmentId: existing.departmentId }] : []),
+                    { departmentId: null },
+                  ],
+                },
+              ],
+            },
+          });
+
+          // 1. Chống tự duyệt (Segregation of Duties): Người thực hiện không được tự hoàn thành nhiệm vụ trừ khi có ủy quyền hợp lệ hoặc quyền quản trị
+          const isTaskAssignee = isAssignee || (assigneeId !== undefined && assigneeId === session.id);
+          if (isTaskAssignee && !isPrivileged && !activeDelegation) {
             return NextResponse.json(
-              { success: false, error: "Chỉ Ban Giám hiệu, Quản trị viên hoặc Trưởng đơn vị mới có quyền nghiệm thu hoàn thành nhiệm vụ" },
+              {
+                success: false,
+                error: "Theo quy định phân lập nhiệm vụ (Segregation of Duties), người thực hiện không được tự nghiệm thu hoàn thành nhiệm vụ của chính mình.",
+              },
               { status: 403 }
             );
+          }
+
+          // 2. Nhiệm vụ cấp Trường (TaskScope.SCHOOL): Chỉ Ban Giám hiệu hoặc Quản trị viên (hoặc người được ủy quyền) mới có quyền nghiệm thu
+          if (existing.scope === TaskScope.SCHOOL) {
+            if (!isPrivileged && !activeDelegation) {
+              return NextResponse.json(
+                {
+                  success: false,
+                  error: "Chỉ Ban Giám hiệu hoặc Quản trị viên mới có quyền nghiệm thu nhiệm vụ cấp trường.",
+                },
+                { status: 403 }
+              );
+            }
+          } else {
+            // 3. Nhiệm vụ cấp Đơn vị hoặc Cá nhân: Ban Giám hiệu, Quản trị viên, Trưởng đơn vị quản lý, người được ủy quyền hoặc người tạo (không phải người thực hiện)
+            const canApprove =
+              isPrivileged ||
+              isDepartmentLeader ||
+              Boolean(activeDelegation) ||
+              (isCreator && !isTaskAssignee);
+
+            if (!canApprove) {
+              return NextResponse.json(
+                {
+                  success: false,
+                  error: "Chỉ Ban Giám hiệu, Quản trị viên, Trưởng đơn vị hoặc người được ủy quyền mới có quyền nghiệm thu hoàn thành nhiệm vụ.",
+                },
+                { status: 403 }
+              );
+            }
           }
         }
         updateData.status = mappedStatus;
