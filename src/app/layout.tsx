@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     template: "%s | QCET E-Office",
   },
   description:
-    "Hệ thống Quản trị & Điều hành Văn phòng Điện tử - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (QCET)",
+    "Hệ thống Quản lý và Điều hành Tác nghiệp Điện tử - Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh (QCET)",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

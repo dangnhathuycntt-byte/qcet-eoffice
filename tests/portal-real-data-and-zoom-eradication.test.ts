@@ -14,10 +14,12 @@ import PortalPage, {
 const portalPagePath = path.resolve(process.cwd(), "src/app/portal/page.tsx");
 
 function createMockAuthContext(overrides: Partial<AuthContextType> = {}): AuthContextType {
-  return {
+  const base: AuthContextType = {
     user: null,
     isAuthenticated: false,
     isOfflineReadOnly: false,
+    authState: { status: "anonymous" },
+    canMutate: false,
     switchRole: () => {},
     switchUser: () => {},
     login: async () => ({ success: true }),
@@ -36,8 +38,8 @@ function createMockAuthContext(overrides: Partial<AuthContextType> = {}): AuthCo
     isProfileModalOpen: false,
     setIsProfileModalOpen: () => {},
     isLoading: false,
-    ...overrides,
   };
+  return Object.assign(base, overrides);
 }
 
 describe("Task 5: Real Data Binding for /portal & Eradicate CSS Zoom (P0-7 & P1-12)", () => {

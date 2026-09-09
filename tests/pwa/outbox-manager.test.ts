@@ -12,6 +12,7 @@ import {
   clearOutbox,
   updateOutboxItem,
   flushOutbox,
+  reconcileStuckSyncingItems,
   setActiveUserId,
   getActiveUserId,
   subscribeOutbox,
@@ -460,6 +461,91 @@ describe("Task 4: Durable Offline Mutation Outbox with Idempotency & OCC Conflic
       assert.ok(content.includes("Áp dụng lại (Ghi đè)"));
       assert.ok(content.includes("Xem chi tiết"));
       assert.ok(content.includes("min-h-[44px]"), "All interactive buttons must satisfy min 44px touch ergonomics");
+      assert.ok(
+        content.includes("size-11 min-h-[44px] min-w-[44px]"),
+        "Dismiss button must satisfy min 44x44px touch boundary"
+      );
+    });
+  });
+
+  describe("9. Task 4 Reviewer Refinements: Startup Sweep & Blocked Entity Cascade Prevention", () => {
+    it("reconcileStuckSyncingItems sweeps stuck syncing items back to pending", async () => {
+      const item = await enqueueOutbox({
+        operation: "TASK_UPDATE",
+        entityId: "task-sweep-1",
+        url: "/api/tasks/sweep-1",
+        method: "PATCH",
+        payload: { test: true },
+      });
+
+      // Manually set status to "syncing" to simulate interrupted flush (e.g. tab closed mid-sync)
+      await updateOutboxItem(item.id, { status: "syncing" });
+
+      let queue = await getOutboxQueue("test-user-01");
+      assert.strictEqual(queue[0].status, "syncing");
+
+      // Run reconciliation sweep
+      const count = await reconcileStuckSyncingItems("test-user-01");
+      assert.strictEqual(count, 1);
+
+      queue = await getOutboxQueue("test-user-01");
+      assert.strictEqual(queue[0].status, "pending", "Stuck syncing item must be reverted to pending");
+    });
+
+    it("flushOutbox skips subsequent mutations for an entity whose earlier mutation conflicted or failed", async () => {
+      // Enqueue 2 mutations for task-entity-A:
+      // First one will fail with 409 conflict
+      // Second one should be SKIPPED in that flush cycle
+      await enqueueOutbox({
+        operation: "TASK_STEP_1",
+        entityId: "task-entity-A",
+        url: "/api/tasks/entity-A/step-1",
+        method: "PATCH",
+        payload: { step: 1 },
+      });
+
+      await enqueueOutbox({
+        operation: "TASK_STEP_2",
+        entityId: "task-entity-A",
+        url: "/api/tasks/entity-A/step-2",
+        method: "PATCH",
+        payload: { step: 2 },
+      });
+
+      // Enqueue 1 mutation for independent task-entity-B which should succeed
+      await enqueueOutbox({
+        operation: "TASK_STEP_INDEPENDENT",
+        entityId: "task-entity-B",
+        url: "/api/tasks/entity-B",
+        method: "PATCH",
+        payload: { step: "b" },
+      });
+
+      const processedUrls: string[] = [];
+      const mockFetch: typeof fetch = async (input) => {
+        const url = String(input);
+        processedUrls.push(url);
+        if (url.includes("entity-A/step-1")) {
+          return new Response(JSON.stringify({ error: "Version conflict" }), { status: 409 });
+        }
+        return new Response(JSON.stringify({ success: true }), { status: 200 });
+      };
+
+      const result = await flushOutbox("test-user-01", { fetchFn: mockFetch });
+
+      assert.strictEqual(result.conflicts, 1, "Entity A step 1 conflicts");
+      assert.strictEqual(result.succeeded, 1, "Entity B succeeds");
+
+      // Verify that step 2 for entity-A was NOT called in this flush
+      assert.ok(
+        !processedUrls.includes("/api/tasks/entity-A/step-2"),
+        "Subsequent mutation for conflicted entity-A must be skipped in current flush cycle"
+      );
+
+      const queue = await getOutboxQueue("test-user-01");
+      const step2 = queue.find((i) => i.operation === "TASK_STEP_2");
+      assert.ok(step2, "Step 2 should remain in queue");
+      assert.strictEqual(step2?.status, "pending", "Step 2 remains pending for future retry after conflict resolution");
     });
   });
 });

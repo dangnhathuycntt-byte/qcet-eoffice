@@ -213,7 +213,7 @@ export function OfflineConflictDialog({
           <button
             type="button"
             onClick={handleDismiss}
-            className="size-9 shrink-0 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="size-11 min-h-[44px] min-w-[44px] shrink-0 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             aria-label="Đóng hộp thoại xung đột"
           >
             <X className="size-5" strokeWidth={1.5} />

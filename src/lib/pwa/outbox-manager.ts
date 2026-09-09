@@ -168,6 +168,26 @@ export async function enqueueOutbox(
 }
 
 /**
+ * Startup reconciliation: Resets any mutation items left in "syncing" state back to "pending".
+ * Safe because all mutations carry unique Idempotency-Key headers.
+ */
+export async function reconcileStuckSyncingItems(userId?: string): Promise<number> {
+  const uid = userId || getActiveUserId();
+  const syncingItems = await storeGetQueue(uid, "syncing");
+  for (const item of syncingItems) {
+    await storeUpdate(uid, item.id, {
+      status: "pending",
+      updatedAt: Date.now(),
+    });
+  }
+  if (syncingItems.length > 0) {
+    const queue = await storeGetQueue(uid);
+    notifySubscribers(queue);
+  }
+  return syncingItems.length;
+}
+
+/**
  * Get items from the user's outbox, optionally filtered by status.
  */
 export async function getOutboxQueue(
@@ -335,6 +355,9 @@ async function executeFlush(
     return { succeeded: 0, failed: 0, conflicts: 0 };
   }
 
+  // 0. Pre-flush sweep: reset any items stuck in "syncing" back to "pending"
+  await reconcileStuckSyncingItems(uid);
+
   const pendingItems = await storeGetQueue(uid, "pending");
   if (pendingItems.length === 0) {
     return { succeeded: 0, failed: 0, conflicts: 0 };
@@ -343,8 +366,15 @@ async function executeFlush(
   let succeeded = 0;
   let failed = 0;
   let conflicts = 0;
+  const blockedEntityIds = new Set<string>();
 
   for (const item of pendingItems) {
+    // If an earlier mutation for this entity failed or conflicted in this cycle,
+    // skip subsequent mutations for the same entity to avoid cascading errors or out-of-order state.
+    if (item.entityId && blockedEntityIds.has(item.entityId)) {
+      continue;
+    }
+
     // 1. Mark status as syncing
     await storeUpdate(uid, item.id, {
       status: "syncing",
@@ -378,6 +408,9 @@ async function executeFlush(
         // DO NOT discard and DO NOT overwrite server data blindly.
         conflicts++;
         failed++;
+        if (item.entityId) {
+          blockedEntityIds.add(item.entityId);
+        }
 
         let conflictData: unknown = null;
         try {
@@ -410,6 +443,9 @@ async function executeFlush(
       } else if (response.status >= 400 && response.status < 500) {
         // Permanent client error (400, 404, 422, etc.)
         failed++;
+        if (item.entityId) {
+          blockedEntityIds.add(item.entityId);
+        }
         const nextRetries = item.retryCount + 1;
         let clientErr = `Lỗi yêu cầu (${response.status})`;
         try {
@@ -430,6 +466,9 @@ async function executeFlush(
       } else {
         // 5xx Server Error: Increment retry count
         failed++;
+        if (item.entityId) {
+          blockedEntityIds.add(item.entityId);
+        }
         const nextRetries = item.retryCount + 1;
         if (nextRetries >= maxRetries) {
           await storeUpdate(uid, item.id, {
@@ -450,6 +489,9 @@ async function executeFlush(
     } catch (networkErr: any) {
       // Network drop or connection refused: Revert to pending and abort sequential drain
       failed++;
+      if (item.entityId) {
+        blockedEntityIds.add(item.entityId);
+      }
       const nextRetries = item.retryCount + 1;
       await storeUpdate(uid, item.id, {
         retryCount: nextRetries,
@@ -479,6 +521,9 @@ export function setupOutboxAutoSyncListeners(): void {
   }
 
   isListenersAttached = true;
+
+  // Startup reconciliation sweep: reset any stuck syncing items
+  reconcileStuckSyncingItems().catch(() => {});
 
   const triggerDrain = () => {
     if (isOnline()) {
