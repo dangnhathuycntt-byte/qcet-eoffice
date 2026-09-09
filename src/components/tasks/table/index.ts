@@ -20,6 +20,7 @@ export * from "./components/mobile-task-card";
 // Interactive Toolbars & Bulk Actions
 export * from "./components/task-table-toolbar";
 export * from "./components/task-bulk-action-bar";
+export * from "./components/batch-action-bar";
 
 // Core Assembly
 export * from "./modular-cascading-task-table";

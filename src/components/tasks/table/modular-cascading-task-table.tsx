@@ -55,7 +55,7 @@ import {
   TaskTableToolbar,
   aggregateFilterCounts,
 } from "./components/task-table-toolbar";
-import { TaskBulkActionBar } from "./components/task-bulk-action-bar";
+import { BatchActionBar, TaskBulkActionBar } from "./components/batch-action-bar";
 
 export interface ModularCascadingTaskTableProps {
   tasks: SchoolTask[];
@@ -771,6 +771,17 @@ export function ModularCascadingTaskTable({
                   sortDirection={tableState.sortDirection}
                   onSort={tableState.handleSort}
                   density={tableState.density}
+                  showSelection={true}
+                  showExpandAll={true}
+                  isAllExpanded={tableState.expandedIds.size > 0}
+                  onToggleExpandAll={() => {
+                    if (tableState.expandedIds.size > 0) {
+                      tableState.collapseAll();
+                    } else {
+                      tableState.expandAll(paginatedResult.items.map((t) => t.id));
+                    }
+                  }}
+                  hasTasks={paginatedResult.items.length > 0}
                 />
                 <tbody className="divide-y divide-border/60">
                   {paginatedResult.items.map((task, index) => {
@@ -808,6 +819,7 @@ export function ModularCascadingTaskTable({
                             scope={scope}
                             isExpanded={isExpanded}
                             density={tableState.density}
+                            colSpan={8}
                             selectedAcademicMonth={selectedAcademicMonth}
                             onSelectSubTask={(sub) => handleEffectiveSelectTask(sub)}
                             onStatusChange={onStatusChange}

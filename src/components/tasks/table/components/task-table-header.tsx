@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   ArrowUpDown,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ export interface TaskTableHeaderProps {
 }
 
 interface ColumnDefinition {
-  id: TaskSortField;
+  id: TaskSortField | "actions";
   label: string;
   sortable?: boolean;
   align?: "left" | "center" | "right";
@@ -38,13 +39,13 @@ interface ColumnDefinition {
 }
 
 const TABLE_COLUMNS: ColumnDefinition[] = [
-  { id: "code", label: "Mã NV", sortable: true, widthClass: "w-[100px]" },
-  { id: "title", label: "Nhiệm vụ cấp Trường", sortable: true },
-  { id: "department", label: "Đơn vị & Danh mục", sortable: true, widthClass: "w-44" },
-  { id: "leadAssignee", label: "Chủ trì (DRI)", sortable: true, widthClass: "w-36" },
-  { id: "dueDate", label: "Thời hạn & SLA", sortable: true, widthClass: "w-28" },
-  { id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-20" },
-  { id: "progress", label: "Tiến độ & Thao tác", sortable: true, align: "right", widthClass: "w-36" },
+  { id: "title", label: "Nhiệm vụ", sortable: true },
+  { id: "department", label: "Đơn vị", sortable: true, widthClass: "w-36 sm:w-40" },
+  { id: "leadAssignee", label: "DRI", sortable: true, widthClass: "w-36" },
+  { id: "progress", label: "Tiến độ", sortable: true, widthClass: "w-28" },
+  { id: "dueDate", label: "Hạn", sortable: true, widthClass: "w-32" },
+  { id: "status", label: "Trạng thái", sortable: true, widthClass: "w-28" },
+  { id: "actions", label: "Thao tác", sortable: false, align: "right", widthClass: "w-24 sm:w-28" },
 ];
 
 export function TaskTableHeader({
@@ -96,7 +97,7 @@ export function TaskTableHeader({
         className
       )}
     >
-      <tr className={cn(rowHeightClass, "text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground")}>
+      <tr className={cn(rowHeightClass, "text-xs font-semibold uppercase tracking-wider text-muted-foreground")}>
         {/* Selection Checkbox */}
         {showSelection && (
           <th
@@ -117,39 +118,17 @@ export function TaskTableHeader({
           </th>
         )}
 
-        {/* Expand/Collapse All Caret */}
-        <th
-          scope="col"
-          className={cn("w-9 text-center align-middle", paddingClass)}
-        >
-          {showExpandAll && onToggleExpandAll ? (
-            <button
-              type="button"
-              onClick={onToggleExpandAll}
-              disabled={!hasTasks}
-              className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-slate-200/60 hover:text-foreground cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
-              title={isAllExpanded ? "Thu gọn tất cả việc con" : "Mở rộng tất cả việc con"}
-              aria-label={isAllExpanded ? "Thu gọn tất cả việc con" : "Mở rộng tất cả việc con"}
-            >
-              {isAllExpanded ? (
-                <ChevronDown className="size-3.5" strokeWidth={1.5} />
-              ) : (
-                <ChevronUp className="size-3.5 rotate-90" strokeWidth={1.5} />
-              )}
-            </button>
-          ) : (
-            <span className="sr-only">Mở rộng</span>
-          )}
-        </th>
-
         {/* Data Columns */}
         {TABLE_COLUMNS.map((col) => {
-          const isSorted = sortField === col.id;
+          const isSortable = col.sortable && col.id !== "actions";
+          const isSorted = isSortable && sortField === col.id;
           const ariaSortValue = isSorted
             ? sortDirection === "asc"
               ? "ascending"
               : "descending"
-            : "none";
+            : isSortable
+            ? "none"
+            : undefined;
 
           return (
             <th
@@ -157,31 +136,55 @@ export function TaskTableHeader({
               scope="col"
               aria-sort={ariaSortValue}
               className={cn(
-                "group/th align-middle whitespace-nowrap",
+                "align-middle font-semibold transition-colors group/th",
                 col.widthClass,
-                paddingClass,
-                col.align === "right" ? "text-right" : "text-left"
+                col.align === "right"
+                  ? "text-right"
+                  : col.align === "center"
+                  ? "text-center"
+                  : "text-left",
+                paddingClass
               )}
             >
-              {col.sortable && onSort ? (
-                <button
-                  type="button"
-                  onClick={() => onSort(col.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer active:scale-95",
-                    col.align === "right" && "justify-end w-full",
-                    isSorted && "text-foreground font-bold"
-                  )}
-                  title={`Sắp xếp theo ${col.label}`}
-                >
+              <div
+                className={cn(
+                  "flex items-center gap-1.5",
+                  col.align === "right" && "justify-end"
+                )}
+              >
+                {col.id === "title" && showExpandAll && onToggleExpandAll && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleExpandAll();
+                    }}
+                    disabled={!hasTasks}
+                    className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-slate-200/70 hover:text-foreground cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors mr-1 shrink-0"
+                    title={isAllExpanded ? "Thu gọn tất cả việc con" : "Mở rộng tất cả việc con"}
+                    aria-label={isAllExpanded ? "Thu gọn tất cả việc con" : "Mở rộng tất cả việc con"}
+                  >
+                    {isAllExpanded ? (
+                      <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                    ) : (
+                      <ChevronRight className="size-3.5" strokeWidth={1.5} />
+                    )}
+                  </button>
+                )}
+
+                {isSortable ? (
+                  <button
+                    type="button"
+                    onClick={() => onSort?.(col.id as TaskSortField)}
+                    className="group/sort inline-flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer select-none"
+                  >
+                    <span>{col.label}</span>
+                    {renderSortIndicator(col.id as TaskSortField)}
+                  </button>
+                ) : (
                   <span>{col.label}</span>
-                  {renderSortIndicator(col.id)}
-                </button>
-              ) : (
-                <span className={cn(col.align === "right" && "block text-right")}>
-                  {col.label}
-                </span>
-              )}
+                )}
+              </div>
             </th>
           );
         })}
