@@ -41,6 +41,12 @@ export class AuthorizationError extends ApiError {
   }
 }
 
+export class ForbiddenError extends ApiError {
+  constructor(message = 'Access forbidden', code = 'FORBIDDEN') {
+    super(403, code, message);
+  }
+}
+
 export class ValidationError extends ApiError {
   constructor(
     message = 'Validation failed',

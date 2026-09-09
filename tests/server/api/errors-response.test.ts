@@ -5,6 +5,7 @@ import {
   ApiError,
   AuthenticationError,
   AuthorizationError,
+  ForbiddenError,
   ValidationError,
   NotFoundError,
   ConflictError,
@@ -56,6 +57,19 @@ describe('Standard Error Contract & Error Abstraction', () => {
       assert.strictEqual(customErr.statusCode, 403);
       assert.strictEqual(customErr.code, 'CROSS_DEPT_FORBIDDEN');
       assert.strictEqual(customErr.message, 'Department mismatch');
+    });
+
+    it('ForbiddenError has 403 status and default FORBIDDEN code', () => {
+      const defaultErr = new ForbiddenError();
+      assert.ok(defaultErr instanceof ApiError);
+      assert.strictEqual(defaultErr.statusCode, 403);
+      assert.strictEqual(defaultErr.code, 'FORBIDDEN');
+      assert.strictEqual(defaultErr.message, 'Access forbidden');
+
+      const customErr = new ForbiddenError('CSRF token mismatch', 'CSRF_VALIDATION_FAILED');
+      assert.strictEqual(customErr.statusCode, 403);
+      assert.strictEqual(customErr.code, 'CSRF_VALIDATION_FAILED');
+      assert.strictEqual(customErr.message, 'CSRF token mismatch');
     });
 
     it('ValidationError has 400 status and supports fieldErrors', () => {
