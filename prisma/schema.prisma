@@ -222,7 +222,7 @@ model TaskAssignee {
   task       Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([taskId, userId, roleInTask])
+  @@unique([taskId, userId, roleInTask], name: "task_user_role_unique")
   @@index([userId, roleInTask])
   @@map("task_assignees")
 }
@@ -442,6 +442,8 @@ model PushSubscription {
   status           PushSubscriptionStatus @default(ACTIVE)
   failureCount     Int                    @default(0) @map("failure_count")
   lastFailureCode  Int?                   @map("last_failure_code")
+  lastSeenAt       DateTime?              @map("last_seen_at")
+  disabledAt       DateTime?              @map("disabled_at")
   createdAt        DateTime               @default(now()) @map("created_at")
   updatedAt        DateTime               @updatedAt @map("updated_at")
 

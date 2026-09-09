@@ -11,8 +11,8 @@ describe("Prisma Push & Notification Schema", () => {
     assert.ok(schemaContent.includes("model PushSubscription"), "PushSubscription model must be present");
     assert.ok(schemaContent.includes("model Notification"), "Notification model must be present");
     assert.ok(schemaContent.includes("enum PushSubscriptionStatus"), "PushSubscriptionStatus enum must be present");
-    assert.ok(schemaContent.includes("pushSubscriptions PushSubscription[]"), "User must have pushSubscriptions relation");
-    assert.ok(schemaContent.includes("notifications     Notification[]"), "User must have notifications relation");
-    assert.ok(schemaContent.includes("endpoint         String                 @unique"), "endpoint must be unique");
+    assert.ok(/pushSubscriptions\s+PushSubscription\[\]/.test(schemaContent), "User must have pushSubscriptions relation");
+    assert.ok(/notifications\s+Notification\[\]/.test(schemaContent), "User must have notifications relation");
+    assert.ok(/endpoint\s+String\s+@unique/.test(schemaContent), "endpoint must be unique");
   });
 });

@@ -2489,7 +2489,7 @@ async function main() {
     if (assigneeId) {
       await prisma.taskAssignee.upsert({
         where: {
-          taskId_userId_roleInTask: {
+          task_user_role_unique: {
             taskId: task.id,
             userId: assigneeId,
             roleInTask: AssigneeRole.PRIMARY_OWNER,
@@ -2508,7 +2508,7 @@ async function main() {
       for (const collabId of collaboratorIds) {
         await prisma.taskAssignee.upsert({
           where: {
-            taskId_userId_roleInTask: {
+            task_user_role_unique: {
               taskId: task.id,
               userId: collabId,
               roleInTask: AssigneeRole.COLLABORATOR,
