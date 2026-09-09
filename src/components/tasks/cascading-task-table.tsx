@@ -44,6 +44,11 @@ import { useAuth } from "@/lib/auth-context";
 import { canAssignUnitTask, matchesUser } from "@/lib/role-task-filter";
 import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 import { useDisplayDensity } from "@/components/density-provider";
+import { useOptionalDashboardData } from "@/components/dashboard/dashboard-context";
+import {
+  getAcademicMonthPeriod,
+  isDateInAcademicMonth,
+} from "@/lib/academic-calendar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -373,6 +378,8 @@ export interface CascadingTaskTableProps {
   hideWorkbox?: boolean;
   hideToolbar?: boolean;
   onOpenSubmitModal?: (task: StaffTask) => void;
+  selectedAcademicMonth?: number | "ALL";
+  priorOverdueBacklog?: SchoolTask[];
 }
 
 interface MobileTaskCardProps {
@@ -381,6 +388,7 @@ interface MobileTaskCardProps {
   onToggleExpand: (id: string, e: React.MouseEvent) => void;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
+  selectedAcademicMonth?: number | "ALL";
 }
 
 function MobileTaskCard({
@@ -389,6 +397,7 @@ function MobileTaskCard({
   onToggleExpand,
   onSelectTask,
   onStatusChange,
+  selectedAcademicMonth,
 }: MobileTaskCardProps) {
   const statusConfig = getStatusBadgeConfig(task.status);
 
@@ -475,7 +484,22 @@ function MobileTaskCard({
             onClick={(e) => onToggleExpand(task.id, e)}
             className="w-full min-h-[44px] flex items-center justify-between px-3 rounded-xl bg-muted/50 text-xs font-semibold text-foreground active:bg-muted"
           >
-            <span>Nhiệm vụ con ({task.subTasks.length})</span>
+            <div className="flex items-center gap-2">
+              <span>Nhiệm vụ con ({task.subTasks.length})</span>
+              {selectedAcademicMonth && selectedAcademicMonth !== "ALL" && (() => {
+                const dueInMonthCount = task.subTasks.filter(
+                  (s) => s.dueDate && isDateInAcademicMonth(s.dueDate, selectedAcademicMonth, "2026-2027")
+                ).length;
+                if (dueInMonthCount > 0) {
+                  return (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                      Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
+                    </span>
+                  );
+                }
+                return null;
+              })()}
+            </div>
             <ChevronDown
               className={cn(
                 "size-4 transition-transform",
@@ -488,16 +512,31 @@ function MobileTaskCard({
             <div className="space-y-2 pt-1 border-t border-border/40 pl-2">
               {task.subTasks.map((subTask: StaffTask) => {
                 const subStatusConfig = getStatusBadgeConfig(subTask.status);
+                const isSubDueInMonth =
+                  selectedAcademicMonth && selectedAcademicMonth !== "ALL" && subTask.dueDate
+                    ? isDateInAcademicMonth(subTask.dueDate, selectedAcademicMonth, "2026-2027")
+                    : false;
+
                 return (
                   <div
                     key={subTask.id}
                     onClick={() => onSelectTask?.(subTask)}
-                    className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs cursor-pointer active:bg-secondary"
+                    className={cn(
+                      "flex flex-col gap-1.5 p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs cursor-pointer active:bg-secondary transition-colors",
+                      isSubDueInMonth && "bg-primary/[0.04] border-primary/25 shadow-2xs"
+                    )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs text-muted-foreground font-semibold">
-                        {subTask.id.toUpperCase()}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono text-xs text-muted-foreground font-semibold">
+                          {subTask.id.toUpperCase()}
+                        </span>
+                        {isSubDueInMonth && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                            Hạn trong kỳ T{selectedAcademicMonth}
+                          </span>
+                        )}
+                      </div>
                       <span
                         className={cn(
                           "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border",
@@ -512,7 +551,9 @@ function MobileTaskCard({
                     </p>
                     <div className="flex items-center justify-between text-muted-foreground text-xs pt-1">
                       <span>{subTask.assigneeName}</span>
-                      <span>{formatDate(subTask.dueDate)}</span>
+                      <span className={cn(isSubDueInMonth && "font-semibold text-primary font-mono")}>
+                        {formatDate(subTask.dueDate)}
+                      </span>
                     </div>
                   </div>
                 );
@@ -534,9 +575,18 @@ export function CascadingTaskTable({
   className,
   hideWorkbox = false,
   hideToolbar = false,
+  onOpenSubmitModal,
+  selectedAcademicMonth: propSelectedAcademicMonth,
+  priorOverdueBacklog: propPriorOverdueBacklog,
 }: CascadingTaskTableProps) {
   const { user } = useAuth();
   const { density } = useDisplayDensity();
+  const dashboardData = useOptionalDashboardData();
+  const selectedAcademicMonth =
+    propSelectedAcademicMonth ?? dashboardData?.selectedAcademicMonth ?? "ALL";
+  const priorOverdueBacklog =
+    propPriorOverdueBacklog ?? dashboardData?.priorOverdueBacklog ?? [];
+  const [isBacklogExpanded, setIsBacklogExpanded] = React.useState(true);
   const canAssign = canAssignUnitTask(user?.role ?? "ADMIN");
   const [selectedDepartment, setSelectedDepartment] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -708,6 +758,21 @@ export function CascadingTaskTable({
     const start = (currentPage - 1) * pageSize;
     return filteredTasks.slice(start, start + pageSize);
   }, [filteredTasks, currentPage, pageSize]);
+
+  const monthPeriod = React.useMemo(() => {
+    if (selectedAcademicMonth === "ALL") return null;
+    return getAcademicMonthPeriod(selectedAcademicMonth, "2026-2027");
+  }, [selectedAcademicMonth]);
+
+  const monthlyIndicatorText = React.useMemo(() => {
+    if (selectedAcademicMonth === "ALL") {
+      return `Toàn năm học - ${filteredTasks.length} nhiệm vụ`;
+    }
+    const dateSpan = monthPeriod
+      ? `(${monthPeriod.shortDateSpan}/${monthPeriod.endDate.slice(0, 4)})`
+      : "";
+    return `Kỳ vận hành Tháng ${selectedAcademicMonth} ${dateSpan} - ${filteredTasks.length} nhiệm vụ`;
+  }, [selectedAcademicMonth, monthPeriod, filteredTasks.length]);
 
   return (
     <div
@@ -930,10 +995,195 @@ export function CascadingTaskTable({
         </>
       )}
 
+      {/* Prior Overdue Backlog Collapsible Section */}
+      {selectedAcademicMonth !== "ALL" && priorOverdueBacklog.length > 0 && (
+        <section
+          aria-label="Tồn đọng kỳ trước"
+          data-slot="prior-overdue-backlog"
+          className="rounded-2xl border border-amber-300/90 bg-amber-50/50 p-4 shadow-xs space-y-3 transition-all"
+        >
+          {/* Section Header */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="flex size-7 items-center justify-center rounded-xl bg-amber-500/20 text-amber-900 border border-amber-500/30">
+                <RotateCcw className="size-4" strokeWidth={2} />
+              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-xs sm:text-sm font-bold text-amber-950 uppercase tracking-wide">
+                  TỒN ĐỌNG KỲ TRƯỚC ({priorOverdueBacklog.length})
+                </h3>
+                <Badge variant="rose" className="text-xs font-semibold">
+                  Prior Overdue Backlog
+                </Badge>
+              </div>
+              <span className="text-xs text-amber-900/80 font-medium hidden lg:inline">
+                Nhiệm vụ quá hạn từ các kỳ trước chuyển sang kỳ này cần ưu tiên xử lý
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsBacklogExpanded(!isBacklogExpanded)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 min-h-[32px] rounded-lg border border-amber-300/80 bg-white/80 hover:bg-white text-xs font-semibold text-amber-950 transition-colors cursor-pointer"
+              aria-expanded={isBacklogExpanded}
+              aria-label={isBacklogExpanded ? "Thu gọn tồn đọng kỳ trước" : "Mở rộng tồn đọng kỳ trước"}
+            >
+              <span>{isBacklogExpanded ? "Thu gọn" : "Xem chi tiết"}</span>
+              <ChevronDown
+                className={cn("size-3.5 transition-transform duration-200", isBacklogExpanded && "rotate-180")}
+              />
+            </button>
+          </div>
+
+          {/* Collapsible Backlog Content */}
+          {isBacklogExpanded && (
+            <div className="space-y-2 pt-1 border-t border-amber-200/70">
+              {/* Desktop Backlog Table */}
+              <div className="hidden md:block overflow-hidden rounded-xl border border-amber-200/80 bg-white/90 shadow-2xs">
+                <table className="w-full text-left table-row-dense">
+                  <thead>
+                    <tr className="h-9 border-b border-amber-200/60 bg-amber-100/40 text-xs font-semibold text-amber-900 uppercase">
+                      <th className="w-24 px-3 py-1.5">Mã NV</th>
+                      <th className="px-3 py-1.5">Nhiệm vụ tồn đọng</th>
+                      <th className="px-3 py-1.5">Chủ trì</th>
+                      <th className="px-3 py-1.5">Hạn ban đầu</th>
+                      <th className="px-3 py-1.5">Tiến độ</th>
+                      <th className="w-52 px-3 py-1.5 text-right">Trạng thái &amp; Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-amber-100/80">
+                    {priorOverdueBacklog.map((task) => (
+                      <tr
+                        key={task.id}
+                        tabIndex={0}
+                        onClick={() => onSelectTask?.(task)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onSelectTask?.(task);
+                          }
+                        }}
+                        className="group cursor-pointer hover:bg-amber-100/30 transition-colors h-11 text-xs"
+                        data-backlog-task-id={task.id}
+                      >
+                        <td className="px-3 py-2 font-mono font-bold text-amber-900">
+                          {task.taskCode || "NV-QCET"}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                            {task.title}
+                          </div>
+                          {task.categoryLabel && (
+                            <span className="text-xs text-muted-foreground font-medium">
+                              {task.categoryLabel}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground font-medium">
+                          {task.leadAssigneeName}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="font-mono font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-xs">
+                            {task.dueDate ? formatDate(task.dueDate) : "Quá hạn"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="relative h-1.5 w-12 overflow-hidden rounded-full bg-secondary/80">
+                              <div
+                                className="h-full bg-amber-500"
+                                style={{ width: `${task.progressPercent || 0}%` }}
+                              />
+                            </div>
+                            <span className="font-mono text-xs font-semibold text-muted-foreground">
+                              {task.progressPercent || 0}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {onStatusChange && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onStatusChange(
+                                    task.id,
+                                    task.status === "COMPLETED" ? "IN_PROGRESS" : "COMPLETED"
+                                  );
+                                }}
+                                className="inline-flex h-6 items-center px-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-semibold cursor-pointer shadow-2xs transition-colors"
+                              >
+                                Duyệt
+                              </button>
+                            )}
+                            <Badge
+                              variant="rose"
+                              className="h-5.5 px-2 text-xs font-semibold tabular-nums shrink-0"
+                            >
+                              Quá hạn kỳ trước
+                            </Badge>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Backlog Cards */}
+              <div className="md:hidden space-y-2">
+                {priorOverdueBacklog.map((task) => (
+                  <div
+                    key={task.id}
+                    onClick={() => onSelectTask?.(task)}
+                    className="rounded-xl border border-amber-200/90 bg-white/90 p-3 shadow-2xs space-y-2 cursor-pointer active:bg-amber-50"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs font-bold text-amber-900">
+                        {task.taskCode || "NV-QCET"}
+                      </span>
+                      <Badge variant="rose" className="text-xs font-semibold">
+                        Tồn đọng
+                      </Badge>
+                    </div>
+                    <h4 className="text-xs font-bold text-foreground line-clamp-2">
+                      {task.title}
+                    </h4>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-amber-100">
+                      <span>{task.leadAssigneeName}</span>
+                      <span className="font-mono font-semibold text-rose-700">
+                        {task.dueDate ? formatDate(task.dueDate) : "Quá hạn"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Main Table Container */}
       <div className="hidden md:block overflow-hidden rounded-2xl border border-border/50 bg-card shadow-card">
+        {/* Table Header Operational Strip */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b border-border/50 text-xs">
+          <div className="flex items-center gap-2">
+            <Calendar className="size-4 text-primary" strokeWidth={1.5} />
+            <span className="font-semibold text-foreground font-mono" data-slot="monthly-indicator">
+              {monthlyIndicatorText}
+            </span>
+          </div>
+          {selectedAcademicMonth !== "ALL" && (
+            <span className="text-xs text-muted-foreground font-mono">
+              Chu kỳ ngày 25 đến ngày 24
+            </span>
+          )}
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left table-row-dense">
+            <caption className="sr-only">{monthlyIndicatorText}</caption>
             {/* Table Header */}
             <thead>
               <tr className="h-11 border-b border-border/50 bg-muted/40">
@@ -1082,13 +1332,29 @@ export function CascadingTaskTable({
 
                         {/* Task Title */}
                         <td className={cn("table-cell-dense px-4 align-middle text-sm font-medium text-foreground leading-snug", density === "compact" ? "py-1.5" : "py-3")}>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="line-clamp-1 text-sm font-medium text-foreground leading-snug">{task.title}</span>
                             {hasSubtasks && (
                               <span className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground">
                                 {task.completedSubTasks}/{task.totalSubTasks}
                               </span>
                             )}
+                            {selectedAcademicMonth !== "ALL" && hasSubtasks && (() => {
+                              const dueInMonthCount = task.subTasks?.filter(
+                                (s) => s.dueDate && isDateInAcademicMonth(s.dueDate, selectedAcademicMonth, "2026-2027")
+                              ).length || 0;
+                              if (dueInMonthCount > 0) {
+                                return (
+                                  <span
+                                    className="rounded-md bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums"
+                                    title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
+                                  >
+                                    Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount} NV con)
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                         </td>
 
@@ -1241,6 +1507,10 @@ export function CascadingTaskTable({
                                   const statusConfig = getStatusBadgeConfig(
                                     subTask.status
                                   );
+                                  const isSubDueInMonth =
+                                    selectedAcademicMonth !== "ALL" && subTask.dueDate
+                                      ? isDateInAcademicMonth(subTask.dueDate, selectedAcademicMonth, "2026-2027")
+                                      : false;
 
                                   return (
                                     <div
@@ -1253,7 +1523,10 @@ export function CascadingTaskTable({
                                           onSelectTask?.(subTask);
                                         }
                                       }}
-                                      className="group/sub flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs transition-colors hover:bg-secondary/60 focus-visible:outline-hidden focus-visible:bg-secondary/70 cursor-pointer"
+                                      className={cn(
+                                        "group/sub flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-xs transition-colors hover:bg-secondary/60 focus-visible:outline-hidden focus-visible:bg-secondary/70 cursor-pointer",
+                                        isSubDueInMonth && "bg-primary/[0.04] border border-primary/20 shadow-2xs"
+                                      )}
                                       data-subtask-id={subTask.id}
                                     >
                                       {/* Subtask Status Badge & ID & Title */}
@@ -1292,6 +1565,14 @@ export function CascadingTaskTable({
                                         <span className="truncate text-foreground/90 font-medium text-sm">
                                           {subTask.title}
                                         </span>
+                                        {isSubDueInMonth && (
+                                          <span
+                                            className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0"
+                                            title={`Nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
+                                          >
+                                            Hạn trong kỳ T{selectedAcademicMonth}
+                                          </span>
+                                        )}
 
                                         {/* 1-Click Fast Workflow Action for Subtask */}
                                         {onStatusChange && (
@@ -1488,6 +1769,21 @@ export function CascadingTaskTable({
         onTouchMove={pullToRefresh.containerProps.onTouchMove}
         onTouchEnd={pullToRefresh.containerProps.onTouchEnd}
       >
+        {/* Mobile Monthly Indicator Strip */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 bg-card rounded-2xl border border-border/50 text-xs shadow-2xs">
+          <div className="flex items-center gap-2">
+            <Calendar className="size-4 text-primary" strokeWidth={1.5} />
+            <span className="font-semibold text-foreground font-mono" data-slot="mobile-monthly-indicator">
+              {monthlyIndicatorText}
+            </span>
+          </div>
+          {selectedAcademicMonth !== "ALL" && (
+            <span className="text-xs text-muted-foreground font-mono">
+              25 - 24
+            </span>
+          )}
+        </div>
+
         {pullToRefresh.pullDistance > 0 && (
           <div className="flex items-center justify-center py-2 text-xs text-muted-foreground font-medium transition-opacity">
             {pullToRefresh.isRefreshing ? "Đang làm mới..." : "Kéo để làm mới"}
@@ -1520,6 +1816,7 @@ export function CascadingTaskTable({
               onToggleExpand={toggleExpand}
               onSelectTask={onSelectTask}
               onStatusChange={onStatusChange}
+              selectedAcademicMonth={selectedAcademicMonth}
             />
           ))
         )}
