@@ -200,6 +200,12 @@ export interface OnboardingState {
 
 export const LEGACY_ONBOARDING_STORAGE_KEY = "qcet_onboarding_state";
 
+export function isSnoozed(snoozedUntil: string | null | undefined): boolean {
+  if (!snoozedUntil) return false;
+  const snoozeDate = new Date(snoozedUntil);
+  return !isNaN(snoozeDate.getTime()) && snoozeDate.getTime() > Date.now();
+}
+
 export function getOnboardingStorageKey(userId?: string | null): string {
   return userId ? `qcet_onboarding_state_${userId}` : "qcet_onboarding_state_guest";
 }

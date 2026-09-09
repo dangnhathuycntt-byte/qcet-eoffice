@@ -8,106 +8,145 @@ import {
   getRoleChecklist,
   TourStepConfig,
   ChecklistTaskConfig,
+  OnboardingState,
+  DEFAULT_ONBOARDING_STATE,
+  getOnboardingStorageKey,
+  LEGACY_ONBOARDING_STORAGE_KEY,
+  resolveOnboardingState,
+  isSnoozed,
 } from "@/lib/onboarding-constants";
 
-const LOCAL_STORAGE_KEY = "qcet_onboarding_state";
+export type { OnboardingState };
+export { isSnoozed };
 
-export interface OnboardingState {
-  hasSeenWelcome: boolean;
-  hasCompletedTour: boolean;
-  completedSteps: string[];
-  isDismissed: boolean;
-  snoozedUntil: string | null;
+export interface StartTourOptions {
+  force?: boolean;
 }
-
-const DEFAULT_STATE: OnboardingState = {
-  hasSeenWelcome: false,
-  hasCompletedTour: false,
-  completedSteps: ["step-profile"],
-  isDismissed: false,
-  snoozedUntil: null,
-};
 
 export function useOnboarding() {
   const { user } = useAuth();
   const [isMounted, setIsMounted] = React.useState(false);
-  const [state, setState] = React.useState<OnboardingState>(DEFAULT_STATE);
+  const [state, setState] = React.useState<OnboardingState>(DEFAULT_ONBOARDING_STATE);
   const [isTourActive, setIsTourActive] = React.useState(false);
   const [currentTourIndex, setCurrentTourIndex] = React.useState(0);
   const [isChecklistExpanded, setIsChecklistExpanded] = React.useState(false);
 
-  // Khởi tạo từ localStorage và user metadata
+  const userRef = React.useRef(user);
+  React.useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // Khởi tạo từ user-scoped localStorage và user metadata
   React.useEffect(() => {
     setIsMounted(true);
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      const parsed = stored ? JSON.parse(stored) : null;
-      const initialSteps =
-        user?.onboardingData?.completedSteps ||
-        parsed?.completedSteps ||
-        ["step-profile"];
+    if (typeof window === "undefined") return;
 
-      setState({
-        hasSeenWelcome:
-          user?.onboardingData?.hasSeenWelcome ??
-          parsed?.hasSeenWelcome ??
-          false,
-        hasCompletedTour:
-          user?.onboardingData?.hasCompletedTour ??
-          parsed?.hasCompletedTour ??
-          false,
-        completedSteps: Array.from(new Set([...initialSteps, "step-profile"])),
-        isDismissed:
-          user?.onboardingData?.isDismissed ?? parsed?.isDismissed ?? false,
-        snoozedUntil:
-          user?.onboardingData?.snoozedUntil ?? parsed?.snoozedUntil ?? null,
-      });
+    // Dọn dẹp key cũ không phân tách theo user để chống rò rỉ trạng thái giữa các tài khoản
+    try {
+      localStorage.removeItem(LEGACY_ONBOARDING_STORAGE_KEY);
     } catch {
-      // Ignore parsing errors
+      // ignore
+    }
+
+    try {
+      const storageKey = getOnboardingStorageKey(user?.id);
+      const stored = localStorage.getItem(storageKey);
+      const parsed = stored ? JSON.parse(stored) : null;
+      const resolved = resolveOnboardingState(user, parsed);
+
+      // Nếu server ghi nhận chưa onboarding hoặc vừa bị xoá onboarding (onboardedAt: null & onboardingData: null), dọn sạch cache client
+      if (user?.id && !user.onboardedAt && !user.onboardingData && stored) {
+        localStorage.removeItem(storageKey);
+      }
+
+      setState(resolved);
+    } catch {
+      setState(DEFAULT_ONBOARDING_STATE);
     }
   }, [user]);
 
-  // Đồng bộ qua API và LocalStorage
-  const syncState = React.useCallback(
-    async (nextState: Partial<OnboardingState>) => {
-      setState((prev) => {
-        const merged = { ...prev, ...nextState };
-        try {
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
-        } catch {
-          // ignore
-        }
+  // Hàm lưu trạng thái đồng thời vào localStorage và đồng bộ ngầm lên server
+  const persistAndSync = React.useCallback(
+    (merged: OnboardingState) => {
+      const currentUserId = userRef.current?.id;
+      const storageKey = getOnboardingStorageKey(currentUserId);
 
-        // Đồng bộ ngầm lên server
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(merged));
+      } catch {
+        // ignore
+      }
+
+      // Đồng bộ ngầm lên server nếu có người dùng đăng nhập
+      if (currentUserId) {
         fetch("/api/users/onboarding", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(merged),
         }).catch(() => {});
-
-        return merged;
-      });
+      }
     },
     []
   );
 
-  const completeStep = React.useCallback(
+  // Đồng bộ qua API và LocalStorage theo user-scoped key
+  const syncState = React.useCallback(
+    (nextState: Partial<OnboardingState>) => {
+      setState((prev) => {
+        const merged = { ...prev, ...nextState };
+        persistAndSync(merged);
+        return merged;
+      });
+    },
+    [persistAndSync]
+  );
+
+  const markStepComplete = React.useCallback(
     (stepId: string) => {
       setState((prev) => {
-        if (prev.completedSteps.includes(stepId)) return prev;
-        const nextSteps = [...prev.completedSteps, stepId];
-        syncState({ completedSteps: nextSteps });
-        return { ...prev, completedSteps: nextSteps };
+        const currentSet = new Set(prev.completedSteps);
+        if (currentSet.has(stepId)) return prev;
+        currentSet.add(stepId);
+        const nextSteps = Array.from(currentSet);
+        const merged = { ...prev, completedSteps: nextSteps };
+        persistAndSync(merged);
+        return merged;
       });
+    },
+    [persistAndSync]
+  );
+
+  const completeStep = markStepComplete;
+
+  const snoozeOnboarding = React.useCallback(
+    async (hours = 24) => {
+      const snoozeIso = new Date(Date.now() + hours * 3600 * 1000).toISOString();
+      setIsTourActive(false);
+      setIsChecklistExpanded(false);
+      syncState({ snoozedUntil: snoozeIso });
     },
     [syncState]
   );
 
-  const startTour = React.useCallback(() => {
-    setCurrentTourIndex(0);
-    setIsTourActive(true);
-    syncState({ hasSeenWelcome: true });
-  }, [syncState]);
+  const unsnoozeOnboarding = React.useCallback(
+    async () => {
+      syncState({ snoozedUntil: null });
+    },
+    [syncState]
+  );
+
+  const startTour = React.useCallback(
+    (options?: StartTourOptions) => {
+      const currentlySnoozed = isSnoozed(state.snoozedUntil);
+      if (currentlySnoozed && !options?.force) {
+        return;
+      }
+      setCurrentTourIndex(0);
+      setIsTourActive(true);
+      syncState({ hasSeenWelcome: true });
+    },
+    [state.snoozedUntil, syncState]
+  );
 
   const endTour = React.useCallback(() => {
     setIsTourActive(false);
@@ -121,8 +160,8 @@ export function useOnboarding() {
   }, [syncState]);
 
   const restartOnboarding = React.useCallback(() => {
-    syncState({ isDismissed: false, hasCompletedTour: false });
-    startTour();
+    syncState({ isDismissed: false, hasCompletedTour: false, snoozedUntil: null });
+    startTour({ force: true });
   }, [syncState, startTour]);
 
   const tourSteps = React.useMemo(() => {
@@ -142,6 +181,10 @@ export function useOnboarding() {
     return checklistTasks.find((t) => !state.completedSteps.includes(t.id));
   }, [checklistTasks, state.completedSteps]);
 
+  const isCurrentSnoozed = React.useMemo(() => {
+    return isSnoozed(state.snoozedUntil);
+  }, [state.snoozedUntil]);
+
   return {
     isMounted,
     state,
@@ -154,10 +197,14 @@ export function useOnboarding() {
     checklistTasks,
     progress,
     nextIncompleteTask,
+    isSnoozed: isCurrentSnoozed,
     startTour,
     endTour,
     completeStep,
+    markStepComplete,
     dismissOnboarding,
+    snoozeOnboarding,
+    unsnoozeOnboarding,
     restartOnboarding,
   };
 }

@@ -4,7 +4,25 @@ import {
   calculateOnboardingProgress,
   getRoleTourSteps,
   getRoleChecklist,
+  isSnoozed,
+  resolveOnboardingState,
 } from "../src/lib/onboarding-constants";
+
+test("isSnoozed accurately handles null, undefined, past, and future timestamps", () => {
+  // 1. isSnoozed(null) / undefined -> false
+  assert.equal(isSnoozed(null), false);
+  assert.equal(isSnoozed(undefined), false);
+  assert.equal(isSnoozed(""), false);
+  assert.equal(isSnoozed("invalid-date-string"), false);
+
+  // 2. Future date -> true
+  const futureIso = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+  assert.equal(isSnoozed(futureIso), true);
+
+  // 3. Past date -> false
+  const pastIso = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  assert.equal(isSnoozed(pastIso), false);
+});
 
 test("calculateOnboardingProgress calculates correct endowed progress percentage", () => {
   // Endowed initial state: 1 step completed out of 4 (25%)
@@ -72,3 +90,38 @@ test("getRoleChecklist returns 4 tasks with tailored action title per role", () 
   const staffChecklist = getRoleChecklist("STAFF", "CHUYEN_VIEN");
   assert.equal(staffChecklist[2].title, "Nộp minh chứng hoặc tạo tờ trình");
 });
+
+test("resolveOnboardingState preserves and updates snoozedUntil in state machine", () => {
+  const futureSnooze = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+
+  // State with snoozedUntil from server
+  const serverState = {
+    id: "user-snoozed",
+    onboardedAt: null,
+    onboardingData: {
+      hasSeenWelcome: true,
+      hasCompletedTour: false,
+      completedSteps: ["step-profile"],
+      isDismissed: false,
+      snoozedUntil: futureSnooze,
+    },
+  };
+
+  const resolved = resolveOnboardingState(serverState, null);
+  assert.equal(resolved.snoozedUntil, futureSnooze);
+  assert.equal(isSnoozed(resolved.snoozedUntil), true);
+
+  // Cleared snooze (unsnoozed)
+  const unsnoozedServerState = {
+    id: "user-snoozed",
+    onboardedAt: null,
+    onboardingData: {
+      ...serverState.onboardingData,
+      snoozedUntil: null,
+    },
+  };
+  const resolvedUnsnoozed = resolveOnboardingState(unsnoozedServerState, null);
+  assert.equal(resolvedUnsnoozed.snoozedUntil, null);
+  assert.equal(isSnoozed(resolvedUnsnoozed.snoozedUntil), false);
+});
+
