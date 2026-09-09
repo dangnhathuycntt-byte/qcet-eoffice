@@ -83,7 +83,7 @@ function DashboardZoneComponent() {
               size="sm"
               onClick={handleManualRefresh}
               disabled={isRefreshing}
-              className="gap-1.5 text-xs rounded-xl min-h-[36px] touch-manipulation"
+              className="gap-1.5 text-xs rounded-xl min-h-[44px] sm:min-h-[36px] touch-manipulation"
             >
               <RefreshCw
                 size={14}
