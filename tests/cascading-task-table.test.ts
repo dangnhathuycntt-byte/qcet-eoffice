@@ -231,4 +231,20 @@ describe("Task 6: Cascading Task Table Single Source of Truth", () => {
     assert.equal(daoTaoTasks.length, 1);
     assert.equal(daoTaoTasks[0].id, "task-rel-2");
   });
+
+  it("uses ergonomic '/' table filter shortcut and avoids global ⌘K conflict", () => {
+    const tasksTable = path.resolve(__dirname, "../src/components/tasks/cascading-task-table.tsx");
+    const content = fs.readFileSync(tasksTable, "utf-8");
+
+    // Must not intercept 'k' key in table (reserved for global search palette)
+    assert.ok(
+      !content.includes('key.toLowerCase() === "k"'),
+      "CascadingTaskTable must not intercept global ⌘K shortcut"
+    );
+    // Must support '/' shortcut for in-table search
+    assert.ok(
+      content.includes('e.key === "/"'),
+      "CascadingTaskTable should support ergonomic '/' table search shortcut"
+    );
+  });
 });

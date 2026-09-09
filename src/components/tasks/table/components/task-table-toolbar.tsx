@@ -448,7 +448,7 @@ export function TaskTableToolbar({
               className="h-9 px-3 gap-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs cursor-pointer"
               aria-label="Thêm công việc mới"
             >
-              <Plus className="size-4" strokeWidth={2} />
+              <Plus className="size-4" strokeWidth={1.5} />
               <span>Thêm công việc</span>
             </Button>
           )}

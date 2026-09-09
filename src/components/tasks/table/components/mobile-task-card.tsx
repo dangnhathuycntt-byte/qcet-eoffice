@@ -157,7 +157,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
           aria-hidden="true"
         >
           <div className="flex items-center gap-1.5">
-            <Check className="size-5" strokeWidth={2.5} />
+            <Check className="size-5" strokeWidth={1.5} />
             <span>Kéo sang phải để hoàn thành</span>
           </div>
         </div>
@@ -308,7 +308,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
               }}
               className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 text-xs font-semibold tabular-nums active:bg-emerald-500/20 transition-colors"
             >
-              <Check className="size-4" strokeWidth={2} />
+              <Check className="size-4" strokeWidth={1.5} />
               <span>Hoàn thành</span>
             </button>
           )}

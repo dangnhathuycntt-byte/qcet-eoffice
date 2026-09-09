@@ -64,6 +64,11 @@ export interface ModularCascadingTaskTableProps {
     newStatus: TaskStatus,
     ...rest: any[]
   ) => Promise<void> | void;
+  onUrge?: (
+    taskId: string,
+    taskTitle: string,
+    assigneeName: string
+  ) => Promise<void> | void;
   onRefresh?: () => Promise<void> | void;
   className?: string;
   hideWorkbox?: boolean;
@@ -92,6 +97,7 @@ export function ModularCascadingTaskTable({
   onSelectTask,
   onAddTask,
   onStatusChange,
+  onUrge,
   onRefresh,
   className,
   hideWorkbox = false,
@@ -363,7 +369,7 @@ export function ModularCascadingTaskTable({
               onClick={onRefresh}
               className="h-7 px-2 text-xs text-primary hover:bg-primary/10 transition-colors"
             >
-              <RotateCcw className="size-3.5 mr-1" />
+              <RotateCcw className="size-3.5 mr-1" strokeWidth={1.5} />
               Làm mới
             </Button>
           )}
@@ -382,7 +388,7 @@ export function ModularCascadingTaskTable({
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="flex size-7 items-center justify-center rounded-xl bg-amber-500/20 text-amber-900 border border-amber-500/30">
-                  <RotateCcw className="size-4" strokeWidth={2} />
+                  <RotateCcw className="size-4" strokeWidth={1.5} />
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-xs sm:text-sm font-bold text-amber-950 uppercase tracking-wide">
@@ -413,6 +419,7 @@ export function ModularCascadingTaskTable({
                     "size-3.5 transition-transform duration-200",
                     isBacklogExpanded && "rotate-180"
                   )}
+                  strokeWidth={1.5}
                 />
               </button>
             </div>
@@ -625,6 +632,7 @@ export function ModularCascadingTaskTable({
                           onToggleSelect={() => tableState.toggleSelect(task.id)}
                           onClick={onSelectTask}
                           onStatusChange={onStatusChange}
+                          onUrge={onUrge}
                         />
                         {isExpanded && hasSubtasks && (
                           <SubtaskRowGroup

@@ -73,9 +73,9 @@ export function TaskTableHeader({
   const renderSortIndicator = (colId: TaskSortField) => {
     if (sortField === colId) {
       return sortDirection === "asc" ? (
-        <ChevronUp className="size-3.5 text-primary shrink-0 transition-transform" strokeWidth={2} />
+        <ChevronUp className="size-3.5 text-primary shrink-0 transition-transform" strokeWidth={1.5} />
       ) : (
-        <ChevronDown className="size-3.5 text-primary shrink-0 transition-transform" strokeWidth={2} />
+        <ChevronDown className="size-3.5 text-primary shrink-0 transition-transform" strokeWidth={1.5} />
       );
     }
     return (
@@ -132,9 +132,9 @@ export function TaskTableHeader({
               aria-label={isAllExpanded ? "Thu gọn tất cả việc con" : "Mở rộng tất cả việc con"}
             >
               {isAllExpanded ? (
-                <ChevronDown className="size-3.5" strokeWidth={2} />
+                <ChevronDown className="size-3.5" strokeWidth={1.5} />
               ) : (
-                <ChevronUp className="size-3.5 rotate-90" strokeWidth={2} />
+                <ChevronUp className="size-3.5 rotate-90" strokeWidth={1.5} />
               )}
             </button>
           ) : (

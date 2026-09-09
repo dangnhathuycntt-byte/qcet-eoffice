@@ -125,7 +125,7 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
             onClick={onAddTask}
             className="inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/90 cursor-pointer active:scale-95 transition-all"
           >
-            <Plus className="size-3.5" strokeWidth={2} />
+            <Plus className="size-3.5" strokeWidth={1.5} />
             <span>Tạo nhiệm vụ mới</span>
           </button>
         )}

@@ -121,7 +121,7 @@ export function UniversalActionQueue({
       >
         <div className="flex items-center gap-3 min-w-0">
           <div className="size-8 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="size-4" strokeWidth={2} />
+            <CheckCircle2 className="size-4" strokeWidth={1.5} />
           </div>
           <div className="space-y-0.5 min-w-0">
             <h4 className="text-xs sm:text-sm font-semibold text-foreground">
@@ -163,7 +163,7 @@ export function UniversalActionQueue({
         >
           <div className="flex items-center gap-2.5">
             <div className="size-8 rounded-lg bg-rose-500/10 text-rose-700 flex items-center justify-center shrink-0">
-              <AlertTriangle className="size-4" strokeWidth={1.75} />
+              <AlertTriangle className="size-4" strokeWidth={1.5} />
             </div>
             <div>
               <div className="text-xs font-bold tracking-tight text-rose-950">
@@ -311,7 +311,7 @@ export function UniversalActionQueue({
                           }
                           title="Đôn đốc tiến độ thực hiện nhiệm vụ"
                         >
-                          <BellRing className="size-3" strokeWidth={1.75} />
+                          <BellRing className="size-3" strokeWidth={1.5} />
                           <span>Đôn đốc DRI</span>
                         </Button>
                       )}
@@ -324,7 +324,7 @@ export function UniversalActionQueue({
                           onClick={() => onCreateSubtask(item.task.id)}
                           title="Phân rã nhiệm vụ cho chuyên viên"
                         >
-                          <GitFork className="size-3" strokeWidth={1.75} />
+                          <GitFork className="size-3" strokeWidth={1.5} />
                           <span>Phân công con</span>
                         </Button>
                       )}
@@ -344,7 +344,7 @@ export function UniversalActionQueue({
                           }
                         }}
                       >
-                        <ActionIcon className="size-3" strokeWidth={1.75} />
+                        <ActionIcon className="size-3" strokeWidth={1.5} />
                         <span>{approvalConfig.label}</span>
                         <ChevronRight className="size-3 ml-0.5 opacity-70" strokeWidth={1.5} />
                       </Button>
@@ -515,7 +515,7 @@ export function UniversalActionQueue({
                         }
                       }}
                     >
-                      <UploadCloud className="size-3" strokeWidth={1.75} />
+                      <UploadCloud className="size-3" strokeWidth={1.5} />
                       <span>Nộp minh chứng</span>
                     </Button>
                   </div>

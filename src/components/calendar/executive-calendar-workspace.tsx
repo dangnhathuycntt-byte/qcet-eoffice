@@ -483,7 +483,7 @@ export function PriorOverdueBacklogBanner({
     >
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="size-4 text-rose-600 shrink-0" strokeWidth={2} />
+          <AlertTriangle className="size-4 text-rose-600 shrink-0" strokeWidth={1.5} />
           <span className="font-semibold text-xs sm:text-sm">
             Công việc trễ hạn tồn đọng ({overdueItems.length} nhiệm vụ cần xử lý gấp)
           </span>
@@ -1195,7 +1195,7 @@ export function ExecutiveCalendarWorkspace({
                 </div>
                 {selectedPreviewItem.isOverdue && (
                   <div className="flex items-center gap-2 text-rose-600 font-semibold font-mono">
-                    <AlertTriangle className="size-3.5 shrink-0" strokeWidth={2} />
+                    <AlertTriangle className="size-3.5 shrink-0" strokeWidth={1.5} />
                     <span>Đã quá hạn {selectedPreviewItem.daysOverdue || 1} ngày</span>
                   </div>
                 )}

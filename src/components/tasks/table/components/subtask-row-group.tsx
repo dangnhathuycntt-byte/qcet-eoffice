@@ -71,7 +71,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                     onClick={() => onAddSubTask(parentTask)}
                     className="inline-flex items-center gap-1 h-6 px-2.5 rounded-lg border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold cursor-pointer active:scale-95 transition-colors"
                   >
-                    <Plus className="size-3" strokeWidth={2} />
+                    <Plus className="size-3" strokeWidth={1.5} />
                     <span>Thêm việc con</span>
                   </button>
                 )}
@@ -100,7 +100,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                       onClick={() => onAddSubTask(parentTask)}
                       className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-dashed border-slate-300 bg-white/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 text-xs font-medium cursor-pointer transition-colors"
                     >
-                      <Plus className="size-3 text-primary" strokeWidth={2} />
+                      <Plus className="size-3 text-primary" strokeWidth={1.5} />
                       <span>Thêm việc con cho [{parentTask.taskCode || parentTask.id}]</span>
                     </button>
                   </div>
