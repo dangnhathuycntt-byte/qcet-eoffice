@@ -13,6 +13,7 @@ import {
   Plus,
   FileSpreadsheet,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
@@ -175,6 +176,8 @@ export function TaskTableToolbar({
   onAddTask,
   onExportExcel,
   canCreateTask = true,
+  totalTasksCount,
+  loading = false,
   currentUserId,
   currentUserName,
   className,
@@ -218,15 +221,19 @@ export function TaskTableToolbar({
 
   // Tính toán số lượng thẻ lọc nếu không được truyền trực tiếp
   const computedPillCounts = React.useMemo(() => {
-    if (pillCounts) return pillCounts;
-    if (tasks && tasks.length > 0) {
-      return aggregateFilterCounts(tasks, {
+    let counts = pillCounts;
+    if (!counts && tasks && tasks.length > 0) {
+      counts = aggregateFilterCounts(tasks, {
         currentUserId,
         currentUserName,
       });
     }
-    return undefined;
-  }, [pillCounts, tasks, currentUserId, currentUserName]);
+    // Tự động bổ sung số lượng tổng "Tất cả" khi có totalTasksCount
+    if (totalTasksCount !== undefined && (!counts || counts.all === undefined)) {
+      counts = { ...counts, all: totalTasksCount };
+    }
+    return counts;
+  }, [pillCounts, tasks, currentUserId, currentUserName, totalTasksCount]);
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
@@ -236,18 +243,27 @@ export function TaskTableToolbar({
         <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0">
           {/* Ô tìm kiếm Debounced */}
           <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
-              strokeWidth={1.5}
-            />
+            {loading ? (
+              <Loader2
+                className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary animate-spin pointer-events-none"
+                strokeWidth={1.5}
+                aria-label="Đang tải dữ liệu"
+              />
+            ) : (
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+                strokeWidth={1.5}
+              />
+            )}
             <input
               ref={searchInputRef}
               type="text"
               value={localQuery}
               onChange={(e) => setLocalQuery(e.target.value)}
               placeholder={searchPlaceholder}
+              disabled={loading}
               aria-label="Tìm kiếm nhiệm vụ"
-              className="w-full h-9 pl-9 pr-14 rounded-lg border border-border bg-card text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+              className="w-full h-9 pl-9 pr-14 rounded-lg border border-border bg-card text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors disabled:opacity-60"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               {localQuery ? (

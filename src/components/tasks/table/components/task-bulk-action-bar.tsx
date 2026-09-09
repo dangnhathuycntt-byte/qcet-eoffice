@@ -3,8 +3,6 @@
 import * as React from "react";
 import {
   CheckCircle2,
-  Clock,
-  Send,
   FileSpreadsheet,
   X,
   ChevronDown,
@@ -53,6 +51,19 @@ export function getBatchDeadlinePayload(
   return {
     taskIds,
     dueDate: newDueDate,
+  };
+}
+
+/**
+ * Tạo payload phân công lại người thực hiện hàng loạt
+ */
+export function getBatchReassignPayload(
+  taskIds: string[],
+  newAssigneeId: string
+): { taskIds: string[]; assigneeId: string } {
+  return {
+    taskIds,
+    assigneeId: newAssigneeId,
   };
 }
 
@@ -233,6 +244,22 @@ export function TaskBulkActionBar({
               strokeWidth={1.5}
             />
             <span className="hidden sm:inline">Xuất Excel</span>
+          </Button>
+        )}
+
+        {/* Nút Phân công lại hàng loạt (nếu có handler) */}
+        {onBulkReassign && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onBulkReassign("")}
+            disabled={isLoading}
+            className="h-8.5 px-2.5 text-xs font-medium border-border hover:bg-muted/80 text-foreground gap-1.5 cursor-pointer"
+            aria-label="Phân công lại các công việc đã chọn"
+          >
+            <UserCheck className="size-3.5 text-primary" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Phân công lại</span>
           </Button>
         )}
 

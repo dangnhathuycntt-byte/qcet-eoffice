@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -10,13 +9,13 @@ import {
   calculateExtendedDeadline,
   getBatchStatusUpdatePayload,
   getBatchDeadlinePayload,
+  getBatchReassignPayload,
 } from "../src/components/tasks/table/components/task-bulk-action-bar";
 import {
   TaskTableToolbar,
   isSearchShortcut,
   aggregateFilterCounts,
 } from "../src/components/tasks/table/components/task-table-toolbar";
-import { SMART_FILTER_TABS } from "../src/components/tasks/table/constants";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 
 describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Dock", () => {
@@ -27,11 +26,17 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       code: "NV-01",
       title: "Triển khai phần mềm quản lý công việc",
       category: "CHUYEN_DOI_SO",
+      categoryLabel: "Chuyển đổi số",
       status: "IN_PROGRESS",
       priority: "HIGH",
       dueDate: "2026-09-09", // Today based on reference date 2026-09-09
+      progressPercent: 50,
+      totalSubTasks: 1,
+      completedSubTasks: 1,
       leadAssigneeName: "Nguyễn Văn A",
       leadAssigneeId: "user-1",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
       department: "Khoa CNTT",
       departmentId: "CNTT",
       subTasks: [
@@ -50,39 +55,60 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       code: "NV-02",
       title: "Báo cáo an toàn thông tin quý 3",
       category: "ATTT",
+      categoryLabel: "An toàn thông tin",
       status: "OVERDUE",
       priority: "URGENT",
       dueDate: "2026-09-01", // Past due
+      progressPercent: 20,
+      totalSubTasks: 0,
+      completedSubTasks: 0,
       leadAssigneeName: "Trần B",
       leadAssigneeId: "user-2",
+      coAssignees: [],
+      assignedDate: "2026-08-15",
       department: "TT An toàn thông tin",
       departmentId: "ATTT",
+      subTasks: [],
     },
     {
       id: "task-03",
       code: "NV-03",
       title: "Nghiệm thu hồ sơ minh chứng đào tạo",
       category: "BAO_CAO",
+      categoryLabel: "Báo cáo",
       status: "WAITING_APPROVAL",
       priority: "NORMAL",
       dueDate: "2026-09-20",
+      progressPercent: 100,
+      totalSubTasks: 0,
+      completedSubTasks: 0,
       leadAssigneeName: "Lê C",
       leadAssigneeId: "user-3",
+      coAssignees: [],
+      assignedDate: "2026-09-02",
       department: "Phòng Đào tạo",
       departmentId: "DAO_TAO",
+      subTasks: [],
     },
     {
       id: "task-04",
       code: "NV-04",
       title: "Hoàn thiện thư viện điện tử",
       category: "THU_VIEN",
+      categoryLabel: "Thư viện",
       status: "COMPLETED",
       priority: "NORMAL",
       dueDate: "2026-08-30",
+      progressPercent: 100,
+      totalSubTasks: 0,
+      completedSubTasks: 0,
       leadAssigneeName: "Nguyễn Văn A",
       leadAssigneeId: "user-1",
+      coAssignees: [],
+      assignedDate: "2026-08-01",
       department: "Thư viện",
       departmentId: "THU_VIEN",
+      subTasks: [],
     },
   ];
 
@@ -206,6 +232,23 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       assert.ok(html.includes("Tất cả"));
       assert.ok(html.includes("4"));
     });
+
+    it("integrates totalTasksCount as fallback when pillCounts.all is omitted", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(TaskTableToolbar, {
+          searchQuery: "",
+          onSearchChange: () => {},
+          activeTab: "all",
+          onTabChange: () => {},
+          totalTasksCount: 42,
+          selectedDepartment: "ALL",
+          selectedCategory: "ALL",
+        })
+      );
+
+      assert.ok(html.includes("Tất cả"));
+      assert.ok(html.includes("42"));
+    });
   });
 
   describe("3. Bulk Action Payloads & Date Extension Calculation", () => {
@@ -226,6 +269,16 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       assert.deepEqual(payload, {
         taskIds: ["task-01", "task-02"],
         dueDate: "2026-09-16",
+      });
+    });
+
+    it("generates correct batch reassign payload", () => {
+      const taskIds = ["task-01", "task-02"];
+      const payload = getBatchReassignPayload(taskIds, "user-lead-99");
+
+      assert.deepEqual(payload, {
+        taskIds: ["task-01", "task-02"],
+        assigneeId: "user-lead-99",
       });
     });
 
@@ -290,6 +343,27 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       assert.ok(html.includes("Esc"));
     });
 
+    it("renders batch reassign action when onBulkReassign is provided", () => {
+      let reassignCalled = false;
+      const onBulkReassign = () => {
+        reassignCalled = true;
+      };
+
+      const html = renderToStaticMarkup(
+        React.createElement(TaskBulkActionBar, {
+          selectedCount: 2,
+          selectedIds: ["task-01", "task-02"],
+          onClearSelection: () => {},
+          onBulkReassign,
+        })
+      );
+
+      assert.ok(html.includes("Phân công lại"));
+      assert.ok(
+        html.includes('aria-label="Phân công lại các công việc đã chọn"')
+      );
+    });
+
     it("renders optional Delete action when onBulkDelete is provided", () => {
       const html = renderToStaticMarkup(
         React.createElement(TaskBulkActionBar, {
@@ -348,6 +422,21 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       // Action buttons
       assert.ok(html.includes("Thêm công việc"));
       assert.ok(html.includes("Xuất Excel"));
+    });
+
+    it("renders loading spinner in search input when loading prop is true", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(TaskTableToolbar, {
+          searchQuery: "",
+          onSearchChange: () => {},
+          activeTab: "all",
+          onTabChange: () => {},
+          loading: true,
+        })
+      );
+
+      assert.ok(html.includes('aria-label="Đang tải dữ liệu"'));
+      assert.ok(html.includes("animate-spin"));
     });
   });
 
