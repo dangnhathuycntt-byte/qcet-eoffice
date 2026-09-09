@@ -481,6 +481,29 @@ export class PWAOnboardingCoordinator {
     this.notify();
   }
 
+  /**
+   * Allows non-installable desktop platforms (e.g. desktop browsers without beforeinstallprompt or install support)
+   * to advance to PUSH_ELIGIBLE after achieving engagement.
+   */
+  public advanceNonInstallableDesktop(): boolean {
+    const isIos = checkIsIOS();
+    const isStandalone = checkIsStandalone();
+    if (this.stage === "ENGAGED" && !isIos && !this.isInstallable && !this.deferredPrompt && !isStandalone) {
+      this.transitionTo("PUSH_ELIGIBLE");
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Advances stage directly to PUSH_ELIGIBLE when conditions are met
+   */
+  public advanceToPushEligible(): void {
+    if (this.stage === "ENGAGED" || this.stage === "INSTALL_ELIGIBLE" || this.stage === "INSTALLED") {
+      this.transitionTo("PUSH_ELIGIBLE");
+    }
+  }
+
   public getDeferredPrompt(): BeforeInstallPromptEvent | null {
     return this.deferredPrompt;
   }
@@ -680,6 +703,14 @@ export function usePWAOnboardingCoordinator(userId?: string | null) {
     ),
     markInstalled: React.useCallback(
       () => pwaOnboardingCoordinator.markInstalled(),
+      []
+    ),
+    advanceNonInstallableDesktop: React.useCallback(
+      () => pwaOnboardingCoordinator.advanceNonInstallableDesktop(),
+      []
+    ),
+    advanceToPushEligible: React.useCallback(
+      () => pwaOnboardingCoordinator.advanceToPushEligible(),
       []
     ),
     reset: React.useCallback(() => pwaOnboardingCoordinator.reset(), []),

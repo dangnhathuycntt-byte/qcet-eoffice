@@ -15,6 +15,7 @@ import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { pwaOnboardingCoordinator } from "@/lib/pwa/onboarding-coordinator";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 const PWAInstallPrompt = dynamic(
@@ -146,6 +147,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebarLayout();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const { user } = useAuth();
 
   React.useEffect(() => {
     const handleOpen = () => setIsMobileMenuOpen(true);
@@ -192,8 +194,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <MobileMenuDrawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen} />
       </React.Suspense>
 
-      <PWAInstallPrompt />
-      <PushOnboardingSheet />
+      <PWAInstallPrompt userId={user?.id} />
+      <PushOnboardingSheet userId={user?.id} />
       <MobileAppInstallModalContainer />
       <OnboardingHub />
       <CommandSearchModal />

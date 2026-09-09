@@ -283,12 +283,12 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// 5. Push: Deduplication by tag (task:{taskId}:{action}) and badge updates
+// 5. Push: Deduplication by tag (task:{taskId}:{action}, doc:{docId}:directive) and badge updates
 self.addEventListener('push', (event) => {
   let payload = {
     title: 'QCET E-Office',
     body: 'Bạn có thông báo mới từ hệ thống điều hành',
-    data: { linkHref: '/?zone=tasks' },
+    data: { route: '/tasks', linkHref: '/tasks' },
   };
 
   if (event.data) {
@@ -298,27 +298,42 @@ self.addEventListener('push', (event) => {
       payload = {
         title: 'QCET E-Office',
         body: event.data.text() || 'Bạn có thông báo mới từ hệ thống điều hành',
-        data: { linkHref: '/?zone=tasks' },
+        data: { route: '/tasks', linkHref: '/tasks' },
       };
     }
   }
 
   const title = payload.title || 'QCET E-Office';
 
-  // Tag deduplication: task:{taskId}:{action} or custom namespace
+  // Tag deduplication: canonical namespaces task:${id}:${action} or doc:${id}:directive
   let notificationTag = payload.tag;
-  if (!notificationTag && payload.data && payload.data.taskId) {
-    const action = payload.data.action || 'view';
-    notificationTag = `task:${payload.data.taskId}:${action}`;
-  } else if (!notificationTag) {
+  if (!notificationTag && payload.data) {
+    const entityId = payload.data.entityId || payload.data.taskId;
+    const type = String(payload.data.type || payload.data.action || payload.data.event || 'notice').toLowerCase();
+    if (entityId) {
+      if (String(entityId).startsWith('doc-') || type.includes('directive')) {
+        const docId = String(entityId).replace(/^doc-/, '');
+        notificationTag = `doc:${docId}:directive`;
+      } else if (type.includes('review') || type.includes('deliverable')) {
+        notificationTag = `task:${entityId}:review`;
+      } else if (type.includes('assign')) {
+        notificationTag = `task:${entityId}:assigned`;
+      } else if (type.includes('deadline') || type.includes('warning')) {
+        notificationTag = `task:${entityId}:deadline`;
+      } else {
+        notificationTag = `task:${entityId}:${type}`;
+      }
+    }
+  }
+  if (!notificationTag) {
     notificationTag = 'qcet-notification';
   }
 
   const options = {
     body: payload.body || '',
-    icon: payload.icon || '/logo-qcet.png',
+    icon: payload.icon || '/icons/icon-192x192.png',
     badge: payload.badge || '/icons/badge-72x72.png',
-    data: payload.data || { linkHref: '/?zone=tasks' },
+    data: payload.data || { route: '/tasks', linkHref: '/tasks' },
     vibrate: payload.vibrate || [100, 50, 100],
     tag: notificationTag,
     renotify: typeof payload.renotify === 'boolean' ? payload.renotify : true,
@@ -352,21 +367,25 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const data = event.notification.data || {};
-  const rawTargetUrl = data.linkHref || data.url || '/?zone=tasks'; // Default navigation fallback (/portal or /?zone=tasks)
+  const rawTargetUrl = data.route || data.url || data.linkHref || '/tasks';
 
-  // Enforce same-origin route validation
-  let targetUrl = '/?zone=tasks';
+  // Enforce strict same-origin route validation to prevent open redirects
+  let targetUrl = '/tasks';
   try {
     const baseOrigin = self.location ? self.location.origin : 'http://localhost:3000';
-    const parsed = new URL(rawTargetUrl, baseOrigin);
-    if (parsed.origin === baseOrigin) {
-      targetUrl = parsed.href;
+    if (typeof rawTargetUrl === 'string' && /^(javascript|data|vbscript):/i.test(rawTargetUrl.trim())) {
+      targetUrl = new URL('/tasks', baseOrigin).href;
     } else {
-      targetUrl = new URL('/?zone=tasks', baseOrigin).href;
+      const parsed = new URL(rawTargetUrl, baseOrigin);
+      if (parsed.origin === baseOrigin) {
+        targetUrl = parsed.href;
+      } else {
+        targetUrl = new URL('/tasks', baseOrigin).href;
+      }
     }
   } catch {
     const baseOrigin = self.location ? self.location.origin : 'http://localhost:3000';
-    targetUrl = new URL('/?zone=tasks', baseOrigin).href;
+    targetUrl = new URL('/tasks', baseOrigin).href;
   }
 
   const tasks = [];
@@ -390,7 +409,7 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
 
-      // 2. Same-origin window -> navigate and focus
+      // 2. Any same-origin window -> navigate and focus
       for (const client of clientList) {
         if ('focus' in client) {
           if ('navigate' in client) {

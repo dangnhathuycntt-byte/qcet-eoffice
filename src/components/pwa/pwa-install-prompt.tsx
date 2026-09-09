@@ -48,6 +48,9 @@ export function PWAInstallPrompt({
         setJustInstalled(true);
         onInstallSuccess?.();
         setTimeout(() => setJustInstalled(false), 3000);
+      } else if (result === "ios_guided") {
+        snoozeInstall();
+        onDismiss?.();
       }
     } finally {
       setIsProcessing(false);

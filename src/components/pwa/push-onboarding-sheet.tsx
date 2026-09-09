@@ -7,7 +7,6 @@ import {
   PlusSquare,
   Download,
   CheckCircle2,
-  ArrowDown,
   X,
   Smartphone,
   ShieldCheck,
@@ -16,6 +15,8 @@ import {
   Lock,
   Settings,
   RefreshCw,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   BottomSheet,
@@ -27,6 +28,15 @@ import {
 } from "@/components/ui/bottom-sheet";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { usePushNotification } from "@/hooks/use-push-notification";
+import { usePWAOnboardingCoordinator } from "@/lib/pwa/onboarding-coordinator";
+import {
+  PUSH_TOPICS,
+  loadLocalPushPreferences,
+  saveLocalPushPreferences,
+  syncServerPushPreferences,
+  type PushPreferences,
+  type PushTopic,
+} from "@/lib/pwa/push-preferences";
 import { cn } from "@/lib/utils";
 
 const SNOOZE_KEY = "qcet-push-onboarding-dismissed";
@@ -58,15 +68,15 @@ export function PermissionRecoveryGuide({
   return (
     <div className={cn("space-y-4", className)}>
       {/* Platform Switcher Tabs */}
-      <div className="flex p-1 bg-muted/60 rounded-xl border border-border/60">
+      <div className="flex p-1 bg-slate-100 rounded-xl border border-slate-200">
         <button
           type="button"
           onClick={() => setPlatform("chrome")}
           className={cn(
             "flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer text-center",
             platform === "chrome"
-              ? "bg-card text-foreground shadow-sm border border-border/40"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+              : "text-slate-600 hover:text-slate-900"
           )}
         >
           Google Chrome / Máy tính
@@ -77,8 +87,8 @@ export function PermissionRecoveryGuide({
           className={cn(
             "flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer text-center",
             platform === "safari"
-              ? "bg-card text-foreground shadow-sm border border-border/40"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+              : "text-slate-600 hover:text-slate-900"
           )}
         >
           Safari / iOS (iPhone & iPad)
@@ -86,131 +96,131 @@ export function PermissionRecoveryGuide({
       </div>
 
       {/* Info notice */}
-      <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs sm:text-sm text-amber-900 leading-relaxed">
+      <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs sm:text-sm text-amber-900 leading-relaxed">
         <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
         <span>
           {platform === "chrome"
             ? "Trình duyệt Chrome trên máy tính đã bị chặn gửi thông báo. Hãy làm theo 3 bước bên dưới để mở khóa:"
-            : "Thiết bị iPhone / iPad đã tắt thông báo cho QCET. Hãy làm theo 3 bước bên dưới trong phần Cài đặt của máy:"}
+            : "Thiết bị iPhone / iPad đã tắt thông báo cho QCET. Hãy làm theo 3 bước bên dưới trong phần Cài đặt (Settings) của máy:"}
         </span>
       </div>
 
       {/* 3 Steps */}
       {platform === "chrome" ? (
-        <div className="space-y-3 bg-muted/30 border border-border/50 rounded-2xl p-4 sm:p-5">
+        <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5">
           {/* Step 1 */}
           <div className="flex items-start gap-3.5">
-            <div className="size-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1e3a8a] font-bold text-sm flex items-center justify-center shrink-0 border border-blue-200">
               1
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Lock className="w-4 h-4 text-amber-600" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
+                <p className="text-sm sm:text-base font-semibold text-slate-900">
                   Nhấn vào biểu tượng Ổ khóa trên thanh địa chỉ
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 Trên thanh địa chỉ trình duyệt Chrome (bên trái đường dẫn URL https://...), nhấn vào biểu tượng Ổ khóa hoặc Cài đặt trang web.
               </p>
             </div>
           </div>
 
-          <div className="h-px bg-border/40 ml-11" />
+          <div className="h-px bg-slate-200 ml-11" />
 
           {/* Step 2 */}
           <div className="flex items-start gap-3.5">
-            <div className="size-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1e3a8a] font-bold text-sm flex items-center justify-center shrink-0 border border-blue-200">
               2
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-primary" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
+                <Settings className="w-4 h-4 text-[#1e3a8a]" />
+                <p className="text-sm sm:text-base font-semibold text-slate-900">
                   Chuyển &quot;Thông báo&quot; sang &quot;Cho phép&quot;
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 Tìm mục Thông báo (Notifications), chọn gạt công tắc hoặc đổi từ &quot;Chặn&quot; (Block) sang &quot;Cho phép&quot; (Allow).
               </p>
             </div>
           </div>
 
-          <div className="h-px bg-border/40 ml-11" />
+          <div className="h-px bg-slate-200 ml-11" />
 
           {/* Step 3 */}
           <div className="flex items-start gap-3.5">
-            <div className="size-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1e3a8a] font-bold text-sm flex items-center justify-center shrink-0 border border-blue-200">
               3
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4 text-emerald-600" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
+                <p className="text-sm sm:text-base font-semibold text-slate-900">
                   Tải lại trang để áp dụng
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 Nhấn nút &quot;Tải lại trang ngay&quot; bên dưới hoặc phím F5 (Ctrl+R / Cmd+R) để hoàn tất cập nhật quyền thông báo.
               </p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="space-y-3 bg-muted/30 border border-border/50 rounded-2xl p-4 sm:p-5">
+        <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5">
           {/* Step 1 */}
           <div className="flex items-start gap-3.5">
-            <div className="size-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1e3a8a] font-bold text-sm flex items-center justify-center shrink-0 border border-blue-200">
               1
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-primary" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
+                <Settings className="w-4 h-4 text-[#1e3a8a]" />
+                <p className="text-sm sm:text-base font-semibold text-slate-900">
                   Mở ứng dụng Cài đặt (Settings) trên iOS
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 Từ màn hình chính iPhone / iPad, mở Cài đặt (Settings), cuộn xuống tìm và chọn ứng dụng QCET E-Office (hoặc Safari).
               </p>
             </div>
           </div>
 
-          <div className="h-px bg-border/40 ml-11" />
+          <div className="h-px bg-slate-200 ml-11" />
 
           {/* Step 2 */}
           <div className="flex items-start gap-3.5">
-            <div className="size-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1e3a8a] font-bold text-sm flex items-center justify-center shrink-0 border border-blue-200">
               2
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Bell className="w-4 h-4 text-amber-600" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
-                  Bật mục &quot;Thông báo&quot; (Notifications)
+                <p className="text-sm sm:text-base font-semibold text-slate-900">
+                  Bật mục &quot;Thông báo&quot; (Notifications) sang &quot;Cho phép&quot;
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 Chọn mục Thông báo và bật công tắc &quot;Cho phép thông báo&quot; (Allow Notifications), kèm tùy chọn phát âm thanh chuông.
               </p>
             </div>
           </div>
 
-          <div className="h-px bg-border/40 ml-11" />
+          <div className="h-px bg-slate-200 ml-11" />
 
           {/* Step 3 */}
           <div className="flex items-start gap-3.5">
-            <div className="size-8 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0 border border-primary/20">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1e3a8a] font-bold text-sm flex items-center justify-center shrink-0 border border-blue-200">
               3
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4 text-emerald-600" />
-                <p className="text-sm sm:text-base font-semibold text-foreground">
+                <p className="text-sm sm:text-base font-semibold text-slate-900">
                   Quay lại ứng dụng QCET và tải lại
                 </p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                 Quay lại ứng dụng QCET E-Office từ màn hình chính hoặc bấm nút tải lại bên dưới để hoàn tất xác thực quyền.
               </p>
             </div>
@@ -223,7 +233,7 @@ export function PermissionRecoveryGuide({
         <button
           type="button"
           onClick={handleReload}
-          className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-base sm:text-lg shadow-lg hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-2.5"
+          className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-[#1e3a8a] text-white font-bold text-base sm:text-lg shadow-lg hover:bg-[#1e40af] transition-all cursor-pointer flex items-center justify-center gap-2.5"
         >
           <RefreshCw className="w-5 h-5" />
           <span>Tải lại trang ngay</span>
@@ -232,7 +242,7 @@ export function PermissionRecoveryGuide({
           <button
             type="button"
             onClick={onDismiss}
-            className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-border/70 hover:bg-muted text-muted-foreground font-medium text-base transition-colors cursor-pointer"
+            className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium text-base transition-colors cursor-pointer"
           >
             Để sau
           </button>
@@ -243,29 +253,43 @@ export function PermissionRecoveryGuide({
 }
 
 export interface PushOnboardingSheetProps {
+  userId?: string | null;
   manualOpen?: boolean;
+  forceOpen?: boolean;
   onManualOpenChange?: (open: boolean) => void;
+  onClose?: () => void;
+  onSuccess?: () => void;
   permissionOverride?: "default" | "granted" | "denied" | "unsupported";
 }
 
 export function PushOnboardingSheet({
+  userId,
   manualOpen,
+  forceOpen,
   onManualOpenChange,
+  onClose,
+  onSuccess,
   permissionOverride,
 }: PushOnboardingSheetProps) {
   const [internalOpen, setInternalOpen] = React.useState<boolean>(false);
+  const [showPreferences, setShowPreferences] = React.useState<boolean>(false);
+  const [preferences, setPreferences] = React.useState<PushPreferences>(() =>
+    loadLocalPushPreferences(userId)
+  );
+
   const { isInstallable, isStandalone, isIOS, installApp } = usePWAInstall();
   const {
     isSubscribed,
     isLoading,
-    isSupported,
     permission,
     error,
     subscribeToPush,
   } = usePushNotification();
 
-  const isControlled = manualOpen !== undefined;
-  const isOpen = isControlled ? manualOpen : internalOpen;
+  const coordinator = usePWAOnboardingCoordinator(userId);
+
+  const isControlled = manualOpen !== undefined || forceOpen !== undefined;
+  const isOpen = isControlled ? Boolean(manualOpen ?? forceOpen) : internalOpen;
 
   const effectivePermission = permissionOverride ?? permission;
   const isDenied = effectivePermission === "denied";
@@ -276,15 +300,24 @@ export function PushOnboardingSheet({
         setInternalOpen(nextOpen);
       }
       onManualOpenChange?.(nextOpen);
+      if (!nextOpen) {
+        onClose?.();
+      }
     },
-    [isControlled, onManualOpenChange]
+    [isControlled, onManualOpenChange, onClose]
   );
 
-  // Auto-display logic on mount: checks 7-day cooldown
+  // Auto-display logic on mount
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Check if previously dismissed within 7 days
+    // If coordinator handles push prompt, respect canShowPushPrompt
+    if (coordinator.canShowPushPrompt && !isControlled) {
+      setInternalOpen(true);
+      return;
+    }
+
+    // Cooldown check for fallback
     try {
       const dismissedRaw = localStorage.getItem(SNOOZE_KEY);
       if (dismissedRaw) {
@@ -297,20 +330,17 @@ export function PushOnboardingSheet({
       // Ignore localStorage access errors
     }
 
-    // Delay prompt slightly so layout settles
     const timer = setTimeout(() => {
-      // If already subscribed and running in standalone, no need to auto-prompt
       if (isSubscribed && isStandalone) {
         return;
       }
-      // If not dismissed and needs install or push subscription
       if (!isSubscribed || isInstallable || (isIOS && !isStandalone)) {
         setInternalOpen(true);
       }
     }, 1200);
 
     return () => clearTimeout(timer);
-  }, [isSubscribed, isStandalone, isInstallable, isIOS]);
+  }, [isSubscribed, isStandalone, isInstallable, isIOS, coordinator.canShowPushPrompt, isControlled]);
 
   // Listen for manual trigger via custom event
   React.useEffect(() => {
@@ -330,8 +360,9 @@ export function PushOnboardingSheet({
     try {
       localStorage.setItem(SNOOZE_KEY, Date.now().toString());
     } catch {
-      // Ignore localStorage errors
+      // Ignore
     }
+    coordinator.snoozePush(14);
     handleOpenChange(false);
   };
 
@@ -342,20 +373,44 @@ export function PushOnboardingSheet({
     }
   };
 
+  const handleToggleTopic = (topicId: PushTopic) => {
+    setPreferences((prev) => {
+      let key: keyof PushPreferences;
+      switch (topicId) {
+        case "task_assigned":
+          key = "taskAssigned";
+          break;
+        case "task_review":
+          key = "taskReview";
+          break;
+        case "deadline_reminder":
+          key = "deadlineReminder";
+          break;
+        case "document_directive":
+          key = "documentDirective";
+          break;
+        default:
+          return prev;
+      }
+      const updated = { ...prev, [key]: !prev[key] };
+      saveLocalPushPreferences(updated, userId);
+      return updated;
+    });
+  };
+
   const handleSubscribeClick = async () => {
+    saveLocalPushPreferences(preferences, userId);
+    await syncServerPushPreferences(preferences);
+
     const success = await subscribeToPush();
     if (success) {
+      onSuccess?.();
       setTimeout(() => {
         handleOpenChange(false);
       }, 1200);
     }
   };
 
-  // Determine which mode to display:
-  // Mode A: iOS Safari (when isIOS and not isStandalone)
-  // Mode B: Android / Chromium Desktop (when isInstallable and not isStandalone)
-  // Mode C: Standalone PWA or already installed, but not subscribed to push
-  // Mode D: Already subscribed to push
   const isModeIOS = isIOS && !isStandalone;
   const isModeAndroidInstall = isInstallable && !isStandalone && !isIOS;
   const isModePushPrompt = !isSubscribed;
@@ -364,20 +419,20 @@ export function PushOnboardingSheet({
   return (
     <BottomSheet open={isOpen} onOpenChange={handleOpenChange}>
       <BottomSheetContent className="max-h-[92vh] overflow-y-auto px-4 pb-8 sm:px-6">
-        <BottomSheetHeader className="border-b border-border/40 pb-3 pt-2">
+        <BottomSheetHeader className="border-b border-slate-200 pb-3 pt-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#1e3a8a] border border-blue-200 flex items-center justify-center shrink-0">
                 {isModeIOS ? (
-                  <Smartphone className="size-6 text-primary" />
+                  <Smartphone className="w-6 h-6 text-[#1e3a8a]" />
                 ) : isModeAndroidInstall ? (
-                  <Download className="size-6 text-primary" />
+                  <Download className="w-6 h-6 text-[#1e3a8a]" />
                 ) : (
-                  <Bell className="size-6 text-primary" />
+                  <Bell className="w-6 h-6 text-[#1e3a8a]" />
                 )}
               </div>
               <div>
-                <BottomSheetTitle className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                <BottomSheetTitle className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                   {isDenied
                     ? "Hướng dẫn mở lại quyền thông báo"
                     : isModeIOS
@@ -388,7 +443,7 @@ export function PushOnboardingSheet({
                     ? "Bật chuông báo chỉ đạo & việc khẩn"
                     : "Thông báo đã sẵn sàng"}
                 </BottomSheetTitle>
-                <BottomSheetDescription className="text-sm sm:text-base text-muted-foreground mt-0.5">
+                <BottomSheetDescription className="text-sm sm:text-base text-slate-500 mt-0.5">
                   {isDenied
                     ? "Quyền thông báo đang bị chặn hoặc bị khóa bởi trình duyệt"
                     : "Hệ thống điều hành tác nghiệp Trường CĐ Kỹ thuật Công nghệ Quy Nhơn (QCET)"}
@@ -398,10 +453,10 @@ export function PushOnboardingSheet({
 
             <BottomSheetClose
               onClick={handleDismiss}
-              className="flex items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-xl hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+              className="flex items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
               aria-label="Đóng"
             >
-              <X size={20} />
+              <X className="w-5 h-5" />
             </BottomSheetClose>
           </div>
         </BottomSheetHeader>
@@ -409,8 +464,8 @@ export function PushOnboardingSheet({
         {/* Content Body */}
         <div className="py-5 space-y-5">
           {error && (
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-sm font-medium">
-              <AlertCircle size={20} className="shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-sm font-medium">
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
@@ -431,89 +486,74 @@ export function PushOnboardingSheet({
           {/* Mode A: iOS Safari Instructions */}
           {!isDenied && isModeIOS && (
             <div className="space-y-4">
-              <p className="text-base sm:text-lg text-foreground font-medium leading-relaxed">
+              <p className="text-base sm:text-lg text-slate-900 font-medium leading-relaxed">
                 Để nhận thông báo tức thì và thao tác nhanh chóng như ứng dụng cài đặt trên máy iPhone / iPad, vui lòng làm theo 3 bước sau:
               </p>
 
-              <div className="space-y-3 bg-muted/30 border border-border/50 rounded-2xl p-4 sm:p-5">
+              <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5">
                 {/* Step 1 */}
                 <div className="flex items-start gap-4">
-                  <div className="size-9 rounded-xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#1e3a8a] text-white font-bold text-base flex items-center justify-center shrink-0">
                     1
                   </div>
                   <div className="space-y-1">
-                    <p className="text-base sm:text-lg font-semibold text-foreground">
+                    <p className="text-base sm:text-lg font-semibold text-slate-900">
                       Nhấn nút Chia sẻ
                     </p>
-                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                    <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
                       Nhấn nút Chia sẻ (biểu tượng hình vuông có mũi tên trỏ lên) ở thanh điều khiển Safari dưới cùng của màn hình.
                     </p>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background border border-border/60 text-xs font-semibold text-foreground mt-1">
-                      <Share size={15} className="text-primary" />
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-900 mt-1">
+                      <Share className="w-4 h-4 text-[#1e3a8a]" />
                       <span>Nút Chia sẻ Safari</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="h-px bg-border/40 ml-13" />
+                <div className="h-px bg-slate-200 ml-13" />
 
                 {/* Step 2 */}
                 <div className="flex items-start gap-4">
-                  <div className="size-9 rounded-xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#1e3a8a] text-white font-bold text-base flex items-center justify-center shrink-0">
                     2
                   </div>
                   <div className="space-y-1">
-                    <p className="text-base sm:text-lg font-semibold text-foreground">
+                    <p className="text-base sm:text-lg font-semibold text-slate-900">
                       Chọn &quot;Thêm vào Màn hình chính&quot;
                     </p>
-                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                    <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
                       Cuộn xuống trong danh sách tùy chọn và chọn &quot;Thêm vào Màn hình chính&quot; (Add to Home Screen).
                     </p>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background border border-border/60 text-xs font-semibold text-foreground mt-1">
-                      <PlusSquare size={15} className="text-primary" />
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-900 mt-1">
+                      <PlusSquare className="w-4 h-4 text-[#1e3a8a]" />
                       <span>Thêm vào Màn hình chính</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="h-px bg-border/40 ml-13" />
+                <div className="h-px bg-slate-200 ml-13" />
 
                 {/* Step 3 */}
                 <div className="flex items-start gap-4">
-                  <div className="size-9 rounded-xl bg-primary text-primary-foreground font-bold text-base flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-[#1e3a8a] text-white font-bold text-base flex items-center justify-center shrink-0">
                     3
                   </div>
                   <div className="space-y-1">
-                    <p className="text-base sm:text-lg font-semibold text-foreground">
+                    <p className="text-base sm:text-lg font-semibold text-slate-900">
                       Nhấn &quot;Thêm&quot; để hoàn tất
                     </p>
-                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                      Nhấn &quot;Thêm&quot; ở góc trên bên phải để hoàn tất cài đặt ứng dụng QCET ra ngoài màn hình chính.
+                    <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                      Nhấn nút &quot;Thêm&quot; (Add) ở góc trên bên phải màn hình để đưa biểu tượng QCET E-Office ra màn hình chính, sau đó mở ứng dụng từ màn hình chính để kích hoạt thông báo.
                     </p>
                   </div>
                 </div>
-              </div>
-
-              {/* Visual Pointer pointing down towards Safari bottom bar */}
-              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-primary/10 text-primary text-sm font-semibold animate-pulse">
-                <ArrowDown size={18} />
-                <span>Nút Chia sẻ nằm ở thanh công cụ phía dưới cùng màn hình điện thoại</span>
-                <ArrowDown size={18} />
               </div>
 
               <div className="pt-2 flex flex-col gap-3">
                 <button
                   type="button"
                   onClick={handleDismiss}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-base sm:text-lg shadow-md hover:bg-primary/90 transition-colors cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <CheckCircle2 size={20} />
-                  <span>Tôi đã hiểu cách cài đặt</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDismiss}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-border/70 hover:bg-muted text-muted-foreground font-medium text-base transition-colors cursor-pointer"
+                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-base transition-colors cursor-pointer"
                 >
                   Để sau
                 </button>
@@ -522,22 +562,22 @@ export function PushOnboardingSheet({
           )}
 
           {/* Mode B: Android / Chromium Desktop 1-Click Install */}
-          {isModeAndroidInstall && (
+          {!isDenied && isModeAndroidInstall && (
             <div className="space-y-4">
-              <p className="text-base sm:text-lg text-foreground font-normal leading-relaxed">
+              <p className="text-base sm:text-lg text-slate-900 font-normal leading-relaxed">
                 Truy cập nhanh như ứng dụng di động, không cần mở trình duyệt và không tốn dung lượng máy.
               </p>
 
-              <div className="p-4 rounded-2xl bg-muted/40 border border-border/50 space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="flex items-center gap-3">
-                  <ShieldCheck className="size-6 text-primary shrink-0" />
-                  <span className="text-sm sm:text-base text-foreground font-medium">
+                  <ShieldCheck className="w-6 h-6 text-[#1e3a8a] shrink-0" />
+                  <span className="text-sm sm:text-base text-slate-900 font-medium">
                     Nhẹ, an toàn, không tốn bộ nhớ thiết bị
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Bell className="size-6 text-primary shrink-0" />
-                  <span className="text-sm sm:text-base text-foreground font-medium">
+                  <Bell className="w-6 h-6 text-[#1e3a8a] shrink-0" />
+                  <span className="text-sm sm:text-base text-slate-900 font-medium">
                     Nhận chuông báo việc khẩn và chỉ đạo ngay cả khi tắt ứng dụng
                   </span>
                 </div>
@@ -547,15 +587,15 @@ export function PushOnboardingSheet({
                 <button
                   type="button"
                   onClick={handleInstallClick}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-base sm:text-lg shadow-lg hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-2.5"
+                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-[#1e3a8a] text-white font-bold text-base sm:text-lg shadow-lg hover:bg-[#1e40af] transition-all cursor-pointer flex items-center justify-center gap-2.5"
                 >
-                  <Download size={22} />
+                  <Download className="w-5 h-5" />
                   <span>CÀI ĐẶT 1-CHẠM</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleDismiss}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-border/70 hover:bg-muted text-muted-foreground font-medium text-base transition-colors cursor-pointer"
+                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-base transition-colors cursor-pointer"
                 >
                   Để sau
                 </button>
@@ -563,26 +603,89 @@ export function PushOnboardingSheet({
             </div>
           )}
 
-          {/* Mode C: Push Prompt (Standalone or Installed, or Not Subscribed) */}
-          {!isModeIOS && !isModeAndroidInstall && isModePushPrompt && (
+          {/* Mode C: Push Prompt */}
+          {!isDenied && !isModeIOS && !isModeAndroidInstall && isModePushPrompt && (
             <div className="space-y-4">
-              <p className="text-base sm:text-lg text-foreground font-normal leading-relaxed">
+              <p className="text-base sm:text-lg text-slate-900 font-normal leading-relaxed">
                 Nhận thông báo tức thì khi có việc khẩn, văn bản hỏa tốc và ý kiến chỉ đạo từ Ban Giám Hiệu ngay cả khi không mở ứng dụng.
               </p>
 
-              <div className="p-4 rounded-2xl bg-muted/40 border border-border/50 space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="flex items-center gap-3">
-                  <Bell className="size-6 text-primary shrink-0" />
-                  <span className="text-sm sm:text-base text-foreground font-medium">
+                  <Bell className="w-6 h-6 text-[#1e3a8a] shrink-0" />
+                  <span className="text-sm sm:text-base text-slate-900 font-medium">
                     Thông báo âm thanh rõ ràng cho nhiệm vụ khẩn và hạn chót
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <ShieldCheck className="size-6 text-primary shrink-0" />
-                  <span className="text-sm sm:text-base text-foreground font-medium">
+                  <ShieldCheck className="w-6 h-6 text-[#1e3a8a] shrink-0" />
+                  <span className="text-sm sm:text-base text-slate-900 font-medium">
                     Chỉ gửi nội dung liên quan công việc QCET, không làm phiền ngoài giờ
                   </span>
                 </div>
+              </div>
+
+              {/* Granular topic selection */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowPreferences((v) => !v)}
+                  className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left transition-colors min-h-[44px]"
+                >
+                  <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-800">
+                    <ShieldCheck className="w-4 h-4 text-slate-500" />
+                    <span>Tùy chỉnh các chủ đề nhận thông báo</span>
+                  </div>
+                  {showPreferences ? (
+                    <ChevronUp className="w-4 h-4 text-slate-500" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-500" />
+                  )}
+                </button>
+
+                {showPreferences && (
+                  <div className="p-4 bg-white divide-y divide-slate-100 space-y-3">
+                    {PUSH_TOPICS.map((topic) => {
+                      let isChecked = true;
+                      switch (topic.id) {
+                        case "task_assigned":
+                          isChecked = preferences.taskAssigned;
+                          break;
+                        case "task_review":
+                          isChecked = preferences.taskReview;
+                          break;
+                        case "deadline_reminder":
+                          isChecked = preferences.deadlineReminder;
+                          break;
+                        case "document_directive":
+                          isChecked = preferences.documentDirective;
+                          break;
+                      }
+
+                      return (
+                        <label
+                          key={topic.id}
+                          className="pt-3 first:pt-0 flex items-start gap-3 cursor-pointer group"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleTopic(topic.id)}
+                            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#1e3a8a] focus:ring-[#1e3a8a] focus:ring-offset-0"
+                          />
+                          <div className="flex-1">
+                            <div className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-[#1e3a8a] transition-colors">
+                              {topic.title}
+                            </div>
+                            <div className="text-[11px] sm:text-xs text-slate-500 leading-normal mt-0.5">
+                              {topic.description}
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="pt-2 flex flex-col gap-3">
@@ -590,19 +693,19 @@ export function PushOnboardingSheet({
                   type="button"
                   onClick={handleSubscribeClick}
                   disabled={isLoading}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-base sm:text-lg shadow-lg hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50"
+                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-[#1e3a8a] text-white font-bold text-base sm:text-lg shadow-lg hover:bg-[#1e40af] transition-all cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50"
                 >
                   {isLoading ? (
-                    <Loader2 size={22} className="animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <Bell size={22} />
+                    <Bell className="w-5 h-5" />
                   )}
                   <span>BẬT THÔNG BÁO NGAY</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleDismiss}
-                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-border/70 hover:bg-muted text-muted-foreground font-medium text-base transition-colors cursor-pointer"
+                  className="w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-base transition-colors cursor-pointer"
                 >
                   Để sau
                 </button>
@@ -613,21 +716,21 @@ export function PushOnboardingSheet({
           {/* Mode D: Already Subscribed */}
           {!isDenied && !isModeIOS && !isModeAndroidInstall && isModeSubscribed && (
             <div className="space-y-4 text-center py-4">
-              <div className="size-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
-                <CheckCircle2 size={36} />
+              <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-9 h-9 text-emerald-600" />
               </div>
               <div className="space-y-1">
-                <p className="text-lg font-bold text-foreground">
+                <p className="text-lg font-bold text-slate-900">
                   Thông báo đã kích hoạt thành công
                 </p>
-                <p className="text-base text-muted-foreground">
+                <p className="text-base text-slate-600">
                   Bạn sẽ nhận được chuông thông báo mỗi khi có chỉ đạo mới hoặc nhiệm vụ được phân công.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => handleOpenChange(false)}
-                className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-base shadow-md hover:bg-primary/90 transition-colors cursor-pointer mt-2"
+                className="w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-[#1e3a8a] text-white font-semibold text-base shadow-md hover:bg-[#1e40af] transition-colors cursor-pointer mt-2"
               >
                 Hoàn tất
               </button>
