@@ -17,6 +17,13 @@ import {
 import { safeAfter, dispatchTaskAssignedPush } from '@/lib/push-dispatch';
 import { generateTaskCodeAtomic } from '@/lib/task-code-generator';
 import {
+  CreateTaskInputSchema,
+  UpdateTaskInputSchema,
+  SubmitDeliverableInputSchema,
+  ReviewDeliverableInputSchema,
+  ApproveTaskInputSchema,
+} from '@/contracts/tasks';
+import {
   canUserCreateTask,
   canUserUpdateTask,
   canUserDeleteTask,
@@ -89,6 +96,20 @@ export class TaskCommandService {
     input: CreateTaskInput
   ) {
     const user = resolveUser(ctx);
+
+    const validationResult = CreateTaskInputSchema.safeParse(input);
+    if (!validationResult.success) {
+      const fieldErrors: Record<string, string[]> = {};
+      for (const issue of validationResult.error.issues) {
+        const key = issue.path.join('.') || '_root';
+        if (!fieldErrors[key]) fieldErrors[key] = [];
+        fieldErrors[key].push(issue.message);
+      }
+      if (!input?.title || !input?.dueDate || (!input?.departmentId && !input?.parentTaskId)) {
+        throw new ValidationError('Thiếu thông tin bắt buộc (Tiêu đề, Hạn chót, Đơn vị)', fieldErrors);
+      }
+      throw new ValidationError('Dữ liệu tạo nhiệm vụ không hợp lệ', fieldErrors);
+    }
 
     const {
       title,
@@ -282,6 +303,17 @@ export class TaskCommandService {
     input: UpdateTaskInput
   ) {
     const user = resolveUser(ctx);
+
+    const validationResult = UpdateTaskInputSchema.safeParse(input);
+    if (!validationResult.success) {
+      const fieldErrors: Record<string, string[]> = {};
+      for (const issue of validationResult.error.issues) {
+        const key = issue.path.join('.') || '_root';
+        if (!fieldErrors[key]) fieldErrors[key] = [];
+        fieldErrors[key].push(issue.message);
+      }
+      throw new ValidationError('Dữ liệu cập nhật không hợp lệ', fieldErrors);
+    }
 
     const existing = await prisma.task.findUnique({
       where: { id: taskId },
@@ -627,11 +659,21 @@ export class TaskCommandService {
       );
     }
 
-    const { title, fileUrl, fileType, fileSize } = input;
-
-    if (!title || !fileUrl) {
-      throw new ValidationError('Tiêu đề và đường dẫn file minh chứng là bắt buộc');
+    const validationResult = SubmitDeliverableInputSchema.safeParse(input);
+    if (!validationResult.success) {
+      const fieldErrors: Record<string, string[]> = {};
+      for (const issue of validationResult.error.issues) {
+        const key = issue.path.join('.') || '_root';
+        if (!fieldErrors[key]) fieldErrors[key] = [];
+        fieldErrors[key].push(issue.message);
+      }
+      if (!input?.title || !input?.fileUrl) {
+        throw new ValidationError('Tiêu đề và đường dẫn file minh chứng là bắt buộc', fieldErrors);
+      }
+      throw new ValidationError('Dữ liệu nộp minh chứng không hợp lệ', fieldErrors);
     }
+
+    const { title, fileUrl, fileType, fileSize } = input;
 
     const uploadedById = user.id;
 
@@ -674,11 +716,22 @@ export class TaskCommandService {
     input: ReviewDeliverableInput
   ) {
     const user = resolveUser(ctx);
-    const { deliverableId, reviewStatus, reviewNote } = input;
 
-    if (!deliverableId || !reviewStatus) {
-      throw new ValidationError('deliverableId và reviewStatus là bắt buộc');
+    const validationResult = ReviewDeliverableInputSchema.safeParse(input);
+    if (!validationResult.success) {
+      const fieldErrors: Record<string, string[]> = {};
+      for (const issue of validationResult.error.issues) {
+        const key = issue.path.join('.') || '_root';
+        if (!fieldErrors[key]) fieldErrors[key] = [];
+        fieldErrors[key].push(issue.message);
+      }
+      if (!input?.deliverableId || !input?.reviewStatus) {
+        throw new ValidationError('deliverableId và reviewStatus là bắt buộc', fieldErrors);
+      }
+      throw new ValidationError('Dữ liệu duyệt minh chứng không hợp lệ', fieldErrors);
     }
+
+    const { deliverableId, reviewStatus, reviewNote } = input;
 
     const deliverable = await prisma.taskDeliverable.findUnique({
       where: { id: deliverableId },

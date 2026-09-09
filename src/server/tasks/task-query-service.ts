@@ -3,6 +3,9 @@ import { mapPrismaTaskToSchoolTask, type SchoolTask, formatLocalDate } from '@/l
 import { TaskScope, TaskStatus, Prisma } from '@prisma/client';
 import type { ApiRequestContext, AuthenticatedUser } from '@/server/api/request-context';
 import { getSystemReferenceDate, isTaskPastDue } from '@/lib/academic-calendar';
+import { calculateTaskMetrics } from '@/lib/task-metrics';
+import { toTaskDomainModel, toTaskDTO } from '@/domain/tasks';
+import { TaskQueryParamsSchema } from '@/contracts/tasks';
 
 export interface TaskQueryFilters {
   academicMonth?: number | string;
@@ -231,7 +234,13 @@ export class TaskQueryService {
    */
   async getTaskById(
     taskId: string
-  ): Promise<{ task: SchoolTask; data: SchoolTask; raw: any } | null> {
+  ): Promise<{
+    task: SchoolTask;
+    data: SchoolTask;
+    raw: any;
+    domain?: any;
+    dto?: any;
+  } | null> {
     const rawTask = await prisma.task.findUnique({
       where: { id: taskId },
       include: {
@@ -274,10 +283,14 @@ export class TaskQueryService {
     if (!rawTask) return null;
 
     const mapped = mapPrismaTaskToSchoolTask(rawTask);
+    const domain = toTaskDomainModel(rawTask);
+    const dto = toTaskDTO(domain);
     return {
       task: mapped,
       data: mapped,
       raw: rawTask,
+      domain,
+      dto,
     };
   }
 
@@ -338,34 +351,14 @@ export class TaskQueryService {
         id: true,
         status: true,
         dueDate: true,
+        parentTaskId: true,
       },
     });
 
-    let total = tasks.length;
-    let completed = 0;
-    let inProgress = 0;
-    let waitingApproval = 0;
-    let overdue = 0;
-
-    for (const t of tasks) {
-      if (t.status === TaskStatus.COMPLETED) {
-        completed++;
-      } else if (t.status === TaskStatus.WAITING_APPROVAL) {
-        waitingApproval++;
-      } else if (t.status === TaskStatus.IN_PROGRESS || t.status === TaskStatus.NOT_STARTED) {
-        inProgress++;
-      }
-
-      // Overdue check: task status is OVERDUE OR (not completed and past due in ICT local time)
-      if (
-        t.status === TaskStatus.OVERDUE ||
-        (t.status !== TaskStatus.COMPLETED &&
-          t.status !== TaskStatus.CANCELLED &&
-          formatLocalDate(t.dueDate) < referenceDate)
-      ) {
-        overdue++;
-      }
-    }
+    const metrics = calculateTaskMetrics(tasks, {
+      referenceDate,
+      onlyParentTasks: false,
+    });
 
     const cancelledCount = await prisma.task.count({
       where: {
@@ -374,16 +367,14 @@ export class TaskQueryService {
       },
     });
 
-    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-
     return {
-      total,
-      completed,
-      inProgress,
-      waitingApproval,
-      overdue,
+      total: metrics.total,
+      completed: metrics.completed,
+      inProgress: metrics.inProgress,
+      waitingApproval: metrics.waitingApproval,
+      overdue: metrics.overdue,
       cancelled: cancelledCount,
-      completionRate,
+      completionRate: metrics.completionRate,
       referenceDate,
     };
   }
