@@ -308,9 +308,9 @@ export function TaskTableToolbar({
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       {/* ========================================================================= */}
-      {/* 1. GIAO DIỆN DI ĐỘNG (< 640px / sm:hidden): Streamlined Mobile Task Bar  */}
+      {/* 1. GIAO DIỆN DI ĐỘNG (< 768px / md:hidden): Streamlined Mobile Task Bar  */}
       {/* ========================================================================= */}
-      <div className="sm:hidden flex flex-col gap-2.5">
+      <div className="md:hidden flex flex-col gap-2.5">
         {/* Hàng 1: Ô tìm kiếm di động tối ưu cảm ứng (min-h-[44px]) */}
         <div className="relative w-full">
           {loading ? (
@@ -331,14 +331,14 @@ export function TaskTableToolbar({
             placeholder="Tìm theo tên, mã nhiệm vụ..."
             disabled={loading}
             aria-label="Tìm kiếm nhiệm vụ"
-            className="w-full min-h-[44px] h-11 pl-9.5 pr-10 rounded-xl border border-border/80 bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all disabled:opacity-60 shadow-2xs"
+            className="w-full min-h-[44px] h-11 pl-9.5 pr-12 rounded-xl border border-border/80 bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all disabled:opacity-60 shadow-2xs"
           />
           {localQuery && (
             <button
               type="button"
               onClick={handleClearSearch}
               aria-label="Xóa từ khóa tìm kiếm"
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex size-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+              className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex size-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
             >
               <X className="size-4" strokeWidth={1.5} />
             </button>
@@ -698,9 +698,9 @@ export function TaskTableToolbar({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. GIAO DIỆN DESKTOP (>= 640px / hidden sm:flex): Rich Desktop Toolbar     */}
+      {/* 2. GIAO DIỆN DESKTOP (>= 768px / hidden md:flex): Rich Desktop Toolbar     */}
       {/* ========================================================================= */}
-      <div className="hidden sm:flex flex-wrap items-center justify-between gap-2.5">
+      <div className="hidden md:flex flex-wrap items-center justify-between gap-2.5">
         {/* Nhóm bên trái: Tìm kiếm + Lọc Đơn vị + Lọc DACUM */}
         <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0">
           {/* Ô tìm kiếm Debounced */}

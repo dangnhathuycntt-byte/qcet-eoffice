@@ -36,6 +36,20 @@ describe("Task 8: Mobile-First Composition, Task Cards & 44px Touch Targets", ()
       );
     });
 
+    it("ensures drawer close button has >= 44px touch targets (min-h-[44px] min-w-[44px])", () => {
+      const content = fs.readFileSync(bottomNavPath, "utf8");
+      assert.ok(
+        content.includes("min-h-[44px] min-w-[44px]"),
+        "Drawer close button must have >= 44px touch targets"
+      );
+    });
+
+    it("ensures bottom nav respects typography floor (>= 12px, zero text-[11px])", () => {
+      const content = fs.readFileSync(bottomNavPath, "utf8");
+      const smallText = content.match(/text-\[1[01]px\]/g);
+      assert.strictEqual(smallText, null, "Must not contain text smaller than 12px (rule 10-ui.md invariant 6)");
+    });
+
     it("ensures bottom nav opens a drawer/sheet for 'Thêm' (More) containing sub-links", () => {
       const content = fs.readFileSync(bottomNavPath, "utf8");
       assert.ok(
@@ -83,6 +97,14 @@ describe("Task 8: Mobile-First Composition, Task Cards & 44px Touch Targets", ()
       );
     });
 
+    it("verifies MobileTaskCard uses canonical getDaysRemaining date helper", () => {
+      const content = fs.readFileSync(mobileCardPath, "utf8");
+      assert.ok(
+        content.includes("getDaysRemaining"),
+        "MobileTaskCard must use canonical getDaysRemaining helper"
+      );
+    });
+
     it("verifies MobileTaskCard adheres to light-only anti-slop rules", () => {
       const content = fs.readFileSync(mobileCardPath, "utf8");
       const darkMatches = content.match(/dark:/g);
@@ -96,20 +118,28 @@ describe("Task 8: Mobile-First Composition, Task Cards & 44px Touch Targets", ()
   describe("3. Responsive Layout in ModularCascadingTaskTable", () => {
     const tablePath = path.join(SRC_DIR, "components", "tasks", "table", "modular-cascading-task-table.tsx");
 
-    it("ensures table adapts between desktop table and mobile cards", () => {
+    it("ensures table adapts between desktop table and mobile cards using md breakpoint (< 768px)", () => {
       const content = fs.readFileSync(tablePath, "utf8");
       assert.ok(
         content.includes("MobileTaskCard") || content.includes("mobile-task-card"),
         "ModularCascadingTaskTable must import and use MobileTaskCard"
       );
       assert.ok(
-        content.includes("hidden md:block") || content.includes("hidden sm:block") || content.includes("md:hidden") || content.includes("sm:hidden"),
-        "Must toggle desktop table vs mobile cards responsively"
+        content.includes("hidden md:block"),
+        "Must use hidden md:block for desktop table"
+      );
+      assert.ok(
+        content.includes("md:hidden"),
+        "Must use md:hidden for mobile cards"
+      );
+      assert.ok(
+        !content.includes("hidden sm:block"),
+        "Must not use sm breakpoint for desktop table"
       );
     });
   });
 
-  describe("4. Mobile Filter Bottom Sheet in Task Toolbar", () => {
+  describe("4. Mobile Filter Bottom Sheet & Search Target in Task Toolbar", () => {
     const toolbarPath = path.join(SRC_DIR, "components", "dashboard", "unified-task-toolbar.tsx");
     const tableToolbarPath = path.join(SRC_DIR, "components", "tasks", "table", "components", "task-table-toolbar.tsx");
 
@@ -125,7 +155,7 @@ describe("Task 8: Mobile-First Composition, Task Cards & 44px Touch Targets", ()
       );
     });
 
-    it("ensures task-table-toolbar.tsx provides mobile filter bottom sheet trigger", () => {
+    it("ensures task-table-toolbar.tsx provides mobile filter bottom sheet trigger and md breakpoint", () => {
       const content = fs.readFileSync(tableToolbarPath, "utf8");
       assert.ok(
         (content.includes("isMobileFilterOpen") || content.includes("isFilterOpen")) && content.includes("role=\"dialog\""),
@@ -135,16 +165,36 @@ describe("Task 8: Mobile-First Composition, Task Cards & 44px Touch Targets", ()
         content.includes("min-h-[44px]"),
         "Must provide >= 44px touch targets on mobile filter triggers"
       );
+      assert.ok(
+        content.includes("md:hidden"),
+        "Toolbar mobile bar must use md:hidden"
+      );
+      assert.ok(
+        content.includes("hidden md:flex"),
+        "Toolbar desktop bar must use hidden md:flex"
+      );
+    });
+
+    it("ensures search clear button in task-table-toolbar.tsx has >= 44px touch target", () => {
+      const content = fs.readFileSync(tableToolbarPath, "utf8");
+      assert.ok(
+        content.includes("min-h-[44px] min-w-[44px]"),
+        "Search clear button must meet >= 44px touch target"
+      );
     });
   });
 
   describe("5. App Layout Integration", () => {
     const layoutPath = path.join(SRC_DIR, "components", "layout", "app-shell.tsx");
 
-    it("ensures AppShell renders MobileBottomNav for mobile viewports", () => {
+    it("ensures AppShell renders MobileBottomNav from navigation component for mobile viewports", () => {
       const content = fs.readFileSync(layoutPath, "utf8");
       assert.ok(
-        content.includes("MobileBottomNav") || content.includes("mobile-bottom-nav"),
+        content.includes("@/components/navigation/mobile-bottom-nav"),
+        "AppShell must import MobileBottomNav from @/components/navigation/mobile-bottom-nav"
+      );
+      assert.ok(
+        content.includes("<MobileBottomNav"),
         "AppShell must render MobileBottomNav"
       );
       assert.ok(

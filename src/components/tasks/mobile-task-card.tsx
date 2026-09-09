@@ -6,7 +6,10 @@ import { cn } from "@/lib/utils";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { FlattenedPersonalTask } from "./table/types";
 import { getStatusBadgeConfig } from "./table/constants";
-import { getSystemReferenceDate } from "./table/utils/table-date-helpers";
+import {
+  getSystemReferenceDate,
+  getDaysRemaining,
+} from "./table/utils/table-date-helpers";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 
 export interface MobileTaskCardProps {
@@ -78,44 +81,36 @@ export function getMobileDueBadge(
     };
   }
 
-  try {
-    const refDateObj =
-      typeof referenceDateInput === "string"
-        ? new Date(referenceDateInput.split("T")[0] + "T00:00:00")
-        : referenceDateInput;
-    const dueObj = new Date(dueDate.split("T")[0] + "T00:00:00");
-    const diffDays = Math.ceil(
-      (dueObj.getTime() - refDateObj.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    if (diffDays < 0) {
-      return {
-        label: `Quá hạn ${Math.abs(diffDays)} ngày`,
-        className: "border-rose-500/20 bg-rose-500/10 text-rose-700 font-semibold",
-      };
-    }
-    if (diffDays === 0) {
-      return {
-        label: "Hạn hôm nay",
-        className: "border-amber-500/20 bg-amber-500/10 text-amber-700 font-semibold",
-      };
-    }
-    if (diffDays <= 3) {
-      return {
-        label: `Còn ${diffDays} ngày`,
-        className: "border-amber-500/20 bg-amber-500/10 text-amber-700 font-medium",
-      };
-    }
-    return {
-      label: `Còn ${diffDays} ngày`,
-      className: "border-blue-500/20 bg-blue-500/10 text-blue-700 font-medium",
-    };
-  } catch {
+  const diffDays = getDaysRemaining(dueDate, referenceDateInput);
+  if (diffDays === null) {
     return {
       label: "Không xác định",
       className: "border-slate-200 bg-slate-50 text-slate-600",
     };
   }
+
+  if (diffDays < 0) {
+    return {
+      label: `Quá hạn ${Math.abs(diffDays)} ngày`,
+      className: "border-rose-500/20 bg-rose-500/10 text-rose-700 font-semibold",
+    };
+  }
+  if (diffDays === 0) {
+    return {
+      label: "Hạn hôm nay",
+      className: "border-amber-500/20 bg-amber-500/10 text-amber-700 font-semibold",
+    };
+  }
+  if (diffDays <= 3) {
+    return {
+      label: `Còn ${diffDays} ngày`,
+      className: "border-amber-500/20 bg-amber-500/10 text-amber-700 font-medium",
+    };
+  }
+  return {
+    label: `Còn ${diffDays} ngày`,
+    className: "border-blue-500/20 bg-blue-500/10 text-blue-700 font-medium",
+  };
 }
 
 /**

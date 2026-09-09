@@ -240,7 +240,7 @@ export function MobileBottomNav({
                 {numBadge > 0 && (
                   <span
                     aria-label={`${numBadge} mục chưa đọc`}
-                    className="absolute -top-1 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[11px] font-bold text-white font-mono tabular-nums leading-none border border-card shadow-2xs"
+                    className="absolute -top-1 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-xs font-bold text-white font-mono tabular-nums leading-none border border-card shadow-2xs"
                   >
                     {numBadge > 99 ? "99+" : numBadge}
                   </span>
@@ -321,7 +321,7 @@ export function MobileBottomNav({
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
-                className="flex size-9 items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer"
+                className="flex size-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer"
                 aria-label="Đóng bảng tiện ích"
               >
                 <X className="size-4.5" strokeWidth={1.5} />
@@ -342,7 +342,7 @@ export function MobileBottomNav({
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-semibold group-hover:text-primary transition-colors truncate">Lịch công tác</p>
-                  <p className="text-[11px] text-muted-foreground truncate">Lịch tuần &amp; phòng họp</p>
+                  <p className="text-xs text-muted-foreground truncate">Lịch tuần &amp; phòng họp</p>
                 </div>
               </Link>
 
@@ -359,7 +359,7 @@ export function MobileBottomNav({
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-semibold group-hover:text-primary transition-colors truncate">Sơ đồ tổ chức</p>
-                  <p className="text-[11px] text-muted-foreground truncate">Phòng ban &amp; nhân sự</p>
+                  <p className="text-xs text-muted-foreground truncate">Phòng ban &amp; nhân sự</p>
                 </div>
               </Link>
 
@@ -376,7 +376,7 @@ export function MobileBottomNav({
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-semibold group-hover:text-primary transition-colors truncate">Thông báo</p>
-                  <p className="text-[11px] text-muted-foreground truncate">Nhắc việc &amp; tin tức</p>
+                  <p className="text-xs text-muted-foreground truncate">Nhắc việc &amp; tin tức</p>
                 </div>
               </Link>
 
@@ -393,7 +393,7 @@ export function MobileBottomNav({
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-semibold group-hover:text-primary transition-colors truncate">Cài đặt</p>
-                  <p className="text-[11px] text-muted-foreground truncate">Tùy chọn &amp; tài khoản</p>
+                  <p className="text-xs text-muted-foreground truncate">Tùy chọn &amp; tài khoản</p>
                 </div>
               </Link>
             </div>

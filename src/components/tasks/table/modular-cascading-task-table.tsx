@@ -586,7 +586,7 @@ export function ModularCascadingTaskTable({
             {isBacklogExpanded && (
               <div className="space-y-2 pt-1 border-t border-amber-200/70">
                 {/* Desktop Backlog Table */}
-                <div className="hidden sm:block overflow-hidden rounded-xl border border-amber-200/80 bg-white/90 shadow-2xs">
+                <div className="hidden md:block overflow-hidden rounded-xl border border-amber-200/80 bg-white/90 shadow-2xs">
                   <div className="overflow-x-auto thin-scrollbar">
                     <table className="w-full text-left">
                       <thead>
@@ -687,7 +687,7 @@ export function ModularCascadingTaskTable({
                 </div>
 
                 {/* Mobile Backlog Cards */}
-                <div className="sm:hidden space-y-2">
+                <div className="md:hidden space-y-2">
                   {priorOverdueBacklog.map((task) => (
                     <div
                       key={task.id}
@@ -753,8 +753,8 @@ export function ModularCascadingTaskTable({
         />
       ) : (
         <div className="space-y-3">
-          {/* Desktop Table View (>= 640px) */}
-          <div className="hidden sm:block overflow-hidden rounded-xl border border-border/80 bg-card shadow-2xs">
+          {/* Desktop Table View (>= 768px) */}
+          <div className="hidden md:block overflow-hidden rounded-xl border border-border/80 bg-card shadow-2xs">
             <div className="overflow-x-auto thin-scrollbar">
               <table className="w-full text-left">
                 <TaskTableHeader
@@ -837,8 +837,8 @@ export function ModularCascadingTaskTable({
             </div>
           </div>
 
-          {/* Mobile Card Feed View (< 640px) */}
-          <div className="sm:hidden space-y-2.5">
+          {/* Mobile Card Feed View (< 768px) */}
+          <div className="md:hidden space-y-2.5">
             {paginatedResult.items.map((task) => (
               <MobileTaskCard
                 key={task.id}
