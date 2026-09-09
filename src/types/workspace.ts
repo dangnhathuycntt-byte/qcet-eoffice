@@ -111,7 +111,7 @@ export const WORKSPACE_ZONES: ZoneConfig[] = [
 ];
 
 export function parseZoneParam(param: string | null | undefined): WorkspaceZone {
-  if (!param) return "tasks";
+  if (!param) return "dashboard"; // Fallback chuẩn xác về Bàn làm việc Cockpit
   const normalized = param.trim().toLowerCase();
   if (normalized === "portal" || normalized === "hub") return "portal";
   if (normalized === "dashboard" || normalized === "kpi") return "dashboard";
@@ -140,7 +140,7 @@ export function parseZoneParam(param: string | null | undefined): WorkspaceZone 
   ) {
     return "org";
   }
-  return "portal";
+  return "dashboard";
 }
 
 export interface SchoolBottleneckItem {

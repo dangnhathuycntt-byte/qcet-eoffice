@@ -22,7 +22,7 @@ describe("Two-Tier Layout Configuration & Breadcrumbs", () => {
   });
 
   it("resolves breadcrumbs accurately for all system routes", () => {
-    assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", "Quản lý công việc"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", "Bàn làm việc"]);
     assert.deepStrictEqual(resolveBreadcrumb("/tasks"), ["QCET E-Office", "Nhiệm vụ cấp Trường"]);
     assert.deepStrictEqual(resolveBreadcrumb("/unit-tasks"), ["QCET E-Office", "Công việc Đơn vị"]);
     assert.deepStrictEqual(resolveBreadcrumb("/calendar"), ["QCET E-Office", "Lịch công tác"]);
@@ -93,11 +93,10 @@ describe("AppSidebar Component Contracts", () => {
     assert.ok(content.includes("transition-all duration-200"), "Sidebar must have 200ms transition");
   });
 
-  it("implements mobile drawer slide-over with backdrop overlay", () => {
+  it("conforms to desktop-only sidebar without dead mobile drawer classes", () => {
     const content = fs.readFileSync(sidebarPath, "utf-8");
-    assert.ok(content.includes("fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"), "Must have backdrop");
-    assert.ok(content.includes('isMobileOpen ? "translate-x-0" : "-translate-x-full"'), "Must slide translate-x");
-    assert.ok(content.includes("setIsMobileOpen(false)"), "Must allow closing mobile drawer");
+    assert.ok(!content.includes("isMobileOpen"), "Must not contain dead isMobileOpen");
+    assert.ok(content.includes("hidden md:flex"), "Must be hidden on mobile");
   });
 
   it("implements Notion sync status pill with active green dot", () => {
@@ -182,13 +181,11 @@ describe("AppTopbar Component Contracts", () => {
     assert.ok(content.includes("UserProfileModal"), "Must render UserProfileModal");
   });
 
-  it("integrates embedded dev role testing simulator within user profile dropdown", () => {
+  it("anti-pattern assertion: ensures dev role testing simulator / mock up is completely removed from user profile dropdown", () => {
     const content = fs.readFileSync(topbarPath, "utf-8");
-    assert.ok(content.includes("switchRole"), "Must wire switchRole for role switching");
-    assert.ok(content.includes("ADMIN"), "Must support ADMIN role testing");
-    assert.ok(content.includes("MANAGER"), "Must support MANAGER role testing");
-    assert.ok(content.includes("STAFF"), "Must support STAFF role testing");
-    assert.ok(content.includes("FlaskConical"), "Must render FlaskConical icon for dev simulator");
+    assert.ok(!content.includes("FlaskConical"), "FlaskConical dev icon must NOT be in app-topbar");
+    assert.ok(!content.includes("Chế độ kiểm thử vai trò"), "Dev role testing must NOT be in app-topbar");
+    assert.ok(!content.includes("devRoles"), "devRoles must NOT be in app-topbar");
   });
 
   it("anti-pattern assertions: cleans legacy widgets and preserves event listeners", () => {
@@ -277,5 +274,73 @@ describe("AppShell Layout Container & Root Integration", () => {
     assert.ok(content.includes('href="#main-content"'), "Must preserve skip to main content accessibility link");
   });
 });
+
+describe("Web Font Preload Optimization (QCET-PERF-2025-01)", () => {
+  const layoutPath = path.resolve(__dirname, "../src/app/layout.tsx");
+
+  function extractFontWeights(content: string, fontFunction: string): string[] {
+    const blockRegex = new RegExp(`${fontFunction}\\s*\\(\\s*{([\\s\\S]*?)}\\s*\\)`);
+    const match = content.match(blockRegex);
+    if (!match) return [];
+    const weightMatch = match[1].match(/weight\s*:\s*\[([\s\S]*?)\]/);
+    if (!weightMatch) return [];
+    return weightMatch[1]
+      .split(",")
+      .map((w) => w.trim().replace(/['"]/g, ""))
+      .filter(Boolean);
+  }
+
+  function hasDisplaySwap(content: string, fontFunction: string): boolean {
+    const blockRegex = new RegExp(`${fontFunction}\\s*\\(\\s*{([\\s\\S]*?)}\\s*\\)`);
+    const match = content.match(blockRegex);
+    if (!match) return false;
+    return /display\s*:\s*["']swap["']/.test(match[1]);
+  }
+
+  it("prunes Be_Vietnam_Pro to at most 4 weights without 300 or 800", () => {
+    const content = fs.readFileSync(layoutPath, "utf-8");
+    const weights = extractFontWeights(content, "Be_Vietnam_Pro");
+    assert.ok(weights.length <= 4, `Be_Vietnam_Pro has ${weights.length} weights, expected <= 4`);
+    assert.deepStrictEqual(weights, ["400", "500", "600", "700"]);
+    assert.ok(!weights.includes("300"), "Be_Vietnam_Pro must not include weight 300");
+    assert.ok(!weights.includes("800"), "Be_Vietnam_Pro must not include weight 800");
+  });
+
+  it("prunes Plus_Jakarta_Sans to at most 2 weights without 800", () => {
+    const content = fs.readFileSync(layoutPath, "utf-8");
+    const weights = extractFontWeights(content, "Plus_Jakarta_Sans");
+    assert.ok(weights.length <= 2, `Plus_Jakarta_Sans has ${weights.length} weights, expected <= 2`);
+    assert.deepStrictEqual(weights, ["600", "700"]);
+    assert.ok(!weights.includes("800"), "Plus_Jakarta_Sans must not include weight 800");
+  });
+
+  it("prunes JetBrains_Mono to at most 2 weights without 500", () => {
+    const content = fs.readFileSync(layoutPath, "utf-8");
+    const weights = extractFontWeights(content, "JetBrains_Mono");
+    assert.ok(weights.length <= 2, `JetBrains_Mono has ${weights.length} weights, expected <= 2`);
+    assert.deepStrictEqual(weights, ["400", "600"]);
+    assert.ok(!weights.includes("500"), "JetBrains_Mono must not include weight 500");
+  });
+
+  it("specifies display: swap for all imported Google fonts", () => {
+    const content = fs.readFileSync(layoutPath, "utf-8");
+    assert.ok(hasDisplaySwap(content, "Be_Vietnam_Pro"), "Be_Vietnam_Pro must specify display: 'swap'");
+    assert.ok(hasDisplaySwap(content, "Plus_Jakarta_Sans"), "Plus_Jakarta_Sans must specify display: 'swap'");
+    assert.ok(hasDisplaySwap(content, "JetBrains_Mono"), "JetBrains_Mono must specify display: 'swap'");
+  });
+
+  it("ensures total font weights across Google fonts do not exceed 8", () => {
+    const content = fs.readFileSync(layoutPath, "utf-8");
+    const beVietnamWeights = extractFontWeights(content, "Be_Vietnam_Pro");
+    const plusJakartaWeights = extractFontWeights(content, "Plus_Jakarta_Sans");
+    const jetbrainsMonoWeights = extractFontWeights(content, "JetBrains_Mono");
+    const totalWeights = beVietnamWeights.length + plusJakartaWeights.length + jetbrainsMonoWeights.length;
+    assert.ok(
+      totalWeights <= 8,
+      `Total font weights across Google fonts must not exceed 8 (pruned down from 12+), got ${totalWeights}`
+    );
+  });
+});
+
 
 

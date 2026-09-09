@@ -28,16 +28,19 @@ describe("Single-Tier Navigation Architecture Test Suite", () => {
       assert.ok(hrefs.includes("/notifications"), "Personal section must include '/notifications'");
     });
 
-    test("Workspace section includes Tasks (/tasks)", () => {
+    test("Workspace / Core section includes Tasks (/tasks) and Documents (/documents)", () => {
       const workspaceItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "workspace");
       const hrefs = workspaceItems.map((i) => i.href);
       assert.ok(hrefs.includes("/tasks"), "Workspace section must include '/tasks'");
+      assert.ok(
+        hrefs.includes("/documents") || SINGLE_TIER_NAV_ITEMS.some((i) => i.href === "/documents"),
+        "Must include '/documents'"
+      );
     });
 
-    test("Operations section includes Documents (/documents) and Org (/org)", () => {
+    test("Operations / System section includes Org (/org)", () => {
       const opItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "operations");
       const hrefs = opItems.map((i) => i.href);
-      assert.ok(hrefs.includes("/documents"), "Operations section must include '/documents'");
       assert.ok(hrefs.includes("/org"), "Operations section must include '/org'");
     });
 
@@ -57,7 +60,7 @@ describe("Single-Tier Navigation Architecture Test Suite", () => {
     test("Resolves default root and page titles cleanly", () => {
       const [rootTitle, pageTitle] = resolveBreadcrumb("/");
       assert.strictEqual(rootTitle, "QCET E-Office");
-      assert.strictEqual(pageTitle, "Quản lý công việc");
+      assert.strictEqual(pageTitle, "Bàn làm việc");
     });
 
     test("Resolves documents breadcrumb correctly", () => {

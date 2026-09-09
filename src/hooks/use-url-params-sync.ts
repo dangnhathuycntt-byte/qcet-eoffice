@@ -45,8 +45,26 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
   const defaultScope = React.useMemo(() => getDefaultScopeForRole(userRole), [userRole]);
   const defaultViewMode = React.useMemo(() => getDefaultViewModeForRole(userRole), [userRole]);
 
+  const isExecutive = React.useMemo(() => {
+    if (!userRole) return false;
+    const roleStr = String(userRole).toUpperCase();
+    return (
+      roleStr === "ADMIN" ||
+      roleStr === "BGH" ||
+      roleStr === "BAN_GIAM_HIEU" ||
+      roleStr === "HIEU_TRUONG" ||
+      roleStr === "PHO_HIEU_TRUONG"
+    );
+  }, [userRole]);
+
   const [activeZone, setActiveZone] = React.useState<WorkspaceZone>(() => parseZoneParam(zoneQuery));
-  const [scope, setScope] = React.useState<TaskScope>(() => parseScopeParam(scopeQuery, defaultScope));
+  const [scope, setScope] = React.useState<TaskScope>(() => {
+    const rawParsed = parseScopeParam(scopeQuery, defaultScope, userRole);
+    if (rawParsed === "SCHOOL_TASKS" && !isExecutive) {
+      return defaultScope;
+    }
+    return rawParsed;
+  });
   const [viewMode, setViewMode] = React.useState<TaskViewMode>(() => parseViewModeParam(viewQuery, defaultViewMode));
   const [selectedDepartment, setSelectedDepartment] = React.useState<string>(deptQuery || "ALL");
   const [selectedAcademicMonth, setSelectedAcademicMonth] = React.useState<number | "ALL">(() => {
@@ -63,6 +81,35 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
   );
   const [useAdvancedToolbar, setUseAdvancedToolbar] = React.useState<boolean>(false);
 
+  const updateUrlParams = React.useCallback(
+    (updates: {
+      zone?: WorkspaceZone;
+      scope?: TaskScope;
+      view?: TaskViewMode;
+      dept?: string;
+      month?: number | "ALL";
+    }) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (updates.zone !== undefined) {
+        if (updates.zone === "portal" || updates.zone === "dashboard") params.delete("zone");
+        else params.set("zone", updates.zone);
+      }
+      if (updates.scope !== undefined) params.set("scope", scopeToParam(updates.scope));
+      if (updates.view !== undefined) params.set("view", updates.view);
+      if (updates.dept !== undefined) {
+        if (updates.dept && updates.dept !== "ALL") params.set("dept", updates.dept);
+        else params.delete("dept");
+      }
+      if (updates.month !== undefined) {
+        if (updates.month === "ALL") params.set("month", "ALL");
+        else params.set("month", String(updates.month));
+      }
+      const qs = params.toString();
+      router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+    },
+    [router, searchParams]
+  );
+
   // Sync from URL
   React.useEffect(() => {
     if (zoneQuery === "portal") {
@@ -73,8 +120,16 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
   }, [zoneQuery, router]);
 
   React.useEffect(() => {
-    setScope(scopeQuery ? parseScopeParam(scopeQuery, defaultScope) : defaultScope);
-  }, [scopeQuery, defaultScope]);
+    let resolved = scopeQuery ? parseScopeParam(scopeQuery, defaultScope, userRole) : defaultScope;
+    if (resolved === "SCHOOL_TASKS" && !isExecutive) {
+      resolved = defaultScope;
+      const norm = (scopeQuery || "").toLowerCase();
+      if (norm === "school" || norm === "school_tasks") {
+        updateUrlParams({ scope: defaultScope });
+      }
+    }
+    setScope(resolved);
+  }, [scopeQuery, defaultScope, userRole, isExecutive, updateUrlParams]);
 
   React.useEffect(() => {
     if (viewQuery) {
@@ -100,35 +155,6 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
     }
   }, [monthQuery]);
 
-  const updateUrlParams = React.useCallback(
-    (updates: {
-      zone?: WorkspaceZone;
-      scope?: TaskScope;
-      view?: TaskViewMode;
-      dept?: string;
-      month?: number | "ALL";
-    }) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (updates.zone !== undefined) {
-        if (updates.zone === "portal") params.delete("zone");
-        else params.set("zone", updates.zone);
-      }
-      if (updates.scope !== undefined) params.set("scope", scopeToParam(updates.scope));
-      if (updates.view !== undefined) params.set("view", updates.view);
-      if (updates.dept !== undefined) {
-        if (updates.dept && updates.dept !== "ALL") params.set("dept", updates.dept);
-        else params.delete("dept");
-      }
-      if (updates.month !== undefined) {
-        if (updates.month === "ALL") params.set("month", "ALL");
-        else params.set("month", String(updates.month));
-      }
-      const qs = params.toString();
-      router.replace(qs ? `/?${qs}` : "/", { scroll: false });
-    },
-    [router, searchParams]
-  );
-
   const handleZoneChange = React.useCallback(
     (newZone: WorkspaceZone) => {
       if (newZone === "portal") {
@@ -143,10 +169,14 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
 
   const handleScopeChange = React.useCallback(
     (newScope: TaskScope) => {
-      setScope(newScope);
-      updateUrlParams({ scope: newScope });
+      let resolved = newScope;
+      if (newScope === "SCHOOL_TASKS" && !isExecutive) {
+        resolved = defaultScope;
+      }
+      setScope(resolved);
+      updateUrlParams({ scope: resolved });
     },
-    [updateUrlParams]
+    [updateUrlParams, isExecutive, defaultScope]
   );
 
   const handleViewModeChange = React.useCallback(

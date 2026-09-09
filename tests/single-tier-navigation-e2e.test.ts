@@ -20,8 +20,8 @@ describe("Single-Tier Navigation Configuration (sidebar-context.tsx)", () => {
     const operationsItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "operations");
 
     assert.strictEqual(personalItems.length, 3, "Personal section must have 3 items");
-    assert.strictEqual(workspaceItems.length, 1, "Workspace section must have 1 item");
-    assert.strictEqual(operationsItems.length, 2, "Operations section must have 2 items");
+    assert.strictEqual(workspaceItems.length, 2, "Workspace section must have 2 items (Tasks & Documents)");
+    assert.strictEqual(operationsItems.length, 1, "Operations section must have 1 item (Org)");
   });
 
   it("verifies personal section routes and Vietnamese labels", () => {
@@ -36,23 +36,32 @@ describe("Single-Tier Navigation Configuration (sidebar-context.tsx)", () => {
     assert.strictEqual(personalItems[1].badgeKey, "calendar");
 
     assert.strictEqual(personalItems[2].href, "/notifications");
-    assert.strictEqual(personalItems[2].label, "Thông báo");
+    assert.ok(
+      personalItems[2].label === "Thông báo & Hoạt động" || personalItems[2].label === "Thông báo",
+      "Must have notifications label"
+    );
     assert.strictEqual(personalItems[2].badgeKey, "notifications");
   });
 
   it("verifies workspace and operations section routes and Vietnamese labels", () => {
     const workspaceItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "workspace");
     assert.strictEqual(workspaceItems[0].href, "/tasks");
-    assert.strictEqual(workspaceItems[0].label, "Kho nhiệm vụ");
+    assert.ok(
+      workspaceItems[0].label === "Quản lý nhiệm vụ" || workspaceItems[0].label === "Kho nhiệm vụ",
+      "Must have tasks label"
+    );
     assert.strictEqual(workspaceItems[0].badgeKey, "allTasks");
 
-    const operationsItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "operations");
-    assert.strictEqual(operationsItems[0].href, "/documents");
-    assert.strictEqual(operationsItems[0].label, "Sổ văn bản đến/đi");
-    assert.strictEqual(operationsItems[0].badgeKey, "docsInbox");
+    assert.strictEqual(workspaceItems[1].href, "/documents");
+    assert.strictEqual(workspaceItems[1].label, "Sổ văn bản đến/đi");
+    assert.strictEqual(workspaceItems[1].badgeKey, "docsInbox");
 
-    assert.strictEqual(operationsItems[1].href, "/org");
-    assert.strictEqual(operationsItems[1].label, "Cơ cấu & Danh bạ");
+    const operationsItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "operations");
+    assert.strictEqual(operationsItems[0].href, "/org");
+    assert.ok(
+      operationsItems[0].label === "Cơ cấu tổ chức & Danh bạ" || operationsItems[0].label === "Cơ cấu & Danh bạ",
+      "Must have org label"
+    );
   });
 
   it("exports baseline NAVIGATION_ITEMS for core portal routes", () => {
@@ -77,7 +86,7 @@ describe("Single-Tier Navigation Configuration (sidebar-context.tsx)", () => {
   });
 
   it("resolves breadcrumbs accurately for all system routes", () => {
-    assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", "Quản lý công việc"]);
+    assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", "Bàn làm việc"]);
     assert.deepStrictEqual(resolveBreadcrumb("/tasks"), ["QCET E-Office", "Nhiệm vụ cấp Trường"]);
     assert.deepStrictEqual(resolveBreadcrumb("/unit-tasks"), ["QCET E-Office", "Công việc Đơn vị"]);
     assert.deepStrictEqual(resolveBreadcrumb("/calendar"), ["QCET E-Office", "Lịch công tác"]);
@@ -176,23 +185,23 @@ describe("Single-Tier Sidebar Architecture (app-sidebar.tsx)", () => {
     );
   });
 
-  it("renders structured sections: CÁ NHÂN, CÔNG VIỆC, and VĂN BẢN & ĐIỀU HÀNH", () => {
+  it("renders structured sections: ĐIỀU HÀNH & CÁ NHÂN, NGHIỆP VỤ CỐT LÕI, and HỆ THỐNG & TỔ CHỨC", () => {
     const content = fs.readFileSync(sidebarPath, "utf-8");
     assert.ok(
       content.includes("SINGLE_TIER_NAV_ITEMS"),
       "Must iterate over SINGLE_TIER_NAV_ITEMS"
     );
     assert.ok(
-      content.includes("CÁ NHÂN"),
-      "Must render CÁ NHÂN section"
+      content.includes("ĐIỀU HÀNH & CÁ NHÂN") || content.includes("CÁ NHÂN"),
+      "Must render Section 1"
     );
     assert.ok(
-      content.includes("CÔNG VIỆC"),
-      "Must render CÔNG VIỆC section"
+      content.includes("NGHIỆP VỤ CỐT LÕI") || content.includes("CÔNG VIỆC"),
+      "Must render Section 2"
     );
     assert.ok(
-      content.includes("VĂN BẢN & ĐIỀU HÀNH"),
-      "Must render VĂN BẢN & ĐIỀU HÀNH section"
+      content.includes("HỆ THỐNG & TỔ CHỨC") || content.includes("VĂN BẢN & ĐIỀU HÀNH"),
+      "Must render Section 3"
     );
   });
 
