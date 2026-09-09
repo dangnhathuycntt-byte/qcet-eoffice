@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useSidebar } from "@/components/layout/sidebar-context";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask, DashboardPayload } from "@/types/dashboard";
 import { useUrlParamsSync, type UrlParamsSyncReturn } from "./use-url-params-sync";
 import { useTaskMutations, type TaskMutationsReturn } from "./use-task-mutations";
 import { useTaskFilters, type TaskFiltersReturn } from "./use-task-filters";
@@ -23,13 +23,14 @@ export type DashboardStateReturn = UrlParamsSyncReturn & TaskMutationsReturn & T
 
 export function useDashboardState(
   onSelectTask?: (task: SchoolTask | StaffTask) => void,
-  onOpenCreateModal?: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void
+  onOpenCreateModal?: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void,
+  initialData?: DashboardPayload
 ): DashboardStateReturn {
   const { user } = useAuth();
   const { setBadgeCounts } = useSidebar();
 
   const urlSync = useUrlParamsSync(user?.role);
-  const mutations = useTaskMutations(user, onOpenCreateModal);
+  const mutations = useTaskMutations(user, onOpenCreateModal, initialData);
   const filters = useTaskFilters({
     tasks: mutations.dashboardData.tasks,
     upcoming: mutations.dashboardData.upcoming,

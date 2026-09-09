@@ -83,17 +83,24 @@ export interface TaskMutationsReturn {
 
 export function useTaskMutations(
   user?: AuthUser | null,
-  onOpenCreateModal?: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void
+  onOpenCreateModal?: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void,
+  initialData?: DashboardPayload
 ): TaskMutationsReturn {
-  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(EMPTY_DASHBOARD_PAYLOAD);
-  const [isLoading, setIsLoading] = React.useState<boolean>(true);
+  const hasInitialData = Boolean(initialData && initialData.tasks && initialData.stats);
+  const [dashboardData, setDashboardData] = React.useState<DashboardPayload>(
+    hasInitialData ? (initialData as DashboardPayload) : EMPTY_DASHBOARD_PAYLOAD
+  );
+  const [isLoading, setIsLoading] = React.useState<boolean>(!hasInitialData);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = React.useState<boolean>(false);
   const [delegations, setDelegations] = React.useState<DelegationRule[]>(INITIAL_QCET_DELEGATIONS);
   const [delegationDeptCode] = React.useState("K_CNTT");
 
-  // Initial background sync
+  // Initial background sync: Skip when server-provided initial data is present
   React.useEffect(() => {
+    if (hasInitialData) {
+      return;
+    }
     let isMounted = true;
     async function syncDashboardOverview() {
       setIsLoading(true);
@@ -123,7 +130,7 @@ export function useTaskMutations(
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [hasInitialData]);
 
   const handleManualRefresh = React.useCallback(async () => {
     setIsRefreshing(true);

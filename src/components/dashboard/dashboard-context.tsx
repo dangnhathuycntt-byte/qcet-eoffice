@@ -8,6 +8,7 @@ import type {
   DashboardStats,
   TaskStatus,
   ActivityEvent,
+  DashboardPayload,
 } from "@/types/dashboard";
 import type { WorkspaceZone, DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
 import type { TaskScope, TaskViewMode } from "@/components/dashboard/unified-task-toolbar";
@@ -164,11 +165,18 @@ export function useDashboardModal(): DashboardModalContextValue {
 }
 
 // Top-Level Provider
-export function DashboardStateProvider({ children }: { children: React.ReactNode }) {
+export function DashboardStateProvider({
+  children,
+  initialData,
+}: {
+  children: React.ReactNode;
+  initialData?: DashboardPayload;
+}) {
   const modalState = useModalState();
   const dashboardState = useDashboardState(
     modalState.openTaskDetail,
-    modalState.openCreateModal
+    modalState.openCreateModal,
+    initialData
   );
 
   // Synchronize status change with modal selected task

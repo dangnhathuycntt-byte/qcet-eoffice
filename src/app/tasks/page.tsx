@@ -1,25 +1,20 @@
-"use client";
 import * as React from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { getLiveDashboardData } from "@/lib/server/dashboard-service";
+import { TasksPageClient } from "./tasks-page-client";
 import { TaskManagementWorkspace, type ViewMode, type WorkspaceScope } from "@/components/tasks/task-management-workspace";
 export type { ViewMode, WorkspaceScope };
 
-function TasksPageInner() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { user } = useAuth();
+export default async function TasksPage(props: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolved = props.searchParams ? await props.searchParams : {};
+  const searchParams = new URLSearchParams(resolved as Record<string, string>);
   const raw = searchParams.get("scope");
-  const fallback: WorkspaceScope = user?.role === "ADMIN" ? "school" : user?.role === "MANAGER" ? "unit" : "my";
-  const scope: WorkspaceScope = raw === "school" || raw === "unit" || raw === "my" ? raw : fallback;
-  const onScopeChange = (s: WorkspaceScope) => {
-    const p = new URLSearchParams(searchParams.toString());
-    p.set("scope", s);
-    router.replace(`/tasks?${p.toString()}`);
-  };
-  return <TaskManagementWorkspace scope={scope} onScopeChange={onScopeChange} />;
-}
-
-export default function TasksPage() {
-  return <React.Suspense fallback={<TaskManagementWorkspace scope="school" />}><TasksPageInner /></React.Suspense>;
+  const scope: WorkspaceScope | undefined = raw === "school" || raw === "unit" || raw === "my" ? raw : undefined;
+  const { tasks } = await getLiveDashboardData().catch(() => ({ tasks: [] }));
+  return (
+    <React.Suspense fallback={<TaskManagementWorkspace scope="school" />}>
+      <TasksPageClient initialTasks={tasks} initialScope={scope} />
+    </React.Suspense>
+  );
 }
