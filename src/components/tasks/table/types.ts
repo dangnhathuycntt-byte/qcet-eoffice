@@ -165,7 +165,7 @@ export interface TaskTableProps {
   onStatusChange?: (
     taskId: string,
     newStatus: TaskStatus,
-    isSubTask?: boolean,
+    isSubTask?: any,
     parentId?: string
   ) => Promise<void> | void;
   onUrge?: (

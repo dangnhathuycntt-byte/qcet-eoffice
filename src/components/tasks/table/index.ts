@@ -1,6 +1,7 @@
 export * from "./types";
 export * from "./constants";
 export * from "./utils/table-filter-engine";
+export * from "./utils/table-sorters";
 export * from "./utils/table-date-helpers";
 export * from "./utils/progress-rollup-calc";
 export * from "./hooks/use-task-table-state";
@@ -20,3 +21,5 @@ export * from "./components/mobile-task-card";
 export * from "./components/task-table-toolbar";
 export * from "./components/task-bulk-action-bar";
 
+// Core Assembly
+export * from "./modular-cascading-task-table";

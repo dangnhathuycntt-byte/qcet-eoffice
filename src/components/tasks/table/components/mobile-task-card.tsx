@@ -245,7 +245,7 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
             </span>
             {isDueInMonth && (
               <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                T{selectedAcademicMonth}
+                Hạn trong kỳ T{selectedAcademicMonth}
               </span>
             )}
           </div>

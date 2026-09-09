@@ -270,7 +270,7 @@ export const TaskRow = React.memo(function TaskRow({
               className="rounded-md bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums"
               title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
             >
-              Hạn T{selectedAcademicMonth} ({dueInMonthCount})
+              Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
             </span>
           )}
         </div>
@@ -411,7 +411,7 @@ export const TaskRow = React.memo(function TaskRow({
             title={onStatusChange ? "Click để chuyển đổi trạng thái" : undefined}
             className={cn(
               "h-5.5 px-2 text-xs font-semibold tabular-nums leading-none shrink-0",
-              onStatusChange && "cursor-pointer hover:scale-105 active:scale-95 transition-transform",
+              onStatusChange && "cursor-pointer hover:opacity-85 active:opacity-75 transition-opacity",
               statusConfig.className
             )}
           >

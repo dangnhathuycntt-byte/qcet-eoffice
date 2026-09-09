@@ -116,7 +116,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
           title={onStatusChange ? "Click để chuyển đổi trạng thái" : undefined}
           className={cn(
             "h-5.5 px-2 text-xs font-semibold tabular-nums leading-none shrink-0 transition-all",
-            onStatusChange && "cursor-pointer hover:scale-105 active:scale-95",
+            onStatusChange && "cursor-pointer hover:opacity-85 active:opacity-75 transition-opacity",
             statusConfig.className
           )}
         >
@@ -149,7 +149,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
             className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0"
             title={`Nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
           >
-            Hạn T{selectedAcademicMonth}
+            Hạn trong kỳ T{selectedAcademicMonth}
           </span>
         )}
 
