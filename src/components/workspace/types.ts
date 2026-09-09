@@ -16,15 +16,21 @@ export interface UniversalActionQueueItems {
   pendingApprovals: Array<{
     task: SchoolTask | StaffTask;
     parentTaskTitle?: string;
+    parentTaskCode?: string;
+    parentTaskId?: string;
     submittedBy?: string;
     submittedAt?: string;
     complianceScore?: number;
+    actionTypeBadge?: string;
   }>;
   myPendingSubmissions: Array<{
-    task: StaffTask;
-    parentTaskTitle: string;
+    task: SchoolTask | StaffTask;
+    parentTaskTitle?: string;
+    parentTaskCode?: string;
+    parentTaskId?: string;
     dueDate?: string;
     isOverdue: boolean;
+    actionTypeBadge?: string;
   }>;
 }
 
@@ -48,6 +54,7 @@ export interface UnifiedAdaptiveWorkspaceProps {
   onStatusChange?: (taskId: string, status: TaskStatus, note?: string) => void;
   onSendReminder?: (targetDeptOrUser: string, reason: string) => void;
   onCreateTask?: (scope: WorkspaceScope | "TRUONG" | "DON_VI", parentTaskId?: string) => void;
+  onCreateSubtask?: (parentTaskId: string) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   onAction?: (action: string, payload?: unknown) => void;

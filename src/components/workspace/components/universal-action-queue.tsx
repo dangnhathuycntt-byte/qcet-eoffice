@@ -9,15 +9,65 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCheck,
-  Send,
   FileCheck,
   CornerDownRight,
+  GitFork,
+  BellRing,
 } from "lucide-react";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
 import type { UniversalActionQueueItems, WorkspaceScope } from "../types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+export interface ActionQueueButtonMeta {
+  label: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  variant: "default" | "outline" | "ghost" | "secondary" | "destructive";
+  btnClass: string;
+}
+
+export function getActionQueueButtonMeta(
+  scope: WorkspaceScope,
+  itemType: "approval" | "submission"
+): ActionQueueButtonMeta {
+  if (itemType === "approval") {
+    switch (scope) {
+      case "school":
+        return {
+          label: "Phê duyệt",
+          icon: CheckCheck,
+          variant: "outline",
+          btnClass:
+            "border-amber-500/30 text-amber-900 bg-amber-500/10 hover:bg-amber-500/20",
+        };
+      case "unit":
+        return {
+          label: "Thẩm định L1",
+          icon: CheckCircle2,
+          variant: "outline",
+          btnClass:
+            "border-amber-500/30 text-amber-900 bg-amber-500/10 hover:bg-amber-500/20",
+        };
+      case "my":
+      default:
+        return {
+          label: "Thẩm định",
+          icon: FileCheck,
+          variant: "outline",
+          btnClass:
+            "border-amber-500/30 text-amber-900 bg-amber-500/10 hover:bg-amber-500/20",
+        };
+    }
+  }
+
+  return {
+    label: "Nộp minh chứng",
+    icon: UploadCloud,
+    variant: "default",
+    btnClass: "bg-blue-600 hover:bg-blue-700 text-white",
+  };
+}
 
 export interface UniversalActionQueueProps {
   actionQueue: UniversalActionQueueItems;
@@ -28,6 +78,8 @@ export interface UniversalActionQueueProps {
   onSubmitDeliverable?: (payload: DeliverableSubmissionPayload) => void;
   onOpenReview?: (task: SchoolTask | StaffTask) => void;
   onOpenSubmit?: (task: StaffTask) => void;
+  onCreateSubtask?: (parentId: string) => void;
+  onRemindDRI?: (taskId: string, targetName: string) => void;
 }
 
 export function UniversalActionQueue({
@@ -39,6 +91,8 @@ export function UniversalActionQueue({
   onSubmitDeliverable,
   onOpenReview,
   onOpenSubmit,
+  onCreateSubtask,
+  onRemindDRI,
 }: UniversalActionQueueProps) {
   const { pendingApprovals = [], myPendingSubmissions = [] } = actionQueue;
   const [isApprovalsExpanded, setIsApprovalsExpanded] = React.useState(false);
@@ -85,38 +139,7 @@ export function UniversalActionQueue({
     );
   }
 
-  // Determine action button label and icon for pending approvals lane
-  const getApprovalActionConfig = () => {
-    switch (scope) {
-      case "school":
-        return {
-          label: "Phê duyệt",
-          icon: CheckCheck,
-          variant: "outline" as const,
-          btnClass:
-            "border-amber-500/30 text-amber-900 bg-amber-500/10 hover:bg-amber-500/20",
-        };
-      case "unit":
-        return {
-          label: "Phân công",
-          icon: Send,
-          variant: "outline" as const,
-          btnClass:
-            "border-amber-500/30 text-amber-900 bg-amber-500/10 hover:bg-amber-500/20",
-        };
-      case "my":
-      default:
-        return {
-          label: "Thẩm định",
-          icon: FileCheck,
-          variant: "outline" as const,
-          btnClass:
-            "border-amber-500/30 text-amber-900 bg-amber-500/10 hover:bg-amber-500/20",
-        };
-    }
-  };
-
-  const approvalConfig = getApprovalActionConfig();
+  const approvalConfig = getActionQueueButtonMeta(scope, "approval");
 
   const displayedApprovals = isApprovalsExpanded
     ? pendingApprovals
@@ -185,7 +208,11 @@ export function UniversalActionQueue({
                 </h3>
               </div>
               <span className="text-xs font-medium text-amber-800">
-                {scope === "school" ? "Chờ BGH phê duyệt" : "Cần lãnh đạo xử lý"}
+                {scope === "school"
+                  ? "Chờ BGH phê duyệt"
+                  : scope === "unit"
+                  ? "Cần thẩm định L1"
+                  : "Cần lãnh đạo xử lý"}
               </span>
             </div>
 
@@ -193,17 +220,28 @@ export function UniversalActionQueue({
               {displayedApprovals.map((item, idx) => {
                 const ActionIcon = approvalConfig.icon;
                 const parentTitle =
+                  item.parentTaskTitle ||
                   (item.task as any).parentTaskTitle ||
                   (item.task as any).parentSchoolTaskTitle ||
                   (item.task as any).parentTask?.title;
                 const parentCode =
+                  item.parentTaskCode ||
                   (item.task as any).parentTaskCode ||
                   (item.task as any).parentSchoolTaskCode ||
                   (item.task as any).parentTask?.code;
                 const parentId =
+                  item.parentTaskId ||
                   (item.task as any).parentTaskId ||
                   (item.task as any).parentSchoolTaskId ||
                   (item.task as any).parentTask?.id;
+
+                const isItemOverdue = Boolean(
+                  (item as any).isOverdue ||
+                  (item.task.dueDate && new Date(item.task.dueDate) < new Date()) ||
+                  (item.task.status as string) === "AT_RISK"
+                );
+
+                const approvalBadge = item.actionTypeBadge || "Cần duyệt";
 
                 return (
                   <div
@@ -212,7 +250,7 @@ export function UniversalActionQueue({
                   >
                     <div className="min-w-0 flex-1 pr-1">
                       {parentTitle && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5 truncate">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1 truncate">
                           <CornerDownRight className="size-3 text-muted-foreground/70 shrink-0" />
                           {parentCode && (
                             <span className="font-mono text-xs font-semibold text-primary/80 shrink-0">
@@ -236,13 +274,18 @@ export function UniversalActionQueue({
                           </button>
                         </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => onSelectTask(item.task)}
-                        className="text-left text-xs font-semibold text-foreground hover:text-amber-900 focus-visible:underline focus-visible:outline-none transition-colors truncate block w-full cursor-pointer"
-                      >
-                        {item.task.title}
-                      </button>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-900 border border-amber-500/25 shrink-0">
+                          {approvalBadge}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onSelectTask(item.task)}
+                          className="text-left text-xs font-semibold text-foreground hover:text-amber-900 focus-visible:underline focus-visible:outline-none transition-colors truncate block cursor-pointer"
+                        >
+                          {item.task.title}
+                        </button>
+                      </div>
                       <div className="text-xs text-muted-foreground truncate flex items-center gap-2 mt-0.5">
                         <span>
                           Người nộp: {item.submittedBy || "Cán bộ chuyên trách"}
@@ -254,26 +297,58 @@ export function UniversalActionQueue({
                         )}
                       </div>
                     </div>
-                    <Button
-                      size="xs"
-                      variant={approvalConfig.variant}
-                      className={cn(
-                        "min-h-[44px] touch-manipulation px-3.5 rounded-lg text-xs font-semibold shrink-0 gap-1.5 cursor-pointer",
-                        approvalConfig.btnClass
+                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap sm:flex-nowrap">
+                      {isItemOverdue && onRemindDRI && (
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          className="min-h-[44px] touch-manipulation px-2.5 rounded-lg text-xs font-semibold border-rose-500/30 text-rose-800 bg-rose-500/10 hover:bg-rose-500/20 shrink-0 gap-1 cursor-pointer"
+                          onClick={() =>
+                            onRemindDRI(
+                              item.task.id,
+                              item.submittedBy || (item.task as any).assignedTo || ""
+                            )
+                          }
+                          title="Đôn đốc tiến độ thực hiện nhiệm vụ"
+                        >
+                          <BellRing className="size-3" strokeWidth={1.75} />
+                          <span>Đôn đốc DRI</span>
+                        </Button>
                       )}
-                      onClick={() => {
-                        // Mở modal/sheet thẩm định chi tiết có danh tính thật nếu có, hoặc chuyển sang chọn task
-                        if (onOpenReview) {
-                          onOpenReview(item.task);
-                        } else {
-                          onSelectTask(item.task);
-                        }
-                      }}
-                    >
-                      <ActionIcon className="size-3" strokeWidth={1.75} />
-                      <span>{approvalConfig.label}</span>
-                      <ChevronRight className="size-3 ml-0.5 opacity-70" strokeWidth={1.5} />
-                    </Button>
+
+                      {scope === "unit" && onCreateSubtask && (
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          className="min-h-[44px] touch-manipulation px-2.5 rounded-lg text-xs font-semibold border-border text-foreground hover:bg-muted shrink-0 gap-1 cursor-pointer"
+                          onClick={() => onCreateSubtask(item.task.id)}
+                          title="Phân rã nhiệm vụ cho chuyên viên"
+                        >
+                          <GitFork className="size-3" strokeWidth={1.75} />
+                          <span>Phân công con</span>
+                        </Button>
+                      )}
+
+                      <Button
+                        size="xs"
+                        variant={approvalConfig.variant}
+                        className={cn(
+                          "min-h-[44px] touch-manipulation px-3.5 rounded-lg text-xs font-semibold shrink-0 gap-1.5 cursor-pointer",
+                          approvalConfig.btnClass
+                        )}
+                        onClick={() => {
+                          if (onOpenReview) {
+                            onOpenReview(item.task);
+                          } else {
+                            onSelectTask(item.task);
+                          }
+                        }}
+                      >
+                        <ActionIcon className="size-3" strokeWidth={1.75} />
+                        <span>{approvalConfig.label}</span>
+                        <ChevronRight className="size-3 ml-0.5 opacity-70" strokeWidth={1.5} />
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
@@ -332,17 +407,22 @@ export function UniversalActionQueue({
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {displayedSubmissions.map((item, idx) => {
                 const parentTitle =
+                  item.parentTaskTitle ||
                   (item.task as any).parentTaskTitle ||
                   (item.task as any).parentSchoolTaskTitle ||
                   (item.task as any).parentTask?.title;
                 const parentCode =
+                  item.parentTaskCode ||
                   (item.task as any).parentTaskCode ||
                   (item.task as any).parentSchoolTaskCode ||
                   (item.task as any).parentTask?.code;
                 const parentId =
+                  item.parentTaskId ||
                   (item.task as any).parentTaskId ||
                   (item.task as any).parentSchoolTaskId ||
                   (item.task as any).parentTask?.id;
+
+                const submissionBadge = item.actionTypeBadge || "Chờ nộp BC";
 
                 return (
                   <div
@@ -351,7 +431,7 @@ export function UniversalActionQueue({
                   >
                     <div className="min-w-0 flex-1 pr-1">
                       {parentTitle && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5 truncate">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1 truncate">
                           <CornerDownRight className="size-3 text-muted-foreground/70 shrink-0" />
                           {parentCode && (
                             <span className="font-mono text-xs font-semibold text-primary/80 shrink-0">
@@ -375,13 +455,18 @@ export function UniversalActionQueue({
                           </button>
                         </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => onSelectTask(item.task)}
-                        className="text-left text-xs font-semibold text-foreground hover:text-blue-900 focus-visible:underline focus-visible:outline-none transition-colors truncate block w-full cursor-pointer"
-                      >
-                        {item.task.title}
-                      </button>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-900 border border-blue-500/25 shrink-0">
+                          {submissionBadge}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onSelectTask(item.task)}
+                          className="text-left text-xs font-semibold text-foreground hover:text-blue-900 focus-visible:underline focus-visible:outline-none transition-colors truncate block cursor-pointer"
+                        >
+                          {item.task.title}
+                        </button>
+                      </div>
                       <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
                         {item.isOverdue ? (
                           <span className="text-rose-700 font-semibold flex items-center gap-1">
@@ -405,38 +490,38 @@ export function UniversalActionQueue({
                       size="xs"
                       className="min-h-[44px] touch-manipulation px-3.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shrink-0 gap-1.5 cursor-pointer"
                       onClick={() => {
-                      if (onOpenSubmit) {
-                        const staffTask: StaffTask = ("assigneeName" in item.task)
-                          ? (item.task as StaffTask)
-                          : {
-                              id: item.task.id,
-                              title: item.task.title,
-                              assigneeName: (item.task as any).assignee || (item.task as any).assignedTo || "",
-                              department: (item.task as any).assignedDepartment || "",
-                              status: item.task.status as any,
-                              dueDate: item.task.dueDate || "",
-                              parentSchoolTaskId: item.task.id,
-                              updatedAt: new Date().toISOString(),
-                              deliverables: (item.task as any).deliverables || [],
-                            };
-                        onOpenSubmit(staffTask);
-                      } else if (onSubmitDeliverable) {
-                        onSubmitDeliverable({
-                          taskId: item.task.id,
-                          deliverableName: item.task.title,
-                        });
-                      } else {
-                        onSelectTask(item.task);
-                      }
-                    }}
-                  >
-                    <UploadCloud className="size-3" strokeWidth={1.75} />
-                    <span>Nộp minh chứng</span>
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
+                        if (onOpenSubmit) {
+                          const staffTask: StaffTask = ("assigneeName" in item.task)
+                            ? (item.task as StaffTask)
+                            : {
+                                id: item.task.id,
+                                title: item.task.title,
+                                assigneeName: (item.task as any).assignee || (item.task as any).assignedTo || "",
+                                department: (item.task as any).assignedDepartment || "",
+                                status: item.task.status as any,
+                                dueDate: item.task.dueDate || "",
+                                parentSchoolTaskId: item.task.id,
+                                updatedAt: new Date().toISOString(),
+                                deliverables: (item.task as any).deliverables || [],
+                              };
+                          onOpenSubmit(staffTask);
+                        } else if (onSubmitDeliverable) {
+                          onSubmitDeliverable({
+                            taskId: item.task.id,
+                            deliverableName: item.task.title,
+                          });
+                        } else {
+                          onSelectTask(item.task);
+                        }
+                      }}
+                    >
+                      <UploadCloud className="size-3" strokeWidth={1.75} />
+                      <span>Nộp minh chứng</span>
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
 
             {/* Collapsible tray button when count > 3 */}
             {myPendingSubmissions.length > 3 && (
