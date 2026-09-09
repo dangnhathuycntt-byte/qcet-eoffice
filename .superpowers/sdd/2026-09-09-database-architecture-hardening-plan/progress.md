@@ -28,5 +28,7 @@ All tasks agree with plan constraints and QCET core invariants. Pre-flight scan 
 - [x] Task 10: Transactional Outbox Pattern & Model (completed, verified with `prisma validate`, `prisma generate`, `npm run typecheck`, 21/21 tests passing in `tests/outbox-pattern.test.ts`, and full test suite 365/365 passing)
 - [x] Task 11: Composite & Partial Indexes Audit (completed, verified with `prisma validate`, `prisma generate`, `npm run typecheck`, 16/16 tests passing in `tests/composite-indexes.test.ts`, and full test suite 365/365 passing)
 - [x] Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities (completed, review feedback fixed: single-word FTS heuristics, GIN index scan optimization removing Seq Scan, FTS index expression alignment, verified with `prisma/migrations/indexes.sql`, `src/lib/db/search.ts`, 27/27 tests passing in `tests/postgres-search.test.ts`, and full test suite 365/365 passing)
+- [x] Task 13: Operational Reliability & Database Runbook (completed, author `docs/architecture/DATABASE_OPERATIONS.md`, verified with `npm run typecheck`, 22/22 tests passing in `tests/database-operations-doc.test.ts`, and full test suite 386/386 passing)
+- [x] Task 14: Comprehensive Database Hardening Test Suite (completed, author `tests/database-architecture-hardening.test.ts`, verified with `npm run typecheck`, 18/18 tests passing in `tests/database-architecture-hardening.test.ts`, and full test suite 431/431 passing)
 
 
