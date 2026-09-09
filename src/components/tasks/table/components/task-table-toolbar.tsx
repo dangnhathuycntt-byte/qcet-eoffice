@@ -15,6 +15,10 @@ import {
   FileSpreadsheet,
   ChevronDown,
   Loader2,
+  Filter,
+  RotateCcw,
+  SlidersHorizontal,
+  ArrowUpDown,
 } from "lucide-react";
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
@@ -160,6 +164,11 @@ export interface TaskTableToolbarProps {
   viewMode?: TaskViewMode;
   onViewModeChange?: (mode: TaskViewMode) => void;
 
+  // Sắp xếp
+  sortField?: string;
+  sortDirection?: "asc" | "desc";
+  onSort?: (field: string) => void;
+
   // Thao tác chính
   onAddTask?: () => void;
   onExportExcel?: () => void;
@@ -198,6 +207,9 @@ export function TaskTableToolbar({
   onDensityChange,
   viewMode = "table",
   onViewModeChange,
+  sortField,
+  sortDirection,
+  onSort,
   onAddTask,
   onExportExcel,
   canCreateTask = true,
@@ -259,6 +271,8 @@ export function TaskTableToolbar({
     searchInputRef.current?.focus();
   }, [onSearchChange]);
 
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = React.useState(false);
+
   // Tính toán số lượng thẻ lọc nếu không được truyền trực tiếp
   const computedPillCounts = React.useMemo(() => {
     let counts = pillCounts;
@@ -276,10 +290,417 @@ export function TaskTableToolbar({
     return counts;
   }, [pillCounts, tasks, currentUserId, currentUserName, totalTasksCount, activeMonth]);
 
+  const activeAdvancedFilterCount = React.useMemo(() => {
+    let count = 0;
+    if (selectedDepartment && selectedDepartment !== "ALL") count++;
+    if (selectedCategory && selectedCategory !== "ALL") count++;
+    if (activeMonth !== undefined && activeMonth !== "ALL") count++;
+    return count;
+  }, [selectedDepartment, selectedCategory, activeMonth]);
+
+  const handleResetMobileFilters = React.useCallback(() => {
+    onDepartmentChange?.("ALL");
+    onCategoryChange?.("ALL");
+    activeOnMonthChange("ALL");
+    onTabChange("all");
+  }, [onDepartmentChange, onCategoryChange, activeOnMonthChange, onTabChange]);
+
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      {/* Hàng 1: Ô tìm kiếm + Bộ lọc Dropdowns + Điều khiển Chế độ & Mật độ + Nút hành động */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
+      {/* ========================================================================= */}
+      {/* 1. GIAO DIỆN DI ĐỘNG (< 640px / sm:hidden): Streamlined Mobile Task Bar  */}
+      {/* ========================================================================= */}
+      <div className="sm:hidden flex flex-col gap-2.5">
+        {/* Hàng 1: Ô tìm kiếm di động tối ưu cảm ứng (min-h-[44px]) */}
+        <div className="relative w-full">
+          {loading ? (
+            <Loader2
+              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-primary animate-spin pointer-events-none"
+              strokeWidth={1.5}
+            />
+          ) : (
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+              strokeWidth={1.5}
+            />
+          )}
+          <input
+            type="search"
+            value={localQuery}
+            onChange={(e) => setLocalQuery(e.target.value)}
+            placeholder="Tìm theo tên, mã nhiệm vụ..."
+            disabled={loading}
+            aria-label="Tìm kiếm nhiệm vụ"
+            className="w-full min-h-[44px] h-11 pl-9.5 pr-10 rounded-xl border border-border/80 bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all disabled:opacity-60 shadow-2xs"
+          />
+          {localQuery && (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              aria-label="Xóa từ khóa tìm kiếm"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex size-8 min-h-[32px] min-w-[32px] items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+            >
+              <X className="size-4" strokeWidth={1.5} />
+            </button>
+          )}
+        </div>
+
+        {/* Hàng 2: Quick Filter Chips cuộn ngang mượt mà (Apple HIG / WCAG 2.2 min 44px) */}
+        <div
+          role="tablist"
+          aria-label="Lọc nhanh nhiệm vụ trên di động"
+          className="flex items-center gap-2 overflow-x-auto scrollbar-none overscroll-x-contain py-1 -mx-1 px-1 touch-pan-x"
+        >
+          {/* Chip Tất cả */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "all"}
+            onClick={() => onTabChange("all")}
+            className={cn(
+              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-95",
+              activeTab === "all"
+                ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
+            )}
+          >
+            <span>Tất cả</span>
+            <span className="font-mono tabular-nums text-xs opacity-90">
+              ({computedPillCounts?.all ?? 0})
+            </span>
+          </button>
+
+          {/* Chip Của tôi */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "my_tasks"}
+            onClick={() => onTabChange("my_tasks")}
+            className={cn(
+              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-95",
+              activeTab === "my_tasks"
+                ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
+            )}
+          >
+            <span>Của tôi</span>
+            <span className="font-mono tabular-nums text-xs opacity-90">
+              ({computedPillCounts?.my_tasks ?? 0})
+            </span>
+          </button>
+
+          {/* Chip Chờ duyệt */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "review"}
+            onClick={() => onTabChange("review")}
+            className={cn(
+              "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-95",
+              activeTab === "review"
+                ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
+            )}
+          >
+            <span>Chờ duyệt</span>
+            <span className="font-mono tabular-nums text-xs opacity-90">
+              ({computedPillCounts?.review ?? 0})
+            </span>
+          </button>
+
+          {/* Chip Quá hạn nếu có */}
+          {(computedPillCounts?.overdue ?? 0) > 0 && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "overdue"}
+              onClick={() => onTabChange("overdue")}
+              className={cn(
+                "inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-xs transition-all touch-manipulation cursor-pointer shrink-0 active:scale-95",
+                activeTab === "overdue"
+                  ? "bg-rose-600 text-white font-semibold shadow-2xs"
+                  : "border border-rose-200 bg-rose-50/70 text-rose-700 font-medium"
+              )}
+            >
+              <span>Quá hạn</span>
+              <span className="font-mono tabular-nums text-xs font-bold">
+                ({computedPillCounts?.overdue ?? 0})
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* Hàng 3: Thanh nút bấm chức năng di động (min 44px touch targets) */}
+        <div className="flex items-center justify-between gap-2 pt-0.5">
+          <div className="flex items-center gap-2">
+            {/* Nút Bộ lọc mở Bottom Sheet */}
+            <button
+              type="button"
+              onClick={() => setIsMobileFilterOpen(true)}
+              className={cn(
+                "inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl border text-xs font-medium transition-all touch-manipulation cursor-pointer active:scale-95 shadow-2xs",
+                activeAdvancedFilterCount > 0
+                  ? "border-primary/40 bg-primary/10 text-primary font-semibold"
+                  : "border-border/80 bg-card text-foreground hover:bg-muted/60"
+              )}
+              aria-label={`Mở bộ lọc nâng cao, hiện có ${activeAdvancedFilterCount} bộ lọc đang chọn`}
+            >
+              <Filter className="size-4" strokeWidth={1.5} />
+              <span>Bộ lọc</span>
+              {activeAdvancedFilterCount > 0 && (
+                <span className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground font-mono text-xs font-bold">
+                  {activeAdvancedFilterCount}
+                </span>
+              )}
+            </button>
+
+            {/* Nút Sắp xếp nhanh di động */}
+            {onSort && (
+              <button
+                type="button"
+                onClick={() => {
+                  const nextSort =
+                    sortField === "dueDate"
+                      ? "title"
+                      : sortField === "title"
+                      ? "progress"
+                      : "dueDate";
+                  onSort(nextSort);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium touch-manipulation cursor-pointer active:scale-95 shadow-2xs"
+                aria-label="Sắp xếp danh sách công việc"
+              >
+                <ArrowUpDown className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                <span>
+                  {sortField === "dueDate"
+                    ? "Hạn"
+                    : sortField === "title"
+                    ? "Tên"
+                    : sortField === "progress"
+                    ? "Tiến độ"
+                    : "Sắp xếp"}
+                </span>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {sortDirection === "asc" ? "▲" : "▼"}
+                </span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {/* Nút Thêm việc mới */}
+            {canCreateTask && onAddTask && (
+              <button
+                type="button"
+                onClick={onAddTask}
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs active:scale-95 transition-all touch-manipulation cursor-pointer"
+              >
+                <Plus className="size-4" strokeWidth={1.5} />
+                <span>Giao việc</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Filter Bottom Sheet Dialog */}
+        {isMobileFilterOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Bộ lọc công việc nâng cao"
+          >
+            {/* Backdrop click dismiss */}
+            <div
+              className="absolute inset-0"
+              onClick={() => setIsMobileFilterOpen(false)}
+              aria-hidden="true"
+            />
+
+            {/* Drawer Surface */}
+            <div className="relative z-10 w-full max-w-lg rounded-t-2xl border-t border-border/80 bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl max-h-[85vh] overflow-y-auto space-y-4 animate-in slide-in-from-bottom duration-200">
+              {/* Drag Handle Indicator */}
+              <div className="mx-auto w-12 h-1.5 rounded-full bg-border/80 mb-1 shrink-0" aria-hidden="true" />
+
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal className="size-4.5 text-primary" strokeWidth={1.5} />
+                  <h3 className="text-base font-semibold text-foreground">Bộ lọc công việc</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="inline-flex size-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                  aria-label="Đóng bảng bộ lọc"
+                >
+                  <X className="size-5" strokeWidth={1.5} />
+                </button>
+              </div>
+
+              {/* Filter: Trạng thái nhiệm vụ */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Trạng thái nhiệm vụ
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {availableTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => onTabChange(tab.id)}
+                      className={cn(
+                        "inline-flex items-center justify-between min-h-[44px] px-3 rounded-xl border text-xs font-medium transition-all touch-manipulation cursor-pointer active:scale-98",
+                        activeTab === tab.id
+                          ? "border-primary bg-primary/10 text-primary font-semibold shadow-2xs"
+                          : "border-border/70 bg-background text-muted-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      <span>{tab.label}</span>
+                      {typeof computedPillCounts?.[tab.id] === "number" && (
+                        <span className="font-mono tabular-nums text-xs opacity-80">
+                          {computedPillCounts[tab.id]}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filter: Đơn vị phòng ban */}
+              {onDepartmentChange && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Đơn vị / Phòng ban
+                  </label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                    <select
+                      value={selectedDepartment}
+                      onChange={(e) => onDepartmentChange(e.target.value)}
+                      className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                    >
+                      {departmentOptions.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              )}
+
+              {/* Filter: Tháng học kỳ */}
+              {hasMonthHandler && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Kỳ học / Tháng học vụ (2026-2027)
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                    <select
+                      value={activeMonth}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        activeOnMonthChange(val === "ALL" ? "ALL" : Number(val));
+                      }}
+                      className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                    >
+                      <option value="ALL">Cả năm học (Tất cả các tháng)</option>
+                      {ACADEMIC_MONTH_ORDER.map((m) => {
+                        const info = getAcademicMonthInfo(m);
+                        return (
+                          <option key={`academic-month-mobile-${m}`} value={m}>
+                            {info.label} ({info.shortDateSpan})
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              )}
+
+              {/* Filter: Danh mục DACUM */}
+              {onCategoryChange && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Danh mục chuyên môn DACUM
+                  </label>
+                  <div className="relative">
+                    <Layers className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => onCategoryChange(e.target.value as TaskCategory | "ALL")}
+                      className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                    >
+                      {categoryOptions.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              )}
+
+              {/* Filter: Sắp xếp theo */}
+              {onSort && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Sắp xếp theo
+                  </label>
+                  <div className="relative">
+                    <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                    <select
+                      value={`${sortField || "dueDate"}_${sortDirection || "asc"}`}
+                      onChange={(e) => {
+                        const [field] = e.target.value.split("_");
+                        onSort(field);
+                      }}
+                      className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                    >
+                      <option value="dueDate_asc">Hạn chót (Tăng dần - Sớm nhất)</option>
+                      <option value="dueDate_desc">Hạn chót (Giảm dần - Muộn nhất)</option>
+                      <option value="title_asc">Tên nhiệm vụ (A-Z)</option>
+                      <option value="title_desc">Tên nhiệm vụ (Z-A)</option>
+                      <option value="progress_desc">Tiến độ cao nhất</option>
+                      <option value="progress_asc">Tiến độ thấp nhất</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              )}
+
+              {/* Footer Actions */}
+              <div className="flex items-center gap-2 pt-2 border-t border-border/60">
+                <button
+                  type="button"
+                  onClick={handleResetMobileFilters}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer active:scale-98"
+                >
+                  <RotateCcw className="size-3.5 text-muted-foreground" />
+                  <span>Đặt lại bộ lọc</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="flex-1 inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/95 transition-colors cursor-pointer active:scale-98"
+                >
+                  <span>Áp dụng</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2. GIAO DIỆN DESKTOP (>= 640px / hidden sm:flex): Rich Desktop Toolbar     */}
+      {/* ========================================================================= */}
+      <div className="hidden sm:flex flex-wrap items-center justify-between gap-2.5">
         {/* Nhóm bên trái: Tìm kiếm + Lọc Đơn vị + Lọc DACUM */}
         <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0">
           {/* Ô tìm kiếm Debounced */}
@@ -530,11 +951,11 @@ export function TaskTableToolbar({
         </div>
       </div>
 
-      {/* Hàng 2: Dải thẻ lọc thông minh (Smart Filter Pills) */}
+      {/* Hàng 2 (Desktop): Dải thẻ lọc thông minh (Smart Filter Pills) */}
       <div
         role="tablist"
         aria-label="Bộ lọc thông minh theo ngữ cảnh"
-        className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
+        className="hidden sm:flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none"
       >
         {availableTabs.map((tab) => {
           const isActive = activeTab === tab.id;
