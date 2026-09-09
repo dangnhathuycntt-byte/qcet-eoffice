@@ -645,7 +645,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                   />
                   <div className="truncate">
                     <span>Toàn trường (BGH QCET)</span>
-                    <span className="text-[11px] text-muted-foreground block truncate">
+                    <span className="text-xs text-muted-foreground block truncate">
                       Chỉ đạo, điều hành chiến lược
                     </span>
                   </div>
@@ -677,7 +677,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 />
                 <div className="truncate">
                   <span>{primaryUnitName}</span>
-                  <span className="text-[11px] text-muted-foreground block truncate">
+                  <span className="text-xs text-muted-foreground block truncate">
                     {isExecutive ? "Đơn vị điều hành" : "Đơn vị của tôi"}
                   </span>
                 </div>
@@ -708,7 +708,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 />
                 <div className="truncate">
                   <span>Cá nhân (Của tôi)</span>
-                  <span className="text-[11px] text-muted-foreground block truncate">
+                  <span className="text-xs text-muted-foreground block truncate">
                     Nhiệm vụ và kế hoạch cá nhân
                   </span>
                 </div>
@@ -725,7 +725,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
           {/* Section 2: Searchable Combobox of 16 Subordinate Units */}
           <div className="px-3 pt-1 pb-1 flex items-center justify-between text-xs font-semibold tracking-wider text-muted-foreground uppercase">
             <span>Đơn vị trực thuộc</span>
-            <span className="text-[10px] font-normal text-muted-foreground">16 đơn vị</span>
+            <span className="text-xs font-normal text-muted-foreground">16 đơn vị</span>
           </div>
 
           {/* Search Filter Input */}
@@ -759,9 +759,9 @@ export function ScopeSwitcher({ className }: { className?: string }) {
           <div className="max-h-56 overflow-y-auto px-1 space-y-2">
             {filteredTiers.map((tier) => (
               <div key={tier.category} className="space-y-0.5">
-                <div className="px-2 py-0.5 text-[10px] font-bold text-muted-foreground/90 uppercase tracking-wider flex items-center justify-between bg-muted/40 rounded">
+                <div className="px-2 py-0.5 text-xs font-bold text-muted-foreground/90 uppercase tracking-wider flex items-center justify-between bg-muted/40 rounded">
                   <span>{tier.label}</span>
-                  <span className="text-[10px] font-medium text-muted-foreground/70">
+                  <span className="text-xs font-medium text-muted-foreground/70">
                     {tier.departments.length}
                   </span>
                 </div>
@@ -957,7 +957,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
             <div className="pt-2 border-t border-border/50">
               <div className="px-1 pb-2 flex items-center justify-between text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                 <span>Đơn vị trực thuộc</span>
-                <span className="text-[11px] font-normal text-muted-foreground">16 đơn vị</span>
+                <span className="text-xs font-normal text-muted-foreground">16 đơn vị</span>
               </div>
 
               {/* Mobile Search input */}

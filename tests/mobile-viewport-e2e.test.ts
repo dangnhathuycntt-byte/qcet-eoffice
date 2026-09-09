@@ -97,10 +97,10 @@ describe("Mobile Viewport & PWA Standards Verification", () => {
       "ScopeSwitcher close button must enforce min-h-[44px] and min-w-[44px] touch target"
     );
 
-    // Other units accordion items must enforce min 44px height
+    // Subordinate units combobox items must enforce min 44px height
     assert.ok(
-      content.includes("CÁC ĐƠN VỊ KHÁC") && content.includes("min-h-[44px]"),
-      "Accordion trigger and items must enforce min-h-[44px]"
+      content.includes("Đơn vị trực thuộc") && content.includes("min-h-[44px]"),
+      "Subordinate units combobox items must enforce min-h-[44px]"
     );
 
     // Primary items have min 48px height
