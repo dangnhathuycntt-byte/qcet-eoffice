@@ -26,6 +26,7 @@ import {
   getActiveUserId,
 } from "./pwa/outbox-manager";
 import { registerPurgeHook } from "./pwa/offline-store";
+import { isFeatureEnabled } from "@/features/flags";
 
 export interface OfflineMutation {
   id: string;
@@ -258,6 +259,16 @@ export async function flushOfflineMutations(): Promise<{
   succeeded: number;
   failed: number;
 }> {
+  if (!isFeatureEnabled("offlineMutations")) {
+    console.warn(
+      "[OfflineSync] Offline mutation sync is disabled by operational kill switch ('offlineMutations')."
+    );
+    return {
+      succeeded: 0,
+      failed: 0,
+    };
+  }
+
   const result = await flushOutbox();
   // Refresh memory queue
   const latestOutbox = await getOutboxQueue();

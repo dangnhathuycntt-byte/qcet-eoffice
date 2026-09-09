@@ -1,6 +1,7 @@
 import * as webpush from "web-push";
 import { prisma } from "@/lib/prisma";
 import { serverEnv } from "@/config/env.server";
+import { isFeatureEnabled } from "@/features/flags";
 
 export type TaskPushEventType =
   | "TASK_ASSIGNED"
@@ -246,6 +247,20 @@ export async function sendPushNotificationToUser(
   userId: string,
   payload: PushNotificationPayload
 ): Promise<PushResult> {
+  if (!isFeatureEnabled("pushNotifications")) {
+    console.warn(
+      "[PushService] Push notifications are disabled by operational kill switch ('pushNotifications'). Skipping dispatch."
+    );
+    return {
+      success: false,
+      totalSubscriptions: 0,
+      sentCount: 0,
+      failedCount: 0,
+      revokedCount: 0,
+      details: [],
+    };
+  }
+
   ensureVapidConfigured();
 
   const subscriptions = await prisma.pushSubscription.findMany({

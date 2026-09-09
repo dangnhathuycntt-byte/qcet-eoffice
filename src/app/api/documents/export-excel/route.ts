@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { listDocuments } from "@/lib/documents/document-service";
 import { generateAppendixIVCsv } from "@/lib/documents/excel-export";
 import { getSessionFromRequest } from "@/lib/jwt-session";
+import { isFeatureEnabled } from "@/features/flags";
 import type { DocumentType } from "@/types/document";
 
 export async function GET(request: NextRequest) {
@@ -18,6 +19,18 @@ export async function GET(request: NextRequest) {
           error: "Vui lòng đăng nhập để xuất sổ văn bản",
         },
         { status: 401 }
+      );
+    }
+
+    // Operational kill switch: largeExcelExport
+    if (!isFeatureEnabled("largeExcelExport")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Tính năng xuất sổ văn bản Excel/CSV tạm thời bị vô hiệu hóa bởi cấu hình vận hành hệ thống",
+          code: "FEATURE_DISABLED",
+        },
+        { status: 503 }
       );
     }
 

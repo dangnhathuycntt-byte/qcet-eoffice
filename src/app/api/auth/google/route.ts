@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppBaseUrl, buildGoogleAuthUrl } from "@/lib/google-oauth";
 import { serverEnv } from "@/config/env.server";
+import { isFeatureEnabled } from "@/features/flags";
 
 export async function GET(req: NextRequest) {
+  const baseUrl = getAppBaseUrl(req);
+
+  if (!isFeatureEnabled("externalGoogleLogin")) {
+    return NextResponse.redirect(new URL("/login?error=oauth_not_configured", baseUrl));
+  }
+
   const clientId = serverEnv.GOOGLE_CLIENT_ID;
   const clientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
-
-  const baseUrl = getAppBaseUrl(req);
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(new URL("/login?error=oauth_not_configured", baseUrl));

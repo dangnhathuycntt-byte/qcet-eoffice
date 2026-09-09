@@ -3,11 +3,20 @@
  * Enforces strict boundary between server secrets and client-safe runtime configuration.
  */
 
+import { getPublicFeatureFlags, isFeatureEnabled } from "@/features/flags";
+
 export interface PublicRuntimeFeatures {
   googleAuth: boolean;
   webPush: boolean;
   academicCalendarSync: boolean;
   offlineSupport: boolean;
+  pushNotifications: boolean;
+  externalGoogleLogin: boolean;
+  offlineMutations: boolean;
+  largeExcelExport: boolean;
+  taskWorkspaceV2: boolean;
+  mobileAgenda: boolean;
+  newExecutiveDashboard: boolean;
   [key: string]: boolean;
 }
 
@@ -88,20 +97,26 @@ export function getPublicRuntimeConfig(): PublicRuntimeConfig {
     process.env.VERCEL_GIT_COMMIT_SHA ||
     "development";
 
-  const googleAuth = Boolean(
-    process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-  );
-  const webPush = Boolean(
-    process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-  );
+  const publicFlags = getPublicFeatureFlags();
+
+  const googleAuth =
+    isFeatureEnabled("externalGoogleLogin") &&
+    Boolean(process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+
+  const webPush =
+    isFeatureEnabled("pushNotifications") &&
+    Boolean(process.env.VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+
+  const offlineSupport = isFeatureEnabled("offlineMutations");
 
   const config: PublicRuntimeConfig = {
     environment,
     features: {
+      ...publicFlags,
       googleAuth,
       webPush,
       academicCalendarSync: true,
-      offlineSupport: true,
+      offlineSupport,
     },
     version,
     buildId,

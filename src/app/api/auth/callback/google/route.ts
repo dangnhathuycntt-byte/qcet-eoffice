@@ -9,9 +9,18 @@ import { signSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 import { serverEnv } from "@/config/env.server";
+import { isFeatureEnabled } from "@/features/flags";
 
 export async function GET(req: NextRequest) {
   const baseUrl = getAppBaseUrl(req);
+
+  // Operational kill switch: externalGoogleLogin
+  if (!isFeatureEnabled("externalGoogleLogin")) {
+    const response = NextResponse.redirect(new URL("/login?error=oauth_not_configured", baseUrl));
+    response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
+    return response;
+  }
+
   const searchParams = req.nextUrl.searchParams;
 
   // 1. Kiểm tra lỗi trả về từ Google (người dùng bấm Hủy)
