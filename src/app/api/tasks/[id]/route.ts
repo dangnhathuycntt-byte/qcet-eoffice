@@ -13,7 +13,7 @@ function getSessionPayload(request: NextRequest): SessionPayload | null {
 }
 
 interface RouteContext {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(
@@ -45,6 +45,22 @@ export async function GET(
         resolutions: {
           include: {
             actor: { select: { id: true, name: true } }
+          }
+        },
+        dacumTaskDef: {
+          include: {
+            duty: true
+          }
+        },
+        parentTask: {
+          select: { id: true, code: true, title: true, scope: true }
+        },
+        subTasks: {
+          include: {
+            assignees: {
+              include: { user: true }
+            },
+            deliverables: true
           }
         }
       }
@@ -119,10 +135,37 @@ export async function PATCH(
       priority,
       dueDate,
       departmentId,
-      assigneeId
+      assigneeId,
+      parentTaskId,
+      collaboratorIds,
     } = body;
 
     const updateData: any = {};
+
+    if (parentTaskId !== undefined) {
+      if (parentTaskId === null || parentTaskId === '' || parentTaskId === 'none') {
+        updateData.parentTaskId = null;
+      } else if (typeof parentTaskId === 'string') {
+        const trimmedParentId = parentTaskId.trim();
+        if (trimmedParentId === id) {
+          return NextResponse.json(
+            { success: false, error: 'Nhiệm vụ không thể là nhiệm vụ cha của chính nó' },
+            { status: 400 }
+          );
+        }
+        const parentTask = await prisma.task.findUnique({
+          where: { id: trimmedParentId },
+          select: { id: true }
+        });
+        if (!parentTask) {
+          return NextResponse.json(
+            { success: false, error: 'Không tìm thấy nhiệm vụ cha' },
+            { status: 404 }
+          );
+        }
+        updateData.parentTaskId = trimmedParentId;
+      }
+    }
 
     if (typeof title === 'string' && title.trim()) {
       updateData.title = title.trim();
@@ -160,6 +203,15 @@ export async function PATCH(
 
       const mappedStatus = statusMap[status];
       if (mappedStatus) {
+        if (mappedStatus === TaskStatus.COMPLETED) {
+          const canApprove = isPrivileged || isDepartmentLeader || (isCreator && !isAssignee);
+          if (!canApprove) {
+            return NextResponse.json(
+              { success: false, error: "Chỉ Ban Giám hiệu, Quản trị viên hoặc Trưởng đơn vị mới có quyền nghiệm thu hoàn thành nhiệm vụ" },
+              { status: 403 }
+            );
+          }
+        }
         updateData.status = mappedStatus;
         if (mappedStatus === TaskStatus.COMPLETED) {
           updateData.completedAt = new Date();
@@ -191,23 +243,60 @@ export async function PATCH(
     }
 
     const updated = await prisma.$transaction(async (tx) => {
-      if (assigneeId) {
-        // Upsert primary owner
-        const existingAssignee = await tx.taskAssignee.findFirst({
-          where: { taskId: id, roleInTask: AssigneeRole.PRIMARY_OWNER }
-        });
-        if (existingAssignee) {
-          await tx.taskAssignee.update({
-            where: { id: existingAssignee.id },
-            data: { userId: assigneeId }
+      let effectivePrimaryOwnerId: string | null = null;
+
+      if (assigneeId !== undefined) {
+        const validAssigneeId = typeof assigneeId === 'string' && assigneeId.trim() ? assigneeId.trim() : null;
+        if (validAssigneeId) {
+          effectivePrimaryOwnerId = validAssigneeId;
+          // Delete existing primary owner(s) and any existing role for this user on this task
+          await tx.taskAssignee.deleteMany({
+            where: { taskId: id, roleInTask: AssigneeRole.PRIMARY_OWNER }
           });
-        } else {
+          await tx.taskAssignee.deleteMany({
+            where: { taskId: id, userId: validAssigneeId }
+          });
           await tx.taskAssignee.create({
             data: {
               taskId: id,
-              userId: assigneeId,
+              userId: validAssigneeId,
               roleInTask: AssigneeRole.PRIMARY_OWNER
             }
+          });
+        } else if (assigneeId === null) {
+          await tx.taskAssignee.deleteMany({
+            where: { taskId: id, roleInTask: AssigneeRole.PRIMARY_OWNER }
+          });
+        }
+      } else {
+        const existingOwner = await tx.taskAssignee.findFirst({
+          where: { taskId: id, roleInTask: AssigneeRole.PRIMARY_OWNER },
+          select: { userId: true }
+        });
+        effectivePrimaryOwnerId = existingOwner?.userId || null;
+      }
+
+      if (collaboratorIds !== undefined) {
+        const validCollabIds = Array.isArray(collaboratorIds)
+          ? Array.from(new Set(collaboratorIds)).filter(
+              (cId): cId is string => typeof cId === 'string' && Boolean(cId.trim()) && cId.trim() !== effectivePrimaryOwnerId
+            )
+          : [];
+
+        // Remove old collaborators
+        await tx.taskAssignee.deleteMany({
+          where: { taskId: id, roleInTask: AssigneeRole.COLLABORATOR }
+        });
+
+        // Add new collaborators
+        if (validCollabIds.length > 0) {
+          await tx.taskAssignee.createMany({
+            data: validCollabIds.map(cId => ({
+              taskId: id,
+              userId: cId,
+              roleInTask: AssigneeRole.COLLABORATOR
+            })),
+            skipDuplicates: true
           });
         }
       }
@@ -226,6 +315,17 @@ export async function PATCH(
             include: {
               uploadedBy: { select: { id: true, name: true, avatarUrl: true } },
               reviewer: { select: { id: true, name: true, avatarUrl: true } }
+            }
+          },
+          parentTask: {
+            select: { id: true, code: true, title: true, scope: true }
+          },
+          subTasks: {
+            include: {
+              assignees: {
+                include: { user: true }
+              },
+              deliverables: true
             }
           }
         }
@@ -279,17 +379,50 @@ export async function DELETE(
     }
 
     await prisma.$transaction(async (tx) => {
-      // Unlink any document linked to this task
+      // 1. Find all subtasks
+      let allSubtaskIds: string[] = [];
+      let parentIds = [id];
+      while (parentIds.length > 0) {
+        const children = await tx.task.findMany({
+          where: { parentTaskId: { in: parentIds } },
+          select: { id: true },
+        });
+        if (children.length === 0) break;
+        const childIds = children.map((c) => c.id);
+        allSubtaskIds.push(...childIds);
+        parentIds = childIds;
+      }
+
+      if (allSubtaskIds.length > 0) {
+        // Unlink documents linked to subtasks
+        await tx.document.updateMany({
+          where: { linkedTaskId: { in: allSubtaskIds } },
+          data: { linkedTaskId: null },
+        });
+
+        // Delete subtask child relations
+        await tx.taskAssignee.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
+        await tx.taskDeliverable.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
+        await tx.dacumDelegation.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
+        await tx.executiveResolution.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
+
+        // Delete subtasks themselves
+        await tx.task.deleteMany({ where: { id: { in: allSubtaskIds } } });
+      }
+
+      // 2. Unlink any document linked to this task
       await tx.document.updateMany({
         where: { linkedTaskId: id },
-        data: { linkedTaskId: null }
+        data: { linkedTaskId: null },
       });
 
-      // Cleanup cascaded relations safely
+      // 3. Cleanup cascaded relations safely
       await tx.taskAssignee.deleteMany({ where: { taskId: id } });
       await tx.taskDeliverable.deleteMany({ where: { taskId: id } });
       await tx.dacumDelegation.deleteMany({ where: { taskId: id } });
       await tx.executiveResolution.deleteMany({ where: { taskId: id } });
+
+      // 4. Delete the main task
       await tx.task.delete({ where: { id } });
     });
 

@@ -12,6 +12,14 @@ export interface SchoolTask {
   collaborators?: string[];
   category: string;
   academicYear?: string;
+  parentTaskId?: string;
+  parentTask?: {
+    id: string;
+    code: string;
+    title: string;
+    scope?: string;
+  };
+  subTasks?: any[];
   [key: string]: any;
 }
 
@@ -30,6 +38,14 @@ export interface PrismaTaskWithRelations {
   dueDate: Date;
   completedAt?: Date | null;
   departmentId: string | null;
+  parentTaskId?: string | null;
+  parentTask?: {
+    id: string;
+    code: string;
+    title: string;
+    scope?: string;
+  } | null;
+  subTasks?: any[];
   department?: {
     id: string;
     name: string;
@@ -49,6 +65,21 @@ export interface PrismaTaskWithRelations {
     fileUrl: string;
     reviewStatus: string;
   }[];
+  dacumTaskDefId?: string | null;
+  dacumTaskDef?: {
+    id: string;
+    code: string;
+    title: string;
+    criteria?: string | null;
+    tools?: string | null;
+    requiredDeliverables?: string | null;
+    standardHours?: number;
+    duty?: {
+      id: string;
+      code: string;
+      title: string;
+    } | null;
+  } | null;
 }
 
 export interface PrismaTaskCreateInput {
@@ -64,6 +95,18 @@ export interface PrismaTaskCreateInput {
   createdById: string;
   departmentId?: string | null;
   [key: string]: any;
+}
+
+export function formatLocalDate(d: Date | string | null | undefined): string {
+  if (!d) return '';
+  const dateObj = typeof d === 'string' ? new Date(d) : d;
+  if (isNaN(dateObj.getTime())) return '';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(dateObj);
 }
 
 export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations): SchoolTask {
@@ -92,12 +135,11 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations): SchoolT
     LOW: 'low'
   };
 
-  const isoDueDate = raw.dueDate instanceof Date
-    ? raw.dueDate.toISOString().split('T')[0]
-    : String(raw.dueDate).split('T')[0];
+  const isoDueDate = formatLocalDate(raw.dueDate);
 
   return {
     id: raw.id,
+    code: raw.code,
     title: raw.title,
     description: raw.description || '',
     department: raw.department?.name || 'Chưa phân bổ',
@@ -108,7 +150,21 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations): SchoolT
     progress: raw.progressPercent ?? 0,
     academicMonth: raw.academicMonth ?? 9,
     collaborators: collaborators && collaborators.length > 0 ? collaborators : undefined,
-    category: raw.scope === 'SCHOOL' ? 'Chỉ đạo cấp Trường' : 'Chuyên môn Khoa/Phòng'
+    category: raw.scope === 'SCHOOL' ? 'Chỉ đạo cấp Trường' : 'Chuyên môn Khoa/Phòng',
+    parentTaskId: raw.parentTaskId || undefined,
+    parentTask: raw.parentTask || undefined,
+    subTasks: raw.subTasks || undefined,
+    dacumTaskDefId: raw.dacumTaskDefId || undefined,
+    dacumTaskDef: raw.dacumTaskDef ? {
+      id: raw.dacumTaskDef.id,
+      code: raw.dacumTaskDef.code,
+      title: raw.dacumTaskDef.title,
+      criteria: raw.dacumTaskDef.criteria || undefined,
+      tools: raw.dacumTaskDef.tools || undefined,
+      requiredDeliverables: raw.dacumTaskDef.requiredDeliverables || undefined,
+      standardHours: raw.dacumTaskDef.standardHours || 0,
+      dutyTitle: raw.dacumTaskDef.duty?.title,
+    } : undefined
   };
 }
 
