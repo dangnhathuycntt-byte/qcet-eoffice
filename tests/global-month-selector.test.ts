@@ -3,12 +3,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-const calendarModulePath = path.resolve(process.cwd(), "src/lib/academic-calendar.ts");
-const {
+import {
   ACADEMIC_MONTH_ORDER,
   getAcademicMonthPeriod,
   getAcademicMonthInfo,
-} = await import(`file://${calendarModulePath}`);
+} from "../src/lib/academic-calendar";
 
 describe("Global Month Selector Component Invariants", () => {
   const componentPath = path.resolve(process.cwd(), "src/components/layout/global-month-selector.tsx");

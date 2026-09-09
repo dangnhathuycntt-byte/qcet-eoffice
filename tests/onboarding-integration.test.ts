@@ -47,7 +47,7 @@ test("AppShell integrates OnboardingHub with WelcomeModal, SpotlightTour and Che
   assert.ok(content.includes("OnboardingChecklistWidget"), "AppShell must mount OnboardingChecklistWidget");
 });
 
-test("AppTopbar and ScopeSwitcher contain required tour DOM anchors", () => {
+test("Contextual components and ScopeSwitcher contain required tour DOM anchors", () => {
   const topbarPath = path.resolve(
     process.cwd(),
     "src/components/layout/app-topbar.tsx"
@@ -56,9 +56,14 @@ test("AppTopbar and ScopeSwitcher contain required tour DOM anchors", () => {
     process.cwd(),
     "src/components/layout/scope-switcher.tsx"
   );
+  const dashboardZonePath = path.resolve(
+    process.cwd(),
+    "src/components/dashboard/zones/dashboard-zone.tsx"
+  );
 
   const topbarContent = fs.readFileSync(topbarPath, "utf-8");
   const scopeSwitcherContent = fs.readFileSync(scopeSwitcherPath, "utf-8");
+  const dashboardZoneContent = fs.readFileSync(dashboardZonePath, "utf-8");
 
   assert.ok(
     topbarContent.includes('id="tour-topbar-search"'),
@@ -66,9 +71,9 @@ test("AppTopbar and ScopeSwitcher contain required tour DOM anchors", () => {
   );
 
   assert.ok(
-    topbarContent.includes('id="tour-scope-switcher"') ||
+    dashboardZoneContent.includes('id="tour-scope-switcher"') ||
       scopeSwitcherContent.includes('id="tour-scope-switcher"'),
-    "ScopeSwitcher or its Topbar wrapper must have id='tour-scope-switcher'"
+    "ScopeSwitcher or its DashboardZone wrapper must have id='tour-scope-switcher'"
   );
 });
 

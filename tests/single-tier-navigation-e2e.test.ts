@@ -79,7 +79,7 @@ describe("Single-Tier Navigation Configuration (sidebar-context.tsx)", () => {
 
   it("provides default badge configuration for operational counters", () => {
     assert.strictEqual(DEFAULT_SIDEBAR_BADGES.calendar, 1);
-    assert.strictEqual(DEFAULT_SIDEBAR_BADGES.notifications, 5);
+    assert.strictEqual(DEFAULT_SIDEBAR_BADGES.notifications, 0);
     assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsInbox, 6);
     assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsOutbox, 4);
     assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsPending, 2);
@@ -216,6 +216,7 @@ describe("Single-Tier Sidebar Architecture (app-sidebar.tsx)", () => {
 describe("Topbar ScopeSwitcher Component (scope-switcher.tsx & app-topbar.tsx)", () => {
   const scopeSwitcherPath = path.resolve(__dirname, "../src/components/layout/scope-switcher.tsx");
   const topbarPath = path.resolve(__dirname, "../src/components/layout/app-topbar.tsx");
+  const dashboardZonePath = path.resolve(__dirname, "../src/components/dashboard/zones/dashboard-zone.tsx");
 
   it("scope-switcher.tsx exists and exports ScopeSwitcher", () => {
     assert.ok(fs.existsSync(scopeSwitcherPath), "scope-switcher.tsx must exist");
@@ -240,11 +241,15 @@ describe("Topbar ScopeSwitcher Component (scope-switcher.tsx & app-topbar.tsx)",
     assert.ok(content.includes('params.set("scope"'), "Must set scope parameter in URL");
   });
 
-  it("AppTopbar mounts ScopeSwitcher inside React Suspense boundary", () => {
+  it("AppTopbar maintains Clean Chrome and DashboardZone mounts ScopeSwitcher inside React Suspense boundary", () => {
     assert.ok(fs.existsSync(topbarPath), "app-topbar.tsx must exist");
-    const content = fs.readFileSync(topbarPath, "utf-8");
-    assert.ok(content.includes("ScopeSwitcher"), "AppTopbar must import ScopeSwitcher");
-    assert.ok(content.includes("<Suspense"), "Must wrap ScopeSwitcher with Suspense");
+    const topbarContent = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(!topbarContent.includes("ScopeSwitcher"), "AppTopbar must maintain Clean Chrome (no ScopeSwitcher import)");
+
+    assert.ok(fs.existsSync(dashboardZonePath), "dashboard-zone.tsx must exist");
+    const dashboardContent = fs.readFileSync(dashboardZonePath, "utf-8");
+    assert.ok(dashboardContent.includes("ScopeSwitcher"), "DashboardZone must import ScopeSwitcher");
+    assert.ok(dashboardContent.includes("<Suspense"), "DashboardZone must wrap ScopeSwitcher with Suspense");
   });
 
   it("anti-slop rule: 0% emojis in ScopeSwitcher and AppTopbar", () => {
