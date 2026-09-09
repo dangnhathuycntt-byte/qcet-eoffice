@@ -20,13 +20,14 @@ import {
   removeOutboxItem as storeRemove,
   clearUserOutbox as storeClear,
 } from "./offline-store";
+import { recordTelemetry } from "./telemetry";
 
 export type OutboxStatus = "pending" | "syncing" | "conflict" | "failed";
 
 export type { OfflineOutboxItem, EnqueueOutboxItemInput };
 
 export const MAX_OUTBOX_RETRIES = 5;
-export const SYNC_TAG_QCET_OUTBOX = "qcet-outbox";
+export const SYNC_TAG_QCET_OUTBOX = "qcet-outbox-sync";
 
 // ---------------------------------------------------------------------------
 // 1. User Context Resolver
@@ -164,6 +165,18 @@ export async function enqueueOutbox(
   const currentQueue = await storeGetQueue(uid);
   notifySubscribers(currentQueue);
 
+  // Record non-sensitive operational telemetry
+  recordTelemetry(
+    "sync.queued",
+    {
+      itemId: created.id,
+      operation: created.operation,
+      entityId: created.entityId,
+      method: created.method,
+    },
+    uid
+  );
+
   return created;
 }
 
@@ -288,9 +301,6 @@ export async function resolveConflict(
 
     const currentQueue = await storeGetQueue(uid);
     notifySubscribers(currentQueue);
-
-    // Immediately trigger flush for the resolved item
-    flushOutbox(uid).catch(() => {});
   }
 }
 
@@ -403,6 +413,16 @@ async function executeFlush(
         // Successful mutation sync -> Remove from outbox
         await storeRemove(uid, item.id);
         succeeded++;
+        recordTelemetry(
+          "sync.success",
+          {
+            itemId: item.id,
+            operation: item.operation,
+            entityId: item.entityId,
+            method: item.method,
+          },
+          uid
+        );
       } else if (response.status === 409) {
         // 409 Conflict: OCC mismatch.
         // DO NOT discard and DO NOT overwrite server data blindly.
@@ -411,6 +431,17 @@ async function executeFlush(
         if (item.entityId) {
           blockedEntityIds.add(item.entityId);
         }
+
+        recordTelemetry(
+          "sync.conflict",
+          {
+            itemId: item.id,
+            operation: item.operation,
+            entityId: item.entityId,
+            expectedVersion: item.expectedVersion,
+          },
+          uid
+        );
 
         let conflictData: unknown = null;
         try {

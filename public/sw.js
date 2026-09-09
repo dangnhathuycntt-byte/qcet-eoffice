@@ -331,7 +331,7 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: payload.body || '',
-    icon: payload.icon || '/icons/icon-192x192.png',
+    icon: payload.icon || '/logo-qcet.png',
     badge: payload.badge || '/icons/badge-72x72.png',
     data: payload.data || { route: '/tasks', linkHref: '/tasks' },
     vibrate: payload.vibrate || [100, 50, 100],
@@ -367,7 +367,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const data = event.notification.data || {};
-  const rawTargetUrl = data.route || data.url || data.linkHref || '/tasks';
+  const rawTargetUrl = data.route || data.url || data.linkHref || '/portal'; // Supported default routes: /portal or /tasks
 
   // Enforce strict same-origin route validation to prevent open redirects
   let targetUrl = '/tasks';
@@ -432,7 +432,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // 7. Background Sync: Progressive sync for offline mutation outbox
 self.addEventListener('sync', (event) => {
-  if (event.tag === 'qcet-outbox') {
+  if (event.tag === 'qcet-outbox-sync' || event.tag === 'qcet-outbox') {
     event.waitUntil(
       self.clients.matchAll({ type: 'window' }).then((clients) => {
         for (const client of clients) {

@@ -177,6 +177,26 @@ export function generateNotificationTag(
 }
 
 /**
+ * Validates deep link URL against base origin, preventing open redirects or javascript: injection.
+ */
+export function validateDeepLinkUrl(rawTargetUrl: string, baseOrigin: string): string | null {
+  try {
+    if (typeof rawTargetUrl !== "string") return null;
+    const trimmed = rawTargetUrl.trim();
+    if (/^(javascript|data|vbscript):/i.test(trimmed)) {
+      return null;
+    }
+    const parsed = new URL(trimmed, baseOrigin);
+    if (parsed.origin === baseOrigin) {
+      return parsed.href;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Checks platform compatibility specifically for iOS Safari.
  * Apple requires Web Push on iOS 16.4+ to be installed to the Home Screen (standalone mode).
  */

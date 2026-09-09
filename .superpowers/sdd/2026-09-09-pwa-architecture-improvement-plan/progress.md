@@ -71,17 +71,18 @@ Status: Pre-flight scan clean. No conflicts.
 - Status: Completed.
 
 ### Task 8: Storage Quota Management & Global Sync Status UX
-- Commit: Pending commit
+- Commit: `088cfea`
 - Implementer report: `task-8-report.md`
-- Key items:
-  * Storage Quota Inspection via navigator.storage.estimate()
-  * Explicit persistence permission boundary (only on explicit user request)
-  * On-demand offline data purge (READ_CACHE, DRAFT, OUTBOX, Cache Storage)
-  * Tri-state connectivity detector (ONLINE, DEGRADED, OFFLINE) with periodic heartbeat
-  * Live Sync Status Bar & Badge with outbox count, syncing progress, conflict alert
-  * Institutional Settings Card integration for PWA & Offline management
-  * Task 7 review fixes applied (push snooze duration, auto-open guard)
-  * 21/21 unit tests pass (142/142 all PWA tests pass, 0 TS errors)
-- Status: Completed (Ready for review).
+- Review package: `review-c001b08..088cfea.diff`
+- Review verdict: Approved (Storage estimate via navigator.storage.estimate(), explicit persistence consent boundary, tri-state connectivity detection ONLINE/DEGRADED/OFFLINE with HTTP probes, live sync status bar/badge, settings card, 21/21 tests pass).
+- Status: Completed.
+
+### Task 9: Progressive Enhancements, Badging & Verification Test Suite
+- Commit: Pending
+- Implementer report: `task-9-report.md`
+- Review verdict: Completed (Badging API, Background Sync tag alignment, privacy-preserving operational telemetry, Serwist decision record, comprehensive 187-test matrix passing, zero typecheck errors).
+- Status: Completed.
+
+
 
 

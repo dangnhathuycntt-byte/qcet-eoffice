@@ -207,6 +207,13 @@ export class PWAConnectivityManager {
     const previousState = this.state;
     this.state = newState;
 
+    // Track privacy-preserving operational telemetry for offline entry/exit
+    if ((newState === "OFFLINE" || newState === "DEGRADED") && previousState === "ONLINE") {
+      recordTelemetry("offline.enter", { state: newState, previousState });
+    } else if (newState === "ONLINE" && (previousState === "OFFLINE" || previousState === "DEGRADED")) {
+      recordTelemetry("offline.exit", { state: newState, previousState });
+    }
+
     // Dispatch DOM CustomEvent
     if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
       try {

@@ -654,6 +654,13 @@ export class PWAOnboardingCoordinator {
   }
 
   /**
+   * Alias for snoozeInstall to support explicit dismissal
+   */
+  public dismissInstallPrompt(days?: number): void {
+    this.snoozeInstall(days);
+  }
+
+  /**
    * Snoozes the push notification prompt
    */
   public snoozePush(days?: number): void {
