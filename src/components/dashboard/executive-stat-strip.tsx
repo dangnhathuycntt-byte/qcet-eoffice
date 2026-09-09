@@ -81,12 +81,15 @@ const defaultStats: DashboardStats = {
   totalSchoolTasks: 0,
   schoolTasksInProgress: 0,
   schoolTasksCompleted: 0,
+  schoolTasksNotStarted: 0,
   totalStaffTasks: 0,
   staffTasksInProgress: 0,
   staffTasksCompleted: 0,
+  staffTasksNotStarted: 0,
   needsReviewTasksCount: 0,
   overdueTasksCount: 0,
   averageSchoolProgressPercent: 0,
+  completionRate: 0,
 };
 
 export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
@@ -99,7 +102,7 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
 
   // Build intelligent subtext for urgent card
   const urgentSubtextParts: string[] = [
-    `${formatNumber(needsReviewCount)} cần xử lý`,
+    `${formatNumber(needsReviewCount)} cần duyệt`,
     `${formatNumber(overdueCount)} trễ hạn`,
   ];
   if (triageCount > 0) {
@@ -135,12 +138,18 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
     };
   }
 
+  const schoolNotStarted = stats.schoolTasksNotStarted ?? 0;
+  const staffNotStarted = stats.staffTasksNotStarted ?? 0;
+  const completionRateVal =
+    stats.completionRate ??
+    Math.round((stats.schoolTasksCompleted / (stats.totalSchoolTasks || 1)) * 100);
+
   return [
     {
       id: "school-tasks",
       title: "Nhiệm vụ cấp Trường",
       value: formatNumber(stats.totalSchoolTasks),
-      subtext: `${formatNumber(stats.schoolTasksInProgress)} đang làm · ${formatNumber(stats.schoolTasksCompleted)} hoàn thiện`,
+      subtext: `${formatNumber(stats.schoolTasksInProgress)} đang làm · ${formatNumber(schoolNotStarted)} chưa làm · ${formatNumber(stats.schoolTasksCompleted)} hoàn thành`,
       filterKey: "ALL",
       iconName: "Layers",
     },
@@ -148,7 +157,7 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
       id: "unit-tasks",
       title: "Công việc Đơn vị",
       value: formatNumber(stats.totalStaffTasks),
-      subtext: `${formatNumber(stats.staffTasksInProgress)} đang làm · ${formatNumber(stats.staffTasksCompleted)} hoàn thiện`,
+      subtext: `${formatNumber(stats.staffTasksInProgress)} đang làm · ${formatNumber(staffNotStarted)} chưa làm · ${formatNumber(stats.staffTasksCompleted)} hoàn thành`,
       filterKey: "MY_ACTION",
       iconName: "Clock",
     },
@@ -163,9 +172,9 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
     },
     {
       id: "overall-progress",
-      title: "Tỷ lệ hoàn thành toàn trường",
+      title: "Tiến độ trung bình toàn trường",
       value: `${stats.averageSchoolProgressPercent}%`,
-      subtext: "Tiến độ trung bình",
+      subtext: `Hoàn tất ${formatNumber(stats.schoolTasksCompleted)}/${formatNumber(stats.totalSchoolTasks)} (${completionRateVal}%)`,
       filterKey: "COMPLETED",
       progress: stats.averageSchoolProgressPercent,
       iconName: "CheckCircle2",
@@ -311,8 +320,16 @@ export function ExecutiveStatStrip({
             {/* Bottom section: Progress bar or Subtext with subtle status dot */}
             <div className="pt-0.5">
               {card.progress !== undefined ? (
-                <div className="space-y-1.5">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                <div className="space-y-1.5" title="Tiến độ bình quân">
+                  <div
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"
+                    role="progressbar"
+                    aria-label="Tiến độ bình quân"
+                    aria-valuenow={card.progress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    title="Tiến độ bình quân"
+                  >
                     <div
                       className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
                       style={{
@@ -322,7 +339,10 @@ export function ExecutiveStatStrip({
                   </div>
                   <div className="flex items-center justify-between text-xs sm:text-[13px] font-medium text-muted-foreground">
                     <span className="truncate">{card.subtext}</span>
-                    <span className="font-mono font-semibold text-foreground tabular-nums ml-1 shrink-0">
+                    <span
+                      className="font-mono font-semibold text-foreground tabular-nums ml-1 shrink-0"
+                      title="Tiến độ bình quân"
+                    >
                       {card.progress}%
                     </span>
                   </div>
