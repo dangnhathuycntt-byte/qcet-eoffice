@@ -16,6 +16,10 @@ import {
   SlidersHorizontal,
   Loader2,
   Check,
+  ArrowUpDown,
+  ChevronDown,
+  RotateCcw,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AuthUser } from "@/types/auth";
@@ -32,6 +36,60 @@ import {
 } from "@/lib/academic-calendar";
 import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
 import { filterTasksByRole, matchesUser } from "@/lib/role-task-filter";
+import {
+  SavedViewsSelector,
+  type SavedViewsSelectorProps,
+} from "@/components/tasks/saved-views-selector";
+import {
+  type SavedTaskView,
+  type TaskViewCriteria,
+  type SavedViewRole,
+  type UseSavedViewsOptions,
+  type UseSavedViewsReturn,
+  EXECUTIVE_PRESETS,
+  MANAGER_PRESETS,
+  STAFF_PRESETS,
+  ALL_ROLE_PRESETS,
+  getRolePresetViews,
+  findPresetById,
+  findPresetByName,
+  areCriteriaEqual,
+  criteriaToUrlParams,
+  urlParamsToCriteria,
+  getCustomSavedViews,
+  saveCustomView,
+  updateCustomView,
+  deleteCustomView,
+  clearCustomViews,
+  useSavedViews,
+} from "@/lib/saved-views/saved-views-store";
+
+// Export Saved Views Infrastructure
+export {
+  SavedViewsSelector,
+  type SavedViewsSelectorProps,
+  type SavedTaskView,
+  type TaskViewCriteria,
+  type SavedViewRole,
+  type UseSavedViewsOptions,
+  type UseSavedViewsReturn,
+  EXECUTIVE_PRESETS,
+  MANAGER_PRESETS,
+  STAFF_PRESETS,
+  ALL_ROLE_PRESETS,
+  getRolePresetViews,
+  findPresetById,
+  findPresetByName,
+  areCriteriaEqual,
+  criteriaToUrlParams,
+  urlParamsToCriteria,
+  getCustomSavedViews,
+  saveCustomView,
+  updateCustomView,
+  deleteCustomView,
+  clearCustomViews,
+  useSavedViews,
+};
 
 // ============================================================================
 // 1. Interfaces & Types
@@ -97,6 +155,7 @@ export interface UnifiedTaskToolbarProps {
     my_tasks?: number;
     waiting_approval?: number;
     review?: number;
+    pending_submission?: number;
     overdue?: number;
     today?: number;
     in_progress?: number;
@@ -135,6 +194,11 @@ export interface UnifiedTaskToolbarProps {
   density?: TableDensity;
   onDensityChange?: (density: TableDensity) => void;
 
+  // Sorting (Mobile & Adaptive support)
+  sortField?: string;
+  sortDirection?: "asc" | "desc";
+  onSort?: (field: string) => void;
+
   // Refresh
   onRefresh?: () => void;
   isRefreshing?: boolean;
@@ -142,6 +206,15 @@ export interface UnifiedTaskToolbarProps {
   // Presentation
   totalTasksCount?: number;
   className?: string;
+
+  // Saved Views Infrastructure (Phase 10)
+  showSavedViews?: boolean;
+  activeViewId?: string | null;
+  onSelectView?: (view: SavedTaskView) => void;
+  currentCriteria?: TaskViewCriteria;
+  onSaveView?: (newView: SavedTaskView) => void;
+  onDeleteView?: (viewId: string) => void;
+  onRenameView?: (viewId: string, newName: string) => void;
 }
 
 // ============================================================================
@@ -284,8 +357,18 @@ export function UnifiedTaskToolbar({
   onViewModeChange,
   density = "comfortable",
   onDensityChange,
+  sortField,
+  sortDirection,
+  onSort,
   totalTasksCount,
   className,
+  showSavedViews = true,
+  activeViewId,
+  onSelectView,
+  currentCriteria,
+  onSaveView,
+  onDeleteView,
+  onRenameView,
 }: UnifiedTaskToolbarProps) {
   // Input ref for keyboard focus shortcut
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -316,6 +399,37 @@ export function UnifiedTaskToolbar({
     if (scope === "UNIT_TASKS" || scope === "unit") return "unit";
     return "my";
   }, [scope]);
+
+  // Synthesize criteria for saved views if not explicitly provided
+  const synthesizedCriteria: TaskViewCriteria = React.useMemo(() => {
+    return {
+      scope: normalizedScope,
+      dept: selectedDepartment,
+      status: activeTab,
+      category: selectedCategory,
+      priority: selectedPriority,
+      academicMonth: effectiveMonth,
+      q: searchQuery,
+      viewMode: viewMode === "kanban" ? "kanban" : "table",
+      density: density,
+      sortField,
+      sortDirection,
+    };
+  }, [
+    normalizedScope,
+    selectedDepartment,
+    activeTab,
+    selectedCategory,
+    selectedPriority,
+    effectiveMonth,
+    searchQuery,
+    viewMode,
+    density,
+    sortField,
+    sortDirection,
+  ]);
+
+  const effectiveCriteria = currentCriteria ?? synthesizedCriteria;
 
   // Handle scope change, preserving the caller's format preference
   const handleScopeSelect = (scopeId: WorkspaceScope) => {
@@ -450,6 +564,15 @@ export function UnifiedTaskToolbar({
       label: "Chờ duyệt",
       count: tabCounts?.waiting_approval ?? tabCounts?.review,
     },
+    ...(tabCounts?.pending_submission !== undefined && tabCounts.pending_submission > 0
+      ? [
+          {
+            id: "pending_submission",
+            label: "Chờ nộp BC",
+            count: tabCounts.pending_submission,
+          },
+        ]
+      : []),
     {
       id: "overdue",
       label: "Quá hạn",
@@ -549,10 +672,10 @@ export function UnifiedTaskToolbar({
           })}
         </div>
 
-        {/* Center: Search Input Bar with "/" Keyboard Shortcut */}
+        {/* Center: Search Input Bar with "/" Keyboard Shortcut (min 44px on mobile) */}
         <div className="relative flex-1 min-w-[200px] max-w-xl">
           <Search
-            className="size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+            className="size-4 sm:size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
             strokeWidth={1.5}
           />
           <input
@@ -562,7 +685,7 @@ export function UnifiedTaskToolbar({
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
             aria-label="Tìm nhiệm vụ"
-            className="h-9 w-full rounded-xl border border-border/80 bg-background pl-8.5 pr-14 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs transition-colors"
+            className="h-11 sm:h-9 min-h-[44px] sm:min-h-[36px] w-full rounded-xl border border-border/80 bg-background pl-9 pr-14 text-xs sm:text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs transition-colors"
           />
 
           <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
@@ -577,9 +700,9 @@ export function UnifiedTaskToolbar({
                 type="button"
                 onClick={() => onSearchChange("")}
                 aria-label="Xóa từ khóa tìm kiếm"
-                className="text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+                className="min-h-[36px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground p-1 sm:p-0.5 rounded cursor-pointer touch-manipulation"
               >
-                <X className="size-3.5" strokeWidth={1.5} />
+                <X className="size-4 sm:size-3.5" strokeWidth={1.5} />
               </button>
             ) : (
               <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono font-medium text-muted-foreground bg-muted border border-border/80 rounded select-none pointer-events-none">
@@ -701,8 +824,14 @@ export function UnifiedTaskToolbar({
           {smartFilterPills.map((pill) => {
             const isActive =
               activeTab === pill.id ||
-              (pill.id === "my" && activeTab === "my_tasks") ||
-              (pill.id === "waiting_approval" && activeTab === "review");
+              (pill.id === "my" && (activeTab === "my_tasks" || activeTab === "my")) ||
+              (pill.id === "waiting_approval" &&
+                (activeTab === "review" ||
+                  activeTab === "waiting_approval" ||
+                  activeTab === "my_pending_approval")) ||
+              (pill.id === "pending_submission" &&
+                (activeTab === "pending_submission" ||
+                  activeTab === "my_pending_submission"));
 
             return (
               <button
@@ -712,7 +841,7 @@ export function UnifiedTaskToolbar({
                 aria-selected={isActive}
                 onClick={() => onTabChange?.(pill.id)}
                 className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-xs font-medium transition-all cursor-pointer select-none whitespace-nowrap",
+                  "inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-1.5 rounded-xl px-3 sm:px-2.5 text-xs font-medium transition-all cursor-pointer select-none whitespace-nowrap touch-manipulation active:scale-95",
                   isActive
                     ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                     : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60"
@@ -738,6 +867,51 @@ export function UnifiedTaskToolbar({
 
         {/* Right: Advanced Filter Popover + View Switcher + Density Selector */}
         <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 relative">
+          {/* Quick Sort button for mobile */}
+          {onSort && (
+            <button
+              type="button"
+              onClick={() => {
+                const nextSort =
+                  sortField === "dueDate"
+                    ? "title"
+                    : sortField === "title"
+                    ? "progress"
+                    : "dueDate";
+                onSort(nextSort);
+              }}
+              className="sm:hidden inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-border/80 bg-background px-3 text-xs font-medium text-foreground hover:bg-muted/50 cursor-pointer shadow-2xs touch-manipulation active:scale-95"
+              aria-label="Sắp xếp danh sách"
+            >
+              <ArrowUpDown className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+              <span>
+                {sortField === "dueDate"
+                  ? "Hạn"
+                  : sortField === "title"
+                  ? "Tên"
+                  : sortField === "progress"
+                  ? "Tiến độ"
+                  : "Sắp xếp"}
+              </span>
+              <span className="font-mono text-xs text-muted-foreground">
+                {sortDirection === "asc" ? "▲" : "▼"}
+              </span>
+            </button>
+          )}
+
+          {/* Saved Views Selector (Role Presets & Custom Views) */}
+          {showSavedViews && (
+            <SavedViewsSelector
+              user={user}
+              activeViewId={activeViewId}
+              onSelectView={onSelectView}
+              currentCriteria={effectiveCriteria}
+              onSaveView={onSaveView}
+              onDeleteView={onDeleteView}
+              onRenameView={onRenameView}
+            />
+          )}
+
           {/* 1. Advanced Filter Popover Trigger */}
           <div className="relative" ref={popoverRef}>
             <button
@@ -746,7 +920,7 @@ export function UnifiedTaskToolbar({
               aria-expanded={isFilterOpen}
               onClick={() => setIsFilterOpen((prev) => !prev)}
               className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-xl border border-border/80 px-2.5 text-xs font-medium transition-all cursor-pointer shadow-2xs",
+                "inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-1.5 rounded-xl border border-border/80 px-3 sm:px-2.5 text-xs font-medium transition-all cursor-pointer shadow-2xs touch-manipulation active:scale-95",
                 isFilterOpen || activeAdvancedFilterCount > 0
                   ? "bg-primary/10 text-primary border-primary/40 font-semibold"
                   : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -761,10 +935,10 @@ export function UnifiedTaskToolbar({
               )}
             </button>
 
-            {/* Popover Dropdown Panel */}
+            {/* Desktop Popover Dropdown Panel (sm:block) */}
             {isFilterOpen && (
               <div
-                className="absolute right-0 top-full mt-1.5 z-50 w-72 rounded-2xl border border-border/80 bg-card p-4 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+                className="hidden sm:block absolute right-0 top-full mt-1.5 z-50 w-72 rounded-2xl border border-border/80 bg-card p-4 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
                 role="dialog"
                 aria-label="Bộ lọc nâng cao"
               >
@@ -885,6 +1059,180 @@ export function UnifiedTaskToolbar({
                 </div>
               </div>
             )}
+
+            {/* Mobile Filter Bottom Sheet Dialog (< 640px / sm:hidden) */}
+            {isFilterOpen && (
+              <div
+                className="sm:hidden fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Bộ lọc nâng cao"
+              >
+                <div
+                  className="absolute inset-0"
+                  onClick={() => setIsFilterOpen(false)}
+                  aria-hidden="true"
+                />
+                <div className="relative z-10 w-full max-w-lg rounded-t-2xl border-t border-border/80 bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl max-h-[85vh] overflow-y-auto space-y-4 animate-in slide-in-from-bottom duration-200">
+                  <div className="mx-auto w-12 h-1.5 rounded-full bg-border/80 mb-1 shrink-0" aria-hidden="true" />
+                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                    <span className="text-base font-semibold text-foreground flex items-center gap-2">
+                      <SlidersHorizontal className="size-4.5 text-primary" strokeWidth={1.5} />
+                      Bộ lọc nâng cao
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsFilterOpen(false)}
+                      className="inline-flex size-9 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                      aria-label="Đóng bảng bộ lọc"
+                    >
+                      <X className="size-5" strokeWidth={1.5} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Department */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Đơn vị phòng ban
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" strokeWidth={1.5} />
+                        <select
+                          value={selectedDepartment}
+                          onChange={(e) => onDepartmentChange?.(e.target.value)}
+                          className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                        >
+                          {availableDepartments.map((dept) => (
+                            <option key={dept.code} value={dept.code}>
+                              {dept.name}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Month */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Tháng học kỳ ({academicYear})
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                        <select
+                          value={effectiveMonth}
+                          onChange={(e) =>
+                            handleEffectiveMonthChange?.(
+                              e.target.value === "ALL" ? "ALL" : Number(e.target.value)
+                            )
+                          }
+                          className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                        >
+                          <option value="ALL">Cả năm học ({academicYear})</option>
+                          {academicMonths.map((period) => (
+                            <option key={period.monthNumber} value={period.monthNumber}>
+                              {period.label} ({period.shortDateSpan})
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Category */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Danh mục DACUM
+                      </label>
+                      <div className="relative">
+                        <Layers className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                        <select
+                          value={selectedCategory}
+                          onChange={(e) => onCategoryChange?.(e.target.value)}
+                          className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                        >
+                          {CATEGORY_FILTER_OPTIONS.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.label}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Priority */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Mức độ ưu tiên
+                      </label>
+                      <div className="relative">
+                        <AlertTriangle className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                        <select
+                          value={selectedPriority}
+                          onChange={(e) => onPriorityChange?.(e.target.value)}
+                          className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                        >
+                          {PRIORITY_FILTER_OPTIONS.map((prio) => (
+                            <option key={prio.id} value={prio.id}>
+                              {prio.label}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Sort option if onSort */}
+                    {onSort && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Sắp xếp theo
+                        </label>
+                        <div className="relative">
+                          <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                          <select
+                            value={`${sortField || "dueDate"}_${sortDirection || "asc"}`}
+                            onChange={(e) => {
+                              const [field] = e.target.value.split("_");
+                              onSort(field);
+                            }}
+                            className="w-full min-h-[44px] pl-9.5 pr-8 rounded-xl border border-border/80 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
+                          >
+                            <option value="dueDate_asc">Hạn chót (Tăng dần - Sớm nhất)</option>
+                            <option value="dueDate_desc">Hạn chót (Giảm dần - Muộn nhất)</option>
+                            <option value="title_asc">Tên nhiệm vụ (A-Z)</option>
+                            <option value="title_desc">Tên nhiệm vụ (Z-A)</option>
+                            <option value="progress_desc">Tiến độ cao nhất</option>
+                            <option value="progress_asc">Tiến độ thấp nhất</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-border/60 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer active:scale-98"
+                    >
+                      <RotateCcw className="size-3.5 text-muted-foreground" />
+                      <span>Đặt lại</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsFilterOpen(false)}
+                      className="flex-1 inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-xs hover:bg-primary/95 transition-colors cursor-pointer active:scale-98"
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 2. View Switcher [Bảng | Kanban] */}
@@ -928,10 +1276,10 @@ export function UnifiedTaskToolbar({
             </div>
           )}
 
-          {/* 3. Density Selector [Gọn | Chuẩn] */}
+          {/* 3. Density Selector [Gọn | Chuẩn] (Desktop Only) */}
           {onDensityChange && (
             <div
-              className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-0.5 shadow-2xs"
+              className="hidden sm:inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-0.5 shadow-2xs"
               role="group"
               aria-label="Mật độ hiển thị bảng"
             >

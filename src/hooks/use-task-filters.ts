@@ -98,10 +98,12 @@ export interface TaskUrlParams {
   scope?: "school" | "unit" | "my";
   dept?: string;
   status?: string;
+  workbox?: string;
   month?: number | "ALL";
   q?: string;
   view?: "table" | "kanban";
   taskId?: string | null;
+  viewId?: string;
 }
 
 /**
@@ -126,10 +128,13 @@ export function parseTaskUrlParams(
   const rawScope = params.get("scope");
   const rawDept = params.get("dept");
   const rawStatus = params.get("status") || params.get("tab");
+  const rawWorkbox = params.get("workbox");
   const rawMonth = params.get("month");
   const rawQ = params.get("q");
   const rawView = params.get("view");
   const rawTaskId = params.get("taskId");
+  const rawViewId =
+    params.get("viewId") || params.get("view_id") || params.get("savedView");
 
   const result: TaskUrlParams = {};
 
@@ -156,6 +161,15 @@ export function parseTaskUrlParams(
     result.status = rawStatus.trim();
   }
 
+  if (
+    rawWorkbox &&
+    rawWorkbox.trim() !== "" &&
+    rawWorkbox !== "ALL" &&
+    rawWorkbox !== "all"
+  ) {
+    result.workbox = rawWorkbox.trim();
+  }
+
   if (rawMonth) {
     if (rawMonth === "ALL") {
       result.month = "ALL";
@@ -177,6 +191,10 @@ export function parseTaskUrlParams(
 
   if (rawTaskId && rawTaskId.trim() !== "") {
     result.taskId = rawTaskId.trim();
+  }
+
+  if (rawViewId && rawViewId.trim() !== "") {
+    result.viewId = rawViewId.trim();
   }
 
   return result;
@@ -228,6 +246,17 @@ export function buildTaskUrlQuery(
     params.delete("tab");
   }
 
+  // 3.1. workbox
+  if (
+    currentUrlState.workbox &&
+    currentUrlState.workbox !== "ALL" &&
+    currentUrlState.workbox !== "all"
+  ) {
+    params.set("workbox", currentUrlState.workbox);
+  } else {
+    params.delete("workbox");
+  }
+
   // 4. month
   if (
     currentUrlState.month !== undefined &&
@@ -258,6 +287,15 @@ export function buildTaskUrlQuery(
     params.set("taskId", currentUrlState.taskId.trim());
   } else {
     params.delete("taskId");
+  }
+
+  // 8. viewId
+  if (currentUrlState.viewId && currentUrlState.viewId.trim() !== "") {
+    params.set("viewId", currentUrlState.viewId.trim());
+  } else {
+    params.delete("viewId");
+    params.delete("view_id");
+    params.delete("savedView");
   }
 
   return params.toString();

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { Inbox, AlertTriangle, Loader2, Layers, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope, ViewMode } from "./types";
@@ -10,6 +11,11 @@ import {
 } from "./hooks/use-adaptive-workspace-data";
 import { AdaptiveScopeHeader } from "./components/adaptive-scope-header";
 import { UnifiedTaskToolbar, type TableDensity } from "@/components/tasks/unified-task-toolbar";
+import {
+  type SavedTaskView,
+  type TaskViewCriteria,
+  findPresetById,
+} from "@/lib/saved-views/saved-views-store";
 import { parseTaskUrlParams, syncTaskUrlParams } from "@/hooks/use-task-filters";
 import { matchesUser } from "@/lib/role-task-filter";
 import {
@@ -22,16 +28,29 @@ import { UniversalActionQueue } from "./components/universal-action-queue";
 import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
 import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
-import { CreateTaskModal, type CreateTaskFormData } from "@/components/dashboard/create-task-modal";
+import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { TaskDetailSideSheet, isSchoolTask } from "@/components/dashboard/task-detail-side-sheet";
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
-import { ReviewActionDialog } from "@/components/portal/review-action-dialog";
-import { SubmitDeliverableModal } from "@/components/portal/submit-deliverable-modal";
 import { Button } from "@/components/ui/button";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
+
+const CreateTaskModal = dynamic(
+  () => import("@/components/dashboard/create-task-modal").then((mod) => mod.CreateTaskModal),
+  { ssr: false }
+);
+
+const ReviewActionDialog = dynamic(
+  () => import("@/components/portal/review-action-dialog").then((mod) => mod.ReviewActionDialog),
+  { ssr: false }
+);
+
+const SubmitDeliverableModal = dynamic(
+  () => import("@/components/portal/submit-deliverable-modal").then((mod) => mod.SubmitDeliverableModal),
+  { ssr: false }
+);
 import {
   applyOptimisticStatusChange,
   applyOptimisticCreateTask,
@@ -546,6 +565,7 @@ export function UnifiedAdaptiveWorkspace({
   const [currentPriority, setCurrentPriority] = React.useState<string>("ALL");
   const [currentMonth, setCurrentMonth] = React.useState<number | "ALL">("ALL");
   const [tableDensity, setTableDensity] = React.useState<TableDensity>("comfortable");
+  const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setInternalDept(selectedDepartment);
@@ -618,6 +638,31 @@ export function UnifiedAdaptiveWorkspace({
       ) {
         setInternalViewMode(urlParams.view);
         onViewModeChange?.(urlParams.view);
+      }
+      if (urlParams.viewId) {
+        setActiveViewId(urlParams.viewId);
+        const preset = findPresetById(urlParams.viewId);
+        if (preset) {
+          if (!urlParams.scope && preset.criteria.scope) {
+            if (preset.criteria.scope === "school" && !isExecutive) {
+              // unpermitted
+            } else {
+              setActiveScope(preset.criteria.scope);
+              onScopeChange?.(preset.criteria.scope);
+            }
+          }
+          if (!urlParams.status && preset.criteria.status) {
+            setInternalStatus(preset.criteria.status);
+            onStatusFilterChange?.(preset.criteria.status);
+          }
+          if (!urlParams.workbox && preset.criteria.workbox) {
+            setInternalWorkbox(preset.criteria.workbox);
+            onWorkboxChange?.(preset.criteria.workbox);
+          }
+          if (preset.criteria.priority) {
+            setCurrentPriority(preset.criteria.priority);
+          }
+        }
       }
       if (urlParams.taskId && tasks.length > 0) {
         const isMatch = (t: SchoolTask | StaffTask) =>
@@ -733,6 +778,7 @@ export function UnifiedAdaptiveWorkspace({
         month: currentMonth,
         q: currentSearch,
         view: viewMode,
+        viewId: activeViewId || undefined,
         taskId:
           isDetailOpen && internalSelectedTask
             ? (internalSelectedTask as any).code ||
@@ -750,6 +796,7 @@ export function UnifiedAdaptiveWorkspace({
     currentMonth,
     currentSearch,
     viewMode,
+    activeViewId,
     isDetailOpen,
     internalSelectedTask?.id,
     (internalSelectedTask as any)?.code,
@@ -913,6 +960,7 @@ export function UnifiedAdaptiveWorkspace({
   ]);
 
   const handleResetFilters = React.useCallback(() => {
+    setActiveViewId(null);
     setInternalDept(undefined);
     setInternalStatus(undefined);
     setInternalSearch(undefined);
@@ -962,6 +1010,115 @@ export function UnifiedAdaptiveWorkspace({
     setInternalWorkbox("ALL");
     if (onWorkboxChange) onWorkboxChange("ALL");
   }, [onWorkboxChange]);
+
+  // Current active filter criteria for saved views
+  const currentCriteria: TaskViewCriteria = React.useMemo(() => {
+    return {
+      scope: activeScope,
+      dept: currentDept,
+      status: currentStatus,
+      workbox: currentWorkbox,
+      category: currentCategory,
+      priority: currentPriority,
+      academicMonth: currentMonth,
+      q: currentSearch,
+      viewMode: viewMode === "kanban" ? "kanban" : "table",
+      density: tableDensity,
+    };
+  }, [
+    activeScope,
+    currentDept,
+    currentStatus,
+    currentWorkbox,
+    currentCategory,
+    currentPriority,
+    currentMonth,
+    currentSearch,
+    viewMode,
+    tableDensity,
+  ]);
+
+  const handleSelectView = React.useCallback(
+    (view: SavedTaskView) => {
+      setActiveViewId(view.id);
+      const { criteria } = view;
+
+      if (criteria.scope) {
+        if (criteria.scope === "school" && !isExecutive) {
+          // unpermitted
+        } else {
+          setActiveScope(criteria.scope);
+          onScopeChange?.(criteria.scope);
+        }
+      }
+      const dept = criteria.dept || "ALL";
+      setInternalDept(dept);
+      onDepartmentChange?.(dept);
+
+      const status = criteria.status;
+      setInternalStatus(status);
+      onStatusFilterChange?.(status);
+
+      const wb = criteria.workbox || "ALL";
+      setInternalWorkbox(wb);
+      onWorkboxChange?.(wb);
+
+      if (status === "overdue" || wb === "overdue") {
+        setInternalOverdue(true);
+        onOverdueFilterChange?.(true);
+      } else {
+        setInternalOverdue(false);
+        onOverdueFilterChange?.(false);
+      }
+
+      const cat = criteria.category || "ALL";
+      setCurrentCategory(cat);
+
+      const prio = criteria.priority || "ALL";
+      setCurrentPriority(prio);
+
+      const month = criteria.academicMonth ?? "ALL";
+      setCurrentMonth(month);
+
+      const q = criteria.q || "";
+      setInternalSearch(q);
+      onSearchChange?.(q);
+
+      if (criteria.viewMode) {
+        setInternalViewMode(criteria.viewMode);
+        onViewModeChange?.(criteria.viewMode);
+      }
+
+      if (criteria.density === "compact" || criteria.density === "comfortable") {
+        setTableDensity(criteria.density);
+      }
+
+      syncTaskUrlParams(
+        {
+          scope: criteria.scope,
+          dept: dept !== "ALL" ? dept : undefined,
+          status: status !== "all" && status !== "ALL" ? status : undefined,
+          workbox: wb !== "all" && wb !== "ALL" ? wb : undefined,
+          month: month !== "ALL" ? month : undefined,
+          q: q ? q : undefined,
+          view: criteria.viewMode !== "table" ? criteria.viewMode : undefined,
+          viewId: view.id,
+        },
+        router ?? undefined
+      );
+    },
+    [
+      isExecutive,
+      onScopeChange,
+      onDepartmentChange,
+      onStatusFilterChange,
+      onWorkboxChange,
+      onOverdueFilterChange,
+      onSearchChange,
+      onViewModeChange,
+      router,
+    ]
+  );
 
   const isStaff =
     !isExecutiveUser(user) &&
@@ -1236,6 +1393,9 @@ export function UnifiedAdaptiveWorkspace({
           selectedAcademicMonth={currentMonth}
           onAcademicMonthChange={setCurrentMonth}
           onResetFilters={handleResetFilters}
+          activeViewId={activeViewId}
+          onSelectView={handleSelectView}
+          currentCriteria={currentCriteria}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
           density={tableDensity}
@@ -1688,3 +1848,6 @@ export function UnifiedAdaptiveWorkspace({
     </div>
   );
 }
+
+export { useTaskFilters } from "@/hooks/use-task-filters";
+export { useTaskMutations } from "@/hooks/use-task-mutations";
