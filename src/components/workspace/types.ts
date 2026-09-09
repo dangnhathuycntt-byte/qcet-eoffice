@@ -58,4 +58,14 @@ export interface UnifiedAdaptiveWorkspaceProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   onAction?: (action: string, payload?: unknown) => void;
+  activeStatus?: TaskStatus | string;
+  searchQuery?: string;
+  isOverdueOnly?: boolean;
+  activeWorkbox?: string;
+  onDepartmentChange?: (dept?: string) => void;
+  onStatusFilterChange?: (status?: string) => void;
+  onSearchChange?: (query: string) => void;
+  onOverdueFilterChange?: (overdue: boolean) => void;
+  onWorkboxChange?: (workbox?: string) => void;
+  onResetFilters?: () => void;
 }
