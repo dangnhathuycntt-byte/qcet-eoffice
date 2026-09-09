@@ -1,21 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { getApiContext } from '@/server/api/request-context';
+import { apiError, apiSuccess } from '@/server/api/response';
 import { getVapidPublicKey } from '@/lib/push-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+  let requestId = 'req-push-key';
   try {
+    const context = await getApiContext(request);
+    requestId = context.requestId;
     const publicKey = getVapidPublicKey();
-    return NextResponse.json({
-      success: true,
-      publicKey,
-    });
-  } catch (error) {
-    console.error('Failed to get VAPID public key:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
+
+    return apiSuccess(
+      { publicKey },
+      {
+        requestId,
+        headers: {
+          'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+        },
+        legacyCompat: true,
+      }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }

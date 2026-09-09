@@ -1,29 +1,68 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSessionFromRequest } from '@/lib/jwt-session';
+import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
+import { apiError, apiSuccess } from '@/server/api/response';
+import { AuthorizationError, ValidationError } from '@/server/api/errors';
+import {
+  assertJsonContentType,
+  assertRequestBodySize,
+  extractFieldErrors,
+  MAX_JSON_BODY_SIZE,
+} from '@/server/api/validation';
+import { TestPushSchema } from '@/contracts/notifications';
 import {
   formatTaskPushPayload,
   sendPushNotificationToUser,
   truncatePushText,
 } from '@/lib/push-service';
+import { assertCsrf } from '@/server/security/csrf';
+import { assertRateLimit } from '@/server/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  let requestId = 'req-push-test';
   try {
-    const body = await request.json().catch(() => null);
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    requireAuthenticated(context);
+    const authUser = context.user!;
 
-    const session = getSessionFromRequest(request);
-    if (!session?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+    // Privileged / Dev-only guard: Reject with 403 if NODE_ENV === 'production' unless caller has ADMIN role
+    if (process.env.NODE_ENV === 'production' && authUser.role !== 'ADMIN') {
+      throw new AuthorizationError('Tính năng này chỉ khả dụng cho Quản trị viên trong môi trường sản xuất');
     }
 
+    assertCsrf(request);
+    assertRateLimit(authUser.id, 'PUSH_TEST');
+
+    let rawBody: unknown = {};
+    const contentType = request.headers.get('content-type');
+    if (contentType) {
+      assertJsonContentType(request);
+      assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
+      try {
+        const text = await request.text();
+        if (text.trim().length > 0) {
+          rawBody = JSON.parse(text);
+        }
+      } catch {
+        throw new ValidationError('Invalid JSON body');
+      }
+    }
+
+    const parseResult = TestPushSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      throw new ValidationError(
+        parseResult.error.issues[0]?.message || 'Validation failed',
+        extractFieldErrors(parseResult.error)
+      );
+    }
+    const body = parseResult.data;
+
     let safeLinkHref = '/?zone=tasks';
-    if (typeof body?.linkHref === 'string') {
+    if (body.linkHref) {
       const raw = body.linkHref.trim();
       if (raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\') && !raw.includes('://')) {
         safeLinkHref = raw;
@@ -33,25 +72,25 @@ export async function POST(request: NextRequest) {
     const payload = formatTaskPushPayload({
       event: 'TASK_ASSIGNED',
       taskId: 'test-push-notification',
-      taskTitle: body?.title || 'Thử nghiệm chuông thông báo',
-      actorName: session.name || 'Hệ thống QCET',
+      taskTitle: body.title || 'Thử nghiệm chuông thông báo',
+      actorName: authUser.name || 'Hệ thống QCET',
       dueDateStr: 'Hôm nay',
       linkHref: safeLinkHref,
     });
 
-    if (body?.title) {
+    if (body.title) {
       payload.title = truncatePushText(body.title, 35);
     }
 
-    if (body?.body) {
+    if (body.body) {
       payload.body = truncatePushText(body.body, 90);
     }
 
     // Record an in-app notification for the user
     const notification = await prisma.notification.create({
       data: {
-        userId: session.id,
-        actorName: session.name || 'Hệ thống QCET',
+        userId: authUser.id,
+        actorName: authUser.name || 'Hệ thống QCET',
         title: payload.title,
         body: payload.body,
         category: 'task',
@@ -62,18 +101,19 @@ export async function POST(request: NextRequest) {
     });
 
     // Send push notification to user's registered active devices
-    const result = await sendPushNotificationToUser(session.id, payload);
+    const result = await sendPushNotificationToUser(authUser.id, payload);
 
-    return NextResponse.json({
-      success: true,
-      result,
-      notification,
-    });
-  } catch (error) {
-    console.error('Failed to send test push notification:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
+    return apiSuccess(
+      {
+        result,
+        notification,
+      },
+      {
+        requestId,
+        legacyCompat: true,
+      }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }

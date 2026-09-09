@@ -1,22 +1,44 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
-import { ResolutionType, TaskPriority, TaskStatus, UserRole } from '@prisma/client';
-import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload } from '@/lib/jwt-session';
+import { ResolutionType, TaskPriority, TaskStatus } from '@prisma/client';
+import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
+import { apiError, apiSuccess } from '@/server/api/response';
+import { AuthorizationError, NotFoundError, ValidationError } from '@/server/api/errors';
+import {
+  assertJsonContentType,
+  assertRequestBodySize,
+  extractFieldErrors,
+  MAX_JSON_BODY_SIZE,
+} from '@/server/api/validation';
+import {
+  canAccessExecutiveResolutions,
+  canCreateResolution,
+} from '@/server/policies/executive-policy';
+import {
+  CreateExecutiveResolutionSchema,
+  ExecutiveResolutionQuerySchema,
+} from '@/contracts/executive';
+import {
+  toExecutiveResolutionDTO,
+  toExecutiveResolutionDTOArray,
+} from '@/server/dto/executive-dto';
+import { logAuditEvent, AuditEntityType } from '@/lib/db/audit';
+import { assertCsrf } from '@/server/security/csrf';
 import { safeAfter, dispatchExecutiveDirectivePush } from '@/lib/push-dispatch';
 
-function getSessionPayload(request: NextRequest): SessionPayload | null {
-  const authHeader = request.headers.get('authorization');
-  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value || bearerToken;
-  if (!token) return null;
-  return verifySessionToken(token);
-}
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 function mapResolutionType(rawType: string): ResolutionType | null {
   const upper = rawType?.toUpperCase();
   if (upper === 'EXTEND_DEADLINE') return ResolutionType.EXTEND_DEADLINE;
-  if (upper === 'REASSIGN' || upper === 'REASSIGN_OWNER') return ResolutionType.REASSIGN_OWNER;
-  if (upper === 'DIRECTIVE_NOTE' || upper === 'DEMAND_EXPLANATION' || upper === 'DIRECT_DIRECTIVE') {
+  if (upper === 'REASSIGN' || upper === 'REASSIGN_OWNER')
+    return ResolutionType.REASSIGN_OWNER;
+  if (
+    upper === 'DIRECTIVE_NOTE' ||
+    upper === 'DEMAND_EXPLANATION' ||
+    upper === 'DIRECT_DIRECTIVE'
+  ) {
     return ResolutionType.DIRECTIVE_NOTE;
   }
   if (upper === 'DISMISS_BOTTLENECK') return ResolutionType.DISMISS_BOTTLENECK;
@@ -25,9 +47,8 @@ function mapResolutionType(rawType: string): ResolutionType | null {
   }
   return null;
 }
-const normalizeResolutionType = mapResolutionType;
 
-function normalizeTaskStatus(rawStatus: string): TaskStatus | null {
+function normalizeTaskStatus(rawStatus?: string | null): TaskStatus | null {
   if (!rawStatus) return null;
   const upper = rawStatus.toUpperCase();
   const statusMap: Record<string, TaskStatus> = {
@@ -41,7 +62,7 @@ function normalizeTaskStatus(rawStatus: string): TaskStatus | null {
   return statusMap[upper] || null;
 }
 
-function normalizeTaskPriority(rawPriority: string): TaskPriority | null {
+function normalizeTaskPriority(rawPriority?: string | null): TaskPriority | null {
   if (!rawPriority) return null;
   const upper = rawPriority.toUpperCase();
   const priorityMap: Record<string, TaskPriority> = {
@@ -55,27 +76,35 @@ function normalizeTaskPriority(rawPriority: string): TaskPriority | null {
 }
 
 export async function GET(request: NextRequest) {
+  let requestId = 'req-exec-resolutions-get';
   try {
-    const session = getSessionPayload(request);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Chưa đăng nhập (Unauthorized)' },
-        { status: 401 }
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    requireAuthenticated(context);
+    const authUser = context.user!;
+
+    // Function-level authorization: Executive access only
+    if (!canAccessExecutiveResolutions(authUser)) {
+      throw new AuthorizationError(
+        'Forbidden: Chỉ Ban Giám Hiệu hoặc Quản trị viên mới có quyền truy cập nghị quyết/chỉ đạo điều hành'
       );
     }
 
-    const searchParams = request.nextUrl.searchParams;
-    const taskId = searchParams.get('taskId');
-    const resolutionType = searchParams.get('resolutionType');
-    const departmentId = searchParams.get('departmentId') || searchParams.get('dept');
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+    const queryParams: Record<string, any> = {};
+    request.nextUrl.searchParams.forEach((val, key) => {
+      queryParams[key] = val;
+    });
+
+    const parsedQuery = ExecutiveResolutionQuerySchema.parse(queryParams);
+    const { taskId, resolutionType, limit } = parsedQuery;
+    const departmentId = parsedQuery.departmentId || parsedQuery.dept;
 
     const where: any = {};
     if (taskId) {
       where.taskId = taskId;
     }
     if (resolutionType) {
-      const normalized = normalizeResolutionType(resolutionType);
+      const normalized = mapResolutionType(resolutionType);
       if (normalized) {
         where.resolutionType = normalized;
       }
@@ -111,83 +140,78 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    return NextResponse.json({
-      success: true,
-      resolutions,
-      data: resolutions,
-      total: resolutions.length,
-    });
-  } catch (error: any) {
-    console.error('Error fetching executive resolutions:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const dtos = toExecutiveResolutionDTOArray(resolutions);
+
+    return apiSuccess(
+      {
+        resolutions: dtos,
+        data: dtos,
+        total: dtos.length,
+      },
+      {
+        requestId,
+        headers: {
+          'Cache-Control': 'private, no-store',
+        },
+        legacyCompat: true,
+      }
+    );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }
 
 export async function POST(request: NextRequest) {
+  let requestId = 'req-exec-resolutions-post';
   try {
-    const session = await getSessionPayload(request);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Chưa đăng nhập (Unauthorized)' },
-        { status: 401 }
-      );
-    }
-    const effectiveActorId = session.id;
-    const actorRole = session.role;
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    requireAuthenticated(context);
+    const authUser = context.user!;
 
-    // Role check: Only BGH or ADMIN can issue resolutions
-    const isBghOrAdmin =
-      actorRole === UserRole.BAN_GIAM_HIEU ||
-      actorRole === UserRole.ADMIN ||
-      actorRole === 'BAN_GIAM_HIEU' ||
-      actorRole === 'ADMIN';
-
-    if (!isBghOrAdmin) {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden: Chỉ Ban Giám Hiệu hoặc Quản trị viên mới có quyền ban hành lệnh điều hành' },
-        { status: 403 }
+    // Function-level authorization: Executive creation only
+    if (!canCreateResolution(authUser)) {
+      throw new AuthorizationError(
+        'Forbidden: Chỉ Ban Giám Hiệu hoặc Quản trị viên mới có quyền ban hành lệnh điều hành'
       );
     }
 
-    const body = await request.json().catch(() => ({}));
-    const {
-      taskId,
-      directiveNote,
-      newOwnerId,
-      status,
-      taskStatus,
-      priority,
-      taskPriority,
-    } = body;
+    assertCsrf(request);
+    assertJsonContentType(request);
+    assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
 
-    const rawType = body.resolutionType || body.actionType || body.type;
-    const grantedDays = body.grantedDays || body.extensionDays;
-
-    if (!taskId || !rawType) {
-      return NextResponse.json(
-        { success: false, error: 'Thiếu thông tin bắt buộc (taskId, resolutionType/actionType)' },
-        { status: 400 }
-      );
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      throw new ValidationError('Invalid JSON body');
     }
 
-    const mappedResolutionType = mapResolutionType(rawType);
+    const parseResult = CreateExecutiveResolutionSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      throw new ValidationError(
+        parseResult.error.issues[0]?.message || 'Validation failed',
+        extractFieldErrors(parseResult.error)
+      );
+    }
+    const validated = parseResult.data;
+
+    const rawType =
+      validated.resolutionType || validated.actionType || validated.type;
+    const mappedResolutionType = mapResolutionType(rawType!);
     if (!mappedResolutionType) {
-      return NextResponse.json(
-        { success: false, error: `Loại can thiệp không hợp lệ: ${rawType}` },
-        { status: 400 }
-      );
+      throw new ValidationError(`Loại can thiệp không hợp lệ: ${rawType}`);
     }
+
+    const grantedDays = validated.grantedDays || validated.extensionDays;
 
     const task = await prisma.task.findUnique({
-      where: { id: taskId },
+      where: { id: validated.taskId },
       include: { department: true },
     });
 
     if (!task) {
-      return NextResponse.json(
-        { success: false, error: 'Không tìm thấy nhiệm vụ' },
-        { status: 404 }
-      );
+      throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -197,27 +221,36 @@ export async function POST(request: NextRequest) {
 
       const taskUpdateData: any = {};
 
-      if (mappedResolutionType === ResolutionType.EXTEND_DEADLINE && grantedDays) {
-        const days = parseInt(String(grantedDays), 10);
+      if (
+        mappedResolutionType === ResolutionType.EXTEND_DEADLINE &&
+        grantedDays
+      ) {
+        const days = Number(grantedDays);
         if (!isNaN(days) && days > 0) {
           previousDueDate = task.dueDate;
-          newDueDate = new Date(task.dueDate.getTime() + days * 24 * 60 * 60 * 1000);
+          newDueDate = new Date(
+            task.dueDate.getTime() + days * 24 * 60 * 60 * 1000
+          );
           taskUpdateData.dueDate = newDueDate;
 
-          // If task was overdue or blocked, transition to IN_PROGRESS
           if (task.status === TaskStatus.OVERDUE) {
             taskUpdateData.status = TaskStatus.IN_PROGRESS;
           }
         }
-      } else if (mappedResolutionType === ResolutionType.REASSIGN_OWNER && newOwnerId) {
+      } else if (
+        mappedResolutionType === ResolutionType.REASSIGN_OWNER &&
+        validated.newOwnerId
+      ) {
         previousOwnerId = task.departmentId;
-        // Check if newOwnerId is a Department ID
-        const dept = await tx.department.findUnique({ where: { id: newOwnerId } });
+        const dept = await tx.department.findUnique({
+          where: { id: validated.newOwnerId },
+        });
         if (dept) {
-          taskUpdateData.departmentId = newOwnerId;
+          taskUpdateData.departmentId = validated.newOwnerId;
         } else {
-          // Check if newOwnerId is a User ID
-          const user = await tx.user.findUnique({ where: { id: newOwnerId } });
+          const user = await tx.user.findUnique({
+            where: { id: validated.newOwnerId },
+          });
           if (user && user.departmentId) {
             taskUpdateData.departmentId = user.departmentId;
           }
@@ -231,8 +264,9 @@ export async function POST(request: NextRequest) {
         taskUpdateData.status = TaskStatus.IN_PROGRESS;
       }
 
-      // Allow explicitly mandated status from request (e.g. WAITING_APPROVAL, IN_PROGRESS)
-      const explicitStatus = normalizeTaskStatus(status || taskStatus);
+      const explicitStatus = normalizeTaskStatus(
+        validated.status || validated.taskStatus
+      );
       if (explicitStatus) {
         taskUpdateData.status = explicitStatus;
         if (explicitStatus === TaskStatus.COMPLETED) {
@@ -240,8 +274,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Allow explicitly mandated priority from request
-      const explicitPriority = normalizeTaskPriority(priority || taskPriority);
+      const explicitPriority = normalizeTaskPriority(
+        validated.priority || validated.taskPriority
+      );
       if (explicitPriority) {
         taskUpdateData.priority = explicitPriority;
       }
@@ -249,7 +284,7 @@ export async function POST(request: NextRequest) {
       let updatedTask = task;
       if (Object.keys(taskUpdateData).length > 0) {
         updatedTask = await tx.task.update({
-          where: { id: taskId },
+          where: { id: validated.taskId },
           data: taskUpdateData,
           include: { department: true },
         });
@@ -257,15 +292,15 @@ export async function POST(request: NextRequest) {
 
       const resolution = await tx.executiveResolution.create({
         data: {
-          taskId,
-          actorId: effectiveActorId!,
+          taskId: validated.taskId,
+          actorId: authUser.id,
           resolutionType: mappedResolutionType,
-          directiveNote: directiveNote || null,
-          grantedDays: grantedDays ? parseInt(String(grantedDays), 10) : null,
+          directiveNote: validated.directiveNote || null,
+          grantedDays: grantedDays ? Number(grantedDays) : null,
           previousDueDate,
           newDueDate,
           previousOwnerId,
-          newOwnerId: newOwnerId || null,
+          newOwnerId: validated.newOwnerId || null,
         },
         include: {
           actor: {
@@ -290,6 +325,23 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Immutable audit log
+      await logAuditEvent(tx, {
+        action: 'EXECUTIVE_RESOLUTION_CREATED',
+        entityType: 'ExecutiveResolution',
+        entityId: resolution.id,
+        actorId: authUser.id,
+        requestId,
+        metadata: {
+          actorRole: authUser.role,
+          taskId: validated.taskId,
+          resolutionType: mappedResolutionType,
+          directiveNote: validated.directiveNote || null,
+          newOwnerId: validated.newOwnerId || null,
+          grantedDays: grantedDays ? Number(grantedDays) : null,
+        },
+      });
+
       return { resolution, updatedTask };
     });
 
@@ -301,30 +353,36 @@ export async function POST(request: NextRequest) {
           taskId: task.id,
           taskTitle: task.title,
           resolutionType: mappedResolutionType,
-          directiveNote: directiveNote || null,
-          actorName: session.name || 'Ban Giám Hiệu',
-          actorId: session.id,
+          directiveNote: validated.directiveNote || null,
+          actorName: authUser.name || 'Ban Giám Hiệu',
+          actorId: authUser.id,
           departmentId: result.updatedTask.departmentId || task.departmentId,
-          newOwnerId: newOwnerId || null,
+          newOwnerId: validated.newOwnerId || null,
         });
-      } catch (error) {
+      } catch (pushError) {
         console.error('[after() Executive Directive Push Error]', {
           taskId: task.id,
           resolutionId: result.resolution.id,
           durationMs: Date.now() - start,
-          error: error instanceof Error ? error.message : String(error),
+          error: pushError instanceof Error ? pushError.message : String(pushError),
         });
       }
     });
 
-    return NextResponse.json({
-      success: true,
-      resolution: result.resolution,
-      data: result.resolution,
-      task: result.updatedTask,
-    });
-  } catch (error: any) {
-    console.error('Error creating executive resolution:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const dto = toExecutiveResolutionDTO(result.resolution);
+
+    return apiSuccess(
+      {
+        resolution: dto,
+        data: dto,
+        task: result.updatedTask,
+      },
+      {
+        requestId,
+        legacyCompat: true,
+      }
+    );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }

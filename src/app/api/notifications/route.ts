@@ -1,94 +1,116 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSessionFromRequest } from '@/lib/jwt-session';
+import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
+import { apiError, apiSuccess } from '@/server/api/response';
+import { NotificationQuerySchema } from '@/contracts/notifications';
+import { toNotificationDTOArray } from '@/server/dto/notification-dto';
+import { assertCsrf } from '@/server/security/csrf';
+import { assertRateLimit } from '@/server/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  let requestId = 'req-notifications';
   try {
-    const session = getSessionFromRequest(request);
-    if (!session?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    requireAuthenticated(context);
+    const authUser = context.user!;
 
-    const { searchParams } = new URL(request.url);
-    const unreadOnly = searchParams.get('unreadOnly') === 'true';
-    const category = searchParams.get('category') || undefined;
-    const limitParam = parseInt(searchParams.get('limit') || '50', 10);
-    const take = Math.min(Math.max(1, isNaN(limitParam) ? 50 : limitParam), 100);
+    const searchParams = request.nextUrl.searchParams;
+    const validatedQuery = NotificationQuerySchema.parse({
+      unreadOnly: searchParams.get('unreadOnly') ?? undefined,
+      read: searchParams.get('read') ?? undefined,
+      category: searchParams.get('category') ?? undefined,
+      type: searchParams.get('type') ?? undefined,
+      page: searchParams.get('page') ?? undefined,
+      pageSize: searchParams.get('limit') ?? searchParams.get('pageSize') ?? undefined,
+    });
+
+    const isUnreadFilter =
+      validatedQuery.unreadOnly === true || validatedQuery.read === false;
 
     const whereClause: {
       userId: string;
       isRead?: boolean;
       category?: string;
+      type?: string;
     } = {
-      userId: session.id,
-      ...(unreadOnly ? { isRead: false } : {}),
-      ...(category ? { category } : {}),
+      userId: authUser.id,
+      ...(isUnreadFilter ? { isRead: false } : validatedQuery.read === true ? { isRead: true } : {}),
+      ...(validatedQuery.category ? { category: validatedQuery.category } : {}),
+      ...(validatedQuery.type ? { type: validatedQuery.type } : {}),
     };
 
     const [notifications, unreadCount] = await Promise.all([
       prisma.notification.findMany({
         where: whereClause,
         orderBy: { createdAt: 'desc' },
-        take,
+        take: validatedQuery.pageSize,
+        skip: (validatedQuery.page - 1) * validatedQuery.pageSize,
       }),
       prisma.notification.count({
         where: {
-          userId: session.id,
+          userId: authUser.id,
           isRead: false,
         },
       }),
     ]);
 
-    return NextResponse.json({
-      success: true,
-      notifications,
-      unreadCount,
-    });
-  } catch (error) {
-    console.error('Failed to get notifications:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
+    const dtoList = toNotificationDTOArray(notifications);
+
+    return apiSuccess(
+      {
+        notifications: dtoList,
+        items: dtoList,
+        unreadCount,
+        total: dtoList.length,
+      },
+      {
+        requestId,
+        headers: { 'Cache-Control': 'private, no-store' },
+        legacyCompat: true,
+      }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }
 
 export async function PATCH(request: NextRequest) {
+  let requestId = 'req-notifications-patch';
   try {
-    const session = getSessionFromRequest(request);
-    if (!session?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    requireAuthenticated(context);
+    const authUser = context.user!;
 
-    const now = new Date();
-    await prisma.notification.updateMany({
+    assertCsrf(request);
+    assertRateLimit(authUser.id, 'MUTATION');
+
+    const result = await prisma.notification.updateMany({
       where: {
-        userId: session.id,
+        userId: authUser.id,
         isRead: false,
       },
       data: {
         isRead: true,
-        readAt: now,
+        readAt: new Date(),
       },
     });
 
-    return NextResponse.json({
-      success: true,
-    });
-  } catch (error) {
-    console.error('Failed to mark all notifications as read:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
+    return apiSuccess(
+      {
+        count: result.count,
+        updatedCount: result.count,
+      },
+      {
+        requestId,
+        legacyCompat: true,
+      }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }

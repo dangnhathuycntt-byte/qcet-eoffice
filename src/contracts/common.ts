@@ -28,14 +28,37 @@ export const OperationalScopeSchema = z.enum(['school', 'unit', 'personal']);
 export type OperationalScope = z.infer<typeof OperationalScopeSchema>;
 
 /**
- * Common search query schema.
+ * Common search query schema bounding query length to 100 characters and limit to 50.
  */
 export const SearchQuerySchema = z.object({
-  q: z.string().trim().max(200, 'Search query cannot exceed 200 characters').optional(),
+  q: z
+    .string()
+    .trim()
+    .max(100, 'Search query cannot exceed 100 characters')
+    .optional(),
+  query: z
+    .string()
+    .trim()
+    .max(100, 'Search query cannot exceed 100 characters')
+    .optional(),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(50, 'Limit cannot exceed 50')
+    .optional()
+    .default(20),
   scope: OperationalScopeSchema.optional(),
 });
 
 export type SearchQuery = z.infer<typeof SearchQuerySchema>;
+
+/**
+ * Strict Search API query schema alias for SearchQuerySchema.
+ */
+export const SearchApiQuerySchema = SearchQuerySchema;
+
+export type SearchApiQuery = z.infer<typeof SearchApiQuerySchema>;
 
 /**
  * Standard identifier schema (UUID, CUID, or alphanumeric entity ID).

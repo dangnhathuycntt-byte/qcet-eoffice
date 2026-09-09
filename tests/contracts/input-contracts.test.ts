@@ -89,9 +89,9 @@ describe('Shared Input Contracts & Strict Boundary Limits', () => {
         assert.strictEqual(parsed.scope, 'school');
       });
 
-      it('rejects query exceeding 200 characters', () => {
-        const longQuery = 'a'.repeat(201);
-        const validQuery = 'a'.repeat(200);
+      it('rejects query exceeding 100 characters', () => {
+        const longQuery = 'a'.repeat(101);
+        const validQuery = 'a'.repeat(100);
         assert.strictEqual(SearchQuerySchema.safeParse({ q: longQuery }).success, false);
         assert.strictEqual(SearchQuerySchema.safeParse({ q: validQuery }).success, true);
       });

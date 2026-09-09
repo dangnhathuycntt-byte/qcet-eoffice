@@ -48,6 +48,8 @@ export function assertPayloadSize(
   }
 }
 
+export const assertRequestBodySize = assertPayloadSize;
+
 /**
  * Alias for assertPayloadSize.
  */

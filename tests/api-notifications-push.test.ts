@@ -202,6 +202,7 @@ describe('API Routes: Push & Notifications System', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Origin': 'http://localhost:3000',
           'Cookie': `${SESSION_COOKIE_NAME}=${testUserToken}`,
         },
         body: JSON.stringify({

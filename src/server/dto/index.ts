@@ -17,3 +17,6 @@ export * from './document-dto';
 
 // Notification DTOs
 export * from './notification-dto';
+
+// Executive DTOs
+export * from './executive-dto';
