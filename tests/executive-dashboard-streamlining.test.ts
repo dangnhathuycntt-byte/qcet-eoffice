@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   getExecutiveStatCardData,
   getStatCardData,
+  getStatCardsForView,
 } from "../src/components/dashboard/executive-stat-strip";
 import {
   buildExecutiveAttentionQueue,
@@ -135,6 +136,46 @@ describe("Executive Dashboard Streamlining (Phase 6)", () => {
           assert.ok(!emojiRegex.test(card.badge.label), `Badge has emoji: ${card.badge.label}`);
         }
       }
+    });
+
+    test("isExecutive={true} without executiveStats correctly yields 5-KPI configuration", () => {
+      const cards = getStatCardsForView(mockStats, true, undefined);
+      assert.equal(cards.length, 5);
+
+      const titles = cards.map((c) => c.title);
+      assert.deepEqual(titles, [
+        "Tổng nhiệm vụ",
+        "Chờ duyệt",
+        "Trễ / vướng",
+        "Trọng tâm",
+        "Tiến độ toàn trường",
+      ]);
+
+      // Fallback mappings when executiveStats is absent
+      const pendingApprovalCard = cards.find((c) => c.id === "pending-approval");
+      assert.equal(pendingApprovalCard?.value, "4"); // stats.needsReviewTasksCount
+
+      const blockedOverdueCard = cards.find((c) => c.id === "blocked-overdue");
+      assert.equal(blockedOverdueCard?.value, "3"); // stats.overdueTasksCount
+
+      const strategicCard = cards.find((c) => c.id === "strategic-active");
+      assert.equal(strategicCard?.value, "0");
+
+      const overallProgressCard = cards.find((c) => c.id === "overall-progress");
+      assert.equal(overallProgressCard?.value, "68%");
+    });
+
+    test("isExecutive={false} without executiveStats correctly yields 4-KPI non-executive configuration", () => {
+      const cards = getStatCardsForView(mockStats, false, undefined);
+      assert.equal(cards.length, 4);
+
+      const titles = cards.map((c) => c.title);
+      assert.deepEqual(titles, [
+        "Nhiệm vụ cấp Trường",
+        "Công việc Đơn vị",
+        "Cần xử lý & Trễ hạn",
+        "Tiến độ trung bình toàn trường",
+      ]);
     });
   });
 
@@ -325,6 +366,18 @@ describe("Executive Dashboard Streamlining (Phase 6)", () => {
           );
         });
       }
+    });
+
+    test("executive attention queue empty state does not use oversized colored icon enclosure box", () => {
+      const fullPath = path.join(
+        process.cwd(),
+        "src/components/dashboard/executive-cockpit-workspace.tsx"
+      );
+      const content = fs.readFileSync(fullPath, "utf-8");
+      assert.ok(
+        !content.includes("rounded-full bg-emerald-500/10"),
+        "Attention queue empty state must not use oversized colored circle icon enclosure (rounded-full bg-emerald-500/10)"
+      );
     });
   });
 });

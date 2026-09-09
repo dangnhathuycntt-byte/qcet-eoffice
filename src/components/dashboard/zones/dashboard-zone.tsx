@@ -13,6 +13,7 @@ import { UpcomingDeadlinesWidget } from "@/components/dashboard/upcoming-deadlin
 import { ActivityFeedWidget } from "@/components/dashboard/activity-feed-widget";
 import { PriorOverdueBacklogBanner } from "@/components/dashboard/prior-overdue-backlog-banner";
 import { CascadingTaskTable } from "@/components/dashboard/cascading-task-table";
+import { WorkbenchMobileFeed } from "@/components/dashboard/workbench-mobile-feed";
 import { QCET_DEPARTMENTS } from "@/components/org/organization-tree";
 import {
   useDashboardData,
@@ -47,86 +48,88 @@ function DashboardZoneComponent() {
 
   return (
     <div className="space-y-5 sm:space-y-6" data-slot="zone-dashboard">
-      <div className="space-y-4">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-sans font-medium text-xs bg-primary/10 text-primary border border-primary/20 shadow-2xs">{roleBadge}</span>
-          </div>
-          <h1 className="font-heading font-bold text-xl sm:text-2xl tracking-tight text-foreground">{roleTitle}</h1>
-          <p className="text-xs text-muted-foreground mt-1 text-balance">{roleSubtitle}</p>
-        </div>
-
-        {/* Contextual Action Bar: KỲ VẬN HÀNH THÁNG & Phạm vi */}
-        <div aria-label="Thanh tác vụ ngữ cảnh: KỲ VẬN HÀNH THÁNG và Phạm vi" className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-muted/30 border border-border/50">
-          <div className="flex flex-wrap items-center gap-2">
-            <div id="tour-scope-switcher"><Suspense fallback={<div className="h-8 w-44 rounded-lg bg-muted/40 animate-pulse" />}><ScopeSwitcher /></Suspense></div>
-            <div id="tour-month-selector"><Suspense fallback={<div className="h-8 w-32 rounded-lg bg-muted/40 animate-pulse" />}><GlobalMonthSelector /></Suspense></div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={isRefreshing} className="gap-1.5 text-xs rounded-xl min-h-[44px] sm:min-h-[36px] touch-manipulation">
-              <RefreshCw size={14} className={isRefreshing ? "animate-spin text-primary" : ""} />
-              <span>Làm mới dữ liệu</span>
-            </Button>
-          </div>
-        </div>
+      {/* Mobile Attention-First Feed (viewports < 640px) */}
+      <div className="block sm:hidden" data-slot="mobile-workbench-feed-container">
+        <WorkbenchMobileFeed />
       </div>
 
-      {/* Stat Strip */}
-      <section aria-label="Chỉ số điều hành toàn trường">
-        <ExecutiveStatStrip stats={displayedStats} activeFilter={activeWorkbox} onFilterChange={(filter) => setActiveWorkbox(filter)} />
-      </section>
+      {/* Desktop Workbench & Executive Grid (viewports >= 640px) */}
+      <div className="hidden sm:block space-y-6" data-slot="desktop-workbench-container">
+        <div className="space-y-4">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-sans font-medium text-xs bg-primary/10 text-primary border border-primary/20 shadow-2xs">{roleBadge}</span>
+            </div>
+            <h1 className="font-heading font-bold text-xl sm:text-2xl tracking-tight text-foreground">{roleTitle}</h1>
+            <p className="text-xs text-muted-foreground mt-1 text-balance">{roleSubtitle}</p>
+          </div>
 
-      {/* Prior Overdue Backlog Banner */}
-      {priorOverdueBacklog && priorOverdueBacklog.length > 0 && selectedAcademicMonth !== "ALL" && (
-        <PriorOverdueBacklogBanner tasks={priorOverdueBacklog} selectedMonth={selectedAcademicMonth} monthPeriod={selectedMonthPeriod} />
-      )}
+          {/* Contextual Action Bar: KỲ VẬN HÀNH THÁNG & Phạm vi */}
+          <div aria-label="Thanh tác vụ ngữ cảnh: KỲ VẬN HÀNH THÁNG và Phạm vi" className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-muted/30 border border-border/50">
+            <div className="flex flex-wrap items-center gap-2">
+              <div id="tour-scope-switcher"><Suspense fallback={<div className="h-8 w-44 rounded-lg bg-muted/40 animate-pulse" />}><ScopeSwitcher /></Suspense></div>
+              <div id="tour-month-selector"><Suspense fallback={<div className="h-8 w-32 rounded-lg bg-muted/40 animate-pulse" />}><GlobalMonthSelector /></Suspense></div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={isRefreshing} className="gap-1.5 text-xs rounded-xl min-h-[44px] sm:min-h-[36px] touch-manipulation">
+                <RefreshCw size={14} className={isRefreshing ? "animate-spin text-primary" : ""} />
+                <span>Làm mới dữ liệu</span>
+              </Button>
+            </div>
+          </div>
+        </div>
 
-      {/* Executive Cockpit (BGH only) */}
-      {isExecutive && executiveStats && (
-        <section aria-label="Khoang điều hành Ban Giám hiệu" className="space-y-4">
-          <ExecutiveActionCenter
-            stats={executiveStats}
-            activeFilter={executiveFilter}
-            onFilterChange={setExecutiveFilter}
-            items={executiveActionItems}
-            onAction={(actionType, item) => {
+        {/* Stat Strip */}
+        <section aria-label="Chỉ số điều hành toàn trường">
+          <ExecutiveStatStrip stats={displayedStats} executiveStats={executiveStats} isExecutive={isExecutive} activeFilter={activeWorkbox} activeExecutiveFilter={executiveFilter} onFilterChange={setActiveWorkbox} onExecutiveFilterChange={setExecutiveFilter} />
+        </section>
+
+        {/* Prior Overdue Backlog Banner */}
+        {priorOverdueBacklog && priorOverdueBacklog.length > 0 && selectedAcademicMonth !== "ALL" && (
+          <PriorOverdueBacklogBanner tasks={priorOverdueBacklog} selectedMonth={selectedAcademicMonth} monthPeriod={selectedMonthPeriod} />
+        )}
+
+        {/* Executive Cockpit (BGH only) */}
+        {isExecutive && executiveStats && (
+          <section aria-label="Khoang điều hành Ban Giám hiệu" className="space-y-4">
+            <ExecutiveActionCenter stats={executiveStats} activeFilter={executiveFilter} onFilterChange={setExecutiveFilter} items={executiveActionItems} onAction={(_type, item) => {
               const matched = baseTasks.find((t) => t.id === item.id || t.id === item.taskId);
               if (matched) openTaskDetail(matched);
-            }}
+            }} />
+            <DepartmentProgressMatrix departments={departmentHealth} selectedDepartment={selectedDepartment} onSelectDepartment={handleDepartmentChange} defaultViewMode="ranking" />
+          </section>
+        )}
+
+        {/* Bảng nhiệm vụ liên thông phản hồi theo bộ lọc */}
+        <section aria-label="Bảng nhiệm vụ liên thông" className="space-y-3">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <h2 className="font-heading font-semibold text-base text-foreground">
+              {isExecutive ? "Nhiệm vụ điều hành trọng tâm" : isManager ? "Nhiệm vụ quản lý đơn vị" : "Nhiệm vụ cá nhân hôm nay"}
+            </h2>
+            <a href={isExecutive ? "/tasks?scope=school" : isManager ? "/tasks?scope=unit" : "/tasks?scope=my"} className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1">
+              <span>Mở Không gian Nhiệm vụ &rarr;</span>
+            </a>
+          </div>
+          <CascadingTaskTable
+            tasks={reactiveTasks}
+            scope={scope}
+            defaultExpanded={scope === "MY_TASKS"}
+            onSelectTask={openTaskDetail}
+            onAddTask={() => openCreateModal("TRUONG")}
+            onStatusChange={handleStatusChange}
+            hideWorkbox
+            hideToolbar
+            priorOverdueBacklog={[]}
+            selectedAcademicMonth={selectedAcademicMonth}
           />
-          <DepartmentProgressMatrix departments={departmentHealth} selectedDepartment={selectedDepartment} onSelectDepartment={handleDepartmentChange} defaultViewMode="ranking" />
         </section>
-      )}
 
-      {/* Bảng nhiệm vụ liên thông phản hồi theo bộ lọc */}
-      <section aria-label="Bảng nhiệm vụ liên thông" className="space-y-3">
-        <div className="flex items-center justify-between gap-3 px-1">
-          <h2 className="font-heading font-semibold text-base text-foreground">
-            {isExecutive ? "Nhiệm vụ điều hành trọng tâm" : isManager ? "Nhiệm vụ quản lý đơn vị" : "Nhiệm vụ cá nhân hôm nay"}
-          </h2>
-          <a href={isExecutive ? "/tasks?scope=school" : isManager ? "/tasks?scope=unit" : "/tasks?scope=my"} className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1">
-            <span>Mở Không gian Nhiệm vụ &rarr;</span>
-          </a>
-        </div>
-        <CascadingTaskTable
-          tasks={reactiveTasks}
-          scope={scope}
-          defaultExpanded={scope === "MY_TASKS"}
-          onSelectTask={openTaskDetail}
-          onAddTask={() => openCreateModal("TRUONG")}
-          onStatusChange={handleStatusChange}
-          hideWorkbox
-          hideToolbar
-          priorOverdueBacklog={[]}
-          selectedAcademicMonth={selectedAcademicMonth}
-        />
-      </section>
-
-      {/* Widgets Grid: Upcoming Deadlines & Live Activity Feed */}
-      <section aria-label="Tiện ích theo dõi tiến độ và hoạt động" className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <UpcomingDeadlinesWidget items={roleUpcoming} onSelectTask={handleSelectUpcoming} />
-        <ActivityFeedWidget activities={activities} />
-      </section>
+        {/* Widgets Grid: Upcoming Deadlines & Live Activity Feed */}
+        <section aria-label="Tiện ích theo dõi tiến độ và hoạt động" className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <UpcomingDeadlinesWidget items={roleUpcoming} onSelectTask={handleSelectUpcoming} />
+          <ActivityFeedWidget activities={activities} />
+        </section>
+      </div>
     </div>
   );
 }

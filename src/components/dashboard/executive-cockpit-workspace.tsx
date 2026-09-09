@@ -272,16 +272,14 @@ export function ExecutiveAttentionQueue({
       </div>
 
       {items.length === 0 ? (
-        <div className="py-8 text-center flex flex-col items-center justify-center space-y-2">
-          <div className="h-10 w-10 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-            <CheckCircle2 size={20} />
+        <div className="flex items-center gap-3 p-3.5 my-2 rounded-xl border border-emerald-500/20 bg-emerald-50/40 text-xs">
+          <CheckCircle2 size={16} strokeWidth={1.5} className="text-emerald-600 shrink-0" />
+          <div className="min-w-0">
+            <span className="font-semibold text-foreground">Tiến độ toàn trường thông suốt. </span>
+            <span className="text-muted-foreground">
+              Không có điểm nghẽn hay yêu cầu phê duyệt nào tồn đọng tại cấp Ban Giám hiệu.
+            </span>
           </div>
-          <p className="text-xs font-semibold text-foreground">
-            Tiến độ toàn trường thông suốt
-          </p>
-          <p className="text-xs text-muted-foreground max-w-sm">
-            Không có điểm nghẽn hay yêu cầu phê duyệt nào tồn đọng tại cấp Ban Giám hiệu.
-          </p>
         </div>
       ) : (
         <div className="divide-y divide-border/40 overflow-y-auto max-h-[360px] pr-1 mt-2 space-y-1">

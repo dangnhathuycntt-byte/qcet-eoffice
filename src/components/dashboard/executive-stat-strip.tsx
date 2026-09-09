@@ -203,21 +203,19 @@ export function getExecutiveStatCardData(
 
   const pendingApprovalCount =
     executiveStats?.pendingSchoolApprovalCount ?? stats.needsReviewTasksCount;
-  const totalIssueCount =
-    (executiveStats?.blockedTasksCount ?? 0) +
-    (executiveStats?.overdueTasksCount ?? stats.overdueTasksCount);
+  const overdueCount =
+    executiveStats?.overdueTasksCount ?? stats.overdueTasksCount;
+  const blockedCount = executiveStats?.blockedTasksCount ?? 0;
+  const totalIssueCount = blockedCount + overdueCount;
   const strategicCount = executiveStats?.strategicActiveCount ?? 0;
 
   let urgentSubtext = "Tiến độ thông suốt";
-  if (
-    (executiveStats?.blockedTasksCount ?? 0) > 0 &&
-    (executiveStats?.overdueTasksCount ?? 0) > 0
-  ) {
-    urgentSubtext = `${executiveStats?.blockedTasksCount} vướng mắc · ${executiveStats?.overdueTasksCount} trễ hạn`;
-  } else if ((executiveStats?.overdueTasksCount ?? 0) > 0) {
-    urgentSubtext = `${executiveStats?.overdueTasksCount} nhiệm vụ trễ hạn`;
-  } else if ((executiveStats?.blockedTasksCount ?? 0) > 0) {
-    urgentSubtext = `${executiveStats?.blockedTasksCount} nhiệm vụ vướng mắc`;
+  if (blockedCount > 0 && overdueCount > 0) {
+    urgentSubtext = `${blockedCount} vướng mắc · ${overdueCount} trễ hạn`;
+  } else if (overdueCount > 0) {
+    urgentSubtext = `${overdueCount} nhiệm vụ trễ hạn`;
+  } else if (blockedCount > 0) {
+    urgentSubtext = `${blockedCount} nhiệm vụ vướng mắc`;
   }
 
   return [
@@ -282,6 +280,17 @@ export function getExecutiveStatCardData(
   ];
 }
 
+export function getStatCardsForView(
+  stats: DashboardStats,
+  isExecutive?: boolean,
+  executiveStats?: ExecutiveActionStats | null
+): StatCardData[] {
+  const isExecutiveView = Boolean(isExecutive || executiveStats);
+  return isExecutiveView
+    ? getExecutiveStatCardData(stats, executiveStats)
+    : getStatCardData(stats);
+}
+
 export function ExecutiveStatStrip({
   stats,
   executiveStats,
@@ -292,9 +301,9 @@ export function ExecutiveStatStrip({
   className,
   isExecutive,
 }: ExecutiveStatStripProps) {
-  const isExecutiveView = Boolean(isExecutive && executiveStats);
+  const isExecutiveView = Boolean(isExecutive || executiveStats);
   const cards = isExecutiveView
-    ? getExecutiveStatCardData(stats, executiveStats!)
+    ? getExecutiveStatCardData(stats, executiveStats)
     : getStatCardData(stats);
 
   const gridColsClass = isExecutiveView
@@ -343,10 +352,11 @@ export function ExecutiveStatStrip({
         } else if (card.id === "unit-tasks") {
           dotColor = "bg-indigo-500";
         } else if (card.id === "pending-approval") {
-          dotColor =
-            (executiveStats?.pendingSchoolApprovalCount ?? 0) > 0
-              ? "bg-amber-500"
-              : "bg-emerald-500";
+          const pendingCount =
+            executiveStats?.pendingSchoolApprovalCount ??
+            stats?.needsReviewTasksCount ??
+            0;
+          dotColor = pendingCount > 0 ? "bg-amber-500" : "bg-emerald-500";
         } else if (card.id === "urgent-tasks" || card.id === "blocked-overdue") {
           dotColor = isOverdueAlert
             ? "bg-rose-500"
