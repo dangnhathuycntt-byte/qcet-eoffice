@@ -1,7 +1,8 @@
 export type DelegationScope =
   | "DACUM_REVIEW_STEP1"
   | "TASK_ASSIGNMENT"
-  | "FULL_DEPARTMENT_APPROVAL";
+  | "FULL_DEPARTMENT_APPROVAL"
+  | "DOCUMENT_SIGN_LEVEL2";
 
 export type DelegationStatus = "ACTIVE" | "EXPIRED" | "REVOKED";
 
@@ -19,6 +20,7 @@ export interface DelegationRule {
   endDate: string; // YYYY-MM-DD
   status: DelegationStatus;
   reason: string;
+  documentRef?: string; // So QD uy quyen theo ND 30/2020 (vi du: 142/QD-CDKTCN)
   createdAt: string;
   revokedAt?: string;
 }

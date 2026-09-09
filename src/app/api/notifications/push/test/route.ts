@@ -12,6 +12,8 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json().catch(() => null);
+
     const session = getSessionFromRequest(request);
     if (!session?.id) {
       return NextResponse.json(
@@ -20,7 +22,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json().catch(() => null);
+    let safeLinkHref = '/?zone=tasks';
+    if (typeof body?.linkHref === 'string') {
+      const raw = body.linkHref.trim();
+      if (raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\') && !raw.includes('://')) {
+        safeLinkHref = raw;
+      }
+    }
 
     const payload = formatTaskPushPayload({
       event: 'TASK_ASSIGNED',
@@ -28,8 +36,12 @@ export async function POST(request: NextRequest) {
       taskTitle: body?.title || 'Thử nghiệm chuông thông báo',
       actorName: session.name || 'Hệ thống QCET',
       dueDateStr: 'Hôm nay',
-      linkHref: body?.linkHref || '/?zone=tasks',
+      linkHref: safeLinkHref,
     });
+
+    if (body?.title) {
+      payload.title = truncatePushText(body.title, 35);
+    }
 
     if (body?.body) {
       payload.body = truncatePushText(body.body, 90);

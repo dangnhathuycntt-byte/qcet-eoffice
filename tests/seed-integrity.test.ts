@@ -32,12 +32,12 @@ describe('Seed Data Integrity and Verification', () => {
 
     // 2. Verify Key User Accounts
     const keyUsers = [
-      'admin@qcet.edu.vn',
-      'hieutruong@qcet.edu.vn',
-      'truongphong.daotao@qcet.edu.vn',
-      'truongkhoa.cntt@qcet.edu.vn',
-      'giangvien.cntt@qcet.edu.vn',
-      'chuyenvien@qcet.edu.vn'
+      'admin@cdktcnqn.edu.vn',
+      'tuongpv@cdktcnqn.edu.vn',
+      'levanthi@cdktcnqn.edu.vn',
+      'k.cntt@cdktcnqn.edu.vn',
+      'khoipd@cdktcnqn.edu.vn',
+      'hungth@cdktcnqn.edu.vn'
     ];
     for (const user of keyUsers) {
       assert.ok(content.includes(user), `Seed should include key user account: ${user}`);

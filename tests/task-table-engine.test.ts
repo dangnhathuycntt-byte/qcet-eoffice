@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -213,6 +212,7 @@ describe("Task Table Engine - Foundations & Utilities", () => {
         leadDepartment: "Phòng CNTT",
         leadDepartmentCode: "CNTT",
         leadDepartmentId: "dept-cntt",
+        coAssignees: [],
         subTasks: [
           {
             id: "sub-1-1",
@@ -257,7 +257,9 @@ describe("Task Table Engine - Foundations & Utilities", () => {
         leadDepartment: "Phòng Đào tạo",
         leadDepartmentCode: "PĐT",
         leadDepartmentId: "dept-pdt",
+        coAssignees: [],
         dacumTaskDef: {
+          id: "dacum-01",
           code: "DACUM-01",
           title: "Phân tích công việc đào tạo",
         },

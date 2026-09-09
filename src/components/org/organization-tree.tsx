@@ -21,7 +21,6 @@ import {
   List,
   Calendar,
   X,
-  Clock,
   Sparkles,
   Download,
   Printer,
@@ -59,8 +58,6 @@ export interface StaffMember {
   status: "ACTIVE" | "ON_LEAVE" | "BUSY";
   room?: string;
   responsibilities?: string[];
-  checkInTime?: string;
-  workStatus?: "PRESENT" | "REMOTE" | "ON_LEAVE";
 }
 
 export interface DepartmentNode {
@@ -78,16 +75,13 @@ export interface DepartmentNode {
   leaderRole: string;
   members: StaffMember[];
   headcount?: number;
-  presentToday?: number;
-  presentRate?: number;
-  timekeeperSync?: "ONLINE" | "SYNCING" | "OFFLINE";
   activeTasksCount?: number;
   groupField?: "Nhóm" | "Nhóm công tác";
   notionDbKey?: string;
 }
 
 // ============================================================================
-// 2. Comprehensive QCET Institutional Structure (17 Units from dashboard-chamcong)
+// 2. Comprehensive QCET Institutional Structure (17 Units)
 // ============================================================================
 
 export const QCET_DEPARTMENTS: DepartmentNode[] = [
@@ -109,9 +103,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Phạm Văn Tường",
     leaderRole: "Hiệu trưởng",
     headcount: 5,
-    presentToday: 5,
-    presentRate: 100,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 8,
     groupField: "Nhóm",
     members: [
@@ -134,8 +125,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Chỉ đạo chiến lược chuyển đổi số, tổ chức bộ máy và tài chính",
           "Ký duyệt các quyết định, văn bản QPPL và quy chế nội bộ",
         ],
-        checkInTime: "07:05:12",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-kiem-tt",
@@ -155,8 +144,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Chỉ đạo công tác đào tạo, tuyển sinh và hợp tác doanh nghiệp",
           "Phụ trách hoạt động nghiên cứu khoa học và chuyển giao công nghệ",
         ],
-        checkInTime: "07:18:40",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-nguyen-lx",
@@ -176,8 +163,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Phụ trách công tác hành chính quản trị, quy hoạch cơ sở vật chất",
           "Chỉ đạo công tác kiểm định chất lượng GDNN và chuyển đổi số hành chính",
         ],
-        checkInTime: "07:22:15",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -200,9 +185,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Phan Văn Thanh",
     leaderRole: "Trưởng phòng",
     headcount: 14,
-    presentToday: 13,
-    presentRate: 92.8,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 5,
     groupField: "Nhóm",
     notionDbKey: "hanh_chinh_quan_tri",
@@ -225,8 +207,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản lý điều hành toàn diện công tác hành chính, quản trị",
           "Đảm bảo an ninh trật tự, xe công vụ và lễ tân đối ngoại",
         ],
-        checkInTime: "07:11:02",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-nam-lh",
@@ -246,8 +226,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản lý cơ sở vật chất, hệ thống điện nước hội trường",
           "Điều phối mua sắm vật tư tiêu hao và tài sản công",
         ],
-        checkInTime: "07:14:33",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-nhung-tth",
@@ -267,8 +245,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Tiếp nhận và phát hành văn bản đi/đến điện tử",
           "Quản lý con dấu nhà trường và lưu trữ văn thư",
         ],
-        checkInTime: "07:09:50",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -287,9 +263,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Nguyễn Tiến Phong",
     leaderRole: "Trưởng phòng",
     headcount: 11,
-    presentToday: 11,
-    presentRate: 100,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 4,
     groupField: "Nhóm",
     notionDbKey: "to_chuc_dbcl",
@@ -312,8 +285,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Chỉ đạo công tác tổ chức cán bộ, đào tạo bồi dưỡng giảng viên",
           "Lãnh đạo công tác tự đánh giá kiểm định chất lượng GDNN",
         ],
-        checkInTime: "07:08:19",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-hau-dv",
@@ -333,8 +304,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản lý ngân hàng câu hỏi trắc nghiệm và chấm thi điện tử",
           "Thu thập khảo sát ý kiến doanh nghiệp và người học",
         ],
-        checkInTime: "07:15:20",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-my-ltd",
@@ -354,8 +323,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Lập báo cáo tự đánh giá chất lượng chương trình đào tạo",
           "Tổng hợp minh chứng phục vụ đoàn đánh giá ngoài",
         ],
-        checkInTime: "07:12:44",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -374,9 +341,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Lê Văn Thí",
     leaderRole: "Trưởng phòng",
     headcount: 16,
-    presentToday: 15,
-    presentRate: 93.75,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 6,
     groupField: "Nhóm",
     notionDbKey: "quan_ly_dao_tao",
@@ -399,8 +363,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Chỉ đạo toàn diện công tác kế hoạch đào tạo, thời khóa biểu",
           "Phê duyệt hồ sơ mở ngành mới và liên kết đào tạo",
         ],
-        checkInTime: "07:10:05",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-tri-vm",
@@ -420,8 +382,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản lý phần mềm đào tạo và cơ sở dữ liệu điểm thi",
           "Hỗ trợ kỹ thuật E-Office và phân bổ lịch giảng đường",
         ],
-        checkInTime: "07:07:30",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-thuy-ntb",
@@ -441,8 +401,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Theo dõi đề tài NCKH, sáng kiến kinh nghiệm cấp trường",
           "Quản lý hồ sơ dự án hợp tác quốc tế GIZ",
         ],
-        checkInTime: "07:19:12",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -461,9 +419,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Nguyễn Quốc Vỹ",
     leaderRole: "Trưởng phòng",
     headcount: 12,
-    presentToday: 11,
-    presentRate: 91.6,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 4,
     groupField: "Nhóm",
     notionDbKey: "tuyen_sinh_htqt",
@@ -486,8 +441,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Chỉ đạo đề án truyền thông và chỉ tiêu tuyển sinh năm học",
           "Điều phối quan hệ quốc tế và liên kết doanh nghiệp tuyển dụng",
         ],
-        checkInTime: "07:14:18",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-ha-ntt",
@@ -507,8 +460,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Thẩm định hồ sơ tuyển sinh online và học bổng khuyến học",
           "Tư vấn trực tuyến ngày hội hướng nghiệp cho học sinh THPT",
         ],
-        checkInTime: "07:11:45",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -527,9 +478,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Lê Phương Thúy Oanh",
     leaderRole: "Trưởng phòng / Kế toán trưởng",
     headcount: 9,
-    presentToday: 9,
-    presentRate: 100,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 4,
     groupField: "Nhóm",
     notionDbKey: "tai_chinh",
@@ -552,8 +500,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Chịu trách nhiệm toàn bộ công tác tài chính, ngân sách",
           "Lập dự toán tài chính năm và giám sát quy chế chi tiêu nội bộ",
         ],
-        checkInTime: "07:06:20",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-van-ht",
@@ -573,8 +519,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Thực hiện kế toán tiền lương, phụ cấp giảng dạy",
           "Báo cáo thuế và thanh quyết toán chế độ cán bộ",
         ],
-        checkInTime: "07:16:04",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -593,9 +537,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Mai Đinh Thị Xuân",
     leaderRole: "Giám đốc Trung tâm",
     headcount: 8,
-    presentToday: 8,
-    presentRate: 100,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 4,
     groupField: "Nhóm",
     notionDbKey: "so_truyen_thong",
@@ -619,8 +560,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản trị cổng tin điện tử, sản xuất video & ấn phẩm số hóa",
           "Điều phối vận hành ứng dụng văn phòng điện tử E-Office",
         ],
-        checkInTime: "07:10:45",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-huy-dq",
@@ -640,8 +579,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản trị hạ tầng máy chủ, WiFi trường và tường lửa",
           "Hỗ trợ kỹ thuật ứng dụng số hóa nội bộ và sao lưu dữ liệu",
         ],
-        checkInTime: "07:13:20",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -660,9 +597,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Chu Đình Thắng",
     leaderRole: "Giám đốc Trung tâm",
     headcount: 7,
-    presentToday: 7,
-    presentRate: 100,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 3,
     groupField: "Nhóm",
     members: [
@@ -684,8 +618,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Chỉ đạo điều hành công tác đào tạo chứng chỉ chuẩn đầu ra",
           "Hợp tác với các tổ chức khảo thí quốc tế (IIG Việt Nam, British Council)",
         ],
-        checkInTime: "07:08:50",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-thu-pt",
@@ -705,8 +637,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản lý kho học liệu giáo trình điện tử, thư viện số DSpace",
           "Hỗ trợ sinh viên tra cứu tài liệu học tập và thi chứng chỉ",
         ],
-        checkInTime: "07:17:35",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -729,9 +659,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "TS. Nguyễn Ngọc Vinh",
     leaderRole: "Trưởng khoa",
     headcount: 24,
-    presentToday: 23,
-    presentRate: 95.8,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 5,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_dien_tu_tin_hoc",
@@ -755,8 +682,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Chủ nhiệm đề án Chuyển đổi số và triển khai E-Office nhà trường",
           "Giảng dạy chuyên sâu Kiến trúc phần mềm & Cơ sở dữ liệu",
         ],
-        checkInTime: "07:04:12",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-hung-t",
@@ -776,8 +701,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Phụ trách chuyên môn An toàn thông tin và Quản trị mạng QCET",
           "Trưởng nhóm ứng cứu sự cố máy tính và bảo mật dữ liệu",
         ],
-        checkInTime: "07:11:15",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-khoi-pd",
@@ -797,8 +720,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Giảng dạy Lập trình Web Full-Stack và Lập trình Di động",
           "Cố vấn học tập các lớp cao đẳng CNTT K48",
         ],
-        checkInTime: "07:15:55",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -817,9 +738,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "TS. Đinh Quốc Cường",
     leaderRole: "Trưởng khoa",
     headcount: 22,
-    presentToday: 21,
-    presentRate: 95.4,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 4,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_co_khi",
@@ -842,8 +760,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Lãnh đạo toàn diện các bộ môn cơ khí chế tạo và tự động hóa",
           "Chủ nhiệm chương trình hiện đại hóa xưởng thực hành kỹ thuật",
         ],
-        checkInTime: "07:05:40",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-nghiep-vv",
@@ -863,8 +779,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản lý dây chuyền máy phay tiện CNC trung tâm",
           "Huấn luyện đội tuyển sinh viên thi tay nghề Nghề Tiện/Phay CNC",
         ],
-        checkInTime: "07:18:22",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -883,9 +797,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "KS. Vũ Mạnh Hùng",
     leaderRole: "Phó Trưởng khoa phụ trách",
     headcount: 26,
-    presentToday: 25,
-    presentRate: 96.1,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 5,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_cong_nghe_o_to",
@@ -908,8 +819,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản lý dây chuyền chẩn đoán điện tử ô tô hiện đại",
           "Huấn luyện đội tuyển sinh viên thi tay nghề Quốc gia nghề Ô tô",
         ],
-        checkInTime: "07:09:12",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-loc-tb",
@@ -929,8 +838,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Giảng dạy Chẩn đoán lỗi hộp ECU và mạng truyền thông CAN bus",
           "Phụ trách phòng thực hành xe điện mô phỏng hybrid",
         ],
-        checkInTime: "07:13:50",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -949,9 +856,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Nguyễn Văn Thắng",
     leaderRole: "Trưởng khoa",
     headcount: 19,
-    presentToday: 18,
-    presentRate: 94.7,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 3,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_dien",
@@ -974,8 +878,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Lãnh đạo chuyên môn đào tạo kỹ sư thực hành nghề Điện công nghiệp",
           "Quản lý dự án năng lượng mặt trời áp mái nhà trường",
         ],
-        checkInTime: "07:06:40",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-quy-bd",
@@ -995,8 +897,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Giảng dạy PLC Siemens S7-1200 và biến tần công nghiệp",
           "Phụ trách phòng thực hành khí nén Festo",
         ],
-        checkInTime: "07:20:10",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -1015,9 +915,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Phan Thị Phương Thảo",
     leaderRole: "Trưởng khoa",
     headcount: 15,
-    presentToday: 15,
-    presentRate: 100,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 4,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_du_lich",
@@ -1040,8 +937,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản lý điều hành đào tạo ngành khách sạn, ẩm thực và du lịch",
           "Ký kết hợp tác thực tập sinh với chuỗi resort 5 sao tại Quy Nhơn",
         ],
-        checkInTime: "07:12:10",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-nam-hn",
@@ -1061,8 +956,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Giảng dạy Nghiệp vụ Lễ tân và Quản trị Buồng phòng tiêu chuẩn VTOS",
           "Quản lý phòng thực hành buồng mẫu khách sạn 4 sao",
         ],
-        checkInTime: "07:15:30",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -1081,9 +974,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "TS. Lê Thị Ánh Tuyết",
     leaderRole: "Trưởng khoa",
     headcount: 21,
-    presentToday: 20,
-    presentRate: 95.2,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 4,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_kinh_te_tong_hop",
@@ -1106,8 +996,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản lý điều hành đào tạo các ngành khối kinh tế và quản trị",
           "Kết nối doanh nghiệp thực tập sinh khối tài chính - kế toán",
         ],
-        checkInTime: "07:07:15",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-son-dh",
@@ -1127,8 +1015,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Quản lý chuyên môn Kế toán tài chính, Kế toán quản trị",
           "Tổ chức hội thi tay nghề Kế toán sinh viên cấp trường",
         ],
-        checkInTime: "07:18:45",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -1147,9 +1033,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Nguyễn Hữu Dũng",
     leaderRole: "Trưởng khoa",
     headcount: 13,
-    presentToday: 12,
-    presentRate: 92.3,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 2,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_ky_thuat_nong_nghiep",
@@ -1172,8 +1055,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Lãnh đạo hoạt động đào tạo và nghiên cứu ứng dụng nông nghiệp công nghệ cao",
           "Quản lý khu trại thực nghiệm nhà lưới thủy canh thông minh",
         ],
-        checkInTime: "07:14:02",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-lan-pn",
@@ -1193,8 +1074,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Giảng dạy Sinh học cây trồng, Kỹ thuật nhân giống vô tính",
           "Hướng dẫn đề tài nghiên cứu vườn ươm dược liệu",
         ],
-        checkInTime: "07:19:40",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -1213,9 +1092,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Đặng Thị Bích Hạnh",
     leaderRole: "Trưởng khoa",
     headcount: 14,
-    presentToday: 14,
-    presentRate: 100,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 3,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_van_hoa_nghe_thuat",
@@ -1238,8 +1114,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Chỉ đạo nghệ thuật các chương trình biểu diễn giao lưu văn hóa nhà trường",
           "Quản lý đào tạo các bộ môn nghệ thuật biểu diễn dân gian và đương đại",
         ],
-        checkInTime: "07:11:30",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-long-nt",
@@ -1259,8 +1133,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Giảng dạy kỹ thuật luyện thanh, piano và hòa tấu dàn nhạc",
           "Dàn dựng các tiết mục biểu diễn hội thi văn nghệ học sinh sinh viên",
         ],
-        checkInTime: "07:16:15",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -1279,9 +1151,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     leaderName: "ThS. Trịnh Văn Minh",
     leaderRole: "Trưởng khoa",
     headcount: 18,
-    presentToday: 17,
-    presentRate: 94.4,
-    timekeeperSync: "ONLINE",
     activeTasksCount: 3,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_dai_cuong",
@@ -1304,8 +1173,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Lãnh đạo phân bổ giảng viên các bộ môn khoa học cơ bản và chính trị",
           "Giám sát chất lượng giảng dạy đại cương các khóa K47, K48",
         ],
-        checkInTime: "07:08:45",
-        workStatus: "PRESENT",
       },
       {
         id: "staff-oanh-ttk",
@@ -1325,8 +1192,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Giảng dạy Toán cao cấp, Thống kê ứng dụng cho khối kỹ thuật và kinh tế",
           "Cố vấn học tập và rèn luyện kỹ năng tư duy logic cho sinh viên",
         ],
-        checkInTime: "07:14:50",
-        workStatus: "PRESENT",
       },
     ],
   },
@@ -1408,8 +1273,6 @@ export function exportDirectoryToCSV(departments: DepartmentNode[]) {
     "Email công vụ",
     "Số điện thoại",
     "Phòng làm việc",
-    "Trạng thái hôm nay",
-    "Thời gian chấm công",
   ];
 
   const rows = allStaff.map((s) => [
@@ -1420,8 +1283,6 @@ export function exportDirectoryToCSV(departments: DepartmentNode[]) {
     `"${s.email}"`,
     `"${s.phone || ""}"`,
     `"${s.room || ""}"`,
-    `"${s.workStatus === "PRESENT" ? "Có mặt" : "Công tác / Phép"}"`,
-    `"${s.checkInTime || "--:--"}"`,
   ]);
 
   const csvContent =
@@ -1440,7 +1301,7 @@ export function exportDirectoryToCSV(departments: DepartmentNode[]) {
 }
 
 // ============================================================================
-// 4. Main OrganizationTree Component with Attendance Telemetry
+// 4. Main OrganizationTree Component
 // ============================================================================
 
 interface OrganizationTreeProps {
@@ -1535,14 +1396,7 @@ export function OrganizationTree({
     return QCET_DEPARTMENTS.reduce((acc, d) => acc + (d.headcount ?? d.members.length), 0);
   }, []);
 
-  const totalPresent = React.useMemo(() => {
-    return QCET_DEPARTMENTS.reduce((acc, d) => acc + (d.presentToday ?? d.members.length), 0);
-  }, []);
 
-  const schoolAveragePresentRate = React.useMemo(() => {
-    if (totalHeadcount === 0) return 100;
-    return Math.round((totalPresent / totalHeadcount) * 1000) / 10;
-  }, [totalHeadcount, totalPresent]);
 
   // Filtered members resolution
   const displayedMembers = React.useMemo(() => {
@@ -1606,7 +1460,7 @@ export function OrganizationTree({
             )}
           >
             <LayoutGrid className="size-3.5 text-primary" strokeWidth={1.5} />
-            <span>Sơ đồ Bento & Chấm công</span>
+            <span>Sơ đồ Khối Đơn vị</span>
             <Badge variant="secondary" className="text-xs h-4.5 px-1.5 font-mono">
               17
             </Badge>
@@ -1757,10 +1611,9 @@ export function OrganizationTree({
                       </div>
                     </div>
 
-                    {/* Biometric Online Pulse */}
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-600 shrink-0">
-                      <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>{dept.timekeeperSync}</span>
+                    {/* Department Code Badge */}
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted border border-border/70 text-xs font-semibold text-muted-foreground shrink-0 font-mono">
+                      <span>{dept.code}</span>
                     </div>
                   </div>
 
@@ -1778,55 +1631,38 @@ export function OrganizationTree({
                     </div>
                   </div>
 
-                  {/* Attendance Progress Bar & Numbers */}
-                  {(() => {
-                    const presentRate = dept.presentRate ?? 100;
-                    const presentToday = dept.presentToday ?? dept.members.length;
-                    const headcount = dept.headcount ?? dept.members.length;
-                    return (
-                      <div className="mt-3 pt-3 border-t border-border/60">
-                        <div className="flex items-center justify-between text-xs mb-1.5">
-                          <span className="text-muted-foreground font-medium flex items-center gap-1">
-                            <Clock className="size-3.5" strokeWidth={1.5} />
-                            Có mặt hôm nay
-                          </span>
-                          <div className="flex items-baseline gap-1 font-mono">
-                            <span className="font-bold text-foreground">
-                              {presentToday}/{headcount}
-                            </span>
-                            <span className="text-xs font-semibold text-emerald-600">
-                              ({presentRate}%)
-                            </span>
-                          </div>
-                        </div>
+                  {/* Department Details & Actions */}
+                  <div className="mt-3 pt-3 border-t border-border/60 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                        <Users className="size-3.5 text-primary" strokeWidth={1.5} />
+                        Nhân sự đơn vị
+                      </span>
+                      <span className="font-bold text-foreground font-mono">
+                        {dept.members.length} cán bộ / GV
+                      </span>
+                    </div>
 
-                        {/* Progress Track */}
-                        <div className="w-full h-2 rounded-full bg-muted/70 overflow-hidden">
-                          <div
-                            className={cn(
-                              "h-full rounded-full transition-all duration-500",
-                              presentRate >= 95
-                                ? "bg-emerald-500"
-                                : presentRate >= 90
-                                ? "bg-indigo-500"
-                                : "bg-amber-500"
-                            )}
-                            style={{ width: `${presentRate}%` }}
-                          />
-                        </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1.5 truncate max-w-[200px]" title={dept.email}>
+                        <Mail className="size-3 text-muted-foreground/70 shrink-0" strokeWidth={1.5} />
+                        <span className="truncate">{dept.email}</span>
+                      </span>
+                      <span className="text-muted-foreground/80 font-mono">
+                        {dept.phone}
+                      </span>
+                    </div>
 
-                        {/* Footer Badges */}
-                        <div className="flex items-center justify-between mt-3 text-xs">
-                          <span className="text-muted-foreground">
-                            {dept.activeTasksCount ?? 0} nhiệm vụ đang mở
-                          </span>
-                          <span className="font-semibold text-primary group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
-                            Xem danh bạ <ChevronRight className="size-3" strokeWidth={2} />
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                    {/* Footer Badges */}
+                    <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs">
+                      <span className="text-muted-foreground text-2xs">
+                        {dept.activeTasksCount ?? 0} nhiệm vụ đang mở
+                      </span>
+                      <span className="font-semibold text-primary group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
+                        Xem danh bạ <ChevronRight className="size-3" strokeWidth={2} />
+                      </span>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -2067,8 +1903,8 @@ export function OrganizationTree({
                                 >
                                   <span className="truncate pr-2">{dept.name}</span>
                                   <div className="flex items-center gap-1 shrink-0">
-                                    <span className="text-xs font-mono text-emerald-600 font-semibold">
-                                      {dept.presentRate}%
+                                    <span className="text-2xs font-mono text-muted-foreground">
+                                      {dept.members.length} NS
                                     </span>
                                   </div>
                                 </button>
@@ -2112,10 +1948,10 @@ export function OrganizationTree({
                     <div className="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-muted/40 border border-border/60 shrink-0 text-xs">
                       <div>
                         <span className="text-xs text-muted-foreground block">
-                          Chấm công hôm nay
+                          Nhân sự đơn vị
                         </span>
-                        <span className="font-bold text-emerald-600 font-mono">
-                          {selectedDepartment.presentToday}/{selectedDepartment.headcount} ({selectedDepartment.presentRate}%)
+                        <span className="font-bold text-foreground font-mono">
+                          {selectedDepartment.members.length} cán bộ / GV
                         </span>
                       </div>
                       <div className="w-px h-6 bg-border/60" />
@@ -2123,7 +1959,7 @@ export function OrganizationTree({
                         <span className="text-xs text-muted-foreground block">
                           Vị trí
                         </span>
-                        <span className="font-medium text-foreground truncate max-w-[120px] block">
+                        <span className="font-medium text-foreground truncate max-w-[140px] block">
                           {selectedDepartment.location}
                         </span>
                       </div>
@@ -2151,11 +1987,13 @@ export function OrganizationTree({
                           <span
                             className={cn(
                               "absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-card",
-                              staff.workStatus === "PRESENT" || staff.status === "ACTIVE"
+                              staff.status === "ACTIVE"
                                 ? "bg-emerald-500"
-                                : "bg-amber-500"
+                                : staff.status === "BUSY"
+                                ? "bg-amber-500"
+                                : "bg-slate-400"
                             )}
-                            title={staff.workStatus === "PRESENT" ? "Có mặt tại trường" : "Nghỉ phép / Công tác"}
+                            title={staff.status === "ACTIVE" ? "Đang công tác" : staff.status === "BUSY" ? "Bận công vụ" : "Nghỉ phép"}
                           />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -2182,11 +2020,9 @@ export function OrganizationTree({
                               {staff.room}
                             </span>
                           )}
-                          {staff.checkInTime && (
-                            <span className="text-xs text-emerald-600 font-mono tabular-nums">
-                              Vào: {staff.checkInTime}
-                            </span>
-                          )}
+                          <span className="text-xs text-muted-foreground/80 truncate max-w-[140px]">
+                            {staff.room ? `Phòng: ${staff.room}` : "Văn phòng đơn vị"}
+                          </span>
                         </div>
 
                         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -2242,7 +2078,7 @@ export function OrganizationTree({
                           <th className="py-2.5 px-3">Chức vụ & Đơn vị</th>
                           <th className="py-2.5 px-3">Liên hệ</th>
                           <th className="py-2.5 px-3">Phòng</th>
-                          <th className="py-2.5 px-3 text-right">Chấm công</th>
+                          <th className="py-2.5 px-3 text-right">Trạng thái công tác</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
@@ -2284,14 +2120,17 @@ export function OrganizationTree({
                                 {staff.room || "--"}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 text-right font-mono text-xs">
-                              {staff.checkInTime ? (
-                                <span className="text-emerald-600 font-semibold">
-                                  {staff.checkInTime}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">--:--</span>
-                              )}
+                            <td className="py-2.5 px-3 text-right text-xs">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center px-2 py-0.5 rounded-md text-2xs font-semibold",
+                                  staff.status === "ACTIVE"
+                                    ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                                    : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                                )}
+                              >
+                                {staff.status === "ACTIVE" ? "Đang công tác" : "Nghỉ phép"}
+                              </span>
                             </td>
                           </tr>
                         ))}
@@ -2386,12 +2225,14 @@ export function OrganizationTree({
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block font-medium">
-                  Chấm công hôm nay
+                  Trạng thái công tác
                 </span>
-                <span className="font-semibold text-emerald-600 font-mono">
-                  {activeProfileStaff.checkInTime
-                    ? `Có mặt: ${activeProfileStaff.checkInTime}`
-                    : "Chưa ghi nhận"}
+                <span className="font-semibold text-foreground">
+                  {activeProfileStaff.status === "ACTIVE"
+                    ? "Đang công tác"
+                    : activeProfileStaff.status === "BUSY"
+                    ? "Bận công vụ"
+                    : "Nghỉ phép"}
                 </span>
               </div>
             </div>

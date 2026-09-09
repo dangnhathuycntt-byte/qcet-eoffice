@@ -224,6 +224,23 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       assert.equal(handled, true);
       assert.equal(navigatedTo, "/tasks");
       assert.equal(defaultPrevented, true);
+
+      // Number shortcut '4' (documents under development) must prevent default and NOT navigate
+      defaultPrevented = false;
+      navigatedTo = null;
+      handled = handleSidebarShortcut(
+        {
+          key: "4",
+          target: buttonTarget,
+          preventDefault: () => {
+            defaultPrevented = true;
+          },
+        },
+        mockOptions
+      );
+      assert.equal(handled, true);
+      assert.equal(navigatedTo, null, "Shortcut 4 for documents must not trigger navigation");
+      assert.equal(defaultPrevented, true);
     });
   });
 

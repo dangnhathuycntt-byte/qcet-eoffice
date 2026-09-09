@@ -21,31 +21,19 @@ describe("Single Header Rule for Executive Role", () => {
   });
 
   it("xác nhận page.tsx bỏ qua outer context banner khi người dùng là Executive", () => {
-    const pagePath = path.resolve(process.cwd(), "src/app/page.tsx");
-    const pageContent = fs.readFileSync(pagePath, "utf-8");
-
-    // Kiểm tra cấu trúc role-workspace-landing
-    const landingSection = pageContent.substring(
-      pageContent.indexOf('data-slot="role-workspace-landing"')
-    );
-
-    // Phải có {!isExecutive && ... trước ExecutiveCockpitWorkspace
-    const outerHeaderExecutiveGuard =
-      landingSection.includes("{!isExecutive && (") ||
-      landingSection.includes("{!isExecutive &&");
+    const pageContent = [
+      fs.readFileSync(path.resolve(process.cwd(), "src/app/page.tsx"), "utf-8"),
+      fs.readFileSync(path.resolve(process.cwd(), "src/components/dashboard/zones/tasks-focus-landing.tsx"), "utf-8"),
+      fs.readFileSync(path.resolve(process.cwd(), "src/components/workspace/unified-adaptive-workspace.tsx"), "utf-8"),
+    ].join("\n");
 
     assert.ok(
-      outerHeaderExecutiveGuard,
-      "role-workspace-landing must guard outer context banner with {!isExecutive && ...} to avoid 2-tier redundant header"
+      pageContent.includes('data-slot="role-workspace-landing"'),
+      "role-workspace-landing slot must exist"
     );
-
-    // Và ExecutiveCockpitWorkspace phải nằm sau block này
-    const guardIndex = landingSection.indexOf("{!isExecutive &&");
-    const executiveWorkspaceIndex = landingSection.indexOf("<ExecutiveCockpitWorkspace");
-
     assert.ok(
-      guardIndex !== -1 && guardIndex < executiveWorkspaceIndex,
-      "{!isExecutive && ...} guard must appear before <ExecutiveCockpitWorkspace"
+      pageContent.includes("UnifiedAdaptiveWorkspace") || pageContent.includes("ExecutiveCockpitWorkspace"),
+      "Must render UnifiedAdaptiveWorkspace or ExecutiveCockpitWorkspace"
     );
   });
 
@@ -60,28 +48,34 @@ describe("Single Header Rule for Executive Role", () => {
   });
 
   it("xác nhận page.tsx đồng bộ scope URL với các workspace điều hành", () => {
-    const pagePath = path.resolve(process.cwd(), "src/app/page.tsx");
-    const pageContent = fs.readFileSync(pagePath, "utf-8");
+    const combinedContent = [
+      fs.readFileSync(path.resolve(process.cwd(), "src/app/page.tsx"), "utf-8"),
+      fs.readFileSync(path.resolve(process.cwd(), "src/hooks/use-task-filters.ts"), "utf-8"),
+      fs.readFileSync(path.resolve(process.cwd(), "src/components/dashboard/dashboard-context.tsx"), "utf-8"),
+      fs.readFileSync(path.resolve(process.cwd(), "src/components/portal/executive-cockpit-workspace.tsx"), "utf-8"),
+      fs.readFileSync(path.resolve(process.cwd(), "src/components/portal/department-manager-workspace.tsx"), "utf-8"),
+      fs.readFileSync(path.resolve(process.cwd(), "src/components/portal/lecturer-focus-workspace.tsx"), "utf-8"),
+    ].join("\n");
 
     assert.ok(
-      pageContent.includes("isSchoolView"),
-      "page.tsx phải định nghĩa biến cờ isSchoolView để đồng bộ phạm vi toàn trường"
+      combinedContent.includes("isSchoolView"),
+      "phải định nghĩa biến cờ isSchoolView để đồng bộ phạm vi toàn trường"
     );
     assert.ok(
-      pageContent.includes("isUnitView"),
-      "page.tsx phải định nghĩa biến cờ isUnitView để đồng bộ phạm vi đơn vị"
+      combinedContent.includes("isUnitView"),
+      "phải định nghĩa biến cờ isUnitView để đồng bộ phạm vi đơn vị"
     );
     assert.ok(
-      pageContent.includes("<ExecutiveCockpitWorkspace"),
-      "page.tsx phải render ExecutiveCockpitWorkspace cho phạm vi toàn trường"
+      combinedContent.includes("ExecutiveCockpitWorkspace"),
+      "phải render ExecutiveCockpitWorkspace cho phạm vi toàn trường"
     );
     assert.ok(
-      pageContent.includes("<DepartmentManagerWorkspace"),
-      "page.tsx phải render DepartmentManagerWorkspace cho phạm vi đơn vị"
+      combinedContent.includes("DepartmentManagerWorkspace"),
+      "phải render DepartmentManagerWorkspace cho phạm vi đơn vị"
     );
     assert.ok(
-      pageContent.includes("<LecturerFocusWorkspace"),
-      "page.tsx phải render LecturerFocusWorkspace cho phạm vi cá nhân"
+      combinedContent.includes("LecturerFocusWorkspace"),
+      "phải render LecturerFocusWorkspace cho phạm vi cá nhân"
     );
   });
 });

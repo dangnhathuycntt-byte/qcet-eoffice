@@ -1,25 +1,14 @@
 "use client";
 
 import * as React from "react";
-import dynamic from "next/dynamic";
 import {
   useDashboardModal,
   useDashboardData,
   useDashboardActions,
 } from "@/components/dashboard/dashboard-context";
-
-const TaskDetailSideSheet = dynamic(
-  () => import("@/components/dashboard/task-detail-side-sheet").then((m) => m.TaskDetailSideSheet),
-  { ssr: false }
-);
-const CreateTaskModal = dynamic(
-  () => import("@/components/dashboard/create-task-modal").then((m) => m.CreateTaskModal),
-  { ssr: false }
-);
-const DelegationManagementModal = dynamic(
-  () => import("@/components/dashboard/delegation-management-modal").then((m) => m.DelegationManagementModal),
-  { ssr: false }
-);
+import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
+import { CreateTaskModal } from "@/components/dashboard/create-task-modal";
+import { DelegationManagementModal } from "@/components/dashboard/delegation-management-modal";
 
 function DashboardModalsHostComponent() {
   const {
@@ -28,6 +17,7 @@ function DashboardModalsHostComponent() {
     initialTaskLevel,
     initialParentTaskId,
     initialAssigneeName,
+    initialTitle,
     isDelegationModalOpen,
     delegationDeptCode,
     openTaskDetail,
@@ -69,7 +59,7 @@ function DashboardModalsHostComponent() {
           isOpen={!!selectedTask}
           onClose={closeTaskDetail}
           onStatusChange={handleStatusChange}
-          onAddSubTask={(parentId) => openCreateModal("DON_VI", parentId)}
+          onAddSubTask={(parentId, prefillTitle) => openCreateModal("DON_VI", parentId, undefined, prefillTitle)}
           onSelectSubTask={handleSelectSubTask}
           parentSchoolTaskTitle={parentSchoolTaskTitle}
           delegations={delegations}
@@ -81,6 +71,7 @@ function DashboardModalsHostComponent() {
           isOpen={isCreateModalOpen}
           onClose={closeCreateModal}
           onSubmit={handleCreateTask}
+          initialTitle={initialTitle}
           initialLeadAssigneeName={initialAssigneeName}
           schoolTasks={tasks}
           initialLevel={initialTaskLevel}

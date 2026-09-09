@@ -565,7 +565,7 @@ export function ExecutiveCockpitWorkspace({
         tasks={tasks}
         initialScope="school"
         forcedRole="ADMIN"
-        contextTitle="Trung tâm điều hành Ban Giám hiệu"
+        contextTitle="Khoang điều hành Ban Giám hiệu"
         contextBadge="BGH"
         onSelectTask={onSelectTask || (() => {})}
         onReview={onReview}

@@ -15,11 +15,15 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
   const createdTaskIds: string[] = [];
 
   before(async () => {
-    const user = await prisma.user.findFirst();
+    const user = await prisma.user.findFirst({
+      where: { email: { contains: '@cdktcnqn.edu.vn' } },
+    }) || await prisma.user.findFirst();
     assert.ok(user, 'Must have at least one user in database');
     testUserId = user.id;
 
-    const dept = await prisma.department.findFirst();
+    const dept = await prisma.department.findFirst({
+      where: { id: { in: ['BGH', 'P_QLDT', 'K_CNTT'] } },
+    }) || await prisma.department.findFirst();
     assert.ok(dept, 'Must have at least one department in database');
     testDeptId = dept.id;
 
@@ -234,6 +238,16 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
   });
 
   test('DELETE /api/tasks/[id] deletes the task when authenticated', async () => {
+    const targetDept = await prisma.department.findFirst({
+      where: { id: { in: ['BGH', 'P_QLDT', 'K_CNTT'] } },
+    }) || await prisma.department.findFirst();
+    const deptId = targetDept ? targetDept.id : testDeptId;
+
+    const targetUser = await prisma.user.findFirst({
+      where: { email: { contains: '@cdktcnqn.edu.vn' } },
+    }) || await prisma.user.findFirst();
+    const userId = targetUser ? targetUser.id : testUserId;
+
     // Create a dedicated task to delete
     const taskToDelete = await prisma.task.create({
       data: {
@@ -244,8 +258,8 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
         academicMonth: 9,
         academicYear: '2026-2027',
         dueDate: new Date('2026-10-30T17:00:00.000Z'),
-        departmentId: testDeptId,
-        createdById: testUserId,
+        departmentId: deptId,
+        createdById: userId,
       },
     });
 

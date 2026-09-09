@@ -1,5 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import {
   computeSchoolTaskRollup,
@@ -90,5 +92,20 @@ describe("Dashboard Sub-Hooks Logic Verification", () => {
       d.id === "del-test-1" ? { ...d, status: "REVOKED" as const } : d
     );
     assert.equal(delegations[0].status, "REVOKED");
+  });
+
+  test("useTaskFilters dynamically resolves academic year via getAcademicYear instead of static 2026-2027", () => {
+    const hookContent = fs.readFileSync(
+      path.resolve(process.cwd(), "src/hooks/use-task-filters.ts"),
+      "utf-8"
+    );
+    assert.ok(
+      hookContent.includes("getAcademicYear(new Date())"),
+      "Must use getAcademicYear(new Date())"
+    );
+    assert.ok(
+      !hookContent.includes('"2026-2027"'),
+      "Must not contain hardcoded 2026-2027 string"
+    );
   });
 });

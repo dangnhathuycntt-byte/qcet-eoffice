@@ -1350,6 +1350,14 @@ export function LegacyLecturerFocusWorkspace({
                                   <h4 className="text-sm font-semibold text-foreground tracking-tight">
                                     {subTask.title}
                                   </h4>
+                                  {group.parentTask?.title && (
+                                    <span
+                                      className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20 max-w-[240px] truncate shrink-0"
+                                      title={`Thuộc nhiệm vụ: ${group.parentTask.title}`}
+                                    >
+                                      Thuộc nhiệm vụ: {group.parentTask.title}
+                                    </span>
+                                  )}
                                   {subTask.assigneeName && (
                                     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
                                       <User className="size-3" strokeWidth={1.5} />

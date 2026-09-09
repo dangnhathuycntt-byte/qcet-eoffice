@@ -121,28 +121,41 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 const isActive = isRouteActive(item.href, pathname, searchParams, item.aliases);
                 const subtitle = DRAWER_SUBTITLES[item.id] || item.shortLabel;
                 const badgeCount = item.badgeKey ? Number(badgeCounts?.[item.badgeKey]) || 0 : 0;
+                const isDocuments = item.id === "documents";
 
                 return (
                   <Link
                     key={item.id}
-                    href={item.href}
-                    onClick={() => {
+                    href={isDocuments ? "#" : item.href}
+                    onClick={(e) => {
+                      if (isDocuments) {
+                        e.preventDefault();
+                        return;
+                      }
                       triggerHaptic("light");
                       onOpenChange(false);
                     }}
+                    aria-disabled={isDocuments ? true : undefined}
+                    tabIndex={isDocuments ? -1 : undefined}
+                    aria-label={`${item.label}${isDocuments ? " (Đang phát triển - Chưa thể truy cập)" : ""}`}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "flex flex-col justify-between p-3 min-h-[48px] rounded-xl border transition-all active:scale-[0.98] group cursor-pointer touch-manipulation",
+                      "flex flex-col justify-between p-3 min-h-[48px] rounded-xl border transition-all touch-manipulation",
+                      isDocuments
+                        ? "border-border/40 bg-card/60 opacity-60 cursor-not-allowed select-none"
+                        : "cursor-pointer active:scale-[0.98] group",
                       isActive
                         ? "bg-primary/10 border-primary/40 font-semibold text-primary shadow-xs"
-                        : "border-border/50 bg-card hover:bg-muted/50 text-foreground"
+                        : !isDocuments && "border-border/50 bg-card hover:bg-muted/50 text-foreground"
                     )}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <div
                         className={cn(
                           "size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                          isActive
+                          isDocuments
+                            ? "bg-muted text-muted-foreground"
+                            : isActive
                             ? "bg-primary text-primary-foreground"
                             : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
                         )}
@@ -150,10 +163,12 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                         <IconComponent size={16} />
                       </div>
                       <span className="text-xs font-semibold truncate">{item.label}</span>
-                      {item.id === "documents" && (
-                        <span className="sr-only">Đang phát triển</span>
+                      {isDocuments && (
+                        <span className="ml-auto px-1.5 py-0.5 rounded text-xs font-medium tracking-tight bg-amber-500/10 text-amber-800 border border-amber-500/20 shrink-0 leading-none select-none">
+                          Đang phát triển
+                        </span>
                       )}
-                      {badgeCount > 0 && (
+                      {!isDocuments && badgeCount > 0 && (
                         <span className="ml-auto px-1.5 py-0.5 rounded-full text-xs font-bold bg-primary text-primary-foreground">
                           {badgeCount}
                         </span>

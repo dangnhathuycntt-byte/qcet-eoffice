@@ -185,4 +185,21 @@ describe("AdaptiveScopeHeader Component", () => {
     const emojiRegex = /[\u{1F300}-\u{1F9FF}]/u;
     assert.ok(!emojiRegex.test(html), "Markup must be 100% free of emojis");
   });
+
+  test("accessibility roles and attributes on scope navigation tabs", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveScopeHeader, {
+        user: adminUser,
+        activeScope: "school",
+        onScopeChange: () => {},
+        badgeCounts: { school: 3, unit: 2, my: 1 },
+      })
+    );
+
+    assert.ok(html.includes('role="tablist"'), "Should have role=tablist for scope tabs container");
+    assert.ok(html.includes('role="tab"'), "Each tab should have role=tab");
+    assert.ok(html.includes('aria-selected="true"'), "Active tab must have aria-selected=true");
+    assert.ok(html.includes('aria-selected="false"'), "Inactive tab must have aria-selected=false");
+    assert.ok(html.includes('aria-label="Phạm vi công việc"'), "Tablist must have informative aria-label");
+  });
 });

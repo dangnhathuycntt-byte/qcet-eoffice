@@ -49,12 +49,20 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
     assert.ok(dept, "At least one department must exist in database");
     seededDeptId = dept.id;
 
-    // Clean up any lingering test documents from previous runs
+    // Clean up any lingering test documents and generated tasks from previous runs
     await prisma.documentDirective.deleteMany({
       where: { document: { registrationNumber: { in: [8888, 9999] } } },
     });
     await prisma.document.deleteMany({
       where: { registrationNumber: { in: [8888, 9999] } },
+    });
+    await prisma.task.deleteMany({
+      where: {
+        OR: [
+          { title: { contains: "888/UBND-KHTN" } },
+          { title: { contains: "#8888" } },
+        ],
+      },
     });
   });
 

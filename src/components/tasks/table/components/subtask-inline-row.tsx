@@ -23,6 +23,8 @@ export interface SubtaskInlineRowProps {
   subTask: StaffTask;
   parentTask: SchoolTask;
   density?: TableDensity;
+  scope?: string;
+  isHighlighted?: boolean;
   selectedAcademicMonth?: number | "ALL";
   referenceDate?: string | Date;
   onSelectSubTask?: (subTask: StaffTask, parentTask: SchoolTask) => void;
@@ -47,6 +49,8 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
   subTask,
   parentTask,
   density = "comfortable",
+  scope,
+  isHighlighted = false,
   selectedAcademicMonth,
   referenceDate = getSystemReferenceDate(),
   onSelectSubTask,
@@ -101,9 +105,11 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
       className={cn(
         "group/sub flex items-center justify-between gap-3 rounded-xl border transition-colors cursor-pointer select-none focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
         paddingClass,
-        isSubDueInMonth
-          ? "border-primary/25 bg-primary/[0.04] shadow-2xs hover:bg-primary/[0.08]"
-          : "border-slate-200/60 bg-white/70 hover:bg-slate-100/70",
+        isHighlighted
+          ? "border-primary/40 bg-primary/[0.07] shadow-xs hover:bg-primary/[0.10] ring-1 ring-primary/20"
+          : isSubDueInMonth
+            ? "border-primary/25 bg-primary/[0.04] shadow-2xs hover:bg-primary/[0.08]"
+            : "border-slate-200/60 bg-white/70 hover:bg-slate-100/70",
         className
       )}
     >
@@ -132,6 +138,16 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
         <span className="truncate text-foreground font-medium text-sm leading-snug">
           {subTask.title}
         </span>
+
+        {/* Parent Task Context Badge in MY_TASKS or when highlighted */}
+        {(scope === "MY_TASKS" || isHighlighted) && parentTask?.title && (
+          <span
+            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20 max-w-[240px] truncate shrink-0"
+            title={`Thuộc nhiệm vụ: ${parentTask.title}`}
+          >
+            Thuộc nhiệm vụ: {parentTask.title}
+          </span>
+        )}
 
         {/* Weight indicator if present */}
         {typeof subTask.weight === "number" && subTask.weight > 0 && (

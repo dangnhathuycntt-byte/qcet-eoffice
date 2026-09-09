@@ -137,11 +137,17 @@ export interface DashboardModalContextValue {
   initialTaskLevel: "TRUONG" | "DON_VI";
   initialParentTaskId?: string;
   initialAssigneeName?: string;
+  initialTitle?: string;
   isDelegationModalOpen: boolean;
   delegationDeptCode: string;
   openTaskDetail: (task: SchoolTask | StaffTask) => void;
   closeTaskDetail: () => void;
-  openCreateModal: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void;
+  openCreateModal: (
+    level?: "TRUONG" | "DON_VI",
+    parentId?: string,
+    assigneeName?: string,
+    initialTitle?: string
+  ) => void;
   closeCreateModal: () => void;
   openDelegationModal: (deptCode?: string) => void;
   closeDelegationModal: () => void;

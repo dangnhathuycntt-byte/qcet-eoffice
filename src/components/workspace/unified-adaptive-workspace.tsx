@@ -392,10 +392,12 @@ export function UnifiedAdaptiveWorkspace({
             <div className="pt-0.5">
               <CascadingTaskTable
                 tasks={displayedTasks}
+                scope={activeScope === "my" ? "MY_TASKS" : activeScope}
                 onSelectTask={onSelectTask}
                 onStatusChange={
                   onStatusChange
-                    ? (taskId, newStatus) => onStatusChange(taskId, newStatus)
+                    ? (taskId, newStatus) =>
+                        onStatusChange(taskId, newStatus)
                     : undefined
                 }
                 onRefresh={onRefresh}

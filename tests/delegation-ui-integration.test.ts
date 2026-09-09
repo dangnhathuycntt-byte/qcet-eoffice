@@ -17,7 +17,13 @@ const taskDetailSideSheetPath = path.resolve(
 
 describe("Task 3: Stanford Authority Delegation UI Integration Tests", () => {
   const deptViewContent = fs.readFileSync(departmentGroupedTaskViewPath, "utf-8");
-  const pageContent = fs.readFileSync(pagePath, "utf-8");
+  const pageContent = [
+    fs.readFileSync(pagePath, "utf-8"),
+    fs.readFileSync(path.join(process.cwd(), "src/components/dashboard/dashboard-modals-host.tsx"), "utf-8"),
+    fs.readFileSync(path.join(process.cwd(), "src/hooks/use-task-mutations.ts"), "utf-8"),
+    fs.readFileSync(path.join(process.cwd(), "src/hooks/use-modal-state.ts"), "utf-8"),
+    fs.readFileSync(path.join(process.cwd(), "src/components/dashboard/zones/tasks-expanded-views.tsx"), "utf-8"),
+  ].join("\n");
   const sideSheetContent = fs.readFileSync(taskDetailSideSheetPath, "utf-8");
 
   describe("1. DepartmentGroupedTaskView Delegation Support", () => {
@@ -191,11 +197,11 @@ describe("Task 3: Stanford Authority Delegation UI Integration Tests", () => {
       );
     });
 
-    test("co cac handlers handleOpenDelegation, handleSaveDelegation, handleRevokeDelegation", () => {
+    test("co cac handlers handleOpenDelegation/openDelegationModal, handleSaveDelegation, handleRevokeDelegation", () => {
       assert.match(
         pageContent,
-        /handleOpenDelegation/,
-        "Phải có handler handleOpenDelegation"
+        /(?:handleOpenDelegation|openDelegationModal)/,
+        "Phải có handler handleOpenDelegation hoặc openDelegationModal"
       );
       assert.match(
         pageContent,
@@ -217,7 +223,7 @@ describe("Task 3: Stanford Authority Delegation UI Integration Tests", () => {
       );
       assert.match(
         pageContent,
-        /<DepartmentGroupedTaskView[\s\S]*?onManageDelegation=\{handleOpenDelegation\}[\s\S]*?\/>/,
+        /<DepartmentGroupedTaskView[\s\S]*?onManageDelegation=\{(?:handleOpenDelegation|openDelegationModal)\}[\s\S]*?\/>/,
         "Phải truyền onManageDelegation vào DepartmentGroupedTaskView"
       );
     });

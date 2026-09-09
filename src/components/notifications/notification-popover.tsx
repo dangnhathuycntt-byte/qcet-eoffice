@@ -3,192 +3,27 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  Bell,
   Check,
   CheckCheck,
-  CheckCircle2,
   Clock,
-  Activity,
-  FileText,
-  AlertTriangle,
-  Plus,
-  BarChart2,
-  Wifi,
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/layout/sidebar-context";
+import {
+  QCETNotification,
+  formatNotificationContent,
+  getDeterministicAvatarStyle,
+  getActorInitials,
+  getTypeBadge,
+  mapDbNotification,
+  formatRelativeTime,
+  getTimeGroup,
+} from "@/lib/notification-triage";
 
-export interface QCETNotification {
-  id: string;
-  actorName: string;
-  action: string;
-  targetTitle: string;
-  timestamp: string;
-  category: string;
-  isRead: boolean;
-  timeGroup: "new" | "earlier";
-  type: "completed" | "progress" | "upload" | "review" | "created" | "report" | "network" | "assigned" | "directive" | "test";
-  linkHref: string;
-}
-
-export function formatRelativeTime(dateInput: string | Date): string {
-  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-  const now = new Date();
-  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (isNaN(diffSec) || diffSec < 60) return "Vừa xong";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} phút trước`;
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `${diffHours} giờ trước`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} ngày trước`;
-  return date.toLocaleDateString("vi-VN");
-}
-
-export function getTimeGroup(dateInput: string | Date): "new" | "earlier" {
-  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-  const now = new Date();
-  const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-  return isNaN(diffHours) || diffHours < 2 ? "new" : "earlier";
-}
-
-export function mapDbNotification(raw: any): QCETNotification {
-  const dateVal = raw.createdAt || new Date();
-  return {
-    id: raw.id,
-    actorName: raw.actorName || "Hệ thống QCET",
-    action: raw.body || raw.action || "",
-    targetTitle: raw.title || raw.targetTitle || "",
-    timestamp: raw.timestamp || formatRelativeTime(dateVal),
-    category: (raw.category || "QCET").toUpperCase(),
-    isRead: Boolean(raw.isRead),
-    timeGroup: raw.timeGroup || getTimeGroup(dateVal),
-    type: raw.type || "completed",
-    linkHref: raw.linkHref || "/",
-  };
-}
-
-function getActorInitials(name: string): string {
-  if (!name || !name.trim()) return "QC";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
-}
-
-function getPersonnelAvatarStyle(name: string): { bg: string; text: string; ring: string } {
-  if (name.includes("Hùng")) {
-    return {
-      bg: "bg-emerald-500/15",
-      text: "text-emerald-700",
-      ring: "ring-emerald-500/30",
-    };
-  }
-  if (name.includes("Vinh")) {
-    return {
-      bg: "bg-blue-500/15",
-      text: "text-blue-700",
-      ring: "ring-blue-500/30",
-    };
-  }
-  if (name.includes("Xuân")) {
-    return {
-      bg: "bg-purple-500/15",
-      text: "text-purple-700",
-      ring: "ring-purple-500/30",
-    };
-  }
-  if (name.includes("Nam")) {
-    return {
-      bg: "bg-amber-500/15",
-      text: "text-amber-800",
-      ring: "ring-amber-500/30",
-    };
-  }
-  if (name.includes("Thu")) {
-    return {
-      bg: "bg-teal-500/15",
-      text: "text-teal-700",
-      ring: "ring-teal-500/30",
-    };
-  }
-  if (name.includes("Trí")) {
-    return {
-      bg: "bg-rose-500/15",
-      text: "text-rose-700",
-      ring: "ring-rose-500/30",
-    };
-  }
-  if (name.includes("Hậu")) {
-    return {
-      bg: "bg-indigo-500/15",
-      text: "text-indigo-700",
-      ring: "ring-indigo-500/30",
-    };
-  }
-  return {
-    bg: "bg-primary/10",
-    text: "text-primary",
-    ring: "ring-primary/20",
-  };
-}
-
-function getTypeBadge(type: QCETNotification["type"]) {
-  switch (type) {
-    case "completed":
-      return {
-        bg: "bg-emerald-500/15 text-emerald-600 border border-emerald-500/30",
-        icon: CheckCircle2,
-      };
-    case "progress":
-      return {
-        bg: "bg-blue-500/15 text-blue-600 border border-blue-500/30",
-        icon: Clock,
-      };
-    case "upload":
-      return {
-        bg: "bg-purple-500/15 text-purple-600 border border-purple-500/30",
-        icon: FileText,
-      };
-    case "review":
-      return {
-        bg: "bg-amber-500/15 text-amber-600 border border-amber-500/30",
-        icon: AlertTriangle,
-      };
-    case "created":
-      return {
-        bg: "bg-teal-500/15 text-teal-600 border border-teal-500/30",
-        icon: Plus,
-      };
-    case "report":
-      return {
-        bg: "bg-indigo-500/15 text-indigo-600 border border-indigo-500/30",
-        icon: Activity,
-      };
-    case "network":
-      return {
-        bg: "bg-sky-500/15 text-sky-600 border border-sky-500/30",
-        icon: Wifi,
-      };
-    case "assigned":
-    case "directive":
-      return {
-        bg: "bg-amber-500/15 text-amber-700 border border-amber-500/30",
-        icon: FileText,
-      };
-    case "test":
-      return {
-        bg: "bg-purple-500/15 text-purple-700 border border-purple-500/30",
-        icon: Activity,
-      };
-    default:
-      return {
-        bg: "bg-primary/15 text-primary border border-primary/30",
-        icon: Bell,
-      };
-  }
-}
+// Re-export for backward compatibility
+export type { QCETNotification };
+export { mapDbNotification, formatRelativeTime, getTimeGroup };
 
 interface NotificationPopoverProps {
   isOpen: boolean;
@@ -234,12 +69,15 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
     return notifications.filter((n) => !n.isRead).length;
   }, [notifications]);
 
-  // Sync unread count to sidebar badge
+  // Sync unread count to sidebar badge in real-time
   React.useEffect(() => {
-    setBadgeCounts((prev) => ({
-      ...prev,
-      notifications: unreadCount,
-    }));
+    setBadgeCounts((prev) => {
+      if (prev.notifications === unreadCount) return prev;
+      return {
+        ...prev,
+        notifications: unreadCount,
+      };
+    });
   }, [unreadCount, setBadgeCounts]);
 
   // Close on outside click
@@ -457,7 +295,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
         <Link
           href="/notifications"
           onClick={onClose}
-          className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+          className="inline-flex items-center justify-center gap-1.5 w-full py-1.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors cursor-pointer"
         >
           <span>Xem tất cả thông báo điều hành</span>
           <ExternalLink size={12} strokeWidth={1.5} />
@@ -476,16 +314,21 @@ interface NotificationRowProps {
 function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
   const badge = getTypeBadge(item.type);
   const BadgeIcon = badge.icon;
-  const avatarStyle = getPersonnelAvatarStyle(item.actorName);
+  const avatarStyle = getDeterministicAvatarStyle(item.actorName);
+  const formatted = formatNotificationContent(item);
+
+  const destinationHref = item.linkHref && item.linkHref.trim() !== "" ? item.linkHref : "/notifications";
 
   const handleClick = () => {
-    onRead();
+    if (!item.isRead) {
+      onRead();
+    }
     onClose();
   };
 
   return (
     <Link
-      href={item.linkHref}
+      href={destinationHref}
       onClick={handleClick}
       className={cn(
         "group relative flex items-start gap-3 p-2.5 rounded-xl transition-all cursor-pointer border border-transparent",
@@ -503,9 +346,9 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
             avatarStyle.text,
             avatarStyle.ring
           )}
-          title={`${item.actorName} (QCET)`}
+          title={`${formatted.actorName} (QCET)`}
         >
-          {getActorInitials(item.actorName)}
+          {getActorInitials(formatted.actorName)}
         </div>
 
         {/* Micro overlay icon badge */}
@@ -519,17 +362,27 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
         </div>
       </div>
 
-      {/* Content text */}
+      {/* Content text - Formatted cleanly without string duplication glitch */}
       <div className="flex-1 min-w-0 pr-1">
         <p className="text-xs text-foreground leading-snug line-clamp-2">
-          <span className="font-bold text-foreground">{item.actorName}</span>{" "}
-          <span className="text-muted-foreground">{item.action}</span>{" "}
-          <span className="font-semibold text-foreground">&ldquo;{item.targetTitle}&rdquo;</span>
+          <span className="font-bold text-foreground">{formatted.actorName}</span>{" "}
+          <span className="text-muted-foreground">{formatted.actionText}</span>{" "}
+          {formatted.targetTitle && (
+            <span className="font-semibold text-foreground">&ldquo;{formatted.targetTitle}&rdquo;</span>
+          )}
+          {formatted.directiveNote && (
+            <span className="italic text-foreground/90 font-medium"> &ldquo;{formatted.directiveNote}&rdquo;</span>
+          )}
         </p>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
           <span className="px-1 py-0.2 rounded text-xs font-mono font-semibold bg-muted text-muted-foreground border border-border/50">
             {item.category}
           </span>
+          {formatted.extraBadge && (
+            <span className="px-1 py-0.2 rounded text-xs font-mono font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+              {formatted.extraBadge}
+            </span>
+          )}
           <span className="text-xs text-muted-foreground font-mono tabular-nums flex items-center gap-1">
             <Clock size={10} strokeWidth={1.5} className="text-muted-foreground/80 shrink-0" />
             <span>{item.timestamp}</span>
@@ -558,4 +411,5 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
     </Link>
   );
 }
+
 export { NotificationRow };

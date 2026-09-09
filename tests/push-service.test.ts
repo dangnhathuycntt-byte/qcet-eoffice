@@ -117,7 +117,6 @@ describe("Web Push Dispatch & Stale Token Purge Suite", () => {
     await prisma.pushSubscription.deleteMany({
       where: {
         userId: testUserId,
-        endpoint: { startsWith: "https://fcm.googleapis.com/fcm/send/test-" },
       },
     });
   });

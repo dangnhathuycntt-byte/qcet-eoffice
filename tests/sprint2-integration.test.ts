@@ -68,17 +68,22 @@ describe("Sprint 2 Integration & Navigation", () => {
       [
         {
           source: "/tasks",
-          destination: "/?scope=school",
+          destination: "/?zone=tasks&scope=school",
           permanent: false,
         },
         {
           source: "/unit-tasks",
-          destination: "/?scope=unit",
+          destination: "/?zone=tasks&scope=unit",
           permanent: false,
         },
         {
           source: "/calendar",
-          destination: "/?view=calendar",
+          destination: "/?zone=calendar",
+          permanent: false,
+        },
+        {
+          source: "/org",
+          destination: "/?zone=org",
           permanent: false,
         },
       ]

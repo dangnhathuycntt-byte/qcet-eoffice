@@ -5,6 +5,9 @@ import path from 'node:path';
 import {
   QCET_DEPARTMENT_GROUPS,
   QCET_UNIT_CANONICAL_MAP,
+  QCET_CANONICAL_UNITS,
+  toCanonicalUnitCode,
+  isCanonicalUnitCode,
   getDepartmentByCode,
 } from '../src/lib/departments';
 import { QCET_DEPARTMENTS } from '../src/components/org/organization-tree';
@@ -103,7 +106,31 @@ describe('QCET Real Organization & Seed Alignment Suite', () => {
         canonical,
         `Legacy code ${legacy} must resolve to canonical ${canonical}`
       );
+      assert.strictEqual(
+        toCanonicalUnitCode(legacy),
+        canonical,
+        `toCanonicalUnitCode(${legacy}) must return canonical ${canonical}`
+      );
+      assert.strictEqual(
+        isCanonicalUnitCode(legacy),
+        true,
+        `isCanonicalUnitCode(${legacy}) must return true for mapped legacy alias`
+      );
     }
+
+    // Verify QCET_CANONICAL_UNITS contains all 15 core units
+    for (const code of CANONICAL_15_CODES) {
+      assert.ok(
+        (QCET_CANONICAL_UNITS as readonly string[]).includes(code),
+        `QCET_CANONICAL_UNITS must include ${code}`
+      );
+      assert.strictEqual(
+        isCanonicalUnitCode(code),
+        true,
+        `isCanonicalUnitCode(${code}) must be true`
+      );
+    }
+    assert.strictEqual(isCanonicalUnitCode('INVALID_NON_EXISTENT_UNIT'), false);
   });
 
   test('2. QCET_DEPARTMENT_GROUPS contains real canonical units and leaders', () => {

@@ -1,3 +1,5 @@
+import type { UserRole } from "@/types/auth";
+
 const LIGHT_COLORS = {
   appBg: "oklch(0.985 0.003 250)",
   cardBg: "oklch(1 0 0)",
@@ -129,6 +131,7 @@ export interface NavItem {
   label: string;
   icon: string;
   badge?: string;
+  allowedRoles?: UserRole[];
 }
 
 export const NAV_ITEMS: NavItem[] = [

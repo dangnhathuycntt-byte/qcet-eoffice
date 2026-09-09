@@ -102,4 +102,49 @@ describe("ExecutiveActionCenter UI & Empty State Suite", () => {
       "use-task-filters must export executiveActionItems"
     );
   });
+
+  test("ExecutiveActionCenter implements anti-slop, queue ergonomics, and a11y touch targets", () => {
+    const content = fs.readFileSync(actionCenterPath, "utf8");
+
+    // Anti-slop: No activeTopBar top accent lines and no icon box wrappers
+    assert.equal(
+      content.includes("activeTopBar"),
+      false,
+      "Top accent lines (activeTopBar) must be removed"
+    );
+    assert.equal(
+      content.includes("size-7 rounded-md bg-muted/60"),
+      false,
+      "Icon box wrapper size-7 rounded-md bg-muted/60 must be removed"
+    );
+
+    // Queue Ergonomics
+    assert.ok(
+      content.includes("INITIAL_LIMIT"),
+      "Must define INITIAL_LIMIT for queue pagination"
+    );
+    assert.ok(
+      content.includes("max-h-[460px] overflow-y-auto pr-1"),
+      "Container must have max-h-[460px] overflow-y-auto pr-1"
+    );
+    assert.ok(
+      content.includes("Xem thêm") && content.includes("Thu gọn danh sách"),
+      "Must have expand/collapse toggle labels"
+    );
+
+    // Typography & A11y
+    assert.equal(
+      content.includes("uppercase tracking-wider"),
+      false,
+      "Heading must be sentence case (no uppercase tracking-wider)"
+    );
+    assert.ok(
+      content.includes("min-h-[44px] sm:min-h-[36px]"),
+      "Action buttons must meet min-h-[44px] sm:min-h-[36px] touch target"
+    );
+    assert.ok(
+      content.includes('type="button"'),
+      "Metric cards must use <button type=\"button\">"
+    );
+  });
 });

@@ -2,7 +2,7 @@
 // Version: 2.0.0 - Unified Mobile PWA Modernization
 // Handles push notifications, badge counts, client navigation, and two-tier offline caching
 
-const CACHE_NAME = 'qcet-eoffice-v3';
+const CACHE_NAME = 'qcet-eoffice-v4';
 const API_CACHE_NAME = 'qcet-api-v1';
 const OFFLINE_FALLBACK_URL = '/?zone=tasks';
 const API_TIMEOUT_MS = 2500;
@@ -16,6 +16,7 @@ const PRECACHE_ASSETS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/logo-qcet.png',
+  '/logo-qcet.webp',
 ];
 
 self.addEventListener('install', (event) => {

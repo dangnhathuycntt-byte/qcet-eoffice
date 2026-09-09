@@ -7,6 +7,8 @@ import {
   Target,
   ArrowRight,
   ShieldCheck,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import type {
   ExecutiveActionStats,
@@ -17,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type { ExecutiveFilter, ExecutiveActionItem };
+
+export const INITIAL_LIMIT = 5;
 
 export interface ExecutiveActionCenterProps {
   stats: ExecutiveActionStats;
@@ -33,8 +37,6 @@ interface ActionCardConfig {
   getValue: (stats: ExecutiveActionStats) => number;
   getSubtext: (stats: ExecutiveActionStats) => string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement> & { strokeWidth?: number }>;
-  accentColor: string;
-  activeTopBar: string;
   activeAccent: string;
   activeBg: string;
   hoverBorder: string;
@@ -52,8 +54,6 @@ const ACTION_CARDS: ActionCardConfig[] = [
         ? "Tờ trình chờ thẩm định & phê duyệt"
         : "Không có tờ trình tồn đọng",
     icon: CheckCircle2,
-    accentColor: "bg-indigo-500/40",
-    activeTopBar: "bg-indigo-600",
     activeAccent: "border-indigo-500 ring-2 ring-indigo-500/20",
     activeBg: "bg-indigo-500/[0.04]",
     hoverBorder: "hover:border-indigo-500/40 hover:bg-indigo-500/[0.02]",
@@ -73,8 +73,6 @@ const ACTION_CARDS: ActionCardConfig[] = [
       return "Tiến độ thông suốt";
     },
     icon: AlertTriangle,
-    accentColor: "bg-rose-500/40",
-    activeTopBar: "bg-rose-600",
     activeAccent: "border-rose-500 ring-2 ring-rose-500/20",
     activeBg: "bg-rose-500/[0.04]",
     hoverBorder: "hover:border-rose-500/40 hover:bg-rose-500/[0.02]",
@@ -90,8 +88,6 @@ const ACTION_CARDS: ActionCardConfig[] = [
         ? "Nhiệm vụ trọng tâm năm học"
         : "Đã hoàn thành các mục tiêu",
     icon: Target,
-    accentColor: "bg-emerald-500/40",
-    activeTopBar: "bg-emerald-600",
     activeAccent: "border-emerald-500 ring-2 ring-emerald-500/20",
     activeBg: "bg-emerald-500/[0.04]",
     hoverBorder: "hover:border-emerald-500/40 hover:bg-emerald-500/[0.02]",
@@ -115,12 +111,21 @@ export function ExecutiveActionCenter({
   onAction,
 }: ExecutiveActionCenterProps) {
   const cards = getActionCardData(stats);
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsExpanded(false);
+  }, [activeFilter]);
 
   const displayItems = React.useMemo(() => {
     const pool = items ?? [];
     if (activeFilter === "ALL") return pool;
     return pool.filter((item) => item.filterType === activeFilter);
   }, [items, activeFilter]);
+
+  const visibleItems = isExpanded
+    ? displayItems
+    : displayItems.slice(0, INITIAL_LIMIT);
 
   return (
     <div className="space-y-4" data-slot="executive-action-center">
@@ -131,22 +136,16 @@ export function ExecutiveActionCenter({
           const isActive = activeFilter === card.filterKey;
 
           return (
-            <div
+            <button
+              type="button"
               key={card.id}
-              role="button"
-              tabIndex={0}
               aria-pressed={isActive}
+              aria-label={`Lọc theo ${card.title}: ${card.value} ${card.subtext}`}
               onClick={() => {
                 onFilterChange(isActive ? "ALL" : card.filterKey);
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onFilterChange(isActive ? "ALL" : card.filterKey);
-                }
-              }}
               className={cn(
-                "group relative flex flex-col justify-between gap-3 rounded-xl border bg-card p-4 sm:p-5 transition-all duration-200 cursor-pointer select-none overflow-hidden",
+                "group relative flex flex-col justify-between gap-3 rounded-xl border bg-card p-4 sm:p-5 text-left transition-all duration-200 cursor-pointer select-none overflow-hidden w-full",
                 "hover:-translate-y-0.5 hover:shadow-xs",
                 isActive
                   ? cn("shadow-xs z-10", card.activeAccent, card.activeBg)
@@ -158,22 +157,10 @@ export function ExecutiveActionCenter({
               data-filter-key={card.filterKey}
               data-active={isActive ? "true" : "false"}
             >
-              {/* Top accent line */}
-              <div
-                className={cn(
-                  "absolute inset-x-0 top-0 transition-all duration-200",
-                  isActive
-                    ? cn("h-[3px]", card.activeTopBar)
-                    : cn("h-[2px] opacity-70 group-hover:opacity-100 group-hover:h-[3px]", card.accentColor)
-                )}
-              />
-
               {/* Icon + Title */}
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors group-hover:bg-muted group-hover:text-foreground">
-                    <IconComponent className="size-4 shrink-0" strokeWidth={1.5} />
-                  </div>
+                  <IconComponent className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
                   <span className="text-xs sm:text-sm font-semibold text-foreground/90 tracking-tight truncate group-hover:text-foreground transition-colors">
                     {card.title}
                   </span>
@@ -199,7 +186,7 @@ export function ExecutiveActionCenter({
                   {card.subtext}
                 </span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -208,7 +195,7 @@ export function ExecutiveActionCenter({
       {displayItems.length > 0 ? (
         <div className="space-y-2.5 pt-1" data-slot="action-items-queue">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs sm:text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="text-xs sm:text-[13px] font-semibold text-muted-foreground">
               {activeFilter === "ALL"
                 ? "Nhiệm vụ trọng tâm cần chỉ đạo trực tiếp"
                 : `Hàng đợi: ${
@@ -224,8 +211,8 @@ export function ExecutiveActionCenter({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-2.5">
-            {displayItems.map((item) => (
+          <div className="grid grid-cols-1 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
+            {visibleItems.map((item) => (
               <div
                 key={item.id}
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3.5 min-h-[64px] transition-all hover:bg-muted/20"
@@ -252,7 +239,8 @@ export function ExecutiveActionCenter({
                   <Button
                     size="sm"
                     variant={item.filterType === "BLOCKED_OVERDUE" ? "destructive" : "default"}
-                    className="h-8.5 sm:h-9 px-3 text-xs font-semibold rounded-lg shadow-2xs gap-1.5"
+                    className="min-h-[44px] sm:min-h-[36px] h-9 px-3 text-xs font-semibold rounded-lg shadow-2xs gap-1.5"
+                    aria-label={`${item.actionLabel || "Xử lý ngay"}: ${item.title}`}
                     onClick={() => onAction?.(item.actionType || item.filterType, item)}
                   >
                     <span>{item.actionLabel || "Xử lý ngay"}</span>
@@ -262,6 +250,35 @@ export function ExecutiveActionCenter({
               </div>
             ))}
           </div>
+
+          {displayItems.length > INITIAL_LIMIT && (
+            <div className="pt-1 flex justify-center">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 min-h-[44px] sm:min-h-[36px] py-2 gap-1.5"
+                onClick={() => setIsExpanded((prev) => !prev)}
+                aria-expanded={isExpanded}
+                aria-label={
+                  isExpanded
+                    ? "Thu gọn danh sách"
+                    : `Xem thêm ${displayItems.length - INITIAL_LIMIT} nhiệm vụ trong hàng đợi`
+                }
+              >
+                <span>
+                  {isExpanded
+                    ? "Thu gọn danh sách"
+                    : `Xem thêm ${displayItems.length - INITIAL_LIMIT} nhiệm vụ trong hàng đợi`}
+                </span>
+                {isExpanded ? (
+                  <ChevronUp className="size-3.5" strokeWidth={1.5} />
+                ) : (
+                  <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <div

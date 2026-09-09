@@ -5,6 +5,7 @@ import {
   Search,
   X,
   Building2,
+  Calendar,
   Layers,
   Rows3,
   Rows4,
@@ -39,6 +40,11 @@ import {
   isTaskOrSubtaskOverdue,
   isTaskOrSubtaskPendingReview,
 } from "../utils/table-filter-engine";
+import {
+  filterTasksByAcademicMonthStrict,
+  ACADEMIC_MONTH_ORDER,
+  getAcademicMonthInfo,
+} from "@/lib/academic-calendar";
 
 /**
  * Kiểm tra xem phím tắt có phải là shortcut tìm kiếm (/ hoặc Cmd+K / Ctrl+K) hay không
@@ -67,11 +73,20 @@ export function aggregateFilterCounts(
     currentUserId?: string;
     currentUserName?: string;
     referenceDate?: string | Date;
+    month?: number | "ALL";
+    academicYear?: string;
   }
 ): Record<SmartFilterTab, number> {
   const refDate = options?.referenceDate || getSystemReferenceDate();
+  const sourceTasks =
+    options?.month !== undefined &&
+    options?.month !== "ALL" &&
+    typeof options.month === "number"
+      ? filterTasksByAcademicMonthStrict(tasks, options.month, options.academicYear)
+      : tasks;
+
   const counts: Record<SmartFilterTab, number> = {
-    all: tasks.length,
+    all: sourceTasks.length,
     my_tasks: 0,
     overdue: 0,
     review: 0,
@@ -80,7 +95,7 @@ export function aggregateFilterCounts(
     completed: 0,
   };
 
-  for (const task of tasks) {
+  for (const task of sourceTasks) {
     if (
       isTaskAssignedToUser(
         task,
@@ -124,6 +139,12 @@ export interface TaskTableToolbarProps {
   tasks?: SchoolTask[];
   availableTabs?: SmartFilterTabOption[];
 
+  // Bộ lọc Kỳ học / Tháng vận hành (Academic Month)
+  selectedAcademicMonth?: number | "ALL";
+  onAcademicMonthChange?: (month: number | "ALL") => void;
+  selectedMonth?: number | "ALL";
+  onMonthChange?: (month: number | "ALL") => void;
+
   // Bộ lọc Dropdown
   selectedDepartment?: string;
   onDepartmentChange?: (department: string) => void;
@@ -163,6 +184,10 @@ export function TaskTableToolbar({
   pillCounts,
   tasks,
   availableTabs = SMART_FILTER_TABS,
+  selectedAcademicMonth,
+  onAcademicMonthChange,
+  selectedMonth,
+  onMonthChange,
   selectedDepartment = "ALL",
   onDepartmentChange,
   departmentOptions = DEPARTMENT_OPTIONS,
@@ -213,6 +238,12 @@ export function TaskTableToolbar({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const activeMonth =
+    selectedMonth !== undefined
+      ? selectedMonth
+      : selectedAcademicMonth ?? "ALL";
+  const activeOnMonthChange = onMonthChange || onAcademicMonthChange;
+
   const handleClearSearch = React.useCallback(() => {
     setLocalQuery("");
     onSearchChange("");
@@ -226,6 +257,7 @@ export function TaskTableToolbar({
       counts = aggregateFilterCounts(tasks, {
         currentUserId,
         currentUserName,
+        month: activeMonth,
       });
     }
     // Tự động bổ sung số lượng tổng "Tất cả" khi có totalTasksCount
@@ -233,7 +265,7 @@ export function TaskTableToolbar({
       counts = { ...counts, all: totalTasksCount };
     }
     return counts;
-  }, [pillCounts, tasks, currentUserId, currentUserName, totalTasksCount]);
+  }, [pillCounts, tasks, currentUserId, currentUserName, totalTasksCount, activeMonth]);
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
@@ -283,6 +315,39 @@ export function TaskTableToolbar({
             </div>
           </div>
 
+          {/* Dropdown Bộ lọc Tháng (Academic Month) */}
+          {activeOnMonthChange && (
+            <div className="relative inline-flex items-center">
+              <Calendar
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+                strokeWidth={1.5}
+              />
+              <select
+                value={activeMonth}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  activeOnMonthChange(val === "ALL" ? "ALL" : Number(val));
+                }}
+                aria-label="Lọc theo tháng học kỳ"
+                className="h-9 pl-8 pr-7 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none max-w-[170px] truncate"
+              >
+                <option value="ALL">Tất cả các tháng</option>
+                {ACADEMIC_MONTH_ORDER.map((m) => {
+                  const info = getAcademicMonthInfo(m);
+                  return (
+                    <option key={`academic-month-${m}`} value={m}>
+                      {info.label} ({info.shortDateSpan})
+                    </option>
+                  );
+                })}
+              </select>
+              <ChevronDown
+                className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
+                strokeWidth={1.5}
+              />
+            </div>
+          )}
+
           {/* Dropdown Đơn vị / Phòng ban */}
           {onDepartmentChange && (
             <div className="relative inline-flex items-center">
@@ -329,6 +394,43 @@ export function TaskTableToolbar({
                     {cat.label}
                   </option>
                 ))}
+              </select>
+              <ChevronDown
+                className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
+                strokeWidth={1.5}
+              />
+            </div>
+          )}
+
+          {/* Dropdown Kỳ học / Tháng học vụ (Academic Month Selector) */}
+          {onAcademicMonthChange && (
+            <div className="relative inline-flex items-center">
+              <Calendar
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+                strokeWidth={1.5}
+              />
+              <select
+                value={selectedAcademicMonth}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  onAcademicMonthChange(val === "ALL" ? "ALL" : Number(val));
+                }}
+                aria-label="Lọc theo tháng vận hành"
+                className="h-9 pl-8 pr-7 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none max-w-[195px] truncate"
+              >
+                <option value="ALL">Cả năm học (2026 - 2027)</option>
+                <option value="1">Kỳ Tháng 1/2027</option>
+                <option value="2">Kỳ Tháng 2/2027</option>
+                <option value="3">Kỳ Tháng 3/2027</option>
+                <option value="4">Kỳ Tháng 4/2027</option>
+                <option value="5">Kỳ Tháng 5/2027</option>
+                <option value="6">Kỳ Tháng 6/2027</option>
+                <option value="7">Kỳ Tháng 7/2027</option>
+                <option value="8">Kỳ Tháng 8/2027</option>
+                <option value="9">Kỳ Tháng 9/2026</option>
+                <option value="10">Kỳ Tháng 10/2026</option>
+                <option value="11">Kỳ Tháng 11/2026</option>
+                <option value="12">Kỳ Tháng 12/2026</option>
               </select>
               <ChevronDown
                 className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"

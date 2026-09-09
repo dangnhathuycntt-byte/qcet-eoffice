@@ -18,7 +18,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { DeliverableSubmissionPayload } from "@/types/workspace";
-import type { StaffTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -132,7 +132,7 @@ export interface SubmitDeliverableModalProps {
   onClose: () => void;
   taskId?: string;
   taskTitle?: string;
-  task?: StaffTask | null;
+  task?: SchoolTask | StaffTask | null;
   onSubmit: (payload: DeliverableSubmissionPayload) => Promise<void> | void;
   isSubmitting?: boolean;
 }

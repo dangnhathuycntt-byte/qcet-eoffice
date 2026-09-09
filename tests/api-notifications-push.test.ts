@@ -54,6 +54,11 @@ describe('API Routes: Push & Notifications System', () => {
       name: otherUser.name,
       role: otherUser.role,
     });
+
+    // Ensure clean slate for test subscriptions
+    await prisma.pushSubscription.deleteMany({
+      where: { userId: { in: [testUser.id, otherUser.id] } },
+    }).catch(() => {});
   });
 
   after(async () => {
@@ -128,6 +133,66 @@ describe('API Routes: Push & Notifications System', () => {
       const json = await res.json();
       assert.strictEqual(json.success, false);
       assert.match(json.error, /endpoint.*p256dh.*auth/i);
+    });
+
+    test('POST rejects malformed endpoint URL with 400 and expected error message', async () => {
+      const req = new NextRequest('http://localhost:3000/api/notifications/push/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUserToken}`,
+        },
+        body: JSON.stringify({
+          endpoint: 'not-a-valid-url',
+          p256dh: testP256dh,
+          auth: testAuth,
+        }),
+      });
+      const res = await subscribeRoute(req);
+      assert.strictEqual(res.status, 400);
+      const json = await res.json();
+      assert.strictEqual(json.success, false);
+      assert.strictEqual(json.error, 'Push endpoint must be a valid HTTPS URL');
+    });
+
+    test('POST rejects non-HTTPS (HTTP) push endpoint with 400 Bad Request', async () => {
+      const req = new NextRequest('http://localhost:3000/api/notifications/push/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUserToken}`,
+        },
+        body: JSON.stringify({
+          endpoint: 'http://fcm.googleapis.com/fcm/send/insecure',
+          p256dh: testP256dh,
+          auth: testAuth,
+        }),
+      });
+      const res = await subscribeRoute(req);
+      assert.strictEqual(res.status, 400);
+      const json = await res.json();
+      assert.strictEqual(json.success, false);
+      assert.strictEqual(json.error, 'Push endpoint must be a valid HTTPS URL');
+    });
+
+    test('POST rejects dangerous non-HTTPS schemes (javascript:) with 400 Bad Request', async () => {
+      const req = new NextRequest('http://localhost:3000/api/notifications/push/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${testUserToken}`,
+        },
+        body: JSON.stringify({
+          endpoint: 'javascript:alert(1)',
+          p256dh: testP256dh,
+          auth: testAuth,
+        }),
+      });
+      const res = await subscribeRoute(req);
+      assert.strictEqual(res.status, 400);
+      const json = await res.json();
+      assert.strictEqual(json.success, false);
+      assert.strictEqual(json.error, 'Push endpoint must be a valid HTTPS URL');
     });
 
     test('POST creates a new active subscription with valid payload and auth cookie', async () => {

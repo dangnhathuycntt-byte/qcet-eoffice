@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronRight,
   ListTodo,
+  Plus,
   UploadCloud,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,8 @@ export interface MobileTaskCardProps {
     parentId?: string
   ) => Promise<void> | void;
   onOpenSubmitModal?: (task: StaffTask) => void;
+  onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
+  canAssign?: boolean;
   selectedAcademicMonth?: number | "ALL";
   referenceDate?: string | Date;
   className?: string;
@@ -55,6 +58,8 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
   onSelectTask,
   onStatusChange,
   onOpenSubmitModal,
+  onAddSubTask,
+  canAssign,
   selectedAcademicMonth,
   referenceDate = getSystemReferenceDate(),
   className,
@@ -330,6 +335,22 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
               )}
             </button>
           )}
+
+          {/* Decompose / Add Subtask button */}
+          {!isSubTask && onAddSubTask && (canAssign ?? true) && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddSubTask(task.id);
+              }}
+              className="inline-flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-xl border border-primary/30 bg-primary/10 text-primary text-xs font-semibold active:bg-primary/20 transition-colors cursor-pointer"
+              title="Phân rã việc con cho nhiệm vụ này"
+            >
+              <Plus className="size-3.5" strokeWidth={1.5} />
+              <span>+ Việc con</span>
+            </button>
+          )}
         </div>
 
         {/* Collapsible Child Subtasks List */}
@@ -382,6 +403,20 @@ export const MobileTaskCard = React.memo(function MobileTaskCard({
                 </div>
               );
             })}
+
+            {onAddSubTask && (canAssign ?? true) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddSubTask(task.id);
+                }}
+                className="w-full flex items-center justify-center gap-1.5 min-h-[40px] px-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 text-primary text-xs font-semibold active:bg-primary/15 transition-colors cursor-pointer"
+              >
+                <Plus className="size-3.5" strokeWidth={1.5} />
+                <span>+ Thêm việc con cho nhiệm vụ này</span>
+              </button>
+            )}
           </div>
         )}
       </div>

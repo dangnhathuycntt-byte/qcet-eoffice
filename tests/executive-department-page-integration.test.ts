@@ -56,7 +56,11 @@ describe("Executive Department Page & Toolbar Integration", () => {
     const pagePath = path.join(process.cwd(), "src/app/page.tsx");
     assert.ok(fs.existsSync(pagePath), "src/app/page.tsx must exist");
 
-    const pageContent = fs.readFileSync(pagePath, "utf-8");
+    const pageContent = [
+      fs.readFileSync(pagePath, "utf-8"),
+      fs.readFileSync(path.join(process.cwd(), "src/hooks/use-url-params-sync.ts"), "utf-8"),
+      fs.readFileSync(path.join(process.cwd(), "src/components/dashboard/zones/tasks-expanded-views.tsx"), "utf-8"),
+    ].join("\n");
 
     // Dynamic import
     assert.ok(
@@ -80,14 +84,16 @@ describe("Executive Department Page & Toolbar Integration", () => {
 
     // Task selection opens side sheet
     assert.ok(
-      pageContent.includes("onSelectTask={(task) => setSelectedTask(task)}"),
-      "Must wire onSelectTask to setSelectedTask"
+      pageContent.includes("onSelectTask={(task) => setSelectedTask(task)}") ||
+      pageContent.includes("onSelectTask={(task) => openTaskDetail(task)}"),
+      "Must wire onSelectTask to setSelectedTask/openTaskDetail"
     );
 
     // Role-based default view mode integration
     assert.ok(
-      pageContent.includes("getDefaultViewModeForRole(user?.role)"),
-      "Must use getDefaultViewModeForRole(user?.role) for initial and effect state"
+      pageContent.includes("getDefaultViewModeForRole(user?.role)") ||
+      pageContent.includes("getDefaultViewModeForRole(userRole)"),
+      "Must use getDefaultViewModeForRole for initial and effect state"
     );
   });
 

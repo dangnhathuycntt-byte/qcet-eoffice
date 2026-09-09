@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Plus,
   UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -33,13 +34,68 @@ export interface TaskRowProps {
   canAssign?: boolean;
   selectedAcademicMonth?: number | "ALL";
   referenceDate?: string | Date;
+  activeCategory?: string;
+  suppressCategory?: boolean;
   onToggleSelect?: (taskId: string, e?: React.MouseEvent | React.ChangeEvent) => void;
   onToggleExpand?: (taskId: string, e?: React.MouseEvent) => void;
   onClick?: (task: SchoolTask) => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => Promise<void> | void;
   onUrge?: (taskId: string, taskTitle: string, assigneeName: string) => Promise<void> | void;
-  onAddSubTask?: (parentTask: SchoolTask) => void;
+  onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
   className?: string;
+}
+
+export interface ParsedLeadAssignee {
+  primaryName: string;
+  subtext: string;
+}
+
+export function parseLeadAssignee(
+  rawName?: string,
+  department?: string
+): ParsedLeadAssignee {
+  if (!rawName || !rawName.trim()) {
+    return {
+      primaryName: "QCET",
+      subtext: department || "",
+    };
+  }
+
+  let cleaned = rawName.trim();
+  let parenthetical = "";
+
+  // Extract trailing parenthetical notes, e.g. "ThS. Nguyễn Tiến Phong (Trưởng phòng TC-ĐBCL)"
+  const parenMatch = cleaned.match(/\s*\(([^)]+)\)\s*$/);
+  if (parenMatch) {
+    parenthetical = parenMatch[1].trim();
+    cleaned = cleaned.slice(0, parenMatch.index).trim();
+  }
+
+  // Extract academic & administrative title prefixes, e.g. "TT ThS.", "ThS.", "TS.", "PGS.TS."
+  const prefixMatch = cleaned.match(
+    /^(?:(TT|TP|PP|CVP|P\.CVP|HT|PHT|GV|CVC|CV|Tổ trưởng|Trưởng phòng|Phó phòng|Trưởng khoa|Phó khoa)\.?\s*)?(?:(GS\.TS|PGS\.TS|GS|PGS|TS|ThS|CN|KS|BS|KTS)\.?\s*)?/i
+  );
+
+  let prefix = "";
+  if (prefixMatch && prefixMatch[0].trim()) {
+    prefix = prefixMatch[0].trim();
+    cleaned = cleaned.slice(prefixMatch[0].length).trim();
+  }
+
+  const primaryName = cleaned || rawName;
+
+  const subtextParts: string[] = [];
+  if (prefix) subtextParts.push(prefix);
+  if (parenthetical) {
+    subtextParts.push(parenthetical);
+  } else if (department && !prefix.includes(department)) {
+    subtextParts.push(department);
+  }
+
+  return {
+    primaryName,
+    subtext: subtextParts.join(" · "),
+  };
 }
 
 function getInitials(name?: string): string {
@@ -90,6 +146,9 @@ export function areTaskRowPropsEqual(
   if (prev.canAssign !== next.canAssign) return false;
   if (prev.selectedAcademicMonth !== next.selectedAcademicMonth) return false;
   if (prev.referenceDate !== next.referenceDate) return false;
+  if (prev.activeCategory !== next.activeCategory) return false;
+  if (prev.suppressCategory !== next.suppressCategory) return false;
+  if (prev.onAddSubTask !== next.onAddSubTask) return false;
   return true;
 }
 
@@ -103,6 +162,8 @@ export const TaskRow = React.memo(function TaskRow({
   canAssign = false,
   selectedAcademicMonth,
   referenceDate = getSystemReferenceDate(),
+  activeCategory,
+  suppressCategory = false,
   onToggleSelect,
   onToggleExpand,
   onClick,
@@ -126,6 +187,9 @@ export const TaskRow = React.memo(function TaskRow({
     task.status,
     typeof referenceDate === "string" ? referenceDate : referenceDate.toISOString().slice(0, 10)
   );
+  const shouldSuppressCategory =
+    suppressCategory || (Boolean(activeCategory) && activeCategory !== "ALL");
+  const driInfo = parseLeadAssignee(task.leadAssigneeName, task.department);
 
   const dueInMonthCount =
     selectedAcademicMonth && selectedAcademicMonth !== "ALL" && hasSubtasks
@@ -172,10 +236,10 @@ export const TaskRow = React.memo(function TaskRow({
 
   const handleAddSubTaskClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAddSubTask?.(task);
+    onAddSubTask?.(task.id);
   };
 
-  const paddingClass = density === "compact" ? "py-1.5 px-3" : "py-3 px-4";
+  const paddingClass = density === "compact" ? "py-1.5 px-2.5" : "py-3 px-3.5";
   const rowHeightClass = density === "compact" ? "h-[38px]" : "h-[48px]";
 
   return (
@@ -199,7 +263,7 @@ export const TaskRow = React.memo(function TaskRow({
       {/* Selection Checkbox */}
       {showSelection && (
         <td
-          className={cn("w-10 text-center align-middle", paddingClass)}
+          className={cn("w-9 text-center align-middle", paddingClass)}
           onClick={handleCheckboxClick}
         >
           <div className="flex items-center justify-center">
@@ -215,7 +279,7 @@ export const TaskRow = React.memo(function TaskRow({
       )}
 
       {/* Expand / Collapse Caret */}
-      <td className={cn("w-9 text-center align-middle", paddingClass)}>
+      <td className={cn("w-8 text-center align-middle", paddingClass)}>
         {hasSubtasks ? (
           <button
             type="button"
@@ -242,7 +306,7 @@ export const TaskRow = React.memo(function TaskRow({
       {/* Task Code */}
       <td
         className={cn(
-          "w-24 whitespace-nowrap font-mono text-xs sm:text-[13px] tabular-nums text-muted-foreground font-semibold align-middle",
+          "w-[105px] whitespace-nowrap font-mono text-xs sm:text-[13px] tabular-nums text-muted-foreground font-semibold align-middle",
           paddingClass
         )}
       >
@@ -276,25 +340,29 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* Department & DACUM Category Pill */}
-      <td className={cn("w-40 align-middle whitespace-nowrap", paddingClass)}>
-        <div className="flex flex-col gap-1">
-          {categoryConfig && (
-            <span className="inline-flex items-center w-fit px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/70">
+      {/* Department & DACUM Category */}
+      <td className={cn("w-36 align-middle whitespace-nowrap", paddingClass)}>
+        <div className="flex flex-col gap-0.5 justify-center">
+          <span
+            className="text-xs font-medium text-foreground truncate max-w-[135px]"
+            title={task.department || "Toàn trường"}
+          >
+            {task.department || "Toàn trường"}
+          </span>
+          {!shouldSuppressCategory && categoryConfig && (
+            <span
+              className="text-xs text-muted-foreground truncate max-w-[135px]"
+              title={categoryConfig.label}
+            >
               {categoryConfig.label}
-            </span>
-          )}
-          {task.department && (
-            <span className="text-xs text-muted-foreground font-medium truncate max-w-[150px]">
-              {task.department}
             </span>
           )}
         </div>
       </td>
 
       {/* Lead Assignee (Single DRI) */}
-      <td className={cn("w-36 align-middle whitespace-nowrap", paddingClass)}>
-        <div className="flex items-center gap-2">
+      <td className={cn("w-40 min-w-[150px] align-middle whitespace-nowrap", paddingClass)}>
+        <div className="flex items-center gap-2 min-w-0">
           {task.leadAssigneeAvatar ? (
             <img
               src={task.leadAssigneeAvatar}
@@ -307,17 +375,30 @@ export const TaskRow = React.memo(function TaskRow({
             />
           ) : (
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold tabular-nums text-slate-700 border border-slate-200">
-              {getInitials(task.leadAssigneeName)}
+              {getInitials(driInfo.primaryName)}
             </span>
           )}
-          <span className="text-xs font-medium text-foreground/90 truncate max-w-[110px]">
-            {task.leadAssigneeName || "QCET"}
-          </span>
+          <div className="flex flex-col min-w-0 flex-1 justify-center leading-tight">
+            <span
+              className="text-xs font-medium text-foreground/90 truncate"
+              title={driInfo.primaryName}
+            >
+              {driInfo.primaryName}
+            </span>
+            {driInfo.subtext && (
+              <span
+                className="text-xs text-muted-foreground truncate"
+                title={driInfo.subtext}
+              >
+                {driInfo.subtext}
+              </span>
+            )}
+          </div>
         </div>
       </td>
 
       {/* Due Date & SLA Badge */}
-      <td className={cn("w-36 align-middle whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-32 align-middle whitespace-nowrap", paddingClass)}>
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground font-mono tabular-nums text-xs font-semibold">
             {formatTableDate(task.dueDate)}
@@ -336,7 +417,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* Priority Badge */}
-      <td className={cn("w-24 align-middle whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-20 align-middle whitespace-nowrap", paddingClass)}>
         <span
           className={cn(
             "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border",
@@ -348,8 +429,8 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* Progress Bar & Actions */}
-      <td className={cn("w-56 align-middle text-right whitespace-nowrap", paddingClass)}>
-        <div className="flex items-center justify-end gap-2.5">
+      <td className={cn("w-48 align-middle text-right whitespace-nowrap", paddingClass)}>
+        <div className="flex items-center justify-end gap-2">
           {/* Quick Action Micro-buttons */}
           <div className="flex items-center gap-1">
             {onStatusChange && task.status === "IN_PROGRESS" && (
@@ -376,15 +457,15 @@ export const TaskRow = React.memo(function TaskRow({
               </button>
             )}
 
-            {canAssign && onAddSubTask && (
+            {onAddSubTask && (
               <button
                 type="button"
                 onClick={handleAddSubTaskClick}
-                className="inline-flex h-6 items-center gap-1 rounded-md border border-slate-300/80 bg-slate-100/70 px-2 text-xs font-semibold tabular-nums text-slate-700 hover:bg-slate-200/80 cursor-pointer active:scale-95 transition-colors"
-                title="Phân công thêm việc con"
+                className="inline-flex h-6 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-semibold tabular-nums text-primary hover:bg-primary/20 cursor-pointer active:scale-95 transition-colors shadow-2xs"
+                title="Phân rã việc con cho nhiệm vụ này"
               >
-                <UserCheck className="size-3" strokeWidth={1.5} />
-                <span>Phân công</span>
+                <Plus className="size-3" strokeWidth={1.5} />
+                <span>+ Việc con</span>
               </button>
             )}
           </div>

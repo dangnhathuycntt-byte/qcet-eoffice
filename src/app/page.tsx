@@ -12,18 +12,15 @@ import { TasksZone } from "@/components/dashboard/zones/tasks-zone";
 import { DashboardModalsHost } from "@/components/dashboard/dashboard-modals-host";
 
 const CalendarZone = dynamic(
-  () => import("@/components/dashboard/zones/calendar-zone").then((m) => m.CalendarZone),
-  { ssr: false }
+  () => import("@/components/dashboard/zones/calendar-zone").then((m) => m.CalendarZone)
 );
 
 const OrgZone = dynamic(
-  () => import("@/components/dashboard/zones/org-zone").then((m) => m.OrgZone),
-  { ssr: false }
+  () => import("@/components/dashboard/zones/org-zone").then((m) => m.OrgZone)
 );
 
 const DocumentsZone = dynamic(
-  () => import("@/components/dashboard/zones/documents-zone").then((m) => m.DocumentsZone),
-  { ssr: false }
+  () => import("@/components/dashboard/zones/documents-zone").then((m) => m.DocumentsZone)
 );
 
 function DashboardLoadingFallback() {

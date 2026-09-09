@@ -302,6 +302,8 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       assert.match(content, /Xem cả năm/);
       assert.match(content, /monthlyTaskCounts/);
       assert.match(content, /SEMESTER_GROUPS/);
+      assert.match(content, /CALENDAR_MONTHS/);
+      assert.match(content, /CALENDAR_MONTHS\.map/);
       assert.match(content, /handleSelectMonth/);
     });
 

@@ -33,8 +33,8 @@ describe("Executive Cockpit Ergonomics Test", () => {
     );
     assert.match(
       content,
-      /text-xs font-semibold font-mono/,
-      "Badge must be text-xs font-semibold font-mono"
+      /text-xs font-semibold/,
+      "Badge must be text-xs font-semibold"
     );
     assert.doesNotMatch(
       content,

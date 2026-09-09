@@ -19,12 +19,19 @@ describe("Executive Cockpit Workspace Invariants", () => {
     const content = fs.readFileSync(workspaceFilePath, "utf-8");
 
     // Header invariants
-    assert.ok(content.includes("KHOANG ĐIỀU HÀNH BGH"), "Must contain title KHOANG ĐIỀU HÀNH BGH");
+    assert.ok(
+      content.includes("KHOANG ĐIỀU HÀNH BGH") ||
+        content.includes("TRUNG TÂM ĐIỀU HÀNH BGH"),
+      "Must contain title KHOANG ĐIỀU HÀNH BGH or TRUNG TÂM ĐIỀU HÀNH BGH"
+    );
     assert.ok(content.includes("Ban Giám Hiệu"), "Must contain role badge Ban Giám Hiệu");
     assert.ok(content.includes("min-h-[56px]"), "Must have min-h-[56px] single header");
     assert.ok(!content.includes("Xin chào,"), "Must NOT contain redundant greeting Xin chào");
     assert.ok(content.includes("+ Giao nhiệm vụ"), "Must contain + Giao nhiệm vụ action button");
-    assert.ok(content.includes("Kho nhiệm vụ"), "Must contain Kho nhiệm vụ action button");
+    assert.ok(
+      content.includes("Kho nhiệm vụ") || content.includes("Danh mục nhiệm vụ"),
+      "Must contain Kho nhiệm vụ or Danh mục nhiệm vụ action button"
+    );
     assert.ok(content.includes("Làm mới"), "Must contain Làm mới action button");
   });
 

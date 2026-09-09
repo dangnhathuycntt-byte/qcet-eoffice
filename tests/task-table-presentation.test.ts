@@ -1,8 +1,10 @@
-// @ts-nocheck
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { getPageNumbers } from "../src/components/tasks/table/components/task-pagination-bar";
-import { areTaskRowPropsEqual } from "../src/components/tasks/table/components/task-row";
+import {
+  areTaskRowPropsEqual,
+  parseLeadAssignee,
+} from "../src/components/tasks/table/components/task-row";
 import { getStatusBadgeConfig, getCategoryBadgeConfig } from "../src/components/tasks/table/constants";
 import { getSlaBadgeStatus, formatTableDate } from "../src/components/tasks/table/utils/table-date-helpers";
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
@@ -50,6 +52,7 @@ describe("Task Table Presentation Components - Unit & Behavior Suite", () => {
       status: "IN_PROGRESS",
       priority: "HIGH",
       dueDate: "2026-09-30",
+      assignedDate: "2026-09-01",
       department: "Khoa CNTT",
       leadAssigneeName: "Nguyễn Văn A",
       leadAssigneeId: "user-1",
@@ -57,6 +60,7 @@ describe("Task Table Presentation Components - Unit & Behavior Suite", () => {
       progressPercent: 45,
       totalSubTasks: 3,
       completedSubTasks: 1,
+      coAssignees: [],
       subTasks: [
         {
           id: "sub-1",
@@ -151,6 +155,49 @@ describe("Task Table Presentation Components - Unit & Behavior Suite", () => {
         task: { ...baseTask, leadAssigneeName: "Phạm D" },
       };
       assert.equal(areTaskRowPropsEqual(baseProps, nextProps), false);
+    });
+
+    it("returns false when activeCategory or suppressCategory changes", () => {
+      const nextCatProps = {
+        ...baseProps,
+        activeCategory: "CHUYEN_DOI_SO",
+      };
+      assert.equal(areTaskRowPropsEqual(baseProps, nextCatProps), false);
+
+      const nextSuppressProps = {
+        ...baseProps,
+        suppressCategory: true,
+      };
+      assert.equal(areTaskRowPropsEqual(baseProps, nextSuppressProps), false);
+    });
+  });
+
+  describe("DRI Lead Assignee Parser - parseLeadAssignee", () => {
+    it("extracts academic title and clean name from formatted DRI string", () => {
+      const result = parseLeadAssignee("TT ThS. Nguyễn Tiến Phong", "P.TC-ĐBCL");
+      assert.equal(result.primaryName, "Nguyễn Tiến Phong");
+      assert.equal(result.subtext, "TT ThS. · P.TC-ĐBCL");
+    });
+
+    it("handles parenthetical title notes cleanly", () => {
+      const result = parseLeadAssignee(
+        "ThS. Nguyễn Tiến Phong (Trưởng phòng TC-ĐBCL)",
+        "P.TC-ĐBCL"
+      );
+      assert.equal(result.primaryName, "Nguyễn Tiến Phong");
+      assert.equal(result.subtext, "ThS. · Trưởng phòng TC-ĐBCL");
+    });
+
+    it("handles plain names without title prefix by attaching department subtext", () => {
+      const result = parseLeadAssignee("Nguyễn Văn A", "Khoa CNTT");
+      assert.equal(result.primaryName, "Nguyễn Văn A");
+      assert.equal(result.subtext, "Khoa CNTT");
+    });
+
+    it("handles fallback gracefully when name is empty or undefined", () => {
+      const result = parseLeadAssignee(undefined, "P.QLĐT");
+      assert.equal(result.primaryName, "QCET");
+      assert.equal(result.subtext, "P.QLĐT");
     });
   });
 

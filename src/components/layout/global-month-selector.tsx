@@ -24,6 +24,8 @@ export interface SemesterGroup {
   months: number[];
 }
 
+export const CALENDAR_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+
 export const SEMESTER_GROUPS: SemesterGroup[] = [
   {
     id: "hk1",
@@ -188,7 +190,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
         aria-expanded={isOpen}
         aria-label="Chọn tháng học thuật"
         className={cn(
-          "group inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/40 hover:bg-secondary/80 px-2.5 text-xs font-medium text-foreground transition-all cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.98]",
+          "group inline-flex min-h-[44px] sm:min-h-[32px] h-auto sm:h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/40 hover:bg-secondary/80 px-2.5 text-xs font-medium text-foreground transition-all cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.98] touch-manipulation",
           className
         )}
       >
@@ -212,7 +214,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Chọn tháng học thuật và học kỳ"
+          aria-label="Chọn tháng vận hành"
           className="absolute left-0 sm:left-auto sm:right-0 md:left-0 md:right-auto top-full mt-1.5 w-[330px] sm:w-[390px] max-w-[calc(100vw-24px)] rounded-xl border border-border/70 bg-card p-3 text-popover-foreground shadow-xl backdrop-blur-md z-50 animate-in fade-in-0 zoom-in-95 focus:outline-none"
         >
           {/* Header & Year Info */}
@@ -273,78 +275,65 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
             </button>
           </div>
 
-          {/* Semesters & Month Groups */}
-          <div className="pt-2 space-y-3 max-h-[60vh] overflow-y-auto pr-0.5">
-            {SEMESTER_GROUPS.map((semester) => (
-              <div key={semester.id} className="space-y-1.5">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-xs font-semibold text-foreground/80">
-                    {semester.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    {semester.months.length} tháng
-                  </span>
-                </div>
+          {/* 12 Operational Months (Tháng 1 đến Tháng 12) */}
+          <div className="pt-2">
+            <div className="grid grid-cols-2 gap-1.5 max-h-[60vh] overflow-y-auto pr-0.5">
+              {CALENDAR_MONTHS.map((m) => {
+                const period = getAcademicMonthPeriod(m, currentAcademicYear);
+                const isSelected = selectedMonth === m;
+                const isActualCurrent = currentActualMonth === m;
+                const count = monthlyTaskCounts[m];
 
-                <div className="grid grid-cols-2 gap-1.5">
-                  {semester.months.map((m) => {
-                    const period = getAcademicMonthPeriod(m, currentAcademicYear);
-                    const isSelected = selectedMonth === m;
-                    const isActualCurrent = currentActualMonth === m;
-                    const count = monthlyTaskCounts[m];
-
-                    return (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => handleSelectMonth(m)}
-                        className={cn(
-                          "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-all cursor-pointer border min-h-[42px]",
-                          isSelected
-                            ? "bg-primary/10 text-primary border-primary/40 font-semibold shadow-2xs ring-1 ring-primary/20"
-                            : "bg-muted/30 hover:bg-muted/70 text-foreground border-border/40"
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => handleSelectMonth(m)}
+                    className={cn(
+                      "flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-all cursor-pointer border min-h-[42px]",
+                      isSelected
+                        ? "bg-primary/10 text-primary border-primary/40 font-semibold shadow-2xs ring-1 ring-primary/20"
+                        : "bg-muted/30 hover:bg-muted/70 text-foreground border-border/40"
+                    )}
+                  >
+                    <div className="min-w-0 pr-1">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium leading-tight truncate">
+                          {period.label}
+                        </span>
+                        {isActualCurrent && (
+                          <span
+                            title="Tháng hiện tại trên lịch thực tế"
+                            className="size-1.5 rounded-full bg-emerald-500 shrink-0"
+                          />
                         )}
-                      >
-                        <div className="min-w-0 pr-1">
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-medium leading-tight truncate">
-                              {period.label}
-                            </span>
-                            {isActualCurrent && (
-                              <span
-                                title="Tháng hiện tại trên lịch thực tế"
-                                className="size-1.5 rounded-full bg-emerald-500 shrink-0"
-                              />
-                            )}
-                          </div>
-                          <span className="block text-xs text-muted-foreground font-mono leading-tight mt-0.5">
-                            {period.shortDateSpan}
-                          </span>
-                        </div>
+                      </div>
+                      <span className="block text-xs text-muted-foreground font-mono leading-tight mt-0.5">
+                        {period.shortDateSpan}
+                      </span>
+                    </div>
 
-                        <div className="flex items-center gap-1 shrink-0">
-                          {typeof count === "number" && count > 0 && (
-                            <span
-                              className={cn(
-                                "px-1.5 py-0.5 rounded-full text-xs font-semibold font-mono",
-                                isSelected
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted text-muted-foreground"
-                              )}
-                            >
-                              {count}
-                            </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {typeof count === "number" && count > 0 && (
+                        <span
+                          className={cn(
+                            "px-1.5 py-0.5 rounded-full text-xs font-semibold font-mono",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
                           )}
-                          {isSelected && (
-                            <Check size={13} className="text-primary shrink-0" />
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+                        >
+                          {count}
+                        </span>
+                      )}
+                      {isSelected && (
+                        <Check size={13} className="text-primary shrink-0" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

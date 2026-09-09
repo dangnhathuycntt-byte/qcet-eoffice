@@ -63,22 +63,26 @@ describe("Department Grouped Task View Integration", () => {
     const pagePath = path.join(process.cwd(), "src/app/page.tsx");
     assert.ok(fs.existsSync(pagePath), "src/app/page.tsx must exist");
 
-    const pageContent = fs.readFileSync(pagePath, "utf-8");
+    const pageContent = [
+      fs.readFileSync(pagePath, "utf-8"),
+      fs.readFileSync(path.join(process.cwd(), "src/components/dashboard/zones/tasks-zone.tsx"), "utf-8"),
+      fs.readFileSync(path.join(process.cwd(), "src/components/dashboard/zones/tasks-expanded-views.tsx"), "utf-8"),
+    ].join("\n");
     assert.ok(
       pageContent.includes("DepartmentGroupedTaskView = dynamic("),
-      "src/app/page.tsx must dynamically import DepartmentGroupedTaskView"
+      "src/app/page.tsx or tasks zone must dynamically import DepartmentGroupedTaskView"
     );
     assert.ok(
       pageContent.includes("@/components/dashboard/department-grouped-task-view"),
-      "src/app/page.tsx must import from '@/components/dashboard/department-grouped-task-view'"
+      "src/app/page.tsx or tasks zone must import from '@/components/dashboard/department-grouped-task-view'"
     );
     assert.ok(
       pageContent.includes("viewMode === \"department\""),
-      "src/app/page.tsx must conditionally render when viewMode === 'department'"
+      "src/app/page.tsx or tasks zone must conditionally render when viewMode === 'department'"
     );
     assert.ok(
       pageContent.includes("<DepartmentGroupedTaskView"),
-      "src/app/page.tsx must render <DepartmentGroupedTaskView"
+      "src/app/page.tsx or tasks zone must render <DepartmentGroupedTaskView"
     );
   });
 

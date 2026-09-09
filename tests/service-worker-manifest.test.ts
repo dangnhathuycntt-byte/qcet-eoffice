@@ -11,6 +11,19 @@ describe("Task 5: Service Worker & PWA Manifest", () => {
   const layoutPath = path.join(rootDir, "src", "app", "layout.tsx");
 
   describe("public/sw.js Service Worker implementation", () => {
+    test("public/logo-qcet.webp exists and is smaller than PNG original", () => {
+      const webpPath = path.join(rootDir, "public", "logo-qcet.webp");
+      const pngPath = path.join(rootDir, "public", "logo-qcet.png");
+      assert.ok(fs.existsSync(webpPath), "public/logo-qcet.webp must exist");
+      const webpStat = fs.statSync(webpPath);
+      const pngStat = fs.statSync(pngPath);
+      assert.ok(webpStat.size > 0, "logo-qcet.webp must not be empty");
+      assert.ok(
+        webpStat.size < pngStat.size,
+        `logo-qcet.webp (${webpStat.size}B) should be smaller than PNG (${pngStat.size}B)`
+      );
+    });
+
     test("public/sw.js exists and is valid JavaScript syntax", () => {
       assert.ok(fs.existsSync(swPath), "public/sw.js must exist");
       const content = fs.readFileSync(swPath, "utf-8");
@@ -28,6 +41,73 @@ describe("Task 5: Service Worker & PWA Manifest", () => {
       assert.match(content, /skipWaiting\(\)/);
       assert.match(content, /addEventListener\(\s*['"]activate['"]/);
       assert.match(content, /clients\.claim\(\)/);
+    });
+
+    test("defines CACHE_NAME version 4 and includes /logo-qcet.webp in PRECACHE_ASSETS", () => {
+      const content = fs.readFileSync(swPath, "utf-8");
+      assert.match(
+        content,
+        /const\s+CACHE_NAME\s*=\s*['"](qcet-eoffice-v4|qcet-cache-v4)['"]/,
+        "CACHE_NAME must be updated to v4 (qcet-eoffice-v4 or qcet-cache-v4)"
+      );
+      assert.match(
+        content,
+        /PRECACHE_ASSETS\s*=\s*\[[\s\S]*?['"]\/logo-qcet\.webp['"][\s\S]*?\]/,
+        "PRECACHE_ASSETS must contain '/logo-qcet.webp'"
+      );
+    });
+
+    test("activate event purges older cache versions including v3", async () => {
+      const content = fs.readFileSync(swPath, "utf-8");
+
+      type EventHandler = (event: any) => void;
+      const listeners: Record<string, EventHandler> = {};
+      const deletedCaches: string[] = [];
+      const mockCaches = {
+        keys: async () => [
+          "qcet-eoffice-v3",
+          "qcet-cache-v3",
+          "qcet-old-v1",
+          "qcet-api-v1",
+          "qcet-eoffice-v4",
+          "qcet-cache-v4",
+        ],
+        delete: async (name: string) => {
+          deletedCaches.push(name);
+          return true;
+        },
+      };
+
+      const sandbox = {
+        self: {
+          addEventListener: (event: string, handler: EventHandler) => {
+            listeners[event] = handler;
+          },
+          skipWaiting: async () => {},
+          clients: { claim: async () => {} },
+        },
+        caches: mockCaches,
+        console,
+        Promise,
+      };
+
+      vm.createContext(sandbox);
+      vm.runInContext(content, sandbox);
+
+      assert.ok(listeners.activate, "activate listener must be registered");
+      let activateWaited: Promise<any> | null = null;
+      listeners.activate({
+        waitUntil: (p: Promise<any>) => {
+          activateWaited = p;
+        },
+      });
+      if (activateWaited) await activateWaited;
+
+      assert.ok(
+        deletedCaches.includes("qcet-eoffice-v3") || deletedCaches.includes("qcet-cache-v3"),
+        "activate handler must delete older v3 cache"
+      );
+      assert.ok(!deletedCaches.includes("qcet-api-v1"), "API cache should not be deleted");
     });
 
     test("contains push event listener with notification options and app badge update", () => {

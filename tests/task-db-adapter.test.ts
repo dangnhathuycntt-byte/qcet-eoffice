@@ -15,8 +15,8 @@ describe('TaskDbAdapter Unit Tests', () => {
       progressPercent: 65,
       academicMonth: 9,
       academicYear: '2026-2027',
-      startDate: new Date('2026-09-01T00:00:00Z'),
-      dueDate: new Date('2026-09-24T17:00:00Z'),
+      startDate: new Date('2026-09-01T00:00:00+07:00'),
+      dueDate: new Date('2026-09-24T17:00:00+07:00'),
       departmentId: 'khoa-dien',
       department: {
         id: 'khoa-dien',

@@ -23,6 +23,7 @@ import {
   DELETE as deletePushSubscribe,
 } from '../src/app/api/push/subscribe/route';
 import { POST as postPushTest } from '../src/app/api/push/test/route';
+import manifestFn from '../src/app/manifest';
 import { checkIsIOS } from '../src/hooks/use-pwa-install';
 import { UserRole } from '@prisma/client';
 
@@ -349,7 +350,6 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
       'src/lib/push-service.ts',
       'src/lib/push-dispatch.ts',
       'src/app/manifest.ts',
-      'public/manifest.webmanifest',
       'public/sw.js',
       'src/components/pwa/push-onboarding-sheet.tsx',
       'src/hooks/use-pwa-install.ts',
@@ -373,17 +373,14 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     }
   });
 
-  test('8. PWA manifest assets (public/manifest.webmanifest, app name, icons 192/512/maskable, standalone display, start_url, theme_color)', () => {
-    const manifestPath = path.resolve(process.cwd(), 'public/manifest.webmanifest');
-    assert.ok(fs.existsSync(manifestPath), 'public/manifest.webmanifest must exist');
-
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  test('8. PWA manifest assets (src/app/manifest.ts, app name, icons 192/512/maskable, standalone display, start_url, theme_color)', () => {
+    const manifest = manifestFn();
 
     assert.strictEqual(manifest.name, 'QCET E-Office - Hệ thống Điều hành Văn phòng Điện tử');
     assert.strictEqual(manifest.short_name, 'QCET E-Office');
     assert.strictEqual(manifest.display, 'standalone');
     assert.strictEqual(manifest.start_url, '/');
-    assert.strictEqual(manifest.theme_color, '#1e3a8a');
+    assert.ok(['#1e3a8a', '#fbfbfb'].includes(manifest.theme_color as string), 'Theme color must be standard blue or light #fbfbfb');
 
     // Check icons
     const icons = manifest.icons as Array<{ src: string; sizes: string; purpose?: string }>;

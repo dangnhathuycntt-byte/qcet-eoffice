@@ -205,11 +205,12 @@ export function AdaptiveMetricStrip({
   const cards = getCards(scope);
   const isInteractive = typeof onMetricClick === "function";
 
+  // 2x2 Bento grid layout (refactored from hairline divide-border for split-cockpit resilience)
   return (
     <div
       data-slot="adaptive-metric-strip"
       className={cn(
-        "grid grid-cols-2 lg:grid-cols-4 divide-x divide-border/50 rounded-xl bg-card border border-border/70 shadow-2xs overflow-hidden",
+        "grid grid-cols-2 gap-2.5 p-1.5 rounded-xl bg-muted/40 border border-border/70 shadow-2xs",
         className
       )}
     >
@@ -239,13 +240,13 @@ export function AdaptiveMetricStrip({
                 : undefined
             }
             className={cn(
-              "p-3 sm:p-3.5 flex flex-col justify-between space-y-1 sm:space-y-1.5 transition-colors",
+              "p-3 rounded-lg bg-card border border-border/70 flex flex-col justify-between space-y-1.5 shadow-2xs transition-colors",
               isInteractive &&
                 "cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
             )}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground line-clamp-1 leading-snug">
+            <div className="flex items-start justify-between gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground leading-snug">
                 {card.title}
               </span>
               <div

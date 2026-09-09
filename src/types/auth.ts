@@ -19,6 +19,7 @@ export interface AuthUser {
   avatar?: string;
   phone?: string;
   title?: string;
+  aliases?: string[];
   isFirstLogin?: boolean;
   emailVerified?: boolean;
   provider?: 'google' | 'demo' | 'system';

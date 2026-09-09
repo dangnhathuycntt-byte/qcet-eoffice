@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import dynamic from "next/dynamic";
 import { Plus, RefreshCw, Calendar as CalendarIcon, Clock, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,11 +15,7 @@ import {
   getAcademicMonthPeriod,
   type AcademicMonthPeriod,
 } from "@/lib/academic-calendar";
-
-const CalendarMonthView = dynamic(
-  () => import("@/components/calendar/calendar-month-view").then((m) => m.CalendarMonthView),
-  { ssr: false, loading: () => <div className="h-96 rounded-2xl bg-muted/20 animate-pulse" /> }
-);
+import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
 
 function CalendarZoneComponent() {
   const {

@@ -36,17 +36,25 @@ describe('Task Push Dispatch & Background after() Integration', () => {
     });
 
     // 1. Get or create test department
-    const dept = await prisma.department.findFirst();
+    const dept = await prisma.department.findFirst({
+      where: { id: { notIn: ['dept-daotao', 'dept-cntt'] } },
+    });
     assert.ok(dept, 'Database must contain at least one department');
     testDepartmentId = dept.id;
 
     // 2. Find or create test users
-    // Admin / Ban Giam Hieu
+    // Admin / Ban Giam Hieu (exclude temporary test users created by other concurrent suites)
+    const ephemeralTestUserIds = ['user-bgh', 'user-creator-1', 'user-assignee', 'user-cntt', 'user-lead-cntt'];
     let admin = await prisma.user.findFirst({
-      where: { role: { in: [UserRole.BAN_GIAM_HIEU, UserRole.ADMIN] } },
+      where: {
+        role: { in: [UserRole.BAN_GIAM_HIEU, UserRole.ADMIN] },
+        id: { notIn: ephemeralTestUserIds },
+      },
     });
     if (!admin) {
-      admin = await prisma.user.findFirst();
+      admin = await prisma.user.findFirst({
+        where: { id: { notIn: ephemeralTestUserIds } },
+      });
     }
     assert.ok(admin, 'Admin/BGH user must exist');
     adminUser = {
@@ -59,12 +67,19 @@ describe('Task Push Dispatch & Background after() Integration', () => {
 
     // Department Head
     let deptHead = await prisma.user.findFirst({
-      where: { departmentId: testDepartmentId, role: UserRole.TRUONG_PHONG },
+      where: {
+        departmentId: testDepartmentId,
+        role: UserRole.TRUONG_PHONG,
+        id: { notIn: ephemeralTestUserIds },
+      },
     });
     if (!deptHead) {
       // Find any user in department or fallback
       deptHead = await prisma.user.findFirst({
-        where: { departmentId: testDepartmentId },
+        where: {
+          departmentId: testDepartmentId,
+          id: { notIn: ephemeralTestUserIds },
+        },
       });
       if (!deptHead) {
         deptHead = admin;
@@ -81,7 +96,7 @@ describe('Task Push Dispatch & Background after() Integration', () => {
     // Staff member
     let staff = await prisma.user.findFirst({
       where: {
-        id: { notIn: [adminUser.id, deptHeadUser.id] },
+        id: { notIn: [adminUser.id, deptHeadUser.id, ...ephemeralTestUserIds] },
       },
     });
     if (!staff) {

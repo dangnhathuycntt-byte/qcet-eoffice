@@ -4,14 +4,29 @@ import * as React from "react";
 import { Drawer as VaulDrawer } from "vaul";
 import { cn } from "@/lib/utils";
 
+interface BottomSheetContextValue {
+  open?: boolean;
+}
+
+const BottomSheetContext = React.createContext<BottomSheetContextValue>({
+  open: false,
+});
+
 export const BottomSheet = ({
   shouldScaleBackground = false,
+  open,
+  children,
   ...props
 }: React.ComponentProps<typeof VaulDrawer.Root>) => (
-  <VaulDrawer.Root
-    shouldScaleBackground={shouldScaleBackground}
-    {...props}
-  />
+  <BottomSheetContext.Provider value={{ open }}>
+    <VaulDrawer.Root
+      shouldScaleBackground={shouldScaleBackground}
+      open={open}
+      {...props}
+    >
+      {children}
+    </VaulDrawer.Root>
+  </BottomSheetContext.Provider>
 );
 BottomSheet.displayName = "BottomSheet";
 
@@ -20,7 +35,9 @@ export const BottomSheetPortal = ({
   children,
   ...props
 }: React.ComponentProps<typeof VaulDrawer.Portal>) => {
+  const { open } = React.useContext(BottomSheetContext);
   if (typeof window === "undefined") {
+    if (!open) return null;
     return <>{children}</>;
   }
   return <VaulDrawer.Portal {...props}>{children}</VaulDrawer.Portal>;
@@ -48,7 +65,10 @@ export const BottomSheetContent = React.forwardRef<
     hideHandle?: boolean;
   }
 >(({ className, children, hideHandle = false, ...props }, ref) => {
+  const { open } = React.useContext(BottomSheetContext);
+
   if (typeof window === "undefined" || typeof document === "undefined") {
+    if (!open) return null;
     return (
       <div
         className={cn(

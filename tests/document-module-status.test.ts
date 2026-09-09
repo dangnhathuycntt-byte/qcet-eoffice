@@ -45,6 +45,22 @@ describe("Document Module Status & Roadmap Landing Test Suite", () => {
         "app-sidebar.tsx must style the coming soon badge with amber theme"
       );
     });
+
+    test("app-sidebar.tsx disables click and marks cursor-not-allowed for coming soon items", () => {
+      const content = fs.readFileSync(sidebarPath, "utf-8");
+      assert.ok(
+        content.includes("item.isComingSoon") && content.includes("e.preventDefault()"),
+        "app-sidebar.tsx must prevent default click when item is coming soon"
+      );
+      assert.ok(
+        content.includes("cursor-not-allowed"),
+        "app-sidebar.tsx must have cursor-not-allowed style"
+      );
+      assert.ok(
+        content.includes("aria-disabled"),
+        "app-sidebar.tsx must set aria-disabled for accessibility"
+      );
+    });
   });
 
   describe("Topbar Breadcrumbs Indicator", () => {
@@ -72,6 +88,22 @@ describe("Document Module Status & Roadmap Landing Test Suite", () => {
       assert.ok(
         content.includes("Đang phát triển"),
         "mobile-menu-drawer.tsx must display 'Đang phát triển' badge next to documents"
+      );
+    });
+
+    test("mobile-menu-drawer.tsx disables click and marks cursor-not-allowed for documents", () => {
+      const content = fs.readFileSync(mobileDrawerPath, "utf-8");
+      assert.ok(
+        content.includes("isDocuments") && content.includes("e.preventDefault()"),
+        "mobile-menu-drawer.tsx must prevent default click on documents"
+      );
+      assert.ok(
+        content.includes("cursor-not-allowed"),
+        "mobile-menu-drawer.tsx must have cursor-not-allowed style"
+      );
+      assert.ok(
+        content.includes("aria-disabled"),
+        "mobile-menu-drawer.tsx must set aria-disabled for accessibility"
       );
     });
   });

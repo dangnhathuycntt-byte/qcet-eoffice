@@ -207,53 +207,42 @@ export function ExecutiveStatStrip({
         const isActive = Boolean(card.filterKey && activeFilter === card.filterKey);
         const isClickable = Boolean(onFilterChange && card.filterKey);
 
-        // Subtle accent line colors
-        let accentLineColor = "bg-primary/40";
         let dotColor = "bg-primary/70";
 
         if (card.id === "school-tasks") {
-          accentLineColor = "bg-blue-500/50";
           dotColor = "bg-blue-500";
         } else if (card.id === "unit-tasks") {
-          accentLineColor = "bg-indigo-500/50";
           dotColor = "bg-indigo-500";
         } else if (card.id === "urgent-tasks") {
-          accentLineColor = isOverdueAlert
-            ? "bg-rose-500"
-            : (stats?.needsReviewTasksCount ?? 0) > 0 || (stats?.pendingTriageCount ?? 0) > 0
-              ? "bg-amber-500"
-              : "bg-emerald-500/50";
           dotColor = isOverdueAlert
             ? "bg-rose-500"
             : (stats?.needsReviewTasksCount ?? 0) > 0 || (stats?.pendingTriageCount ?? 0) > 0
               ? "bg-amber-500"
               : "bg-emerald-500";
         } else if (card.id === "overall-progress") {
-          accentLineColor = "bg-emerald-500/60";
           dotColor = "bg-emerald-500";
         }
 
+        const ariaLabel = card.badge
+          ? `${card.title}: ${card.value} (${card.badge.label}), ${card.subtext}`
+          : `${card.title}: ${card.value}, ${card.subtext}`;
+
         return (
-          <div
+          <button
             key={card.id}
-            role={isClickable ? "button" : undefined}
-            tabIndex={isClickable ? 0 : undefined}
+            type="button"
+            disabled={!isClickable}
             aria-pressed={isClickable ? isActive : undefined}
+            aria-label={ariaLabel}
             onClick={() => {
               if (card.filterKey) {
                 onFilterChange?.(activeFilter === card.filterKey ? "ALL" : card.filterKey);
               }
             }}
-            onKeyDown={(e) => {
-              if (isClickable && card.filterKey && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault();
-                onFilterChange?.(activeFilter === card.filterKey ? "ALL" : card.filterKey);
-              }
-            }}
             className={cn(
-              "group relative flex flex-col justify-between p-4 sm:p-5 transition-all duration-200 text-left",
+              "group relative flex flex-col justify-between p-4 sm:p-5 transition-all duration-200 text-left w-full disabled:cursor-default",
               isClickable &&
-                "cursor-pointer select-none hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
+                "cursor-pointer select-none hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:z-20",
               !isClickable && "hover:bg-muted/15",
               isActive && (
                 isOverdueAlert
@@ -270,24 +259,12 @@ export function ExecutiveStatStrip({
             data-filter-key={card.filterKey}
             data-active={isActive ? "true" : "false"}
           >
-            {/* Subtle top accent line */}
-            <div
-              className={cn(
-                "absolute inset-x-0 top-0 transition-all duration-200",
-                isActive
-                  ? cn("h-[3px]", isOverdueAlert ? "bg-rose-500" : "bg-primary")
-                  : cn("h-[2px] opacity-70 group-hover:opacity-100 group-hover:h-[3px]", accentLineColor)
-              )}
-            />
-
             {/* Top row: Icon + Title + Micro-badge */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors group-hover:text-foreground">
-                  {IconComponent && (
-                    <IconComponent className="size-4 shrink-0" strokeWidth={1.5} />
-                  )}
-                </div>
+                {IconComponent && (
+                  <IconComponent className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                )}
                 <span className="text-xs sm:text-sm font-semibold text-foreground/90 tracking-tight truncate">
                   {card.title}
                 </span>
@@ -296,7 +273,7 @@ export function ExecutiveStatStrip({
               {card.badge && (
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono shrink-0",
+                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0",
                     isOverdueAlert
                       ? "bg-rose-500/10 text-rose-700 border border-rose-500/20"
                       : (stats?.needsReviewTasksCount ?? 0) > 0 || (stats?.pendingTriageCount ?? 0) > 0
@@ -312,7 +289,7 @@ export function ExecutiveStatStrip({
 
             {/* Metric Value */}
             <div className="my-2.5 flex items-baseline justify-between">
-              <span className="font-mono tabular-nums text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+              <span className="font-heading tabular-nums text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
                 {card.value}
               </span>
             </div>
@@ -320,14 +297,10 @@ export function ExecutiveStatStrip({
             {/* Bottom section: Progress bar or Subtext with subtle status dot */}
             <div className="pt-0.5">
               {card.progress !== undefined ? (
-                <div className="space-y-1.5" title="Tiến độ bình quân">
+                <div className="space-y-1.5" title="Tiến độ bình quân" aria-hidden="true">
                   <div
                     className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"
-                    role="progressbar"
-                    aria-label="Tiến độ bình quân"
-                    aria-valuenow={card.progress}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
+                    aria-hidden="true"
                     title="Tiến độ bình quân"
                   >
                     <div
@@ -340,7 +313,7 @@ export function ExecutiveStatStrip({
                   <div className="flex items-center justify-between text-xs sm:text-[13px] font-medium text-muted-foreground">
                     <span className="truncate">{card.subtext}</span>
                     <span
-                      className="font-mono font-semibold text-foreground tabular-nums ml-1 shrink-0"
+                      className="font-heading font-semibold text-foreground tabular-nums ml-1 shrink-0"
                       title="Tiến độ bình quân"
                     >
                       {card.progress}%
@@ -348,13 +321,13 @@ export function ExecutiveStatStrip({
                   </div>
                 </div>
               ) : (
-                <p className="text-xs sm:text-[13px] font-medium text-muted-foreground flex items-center gap-1.5 leading-snug">
+                <div className="text-xs sm:text-[13px] font-medium text-muted-foreground flex items-center gap-1.5 leading-snug">
                   <span className={cn("size-1.5 rounded-full shrink-0", dotColor)} />
                   <span className="truncate">{card.subtext}</span>
-                </p>
+                </div>
               )}
             </div>
-          </div>
+          </button>
         );
       })}
     </div>

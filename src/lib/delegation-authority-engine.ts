@@ -1,6 +1,7 @@
 import type {
   ApprovalAuditLog,
   DelegationRule,
+  DelegationScope,
 } from "../types/delegation";
 
 function normalizeDateString(date?: string | Date): string {
@@ -135,3 +136,66 @@ export function recordDelegatedApproval(
     notes: params.notes,
   };
 }
+
+export interface CanPerformActionParams {
+  user: { id: string; role: string; departmentCode?: string };
+  requiredScope: DelegationScope;
+  departmentCode: string;
+  delegations: DelegationRule[];
+  referenceDate?: string | Date;
+}
+
+/**
+ * Kiểm tra phân quyền thực thi theo thẩm quyền hoặc ủy quyền hợp lệ
+ */
+export function canPerformAction(params: CanPerformActionParams): boolean {
+  const { user, requiredScope, departmentCode, delegations, referenceDate } = params;
+  if (user.role === "ADMIN") return true;
+  if (user.role === "MANAGER" && user.departmentCode === departmentCode) return true;
+
+  return delegations.some((rule) => {
+    if (rule.granteeId !== user.id) return false;
+    if (rule.departmentCode !== departmentCode) return false;
+    if (!isDelegationActive(rule, referenceDate)) return false;
+
+    // Toàn quyền quản lý đơn vị (Quyền Trưởng đơn vị) bao quát mọi thẩm quyền
+    if (rule.scope === "FULL_DEPARTMENT_APPROVAL") return true;
+    return rule.scope === requiredScope;
+  });
+}
+
+export interface SignerDesignation {
+  prefix: string; // "KT. TRƯỞNG KHOA" hoặc "TL. HIỆU TRƯỞNG"
+  signerName: string;
+  documentRef?: string;
+  signerTitle: string;
+}
+
+/**
+ * Chuẩn hóa thể thức đề ký thừa lệnh / ký thay (KT./TL.) theo Nghị định 30/2020/NĐ-CP
+ */
+export function resolveSignerDesignation(params: {
+  grantorRole: string;
+  granteeName: string;
+  delegation?: DelegationRule;
+  granteeTitle?: string;
+}): SignerDesignation {
+  const { grantorRole, granteeName, delegation, granteeTitle } = params;
+  const isRector = /hiệu trưởng|bgh|admin/i.test(grantorRole);
+
+  const prefix = isRector
+    ? "TL. HIỆU TRƯỞNG"
+    : `KT. ${grantorRole.trim().toUpperCase()}`;
+
+  const defaultTitle = isRector
+    ? "TRƯỞNG PHÒNG ĐƯỢC ỦY QUYỀN"
+    : "PHÓ TRƯỞNG ĐƠN VỊ";
+
+  return {
+    prefix,
+    signerName: granteeName,
+    documentRef: delegation?.documentRef,
+    signerTitle: granteeTitle || defaultTitle,
+  };
+}
+

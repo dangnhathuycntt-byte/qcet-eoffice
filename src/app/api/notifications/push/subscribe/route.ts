@@ -24,19 +24,19 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = getSessionFromRequest(request);
-    if (!session?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json(
         { success: false, error: 'Invalid JSON body' },
         { status: 400 }
+      );
+    }
+
+    const session = getSessionFromRequest(request);
+    if (!session?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
@@ -52,6 +52,21 @@ export async function POST(request: NextRequest) {
           success: false,
           error: 'Missing required fields: endpoint, p256dh, and auth are required',
         },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const parsedEndpoint = new URL(endpoint);
+      if (parsedEndpoint.protocol !== 'https:') {
+        return NextResponse.json(
+          { success: false, error: 'Push endpoint must be a valid HTTPS URL' },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Push endpoint must be a valid HTTPS URL' },
         { status: 400 }
       );
     }
@@ -96,19 +111,19 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = getSessionFromRequest(request);
-    if (!session?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json().catch(() => null);
     if (!body || !body.endpoint) {
       return NextResponse.json(
         { success: false, error: 'Missing endpoint' },
         { status: 400 }
+      );
+    }
+
+    const session = getSessionFromRequest(request);
+    if (!session?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 

@@ -19,7 +19,7 @@ const buttonVariants = cva(
           "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20",
         link: "text-primary underline-offset-4 hover:underline",
         premium:
-          "border-transparent bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 font-medium",
+          "border-transparent bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-card hover:opacity-95 font-medium",
       },
       size: {
         default:

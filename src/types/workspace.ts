@@ -11,6 +11,7 @@ import type { SchoolTask, StaffTask, TaskStatus } from "./dashboard";
 import type { UserRole } from "./auth";
 
 export type WorkspaceRole = UserRole;
+export type WorkspaceScope = "school" | "unit" | "my";
 
 export type TaskPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
 

@@ -252,6 +252,9 @@ export function UniversalActionQueue({
                       {parentTitle && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1 truncate">
                           <CornerDownRight className="size-3 text-muted-foreground/70 shrink-0" />
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
+                            Thuộc nhiệm vụ:
+                          </span>
                           {parentCode && (
                             <span className="font-mono text-xs font-semibold text-primary/80 shrink-0">
                               [{parentCode}]
@@ -268,7 +271,7 @@ export function UniversalActionQueue({
                               } as SchoolTask);
                             }}
                             className="hover:underline hover:text-foreground truncate text-left cursor-pointer font-medium"
-                            title={`Nhiệm vụ cha: ${parentTitle}`}
+                            title={`Thuộc nhiệm vụ: ${parentTitle}`}
                           >
                             {parentTitle}
                           </button>
@@ -333,7 +336,7 @@ export function UniversalActionQueue({
                         size="xs"
                         variant={approvalConfig.variant}
                         className={cn(
-                          "min-h-[44px] touch-manipulation px-3.5 rounded-lg text-xs font-semibold shrink-0 gap-1.5 cursor-pointer",
+                          "h-8 px-3 text-xs font-semibold shrink-0 gap-1.5 cursor-pointer",
                           approvalConfig.btnClass
                         )}
                         onClick={() => {
@@ -344,9 +347,8 @@ export function UniversalActionQueue({
                           }
                         }}
                       >
-                        <ActionIcon className="size-3" strokeWidth={1.5} />
+                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
                         <span>{approvalConfig.label}</span>
-                        <ChevronRight className="size-3 ml-0.5 opacity-70" strokeWidth={1.5} />
                       </Button>
                     </div>
                   </div>
@@ -433,6 +435,9 @@ export function UniversalActionQueue({
                       {parentTitle && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1 truncate">
                           <CornerDownRight className="size-3 text-muted-foreground/70 shrink-0" />
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
+                            Thuộc nhiệm vụ:
+                          </span>
                           {parentCode && (
                             <span className="font-mono text-xs font-semibold text-primary/80 shrink-0">
                               [{parentCode}]
@@ -449,7 +454,7 @@ export function UniversalActionQueue({
                               } as SchoolTask);
                             }}
                             className="hover:underline hover:text-foreground truncate text-left cursor-pointer font-medium"
-                            title={`Nhiệm vụ cha: ${parentTitle}`}
+                            title={`Thuộc nhiệm vụ: ${parentTitle}`}
                           >
                             {parentTitle}
                           </button>

@@ -12,16 +12,18 @@ import type {
   TaskStatus,
 } from "@/types/dashboard";
 import { useAuth } from "@/lib/auth-context";
-import { canAssignUnitTask } from "@/lib/role-task-filter";
+import { canAssignUnitTask, matchesUser } from "@/lib/role-task-filter";
 import { useDisplayDensity } from "@/components/density-provider";
 import {
   getAcademicMonthPeriod,
   getSystemReferenceDate,
+  filterTasksByAcademicMonthStrict,
 } from "@/lib/academic-calendar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { DashboardModalContext } from "@/components/dashboard/dashboard-context";
 
 import type {
   SmartFilterTab,
@@ -57,6 +59,8 @@ import { TaskBulkActionBar } from "./components/task-bulk-action-bar";
 
 export interface ModularCascadingTaskTableProps {
   tasks: SchoolTask[];
+  scope?: string;
+  defaultExpanded?: boolean;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onAddTask?: () => void;
   onStatusChange?: (
@@ -74,8 +78,11 @@ export interface ModularCascadingTaskTableProps {
   hideWorkbox?: boolean;
   hideToolbar?: boolean;
   onOpenSubmitModal?: (task: StaffTask) => void;
-  onAddSubTask?: (parentTask: SchoolTask) => void;
+  onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
   selectedAcademicMonth?: number | "ALL";
+  onAcademicMonthChange?: (month: number | "ALL") => void;
+  selectedMonth?: number | "ALL";
+  onMonthChange?: (month: number | "ALL") => void;
   priorOverdueBacklog?: SchoolTask[];
   canAssign?: boolean;
   initialTab?: SmartFilterTab;
@@ -94,6 +101,8 @@ export interface ModularCascadingTaskTableProps {
 
 export function ModularCascadingTaskTable({
   tasks = [],
+  scope,
+  defaultExpanded,
   onSelectTask,
   onAddTask,
   onStatusChange,
@@ -105,6 +114,9 @@ export function ModularCascadingTaskTable({
   onOpenSubmitModal,
   onAddSubTask,
   selectedAcademicMonth,
+  onAcademicMonthChange,
+  selectedMonth,
+  onMonthChange,
   priorOverdueBacklog = [],
   canAssign,
   initialTab = "all",
@@ -143,11 +155,41 @@ export function ModularCascadingTaskTable({
     initialDensity ?? contextDensity ?? DEFAULT_DENSITY;
   const canAssignUnit = canAssign ?? (user ? canAssignUnitTask(user) : true);
 
+  let dashboardModal: any = null;
+  try {
+    dashboardModal = React.useContext(DashboardModalContext);
+  } catch {
+    dashboardModal = null;
+  }
+
+  const effectiveOnAddSubTask = React.useMemo(() => {
+    if (onAddSubTask) {
+      return (parentTaskOrId: SchoolTask | string) => {
+        const parentId =
+          typeof parentTaskOrId === "string" ? parentTaskOrId : parentTaskOrId.id;
+        (onAddSubTask as (id: string) => void)(parentId);
+      };
+    }
+    if (dashboardModal?.openCreateModal) {
+      return (parentTaskOrId: SchoolTask | string) => {
+        const parentId =
+          typeof parentTaskOrId === "string" ? parentTaskOrId : parentTaskOrId.id;
+        dashboardModal.openCreateModal("DON_VI", parentId);
+      };
+    }
+    return undefined;
+  }, [onAddSubTask, dashboardModal]);
+
+  const effectiveMonthInput =
+    selectedMonth !== undefined ? selectedMonth : selectedAcademicMonth;
+  const effectiveOnMonthChange = onMonthChange || onAcademicMonthChange;
+
   // 2. URL Sync (if enabled)
   const urlSync = useTaskUrlSync({
     tab: initialTab,
     dept: initialDepartment,
     category: initialCategory,
+    month: effectiveMonthInput ?? "ALL",
     density: effectiveInitialDensity,
     page: 1,
   });
@@ -165,11 +207,30 @@ export function ModularCascadingTaskTable({
   const [localCategory, setLocalCategory] = React.useState<TaskCategory | "ALL">(
     syncWithUrl ? urlSync.urlState.category : initialCategory
   );
+  const [localMonth, setLocalMonth] = React.useState<number | "ALL">(
+    effectiveMonthInput !== undefined
+      ? effectiveMonthInput
+      : syncWithUrl
+      ? urlSync.urlState.month
+      : "ALL"
+  );
+
+  React.useEffect(() => {
+    if (effectiveMonthInput !== undefined) {
+      setLocalMonth(effectiveMonthInput);
+    }
+  }, [effectiveMonthInput]);
 
   const activeSearch = syncWithUrl ? urlSync.urlState.q : localSearch;
   const activeTab = syncWithUrl ? urlSync.urlState.tab : localTab;
   const activeDept = syncWithUrl ? urlSync.urlState.dept : localDept;
   const activeCategory = syncWithUrl ? urlSync.urlState.category : localCategory;
+  const activeMonth =
+    effectiveMonthInput !== undefined
+      ? effectiveMonthInput
+      : syncWithUrl
+      ? urlSync.urlState.month
+      : localMonth;
 
   const handleSearchChange = React.useCallback(
     (q: string) => {
@@ -215,6 +276,17 @@ export function ModularCascadingTaskTable({
     [syncWithUrl, urlSync]
   );
 
+  const handleMonthChange = React.useCallback(
+    (m: number | "ALL") => {
+      setLocalMonth(m);
+      effectiveOnMonthChange?.(m);
+      if (syncWithUrl) {
+        urlSync.setMonth(m);
+      }
+    },
+    [syncWithUrl, urlSync, effectiveOnMonthChange]
+  );
+
   const handleResetFilters = React.useCallback(() => {
     if (syncWithUrl) {
       urlSync.resetFilters();
@@ -223,6 +295,7 @@ export function ModularCascadingTaskTable({
       setLocalTab("all");
       setLocalDept("ALL");
       setLocalCategory("ALL");
+      setLocalMonth("ALL");
     }
   }, [syncWithUrl, urlSync]);
 
@@ -240,7 +313,7 @@ export function ModularCascadingTaskTable({
       currentUserName: user?.name,
       currentUserDepartment: user?.department,
       referenceDate,
-      month: selectedAcademicMonth,
+      month: activeMonth,
     });
   }, [
     tasks,
@@ -252,7 +325,7 @@ export function ModularCascadingTaskTable({
     user?.name,
     user?.department,
     referenceDate,
-    selectedAcademicMonth,
+    activeMonth,
   ]);
 
   // 6. Smart Tab Counts
@@ -261,10 +334,40 @@ export function ModularCascadingTaskTable({
       currentUserId: user?.id,
       currentUserName: user?.name,
       referenceDate,
+      month: activeMonth,
     });
-  }, [tasks, user?.id, user?.name, referenceDate]);
+  }, [tasks, user?.id, user?.name, referenceDate, activeMonth]);
 
-  // 7. Table State Hook (Selection, Expansion, Pagination, Sorting, Density)
+  // 7. Auto-expansion in personal scope
+  const isPersonalScope =
+    scope === "MY_TASKS" ||
+    scope === "my" ||
+    activeTab === "my_tasks" ||
+    defaultExpanded === true;
+
+  const autoExpandedParentIds = React.useMemo(() => {
+    if (!isPersonalScope) return [];
+    return tasks
+      .filter((t) => {
+        if (!t.subTasks || t.subTasks.length === 0) return false;
+        if (defaultExpanded) return true;
+        if (user) {
+          return t.subTasks.some((sub) => {
+            const subAny = sub as any;
+            return (
+              (user.id && (sub.assigneeId === user.id || subAny.assignedTo === user.id)) ||
+              matchesUser(sub.assigneeName, user) ||
+              matchesUser(subAny.assignedTo, user) ||
+              subAny.collaborators?.some((c: any) => matchesUser(c.name, user) || (user.id && c.id === user.id))
+            );
+          });
+        }
+        return true;
+      })
+      .map((t) => t.id);
+  }, [tasks, isPersonalScope, defaultExpanded, user]);
+
+  // 8. Table State Hook (Selection, Expansion, Pagination, Sorting, Density)
   const tableState = useTaskTableState({
     totalItems: filteredTasks.length,
     initialPage: 1,
@@ -272,7 +375,17 @@ export function ModularCascadingTaskTable({
     initialDensity: effectiveInitialDensity,
     initialSortField: "dueDate",
     initialSortDirection: "asc",
+    initialExpandedIds: autoExpandedParentIds,
   });
+
+  const prevAutoExpandedKeyRef = React.useRef<string>("");
+  React.useEffect(() => {
+    const key = `${isPersonalScope}-${autoExpandedParentIds.join(",")}`;
+    if (isPersonalScope && autoExpandedParentIds.length > 0 && prevAutoExpandedKeyRef.current !== key) {
+      prevAutoExpandedKeyRef.current = key;
+      tableState.expandAll(autoExpandedParentIds);
+    }
+  }, [isPersonalScope, autoExpandedParentIds, tableState.expandAll]);
 
   // 8. Sorting Data
   const sortedTasks = React.useMemo(() => {
@@ -429,101 +542,103 @@ export function ModularCascadingTaskTable({
               <div className="space-y-2 pt-1 border-t border-amber-200/70">
                 {/* Desktop Backlog Table */}
                 <div className="hidden md:block overflow-hidden rounded-xl border border-amber-200/80 bg-white/90 shadow-2xs">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="h-9 border-b border-amber-200/60 bg-amber-100/40 text-xs font-semibold text-amber-900 uppercase">
-                        <th className="w-24 px-3 py-1.5">Mã NV</th>
-                        <th className="px-3 py-1.5">Nhiệm vụ tồn đọng</th>
-                        <th className="px-3 py-1.5">Chủ trì</th>
-                        <th className="px-3 py-1.5">Hạn ban đầu</th>
-                        <th className="px-3 py-1.5">Tiến độ</th>
-                        <th className="w-52 px-3 py-1.5 text-right">
-                          Trạng thái &amp; Thao tác
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-amber-100/80">
-                      {priorOverdueBacklog.map((task) => (
-                        <tr
-                          key={task.id}
-                          tabIndex={0}
-                          onClick={() => onSelectTask?.(task)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              onSelectTask?.(task);
-                            }
-                          }}
-                          className="group cursor-pointer hover:bg-amber-100/30 transition-colors h-11 text-xs"
-                          data-backlog-task-id={task.id}
-                        >
-                          <td className="px-3 py-2 font-mono font-bold text-amber-900 tabular-nums">
-                            {task.taskCode || "NV-QCET"}
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                              {task.title}
-                            </div>
-                            {task.categoryLabel && (
-                              <span className="text-xs text-muted-foreground font-medium">
-                                {task.categoryLabel}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-muted-foreground font-medium">
-                            {task.leadAssigneeName}
-                          </td>
-                          <td className="px-3 py-2">
-                            <span className="font-mono font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-xs tabular-nums">
-                              {task.dueDate ? formatTableDate(task.dueDate) : "Quá hạn"}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-2">
-                              <div className="relative h-1.5 w-12 overflow-hidden rounded-full bg-secondary/80">
-                                <div
-                                  className="h-full bg-amber-500"
-                                  style={{
-                                    width: `${task.progressPercent || 0}%`,
-                                  }}
-                                />
-                              </div>
-                              <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">
-                                {task.progressPercent || 0}%
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {onStatusChange && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onStatusChange(
-                                      task.id,
-                                      task.status === "COMPLETED"
-                                        ? "IN_PROGRESS"
-                                        : "COMPLETED"
-                                    );
-                                  }}
-                                  className="inline-flex h-6 items-center px-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-semibold cursor-pointer shadow-2xs transition-colors"
-                                >
-                                  Duyệt nhanh
-                                </button>
-                              )}
-                              <Badge
-                                variant="rose"
-                                className="h-5.5 px-2 text-xs font-semibold tabular-nums shrink-0"
-                              >
-                                Tồn đọng
-                              </Badge>
-                            </div>
-                          </td>
+                  <div className="overflow-x-auto thin-scrollbar">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="h-9 border-b border-amber-200/60 bg-amber-100/40 text-xs font-semibold text-amber-900 uppercase">
+                          <th className="w-24 px-3 py-1.5">Mã NV</th>
+                          <th className="px-3 py-1.5">Nhiệm vụ tồn đọng</th>
+                          <th className="px-3 py-1.5">Chủ trì</th>
+                          <th className="px-3 py-1.5">Hạn ban đầu</th>
+                          <th className="px-3 py-1.5">Tiến độ</th>
+                          <th className="w-52 px-3 py-1.5 text-right">
+                            Trạng thái &amp; Thao tác
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-amber-100/80">
+                        {priorOverdueBacklog.map((task) => (
+                          <tr
+                            key={task.id}
+                            tabIndex={0}
+                            onClick={() => onSelectTask?.(task)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onSelectTask?.(task);
+                              }
+                            }}
+                            className="group cursor-pointer hover:bg-amber-100/30 transition-colors h-11 text-xs"
+                            data-backlog-task-id={task.id}
+                          >
+                            <td className="px-3 py-2 font-mono font-bold text-amber-900 tabular-nums">
+                              {task.taskCode || "NV-QCET"}
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                                {task.title}
+                              </div>
+                              {task.categoryLabel && (
+                                <span className="text-xs text-muted-foreground font-medium">
+                                  {task.categoryLabel}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground font-medium">
+                              {task.leadAssigneeName}
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className="font-mono font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-xs tabular-nums">
+                                {task.dueDate ? formatTableDate(task.dueDate) : "Quá hạn"}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <div className="relative h-1.5 w-12 overflow-hidden rounded-full bg-secondary/80">
+                                  <div
+                                    className="h-full bg-amber-500"
+                                    style={{
+                                      width: `${task.progressPercent || 0}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">
+                                  {task.progressPercent || 0}%
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {onStatusChange && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onStatusChange(
+                                        task.id,
+                                        task.status === "COMPLETED"
+                                          ? "IN_PROGRESS"
+                                          : "COMPLETED"
+                                      );
+                                    }}
+                                    className="inline-flex h-6 items-center px-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-semibold cursor-pointer shadow-2xs transition-colors"
+                                  >
+                                    Duyệt nhanh
+                                  </button>
+                                )}
+                                <Badge
+                                  variant="rose"
+                                  className="h-5.5 px-2 text-xs font-semibold tabular-nums shrink-0"
+                                >
+                                  Tồn đọng
+                                </Badge>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 {/* Mobile Backlog Cards */}
@@ -567,6 +682,8 @@ export function ModularCascadingTaskTable({
           activeTab={activeTab}
           onTabChange={handleTabChange}
           pillCounts={tabCounts}
+          selectedAcademicMonth={activeMonth}
+          onAcademicMonthChange={handleMonthChange}
           selectedDepartment={activeDept}
           onDepartmentChange={handleDeptChange}
           selectedCategory={activeCategory}
@@ -593,7 +710,7 @@ export function ModularCascadingTaskTable({
         <div className="space-y-3">
           {/* Desktop Table View (>= 768px) */}
           <div className="hidden md:block overflow-hidden rounded-xl border border-border/80 bg-card shadow-2xs">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto thin-scrollbar">
               <table className="w-full text-left">
                 <TaskTableHeader
                   allSelected={tableState.allVisibleSelected}
@@ -628,6 +745,9 @@ export function ModularCascadingTaskTable({
                           isActive={isRowActive}
                           density={tableState.density}
                           selectedAcademicMonth={selectedAcademicMonth}
+                          activeCategory={activeCategory}
+                          canAssign={canAssignUnit}
+                          onAddSubTask={effectiveOnAddSubTask}
                           onToggleExpand={() => tableState.toggleExpand(task.id)}
                           onToggleSelect={() => tableState.toggleSelect(task.id)}
                           onClick={onSelectTask}
@@ -637,13 +757,14 @@ export function ModularCascadingTaskTable({
                         {isExpanded && hasSubtasks && (
                           <SubtaskRowGroup
                             parentTask={task}
+                            scope={scope}
                             isExpanded={isExpanded}
                             density={tableState.density}
                             selectedAcademicMonth={selectedAcademicMonth}
                             onSelectSubTask={(sub) => onSelectTask?.(sub)}
                             onStatusChange={onStatusChange}
                             onOpenSubmitModal={onOpenSubmitModal}
-                            onAddSubTask={onAddSubTask}
+                            onAddSubTask={effectiveOnAddSubTask}
                             canAssign={canAssignUnit}
                           />
                         )}
@@ -670,6 +791,8 @@ export function ModularCascadingTaskTable({
                 onStatusChange={onStatusChange}
                 selectedAcademicMonth={selectedAcademicMonth}
                 onOpenSubmitModal={onOpenSubmitModal}
+                onAddSubTask={effectiveOnAddSubTask}
+                canAssign={canAssignUnit}
               />
             ))}
           </div>

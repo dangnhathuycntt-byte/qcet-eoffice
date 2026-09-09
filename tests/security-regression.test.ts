@@ -267,14 +267,26 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
   });
 
   after(async () => {
+    const ephemeralUserIds = ["user-creator-1", "user-assignee", "user-cntt", "user-lead-cntt", "user-bgh"];
     await prisma.taskAssignee.deleteMany({
-      where: { taskId: { in: ["task-daotao-1", "task-cntt-1"] } },
+      where: {
+        OR: [
+          { taskId: { in: ["task-daotao-1", "task-cntt-1", "task-temp-delete-creator", "task-temp-delete-bgh"] } },
+          { task: { createdById: { in: ephemeralUserIds } } },
+          { userId: { in: ephemeralUserIds } },
+        ],
+      },
     });
     await prisma.task.deleteMany({
-      where: { id: { in: ["task-daotao-1", "task-cntt-1"] } },
+      where: {
+        OR: [
+          { id: { in: ["task-daotao-1", "task-cntt-1", "task-temp-delete-creator", "task-temp-delete-bgh"] } },
+          { createdById: { in: ephemeralUserIds } },
+        ],
+      },
     });
     await prisma.user.deleteMany({
-      where: { id: { in: ["user-creator-1", "user-assignee", "user-cntt", "user-lead-cntt", "user-bgh"] } },
+      where: { id: { in: ephemeralUserIds } },
     });
     await prisma.department.deleteMany({
       where: { id: { in: ["dept-daotao", "dept-cntt"] } },

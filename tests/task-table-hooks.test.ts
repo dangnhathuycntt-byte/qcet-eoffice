@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -11,6 +10,7 @@ import {
   keyboardNavReducer,
   handleKeyboardNavigation,
   isInputElement,
+  type KeyboardNavState,
 } from "../src/components/tasks/table/hooks/use-task-keyboard-nav";
 import {
   calculateSelectionState,
@@ -135,7 +135,7 @@ describe("Task Table Hooks - URL Sync, Keyboard Nav & State Engine", () => {
     });
 
     it("reducer MOVE_DOWN increments index and clamps at itemCount - 1", () => {
-      let state = { activeIndex: 0, activeId: "task-1" };
+      let state: KeyboardNavState = { activeIndex: 0, activeId: "task-1" };
       state = keyboardNavReducer(state, {
         type: "MOVE_DOWN",
         itemCount,
@@ -170,7 +170,7 @@ describe("Task Table Hooks - URL Sync, Keyboard Nav & State Engine", () => {
     });
 
     it("reducer MOVE_UP decrements index and clamps at 0", () => {
-      let state = { activeIndex: 2, activeId: "task-3" };
+      let state: KeyboardNavState = { activeIndex: 2, activeId: "task-3" };
       state = keyboardNavReducer(state, {
         type: "MOVE_UP",
         itemCount,
@@ -198,7 +198,7 @@ describe("Task Table Hooks - URL Sync, Keyboard Nav & State Engine", () => {
     });
 
     it("reducer SET_INDEX and SET_ID work correctly", () => {
-      let state = keyboardNavReducer(
+      let state: KeyboardNavState = keyboardNavReducer(
         { activeIndex: -1, activeId: null },
         { type: "SET_INDEX", index: 2, itemCount, idList: mockIdList }
       );
@@ -226,7 +226,7 @@ describe("Task Table Hooks - URL Sync, Keyboard Nav & State Engine", () => {
       assert.equal(isInputElement({ isContentEditable: true }), true);
       assert.equal(
         isInputElement({
-          hasAttribute: (attr) => attr === "contenteditable",
+          hasAttribute: (attr: string) => attr === "contenteditable",
         }),
         true
       );

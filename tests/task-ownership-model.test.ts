@@ -363,7 +363,7 @@ describe("Mock Dashboard Data - Origin and Ownership Cases", () => {
 
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { LecturerFocusWorkspace, getPageNumbers } from "../src/components/portal/lecturer-focus-workspace";
+import { LegacyLecturerFocusWorkspace as LecturerFocusWorkspace, getPageNumbers } from "../src/components/portal/lecturer-focus-workspace";
 
 describe("LecturerFocusWorkspace - 2-Tier Rendering and Workload Badges", () => {
   const mockUser: AuthUser = {

@@ -297,10 +297,11 @@ describe("Academic Month Filtering Integration in Dashboard Hub", () => {
   });
 
   test("page.tsx connects selectedAcademicMonth and passes monthlyTaskCounts to toolbar", () => {
-    const source = fs.readFileSync(
-      path.resolve(__dirname, "../src/app/page.tsx"),
-      "utf-8"
-    );
+    const source = [
+      fs.readFileSync(path.resolve(__dirname, "../src/app/page.tsx"), "utf-8"),
+      fs.readFileSync(path.resolve(__dirname, "../src/hooks/use-url-params-sync.ts"), "utf-8"),
+      fs.readFileSync(path.resolve(__dirname, "../src/components/dashboard/zones/tasks-expanded-views.tsx"), "utf-8"),
+    ].join("\n");
 
     // Verify state definition
     assert.ok(

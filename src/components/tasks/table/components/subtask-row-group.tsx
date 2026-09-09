@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { TableDensity } from "../types";
 import { SubtaskInlineRow } from "./subtask-inline-row";
+import { useAuth } from "@/lib/auth-context";
+import { matchesUser } from "@/lib/role-task-filter";
 
 export interface SubtaskRowGroupProps {
   parentTask: SchoolTask;
@@ -13,6 +15,7 @@ export interface SubtaskRowGroupProps {
   isExpanded: boolean;
   colSpan?: number;
   density?: TableDensity;
+  scope?: string;
   selectedAcademicMonth?: number | "ALL";
   referenceDate?: string | Date;
   onSelectSubTask?: (subTask: StaffTask, parentTask: SchoolTask) => void;
@@ -24,7 +27,7 @@ export interface SubtaskRowGroupProps {
   ) => Promise<void> | void;
   onOpenSubmitModal?: (task: StaffTask) => void;
   canAssign?: boolean;
-  onAddSubTask?: (parentTask: SchoolTask) => void;
+  onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
   className?: string;
 }
 
@@ -34,6 +37,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
   isExpanded,
   colSpan = 9,
   density = "comfortable",
+  scope,
   selectedAcademicMonth,
   referenceDate,
   onSelectSubTask,
@@ -43,6 +47,14 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
   onAddSubTask,
   className,
 }: SubtaskRowGroupProps) {
+  let user: ReturnType<typeof useAuth>["user"] = null;
+  try {
+    const auth = useAuth();
+    user = auth?.user ?? null;
+  } catch {
+    user = null;
+  }
+
   if (!isExpanded) {
     return null;
   }
@@ -68,7 +80,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                 {canAssign && onAddSubTask && (
                   <button
                     type="button"
-                    onClick={() => onAddSubTask(parentTask)}
+                    onClick={() => onAddSubTask(parentTask.id)}
                     className="inline-flex items-center gap-1 h-6 px-2.5 rounded-lg border border-primary/20 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold cursor-pointer active:scale-95 transition-colors"
                   >
                     <Plus className="size-3" strokeWidth={1.5} />
@@ -78,26 +90,41 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
               </div>
             ) : (
               <>
-                {subTasks.map((subTask) => (
-                  <SubtaskInlineRow
-                    key={subTask.id}
-                    subTask={subTask}
-                    parentTask={parentTask}
-                    density={density}
-                    selectedAcademicMonth={selectedAcademicMonth}
-                    referenceDate={referenceDate}
-                    onSelectSubTask={onSelectSubTask}
-                    onStatusChange={onStatusChange}
-                    onOpenSubmitModal={onOpenSubmitModal}
-                  />
-                ))}
+                {subTasks.map((subTask) => {
+                  const subAny = subTask as any;
+                  const isUserSubtask = Boolean(
+                    user &&
+                      ((user.id && (subTask.assigneeId === user.id || subAny.assignedTo === user.id)) ||
+                        matchesUser(subTask.assigneeName, user) ||
+                        matchesUser(subAny.assignedTo, user) ||
+                        subAny.collaborators?.some(
+                          (c: any) => matchesUser(c.name, user) || (user.id && c.id === user.id)
+                        ))
+                  );
+
+                  return (
+                    <SubtaskInlineRow
+                      key={subTask.id}
+                      subTask={subTask}
+                      parentTask={parentTask}
+                      density={density}
+                      scope={scope}
+                      isHighlighted={isUserSubtask}
+                      selectedAcademicMonth={selectedAcademicMonth}
+                      referenceDate={referenceDate}
+                      onSelectSubTask={onSelectSubTask}
+                      onStatusChange={onStatusChange}
+                      onOpenSubmitModal={onOpenSubmitModal}
+                    />
+                  );
+                })}
 
                 {/* Optional "Add subtask" bottom line if permitted */}
                 {canAssign && onAddSubTask && (
                   <div className="pt-1 flex items-center">
                     <button
                       type="button"
-                      onClick={() => onAddSubTask(parentTask)}
+                      onClick={() => onAddSubTask(parentTask.id)}
                       className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-dashed border-slate-300 bg-white/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 text-xs font-medium cursor-pointer transition-colors"
                     >
                       <Plus className="size-3 text-primary" strokeWidth={1.5} />

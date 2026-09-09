@@ -172,18 +172,30 @@ export function DocumentRegistryView() {
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState(searchQuery);
+  const debouncedSearch = debouncedSearchQuery;
   const [urgencyFilter, setUrgencyFilter] = React.useState<string>("ALL");
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
+
+  // Debounce searchQuery 300ms
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
 
   // Modal states
   const [selectedDocument, setSelectedDocument] = React.useState<OfficialDocument | null>(null);
   const [isDetailOpen, setIsDetailOpen] = React.useState(false);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
 
-  // Fetch document stats from real API route
-  const fetchStats = React.useCallback(async () => {
+  // Fetch document stats from real API route (decoupled from search)
+  const fetchStats = React.useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch("/api/documents/stats");
+      const res = await fetch("/api/documents/stats", { signal });
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
@@ -196,78 +208,99 @@ export function DocumentRegistryView() {
           }));
         }
       }
-    } catch (err) {
-      console.error("Error fetching document stats:", err);
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        console.error("Error fetching document stats:", err);
+      }
     }
   }, []);
 
-  // Fetch documents from real API route with query filtering
-  const fetchDocuments = React.useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (activeTab === "inbox") params.set("type", "VAN_BAN_DEN");
-      else if (activeTab === "outbox") params.set("type", "VAN_BAN_DI");
-      else if (activeTab === "pending") params.set("type", "TO_TRINH_NOI_BO");
-
-      if (searchQuery.trim()) {
-        params.set("search", searchQuery.trim());
-      }
-      if (urgencyFilter !== "ALL") {
-        const apiUrgency =
-          urgencyFilter === "flash"
-            ? "HOA_TOC"
-            : urgencyFilter === "top_urgent"
-            ? "THUONG_KHAN"
-            : urgencyFilter === "urgent"
-            ? "KHAN"
-            : urgencyFilter === "normal"
-            ? "THUONG"
-            : urgencyFilter;
-        params.set("urgency", apiUrgency);
-      }
-      if (statusFilter !== "ALL") {
-        const apiStatus =
-          statusFilter === "pending_assignment"
-            ? "CHO_PHAN_CONG"
-            : statusFilter === "processing"
-            ? "DANG_XU_LY"
-            : statusFilter === "approved"
-            ? "CHO_PHE_DUYET"
-            : statusFilter === "completed"
-            ? "DA_HOAN_THANH"
-            : statusFilter;
-        params.set("status", apiStatus);
-      }
-
-      const queryString = params.toString() ? `?${params.toString()}` : "";
-      const res = await fetch(`/api/documents${queryString}`);
-      if (res.ok) {
-        const json = await res.json();
-        const rawDocs = Array.isArray(json.data)
-          ? json.data
-          : Array.isArray(json.documents)
-          ? json.documents
-          : [];
-        const mapped = rawDocs.map(mapApiDocumentToOfficial);
-        setDocuments(mapped);
-        setStats((prev) => ({
-          ...prev,
-          linkedTaskCount: mapped.filter((d: OfficialDocument) => Boolean(d.linkedTaskId)).length,
-        }));
-      }
-    } catch (err) {
-      console.error("Error fetching documents:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeTab, searchQuery, urgencyFilter, statusFilter]);
-
-  // Load documents and stats on filter changes
+  // Decoupled fetchStats: runs on mount or tab change with AbortController
   React.useEffect(() => {
-    fetchDocuments();
-    fetchStats();
-  }, [fetchDocuments, fetchStats]);
+    const controller = new AbortController();
+    fetchStats(controller.signal);
+    return () => {
+      controller.abort();
+    };
+  }, [activeTab, fetchStats]);
+
+  // Fetch documents from real API route with query filtering & AbortController
+  const fetchDocuments = React.useCallback(
+    async (signal?: AbortSignal) => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (activeTab === "inbox") params.set("type", "VAN_BAN_DEN");
+        else if (activeTab === "outbox") params.set("type", "VAN_BAN_DI");
+        else if (activeTab === "pending") params.set("type", "TO_TRINH_NOI_BO");
+
+        if (debouncedSearchQuery.trim()) {
+          params.set("search", debouncedSearchQuery.trim());
+        }
+        if (urgencyFilter !== "ALL") {
+          const apiUrgency =
+            urgencyFilter === "flash"
+              ? "HOA_TOC"
+              : urgencyFilter === "top_urgent"
+              ? "THUONG_KHAN"
+              : urgencyFilter === "urgent"
+              ? "KHAN"
+              : urgencyFilter === "normal"
+              ? "THUONG"
+              : urgencyFilter;
+          params.set("urgency", apiUrgency);
+        }
+        if (statusFilter !== "ALL") {
+          const apiStatus =
+            statusFilter === "pending_assignment"
+              ? "CHO_PHAN_CONG"
+              : statusFilter === "processing"
+              ? "DANG_XU_LY"
+              : statusFilter === "approved"
+              ? "CHO_PHE_DUYET"
+              : statusFilter === "completed"
+              ? "DA_HOAN_THANH"
+              : statusFilter;
+          params.set("status", apiStatus);
+        }
+
+        const queryString = params.toString() ? `?${params.toString()}` : "";
+        const res = await fetch(`/api/documents${queryString}`, { signal });
+        if (res.ok) {
+          const json = await res.json();
+          const rawDocs = Array.isArray(json.data)
+            ? json.data
+            : Array.isArray(json.documents)
+            ? json.documents
+            : [];
+          const mapped = rawDocs.map(mapApiDocumentToOfficial);
+          setDocuments(mapped);
+          setStats((prev) => ({
+            ...prev,
+            linkedTaskCount: mapped.filter((d: OfficialDocument) => Boolean(d.linkedTaskId)).length,
+          }));
+        }
+      } catch (err: any) {
+        if (err?.name !== "AbortError") {
+          console.error("Error fetching documents:", err);
+        }
+      } finally {
+        if (!signal?.aborted) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [activeTab, debouncedSearchQuery, urgencyFilter, statusFilter]
+  );
+
+  // Load documents on filter changes using AbortController
+  React.useEffect(() => {
+    const controller = new AbortController();
+    fetchDocuments(controller.signal);
+    return () => {
+      controller.abort();
+    };
+  }, [fetchDocuments]);
 
   // Switch tab and sync with URL
   const handleTabChange = (tab: string) => {
@@ -396,9 +429,9 @@ export function DocumentRegistryView() {
         }
       }
 
-      // Search query
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
+      // Search query (debounced)
+      if (debouncedSearchQuery.trim()) {
+        const query = debouncedSearchQuery.toLowerCase().trim();
         const matchesNumber = doc.documentNumber.toLowerCase().includes(query);
         const matchesSummary = doc.summary.toLowerCase().includes(query);
         const matchesAuthority = doc.issuingAuthority.toLowerCase().includes(query);
@@ -408,7 +441,7 @@ export function DocumentRegistryView() {
 
       return true;
     });
-  }, [documents, activeTab, urgencyFilter, statusFilter, searchQuery]);
+  }, [documents, activeTab, urgencyFilter, statusFilter, debouncedSearchQuery]);
 
   const computedStats = React.useMemo(() => {
     const totalInbox =

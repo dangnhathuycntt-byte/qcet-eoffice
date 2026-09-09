@@ -9,12 +9,18 @@ export interface ModalStateReturn {
   initialTaskLevel: "TRUONG" | "DON_VI";
   initialParentTaskId?: string;
   initialAssigneeName?: string;
+  initialTitle?: string;
   isDelegationModalOpen: boolean;
   delegationDeptCode: string;
   setSelectedTask: React.Dispatch<React.SetStateAction<SchoolTask | StaffTask | null>>;
   openTaskDetail: (task: SchoolTask | StaffTask) => void;
   closeTaskDetail: () => void;
-  openCreateModal: (level?: "TRUONG" | "DON_VI", parentId?: string, assigneeName?: string) => void;
+  openCreateModal: (
+    level?: "TRUONG" | "DON_VI",
+    parentId?: string,
+    assigneeName?: string,
+    initialTitle?: string
+  ) => void;
   closeCreateModal: () => void;
   openDelegationModal: (deptCode?: string) => void;
   closeDelegationModal: () => void;
@@ -26,6 +32,7 @@ export function useModalState(): ModalStateReturn {
   const [initialTaskLevel, setInitialTaskLevel] = React.useState<"TRUONG" | "DON_VI">("TRUONG");
   const [initialParentTaskId, setInitialParentTaskId] = React.useState<string | undefined>(undefined);
   const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
+  const [initialTitle, setInitialTitle] = React.useState<string | undefined>(undefined);
   const [isDelegationModalOpen, setIsDelegationModalOpen] = React.useState(false);
   const [delegationDeptCode, setDelegationDeptCode] = React.useState("K_CNTT");
 
@@ -38,10 +45,16 @@ export function useModalState(): ModalStateReturn {
   }, []);
 
   const openCreateModal = React.useCallback(
-    (level: "TRUONG" | "DON_VI" = "TRUONG", parentId?: string, assigneeName?: string) => {
+    (
+      level: "TRUONG" | "DON_VI" = "TRUONG",
+      parentId?: string,
+      assigneeName?: string,
+      title?: string
+    ) => {
       setInitialTaskLevel(level);
       setInitialParentTaskId(parentId);
       setInitialAssigneeName(assigneeName);
+      setInitialTitle(title);
       setIsCreateModalOpen(true);
     },
     []
@@ -51,6 +64,7 @@ export function useModalState(): ModalStateReturn {
     setIsCreateModalOpen(false);
     setInitialParentTaskId(undefined);
     setInitialAssigneeName(undefined);
+    setInitialTitle(undefined);
   }, []);
 
   const openDelegationModal = React.useCallback((deptCode: string = "K_CNTT") => {

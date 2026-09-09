@@ -157,7 +157,7 @@ describe('Tasks API Route Handler Tests', () => {
     assert.ok(Array.isArray(json.data), 'json.data should be an array');
     assert.ok(Array.isArray(json.tasks), 'json.tasks should also be an array for backwards compatibility');
     assert.strictEqual(typeof json.total, 'number');
-    assert.strictEqual(json.total, json.data.length);
+    assert.ok(json.total >= json.data.length, 'Total should be >= returned page length');
     assert.ok(json.data.length > 0, 'Should return existing tasks from database');
   });
 

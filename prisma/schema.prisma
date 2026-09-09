@@ -94,6 +94,9 @@ model Department {
   draftingDocs Document[]          @relation("DraftingDeptDocs")
   leadDocs     Document[]          @relation("LeadDepartmentDocs")
   directives   DocumentDirective[] @relation("DirectiveDepartments")
+  jobCatalogItems JobCatalogItem[]
+  dacumDuties     DacumDuty[]
+  delegations     DacumDelegation[]
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -192,6 +195,8 @@ model Task {
   delegations     DacumDelegation[]
   resolutions     ExecutiveResolution[]
   linkedDocument  Document?
+  dacumTaskDefId  String?               @map("dacum_task_def_id") @db.VarChar(50)
+  dacumTaskDef    DacumTaskDef?         @relation(fields: [dacumTaskDefId], references: [id])
   createdAt       DateTime              @default(now()) @map("created_at")
   updatedAt       DateTime              @updatedAt @map("updated_at")
 
@@ -238,21 +243,27 @@ model TaskDeliverable {
 }
 
 model DacumDelegation {
-  id             String   @id @default(cuid())
-  taskId         String   @map("task_id")
-  grantorId      String   @map("grantor_id")
-  delegateId     String   @map("delegate_id")
-  committeeRole  String   @map("committee_role") @db.VarChar(100)
-  authorityScope String   @map("authority_scope") @db.VarChar(255)
-  expiresAt      DateTime @map("expires_at")
-  isActive       Boolean  @default(true) @map("is_active")
-  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  grantor        User     @relation("DelegationGrantor", fields: [grantorId], references: [id])
-  delegate       User     @relation("DelegationDelegate", fields: [delegateId], references: [id])
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id             String      @id @default(cuid())
+  taskId         String?     @map("task_id")
+  grantorId      String      @map("grantor_id")
+  delegateId     String      @map("delegate_id")
+  committeeRole  String      @map("committee_role") @db.VarChar(100)
+  authorityScope String      @map("authority_scope") @db.VarChar(255)
+  departmentId   String?     @map("department_id") @db.VarChar(50)
+  startDate      DateTime?   @default(now()) @map("start_date")
+  expiresAt      DateTime    @map("expires_at")
+  isActive       Boolean     @default(true) @map("is_active")
+  reason         String?     @db.Text
+  documentRef    String?     @map("document_ref") @db.VarChar(100)
+  task           Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  department     Department? @relation(fields: [departmentId], references: [id])
+  grantor        User        @relation("DelegationGrantor", fields: [grantorId], references: [id])
+  delegate       User        @relation("DelegationDelegate", fields: [delegateId], references: [id])
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
 
   @@index([delegateId, isActive, expiresAt])
+  @@index([departmentId, isActive])
   @@map("dacum_delegations")
 }
 
@@ -447,4 +458,81 @@ model Notification {
   @@index([createdAt])
   @@map("notifications")
 }
+
+// ===================================================
+// 6. ATOMIC TASK SEQUENCING (QCET-PERF-2025-01)
+// ===================================================
+model TaskSequence {
+  year           Int
+  scope          String
+  departmentCode String   @map("department_code")
+  lastValue      Int      @default(0) @map("last_value")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@id([year, scope, departmentCode])
+  @@map("task_sequences")
+}
+
+// ===================================================
+// 7. VỊ TRÍ VIỆC LÀM (NGHỊ ĐỊNH 106/2020/NĐ-CP) & MA TRẬN DACUM
+// ===================================================
+enum JobCatalogGroup {
+  LDPU // Lãnh đạo, quản lý (Điều 4 NĐ 106)
+  VCMN // Chức danh nghề nghiệp chuyên ngành (Giảng viên, Giáo viên GDNN)
+  VCDC // Chức danh nghề nghiệp chuyên môn dùng chung (Kế toán, CNTT, Hành chính)
+  HTPV // Vị trí việc làm hỗ trợ, phục vụ (Văn thư, Bảo vệ, Phục vụ xưởng)
+}
+
+model JobCatalogItem {
+  id            String          @id @db.VarChar(50)
+  code          String          @unique @db.VarChar(50)
+  title         String          @db.VarChar(255)
+  group         JobCatalogGroup
+  departmentId  String?         @map("department_id") @db.VarChar(50)
+  department    Department?     @relation(fields: [departmentId], references: [id])
+  description   String?         @db.Text
+  competencyReq String?         @map("competency_req") @db.Text
+  duties        DacumDuty[]
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@index([group, departmentId])
+  @@map("job_catalog_items")
+}
+
+model DacumDuty {
+  id               String          @id @db.VarChar(50)
+  code             String          @db.VarChar(20)
+  title            String          @db.VarChar(255)
+  departmentId     String          @map("department_id") @db.VarChar(50)
+  department       Department      @relation(fields: [departmentId], references: [id])
+  jobCatalogItemId String?         @map("job_catalog_item_id") @db.VarChar(50)
+  jobCatalogItem   JobCatalogItem? @relation(fields: [jobCatalogItemId], references: [id])
+  taskDefs         DacumTaskDef[]
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  @@unique([departmentId, code])
+  @@map("dacum_duties")
+}
+
+model DacumTaskDef {
+  id                   String          @id @db.VarChar(50)
+  code                 String          @db.VarChar(20)
+  title                String          @db.VarChar(500)
+  dutyId               String          @map("duty_id") @db.VarChar(50)
+  duty                 DacumDuty       @relation(fields: [dutyId], references: [id], onDelete: Cascade)
+  criteria             String?         @db.Text
+  tools                String?         @db.Text
+  requiredDeliverables String?         @map("required_deliverables") @db.Text
+  standardHours        Float           @default(0) @map("standard_hours")
+  tasks                Task[]
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  @@unique([dutyId, code])
+  @@map("dacum_task_defs")
+}
+
+
 

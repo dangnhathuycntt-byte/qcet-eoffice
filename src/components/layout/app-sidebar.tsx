@@ -33,7 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
+import { useAuth, isUserUnassignedDepartment, shouldPromptUnassignedDepartment } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 const ICON_MAP: Record<CanonicalRouteConfig["iconName"], LucideIcon> = {
@@ -145,11 +145,8 @@ export function AppSidebar() {
   // Automatic profile prompt on first visit if user has unassigned department
   React.useEffect(() => {
     if (typeof window === "undefined" || !user) return;
-    if (isUserUnassignedDepartment(user)) {
-      const alreadyPrompted =
-        window.sessionStorage.getItem("qcet_profile_unassigned_prompted") ||
-        window.sessionStorage.getItem("qcet_dept_prompt_dismissed");
-      if (!alreadyPrompted) {
+    try {
+      if (shouldPromptUnassignedDepartment(user, window.sessionStorage)) {
         setIsProfileModalOpen(true);
         try {
           window.sessionStorage.setItem("qcet_profile_unassigned_prompted", "true");
@@ -158,6 +155,8 @@ export function AppSidebar() {
           // ignore storage access restrictions
         }
       }
+    } catch {
+      // ignore storage access restrictions
     }
   }, [user, setIsProfileModalOpen]);
 

@@ -17,6 +17,7 @@ export interface TaskUrlState {
   tab: SmartFilterTab;
   dept: string;
   category: TaskCategory | "ALL";
+  month: number | "ALL";
   q: string;
   page: number;
   density: TableDensity;
@@ -31,6 +32,7 @@ export const DEFAULT_TASK_URL_STATE: TaskUrlState = {
   tab: "all",
   dept: "ALL",
   category: "ALL",
+  month: "ALL",
   q: "",
   page: 1,
   density: "comfortable",
@@ -124,7 +126,19 @@ export function parseTaskUrlParams(
   const rawQ = params.get("q");
   const q = rawQ !== null ? rawQ.trim() : defaults.q;
 
-  // 6. page
+  // 6. month
+  const rawMonth = params.get("month");
+  let month: number | "ALL" = defaults.month;
+  if (rawMonth === "ALL") {
+    month = "ALL";
+  } else if (rawMonth) {
+    const parsed = parseInt(rawMonth, 10);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
+      month = parsed;
+    }
+  }
+
+  // 7. page
   const rawPage = params.get("page");
   let page = defaults.page;
   if (rawPage) {
@@ -134,14 +148,14 @@ export function parseTaskUrlParams(
     }
   }
 
-  // 7. density
+  // 8. density
   const rawDensity = params.get("density");
   const density: TableDensity =
     rawDensity && (VALID_DENSITIES as string[]).includes(rawDensity)
       ? (rawDensity as TableDensity)
       : defaults.density;
 
-  // 8. taskId
+  // 9. taskId
   const rawTaskId = params.get("taskId");
   const taskId =
     rawTaskId && rawTaskId.trim() !== "" ? rawTaskId.trim() : defaults.taskId;
@@ -151,6 +165,7 @@ export function parseTaskUrlParams(
     tab,
     dept,
     category,
+    month,
     q,
     page,
     density,
@@ -222,6 +237,15 @@ export function serializeTaskUrlParams(
     }
   }
 
+  // 4.1 month (omit default "ALL")
+  if (state.month !== undefined) {
+    if (state.month === "ALL" || !state.month) {
+      params.delete("month");
+    } else {
+      params.set("month", String(state.month));
+    }
+  }
+
   // 5. q (omit empty)
   if (state.q !== undefined) {
     if (!state.q || !state.q.trim()) {
@@ -287,6 +311,7 @@ export interface UseTaskUrlSyncReturn {
   setTab: (tab: SmartFilterTab) => void;
   setDept: (dept: string) => void;
   setCategory: (category: TaskCategory | "ALL") => void;
+  setMonth: (month: number | "ALL") => void;
   setSearch: (q: string) => void;
   setPage: (page: number) => void;
   setDensity: (density: TableDensity) => void;
@@ -348,6 +373,7 @@ export function useTaskUrlSync(
         updates.tab !== undefined ||
         updates.dept !== undefined ||
         updates.category !== undefined ||
+        updates.month !== undefined ||
         updates.q !== undefined;
 
       const mergedUpdates: Partial<TaskUrlState> = {
@@ -390,6 +416,11 @@ export function useTaskUrlSync(
     [updateUrlParams]
   );
 
+  const setMonth = React.useCallback(
+    (month: number | "ALL") => updateUrlParams({ month }),
+    [updateUrlParams]
+  );
+
   const setSearch = React.useCallback(
     (q: string) => updateUrlParams({ q }),
     [updateUrlParams]
@@ -415,6 +446,7 @@ export function useTaskUrlSync(
       tab: effectiveDefaults.tab,
       dept: effectiveDefaults.dept,
       category: effectiveDefaults.category,
+      month: effectiveDefaults.month,
       q: effectiveDefaults.q,
       page: 1,
     });
@@ -426,6 +458,7 @@ export function useTaskUrlSync(
       tab: effectiveDefaults.tab,
       dept: effectiveDefaults.dept,
       category: effectiveDefaults.category,
+      month: effectiveDefaults.month,
       q: effectiveDefaults.q,
       page: 1,
       density: effectiveDefaults.density,
@@ -439,6 +472,7 @@ export function useTaskUrlSync(
     setTab,
     setDept,
     setCategory,
+    setMonth,
     setSearch,
     setPage,
     setDensity,

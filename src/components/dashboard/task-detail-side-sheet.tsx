@@ -26,7 +26,9 @@ import {
   Link,
   Link2,
   ShieldCheck,
+  ListTodo,
 } from "lucide-react";
+import { DashboardModalContext } from "@/components/dashboard/dashboard-context";
 import {
   type SchoolTask,
   type StaffTask,
@@ -380,6 +382,24 @@ export function TaskDetailSideSheet({
   const [isAddingSubtask, setIsAddingSubtask] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
 
+  let dashboardModal: any = null;
+  try {
+    dashboardModal = React.useContext(DashboardModalContext);
+  } catch {
+    dashboardModal = null;
+  }
+
+  const effectiveOnAddSubTask = React.useCallback(
+    (parentSchoolTaskId: string, prefillTitle?: string) => {
+      if (onAddSubTask) {
+        onAddSubTask(parentSchoolTaskId, prefillTitle);
+      } else if (dashboardModal?.openCreateModal) {
+        dashboardModal.openCreateModal("DON_VI", parentSchoolTaskId, undefined, prefillTitle);
+      }
+    },
+    [onAddSubTask, dashboardModal]
+  );
+
   // Deliverable submission state (for StaffTask)
   const [deliverableName, setDeliverableName] = React.useState("");
   const [deliverableUrl, setDeliverableUrl] = React.useState("");
@@ -625,8 +645,8 @@ export function TaskDetailSideSheet({
     e.preventDefault();
     const trimmedTitle = newSubtaskTitle.trim();
     if (!trimmedTitle || !isSchool) return;
-    if (onAddSubTask) {
-      onAddSubTask(task.id, trimmedTitle);
+    if (effectiveOnAddSubTask) {
+      effectiveOnAddSubTask(task.id, trimmedTitle);
     }
     setIsAddingSubtask(false);
     setNewSubtaskTitle("");
@@ -1539,26 +1559,43 @@ export function TaskDetailSideSheet({
           {/* Subtasks Section (SchoolTask only) */}
           {isSchool && (
             <div className="space-y-3.5">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h3 className="font-sans text-sm font-semibold text-foreground tracking-tight">
-                    Nhiệm vụ thành phần trực thuộc
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-sans text-sm font-semibold text-foreground tracking-tight">
+                      Nhiệm vụ con
+                    </h3>
+                    <Badge variant="outline" className="text-xs font-mono font-semibold">
+                      {task.subTasks.length} việc
+                    </Badge>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Theo dõi tiến độ hoàn thành các nhiệm vụ thành phần
+                    Mỗi việc con có đúng 1 người phụ trách, hạn nộp và trạng thái riêng biệt
                   </p>
                 </div>
-                {onAddSubTask && (
+                {effectiveOnAddSubTask && (
                   <div className="flex items-center gap-1.5">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => onAddSubTask(task.id, newSubtaskTitle.trim() || undefined)}
+                      onClick={() => effectiveOnAddSubTask(task.id, newSubtaskTitle.trim() || undefined)}
                       className="h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg cursor-pointer"
+                      title="Phân rã nhiệm vụ cha qua biểu mẫu"
                     >
                       <Plus className="size-3.5" strokeWidth={1.5} />
                       <span>Phân rã nhiệm vụ</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => effectiveOnAddSubTask(task.id)}
+                      className="h-7 text-xs gap-1 border-border/70 hover:bg-muted font-medium rounded-lg cursor-pointer"
+                      title="Thêm việc con mới"
+                    >
+                      <Plus className="size-3.5" strokeWidth={1.5} />
+                      <span>+ Thêm việc con</span>
                     </Button>
                     <Button
                       type="button"
@@ -1583,7 +1620,7 @@ export function TaskDetailSideSheet({
                     type="text"
                     value={newSubtaskTitle}
                     onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    placeholder="Nhập tên nhiệm vụ thành phần cần phân công..."
+                    placeholder="Nhập tên việc con cần phân công..."
                     className="flex-1 text-xs bg-background border border-border/60 rounded-lg px-2.5 py-1.5 outline-none focus:border-ring focus:ring-1 focus:ring-ring"
                     autoFocus
                   />
@@ -1610,8 +1647,21 @@ export function TaskDetailSideSheet({
               {/* Subtask Clean List */}
               <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden shadow-xs">
                 {task.subTasks.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-muted-foreground">
-                    Chưa có nhiệm vụ thành phần trực thuộc
+                  <div className="py-6 flex flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
+                    <ListTodo className="size-6 text-muted-foreground/50" strokeWidth={1.5} />
+                    <p>Chưa có nhiệm vụ con trực thuộc</p>
+                    {effectiveOnAddSubTask && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => effectiveOnAddSubTask(task.id)}
+                        className="mt-1 h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg cursor-pointer"
+                      >
+                        <Plus className="size-3.5" strokeWidth={1.5} />
+                        <span>Phân rã nhiệm vụ ngay</span>
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   task.subTasks.map((sub) => {
@@ -1637,7 +1687,7 @@ export function TaskDetailSideSheet({
                         }}
                         className="group flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 transition-colors hover:bg-secondary/40 cursor-pointer"
                         role="button"
-                        aria-label={`Chi tiết nhiệm vụ thành phần: ${sub.title}`}
+                        aria-label={`Chi tiết nhiệm vụ con: ${sub.title}`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {subDone ? (
@@ -1661,28 +1711,35 @@ export function TaskDetailSideSheet({
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap pl-6 sm:pl-0">
-                          {/* Single DRI */}
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {/* Single DRI: Đúng 1 người phụ trách */}
+                          <div
+                            className="flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200/80"
+                            title={`Người phụ trách duy nhất: ${sub.assigneeName || "Chưa phân công"}`}
+                          >
                             {sub.assigneeAvatar ? (
                               <img
                                 src={sub.assigneeAvatar}
-                                alt={sub.assigneeName}
+                                alt={sub.assigneeName || "Người phụ trách"}
                                 className="size-4 rounded-full object-cover border border-border/60"
                               />
                             ) : (
                               <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                                {sub.assigneeName ? sub.assigneeName.charAt(0).toUpperCase() : "U"}
+                                {sub.assigneeName ? sub.assigneeName.charAt(0).toUpperCase() : "?"}
                               </div>
                             )}
-                            <span className="truncate max-w-[110px]">{sub.assigneeName}</span>
+                            <span className="truncate max-w-[120px] font-medium text-slate-800">
+                              {sub.assigneeName || "Chưa phân công"}
+                            </span>
                           </div>
 
-                          {/* Due Date */}
-                          {sub.dueDate && (
-                            <span className="text-xs text-muted-foreground font-mono tabular-nums">
-                              {formatDetailDate(sub.dueDate)}
-                            </span>
-                          )}
+                          {/* Due Date: Hạn nộp */}
+                          <div
+                            className="flex items-center gap-1 text-xs text-muted-foreground font-mono tabular-nums bg-muted/40 px-2 py-0.5 rounded border border-border/40"
+                            title="Hạn nộp"
+                          >
+                            <Calendar className="size-3 text-muted-foreground/70" />
+                            <span>{sub.dueDate ? formatDetailDate(sub.dueDate) : "Không hạn"}</span>
+                          </div>
 
                           {/* Progress Percentage */}
                           {typeof sub.progressPercent === "number" && (
@@ -1691,11 +1748,11 @@ export function TaskDetailSideSheet({
                             </span>
                           )}
 
-                          {/* Status Badge */}
+                          {/* Status Badge: Trạng thái */}
                           <Badge
                             variant={subStatus.variant}
                             className={cn(
-                              "text-xs px-2 py-0.5 rounded-md font-medium shrink-0",
+                              "text-xs px-2 py-0.5 rounded-md font-semibold shrink-0",
                               subStatus.className
                             )}
                           >
@@ -1705,6 +1762,20 @@ export function TaskDetailSideSheet({
                       </div>
                     );
                   })
+                )}
+                {task.subTasks.length > 0 && effectiveOnAddSubTask && (
+                  <div className="p-2 bg-muted/20 border-t border-border/40 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => effectiveOnAddSubTask(task.id)}
+                      className="h-7 text-xs gap-1 text-primary hover:bg-primary/10 font-semibold rounded-lg cursor-pointer"
+                    >
+                      <Plus className="size-3.5" strokeWidth={1.5} />
+                      <span>+ Thêm việc con</span>
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>

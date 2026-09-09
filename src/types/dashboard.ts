@@ -19,6 +19,8 @@ export type TaskCategory =
   | 'BAO_CAO'
   | 'KHAC';
 
+export type TaskPriority = 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW' | 'MEDIUM';
+
 export type AIRiskStatus = 'CLEAN' | 'NEEDS_ATTENTION' | 'HIGH_RISK';
 export type AISuggestedAction = 'QUICK_APPROVE' | 'REQUEST_CHANGES' | 'MANUAL_INSPECT';
 export type TriageStatus = 'NONE' | 'PENDING_TRIAGE' | 'ACCEPTED' | 'REJECTED';
@@ -56,13 +58,28 @@ export interface DeliverableItem {
   submittedAt?: string;
 }
 
+export interface Deliverable {
+  id: string;
+  taskId?: string;
+  title: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVISION_REQUIRED' | string;
+  dueDate?: string | null;
+  submittedAt?: string | null;
+  verifiedAt?: string | null;
+  fileUrl?: string;
+}
+
 export interface StaffTask {
   id: string;
+  taskId?: string;
   code?: string;
   title: string;
   assigneeName: string;
   assigneeId?: string;
   assigneeAvatar?: string;
+  assignedToDepartmentId?: string;
+  assignedToDepartmentName?: string;
+  createdAt?: string;
   status: TaskStatus;
   dueDate: string;
   internalDueDate?: string;
@@ -79,6 +96,7 @@ export interface StaffTask {
   updatedAt: string;
   deliverables?: DeliverableItem[];
   deliverableDescription?: string;
+  weight?: number;
   vtvlRole?: string;
   blockedReason?: string;
   rejectionReason?: string;
@@ -141,6 +159,7 @@ export interface SchoolTask {
   department?: string;
   departmentCode?: string;
   departmentId?: string;
+  departmentName?: string;
   assignedTo?: string;
   leadAssigneeName: string;
   leadAssigneeId?: string;
@@ -176,6 +195,10 @@ export interface SchoolTask {
     submittedAt: string;
     reportUrl?: string;
   };
+  deliverables?: Deliverable[];
+  assignees?: any[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export function isSchoolTask(task: unknown): task is SchoolTask {

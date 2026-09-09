@@ -72,7 +72,7 @@ describe("AdaptiveMetricStrip Component", () => {
       })
     );
 
-    assert.ok(html.includes("Tiến độ khoa"), "Shows faculty progress");
+    assert.ok(html.includes("Tiến độ đơn vị") || html.includes("Tiến độ khoa"), "Shows faculty progress");
     assert.ok(html.includes("Quá hạn đơn vị"), "Shows unit overdue indicator");
     assert.ok(html.includes("Chờ phân công/duyệt"), "Shows unit triage indicator");
     assert.ok(html.includes("Đã nghiệm thu"), "Shows acceptance metric indicator");
@@ -128,5 +128,25 @@ describe("AdaptiveMetricStrip Component", () => {
 
     assert.ok(html.includes("Tiến độ đúng hạn"), "Shows on-schedule state when 0 overdue");
     assert.ok(html.includes("text-muted-foreground"), "Uses muted style when no pending items");
+  });
+
+  test("a11y aria-label and selectable number typography", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveMetricStrip, {
+        metrics: {
+          totalTasks: 15,
+          urgentOverdueCount: 1,
+          waitingApprovalCount: 2,
+          completedRate: undefined as unknown as number,
+          labelScope: "Khoa CNTT",
+        },
+        scope: "school",
+      })
+    );
+
+    assert.ok(html.includes('role="region"'), "Card should have role=region when not interactive");
+    assert.ok(html.includes('aria-label="'), "Must provide accessible aria-label on cards");
+    assert.ok(html.includes("0%"), "Falls back to 0% when completedRate is undefined");
+    assert.ok(html.includes("select-text"), "Number must be selectable for copy-pasting");
   });
 });

@@ -14,11 +14,11 @@ describe("Client Auth Context & Login Contract", () => {
     assert.match(content, /\/api\/auth\/me/, "Must call /api/auth/me to sync persistent session");
   });
 
-  test("src/app/login/page.tsx calls real login endpoint", () => {
+  test("src/app/login/page.tsx renders Google Workspace SSO authentication", () => {
     const content = fs.readFileSync(
       path.resolve(process.cwd(), "src/app/login/page.tsx"),
       "utf-8"
     );
-    assert.match(content, /await login\(/, "Must call login with real credentials");
+    assert.match(content, /<GoogleLoginButton/, "Must integrate GoogleLoginButton component");
   });
 });

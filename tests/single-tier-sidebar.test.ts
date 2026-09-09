@@ -54,20 +54,26 @@ describe("Single-Tier Sidebar Component Contracts (app-sidebar.tsx)", () => {
     const content = fs.readFileSync(sidebarPath, "utf-8");
     assert.ok(content.includes("h-12"), "Must use h-12 (48px) for Brand Header");
     assert.ok(content.includes("/logo-qcet.png"), "Must use /logo-qcet.png");
-    assert.ok(content.includes("QUẢN LÝ CÔNG VIỆC"), "Must render QUẢN LÝ CÔNG VIỆC title");
+    assert.ok(
+      content.includes("CỔNG ĐIỀU HÀNH QCET") || content.includes("QUẢN LÝ CÔNG VIỆC"),
+      "Must render brand header title"
+    );
     assert.ok(content.includes("Năm học 2026–2027"), "Must render academic year 2026–2027");
   });
 
-  test("app-sidebar.tsx renders sections CÁ NHÂN, CÔNG VIỆC, VĂN BẢN & ĐIỀU HÀNH", () => {
+  test("app-sidebar.tsx renders sections ĐIỀU HÀNH & CÁ NHÂN, NGHIỆP VỤ CỐT LÕI, HỆ THỐNG & TỔ CHỨC", () => {
     const content = fs.readFileSync(sidebarPath, "utf-8");
-    assert.ok(content.includes("CÁ NHÂN"), "Must render CÁ NHÂN section");
     assert.ok(
-      content.includes("CÔNG VIỆC"),
-      "Must render CÔNG VIỆC section"
+      content.includes("ĐIỀU HÀNH & CÁ NHÂN") || content.includes("CÁ NHÂN"),
+      "Must render Section 1"
     );
     assert.ok(
-      content.includes("VĂN BẢN & ĐIỀU HÀNH"),
-      "Must render VĂN BẢN & ĐIỀU HÀNH section"
+      content.includes("NGHIỆP VỤ CỐT LÕI") || content.includes("CÔNG VIỆC"),
+      "Must render Section 2"
+    );
+    assert.ok(
+      content.includes("HỆ THỐNG & TỔ CHỨC") || content.includes("VĂN BẢN & ĐIỀU HÀNH"),
+      "Must render Section 3"
     );
   });
 

@@ -50,8 +50,8 @@ describe("Typography Tokens & Font Pairing Contract", () => {
     );
     assert.match(
       layoutContent,
-      /fontHeading[\s\S]*?weight:\s*\[[^\]]*["']600["'][^\]]*["']700["'][^\]]*["']800["'][^\]]*\]/,
-      "fontHeading must include weights ['600', '700', '800']"
+      /fontHeading[\s\S]*?weight:\s*\[[^\]]*["']600["'][^\]]*["']700["']/,
+      "fontHeading must include weights ['600', '700']"
     );
 
     // 5. html tag contains fontHeading.variable

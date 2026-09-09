@@ -285,6 +285,8 @@ function TasksExpandedViewsComponent() {
         {viewMode === "table" && (
           <CascadingTaskTable
             tasks={filteredTasks}
+            scope={scope}
+            defaultExpanded={scope === "MY_TASKS"}
             onSelectTask={(task) => openTaskDetail(task)}
             onAddTask={() => openCreateModal("TRUONG")}
             onStatusChange={handleStatusChange}
