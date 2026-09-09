@@ -20,31 +20,9 @@ import {
 } from "@/components/dashboard/dashboard-context";
 import type { SchoolTask } from "@/types/dashboard";
 
-export function filterDashboardReactiveTasks(
-  tasks: SchoolTask[],
-  activeWorkbox: string,
-  selectedDepartment: string,
-  user?: { id?: string } | null
-): SchoolTask[] {
-  return tasks.filter((t) => {
-    if (selectedDepartment && selectedDepartment !== "ALL") {
-      const d = t.departmentId || t.leadDepartmentId || t.departmentCode || (t as any).department;
-      if (d !== selectedDepartment) return false;
-    }
-    if (activeWorkbox === "MY_ACTION") {
-      return Boolean(user?.id && (t.leadAssigneeId === user.id || (t as any).assigneeIds?.includes(user.id) || t.subTasks?.some((s) => s.assigneeId === user.id)));
-    }
-    if (activeWorkbox === "URGENT_OVERDUE") {
-      return (t as any).priority === "URGENT" || (t as any).status === "OVERDUE";
-    }
-    if (activeWorkbox === "COMPLETED") return t.status === "COMPLETED";
-    return true;
-  });
-}
-
 function DashboardZoneComponent() {
   const {
-    tasks, monthScopedBaseTasks, user, displayedStats, activeWorkbox,
+    tasks, monthScopedBaseTasks, filteredTasks, user, displayedStats, activeWorkbox,
     isExecutive, executiveStats, executiveFilter, executiveActionItems, departmentHealth,
     selectedDepartment, selectedAcademicMonth, selectedMonthPeriod,
     priorOverdueBacklog, roleUpcoming, activities, isRefreshing,
@@ -57,10 +35,7 @@ function DashboardZoneComponent() {
   const { openTaskDetail, openCreateModal } = useDashboardModal();
 
   const baseTasks = monthScopedBaseTasks ?? tasks;
-  const reactiveTasks = React.useMemo(
-    () => filterDashboardReactiveTasks(baseTasks, activeWorkbox, selectedDepartment, user),
-    [baseTasks, activeWorkbox, selectedDepartment, user]
-  );
+  const reactiveTasks = filteredTasks;
 
   return (
     <div className="space-y-6" data-slot="zone-dashboard">

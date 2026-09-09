@@ -359,9 +359,10 @@ export function computeMonthlyTaskCounts(
 }
 
 export interface FilterTasksHubOptions {
-  tasks: SchoolTask[];
-  scope: TaskScope;
+  tasks?: SchoolTask[];
+  scope?: TaskScope;
   workboxFilter?: WorkboxFilter;
+  workbox?: WorkboxFilter;
   category?: string; // "ALL" or TaskCategory
   priority?: string; // "ALL" | "URGENT" | "HIGH" | "NORMAL"
   department?: string; // "ALL" or department code
@@ -375,19 +376,31 @@ export interface FilterTasksHubOptions {
 /**
  * Orchestrates multi-dimensional filtering across scope, workbox, category, department, priority, and search.
  */
-export function filterTasksHub({
-  tasks,
-  scope,
-  workboxFilter = "ALL",
-  category = "ALL",
-  priority = "ALL",
-  department = "ALL",
-  searchQuery = "",
-  user,
-  referenceDate = TODAY_ISO,
-  academicMonth = "ALL",
-  academicYear = "2026-2027",
-}: FilterTasksHubOptions): SchoolTask[] {
+export function filterTasksHub(
+  optionsOrTasks: FilterTasksHubOptions | SchoolTask[],
+  legacyOptions?: Partial<FilterTasksHubOptions> & { workbox?: WorkboxFilter }
+): SchoolTask[] {
+  let tasks: SchoolTask[];
+  let opts: Partial<FilterTasksHubOptions> & { workbox?: WorkboxFilter };
+
+  if (Array.isArray(optionsOrTasks)) {
+    tasks = optionsOrTasks;
+    opts = legacyOptions || {};
+  } else {
+    tasks = optionsOrTasks.tasks || [];
+    opts = optionsOrTasks;
+  }
+
+  const scope = opts.scope ?? "SCHOOL_TASKS";
+  const workboxFilter = opts.workboxFilter ?? opts.workbox ?? "ALL";
+  const category = opts.category ?? "ALL";
+  const priority = opts.priority ?? "ALL";
+  const department = opts.department ?? "ALL";
+  const searchQuery = opts.searchQuery ?? "";
+  const user = opts.user;
+  const referenceDate = opts.referenceDate ?? TODAY_ISO;
+  const academicMonth = opts.academicMonth ?? "ALL";
+  const academicYear = opts.academicYear ?? "2026-2027";
   // 1. Filter by Scope
   let result = filterTasksByScope(tasks, scope, user, department);
 
