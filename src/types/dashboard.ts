@@ -48,6 +48,7 @@ export interface DeliverableItem {
 
 export interface StaffTask {
   id: string;
+  code?: string;
   title: string;
   assigneeName: string;
   assigneeId?: string;
@@ -55,7 +56,10 @@ export interface StaffTask {
   status: TaskStatus;
   dueDate: string;
   internalDueDate?: string;
-  parentSchoolTaskId: string;
+  parentSchoolTaskId?: string;
+  parentSchoolTaskTitle?: string;
+  parentSchoolTaskCode?: string;
+  parentTaskScope?: string;
   updatedAt: string;
   deliverables?: DeliverableItem[];
   deliverableDescription?: string;
@@ -79,6 +83,12 @@ export interface StaffTask {
     avatarUrl?: string;
     role?: string;
   }[];
+  coAssignees?: {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+    role?: string;
+  }[];
   subItems?: {
     id: string;
     title: string;
@@ -87,6 +97,7 @@ export interface StaffTask {
     dueDate?: string;
     status: TaskStatus;
   }[];
+  progressPercent?: number;
 }
 
 export type TaskOrigin = 'SCHOOL' | 'SELF_INITIATED';
@@ -94,6 +105,7 @@ export type TaskOrigin = 'SCHOOL' | 'SELF_INITIATED';
 export interface SchoolTask {
   id: string;
   taskCode?: string;
+  code?: string;
   title: string;
   category: TaskCategory;
   categoryLabel: string;
@@ -105,6 +117,7 @@ export interface SchoolTask {
   leadDepartmentId?: string;
   department?: string;
   departmentCode?: string;
+  departmentId?: string;
   assignedTo?: string;
   coAssignees: string[];
   coDepartments?: string[];
@@ -118,6 +131,24 @@ export interface SchoolTask {
   progressPercent: number;
   executiveCriteria?: string;
   origin?: TaskOrigin;
+  vtvlRole?: string;
+  parentTaskId?: string;
+  parentTaskTitle?: string;
+  parentTaskCode?: string;
+  parentTask?: {
+    id: string;
+    code: string;
+    title: string;
+    scope?: string;
+  };
+  dacumTaskDefId?: string;
+  dacumTaskDef?: {
+    id: string;
+    code: string;
+    title: string;
+    standardHours?: number;
+    dutyTitle?: string;
+  };
   completionReport?: {
     summary: string;
     submittedBy: string;

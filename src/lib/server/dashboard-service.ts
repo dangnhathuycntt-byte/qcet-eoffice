@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import type { DashboardPayload, SchoolTask, StaffTask, DashboardStats } from "@/types/dashboard";
+import type {
+  DashboardPayload,
+  SchoolTask,
+  StaffTask,
+  DashboardStats,
+  UpcomingItem,
+  ActivityEvent,
+} from "@/types/dashboard";
 import type { DepartmentHealthSummary } from "@/lib/executive-matrix-aggregator";
 import { TaskScope, TaskStatus } from "@prisma/client";
 
@@ -26,6 +33,9 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       assignees: { include: { user: true } },
       deliverables: true,
       resolutions: true,
+      parentTask: {
+        select: { id: true, code: true, title: true, scope: true },
+      },
       subTasks: {
         include: {
           department: true,
@@ -47,15 +57,34 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
 
     const subTasks: StaffTask[] = (t.subTasks || []).map((sub) => {
       const subOwner = sub.assignees.find((a) => a.roleInTask === "PRIMARY_OWNER");
+      const subCollaborators = (sub.assignees || [])
+        .filter((a) => a.roleInTask !== "PRIMARY_OWNER")
+        .map((a) => ({
+          id: a.user?.id || a.userId,
+          name: a.user?.name || "",
+          avatarUrl: a.user?.avatarUrl || undefined,
+          role: "COLLABORATOR",
+        }))
+        .filter((c) => c.name);
+
       return {
         id: sub.id,
+        code: sub.code,
         title: sub.title,
         assigneeName: subOwner?.user?.name || "Chưa phân công",
+        assigneeId: subOwner?.user?.id || subOwner?.userId,
+        assigneeAvatar: subOwner?.user?.avatarUrl || undefined,
+        assignedTo: subOwner?.user?.name || "Chưa phân công",
         status: sub.status as any,
         dueDate: sub.dueDate.toISOString().split("T")[0],
         internalDueDate: sub.dueDate.toISOString().split("T")[0],
         deliverableDescription: sub.description || "",
         parentSchoolTaskId: t.id,
+        parentSchoolTaskTitle: t.title,
+        parentSchoolTaskCode: t.code,
+        parentTaskScope: t.scope,
+        collaborators: subCollaborators,
+        coAssignees: subCollaborators,
         departmentCode: sub.department?.id || undefined,
         departmentId: sub.department?.id || undefined,
         deliverables: (sub.deliverables || []).map((d) => ({
@@ -66,27 +95,51 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
           submittedAt: d.createdAt.toISOString().split("T")[0],
         })),
         updatedAt: sub.updatedAt.toISOString().split("T")[0],
+        progressPercent: sub.progressPercent ?? 0,
       };
     });
 
+    const totalSub = subTasks.length;
+    const completedSub = subTasks.filter((s) => s.status === "COMPLETED").length;
+    const rolledUpProgress = totalSub > 0
+      ? Math.round(
+          subTasks.reduce((acc, s) => {
+            const p = (s as any).progressPercent ?? (s.status === "COMPLETED" ? 100 : 0);
+            return acc + p;
+          }, 0) / totalSub
+        )
+      : 0;
+    const progressPercent = t.progressPercent > 0 ? t.progressPercent : rolledUpProgress;
+
     return {
       id: t.id,
+      code: t.code,
+      taskCode: t.code,
       title: t.title,
       category: (t.scope === "SCHOOL" ? "Chỉ đạo cấp Trường" : "Chuyên môn") as any,
       categoryLabel: t.scope === "SCHOOL" ? "Chỉ đạo cấp Trường" : "Chuyên môn",
       leadAssigneeName: leadAssignee?.user?.name || "Chưa phân công",
+      leadAssigneeId: leadAssignee?.user?.id || leadAssignee?.userId,
       leadAssigneeAvatar: leadAssignee?.user?.avatarUrl || undefined,
+      assignedTo: leadAssignee?.user?.name || "Chưa phân công",
       leadDepartment: t.department?.name,
       leadDepartmentCode: t.department?.id,
       leadDepartmentId: t.department?.id,
+      department: t.department?.name,
+      departmentCode: t.department?.id,
+      departmentId: t.department?.id,
       coAssignees,
       assignedDate: t.startDate.toISOString().split("T")[0],
       dueDate: t.dueDate.toISOString().split("T")[0],
       status: t.status as any,
       subTasks,
-      totalSubTasks: subTasks.length,
-      completedSubTasks: subTasks.filter((s) => s.status === "COMPLETED").length,
-      progressPercent: t.progressPercent,
+      totalSubTasks: totalSub,
+      completedSubTasks: completedSub,
+      progressPercent,
+      parentTaskId: t.parentTaskId || (t as any).parentTask?.id || undefined,
+      parentTaskTitle: (t as any).parentTask?.title || undefined,
+      parentTaskCode: (t as any).parentTask?.code || undefined,
+      parentTask: (t as any).parentTask || undefined,
     };
   });
 
@@ -153,13 +206,84 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     };
   });
 
+  // Tổng hợp Upcoming Items (Hạn chót sắp đến & Quá hạn từ nhiệm vụ cấp trường và đơn vị)
+  const referenceDateStr = "2026-09-09";
+  const upcomingItems: UpcomingItem[] = [];
+
+  for (const t of mappedTasks) {
+    if (t.status !== "COMPLETED") {
+      upcomingItems.push({
+        id: `upcoming-school-${t.id}`,
+        taskId: t.id,
+        title: t.title,
+        dueDate: t.dueDate,
+        assigneeName: t.leadAssigneeName,
+        assigneeAvatar: t.leadAssigneeAvatar,
+        level: "Trường",
+        category: t.category,
+        isOverdue: t.dueDate < referenceDateStr,
+      });
+    }
+
+    for (const sub of t.subTasks || []) {
+      if (sub.status !== "COMPLETED") {
+        upcomingItems.push({
+          id: `upcoming-sub-${sub.id}`,
+          taskId: sub.id,
+          title: sub.title,
+          dueDate: sub.dueDate,
+          assigneeName: sub.assigneeName,
+          level: "Đơn vị",
+          category: t.category,
+          isOverdue: sub.dueDate < referenceDateStr,
+        });
+      }
+    }
+  }
+
+  // Sắp xếp theo thứ tự hạn chót tăng dần (quá hạn và cận hạn lên trước)
+  upcomingItems.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const upcoming = mappedTasks.length > 0 ? upcomingItems.slice(0, 20) : [];
+
+  // Tổng hợp Activity Events từ thông báo hệ thống và tác vụ gần nhất (khi có tasks)
+  let activities: ActivityEvent[] = [];
+  if (mappedTasks.length > 0) {
+    const recentNotifications = await prisma.notification.findMany({
+      take: 15,
+      orderBy: { createdAt: "desc" },
+      include: { user: true },
+    });
+
+    activities = recentNotifications.map((n) => {
+      let action = "cập nhật trạng thái";
+      if (n.type === "assigned" || n.title.includes("GIAO VIỆC")) {
+        action = "đã phân công nhiệm vụ";
+      } else if (n.type === "directive" || n.title.includes("CHỈ ĐẠO")) {
+        action = "đã ban hành ý kiến chỉ đạo";
+      } else if (n.title.includes("hoàn thành")) {
+        action = "đã hoàn thành nhiệm vụ";
+      } else if (n.title.includes("minh chứng") || n.title.includes("sản phẩm")) {
+        action = "đã nộp minh chứng cho";
+      }
+
+      return {
+        id: `act-notif-${n.id}`,
+        actorName: n.actorName || n.user?.name || "Lãnh đạo QCET",
+        action,
+        targetTitle: n.title.replace(/^\[.*?\]\s*/, ""),
+        timestamp: n.createdAt.toISOString(),
+        category: n.category === "resolution" ? "CHUYEN_DOI_SO" : "CNTT",
+      };
+    });
+  }
+
   return {
     source: "database",
     tasks: mappedTasks,
     stats,
     departmentHealth,
-    upcoming: [],
-    activities: [],
+    upcoming,
+    activities,
     syncTimestamp: new Date().toISOString(),
   };
 }
