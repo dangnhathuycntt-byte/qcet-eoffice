@@ -12,17 +12,12 @@ const TaskDetailSideSheet = dynamic(
   () => import("@/components/dashboard/task-detail-side-sheet").then((m) => m.TaskDetailSideSheet),
   { ssr: false }
 );
-
 const CreateTaskModal = dynamic(
   () => import("@/components/dashboard/create-task-modal").then((m) => m.CreateTaskModal),
   { ssr: false }
 );
-
 const DelegationManagementModal = dynamic(
-  () =>
-    import("@/components/dashboard/delegation-management-modal").then(
-      (m) => m.DelegationManagementModal
-    ),
+  () => import("@/components/dashboard/delegation-management-modal").then((m) => m.DelegationManagementModal),
   { ssr: false }
 );
 
@@ -35,34 +30,52 @@ function DashboardModalsHostComponent() {
     initialAssigneeName,
     isDelegationModalOpen,
     delegationDeptCode,
+    openTaskDetail,
+    openCreateModal,
     closeTaskDetail,
     closeCreateModal,
     closeDelegationModal,
   } = useDashboardModal();
 
   const { tasks, parentSchoolTaskTitle, delegations } = useDashboardData();
-  const {
-    handleStatusChange,
-    handleCreateTask,
-    handleSaveDelegation,
-    handleRevokeDelegation,
-  } = useDashboardActions();
+  const { handleStatusChange, handleCreateTask, handleSaveDelegation, handleRevokeDelegation } =
+    useDashboardActions();
+
+  const parentTaskForCreate = React.useMemo(() => {
+    return initialParentTaskId ? tasks.find((t) => t.id === initialParentTaskId) : undefined;
+  }, [initialParentTaskId, tasks]);
+
+  const handleSelectSubTask = React.useCallback(
+    (subTaskOrId: Parameters<NonNullable<React.ComponentProps<typeof TaskDetailSideSheet>["onSelectSubTask"]>>[0]) => {
+      if (typeof subTaskOrId === "string") {
+        const foundSchool = tasks.find((t) => t.id === subTaskOrId);
+        if (foundSchool) return openTaskDetail(foundSchool);
+        for (const t of tasks) {
+          const sub = t.subTasks?.find((s) => s.id === subTaskOrId);
+          if (sub) return openTaskDetail(sub);
+        }
+      } else if (subTaskOrId) {
+        openTaskDetail(subTaskOrId);
+      }
+    },
+    [tasks, openTaskDetail]
+  );
 
   return (
     <div data-slot="dashboard-modals-host">
-      {/* TaskDetailSideSheet Slide-Over (only rendered when task is active) */}
       {selectedTask && (
         <TaskDetailSideSheet
           task={selectedTask}
           isOpen={!!selectedTask}
           onClose={closeTaskDetail}
           onStatusChange={handleStatusChange}
+          onAddSubTask={(parentId) => openCreateModal("DON_VI", parentId)}
+          onSelectSubTask={handleSelectSubTask}
           parentSchoolTaskTitle={parentSchoolTaskTitle}
           delegations={delegations}
         />
       )}
 
-      {/* CreateTaskModal for School-level & Unit-level task creation (rendered on-demand) */}
       {isCreateModalOpen && (
         <CreateTaskModal
           isOpen={isCreateModalOpen}
@@ -72,10 +85,11 @@ function DashboardModalsHostComponent() {
           schoolTasks={tasks}
           initialLevel={initialTaskLevel}
           initialParentTaskId={initialParentTaskId}
+          initialParentTaskTitle={parentTaskForCreate?.title}
+          initialParentTaskDueDate={parentTaskForCreate?.dueDate}
         />
       )}
 
-      {/* DelegationManagementModal for Stanford Authority Delegation (rendered on-demand) */}
       {isDelegationModalOpen && (
         <DelegationManagementModal
           isOpen={isDelegationModalOpen}

@@ -585,6 +585,27 @@ export default function UnitTasksPage() {
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         onStatusChange={handleStatusChange}
+        onAddSubTask={(parentId) => {
+          openCreateModal("DON_VI", parentId);
+        }}
+        onSelectSubTask={(subTaskOrId) => {
+          if (typeof subTaskOrId === "string") {
+            const foundSchool = visibleTasks.find((t) => t.id === subTaskOrId);
+            if (foundSchool) {
+              setSelectedTask(foundSchool);
+              return;
+            }
+            for (const t of visibleTasks) {
+              const sub = t.subTasks?.find((s) => s.id === subTaskOrId);
+              if (sub) {
+                setSelectedTask(sub);
+                return;
+              }
+            }
+          } else {
+            setSelectedTask(subTaskOrId);
+          }
+        }}
         parentSchoolTaskTitle={parentSchoolTaskTitle}
       />
 
@@ -596,6 +617,16 @@ export default function UnitTasksPage() {
         schoolTasks={visibleTasks}
         initialLevel={createInitialLevel}
         initialParentTaskId={createInitialParentId}
+        initialParentTaskTitle={
+          createInitialParentId
+            ? visibleTasks.find((t) => t.id === createInitialParentId)?.title
+            : undefined
+        }
+        initialParentTaskDueDate={
+          createInitialParentId
+            ? visibleTasks.find((t) => t.id === createInitialParentId)?.dueDate
+            : undefined
+        }
       />
     </div>
   );

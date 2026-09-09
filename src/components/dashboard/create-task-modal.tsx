@@ -143,10 +143,60 @@ export function canRoleSelectAssignee(
   };
 }
 
+export function formatDetailDateDisplay(dateStr?: string): string {
+  if (!dateStr) return "";
+  try {
+    const clean = dateStr.split("T")[0];
+    const parts = clean.split("-");
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+}
+
+export function validateSubtaskDueDate(
+  parentDueDate: string,
+  subtaskDueDate: string
+): boolean {
+  if (!parentDueDate || !subtaskDueDate) return true;
+  const parentTime = new Date(parentDueDate).getTime();
+  const subtaskTime = new Date(subtaskDueDate).getTime();
+  if (Number.isNaN(parentTime) || Number.isNaN(subtaskTime)) return false;
+  return subtaskTime <= parentTime;
+}
+
+export function validateSubtaskAssignment(
+  leadAssigneeId: string,
+  collaboratorIds: string[] = []
+): { valid: boolean; error?: string } {
+  if (!leadAssigneeId || leadAssigneeId.trim().length === 0) {
+    return {
+      valid: false,
+      error: "Nhiệm vụ bắt buộc phải có đúng 1 Người phụ trách chính (Single DRI).",
+    };
+  }
+  const trimmedLead = leadAssigneeId.trim().toLowerCase();
+  const hasDuplicate = collaboratorIds.some(
+    (cId) => cId && cId.trim().toLowerCase() === trimmedLead
+  );
+  if (hasDuplicate) {
+    return {
+      valid: false,
+      error: "Người phụ trách chính không thể đồng thời là cán bộ phối hợp thực hiện.",
+    };
+  }
+  return { valid: true };
+}
+
 export function validateTaskForm(
   data: CreateTaskFormData,
   parentSchoolTask?: SchoolTask,
-  currentUser?: AuthUser
+  currentUser?: AuthUser,
+  explicitParentDueDate?: string
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!data.title || data.title.trim().length === 0) {
@@ -171,6 +221,15 @@ export function validateTaskForm(
       }
     }
   }
+
+  // Single DRI & collaborator validation
+  if (data.leadAssigneeName && data.coAssignees && data.coAssignees.length > 0) {
+    const assignCheck = validateSubtaskAssignment(data.leadAssigneeName, data.coAssignees);
+    if (!assignCheck.valid && assignCheck.error) {
+      errors.coAssignees = assignCheck.error;
+    }
+  }
+
   if (!data.dueDate || data.dueDate.trim().length === 0) {
     errors.dueDate = "Vui lòng chọn hạn hoàn thành";
   }
@@ -188,20 +247,18 @@ export function validateTaskForm(
         "Hạn chót nội bộ cấp 1 không được muộn hơn hạn chót hoàn thành của nhiệm vụ.";
     }
   }
-  if (parentSchoolTask && parentSchoolTask.dueDate) {
+
+  const effectiveParentDueDate = explicitParentDueDate || parentSchoolTask?.dueDate;
+  if (effectiveParentDueDate) {
+    const formattedDate = formatDetailDateDisplay(effectiveParentDueDate);
     if (data.internalDueDate) {
-      const internalCheck = validateDueDate(
-        data.internalDueDate,
-        parentSchoolTask.dueDate
-      );
-      if (!internalCheck.valid && internalCheck.error) {
-        errors.internalDueDate = internalCheck.error;
+      if (!validateSubtaskDueDate(effectiveParentDueDate, data.internalDueDate)) {
+        errors.internalDueDate = `Hạn chót nội bộ không được muộn hơn hạn chót nhiệm vụ cha (${formattedDate}) (không được vượt quá hạn chót của Nhiệm vụ cấp Trường).`;
       }
     }
     if (data.dueDate) {
-      const dueCheck = validateDueDate(data.dueDate, parentSchoolTask.dueDate);
-      if (!dueCheck.valid && dueCheck.error) {
-        errors.dueDate = dueCheck.error;
+      if (!validateSubtaskDueDate(effectiveParentDueDate, data.dueDate)) {
+        errors.dueDate = `Hạn chót của nhiệm vụ con không được muộn hơn hạn chót nhiệm vụ cha (${formattedDate}) (không được vượt quá hạn chót của Nhiệm vụ cấp Trường).`;
       }
     }
   }
@@ -216,6 +273,8 @@ export interface CreateTaskModalProps {
   schoolTasks?: SchoolTask[];
   initialLevel?: TaskLevel;
   initialParentTaskId?: string;
+  initialParentTaskTitle?: string;
+  initialParentTaskDueDate?: string;
   initialDueDate?: string;
   initialLeadAssigneeName?: string;
 }
@@ -228,6 +287,8 @@ export function CreateTaskModal({
   schoolTasks = [],
   initialLevel = "TRUONG",
   initialParentTaskId,
+  initialParentTaskTitle,
+  initialParentTaskDueDate,
   initialDueDate,
   initialLeadAssigneeName,
 }: CreateTaskModalProps) {
@@ -235,14 +296,15 @@ export function CreateTaskModal({
   const allowedLevels = getAllowedTaskLevelsForRole(user?.role ?? "ADMIN");
   const isStaff = user?.role === "STAFF";
   const isManager = user?.role === "MANAGER";
+  const isSubtaskMode = Boolean(initialParentTaskId);
 
   const getEffectiveLevel = React.useCallback(
     (requestedLevel: TaskLevel): TaskLevel => {
-      if (isManager || isStaff) return "DON_VI";
+      if (initialParentTaskId || isManager || isStaff) return "DON_VI";
       if (allowedLevels.includes(requestedLevel)) return requestedLevel;
       return getDefaultTaskLevelForRole(user?.role ?? "ADMIN");
     },
-    [isManager, isStaff, allowedLevels, user?.role]
+    [initialParentTaskId, isManager, isStaff, allowedLevels, user?.role]
   );
 
   const [formData, setFormData] = React.useState<CreateTaskFormData>(() => ({
@@ -397,13 +459,16 @@ export function CreateTaskModal({
 
   // Sync state on open
   const prevIsOpen = React.useRef(false);
+  const parentTask = React.useMemo(() => {
+    return schoolTasks.find((t) => t.id === (formData.parentTaskId || initialParentTaskId));
+  }, [schoolTasks, formData.parentTaskId, initialParentTaskId]);
+
+  const effectiveParentTitle = initialParentTaskTitle || parentTask?.title;
+  const effectiveParentDueDate = initialParentTaskDueDate || parentTask?.dueDate;
+
   React.useEffect(() => {
     if (isOpen && !prevIsOpen.current) {
-      const effectiveLevel = isManager || isStaff
-        ? "DON_VI"
-        : allowedLevels.includes(initialLevel)
-        ? initialLevel
-        : getDefaultTaskLevelForRole(user?.role ?? "ADMIN");
+      const effectiveLevel = getEffectiveLevel(initialLevel);
 
       setFormData({
         ...getInitialTaskFormData(effectiveLevel),
@@ -418,7 +483,7 @@ export function CreateTaskModal({
       setTimeout(() => titleInputRef.current?.focus(), 80);
     }
     prevIsOpen.current = isOpen;
-  }, [isOpen, initialLevel, initialParentTaskId, initialDueDate, initialLeadAssigneeName, isManager, isStaff, allowedLevels, user?.role, user?.name, user?.roleLabel]);
+  }, [isOpen, initialLevel, initialParentTaskId, initialDueDate, initialLeadAssigneeName, isStaff, getEffectiveLevel, user?.name, user?.roleLabel]);
 
   // Body scroll lock when drawer is open
   React.useEffect(() => {
@@ -451,8 +516,12 @@ export function CreateTaskModal({
     if (e) e.preventDefault();
     if (allowedLevels.length === 0 || isExternalDeptBlocked) return;
 
-    const parentTask = schoolTasks.find((t) => t.id === formData.parentTaskId);
-    const validationErrors = validateTaskForm(formData, parentTask, user || undefined);
+    const validationErrors = validateTaskForm(
+      formData,
+      parentTask,
+      user || undefined,
+      effectiveParentDueDate
+    );
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -480,8 +549,15 @@ export function CreateTaskModal({
       targetDeptCode !== undefined &&
       targetDeptCode !== "BGH";
 
+    const cleanCollaborators = (formData.coAssignees || []).filter(
+      (name) => name && name.trim().toLowerCase() !== formData.leadAssigneeName.trim().toLowerCase()
+    );
+
     onSubmit({
       ...formData,
+      parentTaskId: formData.parentTaskId || initialParentTaskId,
+      leadAssigneeName: formData.leadAssigneeName,
+      coAssignees: cleanCollaborators,
       isBypassWarning: formData.isBypassWarning || isAdminBypass,
     });
     onClose();
@@ -496,6 +572,12 @@ export function CreateTaskModal({
     } else {
       base.setDate(base.getDate() + days);
       dateStr = base.toISOString().split("T")[0];
+    }
+    if (effectiveParentDueDate) {
+      const pDate = effectiveParentDueDate.split("T")[0];
+      if (dateStr > pDate) {
+        dateStr = pDate;
+      }
     }
     setFormData((prev) => ({ ...prev, dueDate: dateStr }));
     if (errors.dueDate) {
@@ -562,9 +644,14 @@ export function CreateTaskModal({
             </div>
           </div>
 
-          {/* Right: Level Switcher Pill (BGH only) or Close */}
+          {/* Right: Level Switcher Pill (BGH only) or Subtask locked badge or Close */}
           <div className="flex items-center gap-2">
-            {!isManager && !isStaff && (
+            {isSubtaskMode ? (
+              <div className="inline-flex items-center gap-1.5 rounded-lg bg-muted/80 px-2.5 py-1 border border-border/60 text-xs font-semibold text-primary">
+                <Users className="size-3 text-primary" strokeWidth={1.5} />
+                <span>Nhiệm vụ con (Cấp Đơn vị)</span>
+              </div>
+            ) : !isManager && !isStaff ? (
               <div className="inline-flex rounded-lg bg-muted/70 p-0.5 border border-border/60 text-xs">
                 <button
                   type="button"
@@ -593,7 +680,7 @@ export function CreateTaskModal({
                   Cấp Đơn vị
                 </button>
               </div>
-            )}
+            ) : null}
 
             <button
               type="button"
@@ -610,6 +697,31 @@ export function CreateTaskModal({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Scrollable Form Body */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 thin-scrollbar">
+            {/* Informational Subtask Decomposition Banner */}
+            {isSubtaskMode && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-foreground">
+                <Link2 className="size-4 text-primary shrink-0 mt-0.5" strokeWidth={1.5} />
+                <div className="space-y-0.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-primary">Nhiệm vụ cha (Khóa liên kết):</span>
+                    {(parentTask?.code || parentTask?.taskCode) && (
+                      <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary font-mono">
+                        {parentTask?.code || parentTask?.taskCode}
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-medium text-foreground truncate">
+                    {effectiveParentTitle || initialParentTaskId}
+                  </p>
+                  {effectiveParentDueDate && (
+                    <p className="text-xs text-muted-foreground">
+                      Hạn chót nhiệm vụ cha: <span className="font-semibold text-foreground">{formatDetailDateDisplay(effectiveParentDueDate)}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Informational Mode Banner for STAFF */}
             {isStaff && (
               <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-xs text-primary">
@@ -665,12 +777,12 @@ export function CreateTaskModal({
 
             {/* 3. Metadata Property Panel (Linear / Raycast Styled Card) */}
             <div className="rounded-xl border border-border/60 bg-muted/40 p-3.5 space-y-3">
-              {/* Row A: Người chủ trì (Lead Assignee) */}
+              {/* Row A: Người phụ trách chính (Lead Assignee - Single DRI) */}
               <div className="flex flex-col gap-1.5 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
                     <User className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                    Người chủ trì <span className="text-destructive">*</span>
+                    Người phụ trách chính (Chịu trách nhiệm toàn diện - Single DRI) <span className="text-destructive">*</span>
                   </span>
                   {/* Quick Department Filter to narrow down within 300 staff */}
                   <div className="flex items-center gap-1">
@@ -793,6 +905,92 @@ export function CreateTaskModal({
                       <span className="font-bold">Chỉ đạo trực tiếp Ban Giám hiệu:</span> Hệ thống sẽ tự động gửi thông báo gắn cờ [CHỈ ĐẠO BGH] tới Lãnh đạo {selectedAssigneeDept.department} để phối hợp quản lý nhân sự.
                     </p>
                   </div>
+                )}
+              </div>
+
+              {/* Row: Cán bộ phối hợp thực hiện (Collaborators) */}
+              <div className="flex flex-col gap-1.5 text-xs pt-2 border-t border-border/40">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-muted-foreground font-semibold">
+                    <Users className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    Cán bộ phối hợp thực hiện
+                  </span>
+                  <span className="text-xs text-muted-foreground font-normal">
+                    {formData.coAssignees.length > 0 ? `${formData.coAssignees.length} cán bộ` : "Tùy chọn"}
+                  </span>
+                </div>
+
+                {/* Selected Collaborator Badges */}
+                {formData.coAssignees.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 py-1">
+                    {formData.coAssignees.map((collabName) => (
+                      <span
+                        key={collabName}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-2 py-1 text-xs font-medium text-foreground shadow-2xs"
+                      >
+                        <User className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                        <span>{collabName}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((p) => ({
+                              ...p,
+                              coAssignees: p.coAssignees.filter((c) => c !== collabName),
+                            }));
+                          }}
+                          className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                          aria-label={`Xóa cán bộ phối hợp ${collabName}`}
+                        >
+                          <X className="size-3" strokeWidth={1.5} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add Collaborator Dropdown */}
+                <div className="relative">
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const selected = e.target.value;
+                      if (selected && !formData.coAssignees.includes(selected)) {
+                        setFormData((p) => ({
+                          ...p,
+                          coAssignees: [...p.coAssignees, selected],
+                        }));
+                        if (errors.coAssignees) clearError("coAssignees");
+                      }
+                    }}
+                    className="w-full h-8.5 pl-2.5 pr-7 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
+                    aria-label="Thêm cán bộ phối hợp"
+                  >
+                    <option value="">+ Thêm cán bộ phối hợp thực hiện...</option>
+                    {filteredGroups.map((group) => {
+                      const availableMembers = group.members.filter(
+                        (m) =>
+                          m.name !== formData.leadAssigneeName &&
+                          !formData.coAssignees.includes(m.name)
+                      );
+                      if (availableMembers.length === 0) return null;
+                      return (
+                        <optgroup key={group.code} label={group.department}>
+                          {availableMembers.map((member) => (
+                            <option key={member.name} value={member.name}>
+                              {member.title} — {member.role}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
+                  </select>
+                  <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2.5 top-2.5" strokeWidth={1.5} />
+                </div>
+                {errors.coAssignees && (
+                  <p className="text-xs font-medium text-destructive flex items-center gap-1">
+                    <AlertCircle className="size-3 shrink-0" strokeWidth={1.5} />
+                    <span>{errors.coAssignees}</span>
+                  </p>
                 )}
               </div>
 
@@ -930,6 +1128,7 @@ export function CreateTaskModal({
                   <input
                     type="date"
                     value={formData.dueDate}
+                    max={effectiveParentDueDate ? effectiveParentDueDate.split("T")[0] : undefined}
                     onChange={(e) => {
                       setFormData((p) => ({ ...p, dueDate: e.target.value }));
                       if (errors.dueDate) clearError("dueDate");
@@ -973,6 +1172,12 @@ export function CreateTaskModal({
                   </div>
                 </div>
               </div>
+              {errors.dueDate && (
+                <p className="text-xs font-medium text-destructive flex items-center gap-1">
+                  <AlertCircle className="size-3 shrink-0" strokeWidth={1.5} />
+                  <span>{errors.dueDate}</span>
+                </p>
+              )}
 
               {/* Row: Hạn chót nội bộ (Internal Due Date) */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs pt-1 border-t border-border/40">
@@ -1007,38 +1212,51 @@ export function CreateTaskModal({
               )}
 
               {/* Row D: Thuộc nhiệm vụ cấp Trường (nếu là việc Đơn vị) */}
-              {formData.level === "DON_VI" && schoolTasks.length > 0 && (
-                <div className="flex items-center justify-between gap-3 text-xs pt-1 border-t border-border/40">
-                  <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[110px]">
-                    <Link2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                    Nhiệm vụ cha
-                  </span>
-
-                  <div className="relative flex-1 sm:max-w-[280px]">
-                    <select
-                      value={formData.parentTaskId || ""}
-                      onChange={(e) =>
-                        setFormData((p) => ({ ...p, parentTaskId: e.target.value || undefined }))
-                      }
-                      className="w-full h-8 pl-2.5 pr-7 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
-                    >
-                      <option value="">— Độc lập (Không liên kết) —</option>
-                      {schoolTasks.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.title}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2 top-2.5" strokeWidth={1.5} />
+              {formData.level === "DON_VI" && (
+                isSubtaskMode ? (
+                  <div className="flex items-center justify-between gap-3 text-xs pt-1 border-t border-border/40">
+                    <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[110px]">
+                      <Link2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      Nhiệm vụ cha
+                    </span>
+                    <div className="flex-1 sm:max-w-[280px] text-xs font-semibold text-primary bg-primary/5 border border-primary/20 rounded-lg px-2.5 py-1.5 truncate">
+                      {effectiveParentTitle || initialParentTaskId} (Đã khóa liên kết)
+                    </div>
                   </div>
-                </div>
+                ) : schoolTasks.length > 0 ? (
+                  <div className="flex items-center justify-between gap-3 text-xs pt-1 border-t border-border/40">
+                    <span className="flex items-center gap-1.5 text-muted-foreground font-semibold shrink-0 min-w-[110px]">
+                      <Link2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      Nhiệm vụ cha
+                    </span>
+
+                    <div className="relative flex-1 sm:max-w-[280px]">
+                      <select
+                        value={formData.parentTaskId || ""}
+                        onChange={(e) =>
+                          setFormData((p) => ({ ...p, parentTaskId: e.target.value || undefined }))
+                        }
+                        className="w-full h-8 pl-2.5 pr-7 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
+                      >
+                        <option value="">— Độc lập (Không liên kết) —</option>
+                        {schoolTasks.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.title}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="size-3.5 text-muted-foreground pointer-events-none absolute right-2 top-2.5" strokeWidth={1.5} />
+                    </div>
+                  </div>
+                ) : null
               )}
             </div>
 
             {/* Validation Errors Summary (if any) */}
-            {(errors.leadAssigneeName || errors.dueDate || errors.internalDueDate || errors.requiredDeliverables) && (
+            {(errors.leadAssigneeName || errors.coAssignees || errors.dueDate || errors.internalDueDate || errors.requiredDeliverables) && (
               <div className="text-xs text-destructive space-y-0.5">
                 {errors.leadAssigneeName && <p>• {errors.leadAssigneeName}</p>}
+                {errors.coAssignees && <p>• {errors.coAssignees}</p>}
                 {errors.dueDate && <p>• {errors.dueDate}</p>}
                 {errors.internalDueDate && <p>• {errors.internalDueDate}</p>}
                 {errors.requiredDeliverables && <p>• {errors.requiredDeliverables}</p>}
