@@ -10,6 +10,7 @@ import type {
 } from "@/types/dashboard";
 import type { DepartmentHealthSummary } from "@/lib/executive-matrix-aggregator";
 import { TaskScope, TaskStatus } from "@prisma/client";
+import { getSystemReferenceDate, isTaskPastDue } from "@/lib/academic-calendar";
 
 export interface LiveDashboardOptions {
   userId?: string;
@@ -19,14 +20,25 @@ export interface LiveDashboardOptions {
 }
 
 export async function getLiveDashboardData(options?: LiveDashboardOptions): Promise<DashboardPayload> {
-  const whereTask: any = { scope: TaskScope.SCHOOL };
+  const referenceDate = getSystemReferenceDate();
+
+  const whereTask: any = {
+    scope: { in: [TaskScope.SCHOOL, TaskScope.DEPARTMENT] },
+    parentTaskId: null,
+    status: { not: TaskStatus.CANCELLED },
+  };
   if (options?.academicMonth) whereTask.academicMonth = options.academicMonth;
   if (options?.academicYear) whereTask.academicYear = options.academicYear;
   if (options?.departmentId && options.departmentId !== "all") {
     whereTask.departmentId = options.departmentId;
   }
+  if (options?.userId) {
+    whereTask.assignees = {
+      some: { userId: options.userId },
+    };
+  }
 
-  // Tải danh sách nhiệm vụ cấp trường kèm subTasks và assignees
+  // Tải danh sách nhiệm vụ cấp trường & đơn vị độc lập kèm subTasks và assignees
   const dbTasks = await prisma.task.findMany({
     where: whereTask,
     include: {
@@ -38,6 +50,9 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
         select: { id: true, code: true, title: true, scope: true },
       },
       subTasks: {
+        where: {
+          status: { not: TaskStatus.CANCELLED },
+        },
         include: {
           department: true,
           assignees: { include: { user: true } },
@@ -71,20 +86,27 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       ? Math.round(
           subTasks.reduce((acc, s) => {
             const isCompleted = s.status === "COMPLETED";
-            const p = isCompleted ? 100 : ((s as any).progressPercent ?? 0);
+            const p = isCompleted ? 100 : (typeof s.progressPercent === "number" ? s.progressPercent : 0);
             return acc + p;
           }, 0) / totalSub
         )
       : 0;
     const progressPercent = t.progressPercent > 0 ? t.progressPercent : rolledUpProgress;
 
+    const isSchool = t.scope === TaskScope.SCHOOL;
+    const categoryLabel = isSchool ? "Chỉ đạo cấp Trường" : "Chuyên môn Khoa/Phòng";
+    const category = isSchool ? "CHUYEN_DOI_SO" : "CNTT";
+
     return {
       id: t.id,
       code: t.code,
       taskCode: t.code,
       title: t.title,
-      category: (t.scope === "SCHOOL" ? "Chỉ đạo cấp Trường" : "Chuyên môn") as any,
-      categoryLabel: t.scope === "SCHOOL" ? "Chỉ đạo cấp Trường" : "Chuyên môn",
+      scope: t.scope,
+      category: category as any,
+      categoryLabel,
+      academicMonth: t.academicMonth,
+      academicYear: t.academicYear,
       leadAssigneeName: leadAssignee?.user?.name || "Chưa phân công",
       leadAssigneeId: leadAssignee?.user?.id || leadAssignee?.userId,
       leadAssigneeAvatar: leadAssignee?.user?.avatarUrl || undefined,
@@ -95,10 +117,11 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       department: t.department?.name,
       departmentCode: t.department?.id,
       departmentId: t.department?.id,
+      departmentName: t.department?.name,
       coAssignees,
-      assignedDate: t.startDate.toISOString().split("T")[0],
-      dueDate: t.dueDate.toISOString().split("T")[0],
-      status: t.status as any,
+      assignedDate: formatLocalDate(t.startDate),
+      dueDate: formatLocalDate(t.dueDate),
+      status: t.status,
       subTasks,
       totalSubTasks: totalSub,
       completedSubTasks: completedSub,
@@ -107,7 +130,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       parentTaskTitle: (t as any).parentTask?.title || undefined,
       parentTaskCode: (t as any).parentTask?.code || undefined,
       parentTask: (t as any).parentTask || undefined,
-    };
+    } as SchoolTask;
   });
 
   // Tính toán DashboardStats
@@ -115,11 +138,34 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
   const inProgress = mappedTasks.filter((t) => t.status === "IN_PROGRESS").length;
   const completed = mappedTasks.filter((t) => t.status === "COMPLETED").length;
   const overdue = mappedTasks.filter(
-    (t) => (t.status as string) === "OVERDUE" || (t.dueDate < "2026-09-07" && t.status !== "COMPLETED")
+    (t) => t.status === "OVERDUE" || (isTaskPastDue(t.dueDate, referenceDate) && t.status !== "COMPLETED")
   ).length;
   const pendingApprovals = mappedTasks.filter(
-    (t) => (t.status as string) === "WAITING_APPROVAL" || t.status === "PENDING_EXECUTIVE_APPROVAL"
+    (t) => t.status === "WAITING_APPROVAL" || t.status === "PENDING_EXECUTIVE_APPROVAL"
   ).length;
+
+  const schoolTasksList = mappedTasks.filter(
+    (t) => (t as any).scope === TaskScope.SCHOOL || t.categoryLabel === "Chỉ đạo cấp Trường"
+  );
+  const totalSchool = schoolTasksList.length;
+  const inProgressSchool = schoolTasksList.filter((t) => t.status === "IN_PROGRESS").length;
+  const completedSchool = schoolTasksList.filter((t) => t.status === "COMPLETED").length;
+  const averageSchoolProgressPercent =
+    totalSchool > 0
+      ? Math.round(schoolTasksList.reduce((acc, t) => acc + (t.progressPercent || 0), 0) / totalSchool)
+      : total > 0
+      ? Math.round(mappedTasks.reduce((acc, t) => acc + (t.progressPercent || 0), 0) / total)
+      : 0;
+
+  const totalStaffTasks = mappedTasks.reduce((acc, t) => acc + (t.subTasks?.length || 0), 0);
+  const staffTasksInProgress = mappedTasks.reduce(
+    (acc, t) => acc + (t.subTasks?.filter((s) => s.status === "IN_PROGRESS").length || 0),
+    0
+  );
+  const staffTasksCompleted = mappedTasks.reduce(
+    (acc, t) => acc + (t.subTasks?.filter((s) => s.status === "COMPLETED").length || 0),
+    0
+  );
 
   const stats: DashboardStats = {
     totalTasks: total,
@@ -129,20 +175,30 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     pendingApprovals,
     completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
 
-    totalSchoolTasks: total,
-    schoolTasksInProgress: inProgress,
-    schoolTasksCompleted: completed,
-    totalStaffTasks: mappedTasks.reduce((acc, t) => acc + (t.subTasks?.length || 0), 0),
-    staffTasksInProgress: mappedTasks.reduce((acc, t) => acc + (t.subTasks?.filter((s) => s.status === "IN_PROGRESS").length || 0), 0),
-    staffTasksCompleted: mappedTasks.reduce((acc, t) => acc + (t.subTasks?.filter((s) => s.status === "COMPLETED").length || 0), 0),
+    totalSchoolTasks: totalSchool > 0 ? totalSchool : total,
+    schoolTasksInProgress: totalSchool > 0 ? inProgressSchool : inProgress,
+    schoolTasksCompleted: totalSchool > 0 ? completedSchool : completed,
+    totalStaffTasks,
+    staffTasksInProgress,
+    staffTasksCompleted,
     needsReviewTasksCount: pendingApprovals,
     overdueTasksCount: overdue,
-    averageSchoolProgressPercent: total > 0 ? Math.round(mappedTasks.reduce((acc, t) => acc + (t.progressPercent || 0), 0) / total) : 0,
+    averageSchoolProgressPercent,
   };
 
   // Ma trận 11 phòng ban
+  const deptTaskWhere: any = {
+    status: { not: TaskStatus.CANCELLED },
+  };
+  if (options?.academicMonth) deptTaskWhere.academicMonth = options.academicMonth;
+  if (options?.academicYear) deptTaskWhere.academicYear = options.academicYear;
+
   const departments = await prisma.department.findMany({
-    include: { tasks: true },
+    include: {
+      tasks: {
+        where: deptTaskWhere,
+      },
+    },
   });
 
   const departmentHealth: DepartmentHealthSummary[] = departments.map((d) => {
@@ -150,7 +206,18 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     const dTotal = dTasks.length;
     const dCompleted = dTasks.filter((t) => t.status === "COMPLETED").length;
     const dInProgress = dTasks.filter((t) => t.status === "IN_PROGRESS").length;
-    const dOverdue = dTasks.filter((t) => t.status === "OVERDUE" || (t.dueDate < new Date() && t.status !== "COMPLETED")).length;
+    const dOverdue = dTasks.filter(
+      (t) => t.status === "OVERDUE" || (isTaskPastDue(t.dueDate, referenceDate) && t.status !== "COMPLETED")
+    ).length;
+
+    const totalProgress = dTasks.reduce((acc, t) => {
+      const isCompleted = t.status === "COMPLETED";
+      const p = isCompleted ? 100 : (t.progressPercent ?? 0);
+      return acc + (typeof p === "number" && !isNaN(p) ? p : 0);
+    }, 0);
+
+    const averageProgressPercent = dTotal > 0 ? Math.round(totalProgress / dTotal) : 0;
+    const completionRate = dTotal > 0 ? Math.round((dCompleted / dTotal) * 100) : 0;
 
     return {
       departmentId: d.id,
@@ -167,33 +234,32 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       overdueTasks: dOverdue,
       overdueTasksCount: dOverdue,
       blockedTasksCount: 0,
-      averageProgressPercent: dTotal > 0 ? Math.round((dCompleted / dTotal) * 100) : 0,
-      completionRate: dTotal > 0 ? Math.round((dCompleted / dTotal) * 100) : 0,
+      averageProgressPercent,
+      completionRate,
       status: dOverdue > 0 ? "critical" : dCompleted === dTotal && dTotal > 0 ? "good" : "warning",
     };
   });
 
   // Tổng hợp Upcoming Items (Hạn chót sắp đến & Quá hạn từ nhiệm vụ cấp trường và đơn vị)
-  const referenceDateStr = "2026-09-09";
   const upcomingItems: UpcomingItem[] = [];
 
   for (const t of mappedTasks) {
-    if (t.status !== "COMPLETED") {
+    if (t.status !== "COMPLETED" && (t.status as string) !== "CANCELLED") {
       upcomingItems.push({
-        id: `upcoming-school-${t.id}`,
+        id: `upcoming-${(t as any).scope === TaskScope.DEPARTMENT ? "dept" : "school"}-${t.id}`,
         taskId: t.id,
         title: t.title,
         dueDate: t.dueDate,
         assigneeName: t.leadAssigneeName,
         assigneeAvatar: t.leadAssigneeAvatar,
-        level: "Trường",
+        level: (t as any).scope === TaskScope.DEPARTMENT ? "Đơn vị" : "Trường",
         category: t.category,
-        isOverdue: t.dueDate < referenceDateStr,
+        isOverdue: isTaskPastDue(t.dueDate, referenceDate),
       });
     }
 
     for (const sub of t.subTasks || []) {
-      if (sub.status !== "COMPLETED") {
+      if (sub.status !== "COMPLETED" && (sub.status as string) !== "CANCELLED") {
         upcomingItems.push({
           id: `upcoming-sub-${sub.id}`,
           taskId: sub.id,
@@ -202,7 +268,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
           assigneeName: sub.assigneeName,
           level: "Đơn vị",
           category: t.category,
-          isOverdue: sub.dueDate < referenceDateStr,
+          isOverdue: isTaskPastDue(sub.dueDate, referenceDate),
         });
       }
     }
