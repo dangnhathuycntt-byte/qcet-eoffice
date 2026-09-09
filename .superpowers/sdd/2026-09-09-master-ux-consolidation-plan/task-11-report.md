@@ -66,23 +66,31 @@ The design strictly complies with QCET Engineering Rules:
 ## 3. Verification and Testing
 
 ### 3.1 Unit & Integration Test Suite (`tests/keyboard-command-palette.test.ts`)
-- Added 23 comprehensive tests covering:
+- Added 24 comprehensive tests covering:
   - `keyboardNavReducer` (boundary clamping, initial jump, cursor resetting).
   - `isInputElement` and `isInsideModal` input guards.
   - `handleKeyboardNavigation` handling `/`, `J`, `K`, `Enter`, `X`, `Escape`.
   - Quick action verification in `CommandSearchModal`.
   - Light-only verification (no `dark:` classes in modal and task table).
+  - Typography floor verification (zero `text-[11px]` or sub-12px font sizes, strictly `text-xs` >= 12px).
   - Shortcut discoverability hints verification in task table.
-- Result: **23/23 passing** (0 failures).
+- Result: **24/24 passing** (0 failures).
 
 ### 3.2 Regression Testing
 - `tests/command-search-modal.test.ts`: **6/6 passing**.
-- Project full test suite (`npm test`): **431/431 passing across 150 test suites** (0 failures).
+- Project full test suite (`npm test`): **435/435 passing across 151 test suites** (0 failures).
 - TypeScript verification (`npm run typecheck`): **Zero errors**.
 
 ---
 
-## 4. Files Modified / Created
+## 4. Code Review Remediation
+- Addressed Code Review findings in `task-11-review.md`:
+  - Upgraded footer `<kbd>` badges in `src/components/layout/command-search-modal.tsx` (lines 1119, 1125, 1131, 1137, 1144) from `text-[11px]` to `text-xs` to strictly comply with Rule `10-ui.md` Invariant 6 (Typography floor >= 12px).
+  - Added explicit automated regression test asserting absence of `text-[11px]` or `text-[10px]` in `tests/keyboard-command-palette.test.ts`.
+
+---
+
+## 5. Files Modified / Created
 
 1. `src/components/layout/command-search-modal.tsx`: Added quick actions (`create-task`, `action-review-tasks`, `action-my-tasks`, `nav-documents`, `nav-calendar`), refined `Cmd+K` global listener and `data-slot="command-palette"`.
 2. `src/components/command-search-modal.tsx`: Re-export barrel to ensure stable module resolution.

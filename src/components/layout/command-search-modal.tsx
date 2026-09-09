@@ -1116,32 +1116,32 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         <div className="px-4 py-2.5 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between text-xs text-neutral-500">
           <div className="flex items-center gap-4 flex-wrap">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-[11px] bg-white rounded border border-neutral-200 text-neutral-600">
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
                 ↵
               </kbd>
               <span>Mở</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-[11px] bg-white rounded border border-neutral-200 text-neutral-600">
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
                 ⌘↵
               </kbd>
               <span>Mở tab mới</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-[11px] bg-white rounded border border-neutral-200 text-neutral-600">
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
                 Tab
               </kbd>
               <span>Chuyển nhóm</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 font-mono text-[11px] bg-white rounded border border-neutral-200 text-neutral-600">
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
                 ↑↓
               </kbd>
               <span>Di chuyển</span>
             </span>
           </div>
           <div className="flex items-center gap-1 text-neutral-400">
-            <kbd className="px-1.5 py-0.5 font-mono text-[11px] bg-white rounded border border-neutral-200 text-neutral-600">
+            <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
               Esc
             </kbd>
             <span>Đóng</span>

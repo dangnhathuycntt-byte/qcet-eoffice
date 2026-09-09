@@ -356,6 +356,22 @@ describe("Command Palette & Keyboard Ergonomics (Task 11)", () => {
       const content = fs.readFileSync(modalPath, "utf-8");
       assert.ok(!content.includes("dark:"), "No dark: Tailwind classes permitted");
     });
+
+    test("strictly adheres to typography floor >= 12px (no sub-12px or text-[11px])", () => {
+      const content = fs.readFileSync(modalPath, "utf-8");
+      assert.ok(
+        !content.includes("text-[11px]"),
+        "No text-[11px] classes permitted; floor is text-xs (12px)"
+      );
+      assert.ok(
+        !content.includes("text-[10px]"),
+        "No text-[10px] classes permitted; floor is text-xs (12px)"
+      );
+      assert.ok(
+        content.includes("text-xs"),
+        "Footer kbd elements must use standard text-xs"
+      );
+    });
   });
 
   describe("5. ModularCascadingTaskTable Ergonomics & Discoverability", () => {

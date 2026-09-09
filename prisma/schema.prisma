@@ -145,6 +145,13 @@ model User {
   taskApprovalSteps     TaskApprovalStep[]
   taskResultsSubmitted  TaskResult[]          @relation("TaskResultSubmitter")
   taskResultsVerified   TaskResult[]          @relation("TaskResultVerifier")
+  workflowsPresented    DocumentIncomingWorkflow[] @relation("DocWorkflowPresentedBy")
+  workflowsDirected     DocumentIncomingWorkflow[] @relation("DocWorkflowLeader")
+  workflowsResolved     DocumentIncomingWorkflow[] @relation("DocWorkflowResolvedBy")
+  workflowsFiled        DocumentIncomingWorkflow[] @relation("DocWorkflowFiledBy")
+  workflowsArchived     DocumentIncomingWorkflow[] @relation("DocWorkflowArchivedBy")
+  unitAssignmentsGiven  UnitWorkAssignment[]       @relation("UnitWorkAssignedBy")
+  unitAssignmentsDri    UnitWorkAssignment[]       @relation("UnitWorkDri")
 
   @@map("users")
 }
@@ -219,6 +226,7 @@ model Task {
   actors              TaskActor[]
   approvalProcesses   TaskApprovalProcess[]
   taskResults         TaskResult[]
+  unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
   sourceRelations     TaskRelation[]        @relation("SourceTaskRelations")
   targetRelations     TaskRelation[]        @relation("TargetTaskRelations")
   version             Int                   @default(1) @map("version")
@@ -376,6 +384,7 @@ model Document {
   // Quan hệ tệp đính kèm & Bút phê BGH
   attachments        DocumentAttachment[]
   directives         DocumentDirective[]
+  incomingWorkflow   DocumentIncomingWorkflow?
 
   // Liên thông Unified Task Hub
   linkedTaskId       String?               @unique @map("linked_task_id")
@@ -452,6 +461,107 @@ model DocumentDirective {
 
   @@index([documentId, leaderId])
   @@map("document_directives")
+}
+
+// ===================================================
+// 4B. VÒNG ĐỜI VĂN BẢN ĐẾN & PHÂN CÔNG TÁC NGHIỆP 2 CẤP
+// Tiêu chuẩn Nghị định 30/2020/NĐ-CP & Mô hình Điều hành QCET
+// ===================================================
+enum IncomingDocumentStatus {
+  RECEIVED
+  REGISTERED
+  PRESENTED
+  DIRECTED
+  ASSIGNED_TO_LEAD_UNIT
+  UNIT_ASSIGNED_PERSON
+  IN_PROGRESS
+  RESOLVED
+  FILED
+  ARCHIVED
+}
+
+model DocumentIncomingWorkflow {
+  id                    String                 @id @default(cuid())
+  documentId            String                 @unique @map("document_id")
+  document              Document               @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status                IncomingDocumentStatus @default(REGISTERED)
+
+  // Presentation (Trình Lãnh đạo)
+  presentedAt           DateTime?              @map("presented_at")
+  presentedById         String?                @map("presented_by_id")
+  presentedBy           User?                  @relation("DocWorkflowPresentedBy", fields: [presentedById], references: [id], onDelete: SetNull)
+  presenterNotes        String?                @map("presenter_notes") @db.Text
+
+  // Leadership Direction (Tier 1: BGH chỉ đạo)
+  directedAt            DateTime?              @map("directed_at")
+  leaderId              String?                @map("leader_id")
+  leader                User?                  @relation("DocWorkflowLeader", fields: [leaderId], references: [id], onDelete: SetNull)
+  leadUnitId            String?                @map("lead_unit_id")
+  leadUnit              OrganizationalUnit?    @relation("DocWorkflowLeadUnit", fields: [leadUnitId], references: [id], onDelete: SetNull)
+  coordinatingUnitIds   Json?                  @map("coordinating_unit_ids")
+  leadershipInstruction String?                @map("leadership_instruction") @db.Text
+  deadline              DateTime?              @map("deadline")
+  responsibilityAreaId  String?                @map("responsibility_area_id")
+  responsibilityArea    ResponsibilityArea?    @relation("DocWorkflowRespArea", fields: [responsibilityAreaId], references: [id], onDelete: SetNull)
+
+  // Tier 2: Unit Work Assignment (Trưởng đơn vị phân công)
+  unitAssignments       UnitWorkAssignment[]
+
+  // Resolution (Giải quyết xong)
+  resolvedAt            DateTime?              @map("resolved_at")
+  resolvedById          String?                @map("resolved_by_id")
+  resolvedBy            User?                  @relation("DocWorkflowResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolutionSummary     String?                @map("resolution_summary") @db.Text
+  resolutionDocUrl      String?                @map("resolution_doc_url") @db.Text
+
+  // Filing / Archival (Lập hồ sơ / Lưu trữ)
+  filedAt               DateTime?              @map("filed_at")
+  filedById             String?                @map("filed_by_id")
+  filedBy               User?                  @relation("DocWorkflowFiledBy", fields: [filedById], references: [id], onDelete: SetNull)
+  dossierId             String?                @map("dossier_id") @db.VarChar(100)
+  filingNotes           String?                @map("filing_notes") @db.Text
+
+  archivedAt            DateTime?              @map("archived_at")
+  archivedById          String?                @map("archived_by_id")
+  archivedBy            User?                  @relation("DocWorkflowArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([leadUnitId])
+  @@index([leaderId])
+  @@map("document_incoming_workflows")
+}
+
+model UnitWorkAssignment {
+  id                  String                   @id @default(cuid())
+  workflowId          String                   @map("workflow_id")
+  workflow            DocumentIncomingWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  unitId              String                   @map("unit_id")
+  unit                OrganizationalUnit       @relation("UnitWorkAssignmentUnit", fields: [unitId], references: [id], onDelete: Restrict)
+  assignedById        String                   @map("assigned_by_id")
+  assignedBy          User                     @relation("UnitWorkAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  driUserId           String                   @map("dri_user_id")
+  driUser             User                     @relation("UnitWorkDri", fields: [driUserId], references: [id], onDelete: Restrict)
+  collaboratorUserIds Json?                    @map("collaborator_user_ids")
+
+  instruction         String?                  @db.Text
+  deadline            DateTime?
+  status              String                   @default("ASSIGNED") @db.VarChar(50)
+
+  // Link to generated task if any
+  taskId              String?                  @map("task_id")
+  task                Task?                    @relation("UnitWorkTask", fields: [taskId], references: [id], onDelete: SetNull)
+
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+
+  @@index([workflowId])
+  @@index([unitId])
+  @@index([driUserId])
+  @@map("unit_work_assignments")
 }
 
 // ===================================================
@@ -669,6 +779,8 @@ model OrganizationalUnit {
   positionAssignments PositionAssignment[]
   leadTasks           Task[]               @relation("TaskLeadUnit")
   taskActors          TaskActor[]
+  leadWorkflows       DocumentIncomingWorkflow[] @relation("DocWorkflowLeadUnit")
+  unitAssignments     UnitWorkAssignment[]       @relation("UnitWorkAssignmentUnit")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt        DateTime             @updatedAt @map("updated_at")
 
@@ -778,6 +890,7 @@ model ResponsibilityArea {
   category             ResponsibilityCategory
   portfolioAssignments PortfolioAssignment[]
   delegationGrants     DelegationGrant[]
+  incomingWorkflows    DocumentIncomingWorkflow[] @relation("DocWorkflowRespArea")
   createdAt            DateTime               @default(now()) @map("created_at")
   updatedAt            DateTime               @updatedAt @map("updated_at")
 
