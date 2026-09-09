@@ -249,11 +249,8 @@ export function useTaskFilters({
   );
 
   const executiveActionItems = React.useMemo(
-    () =>
-      isExecutive && activeZone === "dashboard"
-        ? extractExecutiveActionItems(monthFilteredSchoolTasks, referenceDate)
-        : [],
-    [monthFilteredSchoolTasks, isExecutive, activeZone, referenceDate]
+    () => (isExecutive ? extractExecutiveActionItems(monthFilteredSchoolTasks, referenceDate) : []),
+    [isExecutive, monthFilteredSchoolTasks, referenceDate]
   );
 
   const filteredTasks = React.useMemo(() => {

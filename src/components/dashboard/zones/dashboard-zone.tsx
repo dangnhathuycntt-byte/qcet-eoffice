@@ -81,7 +81,7 @@ function DashboardZoneComponent() {
             activeFilter={executiveFilter}
             onFilterChange={setExecutiveFilter}
             items={executiveActionItems}
-            onAction={(item) => {
+            onAction={(actionType, item) => {
               const matched = baseTasks.find((t) => t.id === item.id || t.id === item.taskId);
               if (matched) openTaskDetail(matched);
             }}

@@ -1,7 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, AlertTriangle, Target, ArrowRight } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Target,
+  ArrowRight,
+  ShieldCheck,
+} from "lucide-react";
 import type {
   ExecutiveActionStats,
   ExecutiveFilter,
@@ -17,7 +23,7 @@ export interface ExecutiveActionCenterProps {
   activeFilter: ExecutiveFilter;
   onFilterChange: (filter: ExecutiveFilter) => void;
   items?: ExecutiveActionItem[];
-  onAction?: (item: ExecutiveActionItem) => void;
+  onAction?: (actionType: string, item: ExecutiveActionItem) => void;
 }
 
 interface ActionCardConfig {
@@ -93,56 +99,6 @@ const ACTION_CARDS: ActionCardConfig[] = [
   },
 ];
 
-export const DEFAULT_ACTION_ITEMS: ExecutiveActionItem[] = [
-  {
-    id: "action-pending-1",
-    title: "Phê duyệt kế hoạch kiểm định chất lượng CTĐT Khoa CNTT",
-    department: "Khoa CNTT",
-    assignee: "TS. Nguyễn Ngọc Vinh",
-    dueDate: "10/09/2026",
-    filterType: "PENDING_APPROVAL",
-    actionLabel: "Phê duyệt ngay",
-  },
-  {
-    id: "action-pending-2",
-    title: "Tờ trình kinh phí mua sắm thiết bị phòng máy thực hành số 2",
-    department: "Phòng QTTB",
-    assignee: "ThS. Hoàng Anh Tuấn",
-    dueDate: "12/09/2026",
-    filterType: "PENDING_APPROVAL",
-    actionLabel: "Phê duyệt ngay",
-  },
-  {
-    id: "action-blocked-1",
-    title: "Tắc nghẽn tiến độ số hóa hồ sơ tuyển sinh năm 2026",
-    department: "Phòng Đào tạo",
-    assignee: "ThS. Đỗ Quang Trung",
-    dueDate: "05/09/2026",
-    filterType: "BLOCKED_OVERDUE",
-    priority: "KHAN_CAP",
-    actionLabel: "Đôn đốc",
-  },
-  {
-    id: "action-blocked-2",
-    title: "Quá hạn nộp báo cáo kiểm kê tài sản phục vụ năm học mới",
-    department: "Phòng HC-QT",
-    assignee: "ThS. Phan Văn Thanh",
-    dueDate: "04/09/2026",
-    filterType: "BLOCKED_OVERDUE",
-    priority: "CAO",
-    actionLabel: "Đôn đốc",
-  },
-  {
-    id: "action-strategic-1",
-    title: "Triển khai đề án chuyển đổi số toàn diện QCET 2026-2030",
-    department: "TT Truyền thông",
-    assignee: "ThS. Mai Đinh Thị Xuân",
-    dueDate: "30/09/2026",
-    filterType: "STRATEGIC",
-    actionLabel: "Chỉ đạo",
-  },
-];
-
 export function getActionCardData(stats: ExecutiveActionStats) {
   return ACTION_CARDS.map((card) => ({
     ...card,
@@ -160,9 +116,9 @@ export function ExecutiveActionCenter({
 }: ExecutiveActionCenterProps) {
   const cards = getActionCardData(stats);
 
-  const activeItems = React.useMemo(() => {
-    const pool = items && items.length > 0 ? items : DEFAULT_ACTION_ITEMS;
-    if (activeFilter === "ALL") return pool.slice(0, 3);
+  const displayItems = React.useMemo(() => {
+    const pool = items ?? [];
+    if (activeFilter === "ALL") return pool;
     return pool.filter((item) => item.filterType === activeFilter);
   }, [items, activeFilter]);
 
@@ -248,8 +204,8 @@ export function ExecutiveActionCenter({
         })}
       </div>
 
-      {/* Action Items List Queue (min-h-[64px] p-3.5 with accessible buttons) */}
-      {activeItems.length > 0 && (
+      {/* Action Items List Queue or Verified Clear Horizon Empty State */}
+      {displayItems.length > 0 ? (
         <div className="space-y-2.5 pt-1" data-slot="action-items-queue">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs sm:text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -264,12 +220,12 @@ export function ExecutiveActionCenter({
                   }`}
             </span>
             <span className="text-xs font-mono text-muted-foreground tabular-nums">
-              {activeItems.length} nhiệm vụ
+              {displayItems.length} nhiệm vụ
             </span>
           </div>
 
           <div className="grid grid-cols-1 gap-2.5">
-            {activeItems.map((item) => (
+            {displayItems.map((item) => (
               <div
                 key={item.id}
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3.5 min-h-[64px] transition-all hover:bg-muted/20"
@@ -282,9 +238,11 @@ export function ExecutiveActionCenter({
                     </h4>
                   </div>
                   <p className="text-xs sm:text-[13px] text-muted-foreground flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-foreground/80">{item.department}</span>
+                    <span className="font-semibold text-foreground/80">
+                      {item.departmentName || item.department}
+                    </span>
                     <span>·</span>
-                    <span>Chủ trì: {item.assignee}</span>
+                    <span>Chủ trì: {item.leadName || item.assignee}</span>
                     <span>·</span>
                     <span className="font-mono tabular-nums">Hạn: {item.dueDate}</span>
                   </p>
@@ -295,7 +253,7 @@ export function ExecutiveActionCenter({
                     size="sm"
                     variant={item.filterType === "BLOCKED_OVERDUE" ? "destructive" : "default"}
                     className="h-8.5 sm:h-9 px-3 text-xs font-semibold rounded-lg shadow-2xs gap-1.5"
-                    onClick={() => onAction?.(item)}
+                    onClick={() => onAction?.(item.actionType || item.filterType, item)}
                   >
                     <span>{item.actionLabel || "Xử lý ngay"}</span>
                     <ArrowRight className="size-3.5" strokeWidth={1.5} />
@@ -303,6 +261,29 @@ export function ExecutiveActionCenter({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      ) : (
+        <div
+          className="flex flex-col sm:flex-row sm:items-center gap-3.5 rounded-xl border border-border/70 bg-card/60 p-3.5 min-h-[64px] transition-all"
+          data-slot="action-center-empty-state"
+        >
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+            <ShieldCheck className="size-5" strokeWidth={1.5} />
+          </div>
+          <div className="space-y-0.5 min-w-0 flex-1">
+            <h4 className="text-sm font-semibold text-foreground leading-snug">
+              Hàng đợi điều hành thông suốt
+            </h4>
+            <p className="text-xs sm:text-[13px] text-muted-foreground">
+              Không có nhiệm vụ cần phê duyệt hoặc đôn đốc trực tiếp trong phạm vi hiện tại.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 font-mono tabular-nums">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              Verified Clear
+            </span>
           </div>
         </div>
       )}
