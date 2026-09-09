@@ -27,6 +27,6 @@ All tasks agree with plan constraints and QCET core invariants. Pre-flight scan 
 - [x] Task 9: Immutable AuditEvent Model & Service (completed, verified with `prisma validate`, `prisma generate`, `npm run typecheck`, 19/19 tests passing in `tests/audit-events.test.ts`, and full test suite 344/344 passing)
 - [x] Task 10: Transactional Outbox Pattern & Model (completed, verified with `prisma validate`, `prisma generate`, `npm run typecheck`, 21/21 tests passing in `tests/outbox-pattern.test.ts`, and full test suite 365/365 passing)
 - [x] Task 11: Composite & Partial Indexes Audit (completed, verified with `prisma validate`, `prisma generate`, `npm run typecheck`, 16/16 tests passing in `tests/composite-indexes.test.ts`, and full test suite 365/365 passing)
-- [x] Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities (completed, verified with `prisma/migrations/indexes.sql`, `src/lib/db/search.ts`, 25/25 tests passing in `tests/postgres-search.test.ts`, and full test suite 365/365 passing)
+- [x] Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities (completed, review feedback fixed: single-word FTS heuristics, GIN index scan optimization removing Seq Scan, FTS index expression alignment, verified with `prisma/migrations/indexes.sql`, `src/lib/db/search.ts`, 27/27 tests passing in `tests/postgres-search.test.ts`, and full test suite 365/365 passing)
 
 

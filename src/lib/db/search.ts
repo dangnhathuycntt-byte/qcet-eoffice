@@ -108,24 +108,45 @@ export interface UserSearchResultItem {
 // ----------------------------------------------------------------------
 
 const KNOWN_CODE_PREFIX_REGEX = /^(TASK|QCET|NV|VB|CV|TB|QD|HD|BC|KH|DA|TT)-/i;
-const EXACT_CODE_PATTERN = /^[A-Za-z0-9\-_/.@]+$/;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CODE_WITH_DIGITS_REGEX = /^[A-Za-z0-9\-_/.@]*\d[A-Za-z0-9\-_/.@]*$/;
+const PURE_ALPHABETIC_REGEX = /^[A-Za-zÀ-ỹ]+$/u;
 
 /**
  * Determines whether a user query represents an exact identifier/code lookup
- * (e.g. "TASK-2026", "NV-001", "#128", "19/UBND", or single alphanumeric token without spaces).
+ * (e.g. "TASK-2026", "NV-001", "#128", "19/UBND", or single code token with digits).
+ * Pure words like "Subtask", "baocao", "report", "plan" return false so they are
+ * searched across title and description via Full-Text / Trigram index search.
  */
 export function isExactCodeQuery(query: string): boolean {
   const trimmed = query.trim();
   if (!trimmed) return false;
 
-  // Prefixed with hash identifier
-  if (trimmed.startsWith("#")) return true;
+  // Multi-word strings with whitespace are always natural text / keyword searches
+  if (/\s/.test(trimmed)) return false;
 
-  // Common organizational institutional code prefixes
-  if (KNOWN_CODE_PREFIX_REGEX.test(trimmed)) return true;
+  // Prefixed with hash identifier or user handle / email indicator
+  if (trimmed.startsWith("#") || trimmed.startsWith("@") || trimmed.includes("@")) {
+    return true;
+  }
 
-  // Single token without whitespace matching code/alphanumeric characters
-  if (!/\s/.test(trimmed) && EXACT_CODE_PATTERN.test(trimmed)) {
+  // Common organizational institutional code prefixes (e.g. TASK-2026, QCET-DOC, NV-001)
+  if (KNOWN_CODE_PREFIX_REGEX.test(trimmed)) {
+    return true;
+  }
+
+  // Standard UUID identifier format
+  if (UUID_REGEX.test(trimmed)) {
+    return true;
+  }
+
+  // Pure alphabetic words (ASCII or Vietnamese diacritics) must NOT be treated as exact codes
+  if (PURE_ALPHABETIC_REGEX.test(trimmed)) {
+    return false;
+  }
+
+  // Code containing digits combined with separators or alphanumerics (e.g. 19/UBND, 2026-09, TASK-123, 128)
+  if (CODE_WITH_DIGITS_REGEX.test(trimmed)) {
     return true;
   }
 
@@ -200,12 +221,11 @@ export function buildTaskSearchQuery(
     `;
   }
 
-  // Full-Text Search (to_tsvector) + pg_trgm similarity
+  // Full-Text Search (to_tsvector) + pg_trgm ILIKE
   conditions.push(
     Prisma.sql`(
       to_tsvector('simple', coalesce("title", '') || ' ' || coalesce("description", '')) @@ plainto_tsquery('simple', ${query})
       OR "title" ILIKE ${"%" + query + "%"}
-      OR similarity("title", ${query}) > 0.15
     )`
   );
 
@@ -341,12 +361,11 @@ export function buildDocumentSearchQuery(
     `;
   }
 
-  // Full-Text Search on summary + pg_trgm similarity
+  // Full-Text Search on summary + pg_trgm ILIKE
   conditions.push(
     Prisma.sql`(
       to_tsvector('simple', coalesce("summary", '')) @@ plainto_tsquery('simple', ${query})
       OR "summary" ILIKE ${"%" + query + "%"}
-      OR similarity("summary", ${query}) > 0.15
     )`
   );
 
@@ -466,13 +485,11 @@ export function buildUserSearchQuery(
     `;
   }
 
-  // Full-Text Search on name + email + title
+  // Full-Text Search on name + email + title + pg_trgm ILIKE
   conditions.push(
     Prisma.sql`(
       to_tsvector('simple', coalesce("name", '') || ' ' || coalesce("email", '') || ' ' || coalesce("title", '')) @@ plainto_tsquery('simple', ${query})
       OR "name" ILIKE ${"%" + query + "%"}
-      OR "email" ILIKE ${"%" + query + "%"}
-      OR similarity("name", ${query}) > 0.15
     )`
   );
 
@@ -481,7 +498,7 @@ export function buildUserSearchQuery(
     SELECT
       id, name, email, role, title, phone, avatar_url, department_id,
       (
-        ts_rank(to_tsvector('simple', coalesce("name", '') || ' ' || coalesce("email", '')), plainto_tsquery('simple', ${query})) +
+        ts_rank(to_tsvector('simple', coalesce("name", '') || ' ' || coalesce("email", '') || ' ' || coalesce("title", '')), plainto_tsquery('simple', ${query})) +
         coalesce(similarity("name", ${query}), 0)
       )::float AS rank
     FROM "users"

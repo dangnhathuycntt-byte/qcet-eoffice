@@ -35,6 +35,10 @@ test("Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities", async (t) 
   // --------------------------------------------------------------------
   await t.test("1. Query Heuristics & Code Detection", async (t) => {
     await t.test("identifies institutional codes, numbers, and prefixes as exact code lookups", () => {
+      assert.equal(isExactCodeQuery("TASK-101"), true);
+      assert.equal(isExactCodeQuery("#42"), true);
+      assert.equal(isExactCodeQuery("19/UBND"), true);
+      assert.equal(isExactCodeQuery("QCET-2026"), true);
       assert.equal(isExactCodeQuery("TASK-2026-001"), true);
       assert.equal(isExactCodeQuery("QCET-DOC-42"), true);
       assert.equal(isExactCodeQuery("NV-2026-10-017"), true);
@@ -47,7 +51,15 @@ test("Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities", async (t) 
       assert.equal(isExactCodeQuery("0912345678"), true);
     });
 
-    await t.test("identifies multi-word phrases and natural language as keyword search", () => {
+    await t.test("identifies multi-word phrases and single natural language words as keyword search", () => {
+      // Pure alphabetic words must NOT be treated as exact codes
+      assert.equal(isExactCodeQuery("Subtask"), false);
+      assert.equal(isExactCodeQuery("Kehoach"), false);
+      assert.equal(isExactCodeQuery("report"), false);
+      assert.equal(isExactCodeQuery("plan"), false);
+      assert.equal(isExactCodeQuery("baocao"), false);
+
+      // Multi-word phrases
       assert.equal(isExactCodeQuery("ứng phó bão lũ khẩn cấp"), false);
       assert.equal(isExactCodeQuery("kế hoạch năm học 2026-2027"), false);
       assert.equal(isExactCodeQuery("hướng dẫn công nhận tín chỉ"), false);
@@ -89,6 +101,7 @@ test("Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities", async (t) 
       assert.ok(query.sql.includes("plainto_tsquery('simple'"));
       assert.ok(query.sql.includes("ts_rank("));
       assert.ok(query.sql.includes("similarity("));
+      assert.ok(!query.sql.includes("> 0.15"), "buildTaskSearchQuery must not include similarity > 0.15 in WHERE clause");
       assert.ok(query.values.includes("phòng chống thiên tai"));
     });
 
@@ -117,6 +130,7 @@ test("Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities", async (t) 
       });
       assert.ok(ftsDoc.sql.includes("to_tsvector('simple', coalesce(\"summary\", ''))"));
       assert.ok(ftsDoc.sql.includes("plainto_tsquery('simple'"));
+      assert.ok(!ftsDoc.sql.includes("> 0.15"), "buildDocumentSearchQuery must not include similarity > 0.15 in WHERE clause");
       assert.ok(ftsDoc.values.includes("áp thấp nhiệt đới"));
     });
 
@@ -132,6 +146,8 @@ test("Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities", async (t) 
       });
       assert.ok(ftsUser.sql.includes("to_tsvector('simple'"));
       assert.ok(ftsUser.sql.includes("plainto_tsquery('simple'"));
+      assert.ok(ftsUser.sql.includes('coalesce("title", \'\')'), "buildUserSearchQuery must include title in tsvector expression");
+      assert.ok(!ftsUser.sql.includes("> 0.15"), "buildUserSearchQuery must not include similarity > 0.15 in WHERE clause");
       assert.ok(ftsUser.values.includes("Trưởng phòng Đào tạo"));
     });
   });
@@ -234,6 +250,45 @@ test("Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities", async (t) 
         assert.ok(results[0].title.toLowerCase().includes("bão") || results[0].title.toLowerCase().includes("khẩn cấp"));
         assert.ok(typeof results[0].rank === "number");
         assert.ok((results[0].rank ?? 0) > 0);
+      }
+    });
+
+    await t.test("searchTasks with single word 'Subtask' executes keyword FTS search on title/description", async () => {
+      const results = await searchTasks(prisma, {
+        query: "Subtask",
+        limit: 5,
+      });
+
+      assert.ok(Array.isArray(results));
+      assert.ok(results.length > 0, "Expected tasks matching 'Subtask' in title");
+      assert.ok(
+        results.some((t) => t.title.toLowerCase().includes("subtask") || (t.description && t.description.toLowerCase().includes("subtask"))),
+        "Tasks must match by title or description"
+      );
+    });
+
+    await t.test("EXPLAIN query plan on tasks uses Bitmap Index Scan / index scan and not full Seq Scan", async () => {
+      await prisma.$executeRawUnsafe("SET enable_seqscan = off");
+      try {
+        const query = buildTaskSearchQuery({
+          query: "bão lũ khẩn cấp",
+        });
+        const explainRows = await prisma.$queryRawUnsafe<Array<{ "QUERY PLAN": string }>>(
+          "EXPLAIN " + query.text,
+          ...query.values
+        );
+        const planText = explainRows.map((r) => r["QUERY PLAN"]).join("\n");
+
+        assert.ok(
+          planText.includes("Bitmap Index Scan") || planText.includes("Index Scan") || planText.includes("Bitmap Heap Scan"),
+          `Expected query plan to use index scan, got: ${planText}`
+        );
+        assert.ok(
+          !planText.includes("Seq Scan"),
+          `Query plan must not fall back to Seq Scan when indexes are available: ${planText}`
+        );
+      } finally {
+        await prisma.$executeRawUnsafe("SET enable_seqscan = on");
       }
     });
 
@@ -374,6 +429,14 @@ test("Task 12: PostgreSQL Full-Text Search (FTS) & Search Utilities", async (t) 
           `Index ${idx.indexname} definition should use GIN: ${idx.indexdef}`
         );
       }
+
+      // Verify user_name_email_fts_idx includes title in functional index
+      const userFts = ftsIndexes.find((idx) => idx.indexname === "user_name_email_fts_idx");
+      assert.ok(userFts, "user_name_email_fts_idx must exist in pg_indexes");
+      assert.ok(
+        userFts.indexdef.toLowerCase().includes("title"),
+        `user_name_email_fts_idx must include title column in its expression: ${userFts.indexdef}`
+      );
     });
   });
 });

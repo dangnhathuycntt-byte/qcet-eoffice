@@ -133,9 +133,9 @@ ON "documents" USING gin (to_tsvector('simple', coalesce("summary", '')));
 CREATE INDEX IF NOT EXISTS document_summary_trgm_idx
 ON "documents" USING gin ("summary" gin_trgm_ops);
 
--- User full-text search index on name and email
+-- User full-text search index on name, email, and title
 CREATE INDEX IF NOT EXISTS user_name_email_fts_idx
-ON "users" USING gin (to_tsvector('simple', coalesce("name", '') || ' ' || coalesce("email", '')));
+ON "users" USING gin (to_tsvector('simple', coalesce("name", '') || ' ' || coalesce("email", '') || ' ' || coalesce("title", '')));
 
 -- User trigram index on name
 CREATE INDEX IF NOT EXISTS user_name_trgm_idx

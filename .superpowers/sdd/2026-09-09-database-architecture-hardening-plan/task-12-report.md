@@ -92,6 +92,21 @@ Implemented 25 rigorous test assertions across 5 suites:
 5. **PostgreSQL Catalog Verification**:
    - Queries `pg_indexes` to verify that all 6 GIN indexes (`task_title_description_fts_idx`, `task_title_trgm_idx`, `document_title_fts_idx`, `document_summary_trgm_idx`, `user_name_email_fts_idx`, `user_name_trgm_idx`) exist and specify `USING gin`.
 
+### 4. Review Refinements & Performance Fixes
+Following reviewer feedback, the following critical issues were addressed:
+1. **Refined Query Heuristics (`isExactCodeQuery`)**:
+   - Single pure alphabetic words (e.g. `"Subtask"`, `"Kehoach"`, `"report"`, `"plan"`) no longer bypass full-text search.
+   - Code queries require: leading `#` or `@`, recognized institutional prefixes (`TASK-`, `QCET-`, `NV-`, `VB-`, `CV-`, `TB-`, `QD-`), digits combined with separators/alphanumerics (`19/UBND`, `2026-09`), or standard UUID formats.
+2. **PostgreSQL GIN Scan Optimization (Eliminating Seq Scan Bug)**:
+   - Removed `similarity(...) > 0.15` from `WHERE` clauses in `buildTaskSearchQuery`, `buildDocumentSearchQuery`, and `buildUserSearchQuery`. GIN `gin_trgm_ops` cannot index `> 0.15` thresholds and caused PostgreSQL query planner to force a full table `Seq Scan`.
+   - Replaced with indexed predicates: `to_tsvector(...) @@ plainto_tsquery(...) OR "field" ILIKE %query%`.
+   - Retained `similarity(...)` in `SELECT rank` and `ORDER BY rank` for relevance scoring.
+   - Verified via `EXPLAIN (ANALYZE, COSTS OFF)` that PostgreSQL utilizes `Bitmap Index Scan` on `task_title_description_fts_idx` / `task_title_trgm_idx`.
+3. **Aligned User Functional FTS Index**:
+   - Aligned `user_name_email_fts_idx` in `prisma/migrations/indexes.sql` to include `title`:
+     `to_tsvector('simple', coalesce("name", '') || ' ' || coalesce("email", '') || ' ' || coalesce("title", ''))`.
+   - Updated `buildUserSearchQuery` in `src/lib/db/search.ts` to match identical functional expression in both `ts_rank` and `to_tsvector`.
+
 ---
 
 ## Verification Results
@@ -100,13 +115,13 @@ Implemented 25 rigorous test assertions across 5 suites:
    ```bash
    npx tsx --test tests/postgres-search.test.ts
    ```
-   **Output**: 25/25 tests passing (0 failures).
+   **Output**: 27/27 tests passing (0 failures).
 
 2. **Database Hardening Combined Execution**:
    ```bash
    npx tsx --test tests/composite-indexes.test.ts tests/postgres-search.test.ts
    ```
-   **Output**: 41/41 tests passing (0 failures).
+   **Output**: 43/43 tests passing (0 failures).
 
 3. **Full Project Test Suite**:
    ```bash
