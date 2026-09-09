@@ -367,7 +367,7 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const data = event.notification.data || {};
-  const rawTargetUrl = data.route || data.url || data.linkHref || '/portal'; // Supported default routes: /portal or /tasks
+  const rawTargetUrl = data.route || data.url || data.linkHref || '/tasks'; // Supported default route: /tasks
 
   // Enforce strict same-origin route validation to prevent open redirects
   let targetUrl = '/tasks';

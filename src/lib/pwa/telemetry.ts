@@ -77,6 +77,24 @@ export function sanitizeTelemetryMetadata(
   return clean;
 }
 
+/**
+ * Masks raw user identifiers to preserve staff privacy in telemetry logs.
+ * Example: 'usr_staff_12345' -> 'user_usr_staf...'
+ */
+export function maskUserId(userId?: string | null): string | null {
+  if (!userId || typeof userId !== "string") {
+    return null;
+  }
+  const clean = userId.trim();
+  if (!clean) {
+    return null;
+  }
+  if (clean.startsWith("user_") && clean.endsWith("...")) {
+    return clean;
+  }
+  return `user_${clean.slice(0, 8)}...`;
+}
+
 export interface PWATelemetryRecord {
   id: string;
   event: PWATelemetryEventName | string;
@@ -100,12 +118,13 @@ export function recordTelemetry(
   userId?: string | null
 ): PWATelemetryRecord {
   const sanitized = sanitizeTelemetryMetadata(metadata);
+  const maskedUserId = maskUserId(userId);
 
   const record: PWATelemetryRecord = {
     id: `tel-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
     event,
     timestamp: Date.now(),
-    userId: userId ?? null,
+    userId: maskedUserId,
     metadata: sanitized,
   };
 

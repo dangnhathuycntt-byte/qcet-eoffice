@@ -55,6 +55,8 @@ import {
 import {
   getTelemetryLog,
   clearTelemetryLog,
+  recordTelemetry,
+  maskUserId,
 } from "../../src/lib/pwa/telemetry";
 
 describe("QCET E-Office — Comprehensive PWA End-to-End Verification Matrix", () => {
@@ -738,6 +740,12 @@ describe("QCET E-Office — Comprehensive PWA End-to-End Verification Matrix", (
         actionableTasks: 0,
       });
       assert.equal(badgeSet, 0);
+
+      // Guard against NaN / non-finite badge counts
+      const nanResult = await setAppBadge(NaN);
+      assert.equal(nanResult, false, "Must reject NaN badge count");
+      const infResult = await setAppBadge(Infinity);
+      assert.equal(infResult, false, "Must reject Infinity badge count");
     });
 
     it("manifest defines institutional metadata and shortcuts", () => {
@@ -748,6 +756,94 @@ describe("QCET E-Office — Comprehensive PWA End-to-End Verification Matrix", (
       assert.equal(m.start_url, "/?source=pwa");
       assert.ok(Array.isArray(m.icons) && m.icons.length >= 4);
       assert.ok(Array.isArray(m.shortcuts) && m.shortcuts.length >= 2);
+    });
+  });
+
+  // =========================================================================
+  // 10. PWA Operational Telemetry & Privacy Preservation
+  // =========================================================================
+  describe("Matrix 10: PWA Operational Telemetry & Privacy Preservation", () => {
+    beforeEach(() => {
+      clearTelemetryLog();
+    });
+
+    it("tracks operational events across the PWA lifecycle", () => {
+      recordTelemetry("pwa.install.offer", { promptCount: 1 });
+      recordTelemetry("sw.update.applied", { previousVersion: "1.0.0", newVersion: "1.0.1" });
+      recordTelemetry("sync.success", { entityId: "task-01", durationMs: 120 });
+      recordTelemetry("offline.enter", { state: "offline" });
+      recordTelemetry("offline.exit", { state: "online" });
+
+      const log = getTelemetryLog();
+      assert.equal(log.length, 5);
+      assert.equal(log[0].event, "pwa.install.offer");
+      assert.equal(log[1].event, "sw.update.applied");
+      assert.equal(log[2].event, "sync.success");
+      assert.equal(log[2].metadata?.entityId, "task-01");
+      assert.equal(log[3].event, "offline.enter");
+      assert.equal(log[4].event, "offline.exit");
+    });
+
+    it("enforces privacy scrubbing for sensitive metadata keys", () => {
+      recordTelemetry("sync.queued", {
+        entityId: "doc-123",
+        method: "POST",
+        title: "Kế hoạch tuyển sinh tuyệt mật",
+        name: "Nguyễn Văn A",
+        password: "SecretPassword123!",
+        token: "bearer-token-abc",
+        secret: "app-secret-xyz",
+        auth: "Basic dXNlcjpwYXNz",
+        credential: "cred-secret-value",
+        cookie: "session=xyz123",
+        content: "Nội dung chỉ đạo mật",
+        body: "Chi tiết công việc nội bộ",
+        payload: { sensitive: true },
+        safeMetric: 42,
+      });
+
+      const log = getTelemetryLog();
+      assert.equal(log.length, 1);
+      const metadata = log[0].metadata;
+      assert.ok(metadata);
+      assert.equal(metadata.safeMetric, 42);
+      assert.equal(metadata.entityId, "doc-123");
+      assert.equal(metadata.method, "POST");
+
+      // Verify sensitive keys are omitted
+      assert.equal(metadata.title, undefined);
+      assert.equal(metadata.name, undefined);
+      assert.equal(metadata.password, undefined);
+      assert.equal(metadata.token, undefined);
+      assert.equal(metadata.secret, undefined);
+      assert.equal(metadata.auth, undefined);
+      assert.equal(metadata.credential, undefined);
+      assert.equal(metadata.cookie, undefined);
+      assert.equal(metadata.content, undefined);
+      assert.equal(metadata.body, undefined);
+      assert.equal(metadata.payload, undefined);
+    });
+
+    it("masks user ID identifiers to protect staff privacy in telemetry logs", () => {
+      recordTelemetry("pwa.install.accept", { source: "banner" }, "staff_nguyen_van_a_98765");
+
+      const log = getTelemetryLog();
+      assert.equal(log.length, 1);
+      const entry = log[0];
+      assert.ok(entry.userId !== "staff_nguyen_van_a_98765", "Raw userId must not be present");
+      assert.equal(entry.userId, maskUserId("staff_nguyen_van_a_98765"));
+      assert.ok(entry.userId?.startsWith("user_"), "Masked ID must begin with user_ prefix");
+      assert.ok(entry.userId?.endsWith("..."), "Masked ID must end with ellipsis");
+    });
+
+    it("retrieves telemetry log via getTelemetryLog and clears history via clearTelemetryLog", () => {
+      assert.equal(getTelemetryLog().length, 0);
+
+      recordTelemetry("storage.cleared", { source: "settings" });
+      assert.equal(getTelemetryLog().length, 1);
+
+      clearTelemetryLog();
+      assert.equal(getTelemetryLog().length, 0);
     });
   });
 });

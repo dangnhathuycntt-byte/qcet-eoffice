@@ -51,7 +51,10 @@ export async function setAppBadge(count?: number): Promise<boolean> {
   }
 
   try {
-    if (typeof count === "number") {
+    if (count !== undefined) {
+      if (typeof count !== "number" || !Number.isFinite(count)) {
+        return false;
+      }
       const sanitized = Math.max(0, Math.floor(count));
       if (sanitized === 0) {
         await (navigator as any).clearAppBadge();

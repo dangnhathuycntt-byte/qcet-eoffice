@@ -22,7 +22,7 @@ import {
   getDraft,
   listUserDrafts,
 } from "../../src/lib/pwa/offline-store";
-import { getTelemetryEvents, clearTelemetryEvents } from "../../src/lib/pwa/telemetry";
+import { getTelemetryEvents, clearTelemetryEvents, maskUserId } from "../../src/lib/pwa/telemetry";
 
 describe("PWA Storage Manager Tests", () => {
   const originalNavigator = globalThis.navigator;
@@ -130,7 +130,7 @@ describe("PWA Storage Manager Tests", () => {
       const events = getTelemetryEvents();
       const persistEvent = events.find((e) => e.event === "storage.persist.granted");
       assert.ok(persistEvent, "Must record storage.persist.granted telemetry event");
-      assert.strictEqual(persistEvent.userId, "test-user-storage-01");
+      assert.strictEqual(persistEvent.userId, maskUserId("test-user-storage-01"));
       assert.strictEqual(persistEvent.metadata?.explicitUserAction, true);
     });
 
@@ -151,7 +151,7 @@ describe("PWA Storage Manager Tests", () => {
       const events = getTelemetryEvents();
       const denyEvent = events.find((e) => e.event === "storage.persist.denied");
       assert.ok(denyEvent, "Must record storage.persist.denied telemetry event");
-      assert.strictEqual(denyEvent.userId, "test-user-storage-01");
+      assert.strictEqual(denyEvent.userId, maskUserId("test-user-storage-01"));
     });
   });
 
@@ -292,7 +292,7 @@ describe("PWA Storage Manager Tests", () => {
       const events = getTelemetryEvents();
       const clearEvent = events.find((e) => e.event === "storage.cleared");
       assert.ok(clearEvent, "Must record storage.cleared event");
-      assert.strictEqual(clearEvent.userId, uid);
+      assert.strictEqual(clearEvent.userId, maskUserId(uid));
     });
 
     it("preserves outbox when preserveOutbox: true is specified", async () => {
