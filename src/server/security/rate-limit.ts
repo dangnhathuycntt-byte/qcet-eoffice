@@ -6,6 +6,7 @@ export type RateLimitTier =
   | 'SEARCH'
   | 'EXPORT'
   | 'MUTATIONS_SENSITIVE'
+  | 'MUTATION'
   | 'PUSH_TEST'
   | 'DEFAULT_API';
 
@@ -20,6 +21,7 @@ export const RATE_LIMIT_PRESETS: Record<RateLimitTier, RateLimitConfig> = {
   SEARCH: { limit: 30, windowMs: 60 * 1000 },                  // 30 reqs per 1 min
   EXPORT: { limit: 5, windowMs: 60 * 1000 },                   // 5 reqs per 1 min
   MUTATIONS_SENSITIVE: { limit: 30, windowMs: 60 * 1000 },     // 30 reqs per 1 min
+  MUTATION: { limit: 60, windowMs: 60 * 1000 },                // 60 reqs per 1 min
   PUSH_TEST: { limit: 3, windowMs: 5 * 60 * 1000 },            // 3 reqs per 5 min
   DEFAULT_API: { limit: 100, windowMs: 60 * 1000 },            // 100 reqs per 1 min
 };

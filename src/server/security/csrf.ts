@@ -281,6 +281,8 @@ export function assertCsrfProtection(request: Request, options?: CsrfOptions): v
   }
 }
 
+export const assertCsrf = assertCsrfProtection;
+
 /**
  * Standard HTTP security and hardening headers.
  */

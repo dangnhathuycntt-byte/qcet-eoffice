@@ -1,82 +1,83 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getSessionFromRequest } from '@/lib/jwt-session';
+import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
+import { apiError, apiSuccess } from '@/server/api/response';
+import { ValidationError } from '@/server/api/errors';
+import {
+  assertJsonContentType,
+  assertRequestBodySize,
+  extractFieldErrors,
+  MAX_JSON_BODY_SIZE,
+} from '@/server/api/validation';
+import { PushSubscriptionSchema } from '@/contracts/notifications';
 import { getVapidPublicKey } from '@/lib/push-service';
+import { assertCsrf } from '@/server/security/csrf';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+  let requestId = 'req-push-key';
   try {
+    const context = await getApiContext(request);
+    requestId = context.requestId;
     const publicKey = getVapidPublicKey();
-    return NextResponse.json({
-      success: true,
-      publicKey,
-    });
-  } catch (error) {
-    console.error('Failed to get VAPID public key:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
+    return apiSuccess(
+      { publicKey },
+      {
+        requestId,
+        legacyCompat: true,
+      }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }
 
 export async function POST(request: NextRequest) {
+  let requestId = 'req-push-subscribe';
   try {
-    const body = await request.json().catch(() => null);
-    if (!body) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid JSON body' },
-        { status: 400 }
-      );
-    }
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    requireAuthenticated(context);
+    const authUser = context.user!;
 
-    const session = getSessionFromRequest(request);
-    if (!session?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    assertCsrf(request);
+    assertJsonContentType(request);
+    assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
 
-    const endpoint = body.endpoint;
-    const p256dh = body.p256dh || body.keys?.p256dh;
-    const auth = body.auth || body.keys?.auth;
-    const deviceType = body.deviceType || body.platform || null;
-    const userAgent = body.userAgent || request.headers.get('user-agent') || null;
-
-    if (!endpoint || !p256dh || !auth) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Missing required fields: endpoint, p256dh, and auth are required',
-        },
-        { status: 400 }
-      );
-    }
-
+    let rawBody: unknown;
     try {
-      const parsedEndpoint = new URL(endpoint);
-      if (parsedEndpoint.protocol !== 'https:') {
-        return NextResponse.json(
-          { success: false, error: 'Push endpoint must be a valid HTTPS URL' },
-          { status: 400 }
-        );
-      }
+      rawBody = await request.json();
     } catch {
-      return NextResponse.json(
-        { success: false, error: 'Push endpoint must be a valid HTTPS URL' },
-        { status: 400 }
+      throw new ValidationError('Invalid JSON body');
+    }
+
+    if (!rawBody || typeof rawBody !== 'object') {
+      throw new ValidationError('Invalid JSON body');
+    }
+
+    const parseResult = PushSubscriptionSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      const firstIssue = parseResult.error.issues[0];
+      throw new ValidationError(
+        firstIssue?.message || 'Thiếu thông tin endpoint, p256dh hoặc auth',
+        extractFieldErrors(parseResult.error)
       );
     }
+
+    const validated = parseResult.data;
+    const p256dh = validated.keys?.p256dh || validated.p256dh;
+    const auth = validated.keys?.auth || validated.auth;
+    const deviceType = validated.deviceType || (rawBody as Record<string, any>).platform || null;
+    const userAgent = validated.userAgent || request.headers.get('user-agent') || null;
 
     const subscription = await prisma.pushSubscription.upsert({
-      where: { endpoint },
+      where: { endpoint: validated.endpoint },
       update: {
-        userId: session.id,
-        p256dh,
-        auth,
+        userId: authUser.id,
+        p256dh: p256dh!,
+        auth: auth!,
         deviceType: deviceType || null,
         userAgent: userAgent || null,
         status: 'ACTIVE',
@@ -85,10 +86,10 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       },
       create: {
-        userId: session.id,
-        endpoint,
-        p256dh,
-        auth,
+        userId: authUser.id,
+        endpoint: validated.endpoint,
+        p256dh: p256dh!,
+        auth: auth!,
         deviceType: deviceType || null,
         userAgent: userAgent || null,
         status: 'ACTIVE',
@@ -96,41 +97,46 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      subscriptionId: subscription.id,
-    });
-  } catch (error) {
-    console.error('Failed to subscribe push notification:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
+    return apiSuccess(
+      {
+        subscriptionId: subscription.id,
+        subscription,
+      },
+      {
+        requestId,
+        legacyCompat: true,
+      }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }
 
 export async function DELETE(request: NextRequest) {
+  let requestId = 'req-push-unsubscribe';
   try {
-    const body = await request.json().catch(() => null);
-    if (!body || !body.endpoint) {
-      return NextResponse.json(
-        { success: false, error: 'Missing endpoint' },
-        { status: 400 }
-      );
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    requireAuthenticated(context);
+    const authUser = context.user!;
+
+    assertCsrf(request);
+
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      throw new ValidationError('Invalid JSON body');
     }
 
-    const session = getSessionFromRequest(request);
-    if (!session?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!body || !body.endpoint) {
+      throw new ValidationError('Missing endpoint');
     }
 
     await prisma.pushSubscription.updateMany({
       where: {
         endpoint: body.endpoint,
-        userId: session.id,
+        userId: authUser.id,
       },
       data: {
         status: 'REVOKED',
@@ -138,14 +144,14 @@ export async function DELETE(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-    });
-  } catch (error) {
-    console.error('Failed to unsubscribe push notification:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal Server Error' },
-      { status: 500 }
+    return apiSuccess(
+      { success: true },
+      {
+        requestId,
+        legacyCompat: true,
+      }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }

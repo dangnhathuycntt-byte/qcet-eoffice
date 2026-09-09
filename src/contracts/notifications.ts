@@ -15,6 +15,17 @@ export const NotificationQuerySchema = PaginationQuerySchema.extend({
       return val;
     }, z.boolean())
     .optional(),
+  unreadOnly: z
+    .preprocess((val) => {
+      if (typeof val === 'string') {
+        const lower = val.trim().toLowerCase();
+        if (lower === 'true' || lower === '1') return true;
+        if (lower === 'false' || lower === '0') return false;
+      }
+      return val;
+    }, z.boolean())
+    .optional(),
+  category: z.string().trim().max(50).optional(),
   type: z.string().trim().max(50, 'Type cannot exceed 50 characters').optional(),
 });
 
@@ -70,6 +81,57 @@ export const SubscribePushSchema = z
 export type SubscribePushInput = z.infer<typeof SubscribePushSchema>;
 
 /**
+ * Flexible Push subscription contract supporting both flat (p256dh, auth)
+ * and nested ({ keys: { p256dh, auth } }) structures with HTTPS URL enforcement.
+ */
+export const PushSubscriptionSchema = z
+  .object({
+    endpoint: z
+      .string()
+      .trim()
+      .refine(
+        (val) => {
+          try {
+            const parsed = new URL(val);
+            return parsed.protocol === 'https:';
+          } catch {
+            return false;
+          }
+        },
+        { message: 'Push endpoint must be a valid HTTPS URL' }
+      )
+      .pipe(z.string().max(1024, 'Endpoint cannot exceed 1024 characters')),
+    keys: PushSubscriptionKeysSchema.optional(),
+    p256dh: z.string().trim().max(255).optional(),
+    auth: z.string().trim().max(255).optional(),
+    deviceType: z
+      .string()
+      .trim()
+      .max(50, 'Device type cannot exceed 50 characters')
+      .optional()
+      .nullable(),
+    userAgent: z
+      .string()
+      .trim()
+      .max(500, 'User agent cannot exceed 500 characters')
+      .optional()
+      .nullable(),
+  })
+  .refine(
+    (data) => {
+      const p256 = (data.keys?.p256dh || data.p256dh)?.trim();
+      const a = (data.keys?.auth || data.auth)?.trim();
+      return Boolean(p256 && a);
+    },
+    {
+      message: 'Thiếu thông tin endpoint, p256dh hoặc auth',
+      path: ['keys'],
+    }
+  );
+
+export type PushSubscriptionInput = z.infer<typeof PushSubscriptionSchema>;
+
+/**
  * Test push notification contract.
  */
 export const TestPushSchema = z
@@ -83,6 +145,11 @@ export const TestPushSchema = z
       .string()
       .trim()
       .max(255, 'Body cannot exceed 255 characters')
+      .optional(),
+    linkHref: z
+      .string()
+      .trim()
+      .max(255, 'Link href cannot exceed 255 characters')
       .optional(),
   })
   .strict();

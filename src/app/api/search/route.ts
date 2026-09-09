@@ -1,12 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getSessionFromRequest } from "@/lib/jwt-session";
+import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
+import { apiError, apiSuccess } from '@/server/api/response';
+import { ValidationError } from '@/server/api/errors';
+import { extractFieldErrors } from '@/server/api/validation';
+import { SearchQuerySchema } from '@/contracts/common';
+import { assertRateLimit } from '@/server/security/rate-limit';
+import { isAdmin } from '@/server/policies/executive-policy';
 import {
   foldVietnamese,
   normalizeTelexQuery,
   scoreVietnameseSearch,
   QCET_ACRONYMS,
-} from "@/lib/search/vietnamese-search";
+} from '@/lib/search/vietnamese-search';
+import { TaskScope } from '@prisma/client';
 
 export interface SearchTaskResult {
   id: string;
@@ -51,81 +58,150 @@ export interface SearchUserResult {
   } | null;
 }
 
+export interface SearchDocumentResult {
+  id: string;
+  documentNumber?: string;
+  originalNumber?: string | null;
+  title: string;
+  summary: string;
+  type?: string;
+  category?: string | null;
+  issuingAuthority?: string | null;
+  issuedDate?: string;
+}
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
+  let requestId = 'req-search-get';
   try {
-    const session = getSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: "Chưa xác thực danh tính" },
-        { status: 401 }
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    requireAuthenticated(context);
+    const authUser = context.user!;
+
+    // Enforce SEARCH rate limit tier
+    assertRateLimit(authUser.id, 'SEARCH');
+
+    const searchParams = request.nextUrl.searchParams;
+    const queryParams: Record<string, any> = {};
+    searchParams.forEach((val, key) => {
+      queryParams[key] = val;
+    });
+
+    const parseResult = SearchQuerySchema.safeParse(queryParams);
+    if (!parseResult.success) {
+      throw new ValidationError(
+        parseResult.error.issues[0]?.message || 'Validation failed',
+        extractFieldErrors(parseResult.error)
       );
     }
+    const { q: rawQParam, query: rawQueryParam, limit = 20, scope } = parseResult.data;
+    const q = (rawQParam || rawQueryParam || '').trim();
 
-    const { searchParams } = request.nextUrl;
-    const q = (searchParams.get("q") || searchParams.get("query") || "").trim();
-    const rawQ = q;
-    const foldedQ = foldVietnamese(rawQ);
-    const telexQ = normalizeTelexQuery(rawQ);
+    const foldedQ = foldVietnamese(q);
+    const telexQ = normalizeTelexQuery(q);
     const acronymTerms = QCET_ACRONYMS[foldedQ] || [];
 
-    // 1. Search Tasks
-    let tasksWhere: any = {};
+    // Base query filter for tasks
+    const andConditions: any[] = [];
+
     if (q) {
       const taskOrConditions: any[] = [
-        { title: { contains: q, mode: "insensitive" } },
-        { code: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-        { department: { name: { contains: q, mode: "insensitive" } } },
-        { department: { shortName: { contains: q, mode: "insensitive" } } },
+        { title: { contains: q, mode: 'insensitive' } },
+        { code: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+        { department: { name: { contains: q, mode: 'insensitive' } } },
+        { department: { shortName: { contains: q, mode: 'insensitive' } } },
       ];
 
       // Add folded and telex forms
       if (foldedQ && foldedQ !== q.toLowerCase()) {
         taskOrConditions.push(
-          { title: { contains: foldedQ, mode: "insensitive" } },
-          { code: { contains: foldedQ, mode: "insensitive" } }
+          { title: { contains: foldedQ, mode: 'insensitive' } },
+          { code: { contains: foldedQ, mode: 'insensitive' } }
         );
       }
       if (telexQ && telexQ !== foldedQ && telexQ !== q.toLowerCase()) {
-        taskOrConditions.push(
-          { title: { contains: telexQ, mode: "insensitive" } }
-        );
+        taskOrConditions.push({
+          title: { contains: telexQ, mode: 'insensitive' },
+        });
       }
 
       // Add acronym expansions (e.g. "cntt" -> "Khoa Công nghệ thông tin")
       for (const term of acronymTerms) {
         taskOrConditions.push(
-          { department: { name: { contains: term, mode: "insensitive" } } },
-          { title: { contains: term, mode: "insensitive" } }
+          { department: { name: { contains: term, mode: 'insensitive' } } },
+          { title: { contains: term, mode: 'insensitive' } }
         );
       }
 
-      tasksWhere = { OR: taskOrConditions };
+      andConditions.push({ OR: taskOrConditions });
     }
+
+    // Role and Scope authorization filter
+    const userIsAdmin = isAdmin(authUser);
+
+    if (scope === 'personal') {
+      andConditions.push({
+        OR: [
+          { createdById: authUser.id },
+          { assignees: { some: { userId: authUser.id } } },
+        ],
+      });
+    } else if (scope === 'unit') {
+      if (authUser.departmentId) {
+        andConditions.push({ departmentId: authUser.departmentId });
+      } else if (!userIsAdmin) {
+        // User with no department can only see their own tasks in unit scope
+        andConditions.push({
+          OR: [
+            { createdById: authUser.id },
+            { assignees: { some: { userId: authUser.id } } },
+          ],
+        });
+      }
+    } else if (scope === 'school') {
+      andConditions.push({ scope: TaskScope.SCHOOL });
+    } else if (!userIsAdmin) {
+      // Unscoped query for non-admin: restrict to assigned, created, own department, or school-wide tasks
+      const permittedConditions: any[] = [
+        { createdById: authUser.id },
+        { assignees: { some: { userId: authUser.id } } },
+        { scope: TaskScope.SCHOOL },
+      ];
+      if (authUser.departmentId) {
+        permittedConditions.push({ departmentId: authUser.departmentId });
+      }
+      andConditions.push({ OR: permittedConditions });
+    }
+
+    const tasksWhere = andConditions.length > 0 ? { AND: andConditions } : {};
 
     // 2. Search Users
     let usersWhere: any = { isActive: true };
     if (q) {
       const userOrConditions: any[] = [
-        { name: { contains: q, mode: "insensitive" } },
-        { email: { contains: q, mode: "insensitive" } },
-        { title: { contains: q, mode: "insensitive" } },
-        { phone: { contains: q, mode: "insensitive" } },
-        { department: { name: { contains: q, mode: "insensitive" } } },
-        { department: { shortName: { contains: q, mode: "insensitive" } } },
+        { name: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+        { title: { contains: q, mode: 'insensitive' } },
+        { phone: { contains: q, mode: 'insensitive' } },
+        { department: { name: { contains: q, mode: 'insensitive' } } },
+        { department: { shortName: { contains: q, mode: 'insensitive' } } },
       ];
 
       if (foldedQ && foldedQ !== q.toLowerCase()) {
         userOrConditions.push(
-          { name: { contains: foldedQ, mode: "insensitive" } },
-          { email: { contains: foldedQ, mode: "insensitive" } }
+          { name: { contains: foldedQ, mode: 'insensitive' } },
+          { email: { contains: foldedQ, mode: 'insensitive' } }
         );
       }
 
       for (const term of acronymTerms) {
-        userOrConditions.push(
-          { department: { name: { contains: term, mode: "insensitive" } } }
-        );
+        userOrConditions.push({
+          department: { name: { contains: term, mode: 'insensitive' } },
+        });
       }
 
       usersWhere = {
@@ -169,8 +245,8 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: q ? [{ dueDate: "asc" }, { updatedAt: "desc" }] : [{ updatedAt: "desc" }],
-        take: q ? 30 : 5,
+        orderBy: q ? [{ dueDate: 'asc' }, { updatedAt: 'desc' }] : [{ updatedAt: 'desc' }],
+        take: Math.min(limit, 50),
       }),
       prisma.user.findMany({
         where: usersWhere,
@@ -191,8 +267,8 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { name: "asc" },
-        take: q ? 20 : 5,
+        orderBy: { name: 'asc' },
+        take: Math.min(limit, 20),
       }),
     ]);
 
@@ -205,8 +281,8 @@ export async function GET(request: NextRequest) {
         .map((task) => {
           const keywords = [
             task.code,
-            task.department?.name || "",
-            task.department?.shortName || "",
+            task.department?.name || '',
+            task.department?.shortName || '',
           ].filter(Boolean);
           const score = Math.max(
             scoreVietnameseSearch(task.title, q, keywords),
@@ -216,17 +292,17 @@ export async function GET(request: NextRequest) {
           return { task, score };
         })
         .sort((a, b) => b.score - a.score)
-        .slice(0, 10)
+        .slice(0, Math.min(limit, 50))
         .map((item) => item.task);
 
       sortedUsers = [...rawUsers]
         .map((user) => {
           const keywords = [
             user.email,
-            user.phone || "",
-            user.title || "",
-            user.department?.name || "",
-            user.department?.shortName || "",
+            user.phone || '',
+            user.title || '',
+            user.department?.name || '',
+            user.department?.shortName || '',
           ].filter(Boolean);
           const score = Math.max(
             scoreVietnameseSearch(user.name, q, keywords),
@@ -236,32 +312,36 @@ export async function GET(request: NextRequest) {
           return { user, score };
         })
         .sort((a, b) => b.score - a.score)
-        .slice(0, 8)
+        .slice(0, Math.min(limit, 20))
         .map((item) => item.user);
     }
 
     const formattedTasks = sortedTasks.map((t) => ({
       ...t,
-      dueDate: t.dueDate ? t.dueDate.toISOString() : "",
+      dueDate: t.dueDate ? t.dueDate.toISOString() : '',
     }));
 
-    return NextResponse.json({
-      success: true,
-      query: q,
-      results: {
-        tasks: formattedTasks,
-        users: sortedUsers,
+    return apiSuccess(
+      {
+        query: q,
+        results: {
+          tasks: formattedTasks,
+          users: sortedUsers,
+        },
+        count: {
+          tasks: formattedTasks.length,
+          users: sortedUsers.length,
+        },
       },
-      count: {
-        tasks: formattedTasks.length,
-        users: sortedUsers.length,
-      },
-    });
-  } catch (error) {
-    console.error("Lỗi tìm kiếm nhanh (Global Search):", error);
-    return NextResponse.json(
-      { success: false, error: "Đã xảy ra lỗi khi tìm kiếm" },
-      { status: 500 }
+      {
+        requestId,
+        headers: {
+          'Cache-Control': 'private, no-store',
+        },
+        legacyCompat: true,
+      }
     );
+  } catch (error) {
+    return apiError(error, requestId, { legacyCompat: true });
   }
 }

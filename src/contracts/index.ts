@@ -4,3 +4,4 @@ export * from './tasks';
 export * from './documents';
 export * from './notifications';
 export * from './users';
+export * from './executive';

@@ -47,6 +47,8 @@ export function assertPayloadSize(
   }
 }
 
+export const assertRequestBodySize = assertPayloadSize;
+
 /**
  * Asserts that the query string length of a URL or Request does not exceed maximum limit.
  */
