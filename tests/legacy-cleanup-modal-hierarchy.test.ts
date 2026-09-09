@@ -29,9 +29,9 @@ describe("Task 12: Legacy Portal Cleanup, Modal Hierarchy & Unified Feedback", (
       const emojiRegex = /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
       assert.ok(!emojiRegex.test(content), "feedback-layer.tsx must not contain decorative emojis");
 
-      // No micro-fonts under 11px
-      const microFontRegex = /text-\[(?:[0-9]|10)px\]/g;
-      assert.equal(microFontRegex.test(content), false, "feedback-layer.tsx must not use font sizes < 11px");
+      // No micro-fonts under 12px
+      const microFontRegex = /text-\[(?:[0-9]|10|11)px\]/g;
+      assert.equal(microFontRegex.test(content), false, "feedback-layer.tsx must not use font sizes < 12px");
     });
 
     it("exports required components and hooks", async () => {

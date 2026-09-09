@@ -216,7 +216,7 @@ export function FormValidationSummary({
         <div className="flex items-center gap-2 font-semibold text-rose-900 text-xs">
           <XCircle className="size-4 text-rose-600 shrink-0" strokeWidth={1.75} />
           <span>{title}</span>
-          <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-100 text-rose-700 border border-rose-200">
+          <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200">
             {errors.length}
           </span>
         </div>
