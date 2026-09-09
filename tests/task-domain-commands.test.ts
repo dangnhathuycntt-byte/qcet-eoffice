@@ -403,6 +403,33 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       });
       assert.ok(outbox, "Outbox event for deliverable submission must exist");
     });
+
+    test("rejects submission on COMPLETED task with 409 Conflict", async () => {
+      // Temporarily mark task COMPLETED
+      await prisma.task.update({
+        where: { id: testTask.id },
+        data: { status: TaskStatus.COMPLETED },
+      });
+
+      const req = makeRequest(
+        `http://localhost:3000/api/tasks/${testTask.id}/actions/submit-result`,
+        {
+          summary: "Cố tình nộp khi đã hoàn thành",
+        },
+        driToken
+      );
+      const res = await submitResultRoute(req, { params: { id: testTask.id } });
+      assert.equal(res.status, 409);
+      const body = await res.json();
+      assert.equal(body.success, false);
+      assert.equal(body.code, "INVALID_TRANSITION");
+
+      // Restore task status
+      await prisma.task.update({
+        where: { id: testTask.id },
+        data: { status: TaskStatus.WAITING_APPROVAL },
+      });
+    });
   });
 
   // ==========================================================================
@@ -515,6 +542,14 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         orderBy: { createdAt: "desc" },
       });
       assert.ok(outbox);
+
+      // Verify approval processes are marked REJECTED
+      const rejectedProcesses = await prisma.taskApprovalProcess.findMany({
+        where: { taskId: testTask.id },
+      });
+      for (const proc of rejectedProcesses) {
+        assert.equal(proc.status, "REJECTED");
+      }
     });
   });
 
@@ -640,6 +675,22 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         orderBy: { createdAt: "desc" },
       });
       assert.ok(outbox);
+    });
+
+    test("rejects invalid role with 400 Validation Error", async () => {
+      const req = makeRequest(
+        `http://localhost:3000/api/tasks/${testTask.id}/actions/reassign`,
+        {
+          newAssigneeId: newDriUser.id,
+          role: "COLLABORATOR",
+        },
+        creatorToken
+      );
+      const res = await reassignRoute(req, { params: { id: testTask.id } });
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.equal(data.success, false);
+      assert.equal(data.code, "VALIDATION_ERROR");
     });
   });
 

@@ -97,10 +97,7 @@ export type ApproveInput = z.infer<typeof ApproveInputSchema>;
 
 export const ReassignInputSchema = z.object({
   newAssigneeId: z.string().min(1, "Mã người được chỉ định là bắt buộc"),
-  role: z
-    .enum(["DRI", "COLLABORATOR", "FOLLOWER", "REVIEWER", "APPROVER", "OBSERVER"])
-    .optional()
-    .default("DRI"),
+  role: z.literal("DRI").optional().default("DRI"),
   isPrimaryDRI: z.boolean().optional().default(true),
   note: z.string().optional(),
 });
@@ -335,6 +332,17 @@ export class TaskDomainActionService {
     const authResult = await authorize(userContext, "task.submit_result", resource);
     assertAuthAllowed(authResult, "task.submit_result", taskId);
 
+    if (
+      task.status === TaskStatus.COMPLETED ||
+      task.status === TaskStatus.CANCELLED
+    ) {
+      throw new InvalidTransitionError(
+        `Không thể nộp kết quả cho nhiệm vụ đã ${
+          task.status === TaskStatus.COMPLETED ? "hoàn thành" : "bị hủy"
+        }.`
+      );
+    }
+
     const summaryText =
       validated.summary?.trim() || validated.title?.trim() || "Nộp kết quả thực hiện nhiệm vụ";
     const reportUrlText = validated.reportUrl?.trim() || validated.fileUrl?.trim() || null;
@@ -379,12 +387,10 @@ export class TaskDomainActionService {
         }
       }
 
-      if (task.status !== TaskStatus.CANCELLED) {
-        await tx.task.update({
-          where: { id: taskId },
-          data: { status: TaskStatus.WAITING_APPROVAL },
-        });
-      }
+      await tx.task.update({
+        where: { id: taskId },
+        data: { status: TaskStatus.WAITING_APPROVAL },
+      });
 
       await auditService.logEvent(tx, {
         actorId: session.id,
@@ -439,13 +445,13 @@ export class TaskDomainActionService {
 
     // Maker-Checker Invariant Enforcement:
     // Submitter cannot review/verify own submission
-    const submitterId =
-      targetResult?.submittedByUserId ||
-      targetDeliverable?.uploadedById ||
-      resource.submittedByUserId ||
-      resource.uploadedById;
+    const isSubmitter =
+      targetResult?.submittedByUserId === session.id ||
+      targetDeliverable?.uploadedById === session.id ||
+      resource.submittedByUserId === session.id ||
+      resource.uploadedById === session.id;
 
-    if (submitterId && submitterId === session.id) {
+    if (isSubmitter) {
       throw new SeparationOfDutiesError(
         "Vi phạm nguyên tắc Maker-Checker (SoD): Cán bộ thực thi hoặc nộp minh chứng không được tự thẩm tra sản phẩm của mình.",
         "task.review",
@@ -516,7 +522,9 @@ export class TaskDomainActionService {
           validated.stepId,
           session.id,
           effectiveDecision,
-          noteText || undefined
+          noteText || undefined,
+          undefined,
+          tx
         );
       }
 
@@ -630,6 +638,27 @@ export class TaskDomainActionService {
             reviewerUserId: session.id,
           },
         });
+
+        // Update parent TaskApprovalProcess status to REJECTED
+        await tx.taskApprovalProcess.update({
+          where: { id: rejectedStep.processId },
+          data: {
+            status: ApprovalProcessStatus.REJECTED,
+          },
+        });
+      } else {
+        // Update any active TaskApprovalProcess for this task to REJECTED
+        await tx.taskApprovalProcess.updateMany({
+          where: {
+            taskId,
+            status: {
+              in: [ApprovalProcessStatus.NOT_STARTED, ApprovalProcessStatus.IN_REVIEW],
+            },
+          },
+          data: {
+            status: ApprovalProcessStatus.REJECTED,
+          },
+        });
       }
 
       await auditService.logEvent(tx, {
@@ -709,7 +738,8 @@ export class TaskDomainActionService {
           session.id,
           "APPROVED",
           noteText || undefined,
-          { allowBypass: validated.allowBypass }
+          { allowBypass: validated.allowBypass },
+          tx
         );
       }
 
@@ -802,44 +832,50 @@ export class TaskDomainActionService {
     const authResult = await authorize(userContext, "task.reassign", resource);
     assertAuthAllowed(authResult, "task.reassign", taskId);
 
-    const primaryDRI = await setTaskDRI(
-      taskId,
-      validated.newAssigneeId,
-      {
-        requestedById: session.id,
-      }
-    );
-
-    await auditService.logEvent(prisma, {
-      actorId: session.id,
-      action: AuditAction.TASK_ASSIGNED,
-      entityType: AuditEntityType.TASK,
-      entityId: taskId,
-      beforeData: { primaryOwnerId: resource.primaryOwnerId },
-      afterData: {
-        primaryOwnerId: validated.newAssigneeId,
-        note: validated.note?.trim() || null,
-      },
-    });
-
-    await publishOutboxEvent(prisma, {
-      eventType: OutboxEventType.TASK_ASSIGNED_NOTIFICATION,
-      aggregateType: OutboxAggregateType.TASK,
-      aggregateId: taskId,
-      payload: {
+    const result = await prisma.$transaction(async (tx) => {
+      const primaryDRI = await setTaskDRI(
         taskId,
-        assignedById: session.id,
+        validated.newAssigneeId,
+        {
+          requestedById: session.id,
+        },
+        undefined,
+        tx
+      );
+
+      await auditService.logEvent(tx, {
+        actorId: session.id,
+        action: AuditAction.TASK_ASSIGNED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        beforeData: { primaryOwnerId: resource.primaryOwnerId },
+        afterData: {
+          primaryOwnerId: validated.newAssigneeId,
+          note: validated.note?.trim() || null,
+        },
+      });
+
+      await publishOutboxEvent(tx, {
+        eventType: OutboxEventType.TASK_ASSIGNED_NOTIFICATION,
+        aggregateType: OutboxAggregateType.TASK,
+        aggregateId: taskId,
+        payload: {
+          taskId,
+          assignedById: session.id,
+          newAssigneeId: validated.newAssigneeId,
+          role: "DRI",
+        },
+      });
+
+      return {
+        taskId,
+        primaryDRI,
         newAssigneeId: validated.newAssigneeId,
-        role: "DRI",
-      },
+        role: TaskActorRole.DRI,
+      };
     });
 
-    return {
-      taskId,
-      primaryDRI,
-      newAssigneeId: validated.newAssigneeId,
-      role: TaskActorRole.DRI,
-    };
+    return result;
   }
 
   /**
