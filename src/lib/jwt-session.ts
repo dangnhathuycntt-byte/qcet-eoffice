@@ -7,6 +7,13 @@ export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
 export const SESSION_COOKIE_MAX_AGE = SESSION_MAX_AGE_SECONDS;
 
 export function getJwtSecret(): string {
+  if (
+    process.env.NODE_ENV === "production" &&
+    !process.env.JWT_SECRET &&
+    !process.env.AUTH_SECRET
+  ) {
+    throw new Error("JWT_SECRET environment variable is required in production");
+  }
   return serverEnv.AUTH_SECRET || "qcet_fallback_secret_key_2026";
 }
 
