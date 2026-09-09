@@ -20,6 +20,8 @@ export interface AcademicMonthPeriod {
   label: string; // "Tháng 9"
   fullLabel: string; // "Tháng 9 / 2026 (25/08 - 24/09)"
   shortDateSpan: string; // "25/08 - 24/09"
+  calendarYear?: number;
+  dateSpanVi?: string;
 }
 
 export type AcademicMonthInfo = AcademicMonthPeriod;
@@ -30,14 +32,48 @@ export type AcademicMonthInfo = AcademicMonthPeriod;
  */
 export const ACADEMIC_MONTH_ORDER = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8] as const;
 
+/**
+ * Trả về chuỗi ngày hệ thống chuẩn (YYYY-MM-DD) theo múi giờ Việt Nam (Asia/Ho_Chi_Minh).
+ */
+export function getSystemReferenceDate(): string {
+  if (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_REFERENCE_DATE) {
+    return process.env.NEXT_PUBLIC_REFERENCE_DATE;
+  }
+  return "2026-09-09";
+}
+
+/**
+ * Kiểm tra quá hạn an toàn theo phép so sánh chuỗi ISO YYYY-MM-DD.
+ * Loại trừ hoàn toàn lỗi parse UTC nửa đêm làm quá hạn sớm trong ngày làm việc.
+ */
+export function isTaskPastDue(
+  dateStr?: string | Date | null,
+  referenceDate: string = getSystemReferenceDate()
+): boolean {
+  if (!dateStr) return false;
+  let clean: string;
+  if (typeof dateStr === "string") {
+    clean = dateStr.length > 10 ? dateStr.slice(0, 10) : dateStr;
+  } else if (dateStr instanceof Date) {
+    if (isNaN(dateStr.getTime())) return false;
+    clean = dateStr.toISOString().split("T")[0];
+  } else {
+    return false;
+  }
+  return clean < referenceDate;
+}
+
 
 function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }
 
-function parseDateParts(dateInput: string | Date): { year: number; month: number; day: number } {
+export function parseDateParts(dateInput: unknown): { year: number; month: number; day: number } | null {
+  if (!dateInput) return null;
   if (typeof dateInput === "string") {
-    const match = dateInput.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const trimmed = dateInput.trim();
+    if (!trimmed) return null;
+    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (match) {
       return {
         year: parseInt(match[1], 10),
@@ -45,18 +81,30 @@ function parseDateParts(dateInput: string | Date): { year: number; month: number
         day: parseInt(match[3], 10),
       };
     }
-    const d = new Date(dateInput);
+    const d = new Date(trimmed);
+    if (isNaN(d.getTime())) return null;
+    return parseDateParts(d);
+  }
+  if (dateInput instanceof Date) {
+    if (isNaN(dateInput.getTime())) return null;
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const parts = formatter.formatToParts(dateInput);
+    const y = parts.find((p) => p.type === "year")?.value;
+    const m = parts.find((p) => p.type === "month")?.value;
+    const d = parts.find((p) => p.type === "day")?.value;
+    if (!y || !m || !d) return null;
     return {
-      year: d.getFullYear(),
-      month: d.getMonth() + 1,
-      day: d.getDate(),
+      year: parseInt(y, 10),
+      month: parseInt(m, 10),
+      day: parseInt(d, 10),
     };
   }
-  return {
-    year: dateInput.getFullYear(),
-    month: dateInput.getMonth() + 1,
-    day: dateInput.getDate(),
-  };
+  return null;
 }
 
 function buildAcademicMonthPeriod(
@@ -87,6 +135,8 @@ function buildAcademicMonthPeriod(
     label,
     fullLabel,
     shortDateSpan,
+    calendarYear: calendarYearForMonth,
+    dateSpanVi: shortDateSpan,
   };
 }
 
@@ -96,8 +146,12 @@ function buildAcademicMonthPeriod(
  * - Dates on or after 25/08 belong to currentYear - (currentYear + 1)
  * - Dates on or before 24/08 belong to (currentYear - 1) - currentYear
  */
-export function getAcademicYear(dateInput: string | Date): string {
-  const { year, month, day } = parseDateParts(dateInput);
+export function getAcademicYear(dateInput: unknown): string {
+  const parts = parseDateParts(dateInput);
+  if (!parts) {
+    return "2026-2027";
+  }
+  const { year, month, day } = parts;
   if (month > 8 || (month === 8 && day >= 25)) {
     return `${year}-${year + 1}`;
   }
@@ -107,8 +161,13 @@ export function getAcademicYear(dateInput: string | Date): string {
 /**
  * Returns the complete AcademicMonthPeriod for a given date.
  */
-export function getAcademicMonthInfo(dateInput: string | Date): AcademicMonthPeriod {
-  const { year, month, day } = parseDateParts(dateInput);
+export function getAcademicMonthInfo(dateInput: unknown): AcademicMonthPeriod {
+  const parts = parseDateParts(dateInput) || {
+    year: 2026,
+    month: 9,
+    day: 1,
+  };
+  const { year, month, day } = parts;
 
   let namedMonth: number;
   let calendarYearForMonth: number;
@@ -237,12 +296,22 @@ function extractDateString(val: unknown): string | null {
     if (match) return match[1];
     const dt = new Date(val);
     if (!isNaN(dt.getTime())) {
-      return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(dt);
     }
     return null;
   }
   if (val instanceof Date && !isNaN(val.getTime())) {
-    return `${val.getFullYear()}-${pad(val.getMonth() + 1)}-${pad(val.getDate())}`;
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(val);
   }
   return null;
 }
