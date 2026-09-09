@@ -3,20 +3,29 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
   Settings,
-  Smartphone,
   X,
+  LayoutDashboard,
+  Calendar,
+  CheckSquare,
+  FileText,
+  Building2,
+  Bell,
+  type LucideIcon,
 } from "lucide-react";
 import {
+  getSidebarNavItems,
+  type CanonicalRouteConfig,
+} from "@/lib/navigation/canonical-navigation-registry";
+import {
   useSidebar,
-  SINGLE_TIER_NAV_ITEMS,
-  type SidebarItem,
   type NavigationSection,
 } from "@/components/layout/sidebar-context";
+import { isRouteActive } from "@/lib/navigation/active-matcher";
 import { MaintenanceDialog } from "@/components/common/maintenance-dialog";
 import {
   Tooltip,
@@ -26,10 +35,94 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+const ICON_MAP: Record<CanonicalRouteConfig["iconName"], LucideIcon> = {
+  LayoutDashboard,
+  Calendar,
+  CheckSquare,
+  FileText,
+  Building2,
+  Bell,
+  Settings,
+};
+
+export interface DesktopSidebarItem extends CanonicalRouteConfig {
+  icon: LucideIcon;
+  isComingSoon?: boolean;
+  isMaintenance?: boolean;
+}
+
+// Canonical desktop sidebar items derived from getSidebarNavItems() (Single Source of Truth)
+// Exclude settings route from body sections since it is rendered in the sidebar footer
+export const SINGLE_TIER_NAV_ITEMS: DesktopSidebarItem[] = getSidebarNavItems()
+  .filter((item) => item.id !== "settings")
+  .map((item) => ({
+    ...item,
+    icon: ICON_MAP[item.iconName] || LayoutDashboard,
+    isComingSoon: item.id === "documents",
+  }));
+
+export function isEditableTarget(target: any): boolean {
+  if (!target) return false;
+  const tagName = typeof target.tagName === "string" ? target.tagName.toUpperCase() : "";
+  if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
+    return true;
+  }
+  if (target.isContentEditable === true || target.isContentEditable === "true") {
+    return true;
+  }
+  if (typeof target.getAttribute === "function" && target.getAttribute("contenteditable") === "true") {
+    return true;
+  }
+  return false;
+}
+
+export interface ShortcutHandlerOptions {
+  toggleCollapse?: () => void;
+  onNavigate?: (href: string) => void;
+}
+
+export function handleSidebarShortcut(
+  e: {
+    key: string;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+    altKey?: boolean;
+    target?: any;
+    preventDefault?: () => void;
+  },
+  options: ShortcutHandlerOptions
+): boolean {
+  // Never hijack keys when user is typing in forms or contenteditable elements
+  if (isEditableTarget(e.target)) {
+    return false;
+  }
+
+  // Ctrl+B or Cmd+B toggles sidebar collapse
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+    e.preventDefault?.();
+    options.toggleCollapse?.();
+    return true;
+  }
+
+  // Quick navigation shortcut numbers '1'-'6'
+  const navIndex = parseInt(e.key, 10);
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && navIndex >= 1 && navIndex <= 6) {
+    const items = getSidebarNavItems().filter((i) => i.id !== "settings");
+    const targetItem = items[navIndex - 1];
+    if (targetItem && options.onNavigate) {
+      e.preventDefault?.();
+      options.onNavigate(targetItem.href);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 const SECTIONS: { key: NavigationSection; label: string }[] = [
-  { key: "personal", label: "CÁ NHÂN" },
-  { key: "workspace", label: "CÔNG VIỆC" },
-  { key: "operations", label: "VĂN BẢN & ĐIỀU HÀNH" },
+  { key: "personal", label: "ĐIỀU HÀNH & CÁ NHÂN" },
+  { key: "workspace", label: "NGHIỆP VỤ CỐT LÕI" },
+  { key: "operations", label: "HỆ THỐNG & TỔ CHỨC" },
 ];
 
 export function AppSidebar() {
@@ -40,6 +133,7 @@ export function AppSidebar() {
   } = useSidebar();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Maintenance dialog state for items undergoing maintenance
   const [maintenanceDialog, setMaintenanceDialog] = React.useState<{
@@ -68,64 +162,36 @@ export function AppSidebar() {
     return () => window.removeEventListener("qcet:open-maintenance", handleOpenMaintenance);
   }, []);
 
-  // Listen to Ctrl+B / Cmd+B globally to toggleCollapse
+  // Listen to Ctrl+B / Cmd+B (and number shortcuts 1-6) globally, guarded against editable targets
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
-        e.preventDefault();
-        toggleCollapse();
-      }
+      handleSidebarShortcut(e, {
+        toggleCollapse,
+        onNavigate: (href) => {
+          router.push(href);
+        },
+      });
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleCollapse]);
+  }, [toggleCollapse, router]);
 
-  // Helper to determine if a nav item is active
+  // Helper to determine if a nav item is active using canonical matcher
   const isItemActive = React.useCallback(
-    (item: SidebarItem) => {
-      if (item.href.includes("?")) {
-        const [itemPath, itemQuery] = item.href.split("?");
-        if (pathname !== itemPath) return false;
-        const itemParams = new URLSearchParams(itemQuery);
-        let match = true;
-        itemParams.forEach((val, key) => {
-          if (searchParams.get(key) !== val) {
-            match = false;
-          }
-        });
-        return match;
-      }
-
-      if (item.href === "/") {
-        const zone = searchParams.get("zone");
-        const view = searchParams.get("view");
-        if (zone === "calendar" || view === "calendar" || view === "month") {
-          return false;
-        }
-        return pathname === "/";
-      }
-
-      if (pathname === item.href) {
-        return true;
-      }
-
-      if (item.href !== "/" && pathname.startsWith(item.href + "/")) {
-        return true;
-      }
-
-      // Backward compatibility for /unit-tasks -> /tasks
-      if (item.href === "/tasks" && pathname === "/unit-tasks") {
-        return true;
-      }
-
-      return false;
+    (item: DesktopSidebarItem) => {
+      return isRouteActive(
+        item.href,
+        pathname,
+        searchParams,
+        (item.aliases as string[]) || (item.id === "tasks" ? ["/unit-tasks"] : undefined)
+      );
     },
     [pathname, searchParams]
   );
 
   // Helper to get badge counter and variant
   const getBadgeInfo = React.useCallback(
-    (item: SidebarItem): {
+    (item: DesktopSidebarItem): {
       text: string;
       variant: "primary" | "sky" | "rose" | "amber" | "muted";
     } | null => {
@@ -140,6 +206,8 @@ export function AppSidebar() {
         text = badgeCounts?.notifications ?? 5;
       } else if (item.href === "/documents") {
         text = badgeCounts?.docsInbox ?? 6;
+      } else if (item.href === "/tasks") {
+        text = badgeCounts?.allTasks ?? badgeCounts?.tasks;
       }
 
       if (item.badgeKey === "calendar" || item.href === "/calendar") {
@@ -148,7 +216,7 @@ export function AppSidebar() {
         variant = "rose";
       } else if (item.badgeKey === "docsInbox" || item.href === "/documents") {
         variant = "amber";
-      } else if (item.badgeKey === "allTasks" || item.href === "/tasks") {
+      } else if (item.href === "/tasks") {
         variant = "primary";
       } else {
         variant = "muted";
@@ -205,10 +273,10 @@ export function AppSidebar() {
                 priority
               />
               <div className="flex flex-col min-w-0">
-                <span className="text-[13px] font-semibold tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
-                  QUẢN LÝ CÔNG VIỆC
+                <span className="text-[13px] font-bold tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
+                  CỔNG ĐIỀU HÀNH QCET
                 </span>
-                <span className="font-mono text-xs text-muted-foreground truncate">
+                <span className="text-xs text-muted-foreground/70 truncate font-sans">
                   Năm học 2026–2027
                 </span>
               </div>
@@ -251,50 +319,26 @@ export function AppSidebar() {
                                   });
                                   return;
                                 }
-                                if (item.href === "/notifications") {
-                                  e.preventDefault();
-                                  window.dispatchEvent(
-                                    new CustomEvent("qcet:toggle-notifications")
-                                  );
-                                }
                               }}
-                              aria-label={`${item.label}${item.isComingSoon ? " (Đang phát triển)" : badge ? ` (${badge.text})` : ""}${item.isMaintenance ? " (Đang bảo trì)" : ""}`}
+                              aria-label={`${item.label}${item.isComingSoon ? " (Sắp có)" : badge ? ` (${badge.text})` : ""}${item.isMaintenance ? " (Đang bảo trì)" : ""}`}
                               aria-current={active ? "page" : undefined}
                               className={cn(
-                                "size-9 rounded-lg relative flex items-center justify-center transition-all duration-150 active:scale-95",
+                                "size-9 rounded-lg relative flex items-center justify-center transition-colors",
                                 active
-                                  ? "bg-primary/10 text-primary font-semibold shadow-2xs"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                                  ? "bg-primary/10 text-primary font-semibold"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
                               )}
                             >
-                              {active && (
-                                <span
-                                  className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-primary rounded-r-full"
-                                  aria-hidden="true"
-                                />
-                              )}
                               <Icon size={18} strokeWidth={active ? 2 : 1.5} />
                               {item.isComingSoon ? (
                                 <span
                                   className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500 ring-2 ring-background"
-                                  title="Đang phát triển"
+                                  title="Sắp có"
                                 />
                               ) : badge ? (
                                 <span
                                   aria-label={`${badge.text} mục`}
-                                  className={cn(
-                                    "absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-xs font-mono font-bold leading-none select-none pointer-events-none",
-                                    badge.variant === "primary" &&
-                                      "bg-primary text-primary-foreground",
-                                    badge.variant === "sky" &&
-                                      "bg-sky-500 text-white",
-                                    badge.variant === "rose" &&
-                                      "bg-rose-500 text-white",
-                                    badge.variant === "amber" &&
-                                      "bg-amber-500 text-white",
-                                    badge.variant === "muted" &&
-                                      "bg-secondary text-muted-foreground"
-                                  )}
+                                  className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-xs font-semibold tabular-nums leading-none select-none pointer-events-none bg-muted text-foreground border border-border/80 shadow-2xs"
                                 >
                                   {badge.text}
                                 </span>
@@ -310,16 +354,16 @@ export function AppSidebar() {
                             <div className="flex items-center gap-1.5">
                               <span>{item.label}</span>
                               {item.isComingSoon ? (
-                                <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                                  Đang phát triển
+                                <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+                                  Sắp có
                                 </span>
                               ) : badge ? (
-                                <span className="px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-muted">
+                                <span className="px-1.5 py-0.5 rounded-full text-xs font-semibold tabular-nums bg-muted border border-border/60">
                                   {badge.text}
                                 </span>
                               ) : null}
                               {item.isMaintenance && (
-                                <span className="text-xs text-amber-500 font-medium">
+                                <span className="text-xs text-amber-700 font-medium">
                                   (Đang bảo trì)
                                 </span>
                               )}
@@ -335,15 +379,15 @@ export function AppSidebar() {
           </div>
         ) : (
           /* Expanded Mode (248px width, full labels & sections) */
-          <div className="overflow-y-auto flex-1 p-2 space-y-4 thin-scrollbar">
+          <div className="overflow-y-auto flex-1 px-2 py-2 space-y-2.5 thin-scrollbar">
             {SECTIONS.map((sec) => {
               const items = SINGLE_TIER_NAV_ITEMS.filter(
                 (item) => item.section === sec.key
               );
               if (items.length === 0) return null;
               return (
-                <div key={sec.key} className="space-y-1">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2.5 py-1 select-none">
+                <div key={sec.key} className="space-y-0.5">
+                  <div className="text-xs font-semibold tracking-wider text-muted-foreground/70 px-2.5 pt-3.5 pb-1 uppercase select-none">
                     {sec.label}
                   </div>
                   <div className="space-y-0.5">
@@ -366,29 +410,20 @@ export function AppSidebar() {
                               });
                               return;
                             }
-                            if (item.href === "/notifications") {
-                              e.preventDefault();
-                              window.dispatchEvent(
-                                new CustomEvent("qcet:toggle-notifications")
-                              );
-                            }
                           }}
                           aria-current={active ? "page" : undefined}
                           className={cn(
-                            "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 min-h-9 text-[13px] font-medium transition-colors select-none",
+                            "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 min-h-[36px] text-[13px] tracking-tight transition-colors select-none",
                             active
                               ? "bg-primary/10 text-primary font-semibold shadow-2xs"
-                              : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                           )}
                         >
                           {active && (
-                            <span
-                              className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-primary rounded-r-full"
-                              aria-hidden="true"
-                            />
+                            <span className="absolute left-0.5 top-2 bottom-2 w-[3px] bg-primary rounded-r-full" />
                           )}
                           <Icon
-                            size={18}
+                            size={16}
                             strokeWidth={active ? 2 : 1.5}
                             className={cn(
                               "shrink-0 transition-colors",
@@ -397,31 +432,29 @@ export function AppSidebar() {
                                 : "text-muted-foreground group-hover:text-foreground"
                             )}
                           />
-                          <span className="truncate flex-1">{item.label}</span>
+                          <span className="truncate flex-1 font-medium">{item.label}</span>
                           {item.isComingSoon ? (
-                            <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0 select-none">
+                            <span
+                              title="Đang phát triển"
+                              className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium tracking-tight bg-amber-500/10 text-amber-800 border border-amber-500/20 shrink-0 select-none leading-none whitespace-nowrap"
+                            >
                               Đang phát triển
                             </span>
                           ) : badge ? (
                             <span
                               className={cn(
-                                "ml-auto inline-flex items-center justify-center px-1.5 py-0.5 rounded-md text-xs font-mono font-semibold leading-none select-none tracking-tight",
-                                badge.variant === "primary" &&
-                                  "bg-primary/15 text-primary border border-primary/20",
-                                badge.variant === "sky" &&
-                                  "bg-sky-500/15 text-sky-600 border border-sky-500/20",
-                                badge.variant === "rose" &&
-                                  "bg-rose-500/15 text-rose-600 border border-rose-500/20",
-                                badge.variant === "amber" &&
-                                  "bg-amber-500/15 text-amber-600 border border-amber-500/20",
-                                badge.variant === "muted" &&
-                                  "bg-secondary text-muted-foreground border border-border/50"
+                                "ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold tabular-nums leading-none border select-none",
+                                badge.variant === "primary" && "bg-primary/10 text-primary border-primary/20",
+                                badge.variant === "sky" && "bg-sky-500/10 text-sky-700 border-sky-500/20",
+                                badge.variant === "rose" && "bg-rose-500/10 text-rose-700 border-rose-500/20",
+                                badge.variant === "amber" && "bg-amber-500/10 text-amber-800 border-amber-500/20",
+                                (!badge.variant || badge.variant === "muted") && "bg-muted/80 text-muted-foreground border-border/50"
                               )}
                             >
                               {badge.text}
                             </span>
                           ) : item.isMaintenance && !badge ? (
-                            <span className="ml-auto text-xs font-medium text-amber-600 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded leading-none select-none">
+                            <span className="ml-auto text-xs font-medium text-amber-800 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded leading-none select-none">
                               Bảo trì
                             </span>
                           ) : null}
@@ -441,33 +474,13 @@ export function AppSidebar() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== "undefined") {
-                        window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
-                      }
-                    }}
-                    className="size-9 rounded-lg flex items-center justify-center text-primary hover:bg-primary/10 transition-colors cursor-pointer select-none"
-                    aria-label="Tải App Mobile (iOS/Android)"
-                    title="Tải App Mobile (iOS/Android)"
-                  >
-                    <Smartphone size={18} strokeWidth={1.5} />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <span>Tải App Mobile (iOS / Android)</span>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
                   <Link
                     href="/settings"
                     className={cn(
                       "size-9 rounded-lg flex items-center justify-center transition-colors select-none",
                       pathname.startsWith("/settings")
-                        ? "bg-primary/10 text-primary font-semibold shadow-2xs"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                        ? "bg-accent/80 text-foreground font-medium"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
                     )}
                     aria-label="Cài đặt"
                   >
@@ -486,7 +499,7 @@ export function AppSidebar() {
                   <button
                     type="button"
                     onClick={toggleCollapse}
-                    className="size-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer select-none"
+                    className="size-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors cursor-pointer select-none"
                     aria-label="Mở rộng thanh bên [Ctrl+B / ⌘B]"
                     title="Mở rộng thanh bên [Ctrl+B / ⌘B]"
                   >
@@ -501,56 +514,32 @@ export function AppSidebar() {
           </div>
         ) : (
           <div className="p-2 border-t border-border/50 shrink-0 space-y-1">
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
-                }
-              }}
-              className="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 min-h-9 text-[13px] font-medium transition-colors select-none text-foreground hover:bg-primary/10 hover:text-primary cursor-pointer w-full text-left"
-            >
-              <Smartphone
-                size={18}
-                strokeWidth={1.5}
-                className="shrink-0 transition-colors text-primary"
-              />
-              <span className="truncate flex-1 font-semibold">Tải App Mobile</span>
-              <span className="text-xs uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25">
-                PWA
-              </span>
-            </button>
-
             <Link
               href="/settings"
               className={cn(
-                "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 min-h-9 text-[13px] font-medium transition-colors select-none",
+                "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 min-h-9 text-[13px] transition-colors select-none",
                 pathname.startsWith("/settings")
-                  ? "bg-primary/10 text-primary font-semibold shadow-2xs"
-                  : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                  ? "bg-accent/80 text-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
               )}
             >
-              {pathname.startsWith("/settings") && (
-                <span
-                  className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-primary rounded-r-full"
-                  aria-hidden="true"
-                />
-              )}
               <Settings
                 size={18}
                 strokeWidth={pathname.startsWith("/settings") ? 2 : 1.5}
-                className="shrink-0 transition-colors text-muted-foreground group-hover:text-foreground"
+                className={cn(
+                  "shrink-0 transition-colors",
+                  pathname.startsWith("/settings")
+                    ? "text-foreground"
+                    : "text-muted-foreground group-hover:text-foreground"
+                )}
               />
               <span className="truncate flex-1">Cài đặt</span>
             </Link>
-            <div className="flex items-center justify-center gap-2 px-2.5 py-1 rounded-md border border-border/40 bg-card text-xs text-muted-foreground">
-              <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
-              <span className="truncate font-medium text-xs">Notion: Đang kết nối</span>
-            </div>
+            {/* Notion: Đang kết nối (bg-emerald-500) mock widget removed */}
             <button
               type="button"
               onClick={toggleCollapse}
-              className="flex w-full items-center gap-2 px-2.5 py-2 min-h-9 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer select-none"
+              className="flex w-full items-center gap-2 px-2.5 py-2 min-h-9 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors cursor-pointer select-none"
               title="Thu gọn thanh bên [Ctrl+B / ⌘B]"
               aria-label="Thu gọn thanh bên [Ctrl+B / ⌘B]"
             >
