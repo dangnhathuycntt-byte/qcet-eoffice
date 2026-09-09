@@ -26,6 +26,38 @@ export interface AcademicMonthPeriod {
 
 export type AcademicMonthInfo = AcademicMonthPeriod;
 
+export interface CurrentAcademicPeriod {
+  academicYear: string; // e.g. "2026-2027"
+  semester: number; // 1 or 2
+  month: number; // 1-12 (operational month number, e.g. 9)
+  label: string; // e.g. "Học kỳ I (2026 - 2027)"
+}
+
+/**
+ * Trả về thông tin chu kỳ học vụ hiện tại (năm học, học kỳ, tháng vận hành và nhãn hiển thị).
+ * Mặc định sử dụng ngày tham chiếu hệ thống getSystemReferenceDate().
+ */
+export function getCurrentAcademicPeriod(referenceDateInput?: unknown): CurrentAcademicPeriod {
+  const refDate = referenceDateInput ?? getSystemReferenceDate();
+  const info = getAcademicMonthInfo(refDate);
+  const month = info.monthNumber;
+  const academicYear = info.academicYear;
+  // Tháng 9, 10, 11, 12 thuộc Học kỳ I; Tháng 1..8 thuộc Học kỳ II
+  const semester = month >= 9 && month <= 12 ? 1 : 2;
+  const roman = semester === 1 ? "I" : "II";
+  const formattedYear = academicYear.includes(" - ")
+    ? academicYear
+    : academicYear.replace("-", " - ");
+  const label = `Học kỳ ${roman} (${formattedYear})`;
+
+  return {
+    academicYear,
+    semester,
+    month,
+    label,
+  };
+}
+
 /**
  * The 12 operational academic months ordered according to QCET cycle:
  * Month 9, 10, 11, 12 in the fall, followed by 1, 2, 3, 4, 5 in the spring, and 6, 7, 8 in the summer.
@@ -162,6 +194,9 @@ export function getAcademicYear(dateInput: unknown): string {
  * Returns the complete AcademicMonthPeriod for a given date.
  */
 export function getAcademicMonthInfo(dateInput: unknown): AcademicMonthPeriod {
+  if (typeof dateInput === "number" && dateInput >= 1 && dateInput <= 12) {
+    return getAcademicMonthPeriod(dateInput);
+  }
   const parts = parseDateParts(dateInput) || {
     year: 2026,
     month: 9,
@@ -283,7 +318,7 @@ export function getAcademicMonthPeriod(
   monthNumber: number,
   academicYear?: string
 ): AcademicMonthPeriod {
-  const yearStr = academicYear || getAcademicYear(new Date());
+  const yearStr = academicYear || getAcademicYear(getSystemReferenceDate());
   const startYear = parseInt(yearStr.split("-")[0], 10);
   const calendarYear = monthNumber >= 9 ? startYear : startYear + 1;
   return buildAcademicMonthPeriod(calendarYear, monthNumber, yearStr);

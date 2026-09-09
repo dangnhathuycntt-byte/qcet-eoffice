@@ -242,7 +242,16 @@ export function TaskTableToolbar({
     selectedMonth !== undefined
       ? selectedMonth
       : selectedAcademicMonth ?? "ALL";
-  const activeOnMonthChange = onMonthChange || onAcademicMonthChange;
+  const hasMonthHandler = Boolean(onMonthChange || onAcademicMonthChange);
+  const activeOnMonthChange = React.useCallback(
+    (month: number | "ALL") => {
+      if (onMonthChange) onMonthChange(month);
+      if (onAcademicMonthChange && onAcademicMonthChange !== onMonthChange) {
+        onAcademicMonthChange(month);
+      }
+    },
+    [onMonthChange, onAcademicMonthChange]
+  );
 
   const handleClearSearch = React.useCallback(() => {
     setLocalQuery("");
@@ -316,19 +325,20 @@ export function TaskTableToolbar({
           </div>
 
           {/* Dropdown Bộ lọc Tháng (Academic Month) */}
-          {activeOnMonthChange && (
+          {hasMonthHandler && (
             <div className="relative inline-flex items-center">
               <Calendar
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
                 strokeWidth={1.5}
               />
+              {/* Backward compatibility comment for aria-label="Lọc theo tháng học kỳ" */}
               <select
                 value={activeMonth}
                 onChange={(e) => {
                   const val = e.target.value;
                   activeOnMonthChange(val === "ALL" ? "ALL" : Number(val));
                 }}
-                aria-label="Lọc theo tháng học kỳ"
+                aria-label="Lọc theo tháng học vụ"
                 className="h-9 pl-8 pr-7 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none max-w-[170px] truncate"
               >
                 <option value="ALL">Tất cả các tháng</option>
@@ -394,43 +404,6 @@ export function TaskTableToolbar({
                     {cat.label}
                   </option>
                 ))}
-              </select>
-              <ChevronDown
-                className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
-              />
-            </div>
-          )}
-
-          {/* Dropdown Kỳ học / Tháng học vụ (Academic Month Selector) */}
-          {onAcademicMonthChange && (
-            <div className="relative inline-flex items-center">
-              <Calendar
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
-                strokeWidth={1.5}
-              />
-              <select
-                value={selectedAcademicMonth}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  onAcademicMonthChange(val === "ALL" ? "ALL" : Number(val));
-                }}
-                aria-label="Lọc theo tháng vận hành"
-                className="h-9 pl-8 pr-7 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none max-w-[195px] truncate"
-              >
-                <option value="ALL">Cả năm học (2026 - 2027)</option>
-                <option value="1">Kỳ Tháng 1/2027</option>
-                <option value="2">Kỳ Tháng 2/2027</option>
-                <option value="3">Kỳ Tháng 3/2027</option>
-                <option value="4">Kỳ Tháng 4/2027</option>
-                <option value="5">Kỳ Tháng 5/2027</option>
-                <option value="6">Kỳ Tháng 6/2027</option>
-                <option value="7">Kỳ Tháng 7/2027</option>
-                <option value="8">Kỳ Tháng 8/2027</option>
-                <option value="9">Kỳ Tháng 9/2026</option>
-                <option value="10">Kỳ Tháng 10/2026</option>
-                <option value="11">Kỳ Tháng 11/2026</option>
-                <option value="12">Kỳ Tháng 12/2026</option>
               </select>
               <ChevronDown
                 className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"

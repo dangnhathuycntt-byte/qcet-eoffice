@@ -110,7 +110,7 @@ model User {
   passwordHash          String?               @map("password_hash")
   role                  UserRole              @default(CHUYEN_VIEN)
   departmentId          String?               @map("department_id") @db.VarChar(50)
-  department            Department?           @relation(fields: [departmentId], references: [id])
+  department            Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   title                 String?               @db.VarChar(150)
   phone                 String?               @db.VarChar(20)
   avatarUrl             String?               @map("avatar_url")
@@ -184,9 +184,9 @@ model Task {
   dueDate         DateTime              @map("due_date")
   completedAt     DateTime?             @map("completed_at")
   departmentId    String?               @map("department_id") @db.VarChar(50)
-  department      Department?           @relation(fields: [departmentId], references: [id])
+  department      Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   createdById     String                @map("created_by_id")
-  createdBy       User                  @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  createdBy       User                  @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   parentTaskId    String?               @map("parent_task_id")
   parentTask      Task?                 @relation("SubTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
   subTasks        Task[]                @relation("SubTasks")
@@ -196,7 +196,7 @@ model Task {
   resolutions     ExecutiveResolution[]
   linkedDocument  Document?
   dacumTaskDefId  String?               @map("dacum_task_def_id") @db.VarChar(50)
-  dacumTaskDef    DacumTaskDef?         @relation(fields: [dacumTaskDefId], references: [id])
+  dacumTaskDef    DacumTaskDef?         @relation(fields: [dacumTaskDefId], references: [id], onDelete: SetNull)
   createdAt       DateTime              @default(now()) @map("created_at")
   updatedAt       DateTime              @updatedAt @map("updated_at")
 
@@ -233,8 +233,8 @@ model TaskDeliverable {
   reviewNote   String?                 @map("review_note") @db.Text
   reviewedAt   DateTime?               @map("reviewed_at")
   task         Task                    @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  uploadedBy   User                    @relation("DeliverableUploadedBy", fields: [uploadedById], references: [id])
-  reviewer     User?                   @relation("DeliverableReviewer", fields: [reviewerId], references: [id])
+  uploadedBy   User                    @relation("DeliverableUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
+  reviewer     User?                   @relation("DeliverableReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
   createdAt    DateTime                @default(now()) @map("created_at")
   updatedAt    DateTime                @updatedAt @map("updated_at")
 
@@ -256,9 +256,9 @@ model DacumDelegation {
   reason         String?     @db.Text
   documentRef    String?     @map("document_ref") @db.VarChar(100)
   task           Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  department     Department? @relation(fields: [departmentId], references: [id])
-  grantor        User        @relation("DelegationGrantor", fields: [grantorId], references: [id])
-  delegate       User        @relation("DelegationDelegate", fields: [delegateId], references: [id])
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  grantor        User        @relation("DelegationGrantor", fields: [grantorId], references: [id], onDelete: Restrict)
+  delegate       User        @relation("DelegationDelegate", fields: [delegateId], references: [id], onDelete: Restrict)
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 
@@ -279,7 +279,7 @@ model ExecutiveResolution {
   previousOwnerId String?        @map("previous_owner_id")
   newOwnerId      String?        @map("new_owner_id")
   task            Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  actor           User           @relation("ResolutionActor", fields: [actorId], references: [id])
+  actor           User           @relation("ResolutionActor", fields: [actorId], references: [id], onDelete: Restrict)
   createdAt       DateTime       @default(now()) @map("created_at")
 
   @@index([taskId, resolutionType])
@@ -314,16 +314,16 @@ model Document {
   signerName         String?               @map("signer_name") @db.VarChar(150)
   signerTitle        String?               @map("signer_title") @db.VarChar(100)
   draftingDeptId     String?               @map("drafting_dept_id") @db.VarChar(50)
-  draftingDept       Department?           @relation("DraftingDeptDocs", fields: [draftingDeptId], references: [id])
+  draftingDept       Department?           @relation("DraftingDeptDocs", fields: [draftingDeptId], references: [id], onDelete: SetNull)
   recipientList      String?               @map("recipient_list") @db.Text
   distributedCopies  Int?                  @default(1) @map("distributed_copies")
 
   // Các trường đặc thù Văn bản Đến (Phụ lục IV Mẫu Sổ Văn bản Đến)
   dueDate            DateTime?             @map("due_date")
   leadDepartmentId   String?               @map("lead_department_id") @db.VarChar(50)
-  leadDepartment     Department?           @relation("LeadDepartmentDocs", fields: [leadDepartmentId], references: [id])
+  leadDepartment     Department?           @relation("LeadDepartmentDocs", fields: [leadDepartmentId], references: [id], onDelete: SetNull)
   leadUserId         String?               @map("lead_user_id")
-  leadUser           User?                 @relation("LeadUserDocs", fields: [leadUserId], references: [id])
+  leadUser           User?                 @relation("LeadUserDocs", fields: [leadUserId], references: [id], onDelete: SetNull)
 
   // Trạng thái vòng đời văn bản
   status             DocumentStatus        @default(CHO_PHAN_CONG)
@@ -331,7 +331,7 @@ model Document {
 
   // Văn thư thực hiện vào sổ
   registeredById     String                @map("registered_by_id")
-  registeredBy       User                  @relation("DocRegisteredBy", fields: [registeredById], references: [id])
+  registeredBy       User                  @relation("DocRegisteredBy", fields: [registeredById], references: [id], onDelete: Restrict)
 
   // Quan hệ tệp đính kèm & Bút phê BGH
   attachments        DocumentAttachment[]
@@ -339,7 +339,7 @@ model Document {
 
   // Liên thông Unified Task Hub
   linkedTaskId       String?               @unique @map("linked_task_id")
-  linkedTask         Task?                 @relation(fields: [linkedTaskId], references: [id])
+  linkedTask         Task?                 @relation(fields: [linkedTaskId], references: [id], onDelete: SetNull)
 
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
@@ -401,8 +401,8 @@ model DocumentDirective {
   isTaskGenerated  Boolean     @default(false) @map("is_task_generated")
 
   document         Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  leader           User        @relation("LeaderDirectives", fields: [leaderId], references: [id])
-  assignedDept     Department  @relation("DirectiveDepartments", fields: [assignedDeptId], references: [id])
+  leader           User        @relation("LeaderDirectives", fields: [leaderId], references: [id], onDelete: Restrict)
+  assignedDept     Department  @relation("DirectiveDepartments", fields: [assignedDeptId], references: [id], onDelete: Restrict)
 
   createdAt        DateTime    @default(now()) @map("created_at")
 
@@ -489,7 +489,7 @@ model JobCatalogItem {
   title         String          @db.VarChar(255)
   group         JobCatalogGroup
   departmentId  String?         @map("department_id") @db.VarChar(50)
-  department    Department?     @relation(fields: [departmentId], references: [id])
+  department    Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   description   String?         @db.Text
   competencyReq String?         @map("competency_req") @db.Text
   duties        DacumDuty[]
@@ -505,9 +505,9 @@ model DacumDuty {
   code             String          @db.VarChar(20)
   title            String          @db.VarChar(255)
   departmentId     String          @map("department_id") @db.VarChar(50)
-  department       Department      @relation(fields: [departmentId], references: [id])
+  department       Department      @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   jobCatalogItemId String?         @map("job_catalog_item_id") @db.VarChar(50)
-  jobCatalogItem   JobCatalogItem? @relation(fields: [jobCatalogItemId], references: [id])
+  jobCatalogItem   JobCatalogItem? @relation(fields: [jobCatalogItemId], references: [id], onDelete: SetNull)
   taskDefs         DacumTaskDef[]
   createdAt        DateTime        @default(now()) @map("created_at")
   updatedAt        DateTime        @updatedAt @map("updated_at")
