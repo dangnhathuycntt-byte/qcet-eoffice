@@ -270,8 +270,10 @@ export function syncTaskUrlParams(
   updates: Partial<TaskUrlParams>,
   router?: { replace: (url: string, opts?: { scroll?: boolean }) => void }
 ): string {
-  if (typeof window === "undefined") return "";
-  const existingParams = new URLSearchParams(window.location.search);
+  const existingParams =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : new URLSearchParams();
   const currentParsed = parseTaskUrlParams(existingParams);
   const merged: TaskUrlParams = {
     ...currentParsed,
@@ -285,18 +287,20 @@ export function syncTaskUrlParams(
   }
 
   const queryString = buildTaskUrlQuery(merged, existingParams);
-  const newUrl = queryString
-    ? `${window.location.pathname}?${queryString}`
-    : window.location.pathname;
+  const basePath =
+    typeof window !== "undefined" ? window.location.pathname : "/tasks";
+  const newUrl = queryString ? `${basePath}?${queryString}` : basePath;
 
   try {
     if (router && typeof router.replace === "function") {
       router.replace(newUrl, { scroll: false });
-    } else {
+    } else if (typeof window !== "undefined" && window.history?.replaceState) {
       window.history.replaceState(null, "", newUrl);
     }
   } catch {
-    window.history.replaceState(null, "", newUrl);
+    if (typeof window !== "undefined" && window.history?.replaceState) {
+      window.history.replaceState(null, "", newUrl);
+    }
   }
 
   return queryString;

@@ -797,7 +797,7 @@ export function TaskDetailSideSheet({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted/60 border border-border/50 px-2 py-0.5 rounded-md tabular-nums">
-                NV-{task.id.slice(0, 8).toUpperCase()}
+                {(task as any).code || (task as any).taskCode || (task.id.startsWith("NV-") ? task.id : `NV-${task.id.slice(0, 8).toUpperCase()}`)}
               </span>
               <span
                 className={cn(

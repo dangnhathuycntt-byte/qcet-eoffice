@@ -1272,6 +1272,10 @@ export function UnifiedAdaptiveWorkspace({
           data-slot="task-workspace-canvas"
           className="w-full space-y-3 min-w-0"
         >
+          <div
+            data-slot="full-width-task-canvas"
+            className="w-full space-y-3 min-w-0"
+          >
           {/* Active Filter Breadcrumb & Action Queue Quick Trigger */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex-1 min-w-0">
@@ -1384,6 +1388,7 @@ export function UnifiedAdaptiveWorkspace({
               )}
             </div>
           )}
+          </div>
         </div>
       )}
 
