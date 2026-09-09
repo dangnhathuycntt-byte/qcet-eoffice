@@ -38,3 +38,9 @@ dev.db
 *.tsbuildinfo
 next-env.d.ts
 qcet-backend-api/
+
+# runtime file storage & sandboxes
+/storage/temp/
+/uploads/
+/test_storage_*/
+/test_uploads_*/
