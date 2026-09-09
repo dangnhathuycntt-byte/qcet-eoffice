@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { TourStepConfig } from "@/lib/onboarding-constants";
-import { ArrowLeft, ArrowRight, X, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, X, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function clampTooltip(left: number, width: number, viewportWidth: number, minMargin = 12): number {
@@ -10,9 +10,10 @@ export function clampTooltip(left: number, width: number, viewportWidth: number,
 }
 
 export function calculateCutoutRect(
-  rect: { x: number; y: number; width: number; height: number },
+  rect: { x: number; y: number; width: number; height: number } | null | undefined,
   padding = 8
 ) {
+  if (!rect) return null;
   return {
     x: rect.x - padding,
     y: rect.y - padding,
@@ -51,19 +52,9 @@ export function SpotlightTour({
     checkDevice();
 
     const updateRect = () => {
-      let el =
+      const el =
         document.querySelector(currentStep.targetSelector) ||
         (currentStep.fallbackSelector ? document.querySelector(currentStep.fallbackSelector) : null);
-
-      // Nếu không tìm thấy target và fallback của step, tự động fallback an toàn
-      // để không bao giờ bị tình trạng màn hình đen tối hoàn toàn
-      if (!el) {
-        el =
-          document.querySelector("#tour-create-task-btn") ||
-          document.querySelector("#tour-tasks-landing") ||
-          document.querySelector("#tour-scope-switcher") ||
-          document.querySelector("#tour-topbar-search");
-      }
 
       if (el) {
         const rect = el.getBoundingClientRect();
@@ -134,7 +125,7 @@ export function SpotlightTour({
         <defs>
           <mask id="qcet-spotlight-mask">
             <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            {targetRect ? (
+            {targetRect && (
               <rect
                 x={targetRect.x - padding}
                 y={targetRect.y - padding}
@@ -142,15 +133,6 @@ export function SpotlightTour({
                 height={targetRect.height + padding * 2}
                 rx="8"
                 style={{ rx: targetRadius }}
-                fill="black"
-              />
-            ) : (
-              <rect
-                x="5%"
-                y="5%"
-                width="90%"
-                height="90%"
-                rx="8"
                 fill="black"
               />
             )}
@@ -168,7 +150,7 @@ export function SpotlightTour({
         />
       </svg>
 
-      {/* 2. Viền phát sáng xung quanh phần tử được chọn */}
+      {/* 2. Viền phát sáng xung quanh phần tử được chọn (chỉ hiển thị khi tìm thấy phần tử) */}
       {targetRect && (
         <div
           className="absolute border-2 border-primary pointer-events-none transition-all duration-300 ring-4 ring-primary/20"
@@ -182,16 +164,85 @@ export function SpotlightTour({
         />
       )}
 
-      {/* 3. Popover Tooltip (Desktop) hoặc Bottom Sheet (Mobile) */}
-      <div
-        className={`pointer-events-auto transition-all duration-300 ${
-          isMobile
-            ? "fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border rounded-t-2xl shadow-xl z-50 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
-            : "absolute w-80 bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xl z-50"
-        }`}
-        style={
-          !isMobile
-            ? targetRect
+      {/* 3. Popover Tooltip (Desktop), Bottom Sheet (Mobile), hoặc Centered Fallback Card khi target không tìm thấy */}
+      {!targetRect ? (
+        <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none z-50">
+          <div
+            className="pointer-events-auto w-full max-w-md bg-card border border-border/80 rounded-2xl p-5 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            data-testid="spotlight-fallback-card"
+          >
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="px-2.5 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
+                Bước {currentIndex + 1} / {steps.length}
+              </span>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Đóng hướng dẫn"
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <h3 id="tour-step-title" className="text-base font-semibold text-foreground mb-1.5">
+              {currentStep.title}
+            </h3>
+            <p id="tour-step-desc" className="text-sm text-muted-foreground leading-relaxed mb-3">
+              {currentStep.description}
+            </p>
+
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 leading-relaxed mb-4">
+              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                Mục này có thể đang bị thu gọn hoặc nằm ở phân hệ làm việc khác. Bạn có thể bấm &quot;Tiếp tục&quot; để khám phá các khu vực tiếp theo.
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-border/50">
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={onClose}
+                className="text-xs h-8 sm:h-9 px-3 text-muted-foreground hover:text-foreground min-h-[36px]"
+              >
+                Để sau (Tự khám phá)
+              </Button>
+              <div className="flex items-center gap-2">
+                {currentIndex > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={onPrev}
+                    className="text-xs h-8 sm:h-9 px-3 min-h-[36px]"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Trước
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={onNext}
+                  className="text-xs h-8 sm:h-9 px-4 bg-primary text-primary-foreground hover:bg-primary/90 font-medium min-h-[36px]"
+                >
+                  {isLastStep ? "Hoàn tất" : "Tiếp tục"}
+                  {!isLastStep && <ArrowRight className="w-3.5 h-3.5 ml-1" />}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          className={`pointer-events-auto transition-all duration-300 ${
+            isMobile
+              ? "fixed bottom-0 left-0 right-0 p-4 bg-card border-t border-border rounded-t-2xl shadow-xl z-50 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+              : "absolute w-80 bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-xl z-50"
+          }`}
+          style={
+            !isMobile
               ? {
                   top: Math.min(
                     targetRect.bottom + 12,
@@ -204,55 +255,65 @@ export function SpotlightTour({
                     16
                   ),
                 }
-              : {
-                  top: "40%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                }
-            : undefined
-        }
-      >
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium border border-primary/20">
-            Bước {currentIndex + 1} / {steps.length}
-          </span>
-          <button
-            onClick={onClose}
-            aria-label="Đóng hướng dẫn"
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+              : undefined
+          }
+        >
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+              Bước {currentIndex + 1} / {steps.length}
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Đóng hướng dẫn"
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <h3 id="tour-step-title" className="text-sm font-semibold text-foreground mb-1">
+            {currentStep.title}
+          </h3>
+          <p id="tour-step-desc" className="text-xs text-muted-foreground leading-relaxed mb-4">
+            {currentStep.description}
+          </p>
+
+          <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-border/50">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={onPrev}
+                disabled={currentIndex === 0}
+                className="text-xs h-8 sm:h-7 px-2.5 sm:px-2 text-muted-foreground min-h-[36px] sm:min-h-[28px]"
+              >
+                <ArrowLeft className="w-3 h-3 mr-1" /> Trước
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={onClose}
+                className="text-xs h-8 sm:h-7 px-2 text-muted-foreground hover:text-foreground min-h-[36px] sm:min-h-[28px]"
+              >
+                Để sau
+              </Button>
+            </div>
+
+            <Button
+              size="sm"
+              type="button"
+              onClick={onNext}
+              className="text-xs h-8 sm:h-7 px-4 sm:px-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium min-h-[36px] sm:min-h-[28px]"
+            >
+              {isLastStep ? "Hoàn tất" : "Tiếp tục"}
+              {!isLastStep && <ArrowRight className="w-3 h-3 ml-1" />}
+            </Button>
+          </div>
         </div>
-
-        <h3 id="tour-step-title" className="text-sm font-semibold text-foreground mb-1">
-          {currentStep.title}
-        </h3>
-        <p id="tour-step-desc" className="text-xs text-muted-foreground leading-relaxed mb-4">
-          {currentStep.description}
-        </p>
-
-        <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-border/50">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onPrev}
-            disabled={currentIndex === 0}
-            className="text-xs h-8 sm:h-7 px-3 sm:px-2 text-muted-foreground min-h-[36px] sm:min-h-[28px]"
-          >
-            <ArrowLeft className="w-3 h-3 mr-1" /> Trước
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={onNext}
-            className="text-xs h-8 sm:h-7 px-4 sm:px-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium min-h-[36px] sm:min-h-[28px]"
-          >
-            {isLastStep ? "Hoàn tất" : "Tiếp tục"}
-            {!isLastStep && <ArrowRight className="w-3 h-3 ml-1" />}
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

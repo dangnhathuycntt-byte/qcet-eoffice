@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { clampTooltip, calculateCutoutRect } from "@/components/onboarding/spotlight-tour";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { clampTooltip, calculateCutoutRect, SpotlightTour } from "@/components/onboarding/spotlight-tour";
 
 test("clampTooltip prevents overflow outside viewport on left and right", () => {
   const clamped1 = clampTooltip(-20, 320, 1024);
@@ -22,16 +24,21 @@ test("calculateCutoutRect correctly expands rect by padding on all sides", () =>
   const target = { x: 100, y: 50, width: 200, height: 40 };
   const cutout = calculateCutoutRect(target, 8);
 
-  assert.equal(cutout.x, 92);
-  assert.equal(cutout.y, 42);
-  assert.equal(cutout.width, 216);
-  assert.equal(cutout.height, 56);
+  assert.equal(cutout!.x, 92);
+  assert.equal(cutout!.y, 42);
+  assert.equal(cutout!.width, 216);
+  assert.equal(cutout!.height, 56);
 
   const customCutout = calculateCutoutRect(target, 12);
-  assert.equal(customCutout.x, 88);
-  assert.equal(customCutout.y, 38);
-  assert.equal(customCutout.width, 224);
-  assert.equal(customCutout.height, 64);
+  assert.equal(customCutout!.x, 88);
+  assert.equal(customCutout!.y, 38);
+  assert.equal(customCutout!.width, 224);
+  assert.equal(customCutout!.height, 64);
+});
+
+test("calculateCutoutRect defensively handles null or undefined without crashing", () => {
+  assert.equal(calculateCutoutRect(null), null);
+  assert.equal(calculateCutoutRect(undefined), null);
 });
 
 test("keyboard shortcuts map correctly to tour controls", () => {
@@ -96,3 +103,72 @@ test("SpotlightTour source code adheres to WCAG, SVG mask, and responsive mobile
   // Export clampTooltip helper
   assert.match(fileContent, /export function clampTooltip/, "Must export clampTooltip helper");
 });
+
+test("SpotlightTour renders centered fallback card when targetRect is null (target DOM missing)", () => {
+  const steps = [
+    {
+      id: "step-missing",
+      title: "Phân hệ Tác vụ & Phê duyệt",
+      description: "Quản lý toàn bộ danh sách công việc và phân công nhiệm vụ.",
+      targetSelector: "#non-existent-element-id-12345",
+      fallbackSelector: "#another-missing-selector",
+    },
+  ];
+
+  const html = renderToStaticMarkup(
+    React.createElement(SpotlightTour, {
+      isActive: true,
+      steps,
+      currentIndex: 0,
+      onNext: () => {},
+      onPrev: () => {},
+      onClose: () => {},
+    })
+  );
+
+  // Fallback card structure and content
+  assert.ok(
+    html.includes("Phân hệ Tác vụ &amp; Phê duyệt") || html.includes("Phân hệ Tác vụ & Phê duyệt"),
+    "Must render step title in fallback card"
+  );
+  assert.ok(
+    html.includes("Quản lý toàn bộ danh sách công việc"),
+    "Must render step description in fallback card"
+  );
+
+  // Informative notice indicating target is collapsed or in another view
+  assert.ok(
+    html.includes("thu gọn") || html.includes("phân hệ") || html.includes("khám phá"),
+    "Must include notice that target section is collapsed or located in another view"
+  );
+
+  // Controls: Tiếp tục & Để sau (Tự khám phá)
+  assert.ok(html.includes("Tiếp tục"), "Must include 'Tiếp tục' button");
+  assert.ok(
+    html.includes("Để sau (Tự khám phá)") || html.includes("Để sau"),
+    "Must include 'Để sau' button in tour controls"
+  );
+});
+
+test("SpotlightTour source enforces zero emoji slop and light-only rules", () => {
+  const componentPath = path.resolve(process.cwd(), "src/components/onboarding/spotlight-tour.tsx");
+  const content = fs.readFileSync(componentPath, "utf-8");
+
+  // Zero emoji
+  const emojiRegex = /\p{Extended_Pictographic}/u;
+  const linesWithEmoji = content
+    .split("\n")
+    .map((line, idx) => ({ line, num: idx + 1 }))
+    .filter(({ line }) => emojiRegex.test(line));
+
+  assert.strictEqual(
+    linesWithEmoji.length,
+    0,
+    `SpotlightTour must strictly have 0 emojis. Found: ${linesWithEmoji.map((l) => `${l.num}: "${l.line.trim()}"`).join(", ")}`
+  );
+
+  // Light-only: no dark: classes
+  assert.ok(!content.includes("dark:"), "SpotlightTour must be light-only and not contain dark: classes");
+  assert.ok(!content.includes("useTheme"), "SpotlightTour must not use useTheme");
+});
+

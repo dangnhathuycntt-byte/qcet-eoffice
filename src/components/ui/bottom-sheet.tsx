@@ -16,7 +16,15 @@ export const BottomSheet = ({
 BottomSheet.displayName = "BottomSheet";
 
 export const BottomSheetTrigger = VaulDrawer.Trigger;
-export const BottomSheetPortal = VaulDrawer.Portal;
+export const BottomSheetPortal = ({
+  children,
+  ...props
+}: React.ComponentProps<typeof VaulDrawer.Portal>) => {
+  if (typeof window === "undefined") {
+    return <>{children}</>;
+  }
+  return <VaulDrawer.Portal {...props}>{children}</VaulDrawer.Portal>;
+};
 export const BottomSheetClose = VaulDrawer.Close;
 
 export const BottomSheetOverlay = React.forwardRef<
@@ -39,25 +47,44 @@ export const BottomSheetContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof VaulDrawer.Content> & {
     hideHandle?: boolean;
   }
->(({ className, children, hideHandle = false, ...props }, ref) => (
-  <BottomSheetPortal>
-    <BottomSheetOverlay />
-    <VaulDrawer.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-t border-border/80 bg-card text-card-foreground shadow-2xl focus:outline-none",
-        "pb-[max(1rem,env(safe-area-inset-bottom))]",
-        className
-      )}
-      {...props}
-    >
-      {!hideHandle && (
-        <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/30 active:bg-muted-foreground/50" />
-      )}
-      {children}
-    </VaulDrawer.Content>
-  </BottomSheetPortal>
-));
+>(({ className, children, hideHandle = false, ...props }, ref) => {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return (
+      <div
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-t border-border/80 bg-card text-card-foreground shadow-2xl focus:outline-none",
+          "pb-[max(1rem,env(safe-area-inset-bottom))]",
+          className
+        )}
+      >
+        {!hideHandle && (
+          <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/30 active:bg-muted-foreground/50" />
+        )}
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <BottomSheetPortal>
+      <BottomSheetOverlay />
+      <VaulDrawer.Content
+        ref={ref}
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-50 flex max-h-[90dvh] flex-col rounded-t-[28px] border-t border-border/80 bg-card text-card-foreground shadow-2xl focus:outline-none",
+          "pb-[max(1rem,env(safe-area-inset-bottom))]",
+          className
+        )}
+        {...props}
+      >
+        {!hideHandle && (
+          <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/30 active:bg-muted-foreground/50" />
+        )}
+        {children}
+      </VaulDrawer.Content>
+    </BottomSheetPortal>
+  );
+});
 BottomSheetContent.displayName = "BottomSheetContent";
 
 export const BottomSheetHeader = ({

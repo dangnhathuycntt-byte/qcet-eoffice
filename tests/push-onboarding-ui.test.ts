@@ -2,6 +2,8 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 describe('Task 7: Push Onboarding & Mobile Settings UI', () => {
   const pwaSheetPath = path.resolve(process.cwd(), 'src/components/pwa/push-onboarding-sheet.tsx');
@@ -132,6 +134,115 @@ describe('Task 7: Push Onboarding & Mobile Settings UI', () => {
       assert.ok(
         content.includes('<PushOnboardingSheet'),
         'AppShell must mount <PushOnboardingSheet />'
+      );
+    });
+  });
+
+  describe('Permission Recovery Guide & Denied State (Task 4)', () => {
+    test('push-onboarding-sheet.tsx exports PermissionRecoveryGuide component', async () => {
+      const module = await import('../src/components/pwa/push-onboarding-sheet');
+      assert.ok(
+        typeof module.PermissionRecoveryGuide === 'function',
+        'PermissionRecoveryGuide must be exported as a function/component'
+      );
+    });
+
+    test('PermissionRecoveryGuide renders 3-step guide for Chrome Desktop with Lock icon', async () => {
+      const module = await import('../src/components/pwa/push-onboarding-sheet');
+      const { PermissionRecoveryGuide } = module;
+
+      const html = renderToStaticMarkup(
+        React.createElement(PermissionRecoveryGuide, { initialPlatform: 'chrome' })
+      );
+
+      // 3-step guide for Chrome Desktop
+      assert.ok(
+        html.includes('Ổ khóa') || html.includes('Khóa') || html.includes('bi���u tượng'),
+        'Chrome Step 1 must mention lock icon / site settings'
+      );
+      assert.ok(
+        html.includes('Thông báo') && (html.includes('Cho phép') || html.includes('Bật')),
+        'Chrome Step 2 must mention changing notifications to Allow'
+      );
+      assert.ok(
+        html.includes('Tải lại') || html.includes('F5'),
+        'Chrome Step 3 must mention reloading page to apply changes'
+      );
+    });
+
+    test('PermissionRecoveryGuide renders 3-step guide for Safari iOS with Settings instructions', async () => {
+      const module = await import('../src/components/pwa/push-onboarding-sheet');
+      const { PermissionRecoveryGuide } = module;
+
+      const html = renderToStaticMarkup(
+        React.createElement(PermissionRecoveryGuide, { initialPlatform: 'safari' })
+      );
+
+      // 3-step guide for Safari iOS
+      assert.ok(
+        html.includes('Cài đặt') || html.includes('Settings'),
+        'Safari Step 1 must mention Settings app on iOS'
+      );
+      assert.ok(
+        html.includes('Thông báo') && (html.includes('Cho phép') || html.includes('bật')),
+        'Safari Step 2 must mention enabling Notifications in Settings'
+      );
+      assert.ok(
+        html.includes('Quay lại') || html.includes('QCET') || html.includes('Tải lại'),
+        'Safari Step 3 must mention returning to QCET app or reloading'
+      );
+    });
+
+    test('PushOnboardingSheet renders PermissionRecoveryGuide when permission is denied', async () => {
+      const module = await import('../src/components/pwa/push-onboarding-sheet');
+      const { PushOnboardingSheet } = module;
+
+      const html = renderToStaticMarkup(
+        React.createElement(PushOnboardingSheet, {
+          manualOpen: true,
+          permissionOverride: 'denied',
+        })
+      );
+
+      // Title indicating permission denied / recovery
+      assert.ok(
+        html.includes('Hướng dẫn mở lại quyền thông báo') ||
+          html.includes('Quyền thông báo đang bị khóa') ||
+          html.includes('bị chặn'),
+        'Must display recovery title when permission is denied'
+      );
+      // Contains platform options / recovery steps
+      assert.ok(
+        html.includes('Chrome') || html.includes('Safari'),
+        'Must show platform instructions for Chrome or Safari'
+      );
+      assert.ok(
+        html.includes('Tải lại') || html.includes('Áp dụng'),
+        'Must have reload or refresh action'
+      );
+      assert.ok(
+        html.includes('Để sau'),
+        'Must have dismiss / Để sau button'
+      );
+    });
+
+    test('PermissionRecoveryGuide strictly complies with 0% emoji and light-only Tailwind v4 standard', () => {
+      const content = fs.readFileSync(pwaSheetPath, 'utf-8');
+
+      // No dark: classes
+      assert.ok(!content.includes('dark:'), 'push-onboarding-sheet.tsx must not contain dark: classes');
+
+      // 0% emojis
+      const emojiRegex = /\p{Extended_Pictographic}/u;
+      const linesWithEmoji = content
+        .split('\n')
+        .map((line, idx) => ({ line, num: idx + 1 }))
+        .filter(({ line }) => emojiRegex.test(line));
+
+      assert.strictEqual(
+        linesWithEmoji.length,
+        0,
+        `push-onboarding-sheet.tsx must strictly have 0 emojis. Found: ${linesWithEmoji.map((l) => `${l.num}: "${l.line.trim()}"`).join(', ')}`
       );
     });
   });
