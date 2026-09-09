@@ -7,6 +7,7 @@ import {
   checkHasUnsavedChanges,
   registerServiceWorker,
   applyServiceWorkerUpdate,
+  setupControllerChangeListener,
 } from "../../src/components/pwa/pwa-service-worker-manager";
 
 describe("Task 2: PWA Service Worker Manager & Safe Update UX", () => {
@@ -404,6 +405,181 @@ describe("Task 2: PWA Service Worker Manager & Safe Update UX", () => {
         updateFoundWorker,
         null,
         "Must not trigger update prompt on initial first-time install"
+      );
+    });
+  });
+
+  describe("3b. Controller Change Handling & First-Time Installation Safeguard", () => {
+    it("does NOT reload window on initial controllerchange when hadController is false (first-time install client claim)", () => {
+      let controllerChangeHandler: any = null;
+      let reloadCount = 0;
+
+      setMockDom({}, {});
+      setMockServiceWorker({
+        controller: null, // First-time visit: no active controller
+        addEventListener: (event: string, handler: () => void) => {
+          if (event === "controllerchange") {
+            controllerChangeHandler = handler;
+          }
+        },
+        removeEventListener: (event: string) => {
+          if (event === "controllerchange") {
+            controllerChangeHandler = null;
+          }
+        },
+      });
+
+      setupControllerChangeListener(() => {
+        reloadCount++;
+      });
+
+      assert.ok(controllerChangeHandler, "controllerchange listener must be registered");
+
+      // Simulate first-time install: sw activates and calls clients.claim()
+      controllerChangeHandler?.();
+
+      assert.strictEqual(
+        reloadCount,
+        0,
+        "Must NOT reload window on initial controller claim (first-time PWA install)"
+      );
+    });
+
+    it("reloads window on subsequent controllerchange after first-time installation claim", () => {
+      let controllerChangeHandler: any = null;
+      let reloadCount = 0;
+
+      setMockDom({}, {});
+      setMockServiceWorker({
+        controller: null, // Initially null
+        addEventListener: (event: string, handler: () => void) => {
+          if (event === "controllerchange") {
+            controllerChangeHandler = handler;
+          }
+        },
+        removeEventListener: (event: string) => {
+          if (event === "controllerchange") {
+            controllerChangeHandler = null;
+          }
+        },
+      });
+
+      setupControllerChangeListener(() => {
+        reloadCount++;
+      });
+
+      // 1. Initial claim: no reload
+      controllerChangeHandler?.();
+      assert.strictEqual(reloadCount, 0, "No reload on first claim");
+
+      // 2. Subsequent update takes over (e.g. user triggers update later): must reload
+      controllerChangeHandler?.();
+      assert.strictEqual(
+        reloadCount,
+        1,
+        "Must reload window on subsequent controller change when SW update activates"
+      );
+    });
+
+    it("reloads window immediately when an existing controller was already present (hadController is true)", () => {
+      let controllerChangeHandler: any = null;
+      let reloadCount = 0;
+
+      setMockDom({}, {});
+      setMockServiceWorker({
+        controller: { state: "activated" }, // User already has installed SW
+        addEventListener: (event: string, handler: () => void) => {
+          if (event === "controllerchange") {
+            controllerChangeHandler = handler;
+          }
+        },
+        removeEventListener: () => {},
+      });
+
+      setupControllerChangeListener(() => {
+        reloadCount++;
+      });
+
+      // Controller replaced by update
+      controllerChangeHandler?.();
+
+      assert.strictEqual(
+        reloadCount,
+        1,
+        "Must reload immediately when replacing an existing active controller"
+      );
+    });
+
+    it("guards against multiple rapid controllerchange events (refreshing deduplication)", () => {
+      let controllerChangeHandler: any = null;
+      let reloadCount = 0;
+
+      setMockDom({}, {});
+      setMockServiceWorker({
+        controller: { state: "activated" },
+        addEventListener: (event: string, handler: () => void) => {
+          if (event === "controllerchange") {
+            controllerChangeHandler = handler;
+          }
+        },
+        removeEventListener: () => {},
+      });
+
+      setupControllerChangeListener(() => {
+        reloadCount++;
+      });
+
+      controllerChangeHandler?.();
+      controllerChangeHandler?.();
+      controllerChangeHandler?.();
+
+      assert.strictEqual(
+        reloadCount,
+        1,
+        "Must only trigger a single reload despite multiple rapid controllerchange events"
+      );
+    });
+
+    it("cleans up controllerchange event listener on unmount", () => {
+      let removedListener = false;
+
+      setMockDom({}, {});
+      setMockServiceWorker({
+        controller: null,
+        addEventListener: () => {},
+        removeEventListener: (event: string) => {
+          if (event === "controllerchange") {
+            removedListener = true;
+          }
+        },
+      });
+
+      const cleanup = setupControllerChangeListener();
+      assert.ok(typeof cleanup === "function");
+      cleanup();
+
+      assert.strictEqual(removedListener, true, "Must remove controllerchange listener on cleanup");
+    });
+
+    it("separates service worker registration effect from form activity listener", () => {
+      const content = fs.readFileSync(swManagerPath, "utf-8");
+
+      // Verify registration effect has empty dependency array []
+      assert.ok(
+        content.includes("void registerServiceWorker"),
+        "Must invoke registerServiceWorker in manager"
+      );
+      assert.ok(
+        content.includes('window.removeEventListener("qcet:check-sw-update", handleManualCheck);') &&
+          content.includes("  }, []);"),
+        "Registration effect must have empty dependency array [] to run once on mount"
+      );
+
+      // Verify form activity listener is isolated with [updateAvailable] dependency array
+      assert.ok(
+        content.includes('window.addEventListener("input", handleActivity, { passive: true });') &&
+          content.includes("  }, [updateAvailable]);"),
+        "Form activity listeners must be in a dedicated effect depending on [updateAvailable]"
       );
     });
   });

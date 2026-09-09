@@ -107,6 +107,46 @@ export interface RegisterSWOptions {
 }
 
 /**
+ * Sets up a listener on navigator.serviceWorker 'controllerchange' event.
+ * Guards against reloading on first-time PWA installation when self.clients.claim()
+ * takes control of an uncontrolled client (navigator.serviceWorker.controller === null).
+ * Only reloads when an existing controller was replaced.
+ */
+export function setupControllerChangeListener(
+  onReload: () => void = () => {
+    if (typeof window !== "undefined") {
+      window.location.reload();
+    }
+  }
+): (() => void) | undefined {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+    return undefined;
+  }
+
+  let hadController = Boolean(navigator.serviceWorker.controller);
+  let refreshing = false;
+
+  const handleControllerChange = () => {
+    // If there was no controller when this page loaded, this controllerchange event
+    // is caused by the initial Service Worker activating and claiming clients.
+    // We must NOT reload the page on first install!
+    if (!hadController) {
+      hadController = true;
+      return;
+    }
+
+    if (refreshing) return;
+    refreshing = true;
+    onReload();
+  };
+
+  navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
+  return () => {
+    navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
+  };
+}
+
+/**
  * Registers /sw.js with controlled update detection.
  * Only registers on window load in production, or when NEXT_PUBLIC_ENABLE_SW is enabled in dev.
  */
@@ -223,24 +263,12 @@ export function PWAServiceWorkerManager() {
   const [isUpdating, setIsUpdating] = React.useState<boolean>(false);
   const [dismissed, setDismissed] = React.useState<boolean>(false);
 
-  // 1. Listen to navigator.serviceWorker.oncontrollerchange to reload smoothly
+  // 1. Listen to navigator.serviceWorker.oncontrollerchange to reload smoothly (ignoring first-time client claim)
   React.useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-
-    let refreshing = false;
-    const handleControllerChange = () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    };
-
-    navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
-    return () => {
-      navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
-    };
+    return setupControllerChangeListener();
   }, []);
 
-  // 2. Register Service Worker on window load in production (or when enabled in dev)
+  // 2. Register Service Worker on window load in production (or when enabled in dev) - runs once on mount
   React.useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
@@ -272,20 +300,25 @@ export function PWAServiceWorkerManager() {
     };
     window.addEventListener("qcet:check-sw-update", handleManualCheck);
 
-    // Keep dirty status updated on user typing / form interactions when banner is displayed
+    return () => {
+      isMounted = false;
+      window.removeEventListener("load", runRegistration);
+      window.removeEventListener("qcet:check-sw-update", handleManualCheck);
+    };
+  }, []);
+
+  // 3. Keep dirty status updated on user typing / form interactions when update banner is displayed
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !updateAvailable) return;
+
     const handleActivity = () => {
-      if (updateAvailable) {
-        setHasUnsaved(checkHasUnsavedChanges());
-      }
+      setHasUnsaved(checkHasUnsavedChanges());
     };
 
     window.addEventListener("input", handleActivity, { passive: true });
     window.addEventListener("change", handleActivity, { passive: true });
 
     return () => {
-      isMounted = false;
-      window.removeEventListener("load", runRegistration);
-      window.removeEventListener("qcet:check-sw-update", handleManualCheck);
       window.removeEventListener("input", handleActivity);
       window.removeEventListener("change", handleActivity);
     };
