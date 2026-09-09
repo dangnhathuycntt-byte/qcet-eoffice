@@ -165,7 +165,7 @@ function CalendarRouteContent() {
   }, [tasks]);
 
   // Handle task submission
-  const handleCreateTaskSubmit = useCallback((data: CreateTaskFormData) => {
+  const handleCreateTaskSubmit = useCallback(async (data: CreateTaskFormData) => {
     setIsCreateModalOpen(false);
     const todayStr = new Date().toISOString().split("T")[0];
 
@@ -200,7 +200,7 @@ function CalendarRouteContent() {
           deliverableDescription: data.requiredDeliverables,
           vtvlRole: data.vtvlRole,
           requiresReview: data.requiresReview,
-          parentSchoolTaskId: data.parentTaskId || updated[0]?.id || "task-1",
+          parentSchoolTaskId: data.parentTaskId || updated[0]?.id || "",
           updatedAt: todayStr,
         };
 
@@ -224,7 +224,31 @@ function CalendarRouteContent() {
 
       return updated.map((t) => computeSchoolTaskRollup(t));
     });
-  }, []);
+
+    try {
+      const payload = {
+        title: data.title,
+        description: data.description || data.requiredDeliverables || "",
+        dueDate: data.dueDate,
+        departmentId: user?.department || "BGH",
+        scope: data.level === "TRUONG" ? "SCHOOL" : "DEPARTMENT",
+        parentTaskId: data.parentTaskId || undefined,
+        creatorId: user?.id,
+      };
+
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        console.warn("Không thể lưu nhiệm vụ vào máy chủ:", await res.text().catch(() => ""));
+      }
+    } catch (err) {
+      console.warn("Lỗi khi kết nối đến máy chủ để lưu nhiệm vụ:", err);
+    }
+  }, [user]);
 
   // Handle task status update
   const handleStatusChange = useCallback((taskId: string, newStatus: TaskStatus) => {
@@ -264,8 +288,6 @@ function CalendarRouteContent() {
 
   return (
     <div className="space-y-6" data-zone={zoneParam}>
-      <title>Lịch Công Tác BGH & Lịch Biểu | QCET E-Office</title>
-
       {/* Executive Page Breadcrumb & Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/50 pb-5">
         <div className="space-y-1.5">

@@ -398,8 +398,11 @@ export function ExecutiveCalendarWorkspace({
 
   const handleEventClick = React.useCallback(
     (ev: CalendarTimeEvent) => {
-      setSelectedPreviewEvent(ev);
-      onSelectEvent?.(ev);
+      if (onSelectEvent) {
+        onSelectEvent(ev);
+      } else {
+        setSelectedPreviewEvent(ev);
+      }
     },
     [onSelectEvent]
   );
