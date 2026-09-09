@@ -12,44 +12,51 @@ import {
   FileText,
   Building2,
   Bell,
-  Smartphone,
-  HelpCircle,
   PlusCircle,
   ArrowRight,
   Loader2,
   Mail,
   Phone,
-  CornerDownLeft,
   ChevronRight,
   ShieldCheck,
   Clock,
   ExternalLink,
   Trash2,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   highlightMatchSegments,
   scoreVietnameseSearch,
 } from "@/lib/search/vietnamese-search";
-import type { SearchTaskResult, SearchUserResult } from "@/app/api/search/route";
+import type {
+  SearchTaskResult,
+  SearchUserResult,
+  SearchDocumentResult,
+} from "@/app/api/search/route";
 
-interface QuickAction {
+export interface QuickAction {
   id: string;
   title: string;
   description: string;
   category: "navigation" | "action";
   icon: React.ElementType;
   shortcut?: string;
+  keywords?: string[];
   action: (inNewTab?: boolean) => void;
 }
 
-interface RecentSearchItem {
+export interface RecentSearchItem {
   id: string;
-  type: "task" | "user" | "action";
+  type: "task" | "document" | "user" | "action";
   title: string;
   subtitle?: string;
   timestamp: number;
   data?: any;
+}
+
+export interface CommandSearchModalProps {
+  className?: string;
 }
 
 const RECENT_SEARCHES_STORAGE_KEY = "qcet_recent_searches";
@@ -87,13 +94,16 @@ function HighlightedText({
   );
 }
 
-export function CommandSearchModal() {
+export function CommandSearchModal({ className }: CommandSearchModalProps = {}) {
   const router = useRouter();
   const [isOpen, setIsOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [activeTab, setActiveTab] = React.useState<"all" | "tasks" | "users" | "actions">("all");
+  const [activeTab, setActiveTab] = React.useState<
+    "all" | "tasks" | "documents" | "actions" | "users"
+  >("all");
   const [isLoading, setIsLoading] = React.useState(false);
   const [tasks, setTasks] = React.useState<SearchTaskResult[]>([]);
+  const [documents, setDocuments] = React.useState<SearchDocumentResult[]>([]);
   const [users, setUsers] = React.useState<SearchUserResult[]>([]);
   const [recentSearches, setRecentSearches] = React.useState<RecentSearchItem[]>([]);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
@@ -101,7 +111,14 @@ export function CommandSearchModal() {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
   const searchCacheRef = React.useRef<
-    Map<string, { tasks: SearchTaskResult[]; users: SearchUserResult[] }>
+    Map<
+      string,
+      {
+        tasks: SearchTaskResult[];
+        documents: SearchDocumentResult[];
+        users: SearchUserResult[];
+      }
+    >
   >(new Map());
 
   // Load recent searches from localStorage on mount
@@ -176,19 +193,47 @@ export function CommandSearchModal() {
           detail: { taskId: task.id },
         })
       );
-      router.push(`/?zone=tasks&taskId=${task.id}`);
+
+      const params = new URLSearchParams(window.location.search);
+      params.set("taskId", task.id);
+      params.set("zone", "tasks");
+      router.push(`/?${params.toString()}`);
     },
     [handleClose, router, saveRecentItem]
   );
 
-  // User select handler
+  // Document click / select handler
+  const handleSelectDocument = React.useCallback(
+    (doc: SearchDocumentResult, inNewTab = false) => {
+      saveRecentItem({
+        id: `doc-${doc.id}`,
+        type: "document",
+        title: `${doc.originalNumber}: ${doc.summary}`,
+        subtitle: doc.issuingAuthority || doc.category || "Văn bản",
+        timestamp: Date.now(),
+        data: doc,
+      });
+
+      handleClose();
+
+      const targetUrl = `/documents/${doc.id}`;
+      if (inNewTab) {
+        window.open(targetUrl, "_blank");
+      } else {
+        router.push(targetUrl);
+      }
+    },
+    [handleClose, router, saveRecentItem]
+  );
+
+  // User contact handler
   const handleSelectUser = React.useCallback(
     (user: SearchUserResult) => {
       saveRecentItem({
         id: `user-${user.id}`,
         type: "user",
         title: user.name,
-        subtitle: user.title || user.department?.name || user.email,
+        subtitle: `${user.title || "Cán bộ"} · ${user.department?.name || "QCET"}`,
         timestamp: Date.now(),
         data: user,
       });
@@ -206,14 +251,80 @@ export function CommandSearchModal() {
     return [
       {
         id: "create-task",
-        title: "Tạo công việc / nhiệm vụ mới",
-        description: "Khởi tạo công việc cấp trường hoặc cấp đơn vị trực thuộc",
+        title: "Tạo nhiệm vụ",
+        description: "Khởi tạo công việc / nhiệm vụ mới cấp trường hoặc cấp đơn vị",
         category: "action",
         icon: PlusCircle,
         shortcut: "N",
+        keywords: ["tao nhiem vu", "tao cong viec", "them nhiem vu", "new task", "create task"],
         action: () => {
           handleClose();
           window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
+        },
+      },
+      {
+        id: "action-review-tasks",
+        title: "Xem việc chờ duyệt",
+        description: "Lọc các nhiệm vụ đang chờ phê duyệt hoặc nghiệm thu kết quả",
+        category: "action",
+        icon: ShieldCheck,
+        shortcut: "P",
+        keywords: ["xem viec cho duyet", "cho duyet", "phe duyet", "nghiem thu", "kiem tra", "pending", "review"],
+        action: (newTab) => {
+          handleClose();
+          window.dispatchEvent(
+            new CustomEvent("qcet:set-smart-tab", { detail: { tab: "review" } })
+          );
+          if (newTab) window.open("/?zone=tasks&tab=review", "_blank");
+          else router.push("/?zone=tasks&tab=review");
+        },
+      },
+      {
+        id: "action-my-tasks",
+        title: "Đổi sang Của tôi",
+        description: "Chuyển phạm vi xem sang công việc cá nhân được giao",
+        category: "action",
+        icon: CheckSquare,
+        shortcut: "M",
+        keywords: ["doi sang cua toi", "cua toi", "ca nhan", "my tasks", "my", "toi"],
+        action: (newTab) => {
+          handleClose();
+          window.dispatchEvent(
+            new CustomEvent("qcet:set-task-scope", { detail: { scope: "my" } })
+          );
+          window.dispatchEvent(
+            new CustomEvent("qcet:set-smart-tab", { detail: { tab: "my_tasks" } })
+          );
+          if (newTab) window.open("/?zone=tasks&scope=my", "_blank");
+          else router.push("/?zone=tasks&scope=my");
+        },
+      },
+      {
+        id: "nav-documents",
+        title: "Đi tới Văn bản",
+        description: "Sổ văn bản điện tử, văn bản đến, đi và chỉ đạo điều hành",
+        category: "navigation",
+        icon: FileText,
+        shortcut: "V",
+        keywords: ["di toi van ban", "van ban", "vb", "so van ban", "cong van", "tai lieu", "documents"],
+        action: (newTab) => {
+          handleClose();
+          if (newTab) window.open("/documents", "_blank");
+          else router.push("/documents");
+        },
+      },
+      {
+        id: "nav-calendar",
+        title: "Đi tới Lịch",
+        description: "Lịch công tác trường và kế hoạch làm việc tuần/tháng",
+        category: "navigation",
+        icon: Calendar,
+        shortcut: "C",
+        keywords: ["di toi lich", "lich", "calendar", "ke hoach tuan", "lich cong tac"],
+        action: (newTab) => {
+          handleClose();
+          if (newTab) window.open("/?zone=calendar", "_blank");
+          else router.push("/?zone=calendar");
         },
       },
       {
@@ -223,6 +334,7 @@ export function CommandSearchModal() {
         category: "navigation",
         icon: LayoutDashboard,
         shortcut: "D",
+        keywords: ["ban lam viec", "tong quan", "dashboard", "kpi", "tien do"],
         action: (newTab) => {
           handleClose();
           if (newTab) window.open("/?zone=dashboard", "_blank");
@@ -236,52 +348,11 @@ export function CommandSearchModal() {
         category: "navigation",
         icon: CheckSquare,
         shortcut: "T",
+        keywords: ["danh sach cong viec", "nhiem vu", "tasks", "dacum"],
         action: (newTab) => {
           handleClose();
           if (newTab) window.open("/?zone=tasks", "_blank");
           else router.push("/?zone=tasks");
-        },
-      },
-      {
-        id: "nav-calendar",
-        title: "Lịch công tác trường",
-        description: "Theo dõi kế hoạch làm việc tuần và tháng của Nhà trường",
-        category: "navigation",
-        icon: Calendar,
-        shortcut: "C",
-        action: (newTab) => {
-          handleClose();
-          if (newTab) window.open("/?zone=calendar", "_blank");
-          else router.push("/?zone=calendar");
-        },
-      },
-      {
-        id: "nav-month-9",
-        title: "Kỳ công tác Tháng 9/2026",
-        description: "Chuyển nhanh sang dữ liệu tháng 9 năm học 2026 - 2027",
-        category: "action",
-        icon: Calendar,
-        shortcut: "M",
-        action: () => {
-          handleClose();
-          window.dispatchEvent(
-            new CustomEvent("qcet:set-academic-month", {
-              detail: { month: 9, year: "2026-2027" },
-            })
-          );
-          router.push("/?zone=tasks&month=9");
-        },
-      },
-      {
-        id: "nav-documents",
-        title: "Văn bản & Chỉ đạo",
-        description: "Sổ văn bản điện tử, văn bản đến, đi và chỉ đạo điều hành",
-        category: "navigation",
-        icon: FileText,
-        action: (newTab) => {
-          handleClose();
-          if (newTab) window.open("/?zone=documents", "_blank");
-          else router.push("/?zone=documents");
         },
       },
       {
@@ -290,6 +361,7 @@ export function CommandSearchModal() {
         description: "Trung tâm điều hành và giải quyết điểm nghẽn toàn trường",
         category: "navigation",
         icon: ShieldCheck,
+        keywords: ["cong chi dao", "ban giam hieu", "portal", "diem nghen"],
         action: (newTab) => {
           handleClose();
           if (newTab) window.open("/?zone=portal", "_blank");
@@ -302,6 +374,7 @@ export function CommandSearchModal() {
         description: "Sơ đồ phòng ban, khoa và thông tin cán bộ giảng viên",
         category: "navigation",
         icon: Building2,
+        keywords: ["co cau to chuc", "nhan su", "phong ban", "khoa", "to chuc"],
         action: (newTab) => {
           handleClose();
           if (newTab) window.open("/?zone=org", "_blank");
@@ -314,32 +387,11 @@ export function CommandSearchModal() {
         description: "Nhật ký chỉ đạo, cảnh báo hạn chót và thông báo giao việc",
         category: "navigation",
         icon: Bell,
+        keywords: ["thong bao", "notifications", "canh bao", "nhat ky"],
         action: (newTab) => {
           handleClose();
           if (newTab) window.open("/notifications", "_blank");
           else router.push("/notifications");
-        },
-      },
-      {
-        id: "action-push",
-        title: "Cài đặt Thông báo đẩy (Push)",
-        description: "Bật nhận thông báo trực tiếp trên thiết bị cá nhân",
-        category: "action",
-        icon: Smartphone,
-        action: () => {
-          handleClose();
-          window.dispatchEvent(new CustomEvent("qcet:open-push-onboarding"));
-        },
-      },
-      {
-        id: "action-tour",
-        title: "Hướng dẫn sử dụng hệ thống",
-        description: "Khởi động lại tour hướng dẫn các tính năng chính của QCET",
-        category: "action",
-        icon: HelpCircle,
-        action: () => {
-          handleClose();
-          window.dispatchEvent(new CustomEvent("qcet:restart-onboarding"));
         },
       },
     ];
@@ -359,16 +411,6 @@ export function CommandSearchModal() {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isKeyK = e.key === "k" || e.key === "K" || e.code === "KeyK";
       if ((e.metaKey || e.ctrlKey) && !e.altKey && isKeyK) {
-        const target = e.target as HTMLElement | null;
-        const isEditable =
-          target?.tagName === "INPUT" ||
-          target?.tagName === "TEXTAREA" ||
-          target?.isContentEditable;
-
-        if (isEditable && target !== inputRef.current) {
-          return;
-        }
-
         if (isOpen) {
           e.preventDefault();
           handleClose();
@@ -415,6 +457,7 @@ export function CommandSearchModal() {
     if (searchCacheRef.current.has(trimmed)) {
       const cached = searchCacheRef.current.get(trimmed)!;
       setTasks(cached.tasks);
+      setDocuments(cached.documents);
       setUsers(cached.users);
       setIsLoading(false);
       setSelectedIndex(0);
@@ -433,16 +476,19 @@ export function CommandSearchModal() {
         if (!res.ok) throw new Error("Search failed");
         const json = await res.json();
         if (isMounted && json.success) {
-          const t = json.results?.tasks || [];
-          const u = json.results?.users || [];
-          searchCacheRef.current.set(trimmed, { tasks: t, users: u });
+          const t: SearchTaskResult[] = json.results?.tasks || [];
+          const d: SearchDocumentResult[] = json.results?.documents || [];
+          const u: SearchUserResult[] = json.results?.users || [];
+          searchCacheRef.current.set(trimmed, { tasks: t, documents: d, users: u });
           setTasks(t);
+          setDocuments(d);
           setUsers(u);
           setSelectedIndex(0);
         }
       } catch {
         if (isMounted) {
           setTasks([]);
+          setDocuments([]);
           setUsers([]);
         }
       } finally {
@@ -464,9 +510,10 @@ export function CommandSearchModal() {
     if (!q) return quickActions;
     return quickActions
       .map((a) => {
+        const keywords = [a.description, ...(a.keywords || [])];
         const score = Math.max(
-          scoreVietnameseSearch(a.title, q, [a.description]),
-          a.shortcut && a.shortcut.toLowerCase() === q.toLowerCase() ? 90 : 0
+          scoreVietnameseSearch(a.title, q, keywords),
+          a.shortcut && a.shortcut.toLowerCase() === q.toLowerCase() ? 95 : 0
         );
         return { action: a, score };
       })
@@ -477,14 +524,16 @@ export function CommandSearchModal() {
 
   // Filtered lists according to active tab
   const displayTasks = activeTab === "all" || activeTab === "tasks" ? tasks : [];
-  const displayUsers = activeTab === "all" || activeTab === "users" ? users : [];
+  const displayDocuments = activeTab === "all" || activeTab === "documents" ? documents : [];
   const displayActions = activeTab === "all" || activeTab === "actions" ? filteredActions : [];
+  const displayUsers = activeTab === "all" || activeTab === "users" ? users : [];
 
   // Build flat items list for keyboard navigation
   type FlatItem =
     | { type: "recent"; item: RecentSearchItem }
     | { type: "action"; item: QuickAction }
     | { type: "task"; item: SearchTaskResult }
+    | { type: "document"; item: SearchDocumentResult }
     | { type: "user"; item: SearchUserResult };
 
   const flatItems = React.useMemo<FlatItem[]>(() => {
@@ -494,9 +543,10 @@ export function CommandSearchModal() {
     }
     displayActions.forEach((a) => items.push({ type: "action", item: a }));
     displayTasks.forEach((t) => items.push({ type: "task", item: t }));
+    displayDocuments.forEach((d) => items.push({ type: "document", item: d }));
     displayUsers.forEach((u) => items.push({ type: "user", item: u }));
     return items;
-  }, [activeTab, displayActions, displayTasks, displayUsers, query, recentSearches]);
+  }, [activeTab, displayActions, displayTasks, displayDocuments, displayUsers, query, recentSearches]);
 
   // Execute selected item
   const executeItem = React.useCallback(
@@ -505,28 +555,33 @@ export function CommandSearchModal() {
         item.item.action(inNewTab);
       } else if (item.type === "task") {
         handleSelectTask(item.item, inNewTab);
+      } else if (item.type === "document") {
+        handleSelectDocument(item.item, inNewTab);
       } else if (item.type === "user") {
         handleSelectUser(item.item);
       } else if (item.type === "recent") {
         if (item.item.type === "task" && item.item.data) {
           handleSelectTask(item.item.data, inNewTab);
+        } else if (item.item.type === "document" && item.item.data) {
+          handleSelectDocument(item.item.data, inNewTab);
         } else if (item.item.type === "user" && item.item.data) {
           handleSelectUser(item.item.data);
         }
       }
     },
-    [handleSelectTask, handleSelectUser]
+    [handleSelectTask, handleSelectDocument, handleSelectUser]
   );
 
-  // Keyboard navigation
+  // Keyboard navigation inside modal
   const handleKeyDownInList = (e: React.KeyboardEvent) => {
     if (e.key === "Tab") {
       e.preventDefault();
-      const tabs: Array<"all" | "tasks" | "users" | "actions"> = [
+      const tabs: Array<"all" | "tasks" | "documents" | "actions" | "users"> = [
         "all",
         "tasks",
-        "users",
+        "documents",
         "actions",
+        "users",
       ];
       const currentIdx = tabs.indexOf(activeTab);
       const nextIdx = e.shiftKey
@@ -547,26 +602,24 @@ export function CommandSearchModal() {
       setSelectedIndex((prev) => (prev - 1 + flatItems.length) % flatItems.length);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const current = flatItems[selectedIndex];
-      if (!current) return;
-      executeItem(current, e.metaKey || e.ctrlKey);
+      const target = flatItems[selectedIndex];
+      if (target) {
+        const inNewTab = e.metaKey || e.ctrlKey;
+        executeItem(target, inNewTab);
+      }
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-        return { label: "Hoàn thành", color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-      case "IN_PROGRESS":
-        return { label: "Đang làm", color: "bg-blue-50 text-blue-700 border-blue-200" };
-      case "WAITING_APPROVAL":
-        return { label: "Chờ duyệt", color: "bg-amber-50 text-amber-700 border-amber-200" };
-      case "REJECTED":
-        return { label: "Từ chối", color: "bg-rose-50 text-rose-700 border-rose-200" };
-      default:
-        return { label: "Chưa bắt đầu", color: "bg-neutral-50 text-neutral-600 border-neutral-200" };
+  // Auto scroll active option into view
+  React.useEffect(() => {
+    if (!listRef.current) return;
+    const selectedEl = listRef.current.querySelector(
+      '[aria-selected="true"]'
+    ) as HTMLElement | null;
+    if (selectedEl) {
+      selectedEl.scrollIntoView({ block: "nearest" });
     }
-  };
+  }, [selectedIndex]);
 
   if (!isOpen) return null;
 
@@ -574,36 +627,37 @@ export function CommandSearchModal() {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Tìm kiếm nhanh hệ thống"
-      className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-4 md:p-6 pt-[10vh] sm:pt-[12vh] animate-in fade-in duration-150"
+      aria-label="Tìm kiếm nhanh hệ thống (Command Palette)"
+      data-slot="command-palette"
+      className={cn(
+        "fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150",
+        className
+      )}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
     >
-      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-neutral-900/40 backdrop-blur-xs transition-opacity"
-        onClick={handleClose}
-        aria-hidden="true"
-      />
-
-      {/* Modal Dialog */}
-      <div
-        className="relative w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-neutral-200/80 overflow-hidden flex flex-col max-h-[80vh] z-10"
+        className="w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-98 duration-150"
         onKeyDown={handleKeyDownInList}
       >
-        {/* Search Header Bar */}
-        <div className="flex items-center px-4 py-3 border-b border-neutral-100 gap-3 bg-white">
+        {/* Search Header Input */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-200 bg-white">
           <Search className="w-5 h-5 text-neutral-400 shrink-0" />
           <input
             ref={inputRef}
             type="text"
             role="combobox"
-            aria-expanded={isOpen}
+            aria-expanded={flatItems.length > 0}
             aria-autocomplete="list"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            placeholder="Tìm theo tên việc, mã số, viết tắt khoa (cntt, dbcl)..."
+            placeholder="Tìm theo tên việc, mã số, văn bản, viết tắt khoa (cntt, vb)..."
             className="flex-1 bg-transparent text-sm sm:text-base font-normal text-neutral-900 placeholder:text-neutral-400 focus:outline-hidden"
           />
           {isLoading && <Loader2 className="w-4 h-4 text-neutral-400 animate-spin shrink-0" />}
@@ -623,7 +677,7 @@ export function CommandSearchModal() {
           <button
             type="button"
             onClick={handleClose}
-            className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-medium text-neutral-400 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
+            className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
           >
             ESC
           </button>
@@ -665,6 +719,38 @@ export function CommandSearchModal() {
           <button
             type="button"
             onClick={() => {
+              setActiveTab("documents");
+              setSelectedIndex(0);
+            }}
+            className={cn(
+              "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
+              activeTab === "documents"
+                ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
+                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
+            )}
+          >
+            <FileText className="w-3.5 h-3.5 text-amber-600" />
+            Văn bản {documents.length > 0 && `(${documents.length})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("actions");
+              setSelectedIndex(0);
+            }}
+            className={cn(
+              "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
+              activeTab === "actions"
+                ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
+                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
+            )}
+          >
+            <Zap className="w-3.5 h-3.5 text-violet-600" />
+            Thao tác nhanh
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setActiveTab("users");
               setSelectedIndex(0);
             }}
@@ -677,21 +763,6 @@ export function CommandSearchModal() {
           >
             <Users className="w-3.5 h-3.5 text-emerald-600" />
             Nhân sự {users.length > 0 && `(${users.length})`}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("actions");
-              setSelectedIndex(0);
-            }}
-            className={cn(
-              "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap",
-              activeTab === "actions"
-                ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
-                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
-            )}
-          >
-            Thao tác nhanh
           </button>
         </div>
 
@@ -709,7 +780,7 @@ export function CommandSearchModal() {
                 Không tìm thấy kết quả phù hợp cho &ldquo;{query}&rdquo;
               </p>
               <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
-                Thử tìm theo mã công việc (ví dụ: NV-2026), viết tắt khoa (cntt, dbcl) hoặc họ tên cán bộ.
+                Thử tìm theo mã công việc (ví dụ: NV-2026), số văn bản (ví dụ: 125/QĐ), viết tắt khoa (cntt, dbcl) hoặc họ tên cán bộ.
               </p>
             </div>
           )}
@@ -815,7 +886,7 @@ export function CommandSearchModal() {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 ml-2">
                         {action.shortcut && (
-                          <kbd className="px-1.5 py-0.5 text-xs font-mono text-neutral-400 bg-white rounded border border-neutral-200">
+                          <kbd className="px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-white rounded border border-neutral-200">
                             {action.shortcut}
                           </kbd>
                         )}
@@ -833,7 +904,7 @@ export function CommandSearchModal() {
             <div>
               <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center justify-between">
                 <span>Nhiệm vụ & Kế hoạch ({displayTasks.length})</span>
-                <span className="text-xs text-neutral-400 lowercase">phím ↵ để mở chi tiết</span>
+                <span className="text-xs text-neutral-400 lowercase">phím ↵ để mở</span>
               </div>
               <div className="space-y-1">
                 {displayTasks.map((task) => {
@@ -841,7 +912,6 @@ export function CommandSearchModal() {
                     (f) => f.type === "task" && f.item.id === task.id
                   );
                   const isSelected = selectedIndex === currentFlatIndex;
-                  const statusInfo = getStatusBadge(task.status);
 
                   return (
                     <div
@@ -877,26 +947,87 @@ export function CommandSearchModal() {
                                 />
                               </span>
                             )}
+                            <span>Tiến độ: {task.progressPercent}%</span>
                             {task.dueDate && (
-                              <span className="flex items-center gap-1 text-neutral-500">
-                                <Calendar className="w-3 h-3 text-neutral-400" />
+                              <span>
                                 Hạn: {new Date(task.dueDate).toLocaleDateString("vi-VN")}
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-1 text-xs text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                        <span>Chi tiết</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-                      <div className="flex items-center gap-2 shrink-0 ml-3">
-                        <span
-                          className={cn(
-                            "px-2 py-0.5 text-xs font-medium rounded border whitespace-nowrap",
-                            statusInfo.color
-                          )}
-                        >
-                          {statusInfo.label}
-                        </span>
-                        <CornerDownLeft className="w-3.5 h-3.5 text-neutral-300 group-hover:text-neutral-600" />
+          {/* Section: Documents */}
+          {displayDocuments.length > 0 && (
+            <div>
+              <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-amber-600" />
+                  Văn bản & Chỉ đạo ({displayDocuments.length})
+                </span>
+                <span className="text-xs text-neutral-400 lowercase">phím ↵ để mở</span>
+              </div>
+              <div className="space-y-1">
+                {displayDocuments.map((doc) => {
+                  const currentFlatIndex = flatItems.findIndex(
+                    (f) => f.type === "document" && f.item.id === doc.id
+                  );
+                  const isSelected = selectedIndex === currentFlatIndex;
+
+                  return (
+                    <div
+                      key={doc.id}
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => handleSelectDocument(doc)}
+                      className={cn(
+                        "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer group",
+                        isSelected
+                          ? "bg-neutral-50/90 border-neutral-300 shadow-2xs"
+                          : "border-transparent hover:bg-neutral-50/60 hover:border-neutral-200"
+                      )}
+                    >
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        <FileText className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-mono font-bold text-amber-900 bg-amber-100/70 px-1.5 py-0.5 rounded border border-amber-200/60">
+                              <HighlightedText text={doc.originalNumber || "VB-QCET"} query={query} />
+                            </span>
+                            <span className="text-xs font-semibold text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded">
+                              {doc.category || "Văn bản"}
+                            </span>
+                            <span className="text-sm font-medium text-neutral-900 truncate">
+                              <HighlightedText text={doc.summary} query={query} />
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500 flex-wrap">
+                            {doc.issuingAuthority && (
+                              <span className="text-neutral-600">
+                                {doc.issuingAuthority}
+                              </span>
+                            )}
+                            {doc.issuedDate && (
+                              <span className="text-neutral-400">
+                                Ngày: {new Date(doc.issuedDate).toLocaleDateString("vi-VN")}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                        <span>Xem</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </div>
                     </div>
                   );
@@ -908,8 +1039,9 @@ export function CommandSearchModal() {
           {/* Section: Users */}
           {displayUsers.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase">
-                Cán bộ & Nhân sự ({displayUsers.length})
+              <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center justify-between">
+                <span>Cán bộ & Giảng viên ({displayUsers.length})</span>
+                <span className="text-xs text-neutral-400 lowercase">phím ↵ để liên hệ</span>
               </div>
               <div className="space-y-1">
                 {displayUsers.map((user) => {
@@ -925,59 +1057,52 @@ export function CommandSearchModal() {
                       aria-selected={isSelected}
                       onClick={() => handleSelectUser(user)}
                       className={cn(
-                        "w-full flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer group",
+                        "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer group",
                         isSelected
                           ? "bg-neutral-50/90 border-neutral-300 shadow-2xs"
                           : "border-transparent hover:bg-neutral-50/60 hover:border-neutral-200"
                       )}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-semibold text-xs flex items-center justify-center shrink-0 border border-emerald-200">
-                          {user.name.charAt(0).toUpperCase()}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold text-xs flex items-center justify-center shrink-0 border border-blue-200">
+                          {user.name.slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-neutral-900">
-                            <HighlightedText text={user.name} query={query} />
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-neutral-900">
+                              <HighlightedText text={user.name} query={query} />
+                            </span>
                             {user.title && (
-                              <span className="text-xs font-normal text-neutral-500 ml-1.5">
-                                • <HighlightedText text={user.title} query={query} />
+                              <span className="text-xs text-neutral-500">
+                                {user.title}
                               </span>
                             )}
-                          </p>
-                          <div className="flex items-center gap-3 text-xs text-neutral-500">
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-neutral-500 flex-wrap">
                             {user.department && (
-                              <span className="truncate">
-                                <HighlightedText
-                                  text={user.department.name}
-                                  query={query}
-                                />
+                              <span className="flex items-center gap-1 text-neutral-600">
+                                <Building2 className="w-3 h-3 text-neutral-400" />
+                                {user.department.name}
+                              </span>
+                            )}
+                            {user.email && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="w-3 h-3 text-neutral-400" />
+                                <HighlightedText text={user.email} query={query} />
+                              </span>
+                            )}
+                            {user.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-neutral-400" />
+                                {user.phone}
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                        {user.phone && (
-                          <a
-                            href={`tel:${user.phone}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded transition-colors"
-                            title={`Gọi: ${user.phone}`}
-                            aria-label={`Gọi điện thoại cho ${user.name}`}
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-                        <a
-                          href={`mailto:${user.email}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded transition-colors"
-                          title={`Email: ${user.email}`}
-                          aria-label={`Gửi email cho ${user.name}`}
-                        >
-                          <Mail className="w-3.5 h-3.5" />
-                        </a>
+                      <div className="flex items-center gap-1 text-xs text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                        <span>Email</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
                       </div>
                     </div>
                   );
@@ -987,44 +1112,44 @@ export function CommandSearchModal() {
           )}
         </div>
 
-        {/* Footer Action Bar (Raycast / Linear Standard) */}
-        <div className="flex items-center justify-between border-t border-neutral-100 px-4 py-2 text-xs text-neutral-500 bg-neutral-50/80 select-none">
-          <div className="flex items-center gap-3">
+        {/* Footer shortcuts hint bar */}
+        <div className="px-4 py-2.5 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between text-xs text-neutral-500">
+          <div className="flex items-center gap-4 flex-wrap">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 text-xs font-mono rounded bg-white border border-neutral-200 text-neutral-700 shadow-2xs">
+              <kbd className="px-1.5 py-0.5 font-mono text-[11px] bg-white rounded border border-neutral-200 text-neutral-600">
                 ↵
               </kbd>
               <span>Mở</span>
             </span>
-            <span className="hidden sm:flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 text-xs font-mono rounded bg-white border border-neutral-200 text-neutral-700 shadow-2xs">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 font-mono text-[11px] bg-white rounded border border-neutral-200 text-neutral-600">
                 ⌘↵
               </kbd>
               <span>Mở tab mới</span>
             </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden md:flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 text-xs font-mono rounded bg-white border border-neutral-200 text-neutral-700 shadow-2xs">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 font-mono text-[11px] bg-white rounded border border-neutral-200 text-neutral-600">
                 Tab
               </kbd>
               <span>Chuyển nhóm</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 text-xs font-mono rounded bg-white border border-neutral-200 text-neutral-700 shadow-2xs">
+              <kbd className="px-1.5 py-0.5 font-mono text-[11px] bg-white rounded border border-neutral-200 text-neutral-600">
                 ↑↓
               </kbd>
               <span>Di chuyển</span>
             </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 text-xs font-mono rounded bg-white border border-neutral-200 text-neutral-700 shadow-2xs">
-                Esc
-              </kbd>
-              <span>Đóng</span>
-            </span>
+          </div>
+          <div className="flex items-center gap-1 text-neutral-400">
+            <kbd className="px-1.5 py-0.5 font-mono text-[11px] bg-white rounded border border-neutral-200 text-neutral-600">
+              Esc
+            </kbd>
+            <span>Đóng</span>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+export default CommandSearchModal;

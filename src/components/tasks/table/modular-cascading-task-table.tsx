@@ -470,7 +470,35 @@ export function ModularCascadingTaskTable({
     onToggleSelect: (id) => tableState.toggleSelect(id),
     onToggleExpand: (id, expand) => tableState.toggleExpand(id, expand),
     onClearSelection: () => tableState.clearSelection(),
+    onFocusSearch: () => {
+      window.dispatchEvent(new CustomEvent("qcet:focus-task-search"));
+    },
+    onEscape: () => {
+      if (selectedTaskId || (syncWithUrl && urlSync.urlState.taskId)) {
+        if (syncWithUrl) {
+          urlSync.setTaskId(null);
+        }
+        window.dispatchEvent(new CustomEvent("qcet:close-task-detail"));
+      } else if (tableState.selectedCount > 0) {
+        tableState.clearSelection();
+      } else if (activeSearch) {
+        handleSearchChange("");
+      } else {
+        keyboardNav.resetActive();
+      }
+    },
   });
+
+  // Tự động cuộn đến hàng đang nhận focus bàn phím
+  React.useEffect(() => {
+    if (!containerRef.current || !keyboardNav.activeId) return;
+    const activeEl = containerRef.current.querySelector(
+      `[data-task-id="${keyboardNav.activeId}"]`
+    ) as HTMLElement | null;
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [keyboardNav.activeId]);
 
   // 11. Pull to refresh for mobile
   const pullToRefresh = usePullToRefresh({
@@ -856,6 +884,55 @@ export function ModularCascadingTaskTable({
                 canAssign={canAssignUnit}
               />
             ))}
+          </div>
+
+          {/* Keyboard Ergonomics & Shortcut Hints Bar */}
+          <div
+            className="hidden md:flex items-center justify-between px-3.5 py-2 border-t border-slate-200/80 bg-slate-50/60 text-xs text-slate-500 select-none"
+            aria-label="Phím tắt điều hướng nhanh"
+          >
+            <div className="flex items-center gap-3.5 flex-wrap">
+              <span className="font-semibold text-slate-700">Phím tắt nhanh:</span>
+              <span className="inline-flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
+                  /
+                </kbd>
+                <span>Tìm kiếm</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
+                  J
+                </kbd>
+                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
+                  K
+                </kbd>
+                <span>Di chuyển dòng</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
+                  ↵
+                </kbd>
+                <span>Xem chi tiết</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
+                  X
+                </kbd>
+                <span>Chọn dòng</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
+                  Esc
+                </kbd>
+                <span>Đóng / Hủy chọn</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
+                ⌘K
+              </kbd>
+              <span>Menu lệnh toàn cục</span>
+            </div>
           </div>
 
           {/* Pagination Controls */}
