@@ -307,40 +307,15 @@ export function PushOnboardingSheet({
     [isControlled, onManualOpenChange, onClose]
   );
 
-  // Auto-display logic on mount
+  // Controlled or coordinator-driven display logic (zero cold prompt invariant)
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // If coordinator handles push prompt, respect canShowPushPrompt
+    // The sheet only opens if coordinator allows it (never cold-prompts on initial load)
     if (coordinator.canShowPushPrompt && !isControlled) {
       setInternalOpen(true);
-      return;
     }
-
-    // Cooldown check for fallback
-    try {
-      const dismissedRaw = localStorage.getItem(SNOOZE_KEY);
-      if (dismissedRaw) {
-        const dismissedAt = parseInt(dismissedRaw, 10);
-        if (!isNaN(dismissedAt) && Date.now() - dismissedAt < SNOOZE_DAYS_MS) {
-          return;
-        }
-      }
-    } catch {
-      // Ignore localStorage access errors
-    }
-
-    const timer = setTimeout(() => {
-      if (isSubscribed && isStandalone) {
-        return;
-      }
-      if (!isSubscribed || isInstallable || (isIOS && !isStandalone)) {
-        setInternalOpen(true);
-      }
-    }, 1200);
-
-    return () => clearTimeout(timer);
-  }, [isSubscribed, isStandalone, isInstallable, isIOS, coordinator.canShowPushPrompt, isControlled]);
+  }, [coordinator.canShowPushPrompt, isControlled]);
 
   // Listen for manual trigger via custom event
   React.useEffect(() => {
@@ -404,6 +379,7 @@ export function PushOnboardingSheet({
 
     const success = await subscribeToPush();
     if (success) {
+      coordinator.snoozePush(365);
       onSuccess?.();
       setTimeout(() => {
         handleOpenChange(false);
@@ -700,7 +676,7 @@ export function PushOnboardingSheet({
                   ) : (
                     <Bell className="w-5 h-5" />
                   )}
-                  <span>BẬT THÔNG BÁO NGAY</span>
+                  <span>Bật thông báo trên thiết bị</span>
                 </button>
                 <button
                   type="button"

@@ -2,6 +2,7 @@ import * as webpush from "web-push";
 import { prisma } from "@/lib/prisma";
 import { serverEnv } from "@/config/env.server";
 import { isFeatureEnabled } from "@/features/flags";
+import { isTopicEnabled, type PushPreferences } from "@/lib/pwa/push-preferences";
 
 export type TaskPushEventType =
   | "TASK_ASSIGNED"
@@ -216,7 +217,7 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
   const title = truncatePushText(rawTitle, 35);
   const body = truncatePushText(rawBody, 90);
   const tag = `task-${taskId}-${eventShort}`;
-  const targetHref = linkHref || `/portal?task=${encodeURIComponent(taskId)}`;
+  const targetHref = linkHref || `/tasks?taskId=${encodeURIComponent(taskId)}`;
 
   return {
     title,
@@ -226,8 +227,12 @@ export function formatTaskPushPayload(input: TaskPushInput): PushNotificationPay
     tag,
     renotify: true,
     data: {
-      linkHref: targetHref,
+      entityId: taskId,
       taskId,
+      type: event,
+      route: targetHref,
+      url: targetHref,
+      linkHref: targetHref,
       event,
     },
     actions: [
@@ -262,6 +267,33 @@ export async function sendPushNotificationToUser(
   }
 
   ensureVapidConfigured();
+
+  // Check user preferences if available
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { onboardingData: true },
+  });
+
+  const onboardingData = user?.onboardingData as Record<string, unknown> | null;
+  const userPrefs = onboardingData?.pushPreferences as PushPreferences | undefined;
+
+  if (userPrefs) {
+    const notifType =
+      (payload.data?.type as string) ||
+      (payload.data?.event as string) ||
+      payload.tag ||
+      "";
+    if (!isTopicEnabled(userPrefs, notifType)) {
+      return {
+        success: true,
+        totalSubscriptions: 0,
+        sentCount: 0,
+        failedCount: 0,
+        revokedCount: 0,
+        details: [],
+      };
+    }
+  }
 
   const subscriptions = await prisma.pushSubscription.findMany({
     where: {
@@ -337,6 +369,7 @@ export async function sendPushNotificationToUser(
             where: { id: sub.id },
             data: {
               status: "REVOKED",
+              disabledAt: new Date(),
               lastFailureCode: statusCode,
             },
           }).catch(() => {});
@@ -350,6 +383,7 @@ export async function sendPushNotificationToUser(
               failureCount: nextFailureCount,
               lastFailureCode: statusCode ?? 500,
               status: isThresholdExceeded ? "REVOKED" : sub.status,
+              disabledAt: isThresholdExceeded ? new Date() : undefined,
             },
           }).catch(() => {});
           if (isThresholdExceeded) revokedCount++;

@@ -1,75 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import {
+  urlBase64ToUint8Array,
+  areServerKeysEqual,
+  isPushSupported,
+  getPushSubscription,
+  subscribeToPush as canonicalSubscribeToPush,
+  unsubscribeFromPush as canonicalUnsubscribeFromPush,
+} from '@/lib/pwa/push-manager';
 
-/**
- * Converts a base64 or URL-safe base64 string to a Uint8Array.
- * Handles padding characters (=) and url-safe substitutions (- and _).
- */
-export function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-
-  if (typeof atob === 'function') {
-    const rawData = atob(base64);
-    const buffer = new ArrayBuffer(rawData.length);
-    const outputArray = new Uint8Array(buffer);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-  }
-
-  if (typeof Buffer !== 'undefined') {
-    const buf = Buffer.from(base64, 'base64');
-    const buffer = new ArrayBuffer(buf.byteLength);
-    const outputArray = new Uint8Array(buffer);
-    outputArray.set(buf);
-    return outputArray;
-  }
-
-  throw new Error('No base64 decoding mechanism available');
-}
-
-/**
- * Compares an existing subscription applicationServerKey against a new target Uint8Array public key.
- * Used to detect VAPID key rotations and trigger automatic client-side re-subscription.
- */
-export function areServerKeysEqual(
-  existingKey: ArrayBuffer | ArrayBufferView | null | undefined,
-  newKeyBytes: Uint8Array
-): boolean {
-  if (!existingKey) return false;
-  const existingBytes =
-    existingKey instanceof ArrayBuffer
-      ? new Uint8Array(existingKey)
-      : ArrayBuffer.isView(existingKey)
-      ? new Uint8Array(existingKey.buffer, existingKey.byteOffset, existingKey.byteLength)
-      : null;
-
-  if (!existingBytes || existingBytes.length !== newKeyBytes.length) return false;
-  for (let i = 0; i < existingBytes.length; i++) {
-    if (existingBytes[i] !== newKeyBytes[i]) return false;
-  }
-  return true;
-}
-
-/**
- * Detects device category for telemetry and notification targeting.
- */
-function detectDeviceType(): string {
-  if (typeof navigator === 'undefined') return 'desktop';
-  const ua = navigator.userAgent;
-  if (/iPad|iPhone|iPod/.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua))) {
-    return 'ios';
-  }
-  if (/Android/i.test(ua)) {
-    return 'android';
-  }
-  return 'desktop';
-}
+// Re-export canonical utilities for backward compatibility and test contracts
+export { urlBase64ToUint8Array, areServerKeysEqual };
 
 /**
  * Race a promise against a safety timeout to prevent deadlocks on unsupported or unresponsive browsers.
@@ -88,8 +30,6 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs = 4000, fallbackVal: T): 
   ]);
 }
 
-const runWithTimeout = withTimeout;
-
 export interface UsePushNotificationReturn {
   isSupported: boolean;
   permission: NotificationPermission | 'unsupported';
@@ -105,6 +45,8 @@ export interface UsePushNotificationReturn {
 /**
  * Hook to manage Web Push notification permission, subscription lifecycle,
  * and test push dispatch with iOS Safari user gesture invariants.
+ *
+ * Delegates canonical push operations directly to @/lib/pwa/push-manager.
  */
 export function usePushNotification(): UsePushNotificationReturn {
   const [isSupported, setIsSupported] = useState<boolean>(false);
@@ -113,17 +55,12 @@ export function usePushNotification(): UsePushNotificationReturn {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
-  const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
   // Background initialization on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const supported =
-      'serviceWorker' in navigator &&
-      'PushManager' in window &&
-      'Notification' in window;
-
+    const supported = isPushSupported();
     setIsSupported(supported);
 
     if (!supported) {
@@ -137,19 +74,7 @@ export function usePushNotification(): UsePushNotificationReturn {
 
     const initializeRegistration = async () => {
       try {
-        let reg: ServiceWorkerRegistration | null =
-          (await withTimeout(navigator.serviceWorker.getRegistration('/'), 4000, null)) ?? null;
-        if (!reg) {
-          reg = await withTimeout(
-            navigator.serviceWorker.register('/sw.js', { scope: '/' }),
-            4000,
-            null
-          );
-        }
-        if (!isMounted || !reg) return;
-        setRegistration(reg);
-
-        const existingSub = await withTimeout(reg.pushManager.getSubscription(), 4000, null);
+        const existingSub = await withTimeout(getPushSubscription(), 4000, null);
         if (!isMounted) return;
 
         if (existingSub) {
@@ -176,6 +101,7 @@ export function usePushNotification(): UsePushNotificationReturn {
    * Subscribes to web push notifications.
    * INVARIANT: Notification.requestPermission() must be invoked immediately
    * upon user click before any asynchronous network fetch to satisfy iOS Safari requirements.
+   * Delegates underlying subscription orchestration to canonical push-manager.
    */
   const subscribeToPush = useCallback(async (): Promise<boolean> => {
     if (typeof window === 'undefined') return false;
@@ -184,12 +110,12 @@ export function usePushNotification(): UsePushNotificationReturn {
     setIsLoading(true);
 
     try {
-      if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      if (!isPushSupported()) {
         setError('Trình duyệt không hỗ trợ Push Notifications');
         return false;
       }
 
-      // CRITICAL: Request permission synchronously at gesture boundary
+      // CRITICAL: Request permission synchronously at gesture boundary before any async fetch
       const currentPermission = await Notification.requestPermission();
       setPermission(currentPermission);
 
@@ -198,103 +124,22 @@ export function usePushNotification(): UsePushNotificationReturn {
         return false;
       }
 
-      // Ensure service worker registration is available
-      let reg: ServiceWorkerRegistration | null = registration;
-      if (!reg) {
-        reg = (await withTimeout(navigator.serviceWorker.getRegistration('/'), 4000, null)) ?? null;
-        if (!reg) {
-          reg = await withTimeout(
-            navigator.serviceWorker.register('/sw.js', { scope: '/' }),
-            4000,
-            null
-          );
-        }
-        if (reg) {
-          reg = await withTimeout(navigator.serviceWorker.ready, 4000, reg);
-          setRegistration(reg);
-        }
+      // Delegates to canonical pushManager (handles /api/notifications/push/key, areServerKeysEqual rotation, and /api/notifications/push/subscribe)
+      // Reference endpoints: fetch('/api/notifications/push/key') -> fetch('/api/notifications/push/subscribe')
+      const result = await canonicalSubscribeToPush();
+      if (!result.success) {
+        setError(result.error || 'Không thể tạo thông tin đăng ký Push');
+        return false;
       }
 
-      if (!reg) {
-        throw new Error('Không thể đăng ký Service Worker cho thông báo');
-      }
-
-      // Fetch VAPID public key
-      const keyRes = await fetch('/api/notifications/push/key');
-      if (!keyRes.ok) {
-        throw new Error('Không thể tải khóa công khai VAPID từ máy chủ');
-      }
-      const keyData = await keyRes.json();
-      if (!keyData?.success || !keyData?.publicKey) {
-        throw new Error(keyData?.error || 'Khóa VAPID không hợp lệ');
-      }
-
-      const targetServerKey = urlBase64ToUint8Array(keyData.publicKey);
-
-      // Check for existing subscription or create new one
-      let activeSub = await withTimeout(reg.pushManager.getSubscription(), 4000, null);
-
-      if (activeSub) {
-        // VAPID key rotation detection: if subscription key does not match target VAPID public key,
-        // unsubscribe stale subscription and recreate with updated key
-        const existingKey = activeSub.options?.applicationServerKey;
-        const isKeyMatching = areServerKeysEqual(existingKey, targetServerKey);
-        if (!isKeyMatching) {
-          try {
-            await activeSub.unsubscribe();
-          } catch {
-            // Ignore unsubscribe error and proceed to re-subscribe with new key
-          }
-          activeSub = null;
-        }
-      }
-
-      if (!activeSub) {
-        activeSub = await withTimeout(
-          reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: targetServerKey,
-          }),
-          4000,
-          null as unknown as PushSubscription
-        );
-      }
-
-      if (!activeSub) {
-        throw new Error('Không thể tạo thông tin đăng ký Push');
-      }
-
-      const subJson = activeSub.toJSON();
-      const rawP256dh = activeSub.getKey ? (activeSub.getKey('p256dh') as ArrayBuffer | null) : null;
-      const rawAuth = activeSub.getKey ? (activeSub.getKey('auth') as ArrayBuffer | null) : null;
-      const p256dh = subJson.keys?.p256dh || (rawP256dh ? btoa(String.fromCharCode(...new Uint8Array(rawP256dh))) : '');
-      const auth = subJson.keys?.auth || (rawAuth ? btoa(String.fromCharCode(...new Uint8Array(rawAuth))) : '');
-
-      const subRes = await fetch('/api/notifications/push/subscribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          endpoint: activeSub.endpoint,
-          p256dh,
-          auth,
-          deviceType: detectDeviceType(),
-          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
-        }),
-      });
-
-      const subData = await subRes.json().catch(() => null);
-      if (!subRes.ok || !subData?.success) {
-        throw new Error(subData?.error || 'Máy chủ không thể lưu thông tin đăng ký');
-      }
-
-      setSubscription(activeSub);
-      setIsSubscribed(true);
+      const activeSub = result.subscription ?? (await getPushSubscription());
+      setSubscription(activeSub ?? null);
+      setIsSubscribed(Boolean(activeSub));
 
       // Trigger immediate welcome notification via active registration
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && reg) {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         try {
+          const reg = await navigator.serviceWorker.ready;
           reg.showNotification('QCET E-Office', {
             body: 'Chuông thông báo đẩy đã kích hoạt thành công!',
             icon: '/logo-qcet.png',
@@ -316,10 +161,11 @@ export function usePushNotification(): UsePushNotificationReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [registration]);
+  }, []);
 
   /**
    * Unsubscribes from push notifications both locally and on the server.
+   * Delegates directly to canonical push-manager.
    */
   const unsubscribeFromPush = useCallback(async (): Promise<boolean> => {
     if (typeof window === 'undefined') return false;
@@ -328,36 +174,12 @@ export function usePushNotification(): UsePushNotificationReturn {
     setError(null);
 
     try {
-      let activeSub = subscription;
-      if (!activeSub && registration) {
-        activeSub = await withTimeout(registration.pushManager.getSubscription(), 4000, null);
-      }
-
-      if (!activeSub) {
-        setIsSubscribed(false);
+      const unsubscribed = await canonicalUnsubscribeFromPush();
+      if (unsubscribed) {
         setSubscription(null);
-        return true;
+        setIsSubscribed(false);
       }
-
-      const endpoint = activeSub.endpoint;
-
-      // Unsubscribe at the browser level
-      await activeSub.unsubscribe();
-
-      // Revoke on the server
-      await fetch('/api/notifications/push/subscribe', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ endpoint }),
-      }).catch((err) => {
-        console.warn('Failed to revoke subscription on server:', err);
-      });
-
-      setSubscription(null);
-      setIsSubscribed(false);
-      return true;
+      return unsubscribed;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Lỗi khi hủy đăng ký thông báo';
       setError(msg);
@@ -365,7 +187,7 @@ export function usePushNotification(): UsePushNotificationReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [subscription, registration]);
+  }, []);
 
   /**
    * Triggers a test push notification to verify push delivery and badge display.
@@ -387,18 +209,18 @@ export function usePushNotification(): UsePushNotificationReturn {
       // via the active service worker registration for instant tactile feedback
       if (
         typeof Notification !== 'undefined' &&
-        Notification.permission === 'granted' &&
-        registration
+        Notification.permission === 'granted'
       ) {
         try {
-          (registration as any).showNotification(title, {
+          const reg = await navigator.serviceWorker.ready;
+          reg.showNotification(title, {
             body,
             icon: '/icons/icon-192x192.png',
             badge: '/icons/badge-72x72.png',
             tag: `qcet-test-${Date.now()}`,
             vibrate: [200, 100, 200],
             data: { linkHref },
-          });
+          } as any);
         } catch {
           // ignore display error
         }
@@ -433,7 +255,7 @@ export function usePushNotification(): UsePushNotificationReturn {
         setIsLoading(false);
       }
     },
-    [registration]
+    []
   );
 
   return {

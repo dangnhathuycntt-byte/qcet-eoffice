@@ -79,6 +79,29 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 /**
+ * Compares an existing subscription applicationServerKey against a new target Uint8Array public key.
+ * Used to detect VAPID key rotations and trigger automatic client-side re-subscription.
+ */
+export function areServerKeysEqual(
+  existingKey: ArrayBuffer | ArrayBufferView | null | undefined,
+  newKeyBytes: Uint8Array
+): boolean {
+  if (!existingKey) return false;
+  const existingBytes =
+    existingKey instanceof ArrayBuffer
+      ? new Uint8Array(existingKey)
+      : ArrayBuffer.isView(existingKey)
+      ? new Uint8Array(existingKey.buffer, existingKey.byteOffset, existingKey.byteLength)
+      : null;
+
+  if (!existingBytes || existingBytes.length !== newKeyBytes.length) return false;
+  for (let i = 0; i < existingBytes.length; i++) {
+    if (existingBytes[i] !== newKeyBytes[i]) return false;
+  }
+  return true;
+}
+
+/**
  * Validates that a route or URL is strictly same-origin to prevent open redirect vulnerabilities.
  * Returns the normalized local path or fallback route if untrusted.
  */
@@ -316,12 +339,27 @@ export async function subscribeToPush(options?: {
   try {
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
+    const targetServerKey = urlBase64ToUint8Array(vapidKey);
+
+    if (subscription) {
+      // VAPID key rotation detection: if subscription key does not match target VAPID public key,
+      // unsubscribe stale subscription and recreate with updated key
+      const existingKey = subscription.options?.applicationServerKey;
+      const isKeyMatching = areServerKeysEqual(existingKey, targetServerKey);
+      if (!isKeyMatching) {
+        try {
+          await subscription.unsubscribe();
+        } catch {
+          // Ignore unsubscribe error and proceed to re-subscribe with new key
+        }
+        subscription = null;
+      }
+    }
 
     if (!subscription) {
-      const convertedVapidKey = urlBase64ToUint8Array(vapidKey);
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: convertedVapidKey as unknown as BufferSource,
+        applicationServerKey: targetServerKey as unknown as BufferSource,
       });
     }
 

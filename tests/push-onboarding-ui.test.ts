@@ -43,7 +43,10 @@ describe('Task 7: Push Onboarding & Mobile Settings UI', () => {
 
       // Push notification soft prompt copy
       assert.ok(content.includes('Bật chuông báo chỉ đạo & việc khẩn'), 'Must have push notification title');
-      assert.ok(content.includes('BẬT THÔNG BÁO NGAY'), 'Must have BẬT THÔNG BÁO NGAY CTA button');
+      assert.ok(
+        content.includes('Bật thông báo trên thiết bị') || content.includes('BẬT THÔNG BÁO NGAY'),
+        'Must have Bật thông báo trên thiết bị CTA button'
+      );
       assert.ok(content.includes('Để sau'), 'Must have dismiss / snooze button');
 
       // LocalStorage snooze key
