@@ -287,7 +287,7 @@ export function SpotlightTour({
                 type="button"
                 onClick={onPrev}
                 disabled={currentIndex === 0}
-                className="text-xs h-8 sm:h-7 px-2.5 sm:px-2 text-muted-foreground min-h-[36px] sm:min-h-[28px]"
+                className="text-xs h-8 sm:h-7 px-2.5 sm:px-2 text-muted-foreground min-h-[36px] sm:min-h-[28px] touch-manipulation"
               >
                 <ArrowLeft className="w-3 h-3 mr-1" /> Trước
               </Button>
@@ -296,7 +296,7 @@ export function SpotlightTour({
                 size="sm"
                 type="button"
                 onClick={onClose}
-                className="text-xs h-8 sm:h-7 px-2 text-muted-foreground hover:text-foreground min-h-[36px] sm:min-h-[28px]"
+                className="text-xs h-8 sm:h-7 px-2 text-muted-foreground hover:text-foreground min-h-[36px] sm:min-h-[28px] touch-manipulation"
               >
                 Để sau
               </Button>
@@ -306,7 +306,7 @@ export function SpotlightTour({
               size="sm"
               type="button"
               onClick={onNext}
-              className="text-xs h-8 sm:h-7 px-4 sm:px-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium min-h-[36px] sm:min-h-[28px]"
+              className="text-xs h-8 sm:h-7 px-4 sm:px-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium min-h-[36px] sm:min-h-[28px] touch-manipulation"
             >
               {isLastStep ? "Hoàn tất" : "Tiếp tục"}
               {!isLastStep && <ArrowRight className="w-3 h-3 ml-1" />}

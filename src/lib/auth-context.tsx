@@ -106,7 +106,7 @@ export function mapDbUserToAuthUser(dbUser: {
   };
 }
 
-const AuthContext = createContext<AuthContextType>({
+export const AuthContext = createContext<AuthContextType>({
   user: null,
   switchRole: () => {},
   switchUser: () => {},
