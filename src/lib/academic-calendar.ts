@@ -333,24 +333,34 @@ export function filterTasksByAcademicMonthStrict<T extends { dueDate?: string | 
   const period = getAcademicMonthPeriod(month, academicYear);
 
   return tasks.reduce<T[]>((acc, task) => {
-    const taskDue = extractDateString(task.dueDate);
-    const taskStart =
-      extractDateString(
-        (task as any).startDate || (task as any).assignedDate || (task as any).createdAt
-      ) || taskDue;
-
     const rawSubTasks = (task as any).subTasks;
     const hasSubTasks = Array.isArray(rawSubTasks);
 
-    // 1. Task dueDate falls in period
+    // 1. Nếu có trường academicMonth tường minh, ưu tiên số 1
+    if (typeof (task as any).academicMonth === "number") {
+      if ((task as any).academicMonth === month) {
+        if (hasSubTasks) {
+          const prunedSubTasks = rawSubTasks.filter((st: any) => {
+            const stDue = extractDateString(st.dueDate);
+            if (!stDue) return true;
+            return stDue >= period.startDate && stDue <= period.endDate;
+          });
+          acc.push({
+            ...task,
+            subTasks: prunedSubTasks,
+            totalSubTasks: prunedSubTasks.length,
+            completedSubTasks: prunedSubTasks.filter((st: any) => st.status === "COMPLETED").length,
+          });
+        } else {
+          acc.push(task);
+        }
+      }
+      return acc;
+    }
+
+    const taskDue = extractDateString(task.dueDate);
     const dueInPeriod = Boolean(taskDue && taskDue >= period.startDate && taskDue <= period.endDate);
 
-    // 2. Multi-month spanning task (startDate <= period.endDate && dueDate >= period.startDate)
-    const spanInPeriod = Boolean(
-      taskStart && taskDue && taskStart <= period.endDate && taskDue >= period.startDate
-    );
-
-    // 3. Any subtask dueDate falls in period
     const subDueInPeriod =
       hasSubTasks &&
       rawSubTasks.some((st: any) => {
@@ -358,14 +368,14 @@ export function filterTasksByAcademicMonthStrict<T extends { dueDate?: string | 
         return stDue && stDue >= period.startDate && stDue <= period.endDate;
       });
 
-    if (!dueInPeriod && !spanInPeriod && !subDueInPeriod) {
+    if (!dueInPeriod && !subDueInPeriod) {
       return acc;
     }
 
     if (hasSubTasks) {
       const prunedSubTasks = rawSubTasks.filter((st: any) => {
         const stDue = extractDateString(st.dueDate);
-        if (!stDue) return dueInPeriod || spanInPeriod;
+        if (!stDue) return dueInPeriod;
         return stDue >= period.startDate && stDue <= period.endDate;
       });
 
