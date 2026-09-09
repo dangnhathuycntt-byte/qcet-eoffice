@@ -2,29 +2,45 @@
 
 import * as React from "react";
 import {
-  List,
-  Kanban,
-  Calendar,
   Search,
   X,
   Plus,
-  Building2,
   Filter,
-  ShieldAlert,
+  List,
+  Kanban,
+  Building2,
+  Calendar,
+  AlertTriangle,
+  School,
+  User,
+  SlidersHorizontal,
+  Loader2,
+  Check,
 } from "lucide-react";
-import type { SchoolTask, TaskCategory } from "@/types/dashboard";
-import { type AuthUser, matchesUser, filterTasksByRole } from "@/lib/role-task-filter";
-import { filterTasksForTable } from "@/components/dashboard/cascading-task-table";
-import { getAcademicMonthsForYear, type AcademicMonthPeriod } from "@/lib/academic-calendar";
-import { DensityToggle } from "@/components/ui/density-toggle";
 import { cn } from "@/lib/utils";
+import type { AuthUser } from "@/types/auth";
+import type { SchoolTask, StaffTask, TaskCategory } from "@/types/dashboard";
+import {
+  isExecutiveUser,
+  isManagerUser,
+} from "@/components/layout/scope-switcher";
+import { isUserUnassignedDepartment } from "@/lib/auth-context";
+import {
+  ACADEMIC_MONTH_ORDER,
+  getAcademicMonthInfo,
+  getAcademicMonthsForYear,
+} from "@/lib/academic-calendar";
+import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
+import { filterTasksByRole, matchesUser } from "@/lib/role-task-filter";
 
 // ============================================================================
 // 1. Interfaces & Types
 // ============================================================================
 
 export type TaskScope = "MY_TASKS" | "SCHOOL_TASKS" | "UNIT_TASKS";
+export type WorkspaceScope = "school" | "unit" | "my";
 export type TaskViewMode = "table" | "kanban" | "calendar" | "department" | "executive";
+export type TableDensity = "compact" | "comfortable";
 
 export interface ScopeTab {
   id: TaskScope;
@@ -38,33 +54,98 @@ export interface ViewModeOption {
   icon: React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
 }
 
+export interface SmartFilterPill {
+  id: string;
+  label: string;
+  count?: number;
+}
+
 export interface UnifiedTaskToolbarProps {
-  scope: TaskScope;
-  onScopeChange: (scope: TaskScope) => void;
-  viewMode: TaskViewMode;
-  onViewModeChange: (mode: TaskViewMode) => void;
-  selectedDepartment: string; // "ALL" or department code
-  onDepartmentChange: (dept: string) => void;
-  availableDepartments?: { code: string; name: string }[];
+  // Scope (supports both "school" | "unit" | "my" and "SCHOOL_TASKS" | "UNIT_TASKS" | "MY_TASKS")
+  scope: WorkspaceScope | TaskScope | string;
+  onScopeChange: (scope: any) => void;
+  user?: AuthUser | null;
+  userRole?: string;
+  isExecutive?: boolean;
+  badgeCounts?: {
+    school?: number;
+    unit?: number;
+    my?: number;
+    [key: string]: number | undefined;
+  };
+  isUnassignedDepartment?: boolean;
+
+  // Search
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  selectedCategory: string; // "ALL" or TaskCategory
-  onCategoryChange: (cat: string) => void;
-  selectedPriority: string; // "ALL" | "URGENT" | "HIGH" | "NORMAL"
-  onPriorityChange: (prio: string) => void;
-  onNewTaskClick: () => void;
+  searchPlaceholder?: string;
+  loading?: boolean;
+
+  // Primary Action
+  onNewTaskClick?: () => void;
+  onCreateTask?: () => void;
+  onAddTask?: (level?: any, parentId?: any) => void;
   canCreateTask?: boolean;
-  totalTasksCount?: number;
-  isExecutive?: boolean;
-  userRole?: string;
-  selectedAcademicMonth?: number | "ALL"; // 1-12 or "ALL"
+  createButtonLabel?: string;
+
+  // Smart Filter Pills (Row 2)
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
+  tabCounts?: {
+    all?: number;
+    my?: number;
+    my_tasks?: number;
+    waiting_approval?: number;
+    review?: number;
+    overdue?: number;
+    today?: number;
+    in_progress?: number;
+    completed?: number;
+    [key: string]: number | undefined;
+  };
+
+  // Advanced Filters
+  selectedDepartment?: string;
+  onDepartmentChange?: (dept: string) => void;
+  availableDepartments?: Array<{ code: string; name: string }>;
+
+  selectedCategory?: string;
+  onCategoryChange?: (category: string) => void;
+
+  selectedPriority?: string;
+  onPriorityChange?: (priority: string) => void;
+
+  selectedAcademicMonth?: number | "ALL";
   onAcademicMonthChange?: (month: number | "ALL") => void;
-  academicYear?: string; // default "2026-2027"
+  // Compatibility aliases
+  selectedMonth?: number | "ALL";
+  onMonthChange?: (month: number | "ALL") => void;
+
+  academicYear?: string;
   monthlyTaskCounts?: Record<number, number>;
+  showAcademicMonthBar?: boolean;
+
+  onResetFilters?: () => void;
+
+  // View Mode
+  viewMode?: TaskViewMode | "table" | "kanban";
+  onViewModeChange?: (view: any) => void;
+
+  // Density
+  density?: TableDensity;
+  onDensityChange?: (density: TableDensity) => void;
+
+  // Refresh
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+
+  // Presentation
+  totalTasksCount?: number;
+  className?: string;
 }
 
 // ============================================================================
-// 2. Constants & Metadata
+// 2. Constants & Metadata (Legacy Compatibility)
 // ============================================================================
 
 export const SCOPE_TABS: ScopeTab[] = [
@@ -78,7 +159,7 @@ export const VIEW_MODE_OPTIONS: ViewModeOption[] = [
   { id: "kanban", label: "Kanban", icon: Kanban },
   { id: "calendar", label: "Lịch", icon: Calendar },
   { id: "department", label: "Theo đơn vị", icon: Building2 },
-  { id: "executive", label: "Chỉ huy BGH", icon: ShieldAlert },
+  { id: "executive", label: "Chỉ huy BGH", icon: School },
 ];
 
 export const DEFAULT_AVAILABLE_DEPARTMENTS: { code: string; name: string }[] = [
@@ -114,10 +195,7 @@ export const PRIORITY_FILTER_OPTIONS: { id: string; label: string }[] = [
   { id: "NORMAL", label: "Bình thường" },
 ];
 
-// ============================================================================
-// 3. Helper Logic: filterTasksByScope
-// ============================================================================
-
+// Helper: filterTasksByScope (backward compatibility)
 export function filterTasksByScope(
   tasks: SchoolTask[],
   scope: TaskScope,
@@ -127,7 +205,8 @@ export function filterTasksByScope(
   if (scope === "MY_TASKS") {
     if (!user) return tasks;
     return tasks.filter((t) => {
-      const isLead = t.leadAssigneeName === user.name || matchesUser(t.leadAssigneeName, user);
+      const isLead =
+        t.leadAssigneeName === user.name || matchesUser(t.leadAssigneeName, user);
       const hasSub = t.subTasks?.some(
         (s) => s.assigneeName === user.name || matchesUser(s.assigneeName, user)
       );
@@ -159,37 +238,231 @@ export function filterTasksByScope(
   return tasks;
 }
 
+// Re-export academic calendar helpers
+export { getAcademicMonthsForYear };
+
 // ============================================================================
-// 4. UnifiedTaskToolbar Component
+// 3. UnifiedTaskToolbar Component
 // ============================================================================
 
 export function UnifiedTaskToolbar({
   scope,
   onScopeChange,
-  viewMode,
-  onViewModeChange,
-  selectedDepartment,
-  onDepartmentChange,
-  availableDepartments = DEFAULT_AVAILABLE_DEPARTMENTS,
+  user,
+  userRole,
+  isExecutive: propIsExecutive,
+  badgeCounts,
+  isUnassignedDepartment: propIsUnassigned,
   searchQuery,
   onSearchChange,
-  selectedCategory,
-  onCategoryChange,
-  selectedPriority,
-  onPriorityChange,
+  searchPlaceholder = "Tìm nhiệm vụ... /",
+  loading = false,
   onNewTaskClick,
+  onCreateTask,
+  onAddTask,
   canCreateTask = true,
-  totalTasksCount,
-  isExecutive,
-  userRole,
+  createButtonLabel,
+  activeTab = "all",
+  onTabChange,
+  tabCounts,
+  selectedDepartment = "ALL",
+  onDepartmentChange,
+  availableDepartments = DEFAULT_AVAILABLE_DEPARTMENTS,
+  selectedCategory = "ALL",
+  onCategoryChange,
+  selectedPriority = "ALL",
+  onPriorityChange,
   selectedAcademicMonth = "ALL",
   onAcademicMonthChange,
+  selectedMonth,
+  onMonthChange,
   academicYear = "2026-2027",
   monthlyTaskCounts,
+  showAcademicMonthBar = false,
+  onResetFilters,
+  viewMode = "table",
+  onViewModeChange,
+  density = "comfortable",
+  onDensityChange,
+  totalTasksCount,
+  className,
 }: UnifiedTaskToolbarProps) {
-  const isUnitScope = scope === "UNIT_TASKS";
-  const activeAcademicMonth = selectedAcademicMonth ?? "ALL";
+  // Input ref for keyboard focus shortcut
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Popover state
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const popoverRef = React.useRef<HTMLDivElement>(null);
+
+  // Resolve Month props (supporting compatibility aliases)
+  const effectiveMonth = selectedMonth !== undefined ? selectedMonth : selectedAcademicMonth;
+  const handleEffectiveMonthChange = onMonthChange || onAcademicMonthChange;
+
+  // Resolve role authorizations
+  const isExecutive =
+    propIsExecutive !== undefined
+      ? propIsExecutive
+      : userRole === "ADMIN" || isExecutiveUser(user);
+  const isManager =
+    userRole === "MANAGER" || isManagerUser(user) || isExecutive;
+  const isUnassigned =
+    propIsUnassigned !== undefined
+      ? propIsUnassigned
+      : isUserUnassignedDepartment(user);
+
+  // Normalize current scope to "school" | "unit" | "my"
+  const normalizedScope: WorkspaceScope = React.useMemo(() => {
+    if (scope === "SCHOOL_TASKS" || scope === "school") return "school";
+    if (scope === "UNIT_TASKS" || scope === "unit") return "unit";
+    return "my";
+  }, [scope]);
+
+  // Handle scope change, preserving the caller's format preference
+  const handleScopeSelect = (scopeId: WorkspaceScope) => {
+    if (typeof scope === "string" && scope.endsWith("_TASKS")) {
+      const legacyMap: Record<WorkspaceScope, TaskScope> = {
+        school: "SCHOOL_TASKS",
+        unit: "UNIT_TASKS",
+        my: "MY_TASKS",
+      };
+      onScopeChange(legacyMap[scopeId]);
+    } else {
+      onScopeChange(scopeId);
+    }
+  };
+
+  // 1. Authorized Scope Options (Only render authorized options, zero disabled buttons)
+  const unitLabel = isUnassigned
+    ? "Chưa chọn đơn vị"
+    : user?.department || user?.departmentCode || "Đơn vị";
+
+  const scopeOptions: Array<{
+    id: WorkspaceScope;
+    legacyId: TaskScope;
+    label: string;
+    shortLabel: string;
+    icon: typeof School;
+    isAuthorized: boolean;
+  }> = [
+    {
+      id: "school",
+      legacyId: "SCHOOL_TASKS",
+      label: "Toàn trường",
+      shortLabel: "Trường",
+      icon: School,
+      isAuthorized: isExecutive,
+    },
+    {
+      id: "unit",
+      legacyId: "UNIT_TASKS",
+      label: unitLabel,
+      shortLabel: isUnassigned
+        ? "Chưa chọn đ/vị"
+        : user?.departmentCode || (unitLabel.length > 18 ? "Đơn vị" : unitLabel),
+      icon: isUnassigned ? AlertTriangle : Building2,
+      isAuthorized: isManager || Boolean(user?.departmentCode) || isUnassigned,
+    },
+    {
+      id: "my",
+      legacyId: "MY_TASKS",
+      label: "Của tôi",
+      shortLabel: "Của tôi",
+      icon: User,
+      isAuthorized: true,
+    },
+  ];
+
+  // Only keep authorized scopes
+  const authorizedScopes = scopeOptions.filter((opt) => opt.isAuthorized);
+
+  // 2. Global "/" Keyboard Shortcut for Search Focus
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA" &&
+        !(document.activeElement as HTMLElement)?.isContentEditable
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // 3. Popover outside click and Esc listener
+  React.useEffect(() => {
+    if (!isFilterOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsFilterOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFilterOpen]);
+
+  // Primary action callback
+  const handlePrimaryAction = onNewTaskClick || onCreateTask || onAddTask;
+  const primaryActionLabel =
+    createButtonLabel ||
+    (isExecutive || isManager ? "+ Giao việc" : "+ Tạo nhiệm vụ");
+
+  // Count active advanced filters
+  const activeAdvancedFilterCount = React.useMemo(() => {
+    let count = 0;
+    if (selectedDepartment && selectedDepartment !== "ALL") count++;
+    if (selectedCategory && selectedCategory !== "ALL") count++;
+    if (selectedPriority && selectedPriority !== "ALL") count++;
+    if (effectiveMonth !== undefined && effectiveMonth !== "ALL") count++;
+    return count;
+  }, [selectedDepartment, selectedCategory, selectedPriority, effectiveMonth]);
+
+  // 4. Smart Filter Pills configuration
+  const smartFilterPills: SmartFilterPill[] = [
+    {
+      id: "all",
+      label: "Tất cả",
+      count: tabCounts?.all ?? totalTasksCount,
+    },
+    {
+      id: "my",
+      label: "Của tôi",
+      count: tabCounts?.my ?? tabCounts?.my_tasks,
+    },
+    {
+      id: "waiting_approval",
+      label: "Chờ duyệt",
+      count: tabCounts?.waiting_approval ?? tabCounts?.review,
+    },
+    {
+      id: "overdue",
+      label: "Quá hạn",
+      count: tabCounts?.overdue,
+    },
+    {
+      id: "today",
+      label: "Hôm nay",
+      count: tabCounts?.today,
+    },
+  ];
+
+  // Optional 12 month cycle list for year
   const academicMonths = React.useMemo(() => {
     return getAcademicMonthsForYear(academicYear);
   }, [academicYear]);
@@ -201,231 +474,71 @@ export function UnifiedTaskToolbar({
     return totalTasksCount;
   }, [monthlyTaskCounts, totalTasksCount]);
 
-  const viewModeOptions = React.useMemo(() => {
-    // If explicitly specified as non-executive / non-admin, filter out executive unless viewMode is currently "executive"
-    if (isExecutive !== undefined) {
-      return isExecutive || viewMode === "executive"
-        ? VIEW_MODE_OPTIONS
-        : VIEW_MODE_OPTIONS.filter((o) => o.id !== "executive");
-    }
-    if (userRole !== undefined) {
-      return userRole === "ADMIN" || viewMode === "executive"
-        ? VIEW_MODE_OPTIONS
-        : VIEW_MODE_OPTIONS.filter((o) => o.id !== "executive");
-    }
-    return VIEW_MODE_OPTIONS;
-  }, [isExecutive, userRole, viewMode]);
+  // Reset all filters
+  const handleResetFilters = () => {
+    onDepartmentChange?.("ALL");
+    onCategoryChange?.("ALL");
+    onPriorityChange?.("ALL");
+    handleEffectiveMonthChange?.("ALL");
+    onResetFilters?.();
+    setIsFilterOpen(false);
+  };
 
   return (
     <div
-      className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xs p-3.5 shadow-card"
       data-slot="unified-task-toolbar"
+      className={cn(
+        "flex flex-col gap-2.5 rounded-2xl border border-border/70 bg-card p-3 shadow-xs",
+        className
+      )}
     >
-      {/* Top Row: Scope Switcher Pills, Unit Department Selector, View Mode Switcher, and Create Action */}
-      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
-        {/* Left Side: Scope Switcher + Conditional Department Selector */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Scope Switcher Pills */}
-          <div
-            className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs"
-            role="tablist"
-            aria-label="Phạm vi công việc"
-          >
-            {SCOPE_TABS.map((tab) => {
-              const isActive = scope === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => onScopeChange(tab.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
-                    isActive
-                      ? "bg-card text-foreground shadow-xs font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {tab.id === "MY_TASKS" ? (
-                    <>
-                      <span className="sm:hidden">Cá nhân</span>
-                      <span className="hidden sm:inline">Việc của tôi</span>
-                    </>
-                  ) : tab.id === "SCHOOL_TASKS" ? (
-                    <>
-                      <span className="sm:hidden">Cấp Trường</span>
-                      <span className="hidden sm:inline">Nhiệm vụ cấp Trường</span>
-                    </>
-                  ) : tab.id === "UNIT_TASKS" ? (
-                    <>
-                      <span className="sm:hidden">Đơn vị</span>
-                      <span className="hidden sm:inline">Công việc Đơn vị</span>
-                    </>
-                  ) : (
-                    <span>{tab.label}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Department Dropdown when Scope is UNIT_TASKS */}
-          {isUnitScope && (
-            <div className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-background px-2.5 py-1 text-xs shadow-2xs">
-              <Building2 className="size-3.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
-              <select
-                value={selectedDepartment}
-                onChange={(e) => onDepartmentChange(e.target.value)}
-                className="bg-transparent text-xs text-foreground font-medium outline-none cursor-pointer pr-1"
-                aria-label="Chọn đơn vị triển khai"
-              >
-                {availableDepartments.map((dept) => (
-                  <option key={dept.code} value={dept.code} className="bg-popover text-popover-foreground">
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {typeof totalTasksCount === "number" && (
-            <span className="hidden sm:inline-flex items-center text-xs font-semibold text-muted-foreground tabular-nums px-1.5 py-0.5 rounded-md bg-muted/60">
-              {totalTasksCount} công việc
-            </span>
-          )}
-        </div>
-
-        {/* Right Side: View Mode Switcher + + Giao việc mới button */}
-        <div className="flex items-center gap-2 self-end lg:self-auto">
-          {/* View Mode Toggle */}
-          <div
-            className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs"
-            role="group"
-            aria-label="Chế độ hiển thị"
-          >
-            {viewModeOptions.map((opt) => {
-              const Icon = opt.icon;
-              const isActive = viewMode === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => onViewModeChange(opt.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all cursor-pointer",
-                    isActive
-                      ? "bg-card text-foreground shadow-xs font-semibold"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                  title={`Xem dạng ${opt.label}`}
-                  aria-pressed={isActive}
-                >
-                  <Icon className="size-3.5" strokeWidth={1.5} />
-                  <span className="hidden sm:inline">{opt.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* New Task Action Button */}
-          {canCreateTask && (
-            <button
-              type="button"
-              onClick={onNewTaskClick}
-              className="inline-flex h-8.5 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 cursor-pointer"
-            >
-              <Plus className="size-3.5" strokeWidth={1.5} />
-              <span>Giao việc mới</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Middle Row: 12 Academic Month Operational Cycle Pill Bar */}
+      {/* ==================================================================== */}
+      {/* ROW 1: Scope Switcher, Search Input, and Primary Action Button       */}
+      {/* ==================================================================== */}
       <div
-        className="flex items-center gap-2 overflow-x-auto overscroll-x-contain pt-2 pb-0.5 border-t border-border/50 scrollbar-none"
-        style={{
-          maskImage: "linear-gradient(to right, black 88%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(to right, black 88%, transparent 100%)",
-        }}
-        role="tablist"
-        aria-label="Chu kỳ 12 tháng công tác năm học"
+        data-slot="unified-task-toolbar-row-1"
+        className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between"
       >
-        <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground whitespace-nowrap pr-0.5 shrink-0 select-none">
-          <Calendar className="size-3.5 text-primary" strokeWidth={1.5} />
-          <span className="hidden sm:inline">Năm học {academicYear}:</span>
-          <span className="sm:hidden">{academicYear}:</span>
-        </div>
-
-        <div className="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-muted/30 p-1 shadow-2xs shrink-0">
-          {/* All Year / Cả năm tab */}
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeAcademicMonth === "ALL"}
-            onClick={() => onAcademicMonthChange?.("ALL")}
-            className={cn(
-              "inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
-              activeAcademicMonth === "ALL"
-                ? "bg-card text-foreground shadow-xs font-semibold"
-                : "text-muted-foreground hover:text-foreground hover:bg-card/40"
-            )}
-            title={`Tất cả các tháng công tác trong năm học ${academicYear}`}
-          >
-            <span>Cả năm</span>
-            {allYearCount !== undefined && (
-              <span
-                className={cn(
-                  "inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-xs tabular-nums font-semibold",
-                  activeAcademicMonth === "ALL"
-                    ? "bg-primary/10 text-primary"
-                    : "bg-muted text-muted-foreground"
-                )}
-              >
-                {allYearCount}
-              </span>
-            )}
-          </button>
-
-          {/* 12 Operational Academic Months: Tháng 9 -> Tháng 8 */}
-          {academicMonths.map((period) => {
-            const isSelected = activeAcademicMonth === period.monthNumber;
-            const count = monthlyTaskCounts ? monthlyTaskCounts[period.monthNumber] : undefined;
+        {/* Left: Scope Switcher (Only Authorized Scopes) */}
+        <div
+          data-slot="adaptive-scope-header"
+          className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs shrink-0"
+          role="tablist"
+          aria-label="Phạm vi công việc"
+        >
+          {authorizedScopes.map((opt) => {
+            const Icon = opt.icon;
+            const isActive = normalizedScope === opt.id;
+            const count = badgeCounts?.[opt.id];
 
             return (
               <button
-                key={period.monthNumber}
+                key={opt.id}
                 type="button"
                 role="tab"
-                aria-selected={isSelected}
-                onClick={() => onAcademicMonthChange?.(period.monthNumber)}
+                data-scope={opt.id}
+                aria-selected={isActive}
+                onClick={() => handleScopeSelect(opt.id)}
                 className={cn(
-                  "group inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
-                  isSelected
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                  "inline-flex min-h-[44px] sm:min-h-[34px] items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer select-none",
+                  isActive
+                    ? opt.id === "school"
+                      ? "bg-amber-50 text-amber-900 border border-amber-300 font-semibold shadow-2xs"
+                      : opt.id === "unit"
+                      ? "bg-blue-50 text-blue-900 border border-blue-300 font-semibold shadow-2xs"
+                      : "bg-emerald-50 text-emerald-900 border border-emerald-300 font-semibold shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-card/60"
                 )}
-                title={period.fullLabel}
               >
-                <span>{period.label}</span>
-                <span
-                  className={cn(
-                    "hidden 2xl:inline text-xs font-normal transition-opacity",
-                    isSelected ? "text-muted-foreground" : "text-muted-foreground/60"
-                  )}
-                >
-                  ({period.shortDateSpan})
-                </span>
-                {typeof count === "number" && (
+                <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
+                <span className="hidden sm:inline">{opt.label}</span>
+                <span className="sm:hidden">{opt.shortLabel}</span>
+
+                {typeof count === "number" && count > 0 && (
                   <span
                     className={cn(
-                      "inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-xs tabular-nums font-semibold",
-                      isSelected
-                        ? "bg-primary/10 text-primary"
-                        : count > 0
-                        ? "bg-muted text-muted-foreground"
-                        : "bg-muted/40 text-muted-foreground/50"
+                      "inline-flex items-center justify-center rounded-full px-1.5 py-0.2 text-xs font-mono tabular-nums font-semibold",
+                      isActive ? "bg-card/90 text-foreground" : "bg-muted text-muted-foreground"
                     )}
                   >
                     {count}
@@ -435,72 +548,426 @@ export function UnifiedTaskToolbar({
             );
           })}
         </div>
-      </div>
 
-      {/* Bottom Row: Search Input + Category Filter + Priority Filter + Density Toggle */}
-      <div className="flex flex-col gap-2 pt-2 border-t border-border/50 sm:flex-row sm:items-center">
-        {/* Search Input Bar */}
-        <div className="relative flex-1 min-w-[200px]">
+        {/* Center: Search Input Bar with "/" Keyboard Shortcut */}
+        <div className="relative flex-1 min-w-[200px] max-w-xl">
           <Search
-            className="size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-2.5"
+            className="size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
             strokeWidth={1.5}
           />
           <input
+            ref={searchInputRef}
             type="text"
-            placeholder="Tìm kiếm theo tiêu đề, người phụ trách... (⌘K)"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full h-8.5 pl-9 pr-8 rounded-xl border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            placeholder={searchPlaceholder}
+            aria-label="Tìm nhiệm vụ"
+            className="h-9 w-full rounded-xl border border-border/80 bg-background pl-8.5 pr-14 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs transition-colors"
           />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => onSearchChange("")}
-              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground cursor-pointer"
-              aria-label="Xóa tìm kiếm"
-            >
-              <X className="size-3.5" strokeWidth={1.5} />
-            </button>
-          )}
+
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            {loading && (
+              <Loader2
+                className="size-3.5 animate-spin text-muted-foreground"
+                aria-label="Đang tải dữ liệu"
+              />
+            )}
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => onSearchChange("")}
+                aria-label="Xóa từ khóa tìm kiếm"
+                className="text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+              >
+                <X className="size-3.5" strokeWidth={1.5} />
+              </button>
+            ) : (
+              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono font-medium text-muted-foreground bg-muted border border-border/80 rounded select-none pointer-events-none">
+                /
+              </kbd>
+            )}
+          </div>
         </div>
 
-        {/* Filters Group: Category and Priority */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          {/* Category Filter */}
-          <div className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-background px-2.5 py-1 text-xs shadow-2xs">
-            <Filter className="size-3 text-muted-foreground shrink-0" strokeWidth={1.5} />
-            <select
-              value={selectedCategory}
-              onChange={(e) => onCategoryChange(e.target.value)}
-              className="bg-transparent text-xs text-foreground font-medium outline-none cursor-pointer pr-1"
-              aria-label="Lọc theo danh mục"
-            >
-              {CATEGORY_FILTER_OPTIONS.map((cat) => (
-                <option key={cat.id} value={cat.id} className="bg-popover text-popover-foreground">
-                  {cat.label}
-                </option>
-              ))}
-            </select>
+        {/* Right: Primary Action Button */}
+        {canCreateTask && handlePrimaryAction && (
+          <button
+            type="button"
+            onClick={() => handlePrimaryAction()}
+            className="inline-flex h-9 min-h-[44px] sm:min-h-[36px] items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 cursor-pointer shrink-0"
+          >
+            <Plus className="size-3.5 shrink-0" strokeWidth={1.5} />
+            <span>{primaryActionLabel}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Optional Academic Month Pills (Rendered when monthlyTaskCounts provided or explicitly requested) */}
+      {(showAcademicMonthBar || Boolean(monthlyTaskCounts) || (selectedAcademicMonth !== undefined && academicYear !== undefined)) && (
+        <div
+          className="flex items-center gap-2 overflow-x-auto overscroll-x-contain pt-1 pb-0.5 border-t border-border/50 scrollbar-none"
+          role="tablist"
+          aria-label="Chu kỳ 12 tháng công tác năm học"
+        >
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground whitespace-nowrap pr-0.5 shrink-0 select-none">
+            <Calendar className="size-3.5 text-primary" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Năm học {academicYear}:</span>
+            <span className="sm:hidden">{academicYear}:</span>
           </div>
 
-          {/* Priority Filter */}
-          <div className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-background px-2.5 py-1 text-xs shadow-2xs">
-            <select
-              value={selectedPriority}
-              onChange={(e) => onPriorityChange(e.target.value)}
-              className="bg-transparent text-xs text-foreground font-medium outline-none cursor-pointer pr-1"
-              aria-label="Lọc theo mức độ ưu tiên"
+          <div className="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-muted/30 p-1 shadow-2xs shrink-0">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={effectiveMonth === "ALL"}
+              onClick={() => handleEffectiveMonthChange?.("ALL")}
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
+                effectiveMonth === "ALL"
+                  ? "bg-card text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+              )}
+              title={`Tất cả các tháng công tác trong năm học ${academicYear}`}
             >
-              {PRIORITY_FILTER_OPTIONS.map((prio) => (
-                <option key={prio.id} value={prio.id} className="bg-popover text-popover-foreground">
-                  {prio.label}
-                </option>
-              ))}
-            </select>
+              <span>Cả năm</span>
+              {allYearCount !== undefined && (
+                <span
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-md px-1.5 py-0.2 text-xs tabular-nums font-semibold font-mono",
+                    effectiveMonth === "ALL"
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {allYearCount}
+                </span>
+              )}
+            </button>
+
+            {academicMonths.map((period) => {
+              const isSelected = effectiveMonth === period.monthNumber;
+              const count = monthlyTaskCounts ? monthlyTaskCounts[period.monthNumber] : undefined;
+
+              return (
+                <button
+                  key={period.monthNumber}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => handleEffectiveMonthChange?.(period.monthNumber)}
+                  className={cn(
+                    "group inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
+                    isSelected
+                      ? "bg-card text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                  )}
+                  title={period.fullLabel}
+                >
+                  <span>{period.label}</span>
+                  {typeof count === "number" && (
+                    <span
+                      className={cn(
+                        "inline-flex items-center justify-center rounded-md px-1.5 py-0.2 text-xs tabular-nums font-semibold font-mono",
+                        isSelected
+                          ? "bg-primary/10 text-primary"
+                          : count > 0
+                          ? "bg-muted text-muted-foreground"
+                          : "bg-muted/40 text-muted-foreground/50"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* ROW 2: Smart Filter Pills + Controls (Popover, View, Density)        */}
+      {/* ==================================================================== */}
+      <div
+        data-slot="unified-task-toolbar-row-2"
+        className="flex flex-col gap-2 pt-1 border-t border-border/50 sm:flex-row sm:items-center sm:justify-between"
+      >
+        {/* Left: Smart Filter Pills */}
+        <div
+          className="inline-flex items-center gap-1 overflow-x-auto overscroll-x-contain py-0.5 scrollbar-none"
+          role="tablist"
+          aria-label="Lọc nhanh trạng thái nhiệm vụ"
+        >
+          {smartFilterPills.map((pill) => {
+            const isActive =
+              activeTab === pill.id ||
+              (pill.id === "my" && activeTab === "my_tasks") ||
+              (pill.id === "waiting_approval" && activeTab === "review");
+
+            return (
+              <button
+                key={pill.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => onTabChange?.(pill.id)}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-xs font-medium transition-all cursor-pointer select-none whitespace-nowrap",
+                  isActive
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60"
+                )}
+              >
+                <span>{pill.label}</span>
+                {typeof pill.count === "number" && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center justify-center rounded-full px-1.5 py-0.2 text-xs font-mono tabular-nums font-semibold",
+                      isActive
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-card text-muted-foreground border border-border/50"
+                    )}
+                  >
+                    {pill.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right: Advanced Filter Popover + View Switcher + Density Selector */}
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 relative">
+          {/* 1. Advanced Filter Popover Trigger */}
+          <div className="relative" ref={popoverRef}>
+            <button
+              type="button"
+              aria-label="Bộ lọc nâng cao"
+              aria-expanded={isFilterOpen}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-xl border border-border/80 px-2.5 text-xs font-medium transition-all cursor-pointer shadow-2xs",
+                isFilterOpen || activeAdvancedFilterCount > 0
+                  ? "bg-primary/10 text-primary border-primary/40 font-semibold"
+                  : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              <Filter className="size-3.5" strokeWidth={1.5} />
+              <span>Bộ lọc</span>
+              {activeAdvancedFilterCount > 0 && (
+                <span className="inline-flex min-w-4.5 h-4.5 px-1 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground font-mono tabular-nums">
+                  {activeAdvancedFilterCount}
+                </span>
+              )}
+            </button>
+
+            {/* Popover Dropdown Panel */}
+            {isFilterOpen && (
+              <div
+                className="absolute right-0 top-full mt-1.5 z-50 w-72 rounded-2xl border border-border/80 bg-card p-4 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+                role="dialog"
+                aria-label="Bộ lọc nâng cao"
+              >
+                <div className="flex items-center justify-between pb-2 mb-3 border-b border-border/60">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Filter className="size-3.5 text-primary" strokeWidth={1.5} />
+                    Bộ lọc nâng cao
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    aria-label="Đóng bộ lọc"
+                    className="text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+                  >
+                    <X className="size-3.5" strokeWidth={1.5} />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Department Select */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Đơn vị phòng ban
+                    </label>
+                    <select
+                      value={selectedDepartment}
+                      onChange={(e) => onDepartmentChange?.(e.target.value)}
+                      aria-label="Lọc theo đơn vị phòng ban"
+                      className="w-full rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs text-foreground font-medium outline-none focus:border-primary cursor-pointer"
+                    >
+                      {availableDepartments.map((dept) => (
+                        <option key={dept.code} value={dept.code}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Category Select */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Danh mục DACUM
+                    </label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => onCategoryChange?.(e.target.value)}
+                      aria-label="Lọc theo danh mục DACUM"
+                      className="w-full rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs text-foreground font-medium outline-none focus:border-primary cursor-pointer"
+                    >
+                      {CATEGORY_FILTER_OPTIONS.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Priority Select */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Mức độ ưu tiên
+                    </label>
+                    <select
+                      value={selectedPriority}
+                      onChange={(e) => onPriorityChange?.(e.target.value)}
+                      aria-label="Lọc theo mức độ ưu tiên"
+                      className="w-full rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs text-foreground font-medium outline-none focus:border-primary cursor-pointer"
+                    >
+                      {PRIORITY_FILTER_OPTIONS.map((prio) => (
+                        <option key={prio.id} value={prio.id}>
+                          {prio.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Month Select */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-muted-foreground">
+                      Tháng học kỳ ({academicYear})
+                    </label>
+                    <select
+                      value={effectiveMonth}
+                      onChange={(e) =>
+                        handleEffectiveMonthChange?.(
+                          e.target.value === "ALL" ? "ALL" : Number(e.target.value)
+                        )
+                      }
+                      aria-label="Lọc theo tháng học kỳ"
+                      className="w-full rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs text-foreground font-medium outline-none focus:border-primary cursor-pointer"
+                    >
+                      <option value="ALL">Cả năm học ({academicYear})</option>
+                      {academicMonths.map((period) => (
+                        <option key={period.monthNumber} value={period.monthNumber}>
+                          {period.label} ({period.shortDateSpan})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Reset Action */}
+                <div className="mt-4 pt-2.5 border-t border-border/60 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer underline-offset-2 hover:underline"
+                  >
+                    Đặt lại bộ lọc
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="inline-flex h-7 items-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                  >
+                    Áp dụng
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Density Toggle */}
-          <DensityToggle className="h-8.5 rounded-xl border-border/70 shadow-2xs" />
+          {/* 2. View Switcher [Bảng | Kanban] */}
+          {onViewModeChange && (
+            <div
+              className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-0.5 shadow-2xs"
+              role="group"
+              aria-label="Chế độ xem không gian làm việc"
+            >
+              <button
+                type="button"
+                onClick={() => onViewModeChange("table")}
+                aria-pressed={viewMode === "table"}
+                className={cn(
+                  "inline-flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
+                  viewMode === "table"
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Xem dạng Bảng danh sách"
+              >
+                <List className="size-3.5" strokeWidth={1.5} />
+                <span className="hidden md:inline">Bảng</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onViewModeChange("kanban")}
+                aria-pressed={viewMode === "kanban"}
+                className={cn(
+                  "inline-flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
+                  viewMode === "kanban"
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Xem dạng Kanban"
+              >
+                <Kanban className="size-3.5" strokeWidth={1.5} />
+                <span className="hidden md:inline">Kanban</span>
+              </button>
+            </div>
+          )}
+
+          {/* 3. Density Selector [Gọn | Chuẩn] */}
+          {onDensityChange && (
+            <div
+              className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-0.5 shadow-2xs"
+              role="group"
+              aria-label="Mật độ hiển thị bảng"
+            >
+              <button
+                type="button"
+                onClick={() => onDensityChange("compact")}
+                aria-pressed={density === "compact"}
+                aria-label="Chế độ hiển thị gọn"
+                className={cn(
+                  "inline-flex h-7 items-center rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
+                  density === "compact"
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Hiển thị gọn (Compact)"
+              >
+                <span>Gọn</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onDensityChange("comfortable")}
+                aria-pressed={density === "comfortable"}
+                aria-label="Chế độ hiển thị tiêu chuẩn"
+                className={cn(
+                  "inline-flex h-7 items-center rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
+                  density === "comfortable"
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Hiển thị tiêu chuẩn (Comfortable)"
+              >
+                <span>Chuẩn</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

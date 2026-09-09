@@ -90,6 +90,218 @@ export interface TaskFiltersReturn {
   handleSelectUpcoming: (item: UpcomingItem) => SchoolTask | StaffTask | undefined;
 }
 
+// ============================================================================
+// URL Parameter Synchronization Types & Pure Functions
+// ============================================================================
+
+export interface TaskUrlParams {
+  scope?: "school" | "unit" | "my";
+  dept?: string;
+  status?: string;
+  month?: number | "ALL";
+  q?: string;
+  view?: "table" | "kanban";
+  taskId?: string | null;
+}
+
+/**
+ * Pure parser extracting task filters and selection state from URL search params.
+ */
+export function parseTaskUrlParams(
+  searchParams?: URLSearchParams | string | null
+): TaskUrlParams {
+  let params: URLSearchParams;
+  if (!searchParams) {
+    if (typeof window !== "undefined") {
+      params = new URLSearchParams(window.location.search);
+    } else {
+      params = new URLSearchParams();
+    }
+  } else if (typeof searchParams === "string") {
+    params = new URLSearchParams(searchParams);
+  } else {
+    params = searchParams;
+  }
+
+  const rawScope = params.get("scope");
+  const rawDept = params.get("dept");
+  const rawStatus = params.get("status") || params.get("tab");
+  const rawMonth = params.get("month");
+  const rawQ = params.get("q");
+  const rawView = params.get("view");
+  const rawTaskId = params.get("taskId");
+
+  const result: TaskUrlParams = {};
+
+  if (rawScope === "school" || rawScope === "unit" || rawScope === "my") {
+    result.scope = rawScope;
+  } else if (rawScope === "SCHOOL_TASKS") {
+    result.scope = "school";
+  } else if (rawScope === "UNIT_TASKS") {
+    result.scope = "unit";
+  } else if (rawScope === "MY_TASKS") {
+    result.scope = "my";
+  }
+
+  if (rawDept && rawDept.trim() !== "" && rawDept !== "ALL") {
+    result.dept = rawDept.trim();
+  }
+
+  if (
+    rawStatus &&
+    rawStatus.trim() !== "" &&
+    rawStatus !== "ALL" &&
+    rawStatus !== "all"
+  ) {
+    result.status = rawStatus.trim();
+  }
+
+  if (rawMonth) {
+    if (rawMonth === "ALL") {
+      result.month = "ALL";
+    } else {
+      const parsedMonth = parseInt(rawMonth, 10);
+      if (!isNaN(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12) {
+        result.month = parsedMonth;
+      }
+    }
+  }
+
+  if (rawQ && rawQ.trim() !== "") {
+    result.q = rawQ.trim();
+  }
+
+  if (rawView === "table" || rawView === "kanban") {
+    result.view = rawView;
+  }
+
+  if (rawTaskId && rawTaskId.trim() !== "") {
+    result.taskId = rawTaskId.trim();
+  }
+
+  return result;
+}
+
+/**
+ * Pure builder creating canonical query string from TaskUrlParams while optionally
+ * preserving other unrelated query parameters.
+ */
+export function buildTaskUrlQuery(
+  currentUrlState: Partial<TaskUrlParams>,
+  existingQuery?: string | URLSearchParams
+): string {
+  let params: URLSearchParams;
+  if (typeof existingQuery === "string") {
+    params = new URLSearchParams(existingQuery);
+  } else if (existingQuery instanceof URLSearchParams) {
+    params = new URLSearchParams(existingQuery.toString());
+  } else if (typeof window !== "undefined") {
+    params = new URLSearchParams(window.location.search);
+  } else {
+    params = new URLSearchParams();
+  }
+
+  // 1. scope
+  if (currentUrlState.scope) {
+    params.set("scope", currentUrlState.scope);
+  } else {
+    params.delete("scope");
+  }
+
+  // 2. dept
+  if (currentUrlState.dept && currentUrlState.dept !== "ALL") {
+    params.set("dept", currentUrlState.dept);
+  } else {
+    params.delete("dept");
+  }
+
+  // 3. status (also remove obsolete tab)
+  if (
+    currentUrlState.status &&
+    currentUrlState.status !== "ALL" &&
+    currentUrlState.status !== "all"
+  ) {
+    params.set("status", currentUrlState.status);
+    params.delete("tab");
+  } else {
+    params.delete("status");
+    params.delete("tab");
+  }
+
+  // 4. month
+  if (
+    currentUrlState.month !== undefined &&
+    currentUrlState.month !== "ALL" &&
+    currentUrlState.month !== null
+  ) {
+    params.set("month", String(currentUrlState.month));
+  } else {
+    params.delete("month");
+  }
+
+  // 5. q
+  if (currentUrlState.q && currentUrlState.q.trim() !== "") {
+    params.set("q", currentUrlState.q.trim());
+  } else {
+    params.delete("q");
+  }
+
+  // 6. view
+  if (currentUrlState.view && currentUrlState.view !== "table") {
+    params.set("view", currentUrlState.view);
+  } else {
+    params.delete("view");
+  }
+
+  // 7. taskId
+  if (currentUrlState.taskId && currentUrlState.taskId.trim() !== "") {
+    params.set("taskId", currentUrlState.taskId.trim());
+  } else {
+    params.delete("taskId");
+  }
+
+  return params.toString();
+}
+
+/**
+ * Synchronize task filters to the browser URL search params without reload.
+ */
+export function syncTaskUrlParams(
+  updates: Partial<TaskUrlParams>,
+  router?: { replace: (url: string, opts?: { scroll?: boolean }) => void }
+): string {
+  if (typeof window === "undefined") return "";
+  const existingParams = new URLSearchParams(window.location.search);
+  const currentParsed = parseTaskUrlParams(existingParams);
+  const merged: TaskUrlParams = {
+    ...currentParsed,
+    ...updates,
+  };
+
+  for (const [key, val] of Object.entries(updates)) {
+    if (val === null || val === "" || val === "ALL") {
+      delete (merged as any)[key];
+    }
+  }
+
+  const queryString = buildTaskUrlQuery(merged, existingParams);
+  const newUrl = queryString
+    ? `${window.location.pathname}?${queryString}`
+    : window.location.pathname;
+
+  try {
+    if (router && typeof router.replace === "function") {
+      router.replace(newUrl, { scroll: false });
+    } else {
+      window.history.replaceState(null, "", newUrl);
+    }
+  } catch {
+    window.history.replaceState(null, "", newUrl);
+  }
+
+  return queryString;
+}
+
 export function useTaskFilters({
   tasks,
   upcoming,

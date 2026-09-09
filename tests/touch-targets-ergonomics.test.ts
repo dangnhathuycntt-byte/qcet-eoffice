@@ -50,8 +50,8 @@ describe("Task 4: Touch Targets & Workspace Ergonomics", () => {
     assert.match(metricStrip, /Tiến độ đơn vị/);
   });
 
-  it("unified-adaptive-workspace.tsx sets safe bottom padding for iOS Home Bar", () => {
-    assert.match(workspaceRoot, /pb-\[calc\(5\.\d+rem\+env\(safe-area-inset-bottom/);
+  it("unified-adaptive-workspace.tsx sets lean bottom padding relying on AppShell safe clearance", () => {
+    assert.match(workspaceRoot, /pb-2\s+sm:pb-8/);
   });
 
   it("app-topbar.tsx enforces min-h-[44px] min-w-[44px] touch target on icon buttons", () => {

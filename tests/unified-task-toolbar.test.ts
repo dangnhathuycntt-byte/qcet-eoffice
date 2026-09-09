@@ -23,6 +23,7 @@ import {
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { DEFAULT_DEMO_USERS, matchesUser } from "../src/lib/role-task-filter";
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
+import { ModularCascadingTaskTable } from "../src/components/tasks/table/modular-cascading-task-table";
 
 describe("UnifiedTaskToolbar Helpers", () => {
   const payload = getMockDashboardPayload();
@@ -286,5 +287,328 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
     );
 
     assert.ok(!emojiRegex.test(html), "Rendered toolbar HTML must contain zero emojis");
+  });
+});
+
+describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", () => {
+  const staffUser = DEFAULT_DEMO_USERS[2]; // STAFF
+  const adminUser = DEFAULT_DEMO_USERS[0]; // BGH / ADMIN
+
+  test("STAFF user does NOT see unauthorized 'Toàn trường' scope option", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "my",
+        onScopeChange: () => {},
+        user: staffUser,
+        userRole: "STAFF",
+        searchQuery: "",
+        onSearchChange: () => {},
+      })
+    );
+
+    // Must have "Của tôi"
+    assert.ok(html.includes("Của tôi"), "Must render 'Của tôi' scope");
+    // Must NOT render "Toàn trường" button
+    assert.ok(!html.includes("Toàn trường"), "Must NOT render 'Toàn trường' for staff");
+  });
+
+  test("ADMIN/BGH user sees all authorized scopes: Toàn trường, Đơn vị, Của tôi", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        userRole: "ADMIN",
+        searchQuery: "",
+        onSearchChange: () => {},
+      })
+    );
+
+    assert.ok(html.includes("Toàn trường"), "Must render 'Toàn trường' for admin");
+    assert.ok(html.includes("Đơn vị") || html.includes("Ban Giám hiệu"), "Must render unit scope for admin");
+    assert.ok(html.includes("Của tôi"), "Must render 'Của tôi' scope for admin");
+  });
+
+  test("Search input renders keyboard shortcut hint '/' and clear button when query exists", () => {
+    const emptyHtml = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "my",
+        onScopeChange: () => {},
+        searchQuery: "",
+        onSearchChange: () => {},
+      })
+    );
+    assert.ok(emptyHtml.includes(">&#x2F;</kbd>") || emptyHtml.includes(">/</kbd>"), "Must show '/' shortcut badge");
+
+    const filledHtml = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "my",
+        onScopeChange: () => {},
+        searchQuery: "kiểm định chất lượng",
+        onSearchChange: () => {},
+      })
+    );
+    assert.ok(filledHtml.includes("Xóa từ khóa tìm kiếm"), "Must show clear search button");
+  });
+
+  test("Row 2 renders 5 Smart Filter Pills: Tất cả, Của tôi, Chờ duyệt, Quá hạn, Hôm nay with counts", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        searchQuery: "",
+        onSearchChange: () => {},
+        activeTab: "all",
+        tabCounts: {
+          all: 42,
+          my: 12,
+          waiting_approval: 5,
+          overdue: 3,
+          today: 2,
+        },
+      })
+    );
+
+    assert.ok(html.includes("Tất cả"), "Must render Tất cả pill");
+    assert.ok(html.includes("42"), "Must render all count badge");
+    assert.ok(html.includes("Của tôi"), "Must render Của tôi pill");
+    assert.ok(html.includes("12"), "Must render my count badge");
+    assert.ok(html.includes("Chờ duyệt"), "Must render Chờ duyệt pill");
+    assert.ok(html.includes("5"), "Must render waiting approval badge");
+    assert.ok(html.includes("Quá hạn"), "Must render Quá hạn pill");
+    assert.ok(html.includes("3"), "Must render overdue badge");
+    assert.ok(html.includes("Hôm nay"), "Must render Hôm nay pill");
+    assert.ok(html.includes("2"), "Must render today badge");
+  });
+
+  test("Advanced Filter Popover button displays active filter count badge", () => {
+    const defaultHtml = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        searchQuery: "",
+        onSearchChange: () => {},
+        selectedDepartment: "ALL",
+        selectedCategory: "ALL",
+        selectedPriority: "ALL",
+        selectedAcademicMonth: "ALL",
+      })
+    );
+    assert.ok(defaultHtml.includes("Bộ lọc"), "Must render Bộ lọc trigger");
+
+    const filteredHtml = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        searchQuery: "",
+        onSearchChange: () => {},
+        selectedDepartment: "CNTT",
+        selectedCategory: "CHUYEN_DOI_SO",
+        selectedPriority: "URGENT",
+        selectedAcademicMonth: 9,
+      })
+    );
+    // 4 active filters -> badge with "4"
+    assert.ok(filteredHtml.includes(">4<"), "Must render badge with 4 active filters");
+  });
+
+  test("View switcher renders Table and Kanban modes", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        searchQuery: "",
+        onSearchChange: () => {},
+        viewMode: "table",
+        onViewModeChange: () => {},
+      })
+    );
+
+    assert.ok(html.includes("Bảng"), "Must render Table view option");
+    assert.ok(html.includes("Kanban"), "Must render Kanban view option");
+  });
+
+  test("Density selector renders Compact and Comfortable options", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        searchQuery: "",
+        onSearchChange: () => {},
+        density: "comfortable",
+        onDensityChange: () => {},
+      })
+    );
+
+    assert.ok(html.includes("Chuẩn"), "Must render Comfortable option");
+    assert.ok(html.includes("Gọn"), "Must render Compact option");
+  });
+});
+
+describe("Inner Duplicate Toolbar Elimination in ModularCascadingTaskTable", () => {
+  const payload = getMockDashboardPayload();
+
+  test("ModularCascadingTaskTable with hideToolbar=true omits inner TaskTableToolbar", () => {
+    const withToolbarHtml = renderToStaticMarkup(
+      React.createElement(ModularCascadingTaskTable, {
+        tasks: payload.tasks,
+        hideToolbar: false,
+      })
+    );
+    // When hideToolbar is false, TaskTableToolbar is rendered
+    assert.ok(
+      withToolbarHtml.includes("Tìm kiếm nhiệm vụ, mã, người thực hiện..."),
+      "Default table renders inner search placeholder"
+    );
+
+    const withoutToolbarHtml = renderToStaticMarkup(
+      React.createElement(ModularCascadingTaskTable, {
+        tasks: payload.tasks,
+        hideToolbar: true,
+      })
+    );
+    // When hideToolbar is true, inner search and duplicate controls must be absent
+    assert.ok(
+      !withoutToolbarHtml.includes("Tìm kiếm nhiệm vụ, mã, người thực hiện..."),
+      "Omitted toolbar removes duplicate inner search"
+    );
+    // But table structure remains intact
+    assert.ok(withoutToolbarHtml.includes("Nhiệm vụ"), "Table headers are preserved");
+  });
+
+  test("ModularCascadingTaskTable accepts density and onDensityChange from unified workspace", () => {
+    const compactHtml = renderToStaticMarkup(
+      React.createElement(ModularCascadingTaskTable, {
+        tasks: payload.tasks,
+        hideToolbar: true,
+        density: "compact",
+      })
+    );
+
+    assert.ok(compactHtml.includes("py-1.5") || compactHtml.includes("text-xs"), "Compact density applies compact styling");
+  });
+});
+
+describe("URL Parameter Synchronization Engine", () => {
+  const { parseTaskUrlParams, buildTaskUrlQuery } = require("../src/hooks/use-task-filters");
+
+  test("parseTaskUrlParams correctly extracts parameters from URLSearchParams", () => {
+    const search = new URLSearchParams(
+      "scope=school&dept=CNTT&status=overdue&month=9&q=chuyen-doi-so&view=kanban&taskId=task-123"
+    );
+
+    const parsed = parseTaskUrlParams(search);
+    assert.equal(parsed.scope, "school");
+    assert.equal(parsed.dept, "CNTT");
+    assert.equal(parsed.status, "overdue");
+    assert.equal(parsed.month, 9);
+    assert.equal(parsed.q, "chuyen-doi-so");
+    assert.equal(parsed.view, "kanban");
+    assert.equal(parsed.taskId, "task-123");
+  });
+
+  test("parseTaskUrlParams returns empty object / undefined for empty or missing params", () => {
+    const emptySearch = new URLSearchParams("");
+    const parsed = parseTaskUrlParams(emptySearch);
+
+    assert.equal(parsed.scope, undefined);
+    assert.equal(parsed.dept, undefined);
+    assert.equal(parsed.status, undefined);
+    assert.equal(parsed.month, undefined);
+    assert.equal(parsed.q, undefined);
+    assert.equal(parsed.view, undefined);
+    assert.equal(parsed.taskId, undefined);
+  });
+
+  test("buildTaskUrlQuery serializes state while omitting defaults and ALL values", () => {
+    const state = {
+      scope: "school" as const,
+      dept: "DAO_TAO",
+      status: "waiting_approval",
+      month: 10 as const,
+      q: "tuyen sinh",
+      view: "kanban" as const,
+      taskId: "task-456",
+    };
+
+    const query = buildTaskUrlQuery(state);
+    assert.ok(query.includes("scope=school"));
+    assert.ok(query.includes("dept=DAO_TAO"));
+    assert.ok(query.includes("status=waiting_approval"));
+    assert.ok(query.includes("month=10"));
+    assert.ok(query.includes("q=tuyen+sinh") || query.includes("q=tuyen%20sinh"));
+    assert.ok(query.includes("view=kanban"));
+    assert.ok(query.includes("taskId=task-456"));
+  });
+
+  test("URL synchronization roundtrip: serialize then parse preserves exact values", () => {
+    const original = {
+      scope: "unit" as const,
+      dept: "CNTT",
+      status: "overdue",
+      month: 9 as const,
+      q: "bao cao",
+      view: "kanban" as const,
+      taskId: "t-789",
+    };
+
+    const queryString = buildTaskUrlQuery(original);
+    const parsed = parseTaskUrlParams(new URLSearchParams(queryString));
+
+    assert.equal(parsed.scope, original.scope);
+    assert.equal(parsed.dept, original.dept);
+    assert.equal(parsed.status, original.status);
+    assert.equal(parsed.month, original.month);
+    assert.equal(parsed.q, original.q);
+    assert.equal(parsed.view, original.view);
+    assert.equal(parsed.taskId, original.taskId);
+  });
+});
+
+describe("Anti-Slop & Light-Only Standard Compliance", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+
+  test("unified-task-toolbar.tsx strictly complies with Light-Only standards (0 dark: classes)", () => {
+    const filePath = path.join(
+      process.cwd(),
+      "src/components/dashboard/unified-task-toolbar.tsx"
+    );
+    const content = fs.readFileSync(filePath, "utf-8");
+
+    const darkMatches = content.match(/\bdark:/g);
+    assert.equal(
+      darkMatches,
+      null,
+      `unified-task-toolbar.tsx must not contain any dark: classes. Found: ${darkMatches?.length}`
+    );
+  });
+
+  test("task-table-toolbar.tsx strictly complies with Light-Only standards (0 dark: classes)", () => {
+    const filePath = path.join(
+      process.cwd(),
+      "src/components/tasks/table/components/task-table-toolbar.tsx"
+    );
+    const content = fs.readFileSync(filePath, "utf-8");
+
+    const darkMatches = content.match(/\bdark:/g);
+    assert.equal(
+      darkMatches,
+      null,
+      `task-table-toolbar.tsx must not contain any dark: classes. Found: ${darkMatches?.length}`
+    );
+  });
+
+  test("Zero unreadable microtext classes (< 12px) in unified-task-toolbar.tsx", () => {
+    const filePath = path.join(
+      process.cwd(),
+      "src/components/dashboard/unified-task-toolbar.tsx"
+    );
+    const content = fs.readFileSync(filePath, "utf-8");
+
+    assert.ok(
+      !content.includes("text-[10px]") && !content.includes("text-[9px]") && !content.includes("text-[8px]"),
+      "unified-task-toolbar.tsx must avoid font sizes below 12px (anti-microtext rule)"
+    );
   });
 });

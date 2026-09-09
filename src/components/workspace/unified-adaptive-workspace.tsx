@@ -8,6 +8,14 @@ import {
   countScopeTasks,
 } from "./hooks/use-adaptive-workspace-data";
 import { AdaptiveScopeHeader } from "./components/adaptive-scope-header";
+import { UnifiedTaskToolbar, type TableDensity } from "@/components/tasks/unified-task-toolbar";
+import { parseTaskUrlParams, syncTaskUrlParams } from "@/hooks/use-task-filters";
+import { matchesUser } from "@/lib/role-task-filter";
+import {
+  filterTasksByAcademicMonthStrict,
+  getSystemReferenceDate,
+  isTaskPastDue,
+} from "@/lib/academic-calendar";
 import { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 import { UniversalActionQueue } from "./components/universal-action-queue";
 import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
@@ -30,6 +38,254 @@ import {
 import { cn } from "@/lib/utils";
 
 export { type WorkspaceScope, type ViewMode };
+
+/**
+ * Helper to check waiting approval status across parent and subtasks
+ */
+export function isTaskWaitingApproval(status?: TaskStatus | string | null): boolean {
+  if (!status) return false;
+  return (
+    status === "WAITING_APPROVAL" ||
+    (status as string) === "PENDING_EXECUTIVE_APPROVAL" ||
+    (status as string) === "NEEDS_REVIEW" ||
+    (status as string) === "PENDING" ||
+    (status as string) === "IN_REVIEW"
+  );
+}
+
+/**
+ * Checks whether a task is active (IN_PROGRESS, TODO, NOT_STARTED)
+ */
+export function isActiveTaskStatus(status?: TaskStatus | string | null): boolean {
+  if (!status) return false;
+  return status === "IN_PROGRESS" || status === "TODO" || status === "NOT_STARTED";
+}
+
+/**
+ * Checks whether a task or its subtasks is overdue relative to canonical system reference date.
+ * Excludes completed parent tasks. Accounts for uncompleted subtasks being overdue if parent is not completed.
+ */
+export function isTaskOverdueOrHasOverdueSubtask(
+  t: SchoolTask,
+  refDate: string = getSystemReferenceDate()
+): boolean {
+  if (t.status === "COMPLETED") return false;
+  const parentOverdue = Boolean(t.dueDate && isTaskPastDue(t.dueDate, refDate));
+  const subtaskOverdue = Boolean(
+    t.subTasks?.some(
+      (st) => st.status !== "COMPLETED" && Boolean(st.dueDate && isTaskPastDue(st.dueDate, refDate))
+    )
+  );
+  return parentOverdue || subtaskOverdue;
+}
+
+/**
+ * Helper to check if a task or any of its subtasks is assigned to user or user's unit.
+ */
+export function isTaskAssignedToUserOrUnit(
+  t: SchoolTask,
+  user?: AuthUser | null
+): boolean {
+  if (!user) return true;
+  const userDept = user.departmentCode || user.department || "";
+  const matchUser = Boolean(
+    t.assignedTo === user.name ||
+    (t as any).assignedToId === user.id ||
+    t.leadAssigneeName === user.name ||
+    (t as any).leadAssigneeId === user.id ||
+    matchesUser(t.leadAssigneeName, user) ||
+    matchesUser(t.assignedTo, user) ||
+    t.subTasks?.some(
+      (st) =>
+        st.assignedTo === user.name ||
+        (st as any).assignedToId === user.id ||
+        st.assigneeName === user.name ||
+        st.assigneeId === user.id ||
+        matchesUser(st.assignedTo, user) ||
+        matchesUser(st.assigneeName, user)
+    )
+  );
+  const matchUnit = Boolean(
+    userDept &&
+      (t.departmentCode?.toUpperCase() === userDept.toUpperCase() ||
+        t.department?.toLowerCase() === userDept.toLowerCase() ||
+        t.leadDepartmentCode?.toUpperCase() === userDept.toUpperCase() ||
+        t.leadDepartment?.toLowerCase() === userDept.toLowerCase() ||
+        t.subTasks?.some(
+          (st) =>
+            st.departmentCode?.toUpperCase() === userDept.toUpperCase() ||
+            st.department?.toLowerCase() === userDept.toLowerCase()
+        ))
+  );
+  return matchUser || matchUnit;
+}
+
+/**
+ * Options for filtering displayed tasks in UnifiedAdaptiveWorkspace
+ */
+export interface FilterDisplayedTasksOptions {
+  tasks: SchoolTask[];
+  search?: string;
+  status?: string;
+  category?: string;
+  priority?: string;
+  academicMonth?: number | "ALL";
+  overdue?: boolean;
+  workbox?: string;
+  user?: AuthUser | null;
+}
+
+/**
+ * Pure canonical filtering engine for tasks displayed in the unified workspace.
+ */
+export function filterDisplayedTasks({
+  tasks,
+  search,
+  status,
+  category,
+  priority,
+  academicMonth,
+  overdue,
+  workbox,
+  user,
+}: FilterDisplayedTasksOptions): SchoolTask[] {
+  let result = tasks;
+
+  // 1. Search Query
+  if (search && search.trim()) {
+    const q = search.trim().toLowerCase();
+    result = result.filter(
+      (t) =>
+        t.title.toLowerCase().includes(q) ||
+        t.code?.toLowerCase().includes(q) ||
+        t.leadAssigneeName?.toLowerCase().includes(q) ||
+        t.assignedTo?.toLowerCase().includes(q) ||
+        t.subTasks?.some(
+          (s) =>
+            s.title.toLowerCase().includes(q) ||
+            s.assigneeName?.toLowerCase().includes(q) ||
+            (s as any).assignedTo?.toLowerCase().includes(q)
+        )
+    );
+  }
+
+  // 2. Status / Smart Filter Pills
+  if (status && status !== "ALL" && status !== "all") {
+    const refDate = getSystemReferenceDate();
+    if (status === "my" || status === "my_tasks") {
+      if (user) {
+        result = result.filter(
+          (t) =>
+            t.leadAssigneeName === user.name ||
+            matchesUser(t.leadAssigneeName, user) ||
+            t.assignedTo === user.name ||
+            matchesUser(t.assignedTo, user) ||
+            t.subTasks?.some(
+              (s) =>
+                s.assigneeName === user.name ||
+                matchesUser(s.assigneeName, user) ||
+                (s as any).assignedTo === user.name ||
+                matchesUser((s as any).assignedTo, user)
+            )
+        );
+      }
+    } else if (status === "waiting_approval" || status === "review") {
+      result = result.filter(
+        (t) =>
+          isTaskWaitingApproval(t.status) ||
+          Boolean(t.subTasks?.some((s) => isTaskWaitingApproval(s.status)))
+      );
+    } else if (status === "overdue") {
+      result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, refDate));
+    } else if (status === "today") {
+      result = result.filter((t) => Boolean(t.dueDate && t.dueDate.startsWith(refDate)));
+    } else {
+      result = result.filter((t) => t.status === status);
+    }
+  }
+
+  // 3. Workbox Filter
+  if (workbox && workbox !== "ALL" && workbox !== "all") {
+    const wb = workbox.trim().toLowerCase();
+    if (
+      wb === "my_pending_approval" ||
+      wb === "review" ||
+      wb === "waiting_approval" ||
+      wb === "needs_review" ||
+      wb === "pending_approval"
+    ) {
+      result = result.filter(
+        (t) =>
+          isTaskWaitingApproval(t.status) ||
+          Boolean(t.subTasks?.some((s) => isTaskWaitingApproval(s.status)))
+      );
+    } else if (
+      wb === "my_pending_submission" ||
+      wb === "pending_submission"
+    ) {
+      result = result.filter((t) => {
+        if (t.status === "COMPLETED") return false;
+        const isTaskActive =
+          isActiveTaskStatus(t.status) ||
+          Boolean(t.subTasks?.some((st) => isActiveTaskStatus(st.status)));
+        if (!isTaskActive) return false;
+        return isTaskAssignedToUserOrUnit(t, user);
+      });
+    } else if (
+      wb === "my_tasks" ||
+      wb === "my" ||
+      wb === "my_action" ||
+      wb === "my_received"
+    ) {
+      result = result.filter((t) => {
+        if (!user) return true;
+        return Boolean(
+          t.assignedTo === user.name ||
+          (t as any).assignedToId === user.id ||
+          t.leadAssigneeName === user.name ||
+          (t as any).leadAssigneeId === user.id ||
+          matchesUser(t.leadAssigneeName, user) ||
+          matchesUser(t.assignedTo, user) ||
+          t.subTasks?.some(
+            (st) =>
+              st.assignedTo === user.name ||
+              (st as any).assignedToId === user.id ||
+              st.assigneeName === user.name ||
+              st.assigneeId === user.id ||
+              matchesUser(st.assignedTo, user) ||
+              matchesUser(st.assigneeName, user)
+          )
+        );
+      });
+    } else if (wb === "overdue" || wb === "urgent_overdue") {
+      result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t));
+    } else if (wb === "completed") {
+      result = result.filter((t) => t.status === "COMPLETED" || t.progressPercent === 100);
+    }
+  }
+
+  // 4. Category Filter
+  if (category && category !== "ALL") {
+    result = result.filter((t) => t.category === category);
+  }
+
+  // 5. Priority Filter
+  if (priority && priority !== "ALL") {
+    result = result.filter((t) => t.priority === priority);
+  }
+
+  // 6. Academic Month Filter
+  if (academicMonth && academicMonth !== "ALL") {
+    result = filterTasksByAcademicMonthStrict(result, Number(academicMonth), "2026-2027");
+  }
+
+  // 7. Overdue flag
+  if (overdue) {
+    result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t));
+  }
+
+  return result;
+}
 
 export function UnifiedAdaptiveWorkspace({
   user: initialUser,
@@ -231,12 +487,18 @@ export function UnifiedAdaptiveWorkspace({
     return "STAFF";
   }, [forcedRole, user]);
 
+  const isExecutive = effectiveReviewerRole === "ADMIN" || isExecutiveUser(user);
+
   // Filter state synchronized with props
   const [internalDept, setInternalDept] = React.useState<string | undefined>(selectedDepartment);
   const [internalStatus, setInternalStatus] = React.useState<string | undefined>(activeStatus);
   const [internalSearch, setInternalSearch] = React.useState<string | undefined>(searchQuery);
   const [internalOverdue, setInternalOverdue] = React.useState<boolean>(Boolean(isOverdueOnly));
   const [internalWorkbox, setInternalWorkbox] = React.useState<string | undefined>(activeWorkbox);
+  const [currentCategory, setCurrentCategory] = React.useState<string>("ALL");
+  const [currentPriority, setCurrentPriority] = React.useState<string>("ALL");
+  const [currentMonth, setCurrentMonth] = React.useState<number | "ALL">("ALL");
+  const [tableDensity, setTableDensity] = React.useState<TableDensity>("comfortable");
 
   React.useEffect(() => {
     setInternalDept(selectedDepartment);
@@ -264,6 +526,94 @@ export function UnifiedAdaptiveWorkspace({
   const currentOverdue = internalOverdue || Boolean(isOverdueOnly);
   const currentWorkbox = internalWorkbox ?? activeWorkbox;
 
+  // URL Synchronization: Read initial URL parameters on mount
+  const [hasInitializedUrl, setHasInitializedUrl] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || hasInitializedUrl) return;
+    try {
+      const urlParams = parseTaskUrlParams(window.location.search);
+      if (
+        urlParams.scope &&
+        (urlParams.scope === "school" ||
+          urlParams.scope === "unit" ||
+          urlParams.scope === "my")
+      ) {
+        if (urlParams.scope === "school" && !isExecutive) {
+          // unpermitted
+        } else {
+          setActiveScope(urlParams.scope);
+          onScopeChange?.(urlParams.scope);
+        }
+      }
+      if (urlParams.dept) {
+        setInternalDept(urlParams.dept);
+        onDepartmentChange?.(urlParams.dept);
+      }
+      if (urlParams.status) {
+        setInternalStatus(urlParams.status);
+        onStatusFilterChange?.(urlParams.status);
+      }
+      if (urlParams.month !== undefined) {
+        setCurrentMonth(urlParams.month);
+      }
+      if (urlParams.q !== undefined) {
+        setInternalSearch(urlParams.q);
+        onSearchChange?.(urlParams.q);
+      }
+      if (
+        urlParams.view &&
+        (urlParams.view === "table" || urlParams.view === "kanban")
+      ) {
+        setInternalViewMode(urlParams.view);
+        onViewModeChange?.(urlParams.view);
+      }
+      if (urlParams.taskId && tasks.length > 0) {
+        const found = tasks.find((t) => t.id === urlParams.taskId);
+        if (found) {
+          setInternalSelectedTask(found);
+          onSelectTask?.(found);
+        }
+      }
+      setHasInitializedUrl(true);
+    } catch {
+      setHasInitializedUrl(true);
+    }
+  }, [
+    hasInitializedUrl,
+    tasks,
+    isExecutive,
+    onScopeChange,
+    onDepartmentChange,
+    onStatusFilterChange,
+    onSearchChange,
+    onViewModeChange,
+    onSelectTask,
+  ]);
+
+  // Sync state changes to URL query parameters
+  React.useEffect(() => {
+    if (!hasInitializedUrl) return;
+    syncTaskUrlParams({
+      scope: activeScope,
+      dept: currentDept,
+      status: currentStatus,
+      month: currentMonth,
+      q: currentSearch,
+      view: viewMode,
+      taskId: internalSelectedTask?.id || null,
+    });
+  }, [
+    hasInitializedUrl,
+    activeScope,
+    currentDept,
+    currentStatus,
+    currentMonth,
+    currentSearch,
+    viewMode,
+    internalSelectedTask?.id,
+  ]);
+
   const { scopedTasks, metrics, actionQueue } = useAdaptiveWorkspaceData(
     tasks,
     user,
@@ -271,38 +621,88 @@ export function UnifiedAdaptiveWorkspace({
     currentDept
   );
 
-  // Filter tasks based on search, status, and overdue criteria
+  // Compute counts for smart filter pills (Tất cả, Của tôi, Chờ duyệt, Quá hạn, Hôm nay)
+  const tabCounts = React.useMemo(() => {
+    const refDate = getSystemReferenceDate();
+    let myCount = 0;
+    let waitingApprovalCount = 0;
+    let overdueCount = 0;
+    let todayCount = 0;
+
+    for (const t of scopedTasks) {
+      if (
+        user &&
+        (t.leadAssigneeName === user.name ||
+          matchesUser(t.leadAssigneeName, user) ||
+          t.assignedTo === user.name ||
+          matchesUser(t.assignedTo, user) ||
+          t.subTasks?.some(
+            (s) =>
+              s.assigneeName === user.name ||
+              matchesUser(s.assigneeName, user) ||
+              (s as any).assignedTo === user.name ||
+              matchesUser((s as any).assignedTo, user)
+          ))
+      ) {
+        myCount++;
+      }
+      if (
+        isTaskWaitingApproval(t.status) ||
+        t.subTasks?.some((s) => isTaskWaitingApproval(s.status))
+      ) {
+        waitingApprovalCount++;
+      }
+      if (isTaskOverdueOrHasOverdueSubtask(t, refDate)) {
+        overdueCount++;
+      }
+      if (t.dueDate && t.dueDate.startsWith(refDate)) {
+        todayCount++;
+      }
+    }
+
+    return {
+      all: scopedTasks.length,
+      my: myCount,
+      waiting_approval: waitingApprovalCount,
+      overdue: overdueCount,
+      today: todayCount,
+    };
+  }, [scopedTasks, user]);
+
+  // Filter tasks based on search, smart status, workbox, category, priority, month, and overdue criteria
   const displayedTasks = React.useMemo(() => {
-    let result = scopedTasks;
-    if (currentSearch && currentSearch.trim()) {
-      const q = currentSearch.trim().toLowerCase();
-      result = result.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) ||
-          t.code?.toLowerCase().includes(q) ||
-          t.leadAssigneeName?.toLowerCase().includes(q) ||
-          t.assignedTo?.toLowerCase().includes(q)
-      );
-    }
-    if (currentStatus && currentStatus !== "ALL") {
-      result = result.filter((t) => t.status === currentStatus);
-    }
-    if (currentOverdue) {
-      const today = new Date().toISOString().split("T")[0];
-      result = result.filter((t) => {
-        if (t.status === "COMPLETED") return false;
-        return Boolean(t.dueDate && t.dueDate < today);
-      });
-    }
-    return result;
-  }, [scopedTasks, currentSearch, currentStatus, currentOverdue]);
+    return filterDisplayedTasks({
+      tasks: scopedTasks,
+      search: currentSearch,
+      status: currentStatus,
+      workbox: currentWorkbox,
+      category: currentCategory,
+      priority: currentPriority,
+      academicMonth: currentMonth,
+      overdue: currentOverdue,
+      user,
+    });
+  }, [
+    scopedTasks,
+    currentSearch,
+    currentStatus,
+    currentWorkbox,
+    currentCategory,
+    currentPriority,
+    currentMonth,
+    currentOverdue,
+    user,
+  ]);
 
   const handleResetFilters = React.useCallback(() => {
     setInternalDept(undefined);
     setInternalStatus(undefined);
     setInternalSearch(undefined);
     setInternalOverdue(false);
-    setInternalWorkbox(undefined);
+    setInternalWorkbox("ALL");
+    setCurrentCategory("ALL");
+    setCurrentPriority("ALL");
+    setCurrentMonth("ALL");
     if (onResetFilters) onResetFilters();
     if (onDepartmentChange) onDepartmentChange("ALL");
     if (onStatusFilterChange) onStatusFilterChange(undefined);
@@ -341,7 +741,7 @@ export function UnifiedAdaptiveWorkspace({
   }, [onOverdueFilterChange]);
 
   const handleRemoveWorkbox = React.useCallback(() => {
-    setInternalWorkbox(undefined);
+    setInternalWorkbox("ALL");
     if (onWorkboxChange) onWorkboxChange("ALL");
   }, [onWorkboxChange]);
 
@@ -396,7 +796,7 @@ export function UnifiedAdaptiveWorkspace({
   const handleCreateTaskSubmit = React.useCallback(
     async (formData: CreateTaskFormData) => {
       const previousData = internalTasks;
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = getSystemReferenceDate();
       setInternalTasks((prev) => applyOptimisticCreateTask(prev, formData, todayStr));
       setIsCreateModalOpen(false);
 
@@ -498,7 +898,7 @@ export function UnifiedAdaptiveWorkspace({
       data-slot="unified-adaptive-workspace"
       data-active-scope={activeScope}
       className={cn(
-        "space-y-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:pb-8",
+        "space-y-4 pb-2 sm:pb-8",
         className
       )}
     >
@@ -545,21 +945,51 @@ export function UnifiedAdaptiveWorkspace({
         </aside>
       )}
 
-      {/* 1. Adaptive Scope Switcher Header */}
-      <AdaptiveScopeHeader
-        user={user}
-        activeScope={activeScope}
-        onScopeChange={handleScopeChange}
-        onRefresh={handleRefresh}
-        onCreateTask={handleCreateTaskClick}
-        badgeCounts={badgeCounts}
-        isRefreshing={effectiveIsRefreshing}
-        hideScopeSwitcher={hideScopeSwitcher}
-        contextTitle={contextTitle}
-        contextBadge={contextBadge}
-        viewMode={viewMode}
-        onViewModeChange={handleViewModeChange}
-      />
+      {/* 1. Unified Task Toolbar: Single Unified Surface (Scope, Search, Smart Pills, Popover, View, Density) */}
+      {!hideScopeSwitcher && (
+        <UnifiedTaskToolbar
+          scope={activeScope}
+          onScopeChange={handleScopeChange}
+          user={user}
+          userRole={effectiveReviewerRole}
+          isExecutive={isExecutive}
+          badgeCounts={badgeCounts}
+          isUnassignedDepartment={isUnassigned}
+          searchQuery={currentSearch || ""}
+          onSearchChange={(q) => {
+            setInternalSearch(q);
+            onSearchChange?.(q);
+          }}
+          loading={effectiveIsRefreshing}
+          onNewTaskClick={handleCreateTaskClick}
+          canCreateTask={true}
+          activeTab={currentStatus || "all"}
+          onTabChange={(tab) => {
+            setInternalStatus(tab);
+            onStatusFilterChange?.(tab === "all" ? undefined : tab);
+          }}
+          tabCounts={tabCounts}
+          selectedDepartment={currentDept || "ALL"}
+          onDepartmentChange={(dept) => {
+            setInternalDept(dept);
+            onDepartmentChange?.(dept);
+          }}
+          selectedCategory={currentCategory}
+          onCategoryChange={setCurrentCategory}
+          selectedPriority={currentPriority}
+          onPriorityChange={setCurrentPriority}
+          selectedAcademicMonth={currentMonth}
+          onAcademicMonthChange={setCurrentMonth}
+          onResetFilters={handleResetFilters}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          density={tableDensity}
+          onDensityChange={setTableDensity}
+          onRefresh={handleRefresh}
+          isRefreshing={effectiveIsRefreshing}
+          totalTasksCount={tasks.length}
+        />
+      )}
 
       {/* Loading state when fetching initial data */}
       {(initialLoading || isLoading || isInternalLoading) && tasks.length === 0 && (
@@ -645,6 +1075,9 @@ export function UnifiedAdaptiveWorkspace({
                 <ModularCascadingTaskTable
                   tasks={displayedTasks}
                   scope={activeScope === "my" ? "MY_TASKS" : activeScope}
+                  hideToolbar={true}
+                  density={tableDensity}
+                  onDensityChange={setTableDensity}
                   onSelectTask={handleSelectTask}
                   onStatusChange={handleStatusChange}
                   onRefresh={handleRefresh}

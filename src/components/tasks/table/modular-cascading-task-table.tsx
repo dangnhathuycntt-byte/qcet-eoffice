@@ -89,6 +89,8 @@ export interface ModularCascadingTaskTableProps {
   initialDepartment?: string;
   initialCategory?: TaskCategory | "ALL";
   initialDensity?: TableDensity;
+  density?: TableDensity;
+  onDensityChange?: (density: TableDensity) => void;
   initialPageSize?: number;
   syncWithUrl?: boolean;
   referenceDate?: string | Date;
@@ -123,6 +125,8 @@ export function ModularCascadingTaskTable({
   initialDepartment = "ALL",
   initialCategory = "ALL",
   initialDensity,
+  density: propDensity,
+  onDensityChange: propOnDensityChange,
   initialPageSize = DEFAULT_PAGE_SIZE,
   syncWithUrl = false,
   referenceDate = getSystemReferenceDate(),
@@ -379,6 +383,12 @@ export function ModularCascadingTaskTable({
   });
 
   const prevAutoExpandedKeyRef = React.useRef<string>("");
+  React.useEffect(() => {
+    if (propDensity && tableState.density !== propDensity) {
+      tableState.setDensity(propDensity);
+    }
+  }, [propDensity, tableState.density, tableState.setDensity]);
+
   React.useEffect(() => {
     const key = `${isPersonalScope}-${autoExpandedParentIds.join(",")}`;
     if (isPersonalScope && autoExpandedParentIds.length > 0 && prevAutoExpandedKeyRef.current !== key) {
