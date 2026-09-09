@@ -416,8 +416,41 @@ export function ModularCascadingTaskTable({
     return paginatedResult.items.map((t) => t.id);
   }, [paginatedResult.items]);
 
-  // 10. Table Container Ref & Keyboard Navigation
+  // 10. Table Container Ref, Task Selection & URL Deep Linking
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const handleEffectiveSelectTask = React.useCallback(
+    (task: SchoolTask | StaffTask) => {
+      if (syncWithUrl) {
+        urlSync.setTaskId(task.id);
+      }
+      onSelectTask?.(task);
+    },
+    [syncWithUrl, urlSync, onSelectTask]
+  );
+
+  // Sync selected task from URL search params on mount or param update
+  React.useEffect(() => {
+    if (syncWithUrl && urlSync.urlState.taskId && !selectedTaskId) {
+      const targetId = urlSync.urlState.taskId;
+      const found = tasks.find(
+        (t) => t.id === targetId || t.code?.toUpperCase() === targetId.toUpperCase()
+      );
+      if (found) {
+        onSelectTask?.(found);
+      } else {
+        for (const t of tasks) {
+          const sub = t.subTasks?.find(
+            (s) => s.id === targetId || (s as any).code?.toUpperCase() === targetId.toUpperCase()
+          );
+          if (sub) {
+            onSelectTask?.(sub);
+            break;
+          }
+        }
+      }
+    }
+  }, [syncWithUrl, urlSync.urlState.taskId, selectedTaskId, tasks, onSelectTask]);
 
   const keyboardNav = useTaskKeyboardNav({
     items: paginatedResult.items,
@@ -430,8 +463,8 @@ export function ModularCascadingTaskTable({
     },
     onSelectTask: (id) => {
       const task = paginatedResult.items.find((t) => t.id === id);
-      if (task && onSelectTask) {
-        onSelectTask(task);
+      if (task) {
+        handleEffectiveSelectTask(task);
       }
     },
     onToggleSelect: (id) => tableState.toggleSelect(id),
@@ -553,7 +586,7 @@ export function ModularCascadingTaskTable({
             {isBacklogExpanded && (
               <div className="space-y-2 pt-1 border-t border-amber-200/70">
                 {/* Desktop Backlog Table */}
-                <div className="hidden md:block overflow-hidden rounded-xl border border-amber-200/80 bg-white/90 shadow-2xs">
+                <div className="hidden sm:block overflow-hidden rounded-xl border border-amber-200/80 bg-white/90 shadow-2xs">
                   <div className="overflow-x-auto thin-scrollbar">
                     <table className="w-full text-left">
                       <thead>
@@ -573,11 +606,11 @@ export function ModularCascadingTaskTable({
                           <tr
                             key={task.id}
                             tabIndex={0}
-                            onClick={() => onSelectTask?.(task)}
+                            onClick={() => handleEffectiveSelectTask(task)}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                onSelectTask?.(task);
+                                handleEffectiveSelectTask(task);
                               }
                             }}
                             className="group cursor-pointer hover:bg-amber-100/30 transition-colors h-11 text-xs"
@@ -654,11 +687,11 @@ export function ModularCascadingTaskTable({
                 </div>
 
                 {/* Mobile Backlog Cards */}
-                <div className="md:hidden space-y-2">
+                <div className="sm:hidden space-y-2">
                   {priorOverdueBacklog.map((task) => (
                     <div
                       key={task.id}
-                      onClick={() => onSelectTask?.(task)}
+                      onClick={() => handleEffectiveSelectTask(task)}
                       className="rounded-xl border border-amber-200/90 bg-white/90 p-3 shadow-2xs space-y-2 cursor-pointer active:bg-amber-50"
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -720,8 +753,8 @@ export function ModularCascadingTaskTable({
         />
       ) : (
         <div className="space-y-3">
-          {/* Desktop Table View (>= 768px) */}
-          <div className="hidden md:block overflow-hidden rounded-xl border border-border/80 bg-card shadow-2xs">
+          {/* Desktop Table View (>= 640px) */}
+          <div className="hidden sm:block overflow-hidden rounded-xl border border-border/80 bg-card shadow-2xs">
             <div className="overflow-x-auto thin-scrollbar">
               <table className="w-full text-left">
                 <TaskTableHeader
@@ -765,7 +798,7 @@ export function ModularCascadingTaskTable({
                           onAddSubTask={effectiveOnAddSubTask}
                           onToggleExpand={() => tableState.toggleExpand(task.id)}
                           onToggleSelect={() => tableState.toggleSelect(task.id)}
-                          onClick={onSelectTask}
+                          onClick={handleEffectiveSelectTask}
                           onStatusChange={onStatusChange}
                           onUrge={onUrge}
                         />
@@ -776,7 +809,7 @@ export function ModularCascadingTaskTable({
                             isExpanded={isExpanded}
                             density={tableState.density}
                             selectedAcademicMonth={selectedAcademicMonth}
-                            onSelectSubTask={(sub) => onSelectTask?.(sub)}
+                            onSelectSubTask={(sub) => handleEffectiveSelectTask(sub)}
                             onStatusChange={onStatusChange}
                             onOpenSubmitModal={onOpenSubmitModal}
                             onAddSubTask={effectiveOnAddSubTask}
@@ -792,8 +825,8 @@ export function ModularCascadingTaskTable({
             </div>
           </div>
 
-          {/* Mobile Card Feed View (< 768px) */}
-          <div className="md:hidden space-y-2.5">
+          {/* Mobile Card Feed View (< 640px) */}
+          <div className="sm:hidden space-y-2.5">
             {paginatedResult.items.map((task) => (
               <MobileTaskCard
                 key={task.id}
@@ -803,7 +836,7 @@ export function ModularCascadingTaskTable({
                   e?.stopPropagation?.();
                   tableState.toggleExpand(id);
                 }}
-                onSelectTask={onSelectTask}
+                onSelectTask={handleEffectiveSelectTask}
                 onStatusChange={onStatusChange}
                 selectedAcademicMonth={selectedAcademicMonth}
                 onOpenSubmitModal={onOpenSubmitModal}

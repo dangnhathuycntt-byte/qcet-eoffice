@@ -15,9 +15,36 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { cn } from "@/lib/utils";
 
-function PortalLiveClock() {
+export interface PortalStatsSummary {
+  completionRate: number;
+  total: number;
+  schoolTasks: number;
+}
+
+export function formatProgressMetric(
+  stats: PortalStatsSummary | null,
+  isLoading: boolean,
+  isAuthenticated: boolean
+): string {
+  if (isLoading) return "Đang tải...";
+  if (!isAuthenticated) return "Đăng nhập để xem";
+  if (!stats) return "Chưa có dữ liệu";
+  return `${stats.completionRate}% hoàn thành (${stats.total} việc)`;
+}
+
+export function formatSchoolTasksMetric(
+  stats: PortalStatsSummary | null,
+  isLoading: boolean,
+  isAuthenticated: boolean
+): string {
+  if (isLoading) return "Đang tải...";
+  if (!isAuthenticated) return "Đăng nhập để xem";
+  if (!stats) return "Chưa có dữ liệu";
+  return `${stats.schoolTasks} việc trọng tâm`;
+}
+
+export function PortalLiveClock() {
   const [timeStr, setTimeStr] = React.useState<string>("");
 
   React.useEffect(() => {
@@ -47,48 +74,72 @@ function PortalLiveClock() {
   );
 }
 
-function PortalZoomToggle() {
-  const [zoomLevel, setZoomLevel] = React.useState<number>(1.0);
-  const [mounted, setMounted] = React.useState(false);
+export default function PortalPage() {
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const [stats, setStats] = React.useState<PortalStatsSummary | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = React.useState<boolean>(false);
+  const [, setHasError] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem("qcet_ui_zoom");
-    if (saved) {
-      const z = parseFloat(saved);
-      if (!isNaN(z)) {
-        setZoomLevel(z);
-        document.documentElement.style.zoom = String(z);
-      }
-    } else {
-      document.documentElement.style.zoom = "1.0";
+    if (!user) {
+      setStats(null);
+      setIsLoadingStats(false);
+      setHasError(false);
+      return;
     }
-  }, []);
 
-  const toggleZoom = () => {
-    const nextZoom = zoomLevel === 1.2 ? 1.0 : 1.2;
-    setZoomLevel(nextZoom);
-    document.documentElement.style.zoom = String(nextZoom);
-    localStorage.setItem("qcet_ui_zoom", String(nextZoom));
-  };
+    let isMounted = true;
+    const fetchOverview = async () => {
+      setIsLoadingStats(true);
+      setHasError(false);
+      try {
+        const res = await fetch("/api/dashboard/overview", {
+          credentials: "include",
+        });
+        if (!res.ok) {
+          throw new Error("Không thể tải thông tin điều hành");
+        }
+        const data = await res.json();
+        if (isMounted) {
+          if (data && data.stats) {
+            const total = data.stats.totalTasks ?? data.stats.totalSchoolTasks ?? 0;
+            const completionRate =
+              typeof data.stats.completionRate === "number"
+                ? data.stats.completionRate
+                : total > 0
+                ? Math.round(((data.stats.completedTasks ?? 0) / total) * 100)
+                : 0;
+            const schoolTasks = data.stats.totalSchoolTasks ?? 0;
 
-  return (
-    <button
-      type="button"
-      onClick={toggleZoom}
-      className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-card/80 hover:bg-card border border-border/60 text-xs font-bold text-foreground shadow-2xs transition-all cursor-pointer hover:border-primary/40 active:scale-95"
-      title="Bật / Tắt phóng to (100% / 120%)"
-    >
-      <span className="text-muted-foreground font-medium">Zoom:</span>
-      <span className="font-mono text-primary font-bold">
-        {mounted ? `${Math.round(zoomLevel * 100)}%` : "100%"}
-      </span>
-    </button>
-  );
-}
+            setStats({
+              completionRate,
+              total,
+              schoolTasks,
+            });
+          } else {
+            setStats(null);
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setHasError(true);
+          setStats(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingStats(false);
+        }
+      }
+    };
 
-export default function PortalPage() {
-  const { user } = useAuth();
+    fetchOverview();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  const isLoading = Boolean(isAuthLoading || (user && isLoadingStats));
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col justify-between selection:bg-primary/20 selection:text-primary">
@@ -125,13 +176,11 @@ export default function PortalPage() {
             </div>
           </div>
 
-          {/* Right: Live Clock + Zoom + Theme */}
+          {/* Right: Live Clock */}
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden sm:block">
               <PortalLiveClock />
             </div>
-
-            <PortalZoomToggle />
           </div>
         </div>
       </header>
@@ -186,7 +235,9 @@ export default function PortalPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-foreground truncate">Tiến độ Toàn trường</div>
-                    <div className="text-xs text-muted-foreground font-medium font-mono tabular-nums">32% hoàn thành (340 việc)</div>
+                    <div className="text-xs text-muted-foreground font-medium font-mono tabular-nums">
+                      {formatProgressMetric(stats, isLoading, Boolean(user))}
+                    </div>
                   </div>
                 </div>
 
@@ -196,7 +247,9 @@ export default function PortalPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-foreground truncate">Nhiệm vụ Cấp trường</div>
-                    <div className="text-xs text-muted-foreground font-medium font-mono tabular-nums">94 việc trọng tâm</div>
+                    <div className="text-xs text-muted-foreground font-medium font-mono tabular-nums">
+                      {formatSchoolTasksMetric(stats, isLoading, Boolean(user))}
+                    </div>
                   </div>
                 </div>
               </div>
