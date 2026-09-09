@@ -358,4 +358,58 @@ describe("ExecutiveCalendarWorkspace Work Operations Integration", () => {
     assert.ok(html.includes("bg-rose-50"), "Should use rose background styling");
     assert.ok(!html.includes("dark:"), "Must adhere to Light-Only standard (no dark:)");
   });
+
+  test("WorkCalendarCard stops event bubbling and triggers onClick safely", () => {
+    const mockItem: WorkCalendarItem = {
+      id: "item-test-click",
+      sourceTaskId: "src-click",
+      title: "Kiểm tra sự kiện click không nổi bọt",
+      dueDate: "2026-09-15",
+      type: "school_milestone",
+      priority: "HIGH",
+      status: "IN_PROGRESS",
+      progressPercent: 50,
+      departmentId: "BGH",
+      departmentName: "Ban Giám hiệu",
+      assigneeName: "Hiệu trưởng",
+      isOverdue: false,
+    };
+
+    let normalClicked = 0;
+    let normalStopped = false;
+    const normalElement = WorkCalendarCard({
+      item: mockItem,
+      onClick: () => {
+        normalClicked++;
+      },
+    });
+
+    normalElement.props.onClick({
+      stopPropagation: () => {
+        normalStopped = true;
+      },
+    });
+
+    assert.equal(normalClicked, 1, "onClick should be triggered exactly once");
+    assert.equal(normalStopped, true, "stopPropagation must be called to prevent bubble to outer slot");
+
+    let compactClicked = 0;
+    let compactStopped = false;
+    const compactElement = WorkCalendarCard({
+      item: mockItem,
+      compact: true,
+      onClick: () => {
+        compactClicked++;
+      },
+    });
+
+    compactElement.props.onClick({
+      stopPropagation: () => {
+        compactStopped = true;
+      },
+    });
+
+    assert.equal(compactClicked, 1, "compact onClick should be triggered exactly once");
+    assert.equal(compactStopped, true, "compact stopPropagation must be called");
+  });
 });

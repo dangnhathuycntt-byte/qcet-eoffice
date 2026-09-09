@@ -30,6 +30,7 @@ import {
   TaskDetailSideSheet,
 } from "@/components/dashboard/task-detail-side-sheet";
 import { useAuth } from "@/lib/auth-context";
+import { getSystemReferenceDate } from "@/lib/academic-calendar";
 import { computeSchoolTaskRollup, computeDashboardStats } from "@/lib/dashboard-aggregator";
 import { cn } from "@/lib/utils";
 
@@ -217,7 +218,7 @@ function CalendarRouteContent() {
   // Handle task submission
   const handleCreateTaskSubmit = useCallback(async (data: CreateTaskFormData) => {
     setIsCreateModalOpen(false);
-    const todayStr = new Date().toISOString().split("T")[0];
+    const todayStr = getSystemReferenceDate();
 
     setTasks((prevTasks) => {
       let updated = [...prevTasks];

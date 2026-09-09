@@ -323,7 +323,10 @@ export function WorkCalendarCard({
   if (compact) {
     return (
       <div
-        onClick={onClick}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.();
+        }}
         className={cn(
           "h-full rounded-lg border p-1.5 overflow-hidden cursor-pointer transition-all shadow-2xs hover:shadow-xs hover:border-primary/50 text-xs select-none bg-card flex flex-col justify-between",
           isOverdue ? "border-rose-300 bg-rose-50/50" : "border-border/70",
@@ -384,7 +387,10 @@ export function WorkCalendarCard({
 
   return (
     <div
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
       className={cn(
         "rounded-xl border p-3.5 cursor-pointer transition-all shadow-2xs hover:shadow-xs hover:border-primary/40 bg-card space-y-2.5",
         isOverdue ? "border-rose-200 bg-rose-50/20" : "border-border/70",
@@ -714,28 +720,24 @@ export function ExecutiveCalendarWorkspace({
 
   const handleAddSlotClick = React.useCallback(
     (dateStr?: string) => {
-      if (onAddTask) {
-        onAddTask(dateStr);
-      }
       if (onOpenAddTask) {
         onOpenAddTask(dateStr);
-      }
-      if (!onAddTask && !onOpenAddTask && onAddEvent) {
+      } else if (onAddTask) {
+        onAddTask(dateStr);
+      } else if (onAddEvent) {
         onAddEvent(dateStr);
       }
     },
-    [onAddTask, onOpenAddTask, onAddEvent]
+    [onOpenAddTask, onAddTask, onAddEvent]
   );
 
   const handleItemClick = React.useCallback(
     (item: WorkCalendarItem) => {
       if (onSelectWorkItem) {
         onSelectWorkItem(item);
-      }
-      if (onSelectEvent) {
+      } else if (onSelectEvent) {
         onSelectEvent(convertItemToTimeEvent(item));
-      }
-      if (!onSelectWorkItem && !onSelectEvent) {
+      } else {
         setSelectedPreviewItem(item);
       }
     },
@@ -1042,7 +1044,6 @@ export function ExecutiveCalendarWorkspace({
                             key={item.id}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleItemClick(item);
                             }}
                             className={cn(
                               "absolute z-10 p-0.5 transition-all select-none",
