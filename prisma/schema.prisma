@@ -226,7 +226,13 @@ model Task {
   updatedAt           DateTime              @updatedAt @map("updated_at")
 
   @@index([departmentId, academicYear, academicMonth])
+  @@index([academicYear])
   @@index([status, dueDate])
+  @@index([scope, status, dueDate])
+  @@index([departmentId, status, dueDate])
+  @@index([parentTaskId])
+  @@index([createdById])
+  @@index([updatedAt(sort: Desc)])
   @@index([scope, priority])
   @@index([leadUnitId])
   @@index([primaryAssignmentId])
@@ -380,7 +386,11 @@ model Document {
 
   @@unique([type, documentYear, registrationNumber])
   @@index([type, documentYear, registeredDate])
+  @@index([type, status, dueDate])
   @@index([status, urgency, dueDate])
+  @@index([originalNumber])
+  @@index([leadDepartmentId])
+  @@index([draftingDeptId])
   @@map("documents")
 }
 
@@ -491,6 +501,8 @@ model Notification {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
   @@index([createdAt])
   @@map("notifications")
 }
