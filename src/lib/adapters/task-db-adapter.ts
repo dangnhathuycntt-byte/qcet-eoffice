@@ -259,7 +259,8 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations): SchoolT
   let progress = raw.progressPercent ?? 0;
   if (progress === 0 && mappedSubTasks.length > 0) {
     const totalSubProgress = mappedSubTasks.reduce((acc: number, st: any) => {
-      const p = st.progressPercent ?? st.progress ?? (st.status === 'COMPLETED' || st.status === 'completed' ? 100 : 0);
+      const isCompleted = st.status === 'COMPLETED' || st.status === 'completed';
+      const p = isCompleted ? 100 : (st.progressPercent ?? st.progress ?? 0);
       return acc + (typeof p === 'number' ? p : 0);
     }, 0);
     progress = Math.round(totalSubProgress / mappedSubTasks.length);

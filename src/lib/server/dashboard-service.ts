@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { mapPrismaTaskToStaffTask, formatLocalDate } from "@/lib/adapters/task-db-adapter";
 import type {
   DashboardPayload,
   SchoolTask,
@@ -56,47 +57,12 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
       .filter(Boolean);
 
     const subTasks: StaffTask[] = (t.subTasks || []).map((sub) => {
-      const subOwner = sub.assignees.find((a) => a.roleInTask === "PRIMARY_OWNER");
-      const subCollaborators = (sub.assignees || [])
-        .filter((a) => a.roleInTask !== "PRIMARY_OWNER")
-        .map((a) => ({
-          id: a.user?.id || a.userId,
-          name: a.user?.name || "",
-          avatarUrl: a.user?.avatarUrl || undefined,
-          role: "COLLABORATOR",
-        }))
-        .filter((c) => c.name);
-
-      return {
-        id: sub.id,
-        code: sub.code,
-        title: sub.title,
-        assigneeName: subOwner?.user?.name || "Chưa phân công",
-        assigneeId: subOwner?.user?.id || subOwner?.userId,
-        assigneeAvatar: subOwner?.user?.avatarUrl || undefined,
-        assignedTo: subOwner?.user?.name || "Chưa phân công",
-        status: sub.status as any,
-        dueDate: sub.dueDate.toISOString().split("T")[0],
-        internalDueDate: sub.dueDate.toISOString().split("T")[0],
-        deliverableDescription: sub.description || "",
-        parentSchoolTaskId: t.id,
-        parentSchoolTaskTitle: t.title,
-        parentSchoolTaskCode: t.code,
-        parentTaskScope: t.scope,
-        collaborators: subCollaborators,
-        coAssignees: subCollaborators,
-        departmentCode: sub.department?.id || undefined,
-        departmentId: sub.department?.id || undefined,
-        deliverables: (sub.deliverables || []).map((d) => ({
-          id: d.id,
-          name: d.title,
-          url: d.fileUrl,
-          fileType: "application/pdf",
-          submittedAt: d.createdAt.toISOString().split("T")[0],
-        })),
-        updatedAt: sub.updatedAt.toISOString().split("T")[0],
-        progressPercent: sub.progressPercent ?? 0,
-      };
+      const staff = mapPrismaTaskToStaffTask(sub as any);
+      staff.parentSchoolTaskId = staff.parentSchoolTaskId || t.id;
+      staff.parentSchoolTaskTitle = staff.parentSchoolTaskTitle || t.title;
+      staff.parentSchoolTaskCode = staff.parentSchoolTaskCode || t.code;
+      staff.parentTaskScope = staff.parentTaskScope || t.scope;
+      return staff;
     });
 
     const totalSub = subTasks.length;
@@ -104,7 +70,8 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     const rolledUpProgress = totalSub > 0
       ? Math.round(
           subTasks.reduce((acc, s) => {
-            const p = (s as any).progressPercent ?? (s.status === "COMPLETED" ? 100 : 0);
+            const isCompleted = s.status === "COMPLETED";
+            const p = isCompleted ? 100 : ((s as any).progressPercent ?? 0);
             return acc + p;
           }, 0) / totalSub
         )

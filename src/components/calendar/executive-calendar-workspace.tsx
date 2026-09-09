@@ -28,6 +28,7 @@ import type { SchoolTask } from "@/types/dashboard";
 
 export interface CalendarTimeEvent {
   id: string;
+  taskId?: string;
   title: string;
   startTime: string; // "HH:MM" e.g. "08:00"
   endTime: string;   // "HH:MM" e.g. "09:30"
@@ -337,6 +338,7 @@ export function ExecutiveCalendarWorkspace({
           const isDacum = Boolean(t.dacumTaskDefId || t.dacumTaskDef || t.category === "BAO_CAO");
           return {
             id: `task-evt-${t.id}`,
+            taskId: t.id,
             title: t.title,
             startTime: "08:00",
             endTime: "09:30",
