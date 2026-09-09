@@ -20,6 +20,7 @@ import {
   ExecutiveCalendarWorkspace,
   CalendarTimeEvent,
 } from "@/components/calendar/executive-calendar-workspace";
+import type { WorkCalendarItem } from "@/lib/work-calendar-adapter";
 import {
   CreateTaskModal,
   type CreateTaskFormData,
@@ -144,10 +145,59 @@ function CalendarRouteContent() {
     setIsCreateModalOpen(true);
   }, [user?.role]);
 
+  // Handle selecting a work calendar item (milestone, subtask, deliverable, backlog)
+  const handleSelectWorkItem = useCallback((item: WorkCalendarItem) => {
+    // 1. Direct school task match (by sourceTaskId, parentSchoolTaskId, or id prefix)
+    const schoolTask = tasks.find(
+      (t) => t.id === item.sourceTaskId || t.id === item.parentSchoolTaskId || `milestone-${t.id}` === item.id
+    );
+    if (schoolTask && (item.type === "school_milestone" || !item.parentSchoolTaskId || item.sourceTaskId === schoolTask.id)) {
+      setSelectedTask(schoolTask);
+      return;
+    }
+
+    // 2. Search for a subtask across all school tasks
+    for (const st of tasks) {
+      if (st.subTasks) {
+        const matchedSub = st.subTasks.find((sub) => sub.id === item.sourceTaskId || sub.id === item.id);
+        if (matchedSub) {
+          setSelectedTask(matchedSub);
+          return;
+        }
+      }
+    }
+
+    // 3. If parent school task exists, open parent school task
+    if (schoolTask) {
+      setSelectedTask(schoolTask);
+      return;
+    }
+
+    // 4. Fallback: synthesize a task object so the side sheet can inspect item details
+    const fallbackTask: StaffTask = {
+      id: item.sourceTaskId || item.id,
+      title: item.title,
+      code: item.code,
+      assigneeName: item.assigneeName,
+      department: item.departmentName,
+      assignedToDepartmentName: item.departmentName,
+      departmentId: item.departmentId,
+      status: item.status === "COMPLETED" ? "COMPLETED" : "IN_PROGRESS",
+      dueDate: item.dueDate,
+      parentSchoolTaskId: item.parentSchoolTaskId,
+      updatedAt: item.dueDate,
+      deliverableDescription: item.deliverableSummary,
+    };
+    setSelectedTask(fallbackTask);
+  }, [tasks]);
+
   // Handle selecting an event on the calendar
   const handleSelectEvent = useCallback((event: CalendarTimeEvent) => {
+    if (event.workItem) {
+      handleSelectWorkItem(event.workItem);
+      return;
+    }
     if (event.taskId) {
-      // Find matching school task or subtask
       for (const t of tasks) {
         if (t.id === event.taskId) {
           setSelectedTask(t);
@@ -162,7 +212,7 @@ function CalendarRouteContent() {
         }
       }
     }
-  }, [tasks]);
+  }, [tasks, handleSelectWorkItem]);
 
   // Handle task submission
   const handleCreateTaskSubmit = useCallback(async (data: CreateTaskFormData) => {
@@ -251,7 +301,8 @@ function CalendarRouteContent() {
   }, [user]);
 
   // Handle task status update
-  const handleStatusChange = useCallback((taskId: string, newStatus: TaskStatus) => {
+  const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
+    // 1. Optimistic state update across school tasks and subtasks
     setTasks((prevTasks) => {
       const updated = prevTasks.map((st) => {
         if (st.id === taskId) {
@@ -283,6 +334,17 @@ function CalendarRouteContent() {
         }
         return { ...prev, status: newStatus };
       });
+    }
+
+    // 2. Asynchronous backend persistence
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } catch (err) {
+      console.warn("Lỗi khi kết nối đến máy chủ để cập nhật trạng thái nhiệm vụ:", err);
     }
   }, [selectedTask]);
 
@@ -371,7 +433,9 @@ function CalendarRouteContent() {
           initialDate={dateParam}
           initialViewMode={viewParam}
           onAddTask={handleOpenAddTask}
+          onOpenAddTask={handleOpenAddTask}
           onSelectEvent={handleSelectEvent}
+          onSelectWorkItem={handleSelectWorkItem}
           isExecutive={user?.role === "ADMIN" || user?.role === "MANAGER"}
         />
       )}
@@ -392,6 +456,20 @@ function CalendarRouteContent() {
         isOpen={!!selectedTask}
         onClose={() => setSelectedTask(null)}
         onStatusChange={handleStatusChange}
+        currentUser={user || undefined}
+        onSelectSubTask={(sub) => {
+          if (typeof sub === "string") {
+            for (const t of tasks) {
+              const found = t.subTasks?.find((st) => st.id === sub);
+              if (found) {
+                setSelectedTask(found);
+                return;
+              }
+            }
+          } else {
+            setSelectedTask(sub);
+          }
+        }}
         parentSchoolTaskTitle={
           selectedTask && !isSchoolTask(selectedTask) && "parentSchoolTaskId" in selectedTask && selectedTask.parentSchoolTaskId
             ? tasks.find((t) => t.id === (selectedTask as StaffTask).parentSchoolTaskId)?.title

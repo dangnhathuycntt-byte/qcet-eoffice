@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { SchoolTask } from "@/types/dashboard";
+import { getSystemReferenceDate } from "@/lib/academic-calendar";
 import {
   transformTasksToCalendarOperations,
   getPriorOverdueWorkItems,
@@ -193,8 +194,19 @@ export function getSemanticEventStyle(type?: string): string {
   }
 }
 
-export function getWeekDays(baseDate: Date | string): WeekDayInfo[] {
-  const d = typeof baseDate === "string" ? new Date(baseDate) : new Date(baseDate.getTime());
+export function getWeekDays(baseDate: Date | string, referenceDate?: string): WeekDayInfo[] {
+  let d: Date;
+  if (typeof baseDate === "string") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(baseDate)) {
+      const [y, m, day] = baseDate.split("-").map(Number);
+      d = new Date(y, m - 1, day, 0, 0, 0, 0);
+    } else {
+      d = new Date(baseDate);
+    }
+  } else {
+    d = new Date(baseDate.getTime());
+  }
+
   const day = d.getDay();
   // Monday is start of week: day 0 (Sun) -> -6, day 1 (Mon) -> 0, day 2 -> -1, etc.
   const diffToMonday = day === 0 ? -6 : 1 - day;
@@ -202,8 +214,8 @@ export function getWeekDays(baseDate: Date | string): WeekDayInfo[] {
   monday.setDate(d.getDate() + diffToMonday);
   monday.setHours(0, 0, 0, 0);
 
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const refDate = referenceDate || getSystemReferenceDate();
+  const todayStr = refDate.includes("T") ? refDate.split("T")[0] : refDate;
 
   const shortLabels = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
   const fullLabels = [
@@ -571,8 +583,16 @@ export function ExecutiveCalendarWorkspace({
 }: ExecutiveCalendarWorkspaceProps) {
   const [currentDate, setCurrentDate] = React.useState<Date>(() => {
     if (initialDate instanceof Date) return initialDate;
-    if (typeof initialDate === "string") return new Date(initialDate);
-    return new Date("2026-09-14T08:00:00");
+    if (typeof initialDate === "string") {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(initialDate)) {
+        const [y, m, day] = initialDate.split("-").map(Number);
+        return new Date(y, m - 1, day, 0, 0, 0, 0);
+      }
+      return new Date(initialDate);
+    }
+    const sysDate = getSystemReferenceDate();
+    const [y, m, day] = sysDate.split("-").map(Number);
+    return new Date(y, m - 1, day, 0, 0, 0, 0);
   });
 
   const [viewMode, setViewMode] = React.useState<"week_grid" | "agenda_list">(initialViewMode);
@@ -687,20 +707,24 @@ export function ExecutiveCalendarWorkspace({
   }, []);
 
   const handleToday = React.useCallback(() => {
-    setCurrentDate(new Date());
+    const sysDate = getSystemReferenceDate();
+    const [y, m, day] = sysDate.split("-").map(Number);
+    setCurrentDate(new Date(y, m - 1, day, 0, 0, 0, 0));
   }, []);
 
   const handleAddSlotClick = React.useCallback(
     (dateStr?: string) => {
-      if (onOpenAddTask) {
-        onOpenAddTask(dateStr);
-      } else if (onAddEvent) {
-        onAddEvent(dateStr);
-      } else if (onAddTask) {
+      if (onAddTask) {
         onAddTask(dateStr);
       }
+      if (onOpenAddTask) {
+        onOpenAddTask(dateStr);
+      }
+      if (!onAddTask && !onOpenAddTask && onAddEvent) {
+        onAddEvent(dateStr);
+      }
     },
-    [onOpenAddTask, onAddEvent, onAddTask]
+    [onAddTask, onOpenAddTask, onAddEvent]
   );
 
   const handleItemClick = React.useCallback(
@@ -974,7 +998,7 @@ export function ExecutiveCalendarWorkspace({
               </div>
 
               {/* 7 Columns for Days */}
-              <div className="grid grid-cols-7 divide-x divide-border/60 flex-1 relative">
+              <div data-time-grid="true" className="grid grid-cols-7 divide-x divide-border/60 flex-1 relative">
                 {weekDays.map((d) => {
                   const dayWorkItems = dayItemsMap.get(d.dateString) || [];
                   const timeEvents = dayWorkItems.map(convertItemToTimeEvent);

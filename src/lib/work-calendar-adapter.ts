@@ -12,6 +12,7 @@ export interface WorkCalendarItem {
   dueDate: string; // YYYY-MM-DD
   dueTime?: string; // HH:mm
   type: WorkItemType;
+  originType?: WorkItemType;
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
   status: "TODO" | "IN_PROGRESS" | "WAITING_APPROVAL" | "COMPLETED" | "OVERDUE";
   progressPercent: number;
@@ -29,7 +30,14 @@ export interface WorkCalendarFilters {
   itemType?: WorkItemType | "ALL";
   statusFilter?: "ALL" | "ACTIVE" | "OVERDUE" | "COMPLETED";
   searchQuery?: string;
+  status?: string | "ALL";
+  priority?: string | "ALL";
+  search?: string;
 }
+
+export type WorkCalendarFilterState = WorkCalendarFilters;
+export const transformSchoolTasksToCalendarItems = transformTasksToCalendarOperations;
+export const extractPriorOverdueTasks = getPriorOverdueWorkItems;
 
 export function extractDateString(isoString?: string | null): string {
   if (!isoString) return "";
@@ -73,6 +81,7 @@ export function transformTasksToCalendarOperations(
       dueDate: taskDueDate,
       dueTime: "17:00",
       type: isOverdue ? "urgent_overdue" : "school_milestone",
+      originType: "school_milestone",
       priority: (task.priority as "LOW" | "MEDIUM" | "HIGH" | "URGENT") || "HIGH",
       status: task.status === "COMPLETED" ? "COMPLETED" : isOverdue ? "OVERDUE" : "IN_PROGRESS",
       progressPercent: task.progressPercent || 0,
@@ -101,6 +110,7 @@ export function transformTasksToCalendarOperations(
           dueDate: subDueDate,
           dueTime: "16:30",
           type: subOverdue ? "urgent_overdue" : "subtask",
+          originType: "subtask",
           priority: (task.priority as "LOW" | "MEDIUM" | "HIGH" | "URGENT") || "MEDIUM",
           status: sub.status === "COMPLETED" ? "COMPLETED" : subOverdue ? "OVERDUE" : "IN_PROGRESS",
           progressPercent: sub.status === "COMPLETED" ? 100 : 50,
@@ -129,6 +139,7 @@ export function transformTasksToCalendarOperations(
           dueDate: delivDueDate,
           dueTime: "11:30",
           type: delivOverdue ? "urgent_overdue" : "deliverable",
+          originType: "deliverable",
           priority: "URGENT",
           status: deliv.status === "APPROVED" ? "COMPLETED" : delivOverdue ? "OVERDUE" : "WAITING_APPROVAL",
           progressPercent: deliv.status === "APPROVED" ? 100 : 0,
@@ -172,7 +183,11 @@ export function filterWorkCalendarItems(
       }
     }
     if (filters.itemType && filters.itemType !== "ALL") {
-      if (item.type !== filters.itemType) return false;
+      const matchesType =
+        item.type === filters.itemType ||
+        item.originType === filters.itemType ||
+        (filters.itemType === "urgent_overdue" && item.isOverdue);
+      if (!matchesType) return false;
     }
     if (filters.statusFilter && filters.statusFilter !== "ALL") {
       if (filters.statusFilter === "OVERDUE" && !item.isOverdue) return false;

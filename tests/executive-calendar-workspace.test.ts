@@ -136,12 +136,14 @@ describe("ExecutiveCalendarWorkspace Layout and Collision Detection Engine", () 
     assert.ok(subtaskStyle.includes("text-emerald-700"));
   });
 
-  test("getWeekDays returns 7 days starting from Monday", () => {
+  test("getWeekDays returns 7 days starting from Monday and parses date-only strings safely", () => {
     // 2026-09-14 is a Monday
-    const days = getWeekDays(new Date("2026-09-16")); // Wednesday
+    const days = getWeekDays("2026-09-16", "2026-09-16"); // Wednesday
     assert.equal(days.length, 7);
     assert.equal(days[0].dateString, "2026-09-14");
     assert.equal(days[0].dayOfWeekLabel, "T2");
+    assert.equal(days[2].dateString, "2026-09-16");
+    assert.equal(days[2].isToday, true);
     assert.equal(days[6].dateString, "2026-09-20");
     assert.equal(days[6].dayOfWeekLabel, "CN");
   });

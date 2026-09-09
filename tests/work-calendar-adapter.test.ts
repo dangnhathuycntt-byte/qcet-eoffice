@@ -132,5 +132,11 @@ describe("Work Calendar Adapter & Operations Engine", () => {
     const overdueOnly = filterWorkCalendarItems(items, { statusFilter: "OVERDUE" });
     assert.strictEqual(overdueOnly.length, 1);
     assert.strictEqual(overdueOnly[0].sourceTaskId, "school-task-overdue");
+
+    // Lọc theo itemType: "school_milestone" vẫn giữ lại mốc trường dù đã quá hạn (nhờ originType)
+    const schoolMilestones = filterWorkCalendarItems(items, { itemType: "school_milestone" });
+    assert.strictEqual(schoolMilestones.length, 2);
+    assert.ok(schoolMilestones.some((m) => m.sourceTaskId === "school-task-overdue"));
+    assert.ok(schoolMilestones.some((m) => m.sourceTaskId === "school-task-1"));
   });
 });
