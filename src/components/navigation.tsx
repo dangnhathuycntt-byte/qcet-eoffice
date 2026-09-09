@@ -143,29 +143,30 @@ export function MobileNav({ pathname: initialPathname }: { pathname?: string } =
   const tabs = [
     {
       id: "overview",
-      label: "Tổng quan",
-      href: "/?zone=dashboard",
+      // Tổng quan / Bàn làm việc (Executive Workbench)
+      label: "Bàn làm việc",
+      href: "/",
       icon: LayoutDashboard,
       active: isOverviewActive,
     },
     {
       id: "tasks",
       label: "Nhiệm vụ",
-      href: "/?zone=tasks",
+      href: "/tasks",
       icon: CheckSquare,
       active: isTasksActive,
     },
     {
       id: "calendar",
       label: "Lịch",
-      href: "/?zone=calendar",
+      href: "/calendar",
       icon: Calendar,
       active: isCalendarActive,
     },
     {
       id: "org",
       label: "Tổ chức",
-      href: "/?zone=org",
+      href: "/org",
       icon: Network,
       active: isOrgActive,
     },

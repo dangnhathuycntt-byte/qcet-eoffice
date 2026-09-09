@@ -47,14 +47,17 @@ import {
   CheckCircle2,
   Building2,
   Calendar,
+  School,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type WorkspaceScope = "school" | "unit";
+export type WorkspaceScope = "school" | "unit" | "my";
 export type ViewMode = "table" | "kanban";
 
 export interface TaskManagementWorkspaceProps {
   scope?: WorkspaceScope;
+  onScopeChange?: (scope: WorkspaceScope) => void;
   className?: string;
   initialViewMode?: ViewMode;
   initialTasks?: SchoolTask[];
@@ -70,6 +73,42 @@ export function filterTasksByScope(
 ): SchoolTask[] {
   if (scope === "school") {
     return tasks;
+  }
+
+  if (scope === "my") {
+    if (!user) return [];
+    const userName = (user.name || "").toLowerCase().trim();
+    if (!userName) return [];
+
+    return tasks
+      .map((task) => {
+        const leadMatches = (task.leadAssigneeName || "").toLowerCase().includes(userName);
+        const coMatches = (task.coAssignees || []).some((name) =>
+          name.toLowerCase().includes(userName)
+        );
+        const matchesMain = leadMatches || coMatches;
+
+        const matchingSubtasks = (task.subTasks || []).filter((sub) => {
+          return (sub.assigneeName || "").toLowerCase().includes(userName);
+        });
+
+        if (matchesMain) {
+          return {
+            ...task,
+            subTasks: matchingSubtasks.length > 0 ? matchingSubtasks : task.subTasks,
+          };
+        }
+
+        if (matchingSubtasks.length > 0) {
+          return {
+            ...task,
+            subTasks: matchingSubtasks,
+          };
+        }
+
+        return null;
+      })
+      .filter((t): t is SchoolTask => t !== null);
   }
 
   const userDeptCode = user?.departmentCode;
@@ -207,11 +246,32 @@ export function applyOptimisticCreateTask(
 
 export function TaskManagementWorkspace({
   scope = "school",
+  onScopeChange,
   className,
   initialViewMode = "kanban",
   initialTasks,
 }: TaskManagementWorkspaceProps) {
   const { user, setIsProfileModalOpen } = useAuth();
+  const [activeScope, setActiveScope] = React.useState<WorkspaceScope>(scope);
+
+  React.useEffect(() => {
+    setActiveScope(scope);
+  }, [scope]);
+
+  const handleScopeSwitch = (newScope: WorkspaceScope) => {
+    setActiveScope(newScope);
+    if (onScopeChange) {
+      onScopeChange(newScope);
+    }
+  };
+
+  const roleStr = String(user?.role || "").toUpperCase();
+  const isExecutive =
+    roleStr === "ADMIN" ||
+    roleStr === "BGH" ||
+    roleStr === "BAN_GIAM_HIEU" ||
+    roleStr === "HIEU_TRUONG" ||
+    roleStr === "PHO_HIEU_TRUONG";
 
   const [dashboardData, setDashboardData] = React.useState<DashboardPayload | null>(
     initialTasks
@@ -242,14 +302,14 @@ export function TaskManagementWorkspace({
     "ALL"
   );
   const [levelFilter, setLevelFilter] = React.useState<TaskLevelFilter>(
-    scope === "unit" ? "DON_VI" : "ALL"
+    activeScope === "unit" ? "DON_VI" : "ALL"
   );
   const [searchQuery, setSearchQuery] = React.useState("");
 
   // Create Task Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [createInitialLevel, setCreateInitialLevel] = React.useState<TaskLevel>(
-    scope === "unit" ? "DON_VI" : "TRUONG"
+    activeScope === "unit" ? "DON_VI" : "TRUONG"
   );
   const [createInitialParentId, setCreateInitialParentId] = React.useState<
     string | undefined
@@ -264,8 +324,10 @@ export function TaskManagementWorkspace({
       const response = await fetch("/api/dashboard/overview");
       if (!response.ok) {
         throw new Error(
-          scope === "unit"
+          activeScope === "unit"
             ? "Không thể kết nối đến máy chủ danh sách công việc đơn vị"
+            : activeScope === "my"
+            ? "Không thể kết nối đến máy chủ danh sách công việc của tôi"
             : "Không thể kết nối đến máy chủ danh sách công việc"
         );
       }
@@ -284,7 +346,7 @@ export function TaskManagementWorkspace({
     } finally {
       setIsLoading(false);
     }
-  }, [scope]);
+  }, [activeScope]);
 
   React.useEffect(() => {
     if (!initialTasks) {
@@ -487,8 +549,8 @@ export function TaskManagementWorkspace({
   const visibleTasks = React.useMemo(() => {
     if (!dashboardData) return [];
     const roleFiltered = filterTasksByRole(dashboardData.tasks, user);
-    return filterTasksByScope(roleFiltered, scope, user);
-  }, [dashboardData, user, scope]);
+    return filterTasksByScope(roleFiltered, activeScope, user);
+  }, [dashboardData, user, activeScope]);
 
   const parentSchoolTaskTitle = React.useMemo(() => {
     if (!selectedTask || isSchoolTask(selectedTask) || !dashboardData) return undefined;
@@ -515,8 +577,10 @@ export function TaskManagementWorkspace({
           </div>
           <div>
             <h2 className="text-base font-semibold text-foreground font-heading">
-              {scope === "unit"
+              {activeScope === "unit"
                 ? "Không thể tải danh sách công việc đơn vị"
+                : activeScope === "my"
+                ? "Không thể tải danh sách công việc của tôi"
                 : "Không thể tải danh sách công việc"}
             </h2>
             <p className="text-xs text-muted-foreground mt-1">{error}</p>
@@ -616,7 +680,7 @@ export function TaskManagementWorkspace({
         className
       )}
       data-slot="task-management-workspace"
-      data-scope={scope}
+      data-scope={activeScope}
     >
       {/* Dynamic Feedback Banners */}
       {mutationError && (
@@ -659,6 +723,63 @@ export function TaskManagementWorkspace({
         </div>
       )}
 
+      {/* Scope Navigation Switcher */}
+      <div className="flex items-center gap-2 border-b border-border/60 pb-3">
+        <div
+          role="tablist"
+          aria-label="Phạm vi nhiệm vụ"
+          className="inline-flex items-center gap-1 p-1 rounded-lg bg-muted/60 border border-border/60 text-xs font-medium"
+        >
+          {(isExecutive || activeScope === "school") && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeScope === "school"}
+              onClick={() => handleScopeSwitch("school")}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer",
+                activeScope === "school"
+                  ? "bg-background text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <School className="size-3.5" strokeWidth={1.5} />
+              <span>Nhiệm vụ cấp Trường</span>
+            </button>
+          )}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeScope === "unit"}
+            onClick={() => handleScopeSwitch("unit")}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer",
+              activeScope === "unit"
+                ? "bg-background text-foreground shadow-2xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Building2 className="size-3.5" strokeWidth={1.5} />
+            <span>Nhiệm vụ Đơn vị</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeScope === "my"}
+            onClick={() => handleScopeSwitch("my")}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer",
+              activeScope === "my"
+                ? "bg-background text-foreground shadow-2xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <User className="size-3.5" strokeWidth={1.5} />
+            <span>Nhiệm vụ của tôi</span>
+          </button>
+        </div>
+      </div>
+
       {/* Header with Title and Primary Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -670,7 +791,7 @@ export function TaskManagementWorkspace({
             <span className="text-xs text-muted-foreground font-medium">
               Học kỳ I
             </span>
-            {scope === "unit" && (
+            {activeScope === "unit" && (
               isUserUnassignedDepartment(user) ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
                   <AlertCircle className="size-3 text-amber-700" strokeWidth={1.5} />
@@ -685,13 +806,17 @@ export function TaskManagementWorkspace({
             )}
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
-            {scope === "unit"
-              ? "Quản lý Nhiệm vụ Đơn vị (Khoa / Phòng / Ban)"
-              : "Quản lý Nhiệm vụ Toàn trường"}
+            {activeScope === "unit"
+              ? "Nhiệm vụ Đơn vị"
+              : activeScope === "my"
+              ? "Nhiệm vụ của tôi"
+              : "Nhiệm vụ cấp Trường"}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {scope === "unit"
+            {activeScope === "unit"
               ? "Theo dõi tiến độ, chi tiết nhiệm vụ và điều phối nhân sự theo từng đơn vị trực thuộc"
+              : activeScope === "my"
+              ? "Theo dõi và xử lý các nhiệm vụ, công việc được phân công trực tiếp"
               : "Theo dõi tiến độ, phân cấp nhiệm vụ và phối hợp điều hành công việc toàn trường"}
           </p>
         </div>
@@ -718,7 +843,7 @@ export function TaskManagementWorkspace({
             type="button"
             onClick={() =>
               openCreateModal(
-                scope === "unit" || user?.role !== "ADMIN" ? "DON_VI" : "TRUONG"
+                activeScope === "unit" || user?.role !== "ADMIN" ? "DON_VI" : "TRUONG"
               )
             }
             className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer shadow-2xs active:scale-95"
@@ -866,7 +991,7 @@ export function TaskManagementWorkspace({
 
       {/* Main Content: Modular Cascading Table OR Kanban Board OR UnassignedDepartmentState */}
       <section aria-label="Danh sách công việc" className="min-h-[420px]">
-        {scope === "unit" && isUserUnassignedDepartment(user) ? (
+        {activeScope === "unit" && isUserUnassignedDepartment(user) ? (
           <UnassignedDepartmentState onOpenProfile={() => setIsProfileModalOpen(true)} />
         ) : viewMode === "table" ? (
           <ModularCascadingTaskTable
@@ -874,14 +999,14 @@ export function TaskManagementWorkspace({
             onSelectTask={(task) => setSelectedTask(task)}
             onAddTask={() =>
               openCreateModal(
-                scope === "unit" || user?.role !== "ADMIN" ? "DON_VI" : "TRUONG"
+                activeScope === "unit" || user?.role !== "ADMIN" ? "DON_VI" : "TRUONG"
               )
             }
             onStatusChange={handleStatusChange}
             onUrge={handleSendUrgeNotification}
             onRefresh={handleRefresh}
             initialCategory={activeCategory}
-            initialDepartment={scope === "unit" ? user?.department : undefined}
+            initialDepartment={activeScope === "unit" ? user?.department : undefined}
           />
         ) : (
           <TaskKanbanBoard
@@ -891,7 +1016,7 @@ export function TaskManagementWorkspace({
             onAddTask={(level, parentId) =>
               openCreateModal(
                 level ||
-                  (scope === "unit" || user?.role !== "ADMIN" ? "DON_VI" : "TRUONG"),
+                  (activeScope === "unit" || user?.role !== "ADMIN" ? "DON_VI" : "TRUONG"),
                 parentId
               )
             }

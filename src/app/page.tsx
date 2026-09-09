@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   DashboardStateProvider,
   useDashboardNav,
@@ -37,6 +38,20 @@ function DashboardLoadingFallback() {
 function UnifiedTaskHubContent() {
   const { activeZone, scope, handleScopeChange } = useDashboardNav();
   const { isExecutive, isManager } = useAuthRole();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const zoneParam = searchParams.get("zone");
+
+  // Canonical redirect: If zone=tasks is detected, navigate to /tasks preserving remaining params
+  React.useEffect(() => {
+    if (zoneParam === "tasks") {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("zone");
+      const qs = params.toString();
+      router.replace(qs ? `/tasks?${qs}` : "/tasks");
+    }
+  }, [zoneParam, searchParams, router]);
 
   // Security access control guard: double-check scope access
   React.useEffect(() => {
@@ -44,6 +59,14 @@ function UnifiedTaskHubContent() {
       handleScopeChange(isManager ? "UNIT_TASKS" : "MY_TASKS");
     }
   }, [scope, isExecutive, isManager, handleScopeChange]);
+
+  if (zoneParam === "tasks") {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] text-sm text-muted-foreground animate-pulse">
+        Đang chuyển tiếp sang Không gian Nhiệm vụ...
+      </div>
+    );
+  }
 
   return (
     <div

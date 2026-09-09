@@ -21,7 +21,7 @@ export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
     id: "desk",
     href: "/",
     label: "Bàn làm việc",
-    shortLabel: "Tổng quan",
+    shortLabel: "Bàn làm việc",
     section: "personal",
     iconName: "LayoutDashboard",
     zone: "dashboard",
@@ -129,6 +129,85 @@ export function getRouteByPath(pathname: string): CanonicalRouteConfig | undefin
   return CANONICAL_ROUTES.find(
     (r) => r.href === cleanPath || r.aliases?.some((alias) => alias === cleanPath || cleanPath.startsWith(`${alias}/`))
   );
+}
+
+export const CANONICAL_NAV_ITEMS = {
+  WORKBENCH: {
+    id: "desk",
+    href: "/",
+    label: "Bàn làm việc",
+    iconName: "LayoutDashboard" as const,
+  },
+  TASKS: {
+    id: "tasks",
+    href: "/tasks",
+    label: "Nhiệm vụ",
+    iconName: "CheckSquare" as const,
+  },
+  CALENDAR: {
+    id: "calendar",
+    href: "/calendar",
+    label: "Lịch công tác",
+    iconName: "Calendar" as const,
+  },
+  DOCUMENTS: {
+    id: "documents",
+    href: "/documents",
+    label: "Sổ văn bản",
+    iconName: "FileText" as const,
+  },
+  ORG: {
+    id: "org",
+    href: "/org",
+    label: "Cơ cấu & Danh bạ",
+    iconName: "Building2" as const,
+  },
+} as const;
+
+export interface ResolveTasksUrlOptions {
+  scope?: "school" | "unit" | "my";
+  category?: string;
+  view?: string;
+  departmentCode?: string;
+}
+
+export function resolveTasksUrl(options: ResolveTasksUrlOptions = {}): string {
+  const params = new URLSearchParams();
+  if (options.scope) {
+    params.set("scope", options.scope);
+  }
+  if (options.category) {
+    params.set("category", options.category);
+  }
+  if (options.view) {
+    params.set("view", options.view);
+  }
+  if (options.departmentCode) {
+    params.set("departmentCode", options.departmentCode);
+  }
+
+  const query = params.toString();
+  return query ? `/tasks?${query}` : "/tasks";
+}
+
+export function resolveCanonicalHref(pathname: string, searchParams?: URLSearchParams | string): string {
+  const cleanPath = pathname.split("?")[0].split("#")[0].trim();
+  const params = typeof searchParams === "string" ? new URLSearchParams(searchParams) : searchParams;
+
+  if (cleanPath === "/dashboard") {
+    return "/";
+  }
+
+  if (cleanPath === "/unit-tasks") {
+    return "/tasks?scope=unit";
+  }
+
+  if (cleanPath === "/" && params?.get("zone") === "tasks") {
+    return "/tasks";
+  }
+
+  const route = getRouteByPath(cleanPath);
+  return route ? route.href : cleanPath;
 }
 
 export { isRouteActive } from "./active-matcher";
