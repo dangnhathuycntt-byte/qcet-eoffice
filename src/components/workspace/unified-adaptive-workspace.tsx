@@ -38,7 +38,7 @@ import {
 } from "./utils/task-workspace-mutations";
 import { cn } from "@/lib/utils";
 
-export { type WorkspaceScope, type ViewMode };
+export { type WorkspaceScope, type ViewMode, matchesUser };
 
 /**
  * Helper to check waiting approval status across parent and subtasks
@@ -200,6 +200,15 @@ export function filterDisplayedTasks({
       result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t, refDate));
     } else if (status === "today") {
       result = result.filter((t) => Boolean(t.dueDate && t.dueDate.startsWith(refDate)));
+    } else if (status === "pending_submission" || status === "waiting_submission") {
+      result = result.filter((t) => {
+        if (t.status === "COMPLETED") return false;
+        const isTaskActive =
+          isActiveTaskStatus(t.status) ||
+          Boolean(t.subTasks?.some((st) => isActiveTaskStatus(st.status)));
+        if (!isTaskActive) return false;
+        return isTaskAssignedToUserOrUnit(t, user);
+      });
     } else {
       result = result.filter((t) => t.status === status);
     }
@@ -592,6 +601,10 @@ export function UnifiedAdaptiveWorkspace({
         setInternalStatus(urlParams.status);
         onStatusFilterChange?.(urlParams.status);
       }
+      if (urlParams.workbox) {
+        setInternalWorkbox(urlParams.workbox);
+        onWorkboxChange?.(urlParams.workbox);
+      }
       if (urlParams.month !== undefined) {
         setCurrentMonth(urlParams.month);
       }
@@ -790,14 +803,89 @@ export function UnifiedAdaptiveWorkspace({
       }
     }
 
+    const pendingSubmissionsCount = actionQueue.myPendingSubmissions.length;
+    const effectiveWaitingApprovalCount =
+      actionQueue.pendingApprovals.length > 0
+        ? actionQueue.pendingApprovals.length
+        : waitingApprovalCount;
+
     return {
       all: scopedTasks.length,
       my: myCount,
-      waiting_approval: waitingApprovalCount,
+      waiting_approval: effectiveWaitingApprovalCount,
+      pending_submission: pendingSubmissionsCount,
       overdue: overdueCount,
       today: todayCount,
     };
-  }, [scopedTasks, user]);
+  }, [
+    scopedTasks,
+    user,
+    actionQueue.pendingApprovals.length,
+    actionQueue.myPendingSubmissions.length,
+  ]);
+
+  const effectiveActiveTab = React.useMemo(() => {
+    if (
+      currentWorkbox === "my_pending_approval" ||
+      currentWorkbox === "waiting_approval" ||
+      currentWorkbox === "review"
+    ) {
+      return "waiting_approval";
+    }
+    if (
+      currentWorkbox === "my_pending_submission" ||
+      currentWorkbox === "pending_submission"
+    ) {
+      return "pending_submission";
+    }
+    if (currentWorkbox === "my_tasks" || currentWorkbox === "my") {
+      return "my";
+    }
+    if (
+      currentWorkbox === "overdue" ||
+      currentWorkbox === "urgent_overdue" ||
+      currentOverdue
+    ) {
+      return "overdue";
+    }
+    return currentStatus || "all";
+  }, [currentWorkbox, currentOverdue, currentStatus]);
+
+  const handleFilterCanvasFromWorkbox = React.useCallback(
+    (filterType: "approvals" | "submissions" | "overdue" | "all") => {
+      setIsActionQueueOpen(false);
+      if (filterType === "approvals") {
+        setInternalStatus("waiting_approval");
+        setInternalWorkbox("my_pending_approval");
+        setInternalOverdue(false);
+        onStatusFilterChange?.("waiting_approval");
+        onWorkboxChange?.("my_pending_approval");
+        onOverdueFilterChange?.(false);
+      } else if (filterType === "submissions") {
+        setInternalStatus("pending_submission");
+        setInternalWorkbox("my_pending_submission");
+        setInternalOverdue(false);
+        onStatusFilterChange?.("pending_submission");
+        onWorkboxChange?.("my_pending_submission");
+        onOverdueFilterChange?.(false);
+      } else if (filterType === "overdue") {
+        setInternalStatus("overdue");
+        setInternalWorkbox("overdue");
+        setInternalOverdue(true);
+        onStatusFilterChange?.("overdue");
+        onWorkboxChange?.("overdue");
+        onOverdueFilterChange?.(true);
+      } else {
+        setInternalStatus(undefined);
+        setInternalWorkbox("ALL");
+        setInternalOverdue(false);
+        onStatusFilterChange?.(undefined);
+        onWorkboxChange?.("ALL");
+        onOverdueFilterChange?.(false);
+      }
+    },
+    [onStatusFilterChange, onWorkboxChange, onOverdueFilterChange]
+  );
 
   // Filter tasks based on search, smart status, workbox, category, priority, month, and overdue criteria
   const displayedTasks = React.useMemo(() => {
@@ -1093,10 +1181,47 @@ export function UnifiedAdaptiveWorkspace({
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
           canCreateTask={true}
-          activeTab={currentStatus || "all"}
+          activeTab={effectiveActiveTab}
           onTabChange={(tab) => {
-            setInternalStatus(tab);
-            onStatusFilterChange?.(tab === "all" ? undefined : tab);
+            if (tab === "all") {
+              setInternalStatus(undefined);
+              setInternalWorkbox("ALL");
+              setInternalOverdue(false);
+              onStatusFilterChange?.(undefined);
+              onWorkboxChange?.("ALL");
+              onOverdueFilterChange?.(false);
+            } else if (tab === "waiting_approval" || tab === "review") {
+              setInternalStatus(tab);
+              setInternalWorkbox("my_pending_approval");
+              setInternalOverdue(false);
+              onStatusFilterChange?.(tab);
+              onWorkboxChange?.("my_pending_approval");
+              onOverdueFilterChange?.(false);
+            } else if (tab === "pending_submission") {
+              setInternalStatus(tab);
+              setInternalWorkbox("my_pending_submission");
+              setInternalOverdue(false);
+              onStatusFilterChange?.(tab);
+              onWorkboxChange?.("my_pending_submission");
+              onOverdueFilterChange?.(false);
+            } else if (tab === "my") {
+              setInternalStatus(tab);
+              setInternalWorkbox("my_tasks");
+              setInternalOverdue(false);
+              onStatusFilterChange?.(tab);
+              onWorkboxChange?.("my_tasks");
+              onOverdueFilterChange?.(false);
+            } else if (tab === "overdue") {
+              setInternalStatus(tab);
+              setInternalWorkbox("overdue");
+              setInternalOverdue(true);
+              onStatusFilterChange?.(tab);
+              onWorkboxChange?.("overdue");
+              onOverdueFilterChange?.(true);
+            } else {
+              setInternalStatus(tab);
+              onStatusFilterChange?.(tab);
+            }
           }}
           tabCounts={tabCounts}
           selectedDepartment={currentDept || "ALL"}
@@ -1270,6 +1395,7 @@ export function UnifiedAdaptiveWorkspace({
                   ? (taskId, target) => onSendReminder(target, `Đôn đốc tiến độ thực hiện nhiệm vụ ${taskId}`)
                   : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
               }
+              onFilterCanvas={handleFilterCanvasFromWorkbox}
             />
           </div>
         </div>
@@ -1309,9 +1435,10 @@ export function UnifiedAdaptiveWorkspace({
                 onClick={() => setIsActionQueueOpen(true)}
                 className="inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-2 px-3 py-1.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold cursor-pointer transition-colors shrink-0 self-start sm:self-auto"
                 aria-label="Mở hàng đợi xử lý công việc"
+                title="Mở Hộp việc khẩn cấp (Smart Workbox)"
               >
                 <Layers className="size-3.5" strokeWidth={1.5} />
-                <span>Hàng đợi xử lý</span>
+                <span>Hộp việc xử lý</span>
                 <span className="font-mono text-xs px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground tabular-nums leading-none">
                   {actionQueue.pendingApprovals.length + actionQueue.myPendingSubmissions.length}
                 </span>
@@ -1422,7 +1549,7 @@ export function UnifiedAdaptiveWorkspace({
               <div className="flex items-center gap-2">
                 <Layers className="size-4 text-primary" strokeWidth={1.5} />
                 <h3 className="text-sm font-bold text-foreground">
-                  Hàng đợi xử lý công việc
+                  Hộp việc khẩn cấp (Smart Workbox)
                 </h3>
               </div>
               <button

@@ -12,7 +12,7 @@ import { DepartmentProgressMatrix } from "@/components/dashboard/department-prog
 import { UpcomingDeadlinesWidget } from "@/components/dashboard/upcoming-deadlines-widget";
 import { ActivityFeedWidget } from "@/components/dashboard/activity-feed-widget";
 import { PriorOverdueBacklogBanner } from "@/components/dashboard/prior-overdue-backlog-banner";
-import { CascadingTaskTable } from "@/components/dashboard/cascading-task-table";
+import { PersonalWorkbench } from "@/components/dashboard/personal-workbench";
 import { WorkbenchMobileFeed } from "@/components/dashboard/workbench-mobile-feed";
 import { QCET_DEPARTMENTS } from "@/components/org/organization-tree";
 import {
@@ -21,7 +21,6 @@ import {
   useDashboardModal,
   useDashboardNav,
 } from "@/components/dashboard/dashboard-context";
-import type { SchoolTask } from "@/types/dashboard";
 
 function DashboardZoneComponent() {
   const {
@@ -96,39 +95,27 @@ function DashboardZoneComponent() {
               const matched = baseTasks.find((t) => t.id === item.id || t.id === item.taskId);
               if (matched) openTaskDetail(matched);
             }} />
-            <DepartmentProgressMatrix departments={departmentHealth} selectedDepartment={selectedDepartment} onSelectDepartment={handleDepartmentChange} defaultViewMode="ranking" />
           </section>
         )}
 
-        {/* Bảng nhiệm vụ liên thông phản hồi theo bộ lọc */}
-        <section aria-label="Bảng nhiệm vụ liên thông" className="space-y-3">
-          <div className="flex items-center justify-between gap-3 px-1">
-            <h2 className="font-heading font-semibold text-base text-foreground">
-              {isExecutive ? "Nhiệm vụ điều hành trọng tâm" : isManager ? "Nhiệm vụ quản lý đơn vị" : "Nhiệm vụ cá nhân hôm nay"}
-            </h2>
-            <a href={isExecutive ? "/tasks?scope=school" : isManager ? "/tasks?scope=unit" : "/tasks?scope=my"} className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1">
-              <span>Mở Không gian Nhiệm vụ &rarr;</span>
-            </a>
-          </div>
-          <CascadingTaskTable
-            tasks={reactiveTasks}
-            scope={scope}
-            defaultExpanded={scope === "MY_TASKS"}
-            onSelectTask={openTaskDetail}
-            onAddTask={() => openCreateModal("TRUONG")}
-            onStatusChange={handleStatusChange}
-            hideWorkbox
-            hideToolbar
-            priorOverdueBacklog={[]}
-            selectedAcademicMonth={selectedAcademicMonth}
-          />
-        </section>
-
-        {/* Widgets Grid: Upcoming Deadlines & Live Activity Feed */}
-        <section aria-label="Tiện ích theo dõi tiến độ và hoạt động" className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <UpcomingDeadlinesWidget items={roleUpcoming} onSelectTask={handleSelectUpcoming} />
-          <ActivityFeedWidget activities={activities} />
-        </section>
+        {/* Role-Aware Personal Workbench (What Needs My Attention Hub) */}
+        <PersonalWorkbench
+          tasks={reactiveTasks}
+          filteredTasks={reactiveTasks}
+          user={user}
+          role={isExecutive ? "EXECUTIVE" : isManager ? "MANAGER" : "STAFF"}
+          isExecutive={isExecutive}
+          isManager={isManager}
+          isStaff={isStaff}
+          executiveStats={executiveStats}
+          departmentHealth={departmentHealth}
+          upcomingItems={roleUpcoming}
+          activities={activities}
+          onSelectTask={openTaskDetail}
+          onRefresh={handleManualRefresh}
+          isRefreshing={isRefreshing}
+          hideHeader
+        />
       </div>
     </div>
   );
