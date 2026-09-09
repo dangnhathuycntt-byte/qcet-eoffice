@@ -13,6 +13,7 @@ function UnitTasksRedirect() {
     params.set("scope", "unit");
     router.replace(`/tasks?${params.toString()}`);
   }, [router, searchParams]);
+
   return <TaskManagementWorkspace scope="unit" />;
 }
 

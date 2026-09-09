@@ -33,6 +33,7 @@ import {
 } from "@/components/dashboard/task-detail-side-sheet";
 import { cn } from "@/lib/utils";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
+import { matchesUser } from "@/lib/role-task-filter";
 import { filterTasksByRole } from "@/lib/role-task-filter";
 import { getDepartmentForMember } from "@/lib/departments";
 import { UnassignedDepartmentState } from "@/components/workspace/components/unassigned-department-state";
@@ -77,28 +78,28 @@ export function filterTasksByScope(
 
   if (scope === "my") {
     if (!user) return [];
-    const userName = (user.name || "").toLowerCase().trim();
-    if (!userName) return [];
 
     return tasks
       .map((task) => {
-        const leadMatches = (task.leadAssigneeName || "").toLowerCase().includes(userName);
-        const coMatches = (task.coAssignees || []).some((name) =>
-          name.toLowerCase().includes(userName)
+        const isLead = matchesUser(task.leadAssigneeName, user);
+        const isCoAssignee = Boolean(
+          task.coAssignees && task.coAssignees.some((name) => matchesUser(name, user))
         );
-        const matchesMain = leadMatches || coMatches;
+        const matchingSubtasks = (task.subTasks || []).filter((sub) =>
+          matchesUser(sub.assigneeName, user)
+        );
 
-        const matchingSubtasks = (task.subTasks || []).filter((sub) => {
-          return (sub.assigneeName || "").toLowerCase().includes(userName);
-        });
-
-        if (matchesMain) {
-          return {
-            ...task,
-            subTasks: matchingSubtasks.length > 0 ? matchingSubtasks : task.subTasks,
-          };
+        // If user is DRI (lead), retain full task with all subtasks for coordination
+        if (isLead) {
+          return { ...task };
         }
 
+        // If user is co-assignee without personal subtasks, show task with subtasks
+        if (isCoAssignee && matchingSubtasks.length === 0) {
+          return { ...task };
+        }
+
+        // If user has specific assigned subtasks, filter to their subtasks
         if (matchingSubtasks.length > 0) {
           return {
             ...task,
