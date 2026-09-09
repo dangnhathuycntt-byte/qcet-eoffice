@@ -3,9 +3,26 @@
  * QCET E-Office Light-Only Standard
  */
 
+import {
+  CANONICAL_ROUTES,
+  getRouteByPath,
+} from "./canonical-navigation-registry";
+
+/**
+ * Normalizes a URL path by stripping query strings, hash fragments,
+ * whitespace, and trailing slashes (while preserving root '/').
+ */
+export function normalizePath(path: string): string {
+  if (!path) return "/";
+  const clean = path.split("?")[0].split("#")[0].trim();
+  const stripped = clean.replace(/\/+$/, "");
+  return stripped || "/";
+}
+
 /**
  * Determines whether a given navigation route is active based on
  * current pathname, search parameters, and route aliases.
+ * Boundary-safe matching prevents prefix collisions (e.g. /tasks vs /tasks-archive).
  */
 export function isRouteActive(
   targetHref: string,
@@ -13,12 +30,15 @@ export function isRouteActive(
   searchParams?: URLSearchParams | null,
   aliases?: string[]
 ): boolean {
-  const pathname = currentPathname || "/";
+  if (!targetHref || !currentPathname) return false;
+
+  const pathname = normalizePath(currentPathname);
 
   // Handle targetHref containing query parameters (e.g. /documents?tab=inbox)
   if (targetHref.includes("?")) {
     const [targetPath, targetQuery] = targetHref.split("?");
-    if (pathname !== targetPath) return false;
+    const normalizedTargetPath = normalizePath(targetPath);
+    if (pathname !== normalizedTargetPath) return false;
     if (!searchParams) return false;
     const targetParams = new URLSearchParams(targetQuery);
     for (const [key, val] of targetParams.entries()) {
@@ -29,59 +49,55 @@ export function isRouteActive(
     return true;
   }
 
-  // Handle aliases matching (e.g. /unit-tasks matching /tasks, or /unit-tasks/[id])
-  if (aliases && aliases.length > 0) {
-    for (const alias of aliases) {
-      if (pathname === alias || pathname.startsWith(alias + "/")) {
+  const targetBase = normalizePath(targetHref);
+  const zone = searchParams?.get("zone")?.toLowerCase();
+  const view = searchParams?.get("view")?.toLowerCase();
+
+  // 1. Phân định Bàn làm việc ("/" or "/dashboard")
+  if (targetBase === "/" || targetBase === "/dashboard") {
+    if (pathname === "/dashboard") return true;
+    if (pathname === "/") {
+      if (zone && ["tasks", "calendar", "documents", "org"].includes(zone)) {
+        return false;
+      }
+      if (view && ["calendar", "month"].includes(view)) {
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // 2. Khi đang ở "/" kèm query zone hoặc view tương ứng
+  if (pathname === "/") {
+    if (targetBase === "/tasks" && zone === "tasks") return true;
+    if (targetBase === "/calendar" && (zone === "calendar" || view === "calendar" || view === "month")) return true;
+    if (targetBase === "/documents" && zone === "documents") return true;
+    if (targetBase === "/org" && zone === "org") return true;
+  }
+
+  // 3. Khớp chính xác Pathname
+  if (pathname === targetBase) return true;
+
+  // 4. Khớp Aliases (kết hợp aliases tham số với CANONICAL_ROUTES)
+  const canonicalRoute = CANONICAL_ROUTES.find((r) => normalizePath(r.href) === targetBase);
+  const combinedAliases = [
+    ...(aliases || []),
+    ...(canonicalRoute?.aliases || []),
+  ];
+
+  if (combinedAliases.length > 0) {
+    for (const alias of combinedAliases) {
+      if (alias.includes("?")) continue;
+      const cleanAlias = normalizePath(alias);
+      if (pathname === cleanAlias || pathname.startsWith(`${cleanAlias}/`)) {
         return true;
       }
     }
   }
 
-  // Extract query parameters for zone/view overrides
-  const zone = searchParams?.get("zone");
-  const view = searchParams?.get("view");
-
-  // Root route "/" special handling
-  if (targetHref === "/") {
-    if (pathname !== "/") return false;
-    // Overridden by zone or view query parameters
-    if (
-      zone === "calendar" ||
-      view === "calendar" ||
-      view === "month" ||
-      zone === "tasks" ||
-      zone === "documents" ||
-      zone === "org"
-    ) {
-      return false;
-    }
-    return true;
-  }
-
-  // Parameter-based override matching for non-root target routes
-  if (pathname === "/") {
-    if (targetHref === "/calendar" && (zone === "calendar" || view === "calendar" || view === "month")) {
-      return true;
-    }
-    if (targetHref === "/tasks" && zone === "tasks") {
-      return true;
-    }
-    if (targetHref === "/documents" && zone === "documents") {
-      return true;
-    }
-    if (targetHref === "/org" && zone === "org") {
-      return true;
-    }
-  }
-
-  // Strict pathname match
-  if (pathname === targetHref) {
-    return true;
-  }
-
-  // Dynamic subroutes match (e.g. /tasks/[id] or /documents/[id])
-  if (pathname.startsWith(targetHref + "/")) {
+  // 5. Khớp Subroutes phân cấp an toàn (boundary safety)
+  if (targetBase !== "/" && pathname.startsWith(`${targetBase}/`)) {
     return true;
   }
 
@@ -141,20 +157,27 @@ export function resolveBreadcrumb(
   if (zone === "documents") return ["QCET E-Office", "Văn bản & Công văn"];
   if (zone === "org") return ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"];
 
-  if (path === "/") {
+  const cleanPath = normalizePath(path);
+
+  if (cleanPath === "/") {
     return ["QCET E-Office", "Bàn làm việc"];
   }
 
-  if (path.startsWith("/maintenance")) return ["QCET E-Office", "Bảo trì & Nâng cấp"];
-  if (path.startsWith("/settings")) return ["QCET E-Office", "Cài đặt hệ thống"];
-  if (path.startsWith("/documents")) return ["QCET E-Office", "Văn bản & Công văn"];
-  if (path.startsWith("/unit-tasks")) return ["QCET E-Office", "Công việc Đơn vị"];
-  if (path.startsWith("/tasks")) return ["QCET E-Office", "Nhiệm vụ cấp Trường"];
-  if (path.startsWith("/calendar")) return ["QCET E-Office", "Lịch công tác"];
-  if (path.startsWith("/dashboard")) return ["QCET E-Office", "Báo cáo & Thống kê KPI"];
-  if (path.startsWith("/org")) return ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"];
-  if (path.startsWith("/notifications")) return ["QCET E-Office", "Thông báo điều hành"];
-  if (path.startsWith("/login")) return ["QCET E-Office", "Đăng nhập"];
+  if (cleanPath.startsWith("/maintenance")) return ["QCET E-Office", "Bảo trì & Nâng cấp"];
+  if (cleanPath.startsWith("/settings")) return ["QCET E-Office", "Cài đặt hệ thống"];
+  if (cleanPath.startsWith("/documents")) return ["QCET E-Office", "Văn bản & Công văn"];
+  if (cleanPath.startsWith("/unit-tasks")) return ["QCET E-Office", "Công việc Đơn vị"];
+  if (cleanPath.startsWith("/tasks")) return ["QCET E-Office", "Nhiệm vụ cấp Trường"];
+  if (cleanPath.startsWith("/calendar")) return ["QCET E-Office", "Lịch công tác"];
+  if (cleanPath.startsWith("/dashboard")) return ["QCET E-Office", "Báo cáo & Thống kê KPI"];
+  if (cleanPath.startsWith("/org")) return ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"];
+  if (cleanPath.startsWith("/notifications")) return ["QCET E-Office", "Thông báo điều hành"];
+  if (cleanPath.startsWith("/login")) return ["QCET E-Office", "Đăng nhập"];
+
+  const matchedRoute = getRouteByPath(cleanPath);
+  if (matchedRoute) {
+    return ["QCET E-Office", matchedRoute.label];
+  }
 
   return ["QCET E-Office", "Tổng quan"];
 }

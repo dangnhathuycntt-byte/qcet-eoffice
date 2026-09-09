@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { isRouteActive, resolveBreadcrumb } from "../src/lib/navigation/active-matcher";
+import { isRouteActive, normalizePath, resolveBreadcrumb } from "../src/lib/navigation/active-matcher";
 import { NAV_ITEMS } from "../src/lib/navigation/nav-config";
 
 describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
@@ -36,6 +36,64 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
     const taskParams = new URLSearchParams("zone=tasks");
     assert.strictEqual(isRouteActive("/", "/", taskParams), false);
     assert.strictEqual(isRouteActive("/tasks", "/", taskParams), true);
+  });
+
+  test("isRouteActive: accurately activates root '/' when no query parameter is present", () => {
+    assert.equal(isRouteActive("/", "/", null), true);
+    assert.equal(isRouteActive("/tasks", "/", null), false);
+    assert.equal(isRouteActive("/calendar", "/", null), false);
+  });
+
+  test("isRouteActive: root '/' exact match vs subpaths", () => {
+    assert.equal(isRouteActive("/", "/"), true);
+    assert.equal(isRouteActive("/", "/tasks"), false);
+    assert.equal(isRouteActive("/", "/calendar"), false);
+    assert.equal(isRouteActive("/", "/settings"), false);
+    assert.equal(isRouteActive("/", "/tasks/123"), false);
+  });
+
+  test("isRouteActive: boundary check prevents subroute collision", () => {
+    assert.equal(isRouteActive("/tasks", "/tasks/task-001"), true);
+    assert.equal(isRouteActive("/tasks", "/tasks-archive"), false);
+    assert.equal(isRouteActive("/documents", "/documents-audit"), false);
+    assert.equal(isRouteActive("/org", "/organization"), false);
+  });
+
+  test("isRouteActive: respects query parameter ?zone=tasks on root '/'", () => {
+    const params = new URLSearchParams("zone=tasks");
+    assert.equal(isRouteActive("/", "/", params), false);
+    assert.equal(isRouteActive("/tasks", "/", params), true);
+  });
+
+  test("isRouteActive: query-aware zone matching on root '/' across all canonical zones", () => {
+    assert.equal(isRouteActive("/calendar", "/", new URLSearchParams("zone=calendar")), true);
+    assert.equal(isRouteActive("/calendar", "/", new URLSearchParams("view=calendar")), true);
+    assert.equal(isRouteActive("/calendar", "/", new URLSearchParams("view=month")), true);
+    assert.equal(isRouteActive("/documents", "/", new URLSearchParams("zone=documents")), true);
+    assert.equal(isRouteActive("/org", "/", new URLSearchParams("zone=org")), true);
+    assert.equal(isRouteActive("/", "/", new URLSearchParams("zone=documents")), false);
+    assert.equal(isRouteActive("/", "/", new URLSearchParams("zone=org")), false);
+  });
+
+  test("isRouteActive & normalizePath: clean parameter normalization and trailing slashes", () => {
+    assert.equal(normalizePath("/tasks/"), "/tasks");
+    assert.equal(normalizePath("/tasks///"), "/tasks");
+    assert.equal(normalizePath("/tasks?tab=1"), "/tasks");
+    assert.equal(normalizePath("/tasks#header"), "/tasks");
+    assert.equal(normalizePath(""), "/");
+    assert.equal(normalizePath("/"), "/");
+
+    // Route matching with trailing slashes
+    assert.equal(isRouteActive("/tasks/", "/tasks"), true);
+    assert.equal(isRouteActive("/tasks", "/tasks/"), true);
+    assert.equal(isRouteActive("/tasks/", "/tasks/task-001/"), true);
+    assert.equal(isRouteActive("/", "/"), true);
+  });
+
+  test("isRouteActive: automatic resolution of aliases from CANONICAL_ROUTES", () => {
+    // /unit-tasks is an alias of /tasks in CANONICAL_ROUTES
+    assert.equal(isRouteActive("/tasks", "/unit-tasks"), true);
+    assert.equal(isRouteActive("/tasks", "/unit-tasks/abc-123"), true);
   });
 
   test("isRouteActive: handles query parameters in target href", () => {
