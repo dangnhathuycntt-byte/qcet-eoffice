@@ -23,6 +23,8 @@ export type JourneyStage =
 
 export type OnboardingStage = JourneyStage;
 
+export type InterruptionType = "WELCOME" | "PWA_INSTALL" | "PUSH" | "TOUR";
+
 export interface InstallGuidance {
   platform: "ios" | "android" | "desktop";
   steps: string[];
@@ -41,7 +43,13 @@ export interface CoordinatorPersistedState {
   engagement: EngagementSignals;
   installPromptDismissedAt: number | null;
   pushPromptDismissedAt: number | null;
+  installSnoozeUntil?: number | null;
+  pushSnoozeUntil?: number | null;
   installedAt: number | null;
+  sessionCount: number;
+  sessionInterruptionShown: boolean;
+  activeInterruptionType: InterruptionType | null;
+  lastSessionId?: string | null;
   updatedAt: number;
 }
 
@@ -54,12 +62,16 @@ export interface CoordinatorState {
   isStandalone: boolean;
   isIOS: boolean;
   isIOSSafari: boolean;
+  canShowWelcome: boolean;
   canShowInstallPrompt: boolean;
   canShowPushPrompt: boolean;
   installSnoozed: boolean;
   pushSnoozed: boolean;
   installedAt: number | null;
   installGuidance: InstallGuidance | null;
+  sessionCount: number;
+  sessionInterruptionShown: boolean;
+  activeInterruptionType: InterruptionType | null;
 }
 
 export interface BeforeInstallPromptEvent extends Event {
@@ -101,6 +113,10 @@ export const DEFAULT_PERSISTED_STATE: CoordinatorPersistedState = {
   installPromptDismissedAt: null,
   pushPromptDismissedAt: null,
   installedAt: null,
+  sessionCount: 1,
+  sessionInterruptionShown: false,
+  activeInterruptionType: null,
+  lastSessionId: null,
   updatedAt: Date.now(),
 };
 
@@ -186,7 +202,13 @@ export class PWAOnboardingCoordinator {
   private engagement: EngagementSignals = { ...DEFAULT_ENGAGEMENT };
   private installPromptDismissedAt: number | null = null;
   private pushPromptDismissedAt: number | null = null;
+  private installSnoozeUntil: number | null = null;
+  private pushSnoozeUntil: number | null = null;
   private installedAt: number | null = null;
+  private sessionCount: number = 1;
+  private sessionInterruptionShown: boolean = false;
+  private activeInterruptionType: InterruptionType | null = null;
+  private lastSessionId: string | null = null;
 
   private deferredPrompt: BeforeInstallPromptEvent | null = null;
   private isInstallable = false;
@@ -206,8 +228,137 @@ export class PWAOnboardingCoordinator {
     this.sessionStartTime = Date.now();
     this.isInitialized = true;
     this.hydrateFromStorage();
+    this.detectOrStartSession();
     this.recalculateStage();
     this.setupWindowListeners();
+    this.notify();
+  }
+
+  /**
+   * Detects browser session boundaries to enforce single interruption per session
+   */
+  private detectOrStartSession(): void {
+    if (typeof window === "undefined" || typeof sessionStorage === "undefined") {
+      return;
+    }
+
+    const sessionMarkerKey = `qcet_pwa_session_active_${this.userId || "guest"}`;
+    let sessionMarker: string | null = null;
+    try {
+      sessionMarker = sessionStorage.getItem(sessionMarkerKey);
+    } catch {
+      // ignore sessionStorage access errors
+    }
+
+    if (!sessionMarker) {
+      const newSessionId = `s_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      try {
+        sessionStorage.setItem(sessionMarkerKey, newSessionId);
+      } catch {
+        // ignore
+      }
+
+      // If we previously had a different session recorded, advance session count and reset interruption gate
+      if (this.lastSessionId && this.lastSessionId !== newSessionId) {
+        this.sessionCount = (this.sessionCount || 1) + 1;
+        this.sessionInterruptionShown = false;
+        this.activeInterruptionType = null;
+      }
+      this.lastSessionId = newSessionId;
+      this.persist();
+    }
+  }
+
+  /**
+   * Explicitly starts a new session (used in testing, re-login, or multi-session workflows)
+   */
+  public startNewSession(): void {
+    this.sessionCount = (this.sessionCount || 1) + 1;
+    this.sessionInterruptionShown = false;
+    this.activeInterruptionType = null;
+    const newSessionId = `s_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    this.lastSessionId = newSessionId;
+
+    if (typeof sessionStorage !== "undefined") {
+      try {
+        const sessionMarkerKey = `qcet_pwa_session_active_${this.userId || "guest"}`;
+        sessionStorage.setItem(sessionMarkerKey, newSessionId);
+      } catch {
+        // ignore
+      }
+    }
+
+    this.recalculateStage();
+    this.persist();
+    this.notify();
+  }
+
+  /**
+   * Records that a proactive interruption has been displayed in the current session.
+   * Suppresses all other proactive interruptions for the remainder of this session.
+   */
+  public recordInterruptionShown(type: InterruptionType): void {
+    this.sessionInterruptionShown = true;
+    this.activeInterruptionType = type;
+    this.persist();
+    this.notify();
+  }
+
+  /**
+   * Clears the currently active interruption type (e.g. upon dismissal or acceptance).
+   * Maintains sessionInterruptionShown = true to prevent subsequent interruptions in the same session.
+   */
+  public clearActiveInterruption(): void {
+    this.activeInterruptionType = null;
+    this.persist();
+    this.notify();
+  }
+
+  /**
+   * Resets the session interruption gate (allows another proactive modal if eligible)
+   */
+  public resetSessionGate(): void {
+    this.sessionInterruptionShown = false;
+    this.activeInterruptionType = null;
+    this.persist();
+    this.notify();
+  }
+
+  public hasSessionInterruptionShown(): boolean {
+    return this.sessionInterruptionShown;
+  }
+
+  public getActiveInterruptionType(): InterruptionType | null {
+    return this.activeInterruptionType;
+  }
+
+  public get canShowWelcome(): boolean {
+    return this.getState().canShowWelcome;
+  }
+
+  public get canShowInstallPrompt(): boolean {
+    return this.getState().canShowInstallPrompt;
+  }
+
+  public get canShowPushPrompt(): boolean {
+    return this.getState().canShowPushPrompt;
+  }
+
+  public getSessionCount(): number {
+    return this.sessionCount;
+  }
+
+  public setSessionCount(count: number): void {
+    this.sessionCount = count;
+    this.recalculateStage();
+    this.persist();
+    this.notify();
+  }
+
+  public setSessionInterruptionShown(shown: boolean, type: InterruptionType | null = null): void {
+    this.sessionInterruptionShown = shown;
+    this.activeInterruptionType = shown ? type : null;
+    this.persist();
     this.notify();
   }
 
@@ -219,6 +370,7 @@ export class PWAOnboardingCoordinator {
     this.userId = userId ?? null;
     this.sessionStartTime = Date.now();
     this.hydrateFromStorage();
+    this.detectOrStartSession();
     this.recalculateStage();
     this.notify();
   }
@@ -232,21 +384,54 @@ export class PWAOnboardingCoordinator {
     const isIosSafari = checkIsIOSSafari();
     const installSnoozeMs = this.config.installSnoozeDays * 24 * 60 * 60 * 1000;
     const pushSnoozeMs = this.config.pushSnoozeDays * 24 * 60 * 60 * 1000;
-    const installSnoozed = isSnoozed(this.installPromptDismissedAt, installSnoozeMs);
-    const pushSnoozed = isSnoozed(this.pushPromptDismissedAt, pushSnoozeMs);
+    const installSnoozed = this.installSnoozeUntil
+      ? Date.now() < this.installSnoozeUntil
+      : isSnoozed(this.installPromptDismissedAt, installSnoozeMs);
+    const pushSnoozed = this.pushSnoozeUntil
+      ? Date.now() < this.pushSnoozeUntil
+      : isSnoozed(this.pushPromptDismissedAt, pushSnoozeMs);
 
     const isInstallable = this.isInstallable || (isIosSafari && !isStandalone);
     const isInstalled = isStandalone || Boolean(this.installedAt);
 
+    // 1. Welcome Modal: Session 1 / First login
+    // Mutually exclusive single interruption: can only show if stage is NEW_USER
+    // and no other interruption has been shown in this session (or welcome is already active).
+    const canShowWelcome =
+      this.stage === "NEW_USER" &&
+      (!this.sessionInterruptionShown || this.activeInterruptionType === "WELCOME");
+
+    // 2. PWA Install Prompt:
+    // Session 2+ (or engagement actions >= 2): Only prompt PWA Install if not installed.
+    // Suppressed if welcome modal is showing, or if an interruption was already shown in this session.
+    const isInstallEligibleStage =
+      this.stage === "INSTALL_ELIGIBLE" ||
+      (this.stage === "ENGAGED" && (this.sessionCount >= 2 || this.engagement.actionCount >= 2)) ||
+      (this.sessionCount >= 2 && this.stage !== "NEW_USER");
+
     const canShowInstallPrompt =
-      (this.stage === "INSTALL_ELIGIBLE" ||
-        (isInstallable && this.stage === "ENGAGED")) &&
       !isInstalled &&
-      !installSnoozed;
+      !installSnoozed &&
+      isInstallable &&
+      !canShowWelcome &&
+      isInstallEligibleStage &&
+      (!this.sessionInterruptionShown || this.activeInterruptionType === "PWA_INSTALL");
+
+    // 3. Web Push Permission Prompt:
+    // Only after PWA install or explicit engagement: Prompt Web Push permission.
+    // Never stack Welcome -> Tour -> Install -> Push in the same session.
+    // If not installed and installable, PWA Install takes precedence.
+    const isPushEligibleTarget =
+      isInstalled ||
+      (this.stage === "PUSH_ELIGIBLE" && !isInstallable);
 
     const canShowPushPrompt =
+      !pushSnoozed &&
+      !canShowWelcome &&
+      !canShowInstallPrompt &&
+      isPushEligibleTarget &&
       (this.stage === "PUSH_ELIGIBLE" || isInstalled) &&
-      !pushSnoozed;
+      (!this.sessionInterruptionShown || this.activeInterruptionType === "PUSH");
 
     const installGuidance: InstallGuidance | null =
       isIos && !isStandalone
@@ -269,12 +454,16 @@ export class PWAOnboardingCoordinator {
       isStandalone,
       isIOS: isIos,
       isIOSSafari: isIosSafari,
+      canShowWelcome,
       canShowInstallPrompt,
       canShowPushPrompt,
       installSnoozed,
       pushSnoozed,
       installedAt: this.installedAt,
       installGuidance,
+      sessionCount: this.sessionCount,
+      sessionInterruptionShown: this.sessionInterruptionShown,
+      activeInterruptionType: this.activeInterruptionType,
     };
   }
 
@@ -299,13 +488,24 @@ export class PWAOnboardingCoordinator {
   }
 
   public completeWelcome(): void {
+    if (this.activeInterruptionType === "WELCOME") {
+      this.activeInterruptionType = null;
+    }
     this.setWelcomeDone();
   }
 
   public setState(partial: Partial<CoordinatorState>): void {
     if (partial.stage) this.stage = partial.stage;
     if (partial.installedAt !== undefined) this.installedAt = partial.installedAt;
+    if (partial.isInstalled) this.installedAt = this.installedAt ?? Date.now();
     if (partial.actionsCount !== undefined) this.engagement.actionCount = partial.actionsCount;
+    if (partial.sessionCount !== undefined) this.sessionCount = partial.sessionCount;
+    if (partial.sessionInterruptionShown !== undefined) {
+      this.sessionInterruptionShown = partial.sessionInterruptionShown;
+    }
+    if (partial.activeInterruptionType !== undefined) {
+      this.activeInterruptionType = partial.activeInterruptionType;
+    }
     this.notify();
   }
 
@@ -369,6 +569,10 @@ export class PWAOnboardingCoordinator {
     this.notify();
   }
 
+  public captureInstallPrompt(event: BeforeInstallPromptEvent): void {
+    this.handleBeforeInstallPrompt(event);
+  }
+
   /**
    * Handles app installation completed event
    */
@@ -378,6 +582,10 @@ export class PWAOnboardingCoordinator {
     this.installedAt = Date.now();
     this.transitionTo("INSTALLED");
     this.recalculateStage();
+  }
+
+  public recordInstalled(): void {
+    this.handleAppInstalled();
   }
 
   /**
@@ -427,7 +635,14 @@ export class PWAOnboardingCoordinator {
    * Snoozes the install prompt for configured days
    */
   public snoozeInstall(days?: number): void {
-    this.installPromptDismissedAt = Date.now();
+    const durationDays = days ?? this.config.installSnoozeDays;
+    const now = Date.now();
+    this.installPromptDismissedAt = now;
+    this.installSnoozeUntil = now + durationDays * 24 * 60 * 60 * 1000;
+    this.sessionInterruptionShown = true;
+    if (this.activeInterruptionType === "PWA_INSTALL") {
+      this.activeInterruptionType = null;
+    }
     this.persist();
 
     // Snoozing install unblocks progressing to PUSH_ELIGIBLE
@@ -441,8 +656,15 @@ export class PWAOnboardingCoordinator {
   /**
    * Snoozes the push notification prompt
    */
-  public snoozePush(_days?: number): void {
-    this.pushPromptDismissedAt = Date.now();
+  public snoozePush(days?: number): void {
+    const durationDays = days ?? this.config.pushSnoozeDays;
+    const now = Date.now();
+    this.pushPromptDismissedAt = now;
+    this.pushSnoozeUntil = now + durationDays * 24 * 60 * 60 * 1000;
+    this.sessionInterruptionShown = true;
+    if (this.activeInterruptionType === "PUSH") {
+      this.activeInterruptionType = null;
+    }
     this.persist();
     this.notify();
   }
@@ -454,6 +676,10 @@ export class PWAOnboardingCoordinator {
     this.installedAt = Date.now();
     this.deferredPrompt = null;
     this.isInstallable = false;
+    this.sessionInterruptionShown = true;
+    if (this.activeInterruptionType === "PWA_INSTALL") {
+      this.activeInterruptionType = null;
+    }
     this.transitionTo("INSTALLED");
     this.recalculateStage();
   }
@@ -466,9 +692,15 @@ export class PWAOnboardingCoordinator {
     this.engagement = { ...DEFAULT_ENGAGEMENT, lastActiveAt: Date.now() };
     this.installPromptDismissedAt = null;
     this.pushPromptDismissedAt = null;
+    this.installSnoozeUntil = null;
+    this.pushSnoozeUntil = null;
     this.installedAt = null;
     this.deferredPrompt = null;
     this.isInstallable = false;
+    this.sessionCount = 1;
+    this.sessionInterruptionShown = false;
+    this.activeInterruptionType = null;
+    this.lastSessionId = null;
     this.sessionStartTime = Date.now();
 
     if (typeof localStorage !== "undefined") {
@@ -585,7 +817,13 @@ export class PWAOnboardingCoordinator {
       if (parsed.engagement) this.engagement = { ...DEFAULT_ENGAGEMENT, ...parsed.engagement };
       if (parsed.installPromptDismissedAt) this.installPromptDismissedAt = parsed.installPromptDismissedAt;
       if (parsed.pushPromptDismissedAt) this.pushPromptDismissedAt = parsed.pushPromptDismissedAt;
+      if (parsed.installSnoozeUntil !== undefined) this.installSnoozeUntil = parsed.installSnoozeUntil;
+      if (parsed.pushSnoozeUntil !== undefined) this.pushSnoozeUntil = parsed.pushSnoozeUntil;
       if (parsed.installedAt) this.installedAt = parsed.installedAt;
+      if (parsed.sessionCount !== undefined) this.sessionCount = parsed.sessionCount;
+      if (parsed.sessionInterruptionShown !== undefined) this.sessionInterruptionShown = parsed.sessionInterruptionShown;
+      if (parsed.activeInterruptionType !== undefined) this.activeInterruptionType = parsed.activeInterruptionType;
+      if (parsed.lastSessionId !== undefined) this.lastSessionId = parsed.lastSessionId;
     } catch {
       // Storage unavailable or JSON malformed
     }
@@ -601,7 +839,13 @@ export class PWAOnboardingCoordinator {
         engagement: this.engagement,
         installPromptDismissedAt: this.installPromptDismissedAt,
         pushPromptDismissedAt: this.pushPromptDismissedAt,
+        installSnoozeUntil: this.installSnoozeUntil,
+        pushSnoozeUntil: this.pushSnoozeUntil,
         installedAt: this.installedAt,
+        sessionCount: this.sessionCount,
+        sessionInterruptionShown: this.sessionInterruptionShown,
+        activeInterruptionType: this.activeInterruptionType,
+        lastSessionId: this.lastSessionId,
         updatedAt: Date.now(),
       };
       localStorage.setItem(key, JSON.stringify(payload));
@@ -666,9 +910,9 @@ export function usePWAOnboardingCoordinator(userId?: string | null) {
     isIOSSafari: state.isIOSSafari,
     installSnoozed: state.installSnoozed,
     pushSnoozed: state.pushSnoozed,
-    canShowWelcome: state.stage === "NEW_USER",
-    canShowInstallPrompt: state.stage === "INSTALL_ELIGIBLE" && !state.installSnoozed,
-    canShowPushPrompt: state.stage === "PUSH_ELIGIBLE" && !state.pushSnoozed,
+    canShowWelcome: state.canShowWelcome,
+    canShowInstallPrompt: state.canShowInstallPrompt,
+    canShowPushPrompt: state.canShowPushPrompt,
     recordAction: React.useCallback(
       (actionName?: string) => pwaOnboardingCoordinator.recordAction(actionName),
       []
@@ -711,6 +955,14 @@ export function usePWAOnboardingCoordinator(userId?: string | null) {
     ),
     advanceToPushEligible: React.useCallback(
       () => pwaOnboardingCoordinator.advanceToPushEligible(),
+      []
+    ),
+    recordInterruptionShown: React.useCallback(
+      (type: InterruptionType) => pwaOnboardingCoordinator.recordInterruptionShown(type),
+      []
+    ),
+    clearActiveInterruption: React.useCallback(
+      () => pwaOnboardingCoordinator.clearActiveInterruption(),
       []
     ),
     reset: React.useCallback(() => pwaOnboardingCoordinator.reset(), []),

@@ -64,6 +64,24 @@ Status: Pre-flight scan clean. No conflicts.
 - Status: Completed.
 
 ### Task 7: Contextual Push Pre-Prompt, Subscription Lifecycle, Deep Linking & Notification Dedup
+- Commit: `df66b53`, `97c043b`
 - Implementer report: `task-7-report.md`
+- Review package: `review-53f3ff9..97c043b.diff`
+- Review verdict: Approved (Zero cold load prompt, canonical pushManager integration, VAPID key conversion, dead subscription cleanup, tag-based dedup in SW, same-origin deep link navigation, 21/21 push tests pass).
 - Status: Completed.
-- Implemented: Contextual push pre-prompt, granular topic preferences, VAPID key exchange, iOS Safari standalone requirement detection, canonical tag namespaces deduplication, same-origin deep link navigation, 21/21 push manager tests and 131/131 total PWA/UI tests pass.
+
+### Task 8: Storage Quota Management & Global Sync Status UX
+- Commit: Pending commit
+- Implementer report: `task-8-report.md`
+- Key items:
+  * Storage Quota Inspection via navigator.storage.estimate()
+  * Explicit persistence permission boundary (only on explicit user request)
+  * On-demand offline data purge (READ_CACHE, DRAFT, OUTBOX, Cache Storage)
+  * Tri-state connectivity detector (ONLINE, DEGRADED, OFFLINE) with periodic heartbeat
+  * Live Sync Status Bar & Badge with outbox count, syncing progress, conflict alert
+  * Institutional Settings Card integration for PWA & Offline management
+  * Task 7 review fixes applied (push snooze duration, auto-open guard)
+  * 21/21 unit tests pass (142/142 all PWA tests pass, 0 TS errors)
+- Status: Completed (Ready for review).
+
+

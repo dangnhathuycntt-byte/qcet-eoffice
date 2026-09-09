@@ -312,10 +312,11 @@ export function PushOnboardingSheet({
     if (typeof window === "undefined") return;
 
     // The sheet only opens if coordinator allows it (never cold-prompts on initial load)
-    if (coordinator.canShowPushPrompt && !isControlled) {
+    if (coordinator.canShowPushPrompt && !isControlled && !isSubscribed) {
+      coordinator.recordInterruptionShown("PUSH");
       setInternalOpen(true);
     }
-  }, [coordinator.canShowPushPrompt, isControlled]);
+  }, [coordinator, isControlled, isSubscribed]);
 
   // Listen for manual trigger via custom event
   React.useEffect(() => {
