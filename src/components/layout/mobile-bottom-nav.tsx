@@ -14,6 +14,10 @@ import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { useSidebarContext } from "@/components/layout/sidebar-context";
 import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import {
+  getMobileBottomBarItems,
+  type CanonicalRouteConfig,
+} from "@/lib/navigation/canonical-navigation-registry";
 import { isRouteActive } from "@/lib/navigation/active-matcher";
 
 export function MobileBottomNav({ className }: { className?: string }) {
@@ -23,9 +27,17 @@ export function MobileBottomNav({ className }: { className?: string }) {
   const { badgeCounts } = useSidebarContext();
   const unreadNotifications = Number(badgeCounts?.notifications) || 0;
 
-  const isHomeActive = isRouteActive("/?zone=dashboard", pathname, searchParams);
-  const isTasksActive = isRouteActive("/?zone=tasks", pathname, searchParams);
-  const isNotificationsActive = isRouteActive("/notifications", pathname, searchParams);
+  const [deskItem, tasksItem, notifItem] = getMobileBottomBarItems();
+
+  const isHomeActive = deskItem
+    ? isRouteActive(deskItem.href, pathname, searchParams, deskItem.aliases)
+    : isRouteActive("/", pathname, searchParams);
+  const isTasksActive = tasksItem
+    ? isRouteActive(tasksItem.href, pathname, searchParams, tasksItem.aliases)
+    : isRouteActive("/tasks", pathname, searchParams);
+  const isNotificationsActive = notifItem
+    ? isRouteActive(notifItem.href, pathname, searchParams, notifItem.aliases)
+    : isRouteActive("/notifications", pathname, searchParams);
 
   const handleCenterAction = () => {
     triggerHaptic("medium");
@@ -45,9 +57,9 @@ export function MobileBottomNav({ className }: { className?: string }) {
         )}
       >
         <div className="grid grid-cols-5 items-center h-14 px-2 max-w-lg mx-auto">
-          {/* 1. Tổng quan */}
+          {/* 1. Bàn làm việc / Tổng quan */}
           <Link
-            href="/?zone=dashboard"
+            href={deskItem?.href || "/"}
             onClick={() => triggerHaptic("light")}
             aria-label="Trang tổng quan"
             aria-current={isHomeActive ? "page" : undefined}
@@ -57,12 +69,12 @@ export function MobileBottomNav({ className }: { className?: string }) {
             )}
           >
             <LayoutDashboard size={20} strokeWidth={isHomeActive ? 2.2 : 1.7} />
-            <span className="text-xs tracking-tight">Tổng quan</span>
+            <span className="text-xs tracking-tight">{deskItem?.shortLabel || "Tổng quan"}</span>
           </Link>
 
           {/* 2. Nhiệm vụ (Công việc) */}
           <Link
-            href="/?zone=tasks"
+            href={tasksItem?.href || "/tasks"}
             onClick={() => triggerHaptic("light")}
             aria-label="Nhiệm vụ - Công việc"
             aria-current={isTasksActive ? "page" : undefined}
@@ -72,7 +84,7 @@ export function MobileBottomNav({ className }: { className?: string }) {
             )}
           >
             <CheckSquare size={20} strokeWidth={isTasksActive ? 2.2 : 1.7} />
-            <span className="text-xs tracking-tight">Nhiệm vụ</span>
+            <span className="text-xs tracking-tight">{tasksItem?.shortLabel || "Nhiệm vụ"}</span>
           </Link>
 
           {/* 3. Center Action Pill (Tạo việc mới) */}
@@ -92,7 +104,7 @@ export function MobileBottomNav({ className }: { className?: string }) {
 
           {/* 4. Thông báo */}
           <Link
-            href="/notifications"
+            href={notifItem?.href || "/notifications"}
             onClick={() => triggerHaptic("light")}
             aria-label="Thông báo hệ thống"
             aria-current={isNotificationsActive ? "page" : undefined}
@@ -107,7 +119,7 @@ export function MobileBottomNav({ className }: { className?: string }) {
                 <span className="absolute -top-1 -right-1 size-2 rounded-full bg-rose-500 ring-2 ring-card" />
               )}
             </div>
-            <span className="text-xs tracking-tight">Thông báo</span>
+            <span className="text-xs tracking-tight">{notifItem?.shortLabel || "Thông báo"}</span>
           </Link>
 
           {/* 5. Menu mở rộng */}
