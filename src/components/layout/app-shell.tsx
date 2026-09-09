@@ -61,7 +61,8 @@ export function OnboardingHub() {
         isOpen={
           onboarding.isMounted &&
           !onboarding.state.hasSeenWelcome &&
-          !onboarding.state.isDismissed
+          !onboarding.state.isDismissed &&
+          !onboarding.isSnoozed
         }
         onStartTour={onboarding.startTour}
         onDismiss={onboarding.dismissOnboarding}
@@ -86,9 +87,11 @@ export function OnboardingHub() {
           completedSteps={onboarding.state.completedSteps}
           percentage={onboarding.progress.percentage}
           isExpanded={onboarding.isChecklistExpanded}
-          isDismissed={onboarding.state.isDismissed}
+          isDismissed={onboarding.state.isDismissed || onboarding.isSnoozed}
+          snoozedUntil={onboarding.state.snoozedUntil}
           onToggleExpand={() => onboarding.setIsChecklistExpanded((v) => !v)}
           onDismiss={onboarding.dismissOnboarding}
+          onSnooze={() => onboarding.snoozeOnboarding(24)}
           onCompleteStep={onboarding.completeStep}
           onStartTour={onboarding.startTour}
         />
