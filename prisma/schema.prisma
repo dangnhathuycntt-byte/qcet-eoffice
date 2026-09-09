@@ -136,10 +136,15 @@ model User {
   docsRegistered        Document[]            @relation("DocRegisteredBy")
   archivedDocuments     Document[]            @relation("DocumentArchiver")
   leaderDirectives      DocumentDirective[]   @relation("LeaderDirectives")
-  pushSubscriptions PushSubscription[]
-  notifications     Notification[]
-  positionAssignments  PositionAssignment[]  @relation("UserPositionAssignments")
-  bodyMemberships      BodyMembership[]
+  pushSubscriptions     PushSubscription[]
+  notifications         Notification[]
+  positionAssignments   PositionAssignment[]  @relation("UserPositionAssignments")
+  bodyMemberships       BodyMembership[]
+  taskActors            TaskActor[]
+  assignedActors        TaskActor[]           @relation("ActorAssignedBy")
+  taskApprovalSteps     TaskApprovalStep[]
+  taskResultsSubmitted  TaskResult[]          @relation("TaskResultSubmitter")
+  taskResultsVerified   TaskResult[]          @relation("TaskResultVerifier")
 
   @@map("users")
 }
@@ -202,17 +207,29 @@ model Task {
   linkedDocument  Document?
   dacumTaskDefId  String?               @map("dacum_task_def_id") @db.VarChar(50)
   dacumTaskDef    DacumTaskDef?         @relation(fields: [dacumTaskDefId], references: [id], onDelete: SetNull)
-  archivedAt      DateTime?             @map("archived_at")
-  archivedById    String?               @map("archived_by_id")
-  archiveReason   String?               @map("archive_reason") @db.Text
-  archivedBy      User?                 @relation("TaskArchiver", fields: [archivedById], references: [id], onDelete: SetNull)
-  version         Int                   @default(1) @map("version")
-  createdAt       DateTime              @default(now()) @map("created_at")
-  updatedAt       DateTime              @updatedAt @map("updated_at")
+  archivedAt          DateTime?             @map("archived_at")
+  archivedById        String?               @map("archived_by_id")
+  archiveReason       String?               @map("archive_reason") @db.Text
+  archivedBy          User?                 @relation("TaskArchiver", fields: [archivedById], references: [id], onDelete: SetNull)
+  originLevel         TaskOriginLevel       @default(SCHOOL) @map("origin_level")
+  leadUnitId          String?               @map("lead_unit_id")
+  leadUnit            OrganizationalUnit?   @relation("TaskLeadUnit", fields: [leadUnitId], references: [id], onDelete: SetNull)
+  primaryAssignmentId String?               @map("primary_assignment_id")
+  primaryAssignment   PositionAssignment?   @relation("TaskPrimaryAssignment", fields: [primaryAssignmentId], references: [id], onDelete: SetNull)
+  actors              TaskActor[]
+  approvalProcesses   TaskApprovalProcess[]
+  taskResults         TaskResult[]
+  sourceRelations     TaskRelation[]        @relation("SourceTaskRelations")
+  targetRelations     TaskRelation[]        @relation("TargetTaskRelations")
+  version             Int                   @default(1) @map("version")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
 
   @@index([departmentId, academicYear, academicMonth])
   @@index([status, dueDate])
   @@index([scope, priority])
+  @@index([leadUnitId])
+  @@index([primaryAssignmentId])
   @@map("tasks")
 }
 
@@ -638,7 +655,9 @@ model OrganizationalUnit {
   ancestorPaths    UnitClosurePath[]    @relation("UnitClosureAncestor")
   descendantPaths  UnitClosurePath[]    @relation("UnitClosureDescendant")
   positionAssignments PositionAssignment[]
-  createdAt        DateTime             @default(now()) @map("created_at")
+  leadTasks           Task[]               @relation("TaskLeadUnit")
+  taskActors          TaskActor[]
+  createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt        DateTime             @updatedAt @map("updated_at")
 
   @@index([type, status])
@@ -728,6 +747,8 @@ model PositionAssignment {
   bodyMemberships      BodyMembership[]
   delegationsGranted   DelegationGrant[]      @relation("GrantorDelegations")
   delegationsReceived  DelegationGrant[]      @relation("GranteeDelegations")
+  primaryTasks         Task[]                 @relation("TaskPrimaryAssignment")
+  taskApprovalSteps    TaskApprovalStep[]
   createdAt            DateTime               @default(now()) @map("created_at")
   updatedAt            DateTime               @updatedAt @map("updated_at")
 
@@ -807,6 +828,156 @@ model DelegationScopeRule {
   @@index([delegationGrantId])
   @@map("delegation_scope_rules")
 }
+
+// ===================================================
+// 9. QUẢN LÝ NHIỆM VỤ REBAC, TIẾN ĐỘ & QUY TRÌNH DUYỆT (PHASE 5)
+// Đáp ứng QĐ 283/QĐ-CĐKTCNQN, QĐ 203/QĐ-CĐKTCNQN & QĐ 420/QĐ-CĐKTCNQN
+// ===================================================
+
+enum TaskActorRole {
+  ASSIGNER
+  LEAD_UNIT
+  COORDINATING_UNIT
+  DRI
+  COLLABORATOR
+  FOLLOWER
+  REVIEWER
+  APPROVER
+  OBSERVER
+}
+
+enum TaskOriginLevel {
+  SCHOOL
+  UNIT
+  PERSONAL
+}
+
+enum ApprovalProcessStatus {
+  NOT_STARTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ApprovalStepStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  BYPASSED
+}
+
+enum TaskRelationType {
+  BLOCKS
+  DEPENDS_ON
+  PARENT_CHILD
+  DUPLICATE_OF
+  DERIVED_FROM
+}
+
+model TaskActor {
+  id           String              @id @default(cuid())
+  taskId       String              @map("task_id")
+  task         Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId       String?             @map("user_id")
+  user         User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  unitId       String?             @map("unit_id")
+  unit         OrganizationalUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  role         TaskActorRole
+  isPrimaryDRI Boolean             @default(false) @map("is_primary_dri")
+  assignedById String?             @map("assigned_by_id")
+  assignedBy   User?               @relation("ActorAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+  appointedAt  DateTime            @default(now()) @map("appointed_at")
+  notes        String?             @db.Text
+
+  @@index([taskId, role])
+  @@index([userId])
+  @@index([unitId])
+  @@map("task_actors")
+}
+
+model TaskApprovalProcess {
+  id               String                @id @default(cuid())
+  taskId           String                @map("task_id")
+  task             Task                  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  status           ApprovalProcessStatus @default(NOT_STARTED)
+  totalSteps       Int                   @default(1) @map("total_steps")
+  currentStepIndex Int                   @default(0) @map("current_step_index")
+  steps            TaskApprovalStep[]
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+
+  @@index([taskId, status])
+  @@map("task_approval_processes")
+}
+
+model TaskApprovalStep {
+  id                   String              @id @default(cuid())
+  processId            String              @map("process_id")
+  process              TaskApprovalProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  stepOrder            Int                 @map("step_order")
+  title                String              @db.VarChar(255)
+  reviewerAssignmentId String?             @map("reviewer_assignment_id")
+  reviewerAssignment   PositionAssignment? @relation(fields: [reviewerAssignmentId], references: [id], onDelete: SetNull)
+  reviewerUserId       String?             @map("reviewer_user_id")
+  reviewerUser         User?               @relation(fields: [reviewerUserId], references: [id], onDelete: SetNull)
+  status               ApprovalStepStatus  @default(PENDING)
+  decisionNote         String?             @map("decision_note") @db.Text
+  decidedAt            DateTime?           @map("decided_at")
+
+  @@index([processId, stepOrder])
+  @@map("task_approval_steps")
+}
+
+model TaskResult {
+  id                String    @id @default(cuid())
+  taskId            String    @map("task_id")
+  task              Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submittedByUserId String    @map("submitted_by_user_id")
+  submittedByUser   User      @relation("TaskResultSubmitter", fields: [submittedByUserId], references: [id])
+  summary           String    @db.Text
+  reportUrl         String?   @map("report_url") @db.Text
+  submittedAt       DateTime  @default(now()) @map("submitted_at")
+  verifiedByUserId  String?   @map("verified_by_user_id")
+  verifiedByUser    User?     @relation("TaskResultVerifier", fields: [verifiedByUserId], references: [id])
+  verifiedAt        DateTime? @map("verified_at")
+
+  @@index([taskId])
+  @@map("task_results")
+}
+
+model TaskRelation {
+  id           String           @id @default(cuid())
+  sourceTaskId String           @map("source_task_id")
+  sourceTask   Task             @relation("SourceTaskRelations", fields: [sourceTaskId], references: [id], onDelete: Cascade)
+  targetTaskId String           @map("target_task_id")
+  targetTask   Task             @relation("TargetTaskRelations", fields: [targetTaskId], references: [id], onDelete: Cascade)
+  relationType TaskRelationType @map("relation_type")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  @@unique([sourceTaskId, targetTaskId, relationType])
+  @@map("task_relations")
+}
+
+// ===================================================
+// 10. BẢNG GHI IDEMPOTENCY CHO MOBILE/PWA RETRIES (TASK 8)
+// ===================================================
+
+model IdempotencyRecord {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  operation   String   @map("operation")
+  key         String   @map("key")
+  status      String   @default("PENDING") @map("status") // PENDING, COMPLETED, FAILED
+  response    Json?    @map("response")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, operation, key])
+  @@index([expiresAt])
+  @@map("idempotency_records")
+}
+
 
 
 
