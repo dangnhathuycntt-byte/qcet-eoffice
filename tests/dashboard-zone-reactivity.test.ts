@@ -92,7 +92,6 @@ describe("DashboardZone Reactivity and Reactive Filtering", () => {
         assignedDate: "2026-09-05",
         dueDate: "2026-09-15",
         status: "IN_PROGRESS",
-        // @ts-expect-error simulated priority
         priority: "URGENT",
         subTasks: [],
         totalSubTasks: 0,

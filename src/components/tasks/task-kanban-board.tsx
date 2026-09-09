@@ -99,10 +99,15 @@ const COLUMN_ICONS: Record<
   React.ComponentType<{ className?: string; strokeWidth?: number }>
 > = {
   NEW: Circle,
+  NOT_STARTED: Circle,
   IN_PROGRESS: Clock,
+  WAITING_APPROVAL: Clock,
+  PENDING_EXECUTIVE_APPROVAL: Clock,
   NEEDS_REVIEW: AlertCircle,
   BLOCKED: AlertTriangle,
   COMPLETED: CheckCircle2,
+  OVERDUE: AlertCircle,
+  CANCELLED: AlertTriangle,
 };
 
 export interface KanbanItem {
@@ -245,10 +250,15 @@ export function groupTasksByStatus(
 
   const grouped: Record<TaskStatus, KanbanItem[]> = {
     NEW: [],
+    NOT_STARTED: [],
     IN_PROGRESS: [],
+    WAITING_APPROVAL: [],
+    PENDING_EXECUTIVE_APPROVAL: [],
     NEEDS_REVIEW: [],
     BLOCKED: [],
     COMPLETED: [],
+    OVERDUE: [],
+    CANCELLED: [],
   };
 
   for (const item of filtered) {
@@ -317,10 +327,15 @@ export function TaskKanbanBoard({
   const deferredSearchQuery = React.useDeferredValue(searchQuery);
   const [colLimits, setColLimits] = React.useState<Record<TaskStatus, number>>({
     NEW: 30,
+    NOT_STARTED: 30,
     IN_PROGRESS: 30,
+    WAITING_APPROVAL: 30,
+    PENDING_EXECUTIVE_APPROVAL: 30,
     NEEDS_REVIEW: 30,
     BLOCKED: 30,
     COMPLETED: 30,
+    OVERDUE: 30,
+    CANCELLED: 30,
   });
 
   const [activeColumnIndex, setActiveColumnIndex] = React.useState(0);

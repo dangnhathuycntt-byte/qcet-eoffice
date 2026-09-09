@@ -204,7 +204,7 @@ export function calculateSchoolTaskRollup(schoolTask: SchoolTask): {
   progressPercent: number;
   completedSubTasks: number;
   totalSubTasks: number;
-  calculatedStatus: "IN_PROGRESS" | "PENDING_EXECUTIVE_APPROVAL" | "COMPLETED";
+  calculatedStatus: TaskStatus;
 } {
   const subTasks = schoolTask.subTasks || [];
   const totalSubTasks = subTasks.length;
@@ -223,7 +223,7 @@ export function calculateSchoolTaskRollup(schoolTask: SchoolTask): {
   ).length;
   const progressPercent = Math.round((completedSubTasks / totalSubTasks) * 100);
 
-  let calculatedStatus: "IN_PROGRESS" | "PENDING_EXECUTIVE_APPROVAL" | "COMPLETED" =
+  let calculatedStatus: TaskStatus =
     schoolTask.status;
 
   if (progressPercent === 100) {

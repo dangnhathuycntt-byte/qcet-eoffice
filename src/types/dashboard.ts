@@ -1,4 +1,14 @@
-export type TaskStatus = 'NEW' | 'IN_PROGRESS' | 'BLOCKED' | 'NEEDS_REVIEW' | 'COMPLETED';
+export type TaskStatus =
+  | 'NOT_STARTED'
+  | 'IN_PROGRESS'
+  | 'WAITING_APPROVAL'
+  | 'PENDING_EXECUTIVE_APPROVAL'
+  | 'NEEDS_REVIEW'
+  | 'BLOCKED'
+  | 'COMPLETED'
+  | 'OVERDUE'
+  | 'CANCELLED'
+  | 'NEW';
 
 export type TaskCategory =
   | 'CHUYEN_DOI_SO'
@@ -60,6 +70,12 @@ export interface StaffTask {
   parentSchoolTaskTitle?: string;
   parentSchoolTaskCode?: string;
   parentTaskScope?: string;
+  parentTask?: {
+    id: string;
+    code?: string;
+    title: string;
+    scope?: string;
+  };
   updatedAt: string;
   deliverables?: DeliverableItem[];
   deliverableDescription?: string;
@@ -107,11 +123,18 @@ export interface SchoolTask {
   taskCode?: string;
   code?: string;
   title: string;
+  description?: string;
   category: TaskCategory;
   categoryLabel: string;
-  leadAssigneeName: string;
-  leadAssigneeId?: string;
-  leadAssigneeAvatar?: string;
+  academicMonth?: number;
+  academicYear?: string;
+  status: TaskStatus;
+  priority?: 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
+  dueDate: string;
+  startDate?: string;
+  progressPercent: number;
+  totalSubTasks: number;
+  completedSubTasks: number;
   leadDepartment?: string;
   leadDepartmentCode?: string;
   leadDepartmentId?: string;
@@ -119,16 +142,14 @@ export interface SchoolTask {
   departmentCode?: string;
   departmentId?: string;
   assignedTo?: string;
+  leadAssigneeName: string;
+  leadAssigneeId?: string;
+  leadAssigneeAvatar?: string;
   coAssignees: string[];
   coDepartments?: string[];
   coDepartmentCodes?: string[];
   assignedDate: string;
-  dueDate: string;
-  status: 'IN_PROGRESS' | 'PENDING_EXECUTIVE_APPROVAL' | 'COMPLETED';
   subTasks: StaffTask[];
-  totalSubTasks: number;
-  completedSubTasks: number;
-  progressPercent: number;
   executiveCriteria?: string;
   origin?: TaskOrigin;
   vtvlRole?: string;
@@ -184,12 +205,20 @@ export interface DashboardStats {
   totalSchoolTasks: number;
   schoolTasksInProgress: number;
   schoolTasksCompleted: number;
+  schoolTasksNotStarted?: number;
+  schoolTasksWaitingApproval?: number;
+  schoolTasksOverdue?: number;
   totalStaffTasks: number;
   staffTasksInProgress: number;
   staffTasksCompleted: number;
+  staffTasksNotStarted?: number;
+  staffTasksWaitingApproval?: number;
+  staffTasksOverdue?: number;
   needsReviewTasksCount: number;
   overdueTasksCount: number;
   averageSchoolProgressPercent: number;
+  completionRate?: number;
+  cancelledTasksCount?: number;
   pendingTriageCount?: number;
   escalatedReviewCount?: number;
 
@@ -199,7 +228,6 @@ export interface DashboardStats {
   completedTasks?: number;
   overdueTasks?: number;
   pendingApprovals?: number;
-  completionRate?: number;
 }
 
 export interface ActivityEvent {

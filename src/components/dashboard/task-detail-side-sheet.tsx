@@ -24,6 +24,7 @@ import {
   FileCheck,
   ExternalLink,
   Link,
+  Link2,
   ShieldCheck,
 } from "lucide-react";
 import {
@@ -96,11 +97,29 @@ export const TASK_STATUS_CONFIG: Record<
       "border-slate-500/20 bg-slate-500/10 text-slate-700",
     variant: "outline",
   },
+  NOT_STARTED: {
+    label: "Chưa bắt đầu",
+    className:
+      "border-slate-500/20 bg-slate-500/10 text-slate-700",
+    variant: "outline",
+  },
   IN_PROGRESS: {
     label: "Đang thực hiện",
     className:
       "border-blue-500/20 bg-blue-500/10 text-blue-700",
     variant: "progress",
+  },
+  WAITING_APPROVAL: {
+    label: "Chờ phê duyệt",
+    className:
+      "border-purple-500/20 bg-purple-500/10 text-purple-700",
+    variant: "outline",
+  },
+  PENDING_EXECUTIVE_APPROVAL: {
+    label: "Chờ BGH nghiệm thu",
+    className:
+      "border-purple-500/20 bg-purple-500/10 text-purple-700",
+    variant: "outline",
   },
   NEEDS_REVIEW: {
     label: "Cần chỉnh sửa",
@@ -108,17 +127,29 @@ export const TASK_STATUS_CONFIG: Record<
       "border-amber-500/20 bg-amber-500/10 text-amber-700",
     variant: "warning",
   },
+  BLOCKED: {
+    label: "Bị nghẽn / Phối hợp",
+    className:
+      "border-rose-500/20 bg-rose-500/10 text-rose-700",
+    variant: "destructive",
+  },
   COMPLETED: {
     label: "Hoàn thành",
     className:
       "border-emerald-500/20 bg-emerald-500/10 text-emerald-700",
     variant: "success",
   },
-  BLOCKED: {
-    label: "Bị nghẽn / Phối hợp",
+  OVERDUE: {
+    label: "Quá hạn",
     className:
-      "border-rose-500/20 bg-rose-500/10 text-rose-700",
+      "border-red-500/20 bg-red-500/10 text-red-700",
     variant: "destructive",
+  },
+  CANCELLED: {
+    label: "Đã hủy",
+    className:
+      "border-slate-400/20 bg-slate-400/10 text-slate-600",
+    variant: "outline",
   },
 };
 
@@ -318,8 +349,8 @@ export interface TaskDetailSideSheetProps {
   isOpen?: boolean;
   onClose: () => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
-  onAddSubTask?: (parentSchoolTaskId: string) => void;
-  onSelectSubTask?: (subTask: StaffTask) => void;
+  onAddSubTask?: (parentSchoolTaskId: string, prefillTitle?: string) => void;
+  onSelectSubTask?: (subTask: StaffTask | string) => void;
   parentSchoolTaskTitle?: string;
   className?: string;
   currentUser?: AuthUser;
@@ -592,9 +623,10 @@ export function TaskDetailSideSheet({
 
   const handleCreateSubtask = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSubtaskTitle.trim() || !isSchool) return;
+    const trimmedTitle = newSubtaskTitle.trim();
+    if (!trimmedTitle || !isSchool) return;
     if (onAddSubTask) {
-      onAddSubTask(task.id);
+      onAddSubTask(task.id, trimmedTitle);
     }
     setIsAddingSubtask(false);
     setNewSubtaskTitle("");
@@ -707,6 +739,32 @@ export function TaskDetailSideSheet({
 
         {/* Scrollable Content Body */}
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-6 thin-scrollbar">
+          {/* Breadcrumb indicator leading back to parent task */}
+          {!isSchool && ((task as StaffTask).parentSchoolTaskId || (task as StaffTask).parentTask) && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border/60">
+              <Link2 className="size-3.5 text-primary shrink-0" strokeWidth={1.5} />
+              <span>Nhiệm vụ cha:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetId =
+                    (task as StaffTask).parentSchoolTaskId ||
+                    (task as StaffTask).parentTask?.id;
+                  if (targetId && onSelectSubTask) {
+                    (onSelectSubTask as (v: any) => void)(targetId);
+                  }
+                }}
+                className="font-semibold text-primary hover:underline cursor-pointer truncate max-w-[320px] text-left"
+              >
+                {(task as StaffTask).parentSchoolTaskTitle ||
+                  (task as StaffTask).parentTask?.title ||
+                  parentSchoolTaskTitle ||
+                  (task as StaffTask).parentSchoolTaskId ||
+                  "Xem nhiệm vụ cha"}
+              </button>
+            </div>
+          )}
+
           {/* Header Block: Code + Level Badge + Title */}
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -1491,16 +1549,27 @@ export function TaskDetailSideSheet({
                   </p>
                 </div>
                 {onAddSubTask && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsAddingSubtask(!isAddingSubtask)}
-                    className="h-7 text-xs gap-1 border-dashed border-border/80 hover:border-border hover:bg-secondary/60 rounded-lg cursor-pointer"
-                  >
-                    <Plus className="size-3.5" strokeWidth={1.5} />
-                    <span>Giao nhiệm vụ thành phần</span>
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onAddSubTask(task.id, newSubtaskTitle.trim() || undefined)}
+                      className="h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg cursor-pointer"
+                    >
+                      <Plus className="size-3.5" strokeWidth={1.5} />
+                      <span>Phân rã nhiệm vụ</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsAddingSubtask(!isAddingSubtask)}
+                      className="h-7 text-xs gap-1 rounded-lg cursor-pointer text-muted-foreground hover:text-foreground"
+                    >
+                      <span>{isAddingSubtask ? "Đóng" : "Giao nhanh"}</span>
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -1553,14 +1622,20 @@ export function TaskDetailSideSheet({
                       <div
                         key={sub.id}
                         tabIndex={0}
-                        onClick={() => onSelectSubTask?.(sub)}
+                        onClick={() => {
+                          if (onSelectSubTask) {
+                            (onSelectSubTask as (v: any) => void)(sub);
+                          }
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            onSelectSubTask?.(sub);
+                            if (onSelectSubTask) {
+                              (onSelectSubTask as (v: any) => void)(sub);
+                            }
                           }
                         }}
-                        className="group flex items-center justify-between gap-3 p-3 transition-colors hover:bg-secondary/40 cursor-pointer"
+                        className="group flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 transition-colors hover:bg-secondary/40 cursor-pointer"
                         role="button"
                         aria-label={`Chi tiết nhiệm vụ thành phần: ${sub.title}`}
                       >
@@ -1570,24 +1645,57 @@ export function TaskDetailSideSheet({
                           ) : (
                             <Circle className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.5} />
                           )}
-                          <span
-                            className={cn(
-                              "text-xs font-medium text-foreground truncate",
-                              subDone && "line-through text-muted-foreground"
-                            )}
-                          >
-                            {sub.title}
-                          </span>
+                          <div className="flex items-center gap-2 min-w-0 truncate">
+                            <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted/60 border border-border/50 px-1.5 py-0.5 rounded shrink-0">
+                              {sub.code || `NV-${sub.id.slice(0, 8).toUpperCase()}`}
+                            </span>
+                            <span
+                              className={cn(
+                                "text-xs font-medium text-foreground truncate",
+                                subDone && "line-through text-muted-foreground"
+                              )}
+                            >
+                              {sub.title}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2.5 shrink-0">
-                          <span className="text-xs text-muted-foreground hidden sm:inline">
-                            {sub.assigneeName}
-                          </span>
+                        <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap pl-6 sm:pl-0">
+                          {/* Single DRI */}
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            {sub.assigneeAvatar ? (
+                              <img
+                                src={sub.assigneeAvatar}
+                                alt={sub.assigneeName}
+                                className="size-4 rounded-full object-cover border border-border/60"
+                              />
+                            ) : (
+                              <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                                {sub.assigneeName ? sub.assigneeName.charAt(0).toUpperCase() : "U"}
+                              </div>
+                            )}
+                            <span className="truncate max-w-[110px]">{sub.assigneeName}</span>
+                          </div>
+
+                          {/* Due Date */}
+                          {sub.dueDate && (
+                            <span className="text-xs text-muted-foreground font-mono tabular-nums">
+                              {formatDetailDate(sub.dueDate)}
+                            </span>
+                          )}
+
+                          {/* Progress Percentage */}
+                          {typeof sub.progressPercent === "number" && (
+                            <span className="text-xs font-mono font-medium text-primary bg-primary/5 px-1.5 py-0.5 rounded border border-primary/20 tabular-nums">
+                              {sub.progressPercent}%
+                            </span>
+                          )}
+
+                          {/* Status Badge */}
                           <Badge
                             variant={subStatus.variant}
                             className={cn(
-                              "text-xs px-2 py-0.5 rounded-md font-medium",
+                              "text-xs px-2 py-0.5 rounded-md font-medium shrink-0",
                               subStatus.className
                             )}
                           >
