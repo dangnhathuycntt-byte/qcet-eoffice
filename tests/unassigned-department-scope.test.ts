@@ -1,5 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { isUserUnassignedDepartment } from "../src/lib/auth-context";
 import { resolveScopeDetails } from "../src/components/layout/scope-switcher";
 
@@ -29,5 +30,14 @@ describe("Unassigned Department Detection & Scope Details", () => {
     assert.equal(details.label, "Chưa chọn đơn vị");
     assert.equal(details.shortLabel, "Chưa chọn đ/vị");
     assert.equal(details.isWarning, true);
+  });
+
+  test("UnassignedDepartmentState file exists and contains accessible actionable CTA", () => {
+    const content = readFileSync("src/components/workspace/components/unassigned-department-state.tsx", "utf-8");
+    assert.ok(content.includes("UnassignedDepartmentState"));
+    assert.ok(content.includes("onOpenProfile"));
+    assert.ok(content.includes("Building2"));
+    assert.ok(content.includes("Cập nhật Khoa / Phòng công tác ngay"));
+    assert.ok(!content.includes("dark:")); // Light-only compliance
   });
 });
