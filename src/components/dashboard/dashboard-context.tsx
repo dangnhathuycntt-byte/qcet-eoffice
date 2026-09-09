@@ -53,11 +53,13 @@ export interface DashboardDataContextValue {
   activities: ActivityEvent[];
   filteredTasks: SchoolTask[];
   scopedBaseTasks: SchoolTask[];
+  monthScopedBaseTasks?: SchoolTask[];
+  priorOverdueBacklog?: SchoolTask[];
   monthlyTaskCounts: Record<number, number>;
   selectedMonthPeriod: AcademicMonthInfo | null;
   displayedStats: DashboardStats;
-  user: AuthUser;
-  effectiveManagerUser: AuthUser;
+  user: AuthUser | null;
+  effectiveManagerUser: AuthUser | null;
   isExecutive: boolean;
   isManager: boolean;
   isStaff: boolean;
@@ -257,6 +259,8 @@ export function DashboardStateProvider({ children }: { children: React.ReactNode
       activities: dashboardState.activities,
       filteredTasks: dashboardState.filteredTasks,
       scopedBaseTasks: dashboardState.scopedBaseTasks,
+      monthScopedBaseTasks: dashboardState.monthScopedBaseTasks,
+      priorOverdueBacklog: dashboardState.priorOverdueBacklog,
       monthlyTaskCounts: dashboardState.monthlyTaskCounts,
       selectedMonthPeriod: dashboardState.selectedMonthPeriod,
       displayedStats: dashboardState.displayedStats,
@@ -289,6 +293,8 @@ export function DashboardStateProvider({ children }: { children: React.ReactNode
       dashboardState.activities,
       dashboardState.filteredTasks,
       dashboardState.scopedBaseTasks,
+      dashboardState.monthScopedBaseTasks,
+      dashboardState.priorOverdueBacklog,
       dashboardState.monthlyTaskCounts,
       dashboardState.selectedMonthPeriod,
       dashboardState.displayedStats,
@@ -316,7 +322,7 @@ export function DashboardStateProvider({ children }: { children: React.ReactNode
     ]
   );
 
-  // 3. Actions value: Stable references with empty dependency array []
+  // 3. Actions value: Properly tracked references to avoid stale closures
   const actionsValue = React.useMemo<DashboardActionsContextValue>(
     () => ({
       handleDepartmentChange: dashboardState.handleDepartmentChange,
@@ -336,8 +342,24 @@ export function DashboardStateProvider({ children }: { children: React.ReactNode
       handleRevokeDelegation: dashboardState.handleRevokeDelegation,
       handleSelectUpcoming: dashboardState.handleSelectUpcoming,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [
+      dashboardState.handleDepartmentChange,
+      dashboardState.handleAcademicMonthChange,
+      dashboardState.setActiveWorkbox,
+      dashboardState.setExecutiveFilter,
+      dashboardState.setSearchQuery,
+      dashboardState.setSelectedPriority,
+      dashboardState.setSelectedCategory,
+      dashboardState.handleResetFilters,
+      handleStatusChangeWithSync,
+      handleSubmitDeliverableWithSync,
+      handleReviewActionWithSync,
+      dashboardState.handleCreateTask,
+      dashboardState.handleManualRefresh,
+      dashboardState.handleSaveDelegation,
+      dashboardState.handleRevokeDelegation,
+      dashboardState.handleSelectUpcoming,
+    ]
   );
 
   // 4. Modal value: Re-rendered only when modal target/state changes

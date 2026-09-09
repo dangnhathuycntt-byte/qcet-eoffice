@@ -37,6 +37,9 @@ import {
 } from "@/components/layout/scope-switcher";
 import {
   getAcademicMonthsForYear,
+  getAcademicYear,
+  filterTasksByAcademicMonthStrict,
+  computePriorOverdueBacklog,
   type AcademicMonthInfo,
 } from "@/lib/academic-calendar";
 
@@ -45,6 +48,10 @@ export interface TaskFiltersReturn {
   selectedCategory: string;
   selectedPriority: string;
   searchQuery: string;
+  deferredSearchQuery: string;
+  deferredSearch: string;
+  isFilteringStale: boolean;
+  isFilteringDeferred: boolean;
   activeWorkbox: WorkboxFilter;
   executiveFilter: ExecutiveFilter;
   setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
@@ -60,17 +67,23 @@ export interface TaskFiltersReturn {
   isStaff: boolean;
   isUnitView: boolean;
   isSchoolView: boolean;
-  effectiveManagerUser: AuthUser;
+  effectiveManagerUser: AuthUser | null;
 
   // Computed memoized outputs
   scopedBaseTasks: SchoolTask[];
+  monthScopedBaseTasks: SchoolTask[];
+  priorOverdueBacklog: SchoolTask[];
+  selectedAcademicMonth: number | "ALL";
   monthlyTaskCounts: Record<number, number>;
   selectedMonthPeriod: AcademicMonthInfo | null;
   displayedStats: DashboardStats;
+  monthlyScopedStats: DashboardStats;
   filteredTasks: SchoolTask[];
   roleUpcoming: UpcomingItem[];
   departmentHealth: DepartmentHealthSummary[];
+  monthlyDepartmentHealth: DepartmentHealthSummary[];
   executiveStats: ExecutiveActionStats | null;
+  monthlyExecutiveStats: ExecutiveActionStats | null;
   handleSelectUpcoming: (item: UpcomingItem) => SchoolTask | StaffTask | undefined;
 }
 
@@ -81,6 +94,7 @@ export function useTaskFilters({
   activeZone,
   selectedDepartment,
   selectedAcademicMonth,
+  referenceDate,
   user,
   onSelectTask,
   onResetDepartment,
@@ -92,7 +106,8 @@ export function useTaskFilters({
   activeZone: WorkspaceZone;
   selectedDepartment: string;
   selectedAcademicMonth: number | "ALL";
-  user: AuthUser;
+  referenceDate?: string;
+  user: AuthUser | null;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onResetDepartment: () => void;
   onResetMonth: () => void;
@@ -100,6 +115,8 @@ export function useTaskFilters({
   const [selectedCategory, setSelectedCategory] = React.useState<string>("ALL");
   const [selectedPriority, setSelectedPriority] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState<string>("");
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
+  const isFilteringStale = searchQuery !== deferredSearchQuery;
   const [activeWorkbox, setActiveWorkbox] = React.useState<WorkboxFilter>("ALL");
   const [executiveFilter, setExecutiveFilter] = React.useState<ExecutiveFilter>("ALL");
 
@@ -109,6 +126,7 @@ export function useTaskFilters({
     setSelectedPriority("ALL");
     setSelectedCategory("ALL");
     setActiveWorkbox("ALL");
+    setExecutiveFilter("ALL");
     setSearchQuery("");
   }, [onResetDepartment, onResetMonth]);
 
@@ -130,10 +148,11 @@ export function useTaskFilters({
     roleStr === "CHUYEN_VIEN" ||
     (!isExecutive && !isManager);
 
-  const isSchoolView = scope === "SCHOOL_TASKS" || (isExecutive && scope !== "UNIT_TASKS" && scope !== "MY_TASKS");
+  const isSchoolView = isExecutive && (scope === "SCHOOL_TASKS" || (scope !== "UNIT_TASKS" && scope !== "MY_TASKS"));
   const isUnitView = !isSchoolView && (scope === "UNIT_TASKS" || (isManager && scope !== "MY_TASKS"));
 
-  const effectiveManagerUser: AuthUser = React.useMemo(() => {
+  const effectiveManagerUser: AuthUser | null = React.useMemo(() => {
+    if (!user) return null;
     if (
       selectedDepartment &&
       selectedDepartment !== "ALL" &&
@@ -151,50 +170,94 @@ export function useTaskFilters({
     return user;
   }, [user, selectedDepartment]);
 
+  const effectiveScope = React.useMemo(() => {
+    if (scope === "SCHOOL_TASKS" && !isExecutive) {
+      return isManager ? "UNIT_TASKS" : "MY_TASKS";
+    }
+    return scope;
+  }, [scope, isExecutive, isManager]);
+
+  const currentAcademicYear = React.useMemo(() => getAcademicYear(new Date()), []);
+
   const scopedBaseTasks = React.useMemo(
-    () => filterTasksByScope(tasks, scope, user, selectedDepartment),
-    [tasks, scope, user, selectedDepartment]
+    () => filterTasksByScope(tasks, effectiveScope, user, selectedDepartment),
+    [tasks, effectiveScope, user, selectedDepartment]
   );
 
+  const monthScopedBaseTasks = React.useMemo(() => {
+    if (selectedAcademicMonth === "ALL") return scopedBaseTasks;
+    return filterTasksByAcademicMonthStrict(
+      scopedBaseTasks,
+      selectedAcademicMonth,
+      currentAcademicYear
+    );
+  }, [scopedBaseTasks, selectedAcademicMonth, currentAcademicYear]);
+
+  const priorOverdueBacklog = React.useMemo(() => {
+    if (selectedAcademicMonth === "ALL") return [];
+    return computePriorOverdueBacklog(
+      scopedBaseTasks,
+      selectedAcademicMonth,
+      currentAcademicYear,
+      referenceDate
+    );
+  }, [scopedBaseTasks, selectedAcademicMonth, currentAcademicYear, referenceDate]);
+
   const monthlyTaskCounts = React.useMemo(
-    () => computeMonthlyTaskCounts(scopedBaseTasks, "2026-2027"),
-    [scopedBaseTasks]
+    () => computeMonthlyTaskCounts(scopedBaseTasks, currentAcademicYear),
+    [scopedBaseTasks, currentAcademicYear]
   );
 
   const selectedMonthPeriod = React.useMemo(() => {
     if (selectedAcademicMonth === "ALL") return null;
-    const months = getAcademicMonthsForYear("2026-2027");
+    const months = getAcademicMonthsForYear(currentAcademicYear);
     return months.find((m) => m.monthNumber === selectedAcademicMonth) ?? null;
-  }, [selectedAcademicMonth]);
+  }, [selectedAcademicMonth, currentAcademicYear]);
 
   const displayedStats = React.useMemo(() => {
+    if (selectedAcademicMonth !== "ALL") {
+      return computeDashboardStats(monthScopedBaseTasks);
+    }
     if (scopedBaseTasks.length > 0) return computeDashboardStats(scopedBaseTasks);
+    if (selectedDepartment && selectedDepartment !== "ALL") return computeDashboardStats([]);
+    if (!isExecutive && effectiveScope === "MY_TASKS") return computeDashboardStats([]);
     return computeDashboardStats(tasks);
-  }, [scopedBaseTasks, tasks]);
+  }, [monthScopedBaseTasks, scopedBaseTasks, tasks, isExecutive, selectedDepartment, effectiveScope, selectedAcademicMonth]);
+
+  const monthFilteredSchoolTasks = React.useMemo(() => {
+    if (selectedAcademicMonth === "ALL") return tasks;
+    return filterTasksByAcademicMonthStrict(tasks, selectedAcademicMonth, currentAcademicYear);
+  }, [tasks, selectedAcademicMonth, currentAcademicYear]);
 
   const executiveStats = React.useMemo(
-    () => (isExecutive && activeZone === "dashboard" ? computeExecutiveActionStats(tasks) : null),
-    [tasks, isExecutive, activeZone]
+    () =>
+      isExecutive && activeZone === "dashboard"
+        ? computeExecutiveActionStats(monthFilteredSchoolTasks)
+        : null,
+    [monthFilteredSchoolTasks, isExecutive, activeZone]
   );
 
   const departmentHealth = React.useMemo(
-    () => (isExecutive && activeZone === "dashboard" ? computeDepartmentHealthMatrix(tasks) : []),
-    [tasks, isExecutive, activeZone]
+    () =>
+      isExecutive && activeZone === "dashboard"
+        ? computeDepartmentHealthMatrix(monthFilteredSchoolTasks, referenceDate)
+        : [],
+    [monthFilteredSchoolTasks, isExecutive, activeZone, referenceDate]
   );
 
   const filteredTasks = React.useMemo(() => {
     if (activeZone === "portal" || activeZone === "org") return [];
     let result = filterTasksHub({
       tasks,
-      scope,
+      scope: effectiveScope,
       workboxFilter: activeWorkbox,
       category: selectedCategory,
       priority: selectedPriority,
       department: selectedDepartment,
-      searchQuery,
+      searchQuery: deferredSearchQuery,
       user,
       academicMonth: selectedAcademicMonth,
-      academicYear: "2026-2027",
+      academicYear: currentAcademicYear,
     });
     if (isExecutive && executiveFilter !== "ALL") {
       result = filterTasksByExecutive(result, executiveFilter);
@@ -203,16 +266,17 @@ export function useTaskFilters({
   }, [
     activeZone,
     tasks,
-    scope,
+    effectiveScope,
     activeWorkbox,
     selectedCategory,
     selectedPriority,
     selectedDepartment,
-    searchQuery,
+    deferredSearchQuery,
     user,
     isExecutive,
     executiveFilter,
     selectedAcademicMonth,
+    currentAcademicYear,
   ]);
 
   const roleVisibleTasks = React.useMemo(
@@ -234,7 +298,7 @@ export function useTaskFilters({
         return matched;
       }
       for (const parent of tasks) {
-        const foundSub = parent.subTasks.find((s) => s.id === targetId);
+        const foundSub = parent.subTasks?.find((s) => s.id === targetId);
         if (foundSub) {
           onSelectTask?.(foundSub);
           return foundSub;
@@ -249,6 +313,10 @@ export function useTaskFilters({
     selectedCategory,
     selectedPriority,
     searchQuery,
+    deferredSearchQuery,
+    deferredSearch: deferredSearchQuery,
+    isFilteringStale,
+    isFilteringDeferred: isFilteringStale,
     activeWorkbox,
     executiveFilter,
     setSelectedCategory,
@@ -264,13 +332,19 @@ export function useTaskFilters({
     isSchoolView,
     effectiveManagerUser,
     scopedBaseTasks,
+    monthScopedBaseTasks,
+    priorOverdueBacklog,
+    selectedAcademicMonth,
     monthlyTaskCounts,
     selectedMonthPeriod,
     displayedStats,
+    monthlyScopedStats: displayedStats,
     filteredTasks,
     roleUpcoming,
     departmentHealth,
+    monthlyDepartmentHealth: departmentHealth,
     executiveStats,
+    monthlyExecutiveStats: executiveStats,
     handleSelectUpcoming,
   };
 }
