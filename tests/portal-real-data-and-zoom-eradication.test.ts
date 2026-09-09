@@ -16,6 +16,8 @@ const portalPagePath = path.resolve(process.cwd(), "src/app/portal/page.tsx");
 function createMockAuthContext(overrides: Partial<AuthContextType> = {}): AuthContextType {
   return {
     user: null,
+    isAuthenticated: false,
+    isOfflineReadOnly: false,
     switchRole: () => {},
     switchUser: () => {},
     login: async () => ({ success: true }),

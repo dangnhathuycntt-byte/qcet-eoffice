@@ -25,6 +25,8 @@ import type { AuthUser } from "../src/types/auth";
 
 const mockAuthContextValue = (user: AuthUser | null): AuthContextType => ({
   user,
+  isAuthenticated: Boolean(user),
+  isOfflineReadOnly: false,
   switchRole: () => {},
   switchUser: () => {},
   login: async () => ({ success: true }),

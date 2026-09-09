@@ -26,6 +26,8 @@ const testOfficer: AuthUser = {
 
 const mockAuthValue: AuthContextType = {
   user: testOfficer,
+  isAuthenticated: true,
+  isOfflineReadOnly: false,
   switchRole: () => {},
   switchUser: () => {},
   login: async () => ({ success: true }),
