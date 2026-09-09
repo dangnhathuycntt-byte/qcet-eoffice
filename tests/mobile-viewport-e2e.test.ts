@@ -110,13 +110,13 @@ describe("Mobile Viewport & PWA Standards Verification", () => {
     );
   });
 
-  test("MobileBottomNav complies with 5 touch points and safe area handling", () => {
+  test("MobileBottomNav complies with 4 touch points and safe area handling", () => {
     const navPath = path.resolve(__dirname, "../src/components/layout/mobile-bottom-nav.tsx");
     const content = fs.readFileSync(navPath, "utf-8");
 
     assert.ok(
-      content.includes("grid grid-cols-5"),
-      "MobileBottomNav must render 5 distinct touch points"
+      content.includes("grid grid-cols-4"),
+      "MobileBottomNav must render 4 distinct touch points"
     );
     assert.ok(
       content.includes("safe-area-inset-bottom"),

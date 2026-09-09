@@ -26,7 +26,7 @@ const DocumentsZone = dynamic(
 
 function DashboardLoadingFallback() {
   return (
-    <div className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10 animate-pulse">
+    <div className="max-w-[1440px] w-full mx-auto space-y-6 pb-4 md:pb-8 animate-pulse">
       <div className="h-16 rounded-2xl bg-muted/40" />
       <div className="h-28 rounded-2xl bg-muted/40" />
       <div className="h-14 rounded-2xl bg-muted/40" />
@@ -70,7 +70,7 @@ function UnifiedTaskHubContent() {
 
   return (
     <div
-      className="max-w-[1440px] w-full mx-auto space-y-6 pb-24 md:pb-10"
+      className="max-w-[1440px] w-full mx-auto space-y-6 pb-4 md:pb-8"
       data-slot="twenty-dashboard"
       data-hub="unified-task-hub"
       data-active-zone={activeZone}

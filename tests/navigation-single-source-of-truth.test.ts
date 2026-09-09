@@ -28,14 +28,15 @@ test("Canonical Navigation Registry yields correct desktop and mobile item break
   assert.ok(sidebarItems.length >= 6, "Sidebar items should cover primary modules");
 
   const bottomItems = getMobileBottomNavItems();
+  assert.equal(bottomItems.length, 4, "Bottom nav must have exactly 4 canonical destinations");
   assert.ok(bottomItems.some((item) => item.href === "/"), "Bottom nav must include Home");
   assert.ok(bottomItems.some((item) => item.href === "/tasks"), "Bottom nav must include Tasks");
-  assert.ok(bottomItems.some((item) => item.href === "/notifications"), "Bottom nav must include Notifications");
+  assert.ok(bottomItems.some((item) => item.href === "/documents"), "Bottom nav must include Documents");
+  assert.ok(bottomItems.some((item) => item.href === "/calendar"), "Bottom nav must include Calendar");
 
   const drawerItems = getMobileDrawerItems();
-  assert.ok(drawerItems.some((item) => item.href === "/calendar"), "Drawer must include Calendar");
-  assert.ok(drawerItems.some((item) => item.href === "/documents"), "Drawer must include Documents");
   assert.ok(drawerItems.some((item) => item.href === "/org"), "Drawer must include Org");
+  assert.ok(drawerItems.some((item) => item.href === "/settings"), "Drawer must include Settings");
   assert.equal(drawerItems.some((item) => item.href === "/kiosk"), false, "Must not contain dead /kiosk route");
 });
 

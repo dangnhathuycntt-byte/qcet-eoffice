@@ -54,12 +54,15 @@ describe("Scope Switcher Mobile Adaptation Suite", () => {
     assert.ok(content.includes("hidden sm:inline"), "Must provide responsive trigger label visibility");
   });
 
-  it("app-shell.tsx integrates MobileBottomNav and bottom spacing pb-28 md:pb-8", () => {
+  it("app-shell.tsx integrates MobileBottomNav and bottom spacing pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-8", () => {
     const filePath = path.resolve(process.cwd(), "src/components/layout/app-shell.tsx");
     const content = fs.readFileSync(filePath, "utf-8");
 
     assert.ok(content.includes("MobileBottomNav"), "AppShell must import MobileBottomNav");
-    assert.ok(content.includes("pb-28 md:pb-8"), "AppShell must apply pb-28 md:pb-8 for safe bottom nav clearance");
+    assert.ok(
+      content.includes("pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-8"),
+      "AppShell must apply pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-8 for safe bottom nav clearance"
+    );
     assert.ok(content.includes("flex md:hidden"), "MobileBottomNav must only render on mobile screens");
   });
 });

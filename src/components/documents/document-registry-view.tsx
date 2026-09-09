@@ -477,7 +477,7 @@ export function DocumentRegistryView() {
 
   return (
     <div
-      className="max-w-[1440px] w-full mx-auto space-y-6 pb-20 md:pb-12"
+      className="max-w-[1440px] w-full mx-auto space-y-6 pb-4 md:pb-8"
       data-slot="document-registry-view"
     >
       {/* 1. Header & Breadcrumb */}

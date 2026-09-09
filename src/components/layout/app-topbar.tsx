@@ -223,7 +223,7 @@ export function AppTopbar() {
           </button>
 
           {/* Notification Bell: Popover Trigger */}
-          <div ref={notificationRef} className="relative hidden md:block">
+          <div ref={notificationRef} className="relative flex items-center">
             <button
               type="button"
               onClick={() => setIsNotificationOpen((prev) => !prev)}
@@ -269,7 +269,13 @@ export function AppTopbar() {
           <div className="relative" ref={profileDropdownRef}>
             <button
               type="button"
-              onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
+              onClick={() => {
+                if (typeof window !== "undefined" && window.innerWidth < 768) {
+                  window.dispatchEvent(new CustomEvent("qcet:open-mobile-menu"));
+                  return;
+                }
+                setIsProfileDropdownOpen((prev) => !prev);
+              }}
               className="min-h-[44px] min-w-[44px] flex items-center justify-center sm:justify-start gap-2 pl-2 border-l border-border/50 transition-opacity hover:opacity-90 group cursor-pointer focus:outline-none touch-manipulation"
               title={`Hồ sơ cá nhân: ${user.name}`}
               aria-expanded={isProfileDropdownOpen}

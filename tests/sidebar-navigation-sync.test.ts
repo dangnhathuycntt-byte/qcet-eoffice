@@ -45,7 +45,7 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       // Verify canonical order
       assert.deepEqual(
         ids,
-        ["desk", "calendar", "tasks", "documents", "org", "notifications", "settings"],
+        ["desk", "tasks", "documents", "calendar", "org", "notifications", "settings"],
         "Items must follow canonical order"
       );
     });
@@ -208,7 +208,24 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       assert.equal(toggled, true);
       assert.equal(defaultPrevented, true);
 
-      // Number shortcut '3' should navigate to /tasks (3rd canonical item excluding settings)
+      // Number shortcut '2' should navigate to /tasks (2nd canonical item excluding settings)
+      defaultPrevented = false;
+      navigatedTo = null;
+      handled = handleSidebarShortcut(
+        {
+          key: "2",
+          target: buttonTarget,
+          preventDefault: () => {
+            defaultPrevented = true;
+          },
+        },
+        mockOptions
+      );
+      assert.equal(handled, true);
+      assert.equal(navigatedTo, "/tasks");
+      assert.equal(defaultPrevented, true);
+
+      // Number shortcut '3' (documents under development) must prevent default and NOT navigate
       defaultPrevented = false;
       navigatedTo = null;
       handled = handleSidebarShortcut(
@@ -222,24 +239,7 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
         mockOptions
       );
       assert.equal(handled, true);
-      assert.equal(navigatedTo, "/tasks");
-      assert.equal(defaultPrevented, true);
-
-      // Number shortcut '4' (documents under development) must prevent default and NOT navigate
-      defaultPrevented = false;
-      navigatedTo = null;
-      handled = handleSidebarShortcut(
-        {
-          key: "4",
-          target: buttonTarget,
-          preventDefault: () => {
-            defaultPrevented = true;
-          },
-        },
-        mockOptions
-      );
-      assert.equal(handled, true);
-      assert.equal(navigatedTo, null, "Shortcut 4 for documents must not trigger navigation");
+      assert.equal(navigatedTo, null, "Shortcut 3 for documents must not trigger navigation");
       assert.equal(defaultPrevented, true);
     });
   });

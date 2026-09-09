@@ -11,6 +11,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { CommandSearchModal } from "@/components/layout/command-search-modal";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
+import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { cn } from "@/lib/utils";
@@ -122,6 +123,13 @@ function MobileAppInstallModalContainer() {
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebarLayout();
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleOpen = () => setIsMobileMenuOpen(true);
+    window.addEventListener("qcet:open-mobile-menu", handleOpen);
+    return () => window.removeEventListener("qcet:open-mobile-menu", handleOpen);
+  }, []);
 
   if (pathname === "/login" || pathname === "/portal") {
     return <>{children}</>;
@@ -142,8 +150,12 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           <AppTopbar />
         </React.Suspense>
         <OfflineBanner />
-        {/* Normalized mobile bottom clearance: pb-20 md:pb-8 (standardized from pb-28 md:pb-8) */}
-        <main id="main-content" className="flex-1 py-4 md:py-8 pb-20 md:pb-8" tabIndex={-1}>
+        {/* Centralized safe-area bottom clearance on main */}
+        <main
+          id="main-content"
+          className="flex-1 py-4 md:py-8 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-8"
+          tabIndex={-1}
+        >
           <div className="max-w-[1440px] w-full mx-auto px-3.5 sm:px-6">
             {children}
           </div>
@@ -152,6 +164,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
       <React.Suspense fallback={null}>
         <MobileBottomNav className="flex md:hidden" />
+      </React.Suspense>
+
+      <React.Suspense fallback={null}>
+        <MobileMenuDrawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen} />
       </React.Suspense>
 
       <PushOnboardingSheet />
