@@ -393,7 +393,11 @@ export function UnifiedAdaptiveWorkspace({
               <CascadingTaskTable
                 tasks={displayedTasks}
                 onSelectTask={onSelectTask}
-                onStatusChange={onStatusChange}
+                onStatusChange={
+                  onStatusChange
+                    ? (taskId, newStatus) => onStatusChange(taskId, newStatus)
+                    : undefined
+                }
                 onRefresh={onRefresh}
                 onOpenSubmitModal={
                   onSubmitDeliverable
