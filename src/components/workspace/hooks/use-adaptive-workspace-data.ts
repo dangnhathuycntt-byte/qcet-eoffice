@@ -3,17 +3,38 @@ import type { AuthUser } from "@/types/auth";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import type {
   WorkspaceScope,
-  AdaptiveWorkspaceMetrics,
   UniversalActionQueueItems,
 } from "../types";
 import { matchesUser } from "@/lib/role-task-filter";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
+import { isTaskPastDue } from "@/lib/academic-calendar";
 
 export type {
   WorkspaceScope,
-  AdaptiveWorkspaceMetrics,
   UniversalActionQueueItems,
 } from "../types";
+
+export interface WorkspaceMetrics {
+  totalParentTasks: number;
+  completedParentTasks: number;
+  parentCompletionRate: number;
+  waitingApprovalCount: number;
+  urgentOverdueCount: number;
+  totalSubtasks: number;
+  completedSubtasks: number;
+  totalWorkItems: number;
+  subtasksWaitingApprovalCount?: number;
+  subtasksUrgentOverdueCount?: number;
+  parentWaitingApprovalCount?: number;
+  parentUrgentOverdueCount?: number;
+  // Backwards compatibility properties:
+  totalTasks: number; // = totalParentTasks
+  completedCount: number; // = completedParentTasks
+  completedRate: number; // = parentCompletionRate
+  labelScope?: string;
+}
+
+export type AdaptiveWorkspaceMetrics = WorkspaceMetrics & { labelScope: string };
 
 export interface DeriveWorkspaceDataOptions {
   tasks: SchoolTask[];
@@ -127,41 +148,50 @@ export function deriveAdaptiveWorkspaceData({
   }
 
   // Calculate Metrics
-  const totalTasks = scopedTasks.length;
-  let completedCount = 0;
-  let urgentOverdueCount = 0;
-  let waitingApprovalCount = 0;
+  const totalParentTasks = scopedTasks.length;
+  let completedParentTasks = 0;
+  let parentWaitingApprovalCount = 0;
+  let parentUrgentOverdueCount = 0;
 
-  const now = new Date();
+  let totalSubtasks = 0;
+  let completedSubtasks = 0;
+  let subtasksWaitingApprovalCount = 0;
+  let subtasksUrgentOverdueCount = 0;
 
   scopedTasks.forEach((t) => {
-    if (t.status === "COMPLETED") completedCount++;
+    if (t.status === "COMPLETED") completedParentTasks++;
     if (
       (t.status as string) === "WAITING_APPROVAL" ||
       (t.status as string) === "NEEDS_REVIEW" ||
       t.status === "PENDING_EXECUTIVE_APPROVAL"
     ) {
-      waitingApprovalCount++;
+      parentWaitingApprovalCount++;
     }
-    if (t.dueDate && new Date(t.dueDate) < now && t.status !== "COMPLETED") {
-      urgentOverdueCount++;
+    if (t.dueDate && isTaskPastDue(t.dueDate) && t.status !== "COMPLETED") {
+      parentUrgentOverdueCount++;
     }
 
     t.subTasks?.forEach((st) => {
+      totalSubtasks++;
+      if (st.status === "COMPLETED") completedSubtasks++;
       if (
         (st.status as string) === "WAITING_APPROVAL" ||
         (st.status as string) === "NEEDS_REVIEW" ||
         (st.status as string) === "PENDING_EXECUTIVE_APPROVAL"
       ) {
-        waitingApprovalCount++;
+        subtasksWaitingApprovalCount++;
       }
-      if (st.dueDate && new Date(st.dueDate) < now && st.status !== "COMPLETED") {
-        urgentOverdueCount++;
+      if (st.dueDate && isTaskPastDue(st.dueDate) && st.status !== "COMPLETED") {
+        subtasksUrgentOverdueCount++;
       }
     });
   });
 
-  const completedRate = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+  const waitingApprovalCount = parentWaitingApprovalCount + subtasksWaitingApprovalCount;
+  const urgentOverdueCount = parentUrgentOverdueCount + subtasksUrgentOverdueCount;
+  const totalWorkItems = totalParentTasks + totalSubtasks;
+  const parentCompletionRate =
+    totalParentTasks > 0 ? Math.round((completedParentTasks / totalParentTasks) * 100) : 0;
 
   const labelScope =
     scope === "school"
@@ -291,7 +321,7 @@ export function deriveAdaptiveWorkspaceData({
 
       const isMine = isSubTaskAssignedToUser(st, user);
       if (isMine && st.status !== "COMPLETED") {
-        const isOverdue = Boolean(st.dueDate && new Date(st.dueDate) < now);
+        const isOverdue = Boolean(st.dueDate && isTaskPastDue(st.dueDate));
         myPendingSubmissions.push({
           task: st,
           parentTaskTitle: t.title,
@@ -307,7 +337,7 @@ export function deriveAdaptiveWorkspaceData({
     if ((!t.subTasks || t.subTasks.length === 0) && t.status !== "COMPLETED") {
       const isMine = isTaskAssignedToUser(t, user);
       if (isMine) {
-        const isOverdue = Boolean(t.dueDate && new Date(t.dueDate) < now);
+        const isOverdue = Boolean(t.dueDate && isTaskPastDue(t.dueDate));
         const adaptedStaffTask: StaffTask = {
           id: t.id,
           title: t.title,
@@ -337,10 +367,22 @@ export function deriveAdaptiveWorkspaceData({
     activeScope: scope,
     scopedTasks,
     metrics: {
-      totalTasks,
-      urgentOverdueCount,
+      totalParentTasks,
+      completedParentTasks,
+      parentCompletionRate,
       waitingApprovalCount,
-      completedRate,
+      urgentOverdueCount,
+      totalSubtasks,
+      completedSubtasks,
+      totalWorkItems,
+      subtasksWaitingApprovalCount,
+      subtasksUrgentOverdueCount,
+      parentWaitingApprovalCount,
+      parentUrgentOverdueCount,
+      // Backwards compatibility properties:
+      totalTasks: totalParentTasks,
+      completedCount: completedParentTasks,
+      completedRate: parentCompletionRate,
       labelScope,
     },
     actionQueue: {
