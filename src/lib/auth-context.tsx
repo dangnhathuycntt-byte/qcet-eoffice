@@ -9,6 +9,7 @@ import React, {
   ReactNode,
 } from "react";
 import { AuthUser, UserRole, OnboardingData } from "../types/auth";
+import { purgeUserOfflineData } from "./pwa/offline-store";
 
 export const AUTH_STORAGE_KEY = "qcet_active_user";
 export const REGISTERED_USERS_KEY = "qcet_registered_users";
@@ -406,10 +407,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async (): Promise<void> => {
+    let userIdToPurge = user?.id;
+    if (!userIdToPurge && typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          userIdToPurge = parsed?.id;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch (err) {
       console.warn("Logout request error:", err);
+    }
+
+    if (userIdToPurge) {
+      try {
+        await purgeUserOfflineData(userIdToPurge);
+      } catch (err) {
+        console.warn("Error purging user offline data during logout:", err);
+      }
     }
 
     setUser(null);
@@ -423,7 +445,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       window.location.href = "/login";
     }
-  }, []);
+  }, [user?.id]);
 
   const switchRole = useCallback((role: UserRole) => {
     setUser((prev) => {
