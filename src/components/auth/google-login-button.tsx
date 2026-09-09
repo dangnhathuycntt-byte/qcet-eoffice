@@ -11,6 +11,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clientEnv } from "@/config/env.client";
 
 // Official Google Multi-Color SVG Icon
 export function GoogleIcon({ className = "size-5" }: { className?: string }) {
@@ -49,8 +50,8 @@ export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
 
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const isDev = process.env.NODE_ENV === "development";
+  const googleClientId = clientEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const isDev = clientEnv.NODE_ENV === "development";
 
   const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3001";
   const callbackUrl = `${origin}/api/auth/callback/google`;

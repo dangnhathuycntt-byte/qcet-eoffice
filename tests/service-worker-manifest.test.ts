@@ -323,7 +323,7 @@ describe("Task 5: Service Worker & PWA Manifest", () => {
   });
 
   describe("src/app/layout.tsx PWA meta & SW registration", () => {
-    test("layout.tsx contains apple-touch-icon link and service worker registration script", () => {
+    test("layout.tsx contains apple-touch-icon link and mounts PWAServiceWorkerManager", () => {
       const content = fs.readFileSync(layoutPath, "utf-8");
 
       assert.match(
@@ -336,10 +336,21 @@ describe("Task 5: Service Worker & PWA Manifest", () => {
         /\/logo-qcet\.png/,
         "layout.tsx apple-touch-icon should link to /logo-qcet.png"
       );
+
+      // PWAServiceWorkerManager handles robust SW lifecycle & safe updates
       assert.match(
         content,
-        /serviceWorker\.register\(\s*['"]\/sw\.js['"]\)/,
-        "layout.tsx should register /sw.js service worker"
+        /PWAServiceWorkerManager/,
+        "layout.tsx should mount PWAServiceWorkerManager"
+      );
+
+      const swManagerPath = path.join(rootDir, "src", "components", "pwa", "pwa-service-worker-manager.tsx");
+      assert.ok(fs.existsSync(swManagerPath), "PWAServiceWorkerManager component must exist");
+      const swManagerContent = fs.readFileSync(swManagerPath, "utf-8");
+      assert.match(
+        swManagerContent,
+        /serviceWorker\.register\(\s*['"]\/sw\.js['"]/,
+        "PWAServiceWorkerManager should register /sw.js service worker"
       );
     });
   });

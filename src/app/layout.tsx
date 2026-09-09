@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { DisplayDensityProvider } from "@/components/density-provider";
 import { AppShell } from "@/components/layout/app-shell";
+import { PWAServiceWorkerManager } from "@/components/pwa/pwa-service-worker-manager";
 
 const fontSans = Be_Vietnam_Pro({
   variable: "--font-sans",
@@ -84,13 +85,6 @@ export default function RootLayout({
                     document.documentElement.setAttribute('data-density', 'comfortable');
                   }
                 } catch (e) {}
-                if ('serviceWorker' in navigator) {
-                  window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                      console.error('ServiceWorker registration failed:', err);
-                    });
-                  });
-                }
               })();
             `,
           }}
@@ -106,6 +100,7 @@ export default function RootLayout({
               Chuyển đến nội dung chính
             </a>
             <AppShell>{children}</AppShell>
+            <PWAServiceWorkerManager />
           </DisplayDensityProvider>
         </AuthProvider>
       </body>
