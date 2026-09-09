@@ -40,4 +40,14 @@ describe("Unassigned Department Detection & Scope Details", () => {
     assert.ok(content.includes("Cập nhật Khoa / Phòng công tác ngay"));
     assert.ok(!content.includes("dark:")); // Light-only compliance
   });
+
+  test("AdaptiveScopeHeader and TaskManagementWorkspace integration contract verified", () => {
+    const headerContent = readFileSync("src/components/workspace/components/adaptive-scope-header.tsx", "utf-8");
+    assert.ok(headerContent.includes("isUserUnassignedDepartment"));
+    assert.ok(headerContent.includes("Chưa chọn đơn vị"));
+
+    const workspaceContent = readFileSync("src/components/tasks/task-management-workspace.tsx", "utf-8");
+    assert.ok(workspaceContent.includes("UnassignedDepartmentState"));
+    assert.ok(workspaceContent.includes("setIsProfileModalOpen"));
+  });
 });

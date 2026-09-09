@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { School, Building2, User, Plus, RefreshCw } from "lucide-react";
+import { School, Building2, User, Plus, RefreshCw, AlertTriangle } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import type { WorkspaceScope } from "../types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
+import { isUserUnassignedDepartment } from "@/lib/auth-context";
 
 export interface AdaptiveScopeHeaderProps {
   user: AuthUser;
@@ -60,7 +61,10 @@ export function AdaptiveScopeHeader({
 }: AdaptiveScopeHeaderProps) {
   const isExecutive = isExecutiveUser(user);
   const isManager = isManagerUser(user) || isExecutive;
-  const unitLabel = user.department || user.departmentCode || "Đơn vị";
+  const isUnassigned = isUserUnassignedDepartment(user);
+  const unitLabel = isUnassigned
+    ? "Chưa chọn đơn vị"
+    : (user.department || user.departmentCode || "Đơn vị");
 
   // Check URL search params on mount if not matching current activeScope
   React.useEffect(() => {
@@ -103,8 +107,10 @@ export function AdaptiveScopeHeader({
     {
       id: "unit",
       label: unitLabel,
-      shortLabel: unitLabel,
-      icon: Building2,
+      shortLabel: isUnassigned
+        ? "Chưa chọn đ/vị"
+        : (user.departmentCode || (unitLabel.length > 18 ? "Đơn vị" : unitLabel)),
+      icon: isUnassigned ? AlertTriangle : Building2,
       visible: true,
     },
     {
@@ -148,6 +154,7 @@ export function AdaptiveScopeHeader({
               const isActive = activeScope === s.id;
               const count = badgeCounts?.[s.id];
               const showBadge = typeof count === "number" && count > 0;
+              const isUnitUnassigned = s.id === "unit" && isUnassigned;
 
               return (
                 <button
@@ -162,13 +169,32 @@ export function AdaptiveScopeHeader({
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer min-h-[44px] sm:min-h-[36px] touch-manipulation border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                     isActive
-                      ? scopeActiveStyles[s.id]
+                      ? isUnitUnassigned
+                        ? "text-amber-800 bg-amber-50/90 border-amber-300 font-bold"
+                        : scopeActiveStyles[s.id]
+                      : isUnitUnassigned
+                      ? "text-amber-700/90 border-amber-200/80 bg-amber-50/40 hover:bg-amber-50/70 hover:text-amber-800"
                       : "text-muted-foreground border-transparent hover:text-foreground hover:bg-card/50"
                   )}
                 >
-                  <Icon className="size-3.5 shrink-0 select-none" strokeWidth={1.5} aria-hidden="true" />
+                  <Icon
+                    className={cn(
+                      "size-3.5 shrink-0 select-none",
+                      isUnitUnassigned && "text-amber-600"
+                    )}
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
                   <span className="hidden sm:inline">{s.label}</span>
                   <span className="sm:hidden">{s.shortLabel}</span>
+                  {isUnitUnassigned && (
+                    <span
+                      data-slot="unassigned-scope-badge"
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 ml-0.5 shrink-0"
+                    >
+                      Cần chọn
+                    </span>
+                  )}
                   {showBadge && (
                     <span
                       data-slot="scope-badge"
@@ -176,7 +202,9 @@ export function AdaptiveScopeHeader({
                       className={cn(
                         "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-mono tabular-nums font-semibold border ml-0.5",
                         isActive
-                          ? scopeBadgeActiveStyles[s.id]
+                          ? isUnitUnassigned
+                            ? "bg-amber-100 text-amber-800 border-amber-200"
+                            : scopeBadgeActiveStyles[s.id]
                           : "bg-muted text-muted-foreground border-border/60"
                       )}
                     >
@@ -189,7 +217,7 @@ export function AdaptiveScopeHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+      <div className="hidden sm:flex items-center gap-2 self-end sm:self-auto shrink-0">
         {onRefresh && (
           <Button
             variant="outline"
@@ -208,6 +236,7 @@ export function AdaptiveScopeHeader({
         )}
         {onCreateTask && (
           <Button
+            id="tour-create-task-btn"
             size="sm"
             onClick={onCreateTask}
             aria-label="Thêm nhiệm vụ / Giao nhiệm vụ"

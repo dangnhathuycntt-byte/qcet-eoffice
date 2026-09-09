@@ -32,9 +32,10 @@ import {
   isSchoolTask,
 } from "@/components/dashboard/task-detail-side-sheet";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { filterTasksByRole } from "@/lib/role-task-filter";
 import { getDepartmentForMember } from "@/lib/departments";
+import { UnassignedDepartmentState } from "@/components/workspace/components/unassigned-department-state";
 import {
   LayoutGrid,
   List,
@@ -210,7 +211,7 @@ export function TaskManagementWorkspace({
   initialViewMode = "kanban",
   initialTasks,
 }: TaskManagementWorkspaceProps) {
-  const { user } = useAuth();
+  const { user, setIsProfileModalOpen } = useAuth();
 
   const [dashboardData, setDashboardData] = React.useState<DashboardPayload | null>(
     initialTasks
@@ -669,11 +670,18 @@ export function TaskManagementWorkspace({
             <span className="text-xs text-muted-foreground font-medium">
               Học kỳ I
             </span>
-            {scope === "unit" && user?.department && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-secondary text-secondary-foreground border border-border/60">
-                <Building2 className="size-3" strokeWidth={1.5} />
-                {user.department}
-              </span>
+            {scope === "unit" && (
+              isUserUnassignedDepartment(user) ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                  <AlertCircle className="size-3 text-amber-700" strokeWidth={1.5} />
+                  Chưa chọn đơn vị
+                </span>
+              ) : user?.department ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-secondary text-secondary-foreground border border-border/60">
+                  <Building2 className="size-3" strokeWidth={1.5} />
+                  {user.department}
+                </span>
+              ) : null
             )}
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
@@ -856,9 +864,11 @@ export function TaskManagementWorkspace({
         </div>
       </div>
 
-      {/* Main Content: Modular Cascading Table OR Kanban Board */}
+      {/* Main Content: Modular Cascading Table OR Kanban Board OR UnassignedDepartmentState */}
       <section aria-label="Danh sách công việc" className="min-h-[420px]">
-        {viewMode === "table" ? (
+        {scope === "unit" && isUserUnassignedDepartment(user) ? (
+          <UnassignedDepartmentState onOpenProfile={() => setIsProfileModalOpen(true)} />
+        ) : viewMode === "table" ? (
           <ModularCascadingTaskTable
             tasks={visibleTasks}
             onSelectTask={(task) => setSelectedTask(task)}
