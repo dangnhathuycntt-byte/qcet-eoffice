@@ -7,10 +7,21 @@ import type {
   DashboardStats,
   UpcomingItem,
   ActivityEvent,
+  TaskCategory,
 } from "@/types/dashboard";
 import type { DepartmentHealthSummary } from "@/lib/executive-matrix-aggregator";
 import { TaskScope, TaskStatus } from "@prisma/client";
 import { getSystemReferenceDate, isTaskPastDue } from "@/lib/academic-calendar";
+
+export const VALID_TASK_CATEGORIES = new Set<string>([
+  "CHUYEN_DOI_SO",
+  "TRUYEN_THONG",
+  "CNTT",
+  "ATTT",
+  "THU_VIEN",
+  "BAO_CAO",
+  "KHAC",
+]);
 
 export interface LiveDashboardOptions {
   userId?: string;
@@ -84,6 +95,13 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     }),
     prisma.department.findMany({
       include: {
+        users: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+          },
+        },
         tasks: {
           where: deptTaskWhere,
           select: {
@@ -146,8 +164,13 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     const progressPercent = t.progressPercent > 0 ? t.progressPercent : rolledUpProgress;
 
     const isSchool = t.scope === TaskScope.SCHOOL;
-    const categoryLabel = isSchool ? "Chỉ đạo cấp Trường" : "Chuyên môn Khoa/Phòng";
-    const category = isSchool ? "CHUYEN_DOI_SO" : "CNTT";
+    const rawCategory = (t as any).category;
+    const category: TaskCategory = rawCategory && VALID_TASK_CATEGORIES.has(rawCategory)
+      ? (rawCategory as TaskCategory)
+      : "KHAC";
+    const categoryLabel =
+      (t as any).categoryLabel ||
+      (isSchool ? "Nhiệm vụ cấp Trường" : "Nhiệm vụ đơn vị");
 
     return {
       id: t.id,
@@ -197,7 +220,10 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
   ).length;
 
   const schoolTasksList = mappedTasks.filter(
-    (t) => (t as any).scope === TaskScope.SCHOOL || t.categoryLabel === "Chỉ đạo cấp Trường"
+    (t) =>
+      (t as any).scope === TaskScope.SCHOOL ||
+      t.categoryLabel === "Nhiệm vụ cấp Trường" ||
+      t.categoryLabel === "Chỉ đạo cấp Trường"
   );
   const totalSchool = schoolTasksList.length;
   const inProgressSchool = schoolTasksList.filter((t) => t.status === "IN_PROGRESS").length;
@@ -258,12 +284,19 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     const averageProgressPercent = dTotal > 0 ? Math.round(totalProgress / dTotal) : 0;
     const completionRate = dTotal > 0 ? Math.round((dCompleted / dTotal) * 100) : 0;
 
+    const leader = d.users?.find(
+      (u) =>
+        (u.role === "TRUONG_PHONG" || u.role === "BAN_GIAM_HIEU") &&
+        u.name.trim().toLowerCase() !== d.name.trim().toLowerCase()
+    );
+    const leadName = leader?.name || "Chưa phân công";
+
     return {
       departmentId: d.id,
       departmentCode: d.id,
       departmentName: d.name,
       shortName: d.shortName || d.id,
-      leadName: d.name,
+      leadName,
       totalTasks: dTotal,
       totalTasksCount: dTotal,
       completedTasks: dCompleted,
@@ -334,13 +367,18 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
         action = "đã nộp minh chứng cho";
       }
 
+      const eventCategory: TaskCategory =
+        n.category && VALID_TASK_CATEGORIES.has(n.category)
+          ? (n.category as TaskCategory)
+          : "KHAC";
+
       return {
         id: `act-notif-${n.id}`,
         actorName: n.actorName || n.user?.name || "Lãnh đạo QCET",
         action,
         targetTitle: n.title.replace(/^\[.*?\]\s*/, ""),
         timestamp: n.createdAt.toISOString(),
-        category: n.category === "resolution" ? "CHUYEN_DOI_SO" : "CNTT",
+        category: eventCategory,
       };
     });
   }
