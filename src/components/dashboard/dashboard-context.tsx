@@ -13,7 +13,7 @@ import type { WorkspaceZone, DeliverableSubmissionPayload, ApprovalActionPayload
 import type { TaskScope, TaskViewMode } from "@/components/dashboard/unified-task-toolbar";
 import type { AuthUser } from "@/types/auth";
 import type { WorkboxFilter } from "@/components/dashboard/executive-stat-strip";
-import type { ExecutiveFilter, ExecutiveActionStats, DepartmentHealthSummary } from "@/lib/executive-matrix-aggregator";
+import type { ExecutiveFilter, ExecutiveActionStats, DepartmentHealthSummary, ExecutiveActionItem } from "@/lib/executive-matrix-aggregator";
 import type { DelegationRule } from "@/types/delegation";
 import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import type { AcademicMonthInfo } from "@/lib/academic-calendar";
@@ -74,6 +74,7 @@ export interface DashboardDataContextValue {
   selectedCategory: string;
   departmentHealth: DepartmentHealthSummary[];
   executiveStats: ExecutiveActionStats | null;
+  executiveActionItems?: ExecutiveActionItem[];
   roleUpcoming: UpcomingItem[];
   parentSchoolTaskTitle?: string;
   delegations: DelegationRule[];
@@ -228,6 +229,32 @@ export function DashboardStateProvider({ children }: { children: React.ReactNode
     return parent?.title;
   }, [modalState.selectedTask, dashboardState.tasks]);
 
+  // Global listener for opening task detail from external triggers (e.g. CommandSearchModal)
+  React.useEffect(() => {
+    const handleOpenTaskDetail = (e: Event) => {
+      const customEvent = e as CustomEvent<{ task?: SchoolTask | StaffTask; taskId?: string }>;
+      if (customEvent.detail?.task) {
+        modalState.openTaskDetail(customEvent.detail.task);
+      } else if (customEvent.detail?.taskId && dashboardState.tasks) {
+        const id = customEvent.detail.taskId;
+        const found = dashboardState.tasks.find((t) => t.id === id);
+        if (found) {
+          modalState.openTaskDetail(found);
+        } else {
+          for (const parent of dashboardState.tasks) {
+            const sub = parent.subTasks?.find((s) => s.id === id);
+            if (sub) {
+              modalState.openTaskDetail(sub);
+              break;
+            }
+          }
+        }
+      }
+    };
+    window.addEventListener("qcet:open-task-detail", handleOpenTaskDetail);
+    return () => window.removeEventListener("qcet:open-task-detail", handleOpenTaskDetail);
+  }, [modalState.openTaskDetail, dashboardState.tasks]);
+
   // 1. Nav value: Stable unless activeZone, scope, viewMode, or view toggles change
   const navValue = React.useMemo<DashboardNavContextValue>(
     () => ({
@@ -288,6 +315,7 @@ export function DashboardStateProvider({ children }: { children: React.ReactNode
       selectedCategory: dashboardState.selectedCategory,
       departmentHealth: dashboardState.departmentHealth,
       executiveStats: dashboardState.executiveStats,
+      executiveActionItems: dashboardState.executiveActionItems,
       roleUpcoming: dashboardState.roleUpcoming,
       parentSchoolTaskTitle,
       delegations: dashboardState.delegations,
@@ -322,6 +350,7 @@ export function DashboardStateProvider({ children }: { children: React.ReactNode
       dashboardState.selectedCategory,
       dashboardState.departmentHealth,
       dashboardState.executiveStats,
+      dashboardState.executiveActionItems,
       dashboardState.roleUpcoming,
       parentSchoolTaskTitle,
       dashboardState.delegations,

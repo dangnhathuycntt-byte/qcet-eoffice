@@ -45,7 +45,7 @@ export function filterDashboardReactiveTasks(
 function DashboardZoneComponent() {
   const {
     tasks, monthScopedBaseTasks, user, displayedStats, activeWorkbox,
-    isExecutive, executiveStats, executiveFilter, departmentHealth,
+    isExecutive, executiveStats, executiveFilter, executiveActionItems, departmentHealth,
     selectedDepartment, selectedAcademicMonth, selectedMonthPeriod,
     priorOverdueBacklog, roleUpcoming, activities, isRefreshing,
   } = useDashboardData();
@@ -105,8 +105,9 @@ function DashboardZoneComponent() {
             stats={executiveStats}
             activeFilter={executiveFilter}
             onFilterChange={setExecutiveFilter}
+            items={executiveActionItems}
             onAction={(item) => {
-              const matched = baseTasks.find((t) => t.id === item.id);
+              const matched = baseTasks.find((t) => t.id === item.id || t.id === item.taskId);
               if (matched) openTaskDetail(matched);
             }}
           />

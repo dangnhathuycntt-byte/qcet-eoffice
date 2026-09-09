@@ -5,22 +5,12 @@ import { CheckCircle2, AlertTriangle, Target, ArrowRight } from "lucide-react";
 import type {
   ExecutiveActionStats,
   ExecutiveFilter,
+  ExecutiveActionItem,
 } from "@/lib/executive-matrix-aggregator";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export type { ExecutiveFilter };
-
-export interface ExecutiveActionItem {
-  id: string;
-  title: string;
-  department: string;
-  assignee: string;
-  dueDate: string;
-  filterType: Exclude<ExecutiveFilter, "ALL">;
-  priority?: "KHAN_CAP" | "CAO" | "TRUNG_BINH";
-  actionLabel?: string;
-}
+export type { ExecutiveFilter, ExecutiveActionItem };
 
 export interface ExecutiveActionCenterProps {
   stats: ExecutiveActionStats;
