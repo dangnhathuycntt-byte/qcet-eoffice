@@ -24,6 +24,8 @@ export interface RegisterPayload {
 
 export interface AuthContextType {
   user: AuthUser | null;
+  isAuthenticated?: boolean;
+  isOfflineReadOnly?: boolean;
   switchRole: (role: UserRole) => void;
   switchUser: (userId: string) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
@@ -155,6 +157,8 @@ export function shouldPromptUnassignedDepartment(
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
+  isAuthenticated: false,
+  isOfflineReadOnly: false,
   switchRole: () => {},
   switchUser: () => {},
   login: async () => ({ success: false, error: "Not initialized" }),
@@ -183,8 +187,103 @@ export function useAuth(): AuthContextType {
   return context;
 }
 
+export interface SessionResolutionResult {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isOfflineReadOnly: boolean;
+}
+
+/**
+ * Pure session state resolver enforcing Server Session Truth (31-auth-security.md):
+ * - Server session is the sole authority for active authentication.
+ * - If server session is valid (200 with authenticated: true):
+ *     isAuthenticated: true, isOfflineReadOnly: false
+ * - If server returns 401 / unauthenticated / offline error, but localStorage has cached identity:
+ *     isAuthenticated: false, isOfflineReadOnly: true (cached UI read-only mode)
+ * - If server returns 401 / unauthenticated and no cached identity exists:
+ *     user: null, isAuthenticated: false, isOfflineReadOnly: false
+ */
+export function resolveSessionState(
+  serverAuth: { authenticated: boolean; user?: any } | null,
+  cachedUserStr: string | null
+): SessionResolutionResult {
+  if (serverAuth && serverAuth.authenticated && serverAuth.user) {
+    const serverUser = mapDbUserToAuthUser(serverAuth.user);
+    return {
+      user: serverUser,
+      isAuthenticated: true,
+      isOfflineReadOnly: false,
+    };
+  }
+
+  if (cachedUserStr) {
+    try {
+      const parsed = JSON.parse(cachedUserStr);
+      if (parsed && typeof parsed === "object" && parsed.id) {
+        return {
+          user: parsed as AuthUser,
+          isAuthenticated: false,
+          isOfflineReadOnly: true,
+        };
+      }
+    } catch {
+      // not valid JSON
+    }
+  }
+
+  return {
+    user: null,
+    isAuthenticated: false,
+    isOfflineReadOnly: false,
+  };
+}
+
+export async function performSessionSync(
+  fetchFn: typeof fetch = fetch,
+  storage: { getItem: (key: string) => string | null; setItem?: (key: string, value: string) => void } | null = typeof window !== "undefined" ? localStorage : null
+): Promise<SessionResolutionResult> {
+  let serverAuth: { authenticated: boolean; user?: any } | null = null;
+  try {
+    const res = await fetchFn("/api/auth/me");
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === "object") {
+        serverAuth = data;
+      }
+    } else {
+      serverAuth = { authenticated: false };
+    }
+  } catch (err) {
+    console.warn("Session check /api/auth/me encountered error, using local fallback:", err);
+    serverAuth = null;
+  }
+
+  let cachedUserStr: string | null = null;
+  if (storage) {
+    try {
+      cachedUserStr = storage.getItem(AUTH_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }
+
+  const resolution = resolveSessionState(serverAuth, cachedUserStr);
+
+  if (resolution.isAuthenticated && resolution.user && storage?.setItem) {
+    try {
+      storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(resolution.user));
+    } catch {
+      // ignore
+    }
+  }
+
+  return resolution;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isOfflineReadOnly, setIsOfflineReadOnly] = useState<boolean>(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -217,54 +316,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
 
     async function syncSession() {
-      try {
-        const res = await fetch("/api/auth/me");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.authenticated && data.user && isMounted) {
-            const serverUser = mapDbUserToAuthUser(data.user);
-            setUser(serverUser);
-            if (typeof window !== "undefined") {
-              try {
-                localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(serverUser));
-              } catch {
-                // ignore
-              }
-            }
-            setIsLoading(false);
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn("Session check /api/auth/me encountered error, using local fallback:", err);
-      }
+      const storage = typeof window !== "undefined" ? localStorage : null;
+      const resolution = await performSessionSync(fetch, storage);
 
-      // Fallback to localStorage if not authenticated on server or offline
-      if (typeof window !== "undefined") {
-        try {
-          const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-          if (saved && isMounted) {
-            try {
-              const parsed = JSON.parse(saved);
-              if (parsed && typeof parsed === "object" && parsed.id) {
-                setUser(parsed as AuthUser);
-                setIsLoading(false);
-                return;
-              }
-            } catch {
-              // not JSON
-            }
-          }
-        } catch {
-          // localStorage unavailable
-        }
-      }
+      if (!isMounted) return;
 
-      // Unauthenticated visitor: user remains null without auto-establishing demo session
-      if (isMounted) {
-        setUser(null);
-        setIsLoading(false);
-      }
+      setUser(resolution.user);
+      setIsAuthenticated(resolution.isAuthenticated);
+      setIsOfflineReadOnly(resolution.isOfflineReadOnly);
+      setIsLoading(false);
     }
 
     syncSession();
@@ -292,6 +352,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const authenticatedUser = mapDbUserToAuthUser(data.user);
         setUser(authenticatedUser);
+        setIsAuthenticated(true);
+        setIsOfflineReadOnly(false);
 
         if (typeof window !== "undefined") {
           try {
@@ -351,6 +413,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setUser(null);
+    setIsAuthenticated(false);
+    setIsOfflineReadOnly(false);
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -390,6 +454,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const targetUser = registered.find((u) => u.id === userId || u.email === userId);
     if (targetUser) {
       setUser(targetUser);
+      setIsAuthenticated(true);
+      setIsOfflineReadOnly(false);
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(targetUser));
@@ -416,6 +482,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar: payload.avatar || existingUser.avatar,
         };
         setUser(updated);
+        setIsAuthenticated(true);
+        setIsOfflineReadOnly(false);
         if (typeof window !== "undefined") {
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
         }
@@ -458,6 +526,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveRegisteredUsers(nextRegistered);
 
       setUser(newUser);
+      setIsAuthenticated(true);
+      setIsOfflineReadOnly(false);
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
@@ -506,6 +576,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        isAuthenticated,
+        isOfflineReadOnly,
         switchRole,
         switchUser,
         login,

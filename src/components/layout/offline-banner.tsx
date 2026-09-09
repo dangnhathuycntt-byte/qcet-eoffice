@@ -9,6 +9,7 @@ import {
   flushOfflineMutations,
   type OfflineMutation,
 } from "@/lib/offline-sync";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 export function OfflineBanner() {
@@ -73,9 +74,17 @@ export function OfflineBanner() {
     }
   }, [isSyncing, online]);
 
+  let isOfflineReadOnly = false;
+  try {
+    const auth = useAuth();
+    isOfflineReadOnly = Boolean(auth.isOfflineReadOnly);
+  } catch {
+    // Rendered outside AuthProvider
+  }
+
   if (!mounted) return null;
 
-  const isVisible = !online || queue.length > 0 || justSynced;
+  const isVisible = !online || queue.length > 0 || justSynced || isOfflineReadOnly;
   if (!isVisible) return null;
 
   return (
@@ -90,7 +99,7 @@ export function OfflineBanner() {
       <div
         className={cn(
           "flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-full shadow-lg border text-xs font-medium backdrop-blur-md transition-all",
-          !online
+          !online || isOfflineReadOnly
             ? "bg-amber-50/95 border-amber-300/80 text-amber-900 shadow-amber-900/5"
             : justSynced
             ? "bg-emerald-50/95 border-emerald-300/80 text-emerald-900 shadow-emerald-900/5"
@@ -100,6 +109,8 @@ export function OfflineBanner() {
         <div className="flex items-center gap-2 min-w-0">
           {!online ? (
             <WifiOff className="size-4 shrink-0 text-amber-600 animate-pulse" />
+          ) : isOfflineReadOnly ? (
+            <AlertCircle className="size-4 shrink-0 text-amber-600" />
           ) : justSynced ? (
             <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
           ) : (
@@ -110,6 +121,8 @@ export function OfflineBanner() {
             <span className="font-semibold block truncate">
               {!online
                 ? "Chế độ ngoại tuyến"
+                : isOfflineReadOnly
+                ? "Chế độ chỉ xem ngoại tuyến"
                 : justSynced
                 ? "Đã đồng bộ thành công"
                 : "Thay đổi chưa gửi"}
@@ -119,6 +132,8 @@ export function OfflineBanner() {
                 ? queue.length > 0
                   ? `Đang lưu tạm ${queue.length} tác vụ cục bộ`
                   : "Dữ liệu được lưu trong bộ nhớ tạm"
+                : isOfflineReadOnly
+                ? "Phiên máy chủ đã hết hạn. Dữ liệu chỉ xem từ bộ nhớ tạm"
                 : justSynced
                 ? "Tất cả thay đổi đã được cập nhật"
                 : `${queue.length} tác vụ đang chờ máy chủ`}
@@ -126,7 +141,19 @@ export function OfflineBanner() {
           </div>
         </div>
 
-        {online && queue.length > 0 && (
+        {isOfflineReadOnly && online && (
+          <a
+            href="/login"
+            className={cn(
+              "shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer",
+              "bg-primary text-primary-foreground hover:bg-primary/90"
+            )}
+          >
+            Đăng nhập lại
+          </a>
+        )}
+
+        {online && !isOfflineReadOnly && queue.length > 0 && (
           <button
             type="button"
             onClick={handleManualSync}

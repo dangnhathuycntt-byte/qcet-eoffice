@@ -95,7 +95,7 @@ export function AppTopbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isCollapsed, toggleCollapse, badgeCounts } = useSidebar();
-  const { user, logout, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
+  const { user, logout, isProfileModalOpen, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -284,12 +284,22 @@ export function AppTopbar() {
                 {getInitials(user.name)}
               </div>
               <div className="hidden text-left xl:block">
-                <p
-                  className="text-xs font-semibold leading-tight text-foreground max-w-[130px] truncate"
-                  title={user.name}
-                >
-                  {user.name}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p
+                    className="text-xs font-semibold leading-tight text-foreground max-w-[120px] truncate"
+                    title={user.name}
+                  >
+                    {user.name}
+                  </p>
+                  {isOfflineReadOnly && (
+                    <span
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-900 border border-amber-300 shrink-0"
+                      title="Phiên đăng nhập máy chủ đã hết hạn (Chỉ xem)"
+                    >
+                      Chỉ xem
+                    </span>
+                  )}
+                </div>
                 <p
                   className="text-xs text-muted-foreground font-medium max-w-[130px] truncate"
                   title={user.roleLabel}
@@ -312,6 +322,11 @@ export function AppTopbar() {
             {/* Profile Dropdown Menu */}
             {isProfileDropdownOpen && (
               <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border/60 bg-card/95 backdrop-blur-md p-3 shadow-dropdown z-50 animate-in fade-in zoom-in-95 duration-150">
+                {isOfflineReadOnly && (
+                  <div className="mb-2.5 p-2 rounded-lg bg-amber-50 border border-amber-300 text-xs text-amber-900 font-medium leading-relaxed">
+                    Phiên máy chủ đã hết hạn. Dữ liệu đang hiển thị ở chế độ chỉ xem từ bộ nhớ tạm.
+                  </div>
+                )}
                 {/* User Summary Card */}
                 <div className="flex items-start gap-3 border-b border-border/50 pb-3">
                   <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-sm font-semibold shadow-xs shrink-0">
