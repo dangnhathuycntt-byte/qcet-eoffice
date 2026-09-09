@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { School, Building2, User, Plus, RefreshCw, AlertTriangle } from "lucide-react";
+import { School, Building2, User, Plus, RefreshCw, AlertTriangle, List, LayoutGrid } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
-import type { WorkspaceScope } from "../types";
+import type { WorkspaceScope, ViewMode } from "../types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
@@ -20,6 +20,8 @@ export interface AdaptiveScopeHeaderProps {
   hideScopeSwitcher?: boolean;
   contextTitle?: string;
   contextBadge?: string;
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
 }
 
 const scopeActiveStyles: Record<WorkspaceScope, string> = {
@@ -58,6 +60,8 @@ export function AdaptiveScopeHeader({
   hideScopeSwitcher: _hideScopeSwitcher,
   contextTitle,
   contextBadge,
+  viewMode,
+  onViewModeChange,
 }: AdaptiveScopeHeaderProps) {
   const isExecutive = isExecutiveUser(user);
   const isManager = isManagerUser(user) || isExecutive;
@@ -217,14 +221,50 @@ export function AdaptiveScopeHeader({
         </div>
       </div>
 
-      <div className="hidden sm:flex items-center gap-2 self-end sm:self-auto shrink-0">
+      <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+        {onViewModeChange && (
+          <div
+            role="group"
+            aria-label="Chế độ xem"
+            className="flex items-center rounded-xl border border-border/70 bg-muted/40 p-0.5"
+          >
+            <button
+              type="button"
+              onClick={() => onViewModeChange("table")}
+              className={cn(
+                "flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                viewMode === "table"
+                  ? "bg-background text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Xem dạng bảng chi tiết"
+            >
+              <List strokeWidth={1.5} className="size-3.5" />
+              <span className="hidden md:inline">Bảng</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange("kanban")}
+              className={cn(
+                "flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                viewMode === "kanban"
+                  ? "bg-background text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Xem dạng bảng Kanban"
+            >
+              <LayoutGrid strokeWidth={1.5} className="size-3.5" />
+              <span className="hidden md:inline">Kanban</span>
+            </button>
+          </div>
+        )}
         {onRefresh && (
           <Button
             variant="outline"
             size="sm"
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="h-8 px-2.5 rounded-xl border-border/80 text-xs font-medium cursor-pointer"
+            className="hidden sm:inline-flex h-8 px-2.5 rounded-xl border-border/80 text-xs font-medium cursor-pointer"
             aria-label="Làm mới dữ liệu"
           >
             <RefreshCw

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Inbox, AlertTriangle, Loader2 } from "lucide-react";
-import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope } from "./types";
+import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope, ViewMode } from "./types";
 import {
   useAdaptiveWorkspaceData,
   countScopeTasks,
@@ -11,18 +11,34 @@ import { AdaptiveScopeHeader } from "./components/adaptive-scope-header";
 import { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 import { UniversalActionQueue } from "./components/universal-action-queue";
 import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
-import { CascadingTaskTable } from "@/components/tasks/cascading-task-table";
+import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
+import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
+import { CreateTaskModal, type CreateTaskFormData } from "@/components/dashboard/create-task-modal";
+import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
+import { UnassignedDepartmentState } from "./components/unassigned-department-state";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 import { ReviewActionDialog } from "@/components/portal/review-action-dialog";
 import { SubmitDeliverableModal } from "@/components/portal/submit-deliverable-modal";
 import { Button } from "@/components/ui/button";
-import type { SchoolTask, StaffTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
+import type { AuthUser } from "@/types/auth";
+import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
+import {
+  applyOptimisticStatusChange,
+  applyOptimisticCreateTask,
+} from "./utils/task-workspace-mutations";
+import { cn } from "@/lib/utils";
+
+export { type WorkspaceScope, type ViewMode };
 
 export function UnifiedAdaptiveWorkspace({
-  user,
-  tasks,
+  user: initialUser,
+  tasks: controlledTasks,
+  initialTasks,
+  scope: propScope,
   initialScope,
   forcedScope,
+  onScopeChange,
   forcedRole,
   selectedDepartment,
   contextTitle,
@@ -32,6 +48,10 @@ export function UnifiedAdaptiveWorkspace({
   isOffline,
   errorMessage,
   hideScopeSwitcher,
+  className,
+  viewMode: controlledViewMode,
+  initialViewMode,
+  onViewModeChange,
   onSelectTask,
   onReview,
   onSubmitDeliverable,
@@ -53,9 +73,76 @@ export function UnifiedAdaptiveWorkspace({
   onWorkboxChange,
   onResetFilters,
 }: UnifiedAdaptiveWorkspaceProps) {
+  const auth = useAuth();
+  const fallbackUser: AuthUser = React.useMemo(
+    () => ({
+      id: "guest",
+      name: "Khách",
+      email: "guest@qcet.edu.vn",
+      role: "STAFF",
+      roleLabel: "Chuyên viên",
+      department: "",
+      departmentCode: "",
+    }),
+    []
+  );
+
+  const effectiveUser = initialUser || auth.user;
+  const user = effectiveUser || fallbackUser;
+  const setIsProfileModalOpen = auth.setIsProfileModalOpen;
+
+  // Internal task collection for standalone/uncontrolled mode
+  const [internalTasks, setInternalTasks] = React.useState<SchoolTask[]>(
+    initialTasks || controlledTasks || []
+  );
+  const [isInternalLoading, setIsInternalLoading] = React.useState(false);
+  const [internalError, setInternalError] = React.useState<string | null>(null);
+  const [isRefreshingInternal, setIsRefreshingInternal] = React.useState(false);
+
+  // Synchronize internal tasks when controlledTasks changes
+  React.useEffect(() => {
+    if (controlledTasks !== undefined) {
+      setInternalTasks(controlledTasks);
+    }
+  }, [controlledTasks]);
+
+  // Self-contained data fetching when tasks are not provided
+  React.useEffect(() => {
+    if (controlledTasks !== undefined) return;
+    if (initialTasks && initialTasks.length > 0) return;
+
+    let isMounted = true;
+    setIsInternalLoading(true);
+    fetch("/api/dashboard/overview")
+      .then((res) => {
+        if (!res.ok) throw new Error("Không thể tải danh sách công việc");
+        return res.json();
+      })
+      .then((data) => {
+        if (isMounted && data?.tasks) {
+          setInternalTasks(data.tasks);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setInternalError(err instanceof Error ? err.message : "Lỗi kết nối");
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsInternalLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [controlledTasks, initialTasks]);
+
+  const tasks = controlledTasks !== undefined ? controlledTasks : internalTasks;
+
   // Determine default scope based on user role or explicit props
   const defaultScope: WorkspaceScope = React.useMemo(() => {
     if (forcedScope) return forcedScope;
+    if (propScope) return propScope;
     if (initialScope) return initialScope;
     const role = (user?.role || user?.dbRole || "").toUpperCase();
     if (
@@ -78,22 +165,64 @@ export function UnifiedAdaptiveWorkspace({
       return "unit";
     }
     return "my";
-  }, [forcedScope, initialScope, forcedRole, user]);
+  }, [forcedScope, propScope, initialScope, forcedRole, user]);
 
   const [activeScope, setActiveScope] = React.useState<WorkspaceScope>(defaultScope);
 
-  // Synchronize when forcedScope or initialScope changes externally
+  // Synchronize when forcedScope, propScope, or initialScope changes externally
   React.useEffect(() => {
     if (forcedScope) {
       setActiveScope(forcedScope);
+    } else if (propScope) {
+      setActiveScope(propScope);
     } else if (initialScope) {
       setActiveScope(initialScope);
     }
-  }, [forcedScope, initialScope]);
+  }, [forcedScope, propScope, initialScope]);
+
+  const handleScopeChange = React.useCallback(
+    (newScope: WorkspaceScope) => {
+      setActiveScope(newScope);
+      onScopeChange?.(newScope);
+    },
+    [onScopeChange]
+  );
+
+  // View mode management (Table vs Kanban)
+  const [internalViewMode, setInternalViewMode] = React.useState<ViewMode>(
+    initialViewMode || controlledViewMode || "table"
+  );
+
+  React.useEffect(() => {
+    if (controlledViewMode) {
+      setInternalViewMode(controlledViewMode);
+    }
+  }, [controlledViewMode]);
+
+  const viewMode = controlledViewMode || internalViewMode;
+
+  const handleViewModeChange = React.useCallback(
+    (mode: ViewMode) => {
+      setInternalViewMode(mode);
+      onViewModeChange?.(mode);
+    },
+    [onViewModeChange]
+  );
 
   // Interactive dialog states for task review and deliverable submission
   const [reviewingTask, setReviewingTask] = React.useState<SchoolTask | StaffTask | null>(null);
   const [submittingTask, setSubmittingTask] = React.useState<SchoolTask | StaffTask | null>(null);
+
+  // Task selection state
+  const [internalSelectedTask, setInternalSelectedTask] = React.useState<SchoolTask | StaffTask | null>(null);
+
+  const handleSelectTask = React.useCallback(
+    (task: SchoolTask | StaffTask) => {
+      setInternalSelectedTask(task);
+      onSelectTask?.(task);
+    },
+    [onSelectTask]
+  );
 
   const effectiveReviewerRole: "ADMIN" | "MANAGER" | "STAFF" = React.useMemo(() => {
     if (forcedRole) return forcedRole;
@@ -158,8 +287,15 @@ export function UnifiedAdaptiveWorkspace({
     if (currentStatus && currentStatus !== "ALL") {
       result = result.filter((t) => t.status === currentStatus);
     }
+    if (currentOverdue) {
+      const today = new Date().toISOString().split("T")[0];
+      result = result.filter((t) => {
+        if (t.status === "COMPLETED") return false;
+        return Boolean(t.dueDate && t.dueDate < today);
+      });
+    }
     return result;
-  }, [scopedTasks, currentSearch, currentStatus]);
+  }, [scopedTasks, currentSearch, currentStatus, currentOverdue]);
 
   const handleResetFilters = React.useCallback(() => {
     setInternalDept(undefined);
@@ -226,8 +362,22 @@ export function UnifiedAdaptiveWorkspace({
     };
   }, [tasks, user, selectedDepartment]);
 
+  // Modal creation state
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [createInitialLevel, setCreateInitialLevel] = React.useState<"TRUONG" | "DON_VI">("DON_VI");
+  const [createInitialParentId, setCreateInitialParentId] = React.useState<string | undefined>(undefined);
+
+  const openCreateModal = React.useCallback(
+    (level: "TRUONG" | "DON_VI", parentId?: string) => {
+      setCreateInitialLevel(level);
+      setCreateInitialParentId(parentId);
+      setIsCreateModalOpen(true);
+    },
+    []
+  );
+
   // Unified task creation handler: defaults staff to "DON_VI" or "my"
-  const handleCreateTask = React.useCallback(() => {
+  const handleCreateTaskClick = React.useCallback(() => {
     if (onCreateTask) {
       if (isStaff) {
         const staffScope = activeScope === "unit" ? "DON_VI" : "my";
@@ -238,16 +388,119 @@ export function UnifiedAdaptiveWorkspace({
     } else if (onAction) {
       const staffScope = activeScope === "unit" ? "DON_VI" : "my";
       onAction("CREATE_TASK", { scope: isStaff ? staffScope : activeScope });
+    } else {
+      openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG");
     }
-  }, [onCreateTask, onAction, isStaff, activeScope]);
+  }, [onCreateTask, onAction, isStaff, activeScope, openCreateModal]);
 
-  const canCreateTask = Boolean(onCreateTask || onAction);
+  const handleCreateTaskSubmit = React.useCallback(
+    async (formData: CreateTaskFormData) => {
+      const previousData = internalTasks;
+      const todayStr = new Date().toISOString().split("T")[0];
+      setInternalTasks((prev) => applyOptimisticCreateTask(prev, formData, todayStr));
+      setIsCreateModalOpen(false);
+
+      try {
+        const res = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+        if (!res.ok) {
+          throw new Error("Lỗi tạo nhiệm vụ");
+        }
+      } catch (err) {
+        setInternalTasks(previousData);
+      }
+    },
+    [internalTasks]
+  );
+
+  // Status mutation handler with optimistic UI and rollback
+  const handleStatusChange = React.useCallback(
+    async (taskId: string, newStatus: TaskStatus, note?: string) => {
+      if (onStatusChange) {
+        await onStatusChange(taskId, newStatus, note);
+        return;
+      }
+      const previousData = internalTasks;
+      setInternalTasks((prev) => applyOptimisticStatusChange(prev, taskId, newStatus));
+
+      try {
+        const res = await fetch(`/api/tasks/${taskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus, note }),
+        });
+        if (!res.ok) {
+          throw new Error("Lỗi cập nhật trạng thái");
+        }
+      } catch (err) {
+        setInternalTasks(previousData);
+      }
+    },
+    [onStatusChange, internalTasks]
+  );
+
+  // Urge notification trigger
+  const handleUrge = React.useCallback(
+    async (taskId: string, taskTitle: string, assigneeName: string) => {
+      if (onSendReminder) {
+        onSendReminder(assigneeName, `Đôn đốc tiến độ thực hiện nhiệm vụ: ${taskTitle}`);
+        return;
+      }
+      try {
+        await fetch("/api/notifications/push/test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "Đôn đốc công việc",
+            body: `Nhiệm vụ "${taskTitle}" cần được đẩy nhanh tiến độ.`,
+            data: { taskId, assigneeName },
+          }),
+        });
+      } catch {
+        // transient
+      }
+    },
+    [onSendReminder]
+  );
+
+  // Refresh handler
+  const handleRefresh = React.useCallback(async () => {
+    if (onRefresh) {
+      await onRefresh();
+      return;
+    }
+    setIsRefreshingInternal(true);
+    try {
+      const res = await fetch("/api/dashboard/overview");
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.tasks) {
+          setInternalTasks(data.tasks);
+          setInternalError(null);
+        }
+      }
+    } catch {
+      // transient
+    } finally {
+      setIsRefreshingInternal(false);
+    }
+  }, [onRefresh]);
+
+  const effectiveIsRefreshing = isRefreshing || isRefreshingInternal;
+  const effectiveError = errorMessage || internalError;
+  const isUnassigned = isUserUnassignedDepartment(user);
 
   return (
     <div
       data-slot="unified-adaptive-workspace"
       data-active-scope={activeScope}
-      className="space-y-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:pb-8"
+      className={cn(
+        "space-y-4 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:pb-8",
+        className
+      )}
     >
       {/* Screen-reader accessible context info when provided by adapter shims (visual banner removed for clean unified canvas) */}
       {(contextTitle || contextBadge) && (
@@ -262,7 +515,7 @@ export function UnifiedAdaptiveWorkspace({
       )}
 
       {/* Offline / Server Error Alert Banner */}
-      {(isOffline || errorMessage) && (
+      {(isOffline || effectiveError) && (
         <aside
           data-slot="workspace-offline-alert"
           role="alert"
@@ -275,22 +528,20 @@ export function UnifiedAdaptiveWorkspace({
                 {isOffline ? "Mất kết nối máy chủ" : "Không thể đồng bộ dữ liệu"}
               </p>
               <p className="text-muted-foreground truncate mt-0.5">
-                {errorMessage ||
+                {effectiveError ||
                   "Không thể đồng bộ dữ liệu thời gian thực từ CSDL trường. Vui lòng kiểm tra đường truyền và thử lại."}
               </p>
             </div>
           </div>
-          {onRefresh && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              className="text-xs h-8 px-3 shrink-0 bg-background hover:bg-muted"
-            >
-              Thử lại
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={effectiveIsRefreshing}
+            className="text-xs h-8 px-3 shrink-0 bg-background hover:bg-muted"
+          >
+            Thử lại
+          </Button>
         </aside>
       )}
 
@@ -298,18 +549,20 @@ export function UnifiedAdaptiveWorkspace({
       <AdaptiveScopeHeader
         user={user}
         activeScope={activeScope}
-        onScopeChange={setActiveScope}
-        onRefresh={onRefresh}
-        onCreateTask={canCreateTask ? handleCreateTask : undefined}
+        onScopeChange={handleScopeChange}
+        onRefresh={handleRefresh}
+        onCreateTask={handleCreateTaskClick}
         badgeCounts={badgeCounts}
-        isRefreshing={isRefreshing}
+        isRefreshing={effectiveIsRefreshing}
         hideScopeSwitcher={hideScopeSwitcher}
         contextTitle={contextTitle}
         contextBadge={contextBadge}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
       />
 
       {/* Loading state when fetching initial data */}
-      {(initialLoading || isLoading) && tasks.length === 0 && (
+      {(initialLoading || isLoading || isInternalLoading) && tasks.length === 0 && (
         <div
           data-slot="workspace-loading-state"
           className="p-8 rounded-2xl border border-border/60 bg-card text-center space-y-3"
@@ -350,14 +603,16 @@ export function UnifiedAdaptiveWorkspace({
             onRemoveWorkbox={handleRemoveWorkbox}
           />
 
-          {/* Single Shared Task Canvas or Authentic Empty State */}
-          {tasks.length === 0 && !initialLoading && !isLoading ? (
+          {/* Unassigned Department State or Empty State or Table/Kanban */}
+          {activeScope === "unit" && isUnassigned ? (
+            <UnassignedDepartmentState onOpenProfile={() => setIsProfileModalOpen(true)} />
+          ) : tasks.length === 0 && !initialLoading && !isLoading && !isInternalLoading ? (
             <div
               data-slot="workspace-empty-state"
               className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-dashed border-border/80 bg-card/40 my-2"
             >
-              <div className="w-12 h-12 rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground mb-3">
-                <Inbox className="w-6 h-6" strokeWidth={1.5} />
+              <div className="size-12 rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground mb-3">
+                <Inbox className="size-6" strokeWidth={1.5} />
               </div>
               <h3 className="text-sm sm:text-base font-bold text-foreground mb-1">
                 Chưa có nhiệm vụ nào được phân công trong kỳ này
@@ -366,47 +621,57 @@ export function UnifiedAdaptiveWorkspace({
                 Hiện tại không có nhiệm vụ nào trong cơ sở dữ liệu. Thầy/Cô có thể tạo nhiệm vụ mới hoặc làm mới dữ liệu từ máy chủ.
               </p>
               <div className="flex items-center gap-2">
-                {canCreateTask && (
-                  <Button
-                    size="sm"
-                    onClick={handleCreateTask}
-                    className="text-xs h-8 px-3"
-                  >
-                    Tạo nhiệm vụ mới
-                  </Button>
-                )}
-                {onRefresh && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={onRefresh}
-                    disabled={isRefreshing}
-                    className="text-xs h-8 px-3"
-                  >
-                    Làm mới dữ liệu
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  onClick={handleCreateTaskClick}
+                  className="text-xs h-8 px-3 cursor-pointer"
+                >
+                  Tạo nhiệm vụ mới
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRefresh}
+                  disabled={effectiveIsRefreshing}
+                  className="text-xs h-8 px-3 cursor-pointer"
+                >
+                  Làm mới dữ liệu
+                </Button>
               </div>
             </div>
           ) : (
             <div className="pt-0.5">
-              <CascadingTaskTable
-                tasks={displayedTasks}
-                scope={activeScope === "my" ? "MY_TASKS" : activeScope}
-                onSelectTask={onSelectTask}
-                onStatusChange={
-                  onStatusChange
-                    ? (taskId, newStatus) =>
-                        onStatusChange(taskId, newStatus)
-                    : undefined
-                }
-                onRefresh={onRefresh}
-                onOpenSubmitModal={
-                  onSubmitDeliverable
-                    ? (st) => setSubmittingTask(st)
-                    : undefined
-                }
-              />
+              {viewMode === "table" ? (
+                <ModularCascadingTaskTable
+                  tasks={displayedTasks}
+                  scope={activeScope === "my" ? "MY_TASKS" : activeScope}
+                  onSelectTask={handleSelectTask}
+                  onStatusChange={handleStatusChange}
+                  onRefresh={handleRefresh}
+                  onAddTask={() =>
+                    openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG")
+                  }
+                  onUrge={handleUrge}
+                  onOpenSubmitModal={
+                    onSubmitDeliverable
+                      ? (st) => setSubmittingTask(st)
+                      : undefined
+                  }
+                />
+              ) : (
+                <TaskKanbanBoard
+                  tasks={displayedTasks}
+                  onSelectTask={handleSelectTask}
+                  onStatusChange={handleStatusChange}
+                  onAddTask={(level, parentId) =>
+                    openCreateModal(
+                      level || (activeScope === "unit" ? "DON_VI" : "TRUONG"),
+                      parentId
+                    )
+                  }
+                  searchQuery={currentSearch}
+                />
+              )}
             </div>
           )}
         </div>
@@ -422,7 +687,7 @@ export function UnifiedAdaptiveWorkspace({
           {/* Universal Action Queue (Approvals & Deliverables) */}
           <UniversalActionQueue
             actionQueue={actionQueue}
-            onSelectTask={onSelectTask}
+            onSelectTask={handleSelectTask}
             scope={activeScope}
             onReview={onReview}
             onSubmitDeliverable={onSubmitDeliverable}
@@ -433,16 +698,66 @@ export function UnifiedAdaptiveWorkspace({
                 ? onCreateSubtask
                 : onCreateTask
                 ? (parentId) => onCreateTask(activeScope === "unit" ? "DON_VI" : activeScope, parentId)
-                : undefined
+                : (parentId) => openCreateModal("DON_VI", parentId)
             }
             onRemindDRI={
               onSendReminder
                 ? (taskId, target) => onSendReminder(target, `Đôn đốc tiến độ thực hiện nhiệm vụ ${taskId}`)
-                : undefined
+                : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
             }
           />
         </div>
       </div>
+
+      {/* 3. Detail Side Sheet (shown when task selected and onSelectTask is not intercepted externally) */}
+      <TaskDetailSideSheet
+        task={internalSelectedTask}
+        isOpen={Boolean(internalSelectedTask && !onSelectTask)}
+        onClose={() => setInternalSelectedTask(null)}
+        onStatusChange={handleStatusChange}
+        onAddSubTask={(parentId) => {
+          openCreateModal("DON_VI", parentId);
+        }}
+        onSelectSubTask={(subTaskOrId) => {
+          if (typeof subTaskOrId === "string") {
+            const foundSchool = displayedTasks.find((t) => t.id === subTaskOrId);
+            if (foundSchool) {
+              setInternalSelectedTask(foundSchool);
+              return;
+            }
+            for (const t of displayedTasks) {
+              const sub = t.subTasks?.find((s) => s.id === subTaskOrId);
+              if (sub) {
+                setInternalSelectedTask(sub);
+                return;
+              }
+            }
+          } else {
+            setInternalSelectedTask(subTaskOrId);
+          }
+        }}
+        currentUser={user}
+      />
+
+      {/* 4. Task Creation Modal */}
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateTaskSubmit}
+        schoolTasks={displayedTasks}
+        initialLevel={createInitialLevel}
+        initialParentTaskId={createInitialParentId}
+        initialParentTaskTitle={
+          createInitialParentId
+            ? displayedTasks.find((t) => t.id === createInitialParentId)?.title
+            : undefined
+        }
+        initialParentTaskDueDate={
+          createInitialParentId
+            ? displayedTasks.find((t) => t.id === createInitialParentId)?.dueDate
+            : undefined
+        }
+      />
 
       {/* 5. Authenticated Review Action Dialog */}
       {reviewingTask && onReview && (

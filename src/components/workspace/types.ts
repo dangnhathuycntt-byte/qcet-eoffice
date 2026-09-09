@@ -3,6 +3,7 @@ import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
 
 export type WorkspaceScope = "school" | "unit" | "my";
+export type ViewMode = "table" | "kanban";
 
 export interface AdaptiveWorkspaceMetrics {
   totalTasks: number;
@@ -35,10 +36,13 @@ export interface UniversalActionQueueItems {
 }
 
 export interface UnifiedAdaptiveWorkspaceProps {
-  user: AuthUser;
-  tasks: SchoolTask[];
+  user?: AuthUser;
+  tasks?: SchoolTask[];
+  initialTasks?: SchoolTask[];
+  scope?: WorkspaceScope;
   initialScope?: WorkspaceScope;
   forcedScope?: WorkspaceScope;
+  onScopeChange?: (scope: WorkspaceScope) => void;
   forcedRole?: "ADMIN" | "MANAGER" | "STAFF";
   selectedDepartment?: string;
   contextTitle?: string;
@@ -48,14 +52,18 @@ export interface UnifiedAdaptiveWorkspaceProps {
   isOffline?: boolean;
   errorMessage?: string | null;
   hideScopeSwitcher?: boolean;
-  onSelectTask: (task: SchoolTask | StaffTask) => void;
+  className?: string;
+  viewMode?: ViewMode;
+  initialViewMode?: ViewMode;
+  onViewModeChange?: (viewMode: ViewMode) => void;
+  onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onReview?: (payload: ApprovalActionPayload) => Promise<void> | void;
   onSubmitDeliverable?: (payload: DeliverableSubmissionPayload) => Promise<void> | void;
-  onStatusChange?: (taskId: string, status: TaskStatus, note?: string) => void;
+  onStatusChange?: (taskId: string, status: TaskStatus, note?: string) => Promise<void> | void;
   onSendReminder?: (targetDeptOrUser: string, reason: string) => void;
   onCreateTask?: (scope: WorkspaceScope | "TRUONG" | "DON_VI", parentTaskId?: string) => void;
   onCreateSubtask?: (parentTaskId: string) => void;
-  onRefresh?: () => void;
+  onRefresh?: () => Promise<void> | void;
   isRefreshing?: boolean;
   onAction?: (action: string, payload?: unknown) => void;
   activeStatus?: TaskStatus | string;
