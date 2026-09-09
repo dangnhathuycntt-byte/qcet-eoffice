@@ -387,6 +387,40 @@ describe("Task Table Hooks - URL Sync, Keyboard Nav & State Engine", () => {
       assert.equal(expandMode, false);
     });
 
+    it("handleKeyboardNavigation respects hasSubtasks: false and does not toggle expansion", () => {
+      let toggled = false;
+
+      // ArrowRight when hasSubtasks returns false
+      const handledRight = handleKeyboardNavigation({
+        event: { key: "ArrowRight", preventDefault: () => {} },
+        activeIndex: 0,
+        itemCount,
+        idList: mockIdList,
+        hasSubtasks: () => false,
+        isExpanded: () => false,
+        onToggleExpand: () => {
+          toggled = true;
+        },
+      });
+      assert.equal(handledRight, false);
+      assert.equal(toggled, false);
+
+      // ArrowLeft when hasSubtasks returns false
+      const handledLeft = handleKeyboardNavigation({
+        event: { key: "ArrowLeft", preventDefault: () => {} },
+        activeIndex: 0,
+        itemCount,
+        idList: mockIdList,
+        hasSubtasks: () => false,
+        isExpanded: () => true,
+        onToggleExpand: () => {
+          toggled = true;
+        },
+      });
+      assert.equal(handledLeft, false);
+      assert.equal(toggled, false);
+    });
+
     it("handleKeyboardNavigation handles Enter to view details and Escape to clear selection", () => {
       let selectedDetailId = null;
       const handledEnter = handleKeyboardNavigation({

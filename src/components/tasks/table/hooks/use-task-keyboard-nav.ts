@@ -247,8 +247,9 @@ export function handleKeyboardNavigation(
     if (activeIndex >= 0 && activeIndex < itemCount) {
       const targetId = activeId || idList[activeIndex];
       if (targetId) {
+        const canCollapse = hasSubtasks ? hasSubtasks(targetId) : true;
         const currentlyExpanded = isExpanded ? isExpanded(targetId) : true;
-        if (currentlyExpanded && onToggleExpand) {
+        if (canCollapse && currentlyExpanded && onToggleExpand) {
           if (event.preventDefault) event.preventDefault();
           onToggleExpand(targetId, false);
           return true;

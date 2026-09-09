@@ -307,20 +307,23 @@ export function useTaskUrlSync(
 ): UseTaskUrlSyncReturn {
   let router: ReturnType<typeof useRouter> | null = null;
   let pathname: string = "";
-  let searchParams: URLSearchParams | null = null;
+  let rawSearchParams: ReturnType<typeof useSearchParams> | null = null;
 
   try {
     // Next.js App Router hooks
     router = useRouter();
     pathname = usePathname() || "";
-    const rawSearchParams = useSearchParams();
-    searchParams = rawSearchParams
-      ? new URLSearchParams(rawSearchParams.toString())
-      : new URLSearchParams();
+    rawSearchParams = useSearchParams();
   } catch {
     // Graceful fallback for non-App-Router or test environments
-    searchParams = new URLSearchParams();
+    rawSearchParams = null;
   }
+
+  const searchParamsString = rawSearchParams?.toString() ?? "";
+
+  const searchParams = React.useMemo(() => {
+    return new URLSearchParams(searchParamsString);
+  }, [searchParamsString]);
 
   const effectiveDefaults = React.useMemo<TaskUrlState>(() => {
     return {
@@ -329,7 +332,7 @@ export function useTaskUrlSync(
     };
   }, [initialDefaults]);
 
-  // Phân tích trạng thái hiện thời từ URLSearchParams
+  // Phân tích trạng thái hiện thời từ URLSearchParams (chỉ re-evaluate khi searchParamsString hoặc defaults thay đổi)
   const urlState = React.useMemo<TaskUrlState>(() => {
     return parseTaskUrlParams(searchParams, effectiveDefaults);
   }, [searchParams, effectiveDefaults]);

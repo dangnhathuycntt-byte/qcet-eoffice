@@ -314,38 +314,41 @@ export function useTaskTableState(
   );
 
   // --- 4. Sắp xếp cột (Sorting) ---
-  const [sortField, setSortField] = React.useState<TaskSortField | undefined>(
-    initialSortField
-  );
-  const [sortDirection, setSortDirection] =
-    React.useState<SortDirection>(initialSortDirection);
+  const [sorting, setSortingState] = React.useState<{
+    field: TaskSortField | undefined;
+    direction: SortDirection;
+  }>(() => ({
+    field: initialSortField,
+    direction: initialSortDirection,
+  }));
+
+  const sortField = sorting.field;
+  const sortDirection = sorting.direction;
 
   const handleSort = React.useCallback((field: TaskSortField) => {
-    setSortField((currentField) => {
-      setSortDirection((currentDir) => {
-        const next = getNextSortDirection(currentField, field, currentDir);
-        return next.direction;
-      });
-      const next = getNextSortDirection(currentField, field, sortDirection);
-      return next.field;
+    setSortingState((current) => {
+      const next = getNextSortDirection(current.field, field, current.direction);
+      return {
+        field: next.field,
+        direction: next.direction,
+      };
     });
-  }, [sortDirection]);
+  }, []);
 
   const setSorting = React.useCallback(
     (field?: TaskSortField, direction: SortDirection = "asc") => {
-      setSortField(field);
-      setSortDirection(direction);
+      setSortingState({ field, direction });
     },
     []
   );
 
   const columnSortState = React.useMemo<ColumnSortState>(() => {
     return {
-      field: sortField,
-      column: sortField,
-      direction: sortDirection,
+      field: sorting.field,
+      column: sorting.field,
+      direction: sorting.direction,
     };
-  }, [sortField, sortDirection]);
+  }, [sorting.field, sorting.direction]);
 
   // --- 5. Mật độ hiển thị (Density) ---
   const [density, setDensity] = React.useState<TableDensity>(initialDensity);
@@ -359,8 +362,7 @@ export function useTaskTableState(
     setCurrentPage(1);
     setSelectedIds(new Set());
     setExpandedIds(new Set());
-    setSortField(initialSortField);
-    setSortDirection(initialSortDirection);
+    setSortingState({ field: initialSortField, direction: initialSortDirection });
     setDensity(initialDensity);
   }, [initialSortField, initialSortDirection, initialDensity]);
 
