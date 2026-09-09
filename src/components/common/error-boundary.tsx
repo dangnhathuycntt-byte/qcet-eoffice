@@ -204,7 +204,7 @@ export function SectionErrorFallback({
             {sanitizeString(error.name || "Error")}: {sanitizeString(error.message)}
           </p>
           {error.stack && (
-            <pre className="text-[11px] leading-snug whitespace-pre-wrap break-all opacity-80 max-h-36 overflow-y-auto">
+            <pre className="text-xs leading-snug whitespace-pre-wrap break-all opacity-80 max-h-36 overflow-y-auto font-mono">
               {sanitizeString(error.stack)}
             </pre>
           )}
