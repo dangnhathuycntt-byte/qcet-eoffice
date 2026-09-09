@@ -21,4 +21,6 @@ All tasks agree with plan constraints and QCET core invariants. Pre-flight scan 
 - [x] Task 3: Invariants & Single Primary Owner Constraint (completed, verified with `prisma validate`, `prisma generate`, `npm run typecheck`, `tests/invariants-constraints.test.ts`, and full test suite)
 - [x] Task 4: Atomic Sequence Generation & Race-Free Numbering (completed, verified with `npm run typecheck`, `npx tsx --test tests/atomic-sequence-generation.test.ts`, and full test suite)
 - [x] Task 5: Database Check Constraints (completed, verified with `prisma/migrations/check_constraints.sql`, and 19/19 tests passing in `tests/database-check-constraints.test.ts`)
+- [x] Task 6: Optimistic Concurrency Control (OCC) (completed, verified with `prisma validate`, `prisma generate`, `npm run typecheck`, 15/15 tests passing in `tests/optimistic-concurrency-control.test.ts`, and full test suite)
+- [x] Task 7: Atomic Transaction Boundaries for Core Workflows (completed, verified with `npm run typecheck`, 15/15 tests passing in `tests/atomic-transaction-boundaries.test.ts`, and full test suite 286/286 passing)
 
