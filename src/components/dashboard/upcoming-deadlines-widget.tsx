@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Calendar, Clock, AlertTriangle, Building2, Layers, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
+import Link from "next/link";
+import { Calendar, Clock, AlertTriangle, Building2, Layers, CheckCircle, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import type { UpcomingItem } from "@/types/dashboard";
+export type { UpcomingItem };
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +13,7 @@ export interface UpcomingDeadlinesWidgetProps {
   onSelectTask?: (item: UpcomingItem) => void;
   className?: string;
   initialLimit?: number;
+  viewAllHref?: string;
 }
 
 export function parseDateOnly(input: string | Date): { year: number; month: number; day: number } {
@@ -102,6 +105,7 @@ export function UpcomingDeadlinesWidget({
   onSelectTask,
   className,
   initialLimit = 5,
+  viewAllHref = "/tasks?filter=upcoming",
 }: UpcomingDeadlinesWidgetProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const displayedItems = initialLimit && !isExpanded ? items.slice(0, initialLimit) : items;
@@ -136,6 +140,15 @@ export function UpcomingDeadlinesWidget({
               Top 5 / {items.length}
             </span>
           )}
+          <Link
+            href={viewAllHref}
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            data-slot="upcoming-view-all"
+            title="Xem tất cả nhiệm vụ hạn chót"
+          >
+            <span>Xem tất cả</span>
+            <ChevronRight className="size-3" strokeWidth={1.5} />
+          </Link>
           <Badge variant="secondary" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full">
             {items.length}
           </Badge>
@@ -266,7 +279,7 @@ export function UpcomingDeadlinesWidget({
 
       {/* Expand / Collapse Footer */}
       {items.length > initialLimit && (
-        <div className="pt-3 mt-1 border-t border-border/40 text-center">
+        <div className="pt-3 mt-1 border-t border-border/40 flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
@@ -285,6 +298,13 @@ export function UpcomingDeadlinesWidget({
               </>
             )}
           </button>
+          <Link
+            href={viewAllHref}
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+            title="Mở trong Không gian Nhiệm vụ"
+          >
+            <span>Xem trên bảng &rarr;</span>
+          </Link>
         </div>
       )}
     </div>

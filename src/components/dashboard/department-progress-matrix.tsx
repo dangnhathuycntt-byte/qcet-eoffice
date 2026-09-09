@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Building2, LayoutGrid, TableProperties, BarChart3, ArrowUpDown, ChevronRight, X } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Building2, LayoutGrid, TableProperties, BarChart3, ArrowUpDown, ChevronRight, X, ExternalLink } from "lucide-react";
 import type { DepartmentHealthSummary } from "@/lib/executive-matrix-aggregator";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -10,11 +12,16 @@ export type DepartmentMatrixViewMode = "cards" | "compact_table" | "ranking";
 
 export interface DepartmentProgressMatrixProps {
   departments: DepartmentHealthSummary[];
-  selectedDepartment: string;
-  onSelectDepartment: (deptId: string) => void;
+  selectedDepartment?: string;
+  onSelectDepartment?: (deptId: string) => void;
   viewMode?: DepartmentMatrixViewMode | "grid" | "table" | "chart";
   defaultViewMode?: DepartmentMatrixViewMode | "grid" | "table" | "chart";
   onViewModeChange?: (mode: DepartmentMatrixViewMode) => void;
+  navigateToTasks?: boolean;
+}
+
+export function getDepartmentTasksUrl(deptId: string): string {
+  return `/tasks?scope=school&dept=${encodeURIComponent(deptId)}`;
 }
 
 function normalizeMode(mode?: string): DepartmentMatrixViewMode {
@@ -134,12 +141,20 @@ function MiniProgressRing({ percent, colorClass }: { percent: number; colorClass
 
 export function DepartmentProgressMatrix({
   departments,
-  selectedDepartment,
-  onSelectDepartment,
+  selectedDepartment = "ALL",
+  onSelectDepartment = () => {},
   viewMode: controlledViewMode,
   defaultViewMode = "cards",
   onViewModeChange,
+  navigateToTasks = false,
 }: DepartmentProgressMatrixProps) {
+  let router: ReturnType<typeof useRouter> | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    router = useRouter();
+  } catch {
+    // Gracefully handle test / non-App Router SSR environments
+  }
   const [internalViewMode, setInternalViewMode] = React.useState<DepartmentMatrixViewMode>(() =>
     normalizeMode(defaultViewMode)
   );
@@ -195,7 +210,7 @@ export function DepartmentProgressMatrix({
             <Building2 className="size-3.5 shrink-0" strokeWidth={1.5} />
           </div>
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
-            Ma trận tiến độ 11 đơn vị
+            Tiến độ các đơn vị
           </span>
           <span className="text-xs text-muted-foreground font-mono tabular-nums">
             ({departments.length})
@@ -324,6 +339,13 @@ export function DepartmentProgressMatrix({
               const completedCount = getDeptCompletedCount(dept);
               const progressPercent = getDeptProgressPercent(dept);
               const barColor = progressBarColor(progressPercent);
+              const handleRowClick = () => {
+                const activeRouter = router;
+                if (navigateToTasks && activeRouter) {
+                  activeRouter.push(getDepartmentTasksUrl(deptId));
+                }
+                onSelectDepartment(isSelected ? "ALL" : deptId);
+              };
 
               return (
                 <div
@@ -331,11 +353,11 @@ export function DepartmentProgressMatrix({
                   role="button"
                   tabIndex={0}
                   aria-pressed={isSelected}
-                  onClick={() => onSelectDepartment(isSelected ? "ALL" : deptId)}
+                  onClick={handleRowClick}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      onSelectDepartment(isSelected ? "ALL" : deptId);
+                      handleRowClick();
                     }
                   }}
                   className={cn(
@@ -413,6 +435,18 @@ export function DepartmentProgressMatrix({
                       <span>{isSelected ? "Đang chọn" : "Lọc"}</span>
                       <ChevronRight className="size-3 shrink-0" strokeWidth={1.5} />
                     </span>
+
+                    <Link
+                      href={getDepartmentTasksUrl(deptId)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
+                      title={`Xem danh sách nhiệm vụ của ${deptName}`}
+                      aria-label={`Xem nhiệm vụ của ${deptName} tại Không gian Nhiệm vụ`}
+                      data-slot="dept-task-link"
+                    >
+                      <span className="hidden sm:inline">Nhiệm vụ</span>
+                      <ChevronRight className="size-3 shrink-0" strokeWidth={1.5} />
+                    </Link>
                   </div>
                 </div>
               );

@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { History, Activity, CheckCircle2, Upload, RefreshCw, PlusCircle, AlertCircle, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import Link from "next/link";
+import { History, Activity, CheckCircle2, Upload, RefreshCw, PlusCircle, AlertCircle, Clock, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import type { ActivityEvent } from "@/types/dashboard";
+export type { ActivityEvent };
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +12,7 @@ export interface ActivityFeedWidgetProps {
   activities?: ActivityEvent[];
   className?: string;
   initialLimit?: number;
+  auditLogHref?: string;
 }
 
 export interface ActivityActionConfig {
@@ -94,6 +97,7 @@ export function ActivityFeedWidget({
   activities = [],
   className,
   initialLimit = 5,
+  auditLogHref = "/tasks?view=audit",
 }: ActivityFeedWidgetProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const displayedActivities = initialLimit && !isExpanded ? activities.slice(0, initialLimit) : activities;
@@ -128,6 +132,15 @@ export function ActivityFeedWidget({
               Top 5 / {activities.length}
             </span>
           )}
+          <Link
+            href={auditLogHref}
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            data-slot="activity-audit-link"
+            title="Xem nhật ký kiểm toán hệ thống"
+          >
+            <span className="hidden sm:inline">Nhật ký</span>
+            <ExternalLink className="size-3" strokeWidth={1.5} />
+          </Link>
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-semibold">
             <span className="size-1.5 rounded-full bg-emerald-500" />
             <span>Live</span>

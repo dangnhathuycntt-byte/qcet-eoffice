@@ -48,6 +48,12 @@ export const RegisterInputSchema = z
       .max(64, 'Department ID cannot exceed 64 characters')
       .nullable()
       .optional(),
+    title: z
+      .string()
+      .trim()
+      .max(100, 'Title cannot exceed 100 characters')
+      .nullable()
+      .optional(),
   })
   .strict();
 

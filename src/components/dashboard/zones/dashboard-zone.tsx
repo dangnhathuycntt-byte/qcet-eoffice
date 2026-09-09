@@ -25,7 +25,7 @@ import type { SchoolTask } from "@/types/dashboard";
 function DashboardZoneComponent() {
   const {
     tasks, monthScopedBaseTasks, filteredTasks, user, displayedStats, activeWorkbox,
-    isExecutive, executiveStats, executiveFilter, executiveActionItems, departmentHealth,
+    isExecutive, isManager, isStaff, executiveStats, executiveFilter, executiveActionItems, departmentHealth,
     selectedDepartment, selectedAcademicMonth, selectedMonthPeriod,
     priorOverdueBacklog, roleUpcoming, activities, isRefreshing,
   } = useDashboardData();
@@ -41,17 +41,19 @@ function DashboardZoneComponent() {
   const reactiveTasks = filteredTasks;
   const operationalUnitCount = QCET_DEPARTMENTS.filter((d) => d.category !== "BGH").length;
 
+  const roleBadge = isExecutive ? "Bàn làm việc Điều hành" : isManager ? "Bàn làm việc Quản lý" : "Bàn làm việc Cá nhân";
+  const roleTitle = isExecutive ? "Bàn làm việc Ban Giám hiệu" : isManager ? `Bàn làm việc ${user?.department || "Đơn vị"}` : `Bàn làm việc: ${user?.name || "Cán bộ / Giảng viên"}`;
+  const roleSubtitle = isExecutive ? `Theo dõi toàn cảnh tiến độ, điểm nghẽn và hàng đợi phê duyệt chiến lược của ${operationalUnitCount} đơn vị trực thuộc` : isManager ? "Điều phối công việc đơn vị, thẩm định minh chứng L1, theo dõi tiến độ và kiểm soát nguy cơ trễ hạn" : "Tập trung các nhiệm vụ cá nhân hôm nay, việc chờ nộp minh chứng và lịch công tác cần xử lý";
+
   return (
     <div className="space-y-5 sm:space-y-6" data-slot="zone-dashboard">
       <div className="space-y-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-sans font-medium text-xs bg-primary/10 text-primary border border-primary/20 shadow-2xs">Phân khu Điều hành</span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-sans font-medium text-xs bg-primary/10 text-primary border border-primary/20 shadow-2xs">{roleBadge}</span>
           </div>
-          <h1 className="font-heading font-bold text-xl sm:text-2xl tracking-tight text-foreground">Dashboard Điều Hành & Báo Cáo KPI</h1>
-          <p className="text-xs text-muted-foreground mt-1 text-balance">
-            Theo dõi toàn cảnh tiến độ, điểm nghẽn, và hàng đợi phê duyệt chiến lược của {operationalUnitCount} đơn vị trực thuộc
-          </p>
+          <h1 className="font-heading font-bold text-xl sm:text-2xl tracking-tight text-foreground">{roleTitle}</h1>
+          <p className="text-xs text-muted-foreground mt-1 text-balance">{roleSubtitle}</p>
         </div>
 
         {/* Contextual Action Bar: KỲ VẬN HÀNH THÁNG & Phạm vi */}
@@ -92,12 +94,20 @@ function DashboardZoneComponent() {
               if (matched) openTaskDetail(matched);
             }}
           />
-          <DepartmentProgressMatrix departments={departmentHealth} selectedDepartment={selectedDepartment} onSelectDepartment={handleDepartmentChange} />
+          <DepartmentProgressMatrix departments={departmentHealth} selectedDepartment={selectedDepartment} onSelectDepartment={handleDepartmentChange} defaultViewMode="ranking" />
         </section>
       )}
 
       {/* Bảng nhiệm vụ liên thông phản hồi theo bộ lọc */}
       <section aria-label="Bảng nhiệm vụ liên thông" className="space-y-3">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <h2 className="font-heading font-semibold text-base text-foreground">
+            {isExecutive ? "Nhiệm vụ điều hành trọng tâm" : isManager ? "Nhiệm vụ quản lý đơn vị" : "Nhiệm vụ cá nhân hôm nay"}
+          </h2>
+          <a href={isExecutive ? "/tasks?scope=school" : isManager ? "/tasks?scope=unit" : "/tasks?scope=my"} className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1">
+            <span>Mở Không gian Nhiệm vụ &rarr;</span>
+          </a>
+        </div>
         <CascadingTaskTable
           tasks={reactiveTasks}
           scope={scope}

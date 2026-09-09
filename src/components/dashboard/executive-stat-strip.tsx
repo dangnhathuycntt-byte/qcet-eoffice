@@ -193,7 +193,7 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
 
 export function getExecutiveStatCardData(
   statsInput: DashboardStats,
-  executiveStats: ExecutiveActionStats
+  executiveStats?: ExecutiveActionStats | null
 ): StatCardData[] {
   const stats = statsInput || defaultStats;
   const schoolNotStarted = stats.schoolTasksNotStarted ?? 0;
@@ -202,27 +202,28 @@ export function getExecutiveStatCardData(
     Math.round((stats.schoolTasksCompleted / (stats.totalSchoolTasks || 1)) * 100);
 
   const pendingApprovalCount =
-    executiveStats.pendingSchoolApprovalCount ?? stats.needsReviewTasksCount;
+    executiveStats?.pendingSchoolApprovalCount ?? stats.needsReviewTasksCount;
   const totalIssueCount =
-    (executiveStats.blockedTasksCount ?? 0) +
-    (executiveStats.overdueTasksCount ?? stats.overdueTasksCount);
+    (executiveStats?.blockedTasksCount ?? 0) +
+    (executiveStats?.overdueTasksCount ?? stats.overdueTasksCount);
+  const strategicCount = executiveStats?.strategicActiveCount ?? 0;
 
   let urgentSubtext = "Tiến độ thông suốt";
   if (
-    (executiveStats.blockedTasksCount ?? 0) > 0 &&
-    (executiveStats.overdueTasksCount ?? 0) > 0
+    (executiveStats?.blockedTasksCount ?? 0) > 0 &&
+    (executiveStats?.overdueTasksCount ?? 0) > 0
   ) {
-    urgentSubtext = `${executiveStats.blockedTasksCount} vướng mắc · ${executiveStats.overdueTasksCount} trễ hạn`;
-  } else if ((executiveStats.overdueTasksCount ?? 0) > 0) {
-    urgentSubtext = `${executiveStats.overdueTasksCount} nhiệm vụ trễ hạn`;
-  } else if ((executiveStats.blockedTasksCount ?? 0) > 0) {
-    urgentSubtext = `${executiveStats.blockedTasksCount} nhiệm vụ vướng mắc`;
+    urgentSubtext = `${executiveStats?.blockedTasksCount} vướng mắc · ${executiveStats?.overdueTasksCount} trễ hạn`;
+  } else if ((executiveStats?.overdueTasksCount ?? 0) > 0) {
+    urgentSubtext = `${executiveStats?.overdueTasksCount} nhiệm vụ trễ hạn`;
+  } else if ((executiveStats?.blockedTasksCount ?? 0) > 0) {
+    urgentSubtext = `${executiveStats?.blockedTasksCount} nhiệm vụ vướng mắc`;
   }
 
   return [
     {
       id: "school-tasks",
-      title: "Nhiệm vụ cấp Trường",
+      title: "Tổng nhiệm vụ",
       value: formatNumber(stats.totalSchoolTasks),
       subtext: `${formatNumber(stats.schoolTasksInProgress)} đang làm · ${formatNumber(schoolNotStarted)} chưa làm · ${formatNumber(stats.schoolTasksCompleted)} hoàn thành`,
       filterKey: "ALL",
@@ -230,7 +231,7 @@ export function getExecutiveStatCardData(
     },
     {
       id: "pending-approval",
-      title: "Chờ BGH Phê duyệt",
+      title: "Chờ duyệt",
       value: formatNumber(pendingApprovalCount),
       subtext:
         pendingApprovalCount > 0
@@ -246,7 +247,7 @@ export function getExecutiveStatCardData(
     },
     {
       id: "blocked-overdue",
-      title: "Vướng mắc & Trễ hạn",
+      title: "Trễ / vướng",
       value: formatNumber(totalIssueCount),
       subtext: urgentSubtext,
       filterKey: "URGENT_OVERDUE",
@@ -258,25 +259,25 @@ export function getExecutiveStatCardData(
       iconName: "AlertTriangle",
     },
     {
-      id: "overall-progress",
-      title: "Tiến độ trung bình toàn trường",
-      value: `${stats.averageSchoolProgressPercent}%`,
-      subtext: `Hoàn tất ${formatNumber(stats.schoolTasksCompleted)}/${formatNumber(stats.totalSchoolTasks)} (${completionRateVal}%)`,
-      filterKey: "COMPLETED",
-      progress: stats.averageSchoolProgressPercent,
-      iconName: "TrendingUp",
-    },
-    {
       id: "strategic-active",
-      title: "Nhiệm vụ Chiến lược",
-      value: formatNumber(executiveStats.strategicActiveCount),
+      title: "Trọng tâm",
+      value: formatNumber(strategicCount),
       subtext:
-        executiveStats.strategicActiveCount > 0
+        strategicCount > 0
           ? "Nhiệm vụ trọng tâm năm học"
           : "Đã hoàn thành mục tiêu",
       filterKey: "ASSIGNED_BY_ME",
       executiveFilterKey: "STRATEGIC",
       iconName: "CheckSquare",
+    },
+    {
+      id: "overall-progress",
+      title: "Tiến độ toàn trường",
+      value: `${stats.averageSchoolProgressPercent}%`,
+      subtext: `Hoàn tất ${formatNumber(stats.schoolTasksCompleted)}/${formatNumber(stats.totalSchoolTasks)} (${completionRateVal}%)`,
+      filterKey: "COMPLETED",
+      progress: stats.averageSchoolProgressPercent,
+      iconName: "TrendingUp",
     },
   ];
 }
