@@ -13,10 +13,12 @@ import { UpcomingDeadlinesWidget } from "@/components/dashboard/upcoming-deadlin
 import { ActivityFeedWidget } from "@/components/dashboard/activity-feed-widget";
 import { PriorOverdueBacklogBanner } from "@/components/dashboard/prior-overdue-backlog-banner";
 import { CascadingTaskTable } from "@/components/dashboard/cascading-task-table";
+import { QCET_DEPARTMENTS } from "@/components/org/organization-tree";
 import {
   useDashboardData,
   useDashboardActions,
   useDashboardModal,
+  useDashboardNav,
 } from "@/components/dashboard/dashboard-context";
 import type { SchoolTask } from "@/types/dashboard";
 
@@ -33,19 +35,23 @@ function DashboardZoneComponent() {
     handleManualRefresh, handleSelectUpcoming, handleStatusChange,
   } = useDashboardActions();
   const { openTaskDetail, openCreateModal } = useDashboardModal();
+  const { scope } = useDashboardNav();
 
   const baseTasks = monthScopedBaseTasks ?? tasks;
   const reactiveTasks = filteredTasks;
+  const operationalUnitCount = QCET_DEPARTMENTS.filter((d) => d.category !== "BGH").length;
 
   return (
-    <div className="space-y-6" data-slot="zone-dashboard">
+    <div className="space-y-5 sm:space-y-6" data-slot="zone-dashboard">
       <div className="space-y-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">Phân khu Điều hành</span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-sans font-medium text-xs bg-primary/10 text-primary border border-primary/20 shadow-2xs">Phân khu Điều hành</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground font-heading">Dashboard Điều Hành & Báo Cáo KPI</h1>
-          <p className="text-xs text-muted-foreground mt-1 text-balance">Theo dõi toàn cảnh tiến độ, điểm nghẽn, và hàng đợi phê duyệt chiến lược của 11 đơn vị</p>
+          <h1 className="font-heading font-bold text-xl sm:text-2xl tracking-tight text-foreground">Dashboard Điều Hành & Báo Cáo KPI</h1>
+          <p className="text-xs text-muted-foreground mt-1 text-balance">
+            Theo dõi toàn cảnh tiến độ, điểm nghẽn, và hàng đợi phê duyệt chiến lược của {operationalUnitCount} đơn vị trực thuộc
+          </p>
         </div>
 
         {/* Contextual Action Bar: KỲ VẬN HÀNH THÁNG & Phạm vi */}
@@ -94,6 +100,8 @@ function DashboardZoneComponent() {
       <section aria-label="Bảng nhiệm vụ liên thông" className="space-y-3">
         <CascadingTaskTable
           tasks={reactiveTasks}
+          scope={scope}
+          defaultExpanded={scope === "MY_TASKS"}
           onSelectTask={openTaskDetail}
           onAddTask={() => openCreateModal("TRUONG")}
           onStatusChange={handleStatusChange}
