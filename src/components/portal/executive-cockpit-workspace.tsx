@@ -38,6 +38,8 @@ import type {
 } from "@/types/workspace";
 import type { ExecutiveResolutionPayload } from "@/types/executive-resolution";
 import { UnifiedAdaptiveWorkspace } from "@/components/workspace/unified-adaptive-workspace";
+import { ExecutiveAttentionHub } from "@/components/workspace";
+export { ExecutiveAttentionHub };
 import {
   QCET_DEPARTMENT_DEFINITIONS,
   computeDepartmentHealthMatrix,
@@ -540,11 +542,11 @@ export function filterStrategicTasks(
 // 3. Main Component: ExecutiveCockpitWorkspace
 // ============================================================================
 
-const EMPTY_TASKS: SchoolTask[] = [];
-const EMPTY_STAFF_TASKS: StaffTask[] = [];
+export const EMPTY_TASKS: SchoolTask[] = [];
+export const EMPTY_STAFF_TASKS: StaffTask[] = [];
 
 /**
- * ExecutiveCockpitWorkspace - Thin adapter over UnifiedAdaptiveWorkspace.
+ * ExecutiveCockpitWorkspace - Thin adapter delegating to ExecutiveAttentionHub.
  * Preserves complete backward compatibility for props and interfaces.
  */
 export function ExecutiveCockpitWorkspace({
@@ -560,18 +562,14 @@ export function ExecutiveCockpitWorkspace({
 }: ExecutiveCockpitWorkspaceProps) {
   return (
     <div className={className} data-slot="executive-cockpit-workspace">
-      <UnifiedAdaptiveWorkspace
+      <ExecutiveAttentionHub
         user={user}
         tasks={tasks}
-        initialScope="school"
-        forcedRole="ADMIN"
-        contextTitle="Khoang điều hành Ban Giám hiệu"
-        contextBadge="BGH"
-        onSelectTask={onSelectTask || (() => {})}
+        onSelectTask={onSelectTask}
         onReview={onReview}
         onSubmitDeliverable={onSubmitDeliverable}
         onStatusChange={onStatusChange}
-        onCreateTask={onCreateDirective ? () => onCreateDirective() : undefined}
+        onCreateDirective={onCreateDirective}
         onSendReminder={onSendReminder}
       />
     </div>

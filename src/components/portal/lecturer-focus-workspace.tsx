@@ -49,6 +49,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SubmitDeliverableModal } from "./submit-deliverable-modal";
 import { UnifiedAdaptiveWorkspace } from "@/components/workspace/unified-adaptive-workspace";
+import { StaffAttentionHub } from "@/components/workspace";
+export { StaffAttentionHub };
 
 // ============================================================================
 // 1. Types & Interfaces
@@ -446,7 +448,7 @@ export function getPageNumbers(current: number, total: number): (number | string
 // ============================================================================
 
 /**
- * LecturerFocusWorkspace - Thin adapter over UnifiedAdaptiveWorkspace.
+ * LecturerFocusWorkspace - Thin adapter delegating to StaffAttentionHub.
  * Preserves complete backward compatibility for props and interfaces.
  */
 export function LecturerFocusWorkspace({
@@ -461,14 +463,10 @@ export function LecturerFocusWorkspace({
 }: LecturerFocusWorkspaceProps) {
   return (
     <div className={className} data-slot="lecturer-focus-workspace">
-      <UnifiedAdaptiveWorkspace
+      <StaffAttentionHub
         user={user}
         tasks={tasks}
-        initialScope="my"
-        forcedRole="STAFF"
-        contextTitle="Không gian tập trung - Giảng viên / Chuyên viên · Nộp minh chứng & Việc Hôm nay"
-        contextBadge="Cá nhân"
-        onSelectTask={onSelectTask || (() => {})}
+        onSelectTask={onSelectTask}
         onSubmitDeliverable={onSubmitDeliverable}
         onStatusChange={onStatusChange}
         onRefresh={onRefresh}

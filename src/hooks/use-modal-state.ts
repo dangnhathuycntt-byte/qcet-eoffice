@@ -51,6 +51,8 @@ export function useModalState(): ModalStateReturn {
       assigneeName?: string,
       title?: string
     ) => {
+      // Modal hierarchy rule: Close detail sheet when opening creation modal to prevent nested dialogs
+      setSelectedTask(null);
       setInitialTaskLevel(level);
       setInitialParentTaskId(parentId);
       setInitialAssigneeName(assigneeName);
@@ -68,6 +70,8 @@ export function useModalState(): ModalStateReturn {
   }, []);
 
   const openDelegationModal = React.useCallback((deptCode: string = "K_CNTT") => {
+    // Modal hierarchy rule: Close detail sheet when opening delegation modal
+    setSelectedTask(null);
     setDelegationDeptCode(deptCode);
     setIsDelegationModalOpen(true);
   }, []);

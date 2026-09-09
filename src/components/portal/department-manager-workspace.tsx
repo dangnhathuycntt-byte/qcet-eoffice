@@ -41,6 +41,8 @@ import {
   type StaffTaskWithContext,
 } from "./lecturer-focus-workspace";
 import { UnifiedAdaptiveWorkspace } from "@/components/workspace/unified-adaptive-workspace";
+import { DepartmentAttentionHub } from "@/components/workspace";
+export { DepartmentAttentionHub };
 
 // ============================================================================
 // 1. Types & Interfaces
@@ -390,7 +392,7 @@ function renderStatusBadge(status: TaskStatus) {
 // ============================================================================
 
 /**
- * DepartmentManagerWorkspace - Thin adapter over UnifiedAdaptiveWorkspace.
+ * DepartmentManagerWorkspace - Thin adapter delegating to DepartmentAttentionHub.
  * Preserves complete backward compatibility for props and interfaces.
  */
 export function DepartmentManagerWorkspace({
@@ -407,18 +409,14 @@ export function DepartmentManagerWorkspace({
 }: DepartmentManagerWorkspaceProps) {
   return (
     <div className={className} data-slot="department-manager-workspace">
-      <UnifiedAdaptiveWorkspace
+      <DepartmentAttentionHub
         user={user}
         tasks={tasks}
-        initialScope="unit"
-        forcedRole="MANAGER"
-        contextTitle="Không gian làm việc Trưởng đơn vị - Khoa / Phòng"
-        contextBadge="Trưởng đơn vị"
-        onSelectTask={onSelectTask || (() => {})}
+        onSelectTask={onSelectTask}
         onReview={onReview}
         onSubmitDeliverable={onSubmitDeliverable}
         onStatusChange={onStatusChange}
-        onCreateTask={onCreateSubTask ? () => onCreateSubTask("") : undefined}
+        onCreateSubTask={onCreateSubTask}
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
       />
