@@ -20,9 +20,33 @@ import {
   deleteRecordsByIndex,
   clearStore,
 } from "./indexed-db";
-import { clearOfflineMutationQueue } from "../offline-sync";
 
 export type OfflineStoreCategory = "READ_CACHE" | "DRAFT" | "MUTATION_OUTBOX";
+
+const purgeHooks = new Set<() => void>();
+
+/**
+ * Registers a hook to be executed when offline data is purged (e.g., clearing in-memory queues).
+ */
+export function registerPurgeHook(hook: () => void): () => void {
+  purgeHooks.add(hook);
+  return () => {
+    purgeHooks.delete(hook);
+  };
+}
+
+/**
+ * Triggers all registered purge hooks (such as clearing in-memory queues on logout).
+ */
+export function clearOfflineMutationQueue(): void {
+  for (const hook of purgeHooks) {
+    try {
+      hook();
+    } catch (err) {
+      console.warn("Error in purge hook:", err);
+    }
+  }
+}
 
 /**
  * Builds the canonical user-scoped store key:
@@ -241,6 +265,7 @@ export interface OfflineOutboxItem<TPayload = unknown> extends BaseOfflineRecord
   retryCount: number;
   status: "pending" | "syncing" | "conflict" | "failed";
   serverConflictData?: unknown;
+  errorMessage?: string;
   updatedAt: number;
 }
 
@@ -257,6 +282,7 @@ export interface EnqueueOutboxItemInput<TPayload = unknown> {
   retryCount?: number;
   status?: "pending" | "syncing" | "conflict" | "failed";
   serverConflictData?: unknown;
+  errorMessage?: string;
   updatedAt?: number;
 }
 
@@ -293,6 +319,7 @@ export async function enqueueOutboxItem<TPayload = unknown>(
     retryCount: item.retryCount || 0,
     status: item.status || "pending",
     serverConflictData: item.serverConflictData,
+    errorMessage: item.errorMessage,
     updatedAt: item.updatedAt || now,
   };
 
@@ -427,6 +454,13 @@ export function getUserOfflineStore(userId: string) {
  *  4. Leaves other users' data on shared device intact
  */
 export async function purgeUserOfflineData(userId: string): Promise<void> {
+  // Always reset in-memory mutation queue on logout, even if userId is falsy
+  try {
+    clearOfflineMutationQueue();
+  } catch (err) {
+    console.warn("Error resetting in-memory mutation queue:", err);
+  }
+
   if (!userId) return;
 
   // 1. Clear private IndexedDB stores for this user

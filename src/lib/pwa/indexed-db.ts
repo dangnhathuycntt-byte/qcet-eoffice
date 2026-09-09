@@ -154,6 +154,8 @@ export async function getDatabase(): Promise<IDBDatabase | null> {
         console.warn(
           "IndexedDB open blocked by another tab. Falling back to in-memory store."
         );
+        dbInstance = null;
+        dbOpenPromise = null;
         resolve(null);
       };
     } catch (err) {

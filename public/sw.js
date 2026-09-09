@@ -410,3 +410,16 @@ self.addEventListener('notificationclick', (event) => {
   tasks.push(windowPromise);
   event.waitUntil(Promise.all(tasks));
 });
+
+// 7. Background Sync: Progressive sync for offline mutation outbox
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'qcet-outbox') {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window' }).then((clients) => {
+        for (const client of clients) {
+          client.postMessage({ type: 'QCET_OUTBOX_DRAIN' });
+        }
+      })
+    );
+  }
+});

@@ -1,7 +1,31 @@
 /**
  * QCET E-Office Offline Mutation Sync Manager
- * Preserves optimistic UI changes across unstable network drops and synchronizes when reconnected.
+ *
+ * Redesigned to delegate to the durable, user-isolated IndexedDB Outbox
+ * while maintaining 100% backward compatibility for existing callers.
+ *
+ * Implements:
+ *  - OCC (Optimistic Concurrency Control) via expectedVersion and If-Match
+ *  - Deduplication via Idempotency-Key
+ *  - 409 Conflict preservation
+ *  - Progressive background drain
  */
+
+import {
+  OfflineOutboxItem,
+  EnqueueOutboxItemInput,
+  enqueueOutbox,
+  removeOutboxItem,
+  clearOutbox,
+  flushOutbox,
+  getOutboxQueue,
+  getConflictItems as outboxGetConflictItems,
+  resolveConflict as outboxResolveConflict,
+  subscribeOutbox,
+  isOnline as outboxIsOnline,
+  getActiveUserId,
+} from "./pwa/outbox-manager";
+import { registerPurgeHook } from "./pwa/offline-store";
 
 export interface OfflineMutation {
   id: string;
@@ -12,13 +36,43 @@ export interface OfflineMutation {
   description?: string;
   timestamp: number;
   retryCount: number;
+  operation?: string;
+  entityId?: string;
+  expectedVersion?: number;
+  idempotencyKey?: string;
+  status?: "pending" | "syncing" | "conflict" | "failed";
+  serverConflictData?: unknown;
+  errorMessage?: string;
 }
 
-const STORAGE_KEY = "qcet_offline_mutations_v1";
-
-// In-memory fallback for Node/SSR or restricted environments
+// In-memory cache for synchronous reads and SSR/Node testing compatibility
 let memoryQueue: OfflineMutation[] = [];
 const subscribers = new Set<(queue: OfflineMutation[]) => void>();
+
+registerPurgeHook(() => {
+  memoryQueue = [];
+  notifySubscribers([]);
+});
+
+function mapOutboxItemToMutation(item: OfflineOutboxItem): OfflineMutation {
+  return {
+    id: item.id,
+    url: item.url,
+    method: item.method,
+    body: item.payload,
+    headers: {},
+    description: item.operation,
+    timestamp: item.createdAt,
+    retryCount: item.retryCount,
+    operation: item.operation,
+    entityId: item.entityId,
+    expectedVersion: item.expectedVersion,
+    idempotencyKey: item.idempotencyKey,
+    status: item.status,
+    serverConflictData: item.serverConflictData,
+    errorMessage: item.errorMessage,
+  };
+}
 
 function notifySubscribers(queue: OfflineMutation[]): void {
   for (const subscriber of subscribers) {
@@ -30,39 +84,71 @@ function notifySubscribers(queue: OfflineMutation[]): void {
   }
 }
 
+// Sync in-memory mirror when outbox updates occur
+subscribeOutbox((items) => {
+  memoryQueue = items.map(mapOutboxItemToMutation);
+  notifySubscribers(memoryQueue);
+});
+
+// Initial hydration from IndexedDB if in browser
+if (typeof window !== "undefined") {
+  getOutboxQueue()
+    .then((items) => {
+      if (items.length > 0) {
+        memoryQueue = items.map(mapOutboxItemToMutation);
+        notifySubscribers(memoryQueue);
+      }
+    })
+    .catch(() => {});
+}
+
 export function isOnline(): boolean {
-  if (typeof window === "undefined" || typeof navigator === "undefined") {
-    return true;
-  }
-  return navigator.onLine;
+  return outboxIsOnline();
 }
 
+/**
+ * Returns current offline mutations from in-memory queue.
+ * Guarantees synchronous response for React hooks and banner components.
+ */
 export function getOfflineMutationQueue(): OfflineMutation[] {
-  if (typeof window === "undefined" || typeof localStorage === "undefined") {
-    return [...memoryQueue];
-  }
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [...memoryQueue];
-  }
+  return [...memoryQueue];
 }
 
-function saveOfflineMutationQueue(queue: OfflineMutation[]): void {
-  memoryQueue = [...queue];
-  if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
-    } catch {
-      // Ignore storage quota or disabled errors
-    }
+/**
+ * Helper to infer entityId and operation from URL and method.
+ */
+function inferOperationAndEntity(
+  url: string,
+  method: string,
+  description?: string
+): { operation: string; entityId: string } {
+  const cleanUrl = url.split("?")[0].replace(/\/$/, "");
+  const segments = cleanUrl.split("/").filter(Boolean);
+
+  let entityId = "global";
+  if (segments.length >= 3 && segments[1] === "tasks") {
+    entityId = segments[2];
+  } else if (segments.length > 0) {
+    entityId = segments[segments.length - 1];
   }
-  notifySubscribers(queue);
+
+  const operation =
+    description ||
+    (method === "PATCH"
+      ? "TASK_UPDATE"
+      : method === "POST"
+      ? "TASK_CREATE"
+      : method === "DELETE"
+      ? "TASK_DELETE"
+      : "MUTATION");
+
+  return { operation, entityId };
 }
 
+/**
+ * Synchronous enqueue function maintaining backward-compatibility.
+ * Instantly appends to in-memory queue and persists to IndexedDB outbox.
+ */
 export function enqueueOfflineMutation(
   item: Omit<OfflineMutation, "id" | "timestamp" | "retryCount"> & {
     id?: string;
@@ -70,34 +156,92 @@ export function enqueueOfflineMutation(
     retryCount?: number;
   }
 ): OfflineMutation {
+  const id =
+    item.id ||
+    `mut-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  const timestamp = item.timestamp || Date.now();
+  const retryCount = item.retryCount || 0;
+  const { operation, entityId } = inferOperationAndEntity(
+    item.url,
+    item.method,
+    item.description || item.operation
+  );
+
+  const idempotencyKey =
+    item.idempotencyKey ||
+    `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
   const mutation: OfflineMutation = {
-    id: item.id || `mut-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    id,
     url: item.url,
     method: item.method,
     body: item.body,
     headers: item.headers,
-    description: item.description,
-    timestamp: item.timestamp || Date.now(),
-    retryCount: item.retryCount || 0,
+    description: item.description || operation,
+    timestamp,
+    retryCount,
+    operation,
+    entityId: item.entityId || entityId,
+    expectedVersion: item.expectedVersion,
+    idempotencyKey,
+    status: item.status || "pending",
+    serverConflictData: item.serverConflictData,
+    errorMessage: item.errorMessage,
   };
 
-  const queue = getOfflineMutationQueue();
-  const updatedQueue = [...queue, mutation];
-  saveOfflineMutationQueue(updatedQueue);
+  // 1. Synchronously update in-memory queue
+  memoryQueue = [...memoryQueue.filter((m) => m.id !== id), mutation];
+  notifySubscribers(memoryQueue);
+
+  // 2. Persist to durable IndexedDB outbox asynchronously
+  const outboxItem: EnqueueOutboxItemInput = {
+    id: mutation.id,
+    operation: mutation.operation || "MUTATION",
+    entityId: mutation.entityId || "unknown",
+    url: mutation.url,
+    method: mutation.method as "POST" | "PUT" | "PATCH" | "DELETE",
+    payload: mutation.body,
+    expectedVersion: mutation.expectedVersion,
+    idempotencyKey: mutation.idempotencyKey,
+    createdAt: mutation.timestamp,
+    retryCount: mutation.retryCount,
+    status: mutation.status,
+    serverConflictData: mutation.serverConflictData,
+    errorMessage: mutation.errorMessage,
+  };
+
+  enqueueOutbox(outboxItem).catch((err) => {
+    console.warn("Failed to persist mutation to IndexedDB outbox:", err);
+  });
 
   return mutation;
 }
 
+/**
+ * Removes a mutation from in-memory queue and IndexedDB outbox.
+ */
 export function removeOfflineMutation(id: string): void {
-  const queue = getOfflineMutationQueue();
-  const filtered = queue.filter((item) => item.id !== id);
-  saveOfflineMutationQueue(filtered);
+  memoryQueue = memoryQueue.filter((item) => item.id !== id);
+  notifySubscribers(memoryQueue);
+  removeOutboxItem(id).catch((err) => {
+    console.warn("Failed to remove outbox item from IndexedDB:", err);
+  });
 }
 
+/**
+ * Clears all mutations from memory queue and IndexedDB outbox.
+ */
 export function clearOfflineMutationQueue(): void {
-  saveOfflineMutationQueue([]);
+  memoryQueue = [];
+  notifySubscribers([]);
+  clearOutbox().catch((err) => {
+    console.warn("Failed to clear IndexedDB outbox:", err);
+  });
 }
 
+/**
+ * Subscribes to mutation queue changes.
+ */
 export function subscribeOfflineQueue(
   listener: (queue: OfflineMutation[]) => void
 ): () => void {
@@ -108,69 +252,26 @@ export function subscribeOfflineQueue(
 }
 
 /**
- * Attempt to flush all queued mutations against server APIs.
+ * Flushes all pending offline mutations by delegating to the durable outbox engine.
  */
 export async function flushOfflineMutations(): Promise<{
   succeeded: number;
   failed: number;
 }> {
-  if (!isOnline()) {
-    return { succeeded: 0, failed: getOfflineMutationQueue().length };
-  }
+  const result = await flushOutbox();
+  // Refresh memory queue
+  const latestOutbox = await getOutboxQueue();
+  memoryQueue = latestOutbox.map(mapOutboxItemToMutation);
+  notifySubscribers(memoryQueue);
 
-  const queue = getOfflineMutationQueue();
-  if (queue.length === 0) {
-    return { succeeded: 0, failed: 0 };
-  }
-
-  let succeeded = 0;
-  let failed = 0;
-
-  for (const item of queue) {
-    try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        ...(item.headers || {}),
-      };
-
-      const response = await fetch(item.url, {
-        method: item.method,
-        headers,
-        body: item.body !== undefined ? JSON.stringify(item.body) : undefined,
-      });
-
-      if (response.ok) {
-        removeOfflineMutation(item.id);
-        succeeded++;
-      } else if (response.status >= 400 && response.status < 500) {
-        // Client error (e.g. 404 or validation), drop from retry queue to avoid blocking
-        removeOfflineMutation(item.id);
-        failed++;
-      } else {
-        // 5xx Server error, increment retry count or discard if exceeded
-        item.retryCount += 1;
-        if (item.retryCount >= 5) {
-          removeOfflineMutation(item.id);
-        } else {
-          saveOfflineMutationQueue(queue);
-        }
-        failed++;
-      }
-    } catch {
-      // Network failure during sync
-      item.retryCount += 1;
-      saveOfflineMutationQueue(queue);
-      failed++;
-      break; // Stop loop if still offline
-    }
-  }
-
-  return { succeeded, failed };
+  return {
+    succeeded: result.succeeded,
+    failed: result.failed,
+  };
 }
 
-// Auto-sync on window 'online' event
-if (typeof window !== "undefined") {
-  window.addEventListener("online", () => {
-    flushOfflineMutations().catch(() => {});
-  });
-}
+// Re-export conflict management functions for UI integration
+export {
+  outboxGetConflictItems as getConflictItems,
+  outboxResolveConflict as resolveConflict,
+};
