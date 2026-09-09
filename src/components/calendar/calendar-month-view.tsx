@@ -29,6 +29,7 @@ import {
   type AcademicMonthPeriod,
   getAcademicMonthInfo,
   getAdjacentAcademicMonth,
+  getAcademicMonthPeriod,
 } from "@/lib/academic-calendar";
 
 export interface CalendarDayCell {
@@ -480,6 +481,8 @@ export interface CalendarMonthViewProps {
   onAddTask?: (initialDate?: string) => void;
   initialYear?: number;
   initialMonth?: number; // 0-indexed or 1-12
+  selectedAcademicMonth?: number | "ALL";
+  onAcademicMonthChange?: (month: number | "ALL") => void;
   initialPeriod?: AcademicMonthPeriod;
   currentPeriod?: AcademicMonthPeriod;
   onPeriodChange?: (period: AcademicMonthPeriod) => void;
@@ -492,6 +495,8 @@ export function CalendarMonthView({
   onAddTask,
   initialYear = 2026,
   initialMonth = 9, // Tháng 9 / 2026 (25/08 - 24/09)
+  selectedAcademicMonth,
+  onAcademicMonthChange,
   initialPeriod,
   currentPeriod: controlledPeriod,
   onPeriodChange,
@@ -499,20 +504,26 @@ export function CalendarMonthView({
 }: CalendarMonthViewProps) {
   const [internalPeriod, setInternalPeriod] = React.useState<AcademicMonthPeriod>(() => {
     if (initialPeriod) return initialPeriod;
-    // Derive initial academic period from initialYear and initialMonth (1-indexed: 9 = September)
-    const m = initialMonth >= 1 && initialMonth <= 12 ? initialMonth : 9;
-    return getAcademicMonthInfo(new Date(initialYear, m - 1, 10));
+    const targetMonth =
+      typeof selectedAcademicMonth === "number"
+        ? selectedAcademicMonth
+        : initialMonth >= 1 && initialMonth <= 12
+        ? initialMonth
+        : 9;
+    return getAcademicMonthPeriod(targetMonth, "2026-2027");
   });
 
-  // Sync internal period if initialMonth, initialYear or initialPeriod props update
+  // Sync internal period if selectedAcademicMonth, initialMonth, initialYear or initialPeriod props update
   React.useEffect(() => {
     if (initialPeriod) {
       setInternalPeriod(initialPeriod);
+    } else if (typeof selectedAcademicMonth === "number") {
+      setInternalPeriod(getAcademicMonthPeriod(selectedAcademicMonth, "2026-2027"));
     } else if (initialMonth) {
       const m = initialMonth >= 1 && initialMonth <= 12 ? initialMonth : 9;
-      setInternalPeriod(getAcademicMonthInfo(new Date(initialYear, m - 1, 10)));
+      setInternalPeriod(getAcademicMonthPeriod(m, "2026-2027"));
     }
-  }, [initialMonth, initialYear, initialPeriod]);
+  }, [selectedAcademicMonth, initialMonth, initialPeriod]);
 
   const period = controlledPeriod ?? internalPeriod;
 
@@ -522,11 +533,24 @@ export function CalendarMonthView({
         setInternalPeriod(newPeriod);
       }
       onPeriodChange?.(newPeriod);
+      onAcademicMonthChange?.(newPeriod.monthNumber);
     },
-    [controlledPeriod, onPeriodChange]
+    [controlledPeriod, onPeriodChange, onAcademicMonthChange]
   );
 
   const [selectedDate, setSelectedDate] = React.useState<string>("2026-09-04");
+
+  // Keep selected date focused within cycle bounds
+  React.useEffect(() => {
+    if (selectedDate < period.startDate || selectedDate > period.endDate) {
+      const anchorToday = "2026-09-04";
+      if (anchorToday >= period.startDate && anchorToday <= period.endDate) {
+        setSelectedDate(anchorToday);
+      } else {
+        setSelectedDate(period.startDate);
+      }
+    }
+  }, [period.startDate, period.endDate, selectedDate]);
   const [activeCategory, setActiveCategory] = React.useState<TaskCategory | "ALL">("ALL");
   const [levelFilter, setLevelFilter] = React.useState<"ALL" | "TRUONG" | "DON_VI">("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");

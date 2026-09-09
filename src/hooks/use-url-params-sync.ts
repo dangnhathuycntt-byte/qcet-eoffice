@@ -57,7 +57,10 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
     );
   }, [userRole]);
 
-  const [activeZone, setActiveZone] = React.useState<WorkspaceZone>(() => parseZoneParam(zoneQuery));
+  const [activeZone, setActiveZone] = React.useState<WorkspaceZone>(() => {
+    if (viewQuery === "calendar" && !zoneQuery) return "calendar";
+    return parseZoneParam(zoneQuery);
+  });
   const [scope, setScope] = React.useState<TaskScope>(() => {
     const rawParsed = parseScopeParam(scopeQuery, defaultScope, userRole);
     if (rawParsed === "SCHOOL_TASKS" && !isExecutive) {
@@ -116,8 +119,12 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
       router.replace("/portal");
       return;
     }
+    if (viewQuery === "calendar" && !zoneQuery) {
+      setActiveZone("calendar");
+      return;
+    }
     setActiveZone(parseZoneParam(zoneQuery));
-  }, [zoneQuery, router]);
+  }, [zoneQuery, viewQuery, router]);
 
   React.useEffect(() => {
     let resolved = scopeQuery ? parseScopeParam(scopeQuery, defaultScope, userRole) : defaultScope;

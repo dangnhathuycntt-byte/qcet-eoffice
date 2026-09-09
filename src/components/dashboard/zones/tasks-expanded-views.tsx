@@ -305,8 +305,13 @@ function TasksExpandedViewsComponent() {
         {viewMode === "calendar" && (
           <CalendarMonthView
             tasks={filteredTasks}
+            selectedAcademicMonth={selectedAcademicMonth}
+            onAcademicMonthChange={handleAcademicMonthChange}
             initialMonth={typeof selectedAcademicMonth === "number" ? selectedAcademicMonth : 9}
             initialYear={2026}
+            onPeriodChange={(newPeriod) => {
+              handleAcademicMonthChange(newPeriod.monthNumber);
+            }}
             onSelectTask={(task) => openTaskDetail(task)}
             onAddTask={() => openCreateModal("TRUONG")}
           />

@@ -1,16 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Calendar } from "lucide-react";
 
-export default function CalendarPage() {
+function CalendarRedirectContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    router.replace("/?view=calendar");
-  }, [router]);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("zone", "calendar");
+    params.set("view", "calendar");
+    const query = params.toString();
+    router.replace(query ? `/?${query}` : "/?zone=calendar&view=calendar");
+  }, [router, searchParams]);
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 p-6 text-center text-muted-foreground">
@@ -26,5 +31,19 @@ export default function CalendarPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function CalendarPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <CalendarRedirectContent />
+    </Suspense>
   );
 }
