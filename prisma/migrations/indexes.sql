@@ -107,3 +107,37 @@ WHERE "archived_at" IS NULL;
 CREATE INDEX IF NOT EXISTS idx_documents_active_type_status
 ON "documents" ("type", "status", "due_date")
 WHERE "archived_at" IS NULL;
+
+-- --------------------------------------------------------------------
+-- 5. FULL-TEXT SEARCH (FTS) & TRIGRAM (pg_trgm) INDEXES
+-- Wave D Performance: PostgreSQL-native search acceleration (Task 12)
+-- --------------------------------------------------------------------
+
+-- Safe extension initialization for trigram fuzzy matching
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Task full-text search index on title and description
+CREATE INDEX IF NOT EXISTS task_title_description_fts_idx
+ON "tasks" USING gin (to_tsvector('simple', coalesce("title", '') || ' ' || coalesce("description", '')));
+
+-- Task trigram index on title for typo tolerance and ILIKE acceleration
+CREATE INDEX IF NOT EXISTS task_title_trgm_idx
+ON "tasks" USING gin ("title" gin_trgm_ops);
+
+-- Document search indexes
+-- Note: Document schema uses "summary" (trích yếu) as the primary textual representation
+CREATE INDEX IF NOT EXISTS document_title_fts_idx
+ON "documents" USING gin (to_tsvector('simple', coalesce("summary", '')));
+
+-- Document trigram index on summary
+CREATE INDEX IF NOT EXISTS document_summary_trgm_idx
+ON "documents" USING gin ("summary" gin_trgm_ops);
+
+-- User full-text search index on name and email
+CREATE INDEX IF NOT EXISTS user_name_email_fts_idx
+ON "users" USING gin (to_tsvector('simple', coalesce("name", '') || ' ' || coalesce("email", '')));
+
+-- User trigram index on name
+CREATE INDEX IF NOT EXISTS user_name_trgm_idx
+ON "users" USING gin ("name" gin_trgm_ops);
+
