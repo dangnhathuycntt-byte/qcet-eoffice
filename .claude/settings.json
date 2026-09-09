@@ -1,0 +1,85 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env*)",
+      "Read(*.env*)",
+      "Read(**/.env*)",
+      "Edit(.env*)",
+      "Edit(*.env*)",
+      "Edit(**/.env*)",
+      "Write(.env*)",
+      "Write(*.env*)",
+      "Write(**/.env*)",
+      "Read(*.pem)",
+      "Read(**/*.pem)",
+      "Edit(*.pem)",
+      "Edit(**/*.pem)",
+      "Write(*.pem)",
+      "Write(**/*.pem)",
+      "Read(*.key)",
+      "Read(**/*.key)",
+      "Edit(*.key)",
+      "Edit(**/*.key)",
+      "Write(*.key)",
+      "Write(**/*.key)",
+      "Bash(git reset --hard*)",
+      "Bash(git push*)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)"
+    ],
+    "ask": [
+      "Bash(npm install*)",
+      "Bash(npx prisma migrate*)",
+      "Bash(npx prisma db push*)",
+      "Bash(git commit*)"
+    ],
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(npm run typecheck*)",
+      "Bash(npm test*)",
+      "Bash(npx tsx --test*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/protect-sensitive-files",
+            "statusMessage": "Verifying file safety..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/guard-next-build",
+            "statusMessage": "Checking dev server port 3001 cache safety..."
+          },
+          {
+            "type": "command",
+            "command": "./.claude/hooks/protect-sensitive-files",
+            "statusMessage": "Verifying command safety..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/fast-changed-file-check",
+            "statusMessage": "Linting changed files for QCET architectural invariants..."
+          }
+        ]
+      }
+    ]
+  }
+}
