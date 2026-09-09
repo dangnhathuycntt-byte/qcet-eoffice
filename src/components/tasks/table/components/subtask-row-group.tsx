@@ -29,6 +29,7 @@ export interface SubtaskRowGroupProps {
   canAssign?: boolean;
   onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
   className?: string;
+  selectedTaskId?: string;
 }
 
 export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
@@ -46,6 +47,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
   canAssign = false,
   onAddSubTask,
   className,
+  selectedTaskId,
 }: SubtaskRowGroupProps) {
   let user: ReturnType<typeof useAuth>["user"] = null;
   try {
@@ -109,7 +111,11 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                       parentTask={parentTask}
                       density={density}
                       scope={scope}
-                      isHighlighted={isUserSubtask}
+                      isHighlighted={
+                        isUserSubtask ||
+                        subTask.id === selectedTaskId ||
+                        Boolean((subTask as any).code && (subTask as any).code === selectedTaskId)
+                      }
                       selectedAcademicMonth={selectedAcademicMonth}
                       referenceDate={referenceDate}
                       onSelectSubTask={onSelectSubTask}

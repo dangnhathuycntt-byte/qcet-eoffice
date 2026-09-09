@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Inbox, AlertTriangle, Loader2 } from "lucide-react";
+import { Inbox, AlertTriangle, Loader2, Layers, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope, ViewMode } from "./types";
 import {
   useAdaptiveWorkspaceData,
@@ -22,7 +23,7 @@ import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
 import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
 import { CreateTaskModal, type CreateTaskFormData } from "@/components/dashboard/create-task-modal";
-import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
+import { TaskDetailSideSheet, isSchoolTask } from "@/components/dashboard/task-detail-side-sheet";
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 import { ReviewActionDialog } from "@/components/portal/review-action-dialog";
@@ -328,6 +329,9 @@ export function UnifiedAdaptiveWorkspace({
   onOverdueFilterChange,
   onWorkboxChange,
   onResetFilters,
+  enableSplitCockpit = false,
+  disableInternalDetail = false,
+  selectedTaskId: propSelectedTaskId,
 }: UnifiedAdaptiveWorkspaceProps) {
   const auth = useAuth();
   const fallbackUser: AuthUser = React.useMemo(
@@ -469,16 +473,50 @@ export function UnifiedAdaptiveWorkspace({
   const [reviewingTask, setReviewingTask] = React.useState<SchoolTask | StaffTask | null>(null);
   const [submittingTask, setSubmittingTask] = React.useState<SchoolTask | StaffTask | null>(null);
 
+  // Initial task selection from propSelectedTaskId if provided
+  const initialTaskFromProp = React.useMemo<SchoolTask | StaffTask | null>(() => {
+    if (!propSelectedTaskId) return null;
+    const directFound = tasks.find(
+      (t) => t.id === propSelectedTaskId || (t as any).code === propSelectedTaskId
+    );
+    if (directFound) return directFound;
+
+    for (const t of tasks) {
+      const sub = t.subTasks?.find(
+        (s) => s.id === propSelectedTaskId || (s as any).code === propSelectedTaskId
+      );
+      if (sub) return sub;
+    }
+    return null;
+  }, [propSelectedTaskId, tasks]);
+
   // Task selection state
-  const [internalSelectedTask, setInternalSelectedTask] = React.useState<SchoolTask | StaffTask | null>(null);
+  const [internalSelectedTask, setInternalSelectedTask] = React.useState<SchoolTask | StaffTask | null>(initialTaskFromProp);
+  // Progressive disclosure detail side sheet open state
+  const [isDetailOpen, setIsDetailOpen] = React.useState(Boolean(initialTaskFromProp));
+  // Action queue drawer open state for full-width layout mode
+  const [isActionQueueOpen, setIsActionQueueOpen] = React.useState(false);
+
+  let router: ReturnType<typeof useRouter> | null = null;
+  try {
+    router = useRouter();
+  } catch {
+    router = null;
+  }
 
   const handleSelectTask = React.useCallback(
     (task: SchoolTask | StaffTask) => {
       setInternalSelectedTask(task);
+      setIsDetailOpen(true);
       onSelectTask?.(task);
     },
     [onSelectTask]
   );
+
+  const handleCloseDetail = React.useCallback(() => {
+    setIsDetailOpen(false);
+    setInternalSelectedTask(null);
+  }, []);
 
   const effectiveReviewerRole: "ADMIN" | "MANAGER" | "STAFF" = React.useMemo(() => {
     if (forcedRole) return forcedRole;
@@ -569,9 +607,23 @@ export function UnifiedAdaptiveWorkspace({
         onViewModeChange?.(urlParams.view);
       }
       if (urlParams.taskId && tasks.length > 0) {
-        const found = tasks.find((t) => t.id === urlParams.taskId);
+        let found: SchoolTask | StaffTask | undefined = tasks.find(
+          (t) => t.id === urlParams.taskId || (t as any).code === urlParams.taskId
+        );
+        if (!found) {
+          for (const t of tasks) {
+            const sub = t.subTasks?.find(
+              (s) => s.id === urlParams.taskId || (s as any).code === urlParams.taskId
+            );
+            if (sub) {
+              found = sub;
+              break;
+            }
+          }
+        }
         if (found) {
           setInternalSelectedTask(found);
+          setIsDetailOpen(true);
           onSelectTask?.(found);
         }
       }
@@ -591,18 +643,87 @@ export function UnifiedAdaptiveWorkspace({
     onSelectTask,
   ]);
 
+  // Handle browser back/forward navigation for URL selection
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handlePopState = () => {
+      try {
+        const urlParams = parseTaskUrlParams(window.location.search);
+        if (urlParams.taskId) {
+          let found: SchoolTask | StaffTask | undefined = tasks.find(
+            (t) => t.id === urlParams.taskId || (t as any).code === urlParams.taskId
+          );
+          if (!found) {
+            for (const t of tasks) {
+              const sub = t.subTasks?.find(
+                (s) => s.id === urlParams.taskId || (s as any).code === urlParams.taskId
+              );
+              if (sub) {
+                found = sub;
+                break;
+              }
+            }
+          }
+          if (found) {
+            setInternalSelectedTask(found);
+            setIsDetailOpen(true);
+          }
+        } else {
+          setInternalSelectedTask(null);
+          setIsDetailOpen(false);
+        }
+      } catch {
+        // Safe fallback
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [tasks]);
+
+  // Synchronize when propSelectedTaskId changes externally
+  React.useEffect(() => {
+    if (propSelectedTaskId) {
+      let found: SchoolTask | StaffTask | undefined = tasks.find(
+        (t) => t.id === propSelectedTaskId || (t as any).code === propSelectedTaskId
+      );
+      if (!found) {
+        for (const t of tasks) {
+          const sub = t.subTasks?.find(
+            (s) => s.id === propSelectedTaskId || (s as any).code === propSelectedTaskId
+          );
+          if (sub) {
+            found = sub;
+            break;
+          }
+        }
+      }
+      if (found) {
+        setInternalSelectedTask(found);
+        setIsDetailOpen(true);
+      }
+    }
+  }, [propSelectedTaskId, tasks]);
+
   // Sync state changes to URL query parameters
   React.useEffect(() => {
     if (!hasInitializedUrl) return;
-    syncTaskUrlParams({
-      scope: activeScope,
-      dept: currentDept,
-      status: currentStatus,
-      month: currentMonth,
-      q: currentSearch,
-      view: viewMode,
-      taskId: internalSelectedTask?.id || null,
-    });
+    syncTaskUrlParams(
+      {
+        scope: activeScope,
+        dept: currentDept,
+        status: currentStatus,
+        month: currentMonth,
+        q: currentSearch,
+        view: viewMode,
+        taskId:
+          isDetailOpen && internalSelectedTask
+            ? (internalSelectedTask as any).code || internalSelectedTask.id
+            : null,
+      },
+      router ?? undefined
+    );
   }, [
     hasInitializedUrl,
     activeScope,
@@ -611,7 +732,10 @@ export function UnifiedAdaptiveWorkspace({
     currentMonth,
     currentSearch,
     viewMode,
+    isDetailOpen,
     internalSelectedTask?.id,
+    (internalSelectedTask as any)?.code,
+    router,
   ]);
 
   const { scopedTasks, metrics, actionQueue } = useAdaptiveWorkspaceData(
@@ -1006,32 +1130,184 @@ export function UnifiedAdaptiveWorkspace({
         </div>
       )}
 
-      {/* 2. Split-Cockpit Layout: Primary Work Table + Contextual Side Panel */}
-      <div
-        data-slot="split-cockpit-layout"
-        className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start"
-      >
-        {/* Primary Work Table (approx 58-66% width on desktop) */}
+      {/* 2. Workspace Layout: Full-Width Canvas (Default) or Backward-compatible Split Cockpit */}
+      {enableSplitCockpit ? (
         <div
-          data-slot="split-cockpit-primary"
-          className="lg:col-span-7 xl:col-span-8 space-y-3 min-w-0"
+          data-slot="split-cockpit-layout"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start"
         >
-          {/* Active Filter Breadcrumb */}
-          <ActiveFilterBreadcrumb
-            department={currentDept}
-            status={currentStatus}
-            search={currentSearch}
-            overdue={currentOverdue}
-            workbox={currentWorkbox}
-            totalFilteredCount={displayedTasks.length}
-            totalCount={tasks.length}
-            onResetFilters={handleResetFilters}
-            onRemoveDepartment={handleRemoveDept}
-            onRemoveStatus={handleRemoveStatus}
-            onRemoveSearch={handleRemoveSearch}
-            onRemoveOverdue={handleRemoveOverdue}
-            onRemoveWorkbox={handleRemoveWorkbox}
-          />
+          {/* Primary Work Table (approx 58-66% width on desktop) */}
+          <div
+            data-slot="split-cockpit-primary"
+            className="lg:col-span-7 xl:col-span-8 space-y-3 min-w-0"
+          >
+            {/* Active Filter Breadcrumb */}
+            <ActiveFilterBreadcrumb
+              department={currentDept}
+              status={currentStatus}
+              search={currentSearch}
+              overdue={currentOverdue}
+              workbox={currentWorkbox}
+              totalFilteredCount={displayedTasks.length}
+              totalCount={tasks.length}
+              onResetFilters={handleResetFilters}
+              onRemoveDepartment={handleRemoveDept}
+              onRemoveStatus={handleRemoveStatus}
+              onRemoveSearch={handleRemoveSearch}
+              onRemoveOverdue={handleRemoveOverdue}
+              onRemoveWorkbox={handleRemoveWorkbox}
+            />
+
+            {/* Unassigned Department State or Empty State or Table/Kanban */}
+            {activeScope === "unit" && isUnassigned ? (
+              <UnassignedDepartmentState onOpenProfile={() => setIsProfileModalOpen(true)} />
+            ) : tasks.length === 0 && !initialLoading && !isLoading && !isInternalLoading ? (
+              <div
+                data-slot="workspace-empty-state"
+                className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-dashed border-border/80 bg-card/40 my-2"
+              >
+                <div className="size-12 rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground mb-3">
+                  <Inbox className="size-6" strokeWidth={1.5} />
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-foreground mb-1">
+                  Chưa có nhiệm vụ nào được phân công trong kỳ này
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-md mb-5 leading-relaxed">
+                  Hiện tại không có nhiệm vụ nào trong cơ sở dữ liệu. Thầy/Cô có thể tạo nhiệm vụ mới hoặc làm mới dữ liệu từ máy chủ.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleCreateTaskClick}
+                    className="text-xs h-8 px-3 cursor-pointer"
+                  >
+                    Tạo nhiệm vụ mới
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRefresh}
+                    disabled={effectiveIsRefreshing}
+                    className="text-xs h-8 px-3 cursor-pointer"
+                  >
+                    Làm mới dữ liệu
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="pt-0.5">
+                {viewMode === "table" ? (
+                  <ModularCascadingTaskTable
+                    tasks={displayedTasks}
+                    selectedTaskId={internalSelectedTask?.id}
+                    scope={activeScope === "my" ? "MY_TASKS" : activeScope}
+                    hideToolbar={true}
+                    density={tableDensity}
+                    onDensityChange={setTableDensity}
+                    onSelectTask={handleSelectTask}
+                    onStatusChange={handleStatusChange}
+                    onRefresh={handleRefresh}
+                    onAddTask={() =>
+                      openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG")
+                    }
+                    onUrge={handleUrge}
+                    onOpenSubmitModal={
+                      onSubmitDeliverable
+                        ? (st) => setSubmittingTask(st)
+                        : undefined
+                    }
+                  />
+                ) : (
+                  <TaskKanbanBoard
+                    tasks={displayedTasks}
+                    onSelectTask={handleSelectTask}
+                    onStatusChange={handleStatusChange}
+                    onAddTask={(level, parentId) =>
+                      openCreateModal(
+                        level || (activeScope === "unit" ? "DON_VI" : "TRUONG"),
+                        parentId
+                      )
+                    }
+                    searchQuery={currentSearch}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Contextual Side Panel: Action Queue & Metrics (approx 33-42% width on desktop) */}
+          <div
+            data-slot="split-cockpit-side-panel"
+            className="lg:col-span-5 xl:col-span-4 space-y-4 min-w-0"
+          >
+            {/* Adaptive Metric Strip */}
+            <AdaptiveMetricStrip metrics={metrics} scope={activeScope} />
+
+            {/* Universal Action Queue (Approvals & Deliverables) */}
+            <UniversalActionQueue
+              actionQueue={actionQueue}
+              onSelectTask={handleSelectTask}
+              scope={activeScope}
+              onReview={onReview}
+              onSubmitDeliverable={onSubmitDeliverable}
+              onOpenReview={onReview ? (task) => setReviewingTask(task) : undefined}
+              onOpenSubmit={onSubmitDeliverable ? (task) => setSubmittingTask(task) : undefined}
+              onCreateSubtask={
+                onCreateSubtask
+                  ? onCreateSubtask
+                  : onCreateTask
+                  ? (parentId) => onCreateTask(activeScope === "unit" ? "DON_VI" : activeScope, parentId)
+                  : (parentId) => openCreateModal("DON_VI", parentId)
+              }
+              onRemindDRI={
+                onSendReminder
+                  ? (taskId, target) => onSendReminder(target, `Đôn đốc tiến độ thực hiện nhiệm vụ ${taskId}`)
+                  : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
+              }
+            />
+          </div>
+        </div>
+      ) : (
+        <div
+          data-slot="task-workspace-canvas"
+          className="w-full space-y-3 min-w-0"
+        >
+          {/* Active Filter Breadcrumb & Action Queue Quick Trigger */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex-1 min-w-0">
+              <ActiveFilterBreadcrumb
+                department={currentDept}
+                status={currentStatus}
+                search={currentSearch}
+                overdue={currentOverdue}
+                workbox={currentWorkbox}
+                totalFilteredCount={displayedTasks.length}
+                totalCount={tasks.length}
+                onResetFilters={handleResetFilters}
+                onRemoveDepartment={handleRemoveDept}
+                onRemoveStatus={handleRemoveStatus}
+                onRemoveSearch={handleRemoveSearch}
+                onRemoveOverdue={handleRemoveOverdue}
+                onRemoveWorkbox={handleRemoveWorkbox}
+              />
+            </div>
+
+            {(actionQueue.pendingApprovals.length > 0 || actionQueue.myPendingSubmissions.length > 0) && (
+              <button
+                type="button"
+                data-slot="action-queue-trigger"
+                onClick={() => setIsActionQueueOpen(true)}
+                className="inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-2 px-3 py-1.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold cursor-pointer transition-colors shrink-0 self-start sm:self-auto"
+                aria-label="Mở hàng đợi xử lý công việc"
+              >
+                <Layers className="size-3.5" strokeWidth={1.5} />
+                <span>Hàng đợi xử lý</span>
+                <span className="font-mono text-xs px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground tabular-nums leading-none">
+                  {actionQueue.pendingApprovals.length + actionQueue.myPendingSubmissions.length}
+                </span>
+              </button>
+            )}
+          </div>
 
           {/* Unassigned Department State or Empty State or Table/Kanban */}
           {activeScope === "unit" && isUnassigned ? (
@@ -1074,6 +1350,7 @@ export function UnifiedAdaptiveWorkspace({
               {viewMode === "table" ? (
                 <ModularCascadingTaskTable
                   tasks={displayedTasks}
+                  selectedTaskId={internalSelectedTask?.id}
                   scope={activeScope === "my" ? "MY_TASKS" : activeScope}
                   hideToolbar={true}
                   density={tableDensity}
@@ -1108,69 +1385,111 @@ export function UnifiedAdaptiveWorkspace({
             </div>
           )}
         </div>
+      )}
 
-        {/* Contextual Side Panel: Action Queue & Metrics (approx 33-42% width on desktop) */}
-        <div
-          data-slot="split-cockpit-side-panel"
-          className="lg:col-span-5 xl:col-span-4 space-y-4 min-w-0"
-        >
-          {/* Adaptive Metric Strip */}
-          <AdaptiveMetricStrip metrics={metrics} scope={activeScope} />
+      {/* Action Queue Slide-Over Drawer (in Full-Width Mode) */}
+      {!enableSplitCockpit && (
+        <>
+          {isActionQueueOpen && (
+            <div
+              data-slot="action-queue-backdrop"
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in !m-0"
+              onClick={() => setIsActionQueueOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+          <aside
+            data-slot="action-queue-drawer"
+            className={cn(
+              "fixed inset-y-0 right-0 z-40 flex h-full w-full sm:w-[480px] sm:max-w-[480px] flex-col border-l border-border/60 bg-card/98 backdrop-blur-xl shadow-2xl transition-transform duration-300 !m-0",
+              isActionQueueOpen ? "translate-x-0" : "translate-x-full pointer-events-none invisible"
+            )}
+            role="region"
+            aria-label="Hàng đợi xử lý công việc"
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-card/90">
+              <div className="flex items-center gap-2">
+                <Layers className="size-4 text-primary" strokeWidth={1.5} />
+                <h3 className="text-sm font-bold text-foreground">
+                  Hàng đợi xử lý công việc
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsActionQueueOpen(false)}
+                className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+                aria-label="Đóng hàng đợi"
+              >
+                <X className="size-4" strokeWidth={1.5} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 thin-scrollbar">
+              <AdaptiveMetricStrip metrics={metrics} scope={activeScope} />
+              <UniversalActionQueue
+                actionQueue={actionQueue}
+                onSelectTask={handleSelectTask}
+                scope={activeScope}
+                onReview={onReview}
+                onSubmitDeliverable={onSubmitDeliverable}
+                onOpenReview={onReview ? (task) => setReviewingTask(task) : undefined}
+                onOpenSubmit={onSubmitDeliverable ? (task) => setSubmittingTask(task) : undefined}
+                onCreateSubtask={
+                  onCreateSubtask
+                    ? onCreateSubtask
+                    : onCreateTask
+                    ? (parentId) => onCreateTask(activeScope === "unit" ? "DON_VI" : activeScope, parentId)
+                    : (parentId) => openCreateModal("DON_VI", parentId)
+                }
+                onRemindDRI={
+                  onSendReminder
+                    ? (taskId, target) => onSendReminder(target, `Đôn đốc tiến độ thực hiện nhiệm vụ ${taskId}`)
+                    : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
+                }
+              />
+            </div>
+          </aside>
+        </>
+      )}
 
-          {/* Universal Action Queue (Approvals & Deliverables) */}
-          <UniversalActionQueue
-            actionQueue={actionQueue}
-            onSelectTask={handleSelectTask}
-            scope={activeScope}
-            onReview={onReview}
-            onSubmitDeliverable={onSubmitDeliverable}
-            onOpenReview={onReview ? (task) => setReviewingTask(task) : undefined}
-            onOpenSubmit={onSubmitDeliverable ? (task) => setSubmittingTask(task) : undefined}
-            onCreateSubtask={
-              onCreateSubtask
-                ? onCreateSubtask
-                : onCreateTask
-                ? (parentId) => onCreateTask(activeScope === "unit" ? "DON_VI" : activeScope, parentId)
-                : (parentId) => openCreateModal("DON_VI", parentId)
-            }
-            onRemindDRI={
-              onSendReminder
-                ? (taskId, target) => onSendReminder(target, `Đôn đốc tiến độ thực hiện nhiệm vụ ${taskId}`)
-                : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
-            }
-          />
-        </div>
-      </div>
-
-      {/* 3. Detail Side Sheet (shown when task selected and onSelectTask is not intercepted externally) */}
-      <TaskDetailSideSheet
-        task={internalSelectedTask}
-        isOpen={Boolean(internalSelectedTask && !onSelectTask)}
-        onClose={() => setInternalSelectedTask(null)}
-        onStatusChange={handleStatusChange}
-        onAddSubTask={(parentId) => {
-          openCreateModal("DON_VI", parentId);
-        }}
-        onSelectSubTask={(subTaskOrId) => {
-          if (typeof subTaskOrId === "string") {
-            const foundSchool = displayedTasks.find((t) => t.id === subTaskOrId);
-            if (foundSchool) {
-              setInternalSelectedTask(foundSchool);
-              return;
-            }
-            for (const t of displayedTasks) {
-              const sub = t.subTasks?.find((s) => s.id === subTaskOrId);
-              if (sub) {
-                setInternalSelectedTask(sub);
+      {/* 3. Detail Side Sheet (shown when task selected) */}
+      {!disableInternalDetail && (
+        <TaskDetailSideSheet
+          task={internalSelectedTask}
+          isOpen={Boolean(isDetailOpen && internalSelectedTask)}
+          onClose={handleCloseDetail}
+          onStatusChange={handleStatusChange}
+          onAddSubTask={(parentId) => {
+            openCreateModal("DON_VI", parentId);
+          }}
+          onSelectSubTask={(subTaskOrId) => {
+            if (typeof subTaskOrId === "string") {
+              const foundSchool = displayedTasks.find((t) => t.id === subTaskOrId);
+              if (foundSchool) {
+                handleSelectTask(foundSchool);
                 return;
               }
+              for (const t of displayedTasks) {
+                const sub = t.subTasks?.find((s) => s.id === subTaskOrId);
+                if (sub) {
+                  handleSelectTask(sub);
+                  return;
+                }
+              }
+            } else {
+              handleSelectTask(subTaskOrId);
             }
-          } else {
-            setInternalSelectedTask(subTaskOrId);
+          }}
+          parentSchoolTaskTitle={
+            internalSelectedTask && !isSchoolTask(internalSelectedTask)
+              ? (internalSelectedTask as StaffTask).parentSchoolTaskTitle ||
+                displayedTasks.find((t) =>
+                  t.subTasks?.some((s) => s.id === internalSelectedTask.id)
+                )?.title
+              : undefined
           }
-        }}
-        currentUser={user}
-      />
+          currentUser={user}
+        />
+      )}
 
       {/* 4. Task Creation Modal */}
       <CreateTaskModal

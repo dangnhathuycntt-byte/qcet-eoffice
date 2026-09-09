@@ -99,6 +99,7 @@ export interface ModularCascadingTaskTableProps {
   onBulkReassign?: (newAssigneeId: string) => Promise<void> | void;
   onBulkDelete?: (taskIds: string[]) => Promise<void> | void;
   onExportExcel?: () => void;
+  selectedTaskId?: string;
 }
 
 export function ModularCascadingTaskTable({
@@ -135,6 +136,7 @@ export function ModularCascadingTaskTable({
   onBulkReassign,
   onBulkDelete,
   onExportExcel,
+  selectedTaskId,
 }: ModularCascadingTaskTableProps) {
   // 1. Context & User Resolution
   let user: ReturnType<typeof useAuth>["user"] = null;
@@ -741,7 +743,10 @@ export function ModularCascadingTaskTable({
                   {paginatedResult.items.map((task, index) => {
                     const isExpanded = tableState.isExpanded(task.id);
                     const isSelected = tableState.isSelected(task.id);
-                    const isRowActive = keyboardNav.activeIndex === index;
+                    const isRowActive =
+                      keyboardNav.activeIndex === index ||
+                      task.id === selectedTaskId ||
+                      Boolean(task.code && task.code === selectedTaskId);
                     const hasSubtasks = Boolean(
                       task.subTasks && task.subTasks.length > 0
                     );
@@ -776,6 +781,7 @@ export function ModularCascadingTaskTable({
                             onOpenSubmitModal={onOpenSubmitModal}
                             onAddSubTask={effectiveOnAddSubTask}
                             canAssign={canAssignUnit}
+                            selectedTaskId={selectedTaskId}
                           />
                         )}
                       </React.Fragment>

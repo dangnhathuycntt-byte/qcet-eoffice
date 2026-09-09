@@ -16,6 +16,7 @@ describe("UnifiedAdaptiveWorkspace Split-Cockpit Layout & ActiveFilterBreadcrumb
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: adminUser,
         tasks,
+        enableSplitCockpit: true,
         onSelectTask: () => {},
       })
     );
@@ -44,6 +45,7 @@ describe("UnifiedAdaptiveWorkspace Split-Cockpit Layout & ActiveFilterBreadcrumb
       React.createElement(UnifiedAdaptiveWorkspace, {
         user: adminUser,
         tasks,
+        enableSplitCockpit: true,
         onSelectTask: () => {},
       })
     );
@@ -110,5 +112,28 @@ describe("UnifiedAdaptiveWorkspace Split-Cockpit Layout & ActiveFilterBreadcrumb
     const emojiRegex = /[\u{1F300}-\u{1F9FF}]/u;
     assert.ok(!emojiRegex.test(html), "Split cockpit markup must be 100% free of emojis");
     assert.ok(!html.includes("dark:"), "Must not introduce dark: variant classes");
+  });
+
+  test("renders 100% full-width task canvas by default without rigid 33-40% right-side cockpit", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedAdaptiveWorkspace, {
+        user: adminUser,
+        tasks,
+        onSelectTask: () => {},
+      })
+    );
+
+    assert.ok(
+      html.includes('data-slot="task-workspace-canvas"'),
+      "Must render full-width task-workspace-canvas container by default"
+    );
+    assert.ok(
+      !html.includes('data-slot="split-cockpit-layout"'),
+      "Must not render permanent split-cockpit-layout by default"
+    );
+    assert.ok(
+      html.includes('data-slot="action-queue-drawer"'),
+      "Must keep action queue drawer available for progressive disclosure"
+    );
   });
 });

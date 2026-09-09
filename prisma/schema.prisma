@@ -116,6 +116,7 @@ model User {
   avatarUrl             String?               @map("avatar_url")
   provider              String                @default("credentials") @db.VarChar(50)
   isActive              Boolean               @default(true) @map("is_active")
+  deactivatedAt         DateTime?             @map("deactivated_at")
   createdAt             DateTime              @default(now()) @map("created_at")
   updatedAt             DateTime              @updatedAt @map("updated_at")
   onboardedAt           DateTime?             @map("onboarded_at")
@@ -124,6 +125,7 @@ model User {
   accounts              Account[]
   sessions              Session[]
   tasksCreated          Task[]                @relation("TaskCreatedBy")
+  archivedTasks         Task[]                @relation("TaskArchiver")
   taskAssignees         TaskAssignee[]
   deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
   deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
@@ -132,6 +134,7 @@ model User {
   resolutionsEnacted    ExecutiveResolution[] @relation("ResolutionActor")
   leadDocs              Document[]            @relation("LeadUserDocs")
   docsRegistered        Document[]            @relation("DocRegisteredBy")
+  archivedDocuments     Document[]            @relation("DocumentArchiver")
   leaderDirectives      DocumentDirective[]   @relation("LeaderDirectives")
   pushSubscriptions PushSubscription[]
   notifications     Notification[]
@@ -197,6 +200,10 @@ model Task {
   linkedDocument  Document?
   dacumTaskDefId  String?               @map("dacum_task_def_id") @db.VarChar(50)
   dacumTaskDef    DacumTaskDef?         @relation(fields: [dacumTaskDefId], references: [id], onDelete: SetNull)
+  archivedAt      DateTime?             @map("archived_at")
+  archivedById    String?               @map("archived_by_id")
+  archiveReason   String?               @map("archive_reason") @db.Text
+  archivedBy      User?                 @relation("TaskArchiver", fields: [archivedById], references: [id], onDelete: SetNull)
   createdAt       DateTime              @default(now()) @map("created_at")
   updatedAt       DateTime              @updatedAt @map("updated_at")
 
@@ -332,6 +339,12 @@ model Document {
   // Văn thư thực hiện vào sổ
   registeredById     String                @map("registered_by_id")
   registeredBy       User                  @relation("DocRegisteredBy", fields: [registeredById], references: [id], onDelete: Restrict)
+
+  // Lưu trữ & Hủy/Lưu trữ vòng đời
+  archivedAt         DateTime?             @map("archived_at")
+  archivedById       String?               @map("archived_by_id")
+  archiveReason      String?               @map("archive_reason") @db.Text
+  archivedBy         User?                 @relation("DocumentArchiver", fields: [archivedById], references: [id], onDelete: SetNull)
 
   // Quan hệ tệp đính kèm & Bút phê BGH
   attachments        DocumentAttachment[]

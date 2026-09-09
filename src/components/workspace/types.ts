@@ -76,4 +76,7 @@ export interface UnifiedAdaptiveWorkspaceProps {
   onOverdueFilterChange?: (overdue: boolean) => void;
   onWorkboxChange?: (workbox?: string) => void;
   onResetFilters?: () => void;
+  enableSplitCockpit?: boolean;
+  disableInternalDetail?: boolean;
+  selectedTaskId?: string;
 }

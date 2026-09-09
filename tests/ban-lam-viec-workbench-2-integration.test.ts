@@ -427,6 +427,7 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
         React.createElement(UnifiedAdaptiveWorkspace, {
           user: adminUser,
           tasks,
+          enableSplitCockpit: true,
           onSelectTask: () => {},
         })
       );

@@ -656,15 +656,23 @@ export function TaskDetailSideSheet({
     <>
       {/* Backdrop overlay */}
       <div
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in !m-0"
+        data-slot="side-sheet-backdrop"
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs sm:backdrop-blur-sm transition-opacity duration-300 animate-in fade-in !m-0"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Slide-over Drawer Panel */}
       <aside
+        data-slot="task-detail-side-sheet"
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full sm:max-w-lg md:max-w-xl flex-col border-l border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-right duration-300 !m-0",
+          "fixed inset-y-0 right-0 z-50 flex h-full flex-col border-l border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-right duration-300 !m-0",
+          // Mobile (< 768px): Full-screen detail surface
+          "w-full inset-0 sm:inset-y-0 sm:right-0 sm:left-auto",
+          // Tablet & Desktop (768-1439px): 520px side sheet overlay
+          "md:w-[520px] md:max-w-[520px]",
+          // Large Desktop (>= 1440px): 560px side sheet overlay
+          "2xl:w-[560px] 2xl:max-w-[560px]",
           className
         )}
         role="dialog"
@@ -672,7 +680,7 @@ export function TaskDetailSideSheet({
         aria-labelledby="task-detail-title"
       >
         {/* Sticky Header Bar: Status & Quick Actions */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 px-5 sm:px-6 py-3.5 bg-card/90 backdrop-blur-xl gap-3">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 px-5 sm:px-6 py-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] bg-card/90 backdrop-blur-xl gap-3">
           {/* Status Indicator Pill */}
           <div className="flex items-center gap-2 min-w-0">
             <span
@@ -732,7 +740,7 @@ export function TaskDetailSideSheet({
                 onChange={(e) =>
                   onStatusChange(task.id, e.target.value as TaskStatus)
                 }
-                className="h-8 rounded-lg border border-border/60 bg-background px-2.5 text-xs font-medium text-foreground hover:border-border transition-all cursor-pointer outline-none focus:border-ring focus:ring-1 focus:ring-ring"
+                className="min-h-[44px] sm:min-h-8 sm:h-8 rounded-lg border border-border/60 bg-background px-2.5 text-xs font-medium text-foreground hover:border-border transition-all cursor-pointer outline-none focus:border-ring focus:ring-1 focus:ring-ring"
                 aria-label="Cập nhật trạng thái nhiệm vụ"
               >
                 <option value="NEW">Mới</option>
@@ -749,7 +757,7 @@ export function TaskDetailSideSheet({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95"
+              className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95"
               aria-label="Đóng bảng chi tiết"
             >
               <X className="size-4" strokeWidth={1.5} />
