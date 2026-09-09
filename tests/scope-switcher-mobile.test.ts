@@ -19,7 +19,10 @@ describe("Scope Switcher Mobile Adaptation Suite", () => {
     const details = resolveScopeDetails("unit", "K_CNTT", mockUser);
     assert.equal(details.scope, "unit");
     assert.equal(details.shortLabel, "Khoa CNTT");
-    assert.ok(details.triggerLabel.includes("Khoa CNTT"));
+    assert.ok(
+      details.triggerLabel.includes("Khoa CNTT") ||
+      details.triggerLabel.includes("Khoa Công nghệ thông tin")
+    );
 
     const schoolDetails = resolveScopeDetails("school", null, {
       ...mockUser,

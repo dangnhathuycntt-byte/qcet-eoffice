@@ -8,7 +8,8 @@ import {
   User,
   ChevronDown,
   Check,
-  Settings,
+  Shield,
+  Search,
   X,
 } from "lucide-react";
 import {
@@ -35,10 +36,52 @@ export interface ScopeDetails {
   isWarning?: boolean;
 }
 
+export interface DepartmentTierGroup {
+  category: "KHOA_CHUYEN_MON" | "PHONG_CHUC_NANG" | "TRUNG_TAM";
+  label: string;
+  expectedCountText: string;
+}
+
+export const DEPARTMENT_TIERS: DepartmentTierGroup[] = [
+  {
+    category: "KHOA_CHUYEN_MON",
+    label: "Khoa chuyên môn",
+    expectedCountText: "9 khoa",
+  },
+  {
+    category: "PHONG_CHUC_NANG",
+    label: "Phòng chức năng",
+    expectedCountText: "5 phòng",
+  },
+  {
+    category: "TRUNG_TAM",
+    label: "Trung tâm",
+    expectedCountText: "2 trung tâm",
+  },
+];
+
+/**
+ * Removes Vietnamese diacritics / accents for fast instant text matching.
+ */
+export function removeVietnameseTones(str: string): string {
+  return str
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[đĐ]/g, (m) => (m === "đ" ? "d" : "D"))
+    .toLowerCase()
+    .trim();
+}
+
 /**
  * Formats standard Vietnamese institutional department display label.
  */
 export function formatDepartmentLabel(dept: DepartmentNode): string {
+  if (dept.code === "BGH" || dept.category === "BGH") {
+    return "Ban Giám hiệu";
+  }
+  if (dept.code === "K_CNTT") {
+    return "Khoa Công nghệ thông tin";
+  }
   if (dept.code === "P_DTQLKH" || dept.code === "DAO_TAO") {
     return "Phòng Đào tạo & QLKH";
   }
@@ -58,11 +101,43 @@ export function formatDepartmentLabel(dept: DepartmentNode): string {
 }
 
 /**
+ * Instant unaccented Vietnamese search filter for subordinate units.
+ */
+export function matchesDepartmentSearch(dept: DepartmentNode, query: string): boolean {
+  if (!query) return true;
+  const cleanQuery = removeVietnameseTones(query);
+  const nameNorm = removeVietnameseTones(dept.name);
+  const shortNorm = removeVietnameseTones(dept.shortName || "");
+  const formattedNorm = removeVietnameseTones(formatDepartmentLabel(dept));
+  const rawCode = dept.code.toLowerCase();
+  const pureCode = rawCode.replace(/^(k_|p_|tt_)/, "");
+
+  return (
+    nameNorm.includes(cleanQuery) ||
+    shortNorm.includes(cleanQuery) ||
+    formattedNorm.includes(cleanQuery) ||
+    rawCode.includes(cleanQuery) ||
+    pureCode.includes(cleanQuery)
+  );
+}
+
+/**
  * Resolves a department from QCET_DEPARTMENTS by code, id, or normalized string.
  */
 export function resolveDepartment(codeOrId?: string | null): DepartmentNode | undefined {
   if (!codeOrId) return undefined;
   const norm = codeOrId.trim().toUpperCase().replace(/[-\s]/g, "_");
+
+  // Macro institutional legal name alias
+  if (
+    norm.includes("TRUONG_CAO_DANG") ||
+    norm.includes("BGH") ||
+    norm === "BAN_GIAM_HIEU" ||
+    norm === "TOAN_TRUONG"
+  ) {
+    return QCET_DEPARTMENTS.find((d) => d.code === "BGH");
+  }
+
   return (
     QCET_DEPARTMENTS.find((d) => d.code.toUpperCase() === norm) ||
     QCET_DEPARTMENTS.find((d) => d.id.toUpperCase() === norm) ||
@@ -72,9 +147,9 @@ export function resolveDepartment(codeOrId?: string | null): DepartmentNode | un
       const pureNorm = norm.replace(/^(K_|P_|TT_|DEPT_)/, "");
       return (
         pureCode === pureNorm ||
-        (norm === "DAO_TAO" && (d.code === "P_DTQLKH" || d.name.includes("Đào tạo"))) ||
+        (norm === "DAO_TAO" && (d.code === "P_QLDT" || d.code === "P_DTQLKH" || d.name.includes("Đào tạo"))) ||
         (norm === "CNTT" && d.code === "K_CNTT") ||
-        (norm === "TCHC" && (d.code === "P_KTDBCL" || d.code === "P_HCQT")) ||
+        (norm === "TCHC" && (d.code === "P_TCDBCL" || d.code === "P_HCQT")) ||
         d.code.toUpperCase().includes(pureNorm) ||
         pureNorm.includes(pureCode)
       );
@@ -345,7 +420,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
   const isMobile = useIsMobile();
 
   const [isOpen, setIsOpen] = React.useState(false);
-  const [showOtherUnits, setShowOtherUnits] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const scopeParam = searchParams?.get("scope") ?? null;
@@ -358,9 +433,24 @@ export function ScopeSwitcher({ className }: { className?: string }) {
     return resolveScopeDetails(scopeParam, deptParam, user);
   }, [scopeParam, deptParam, user]);
 
-  // Primary user department context
-  const primaryUnitName = user?.department || "Phòng Quản trị Mạng và CNTT";
-  const primaryUnitCode = user?.departmentCode || "P_HCQT";
+  // Primary user department context resolved dynamically
+  const resolvedPrimaryDept = React.useMemo(() => {
+    if (isExecutive) {
+      return resolveDepartment("BGH") || QCET_DEPARTMENTS.find((d) => d.code === "BGH");
+    }
+    return resolveDepartment(user?.departmentCode || user?.department);
+  }, [isExecutive, user?.departmentCode, user?.department]);
+
+  const primaryUnitCode = resolvedPrimaryDept?.code || (isExecutive ? "BGH" : user?.departmentCode || "P_HCQT");
+  const primaryUnitName = React.useMemo(() => {
+    if (isExecutive) return "Ban Giám hiệu";
+    if (resolvedPrimaryDept) {
+      return resolvedPrimaryDept.code === "BGH" ? "Ban Giám hiệu" : formatDepartmentLabel(resolvedPrimaryDept);
+    }
+    const raw = user?.department || "Đơn vị của tôi";
+    if (raw.includes("Trường Cao đẳng")) return "Ban Giám hiệu";
+    return raw;
+  }, [isExecutive, resolvedPrimaryDept, user?.department]);
 
   // Silent URL guard: non-executive users accessing school scope must be redirected
   React.useEffect(() => {
@@ -389,25 +479,35 @@ export function ScopeSwitcher({ className }: { className?: string }) {
     router,
   ]);
 
-  // Standard non-BGH departments for selection
+  // Standard non-BGH operational units (16 units)
   const standardDepartments = React.useMemo(() => {
     return QCET_DEPARTMENTS.filter(
       (dept) => dept.code !== "BGH" && dept.category !== "BGH"
     );
   }, []);
 
+  // Filtered department tiers based on instant search
+  const filteredTiers = React.useMemo(() => {
+    return DEPARTMENT_TIERS.map((tier) => {
+      const depts = standardDepartments.filter(
+        (d) => d.category === tier.category && matchesDepartmentSearch(d, searchQuery)
+      );
+      return {
+        ...tier,
+        departments: depts,
+      };
+    }).filter((tier) => tier.departments.length > 0);
+  }, [standardDepartments, searchQuery]);
+
+  const totalMatches = React.useMemo(() => {
+    return filteredTiers.reduce((acc, t) => acc + t.departments.length, 0);
+  }, [filteredTiers]);
+
   // Allowed scopes based on role — hide "Toàn trường" from non-executive
   const allScopes: ScopeType[] = ["school", "unit", "my"];
   const allowedScopes = isExecutive
     ? allScopes
     : allScopes.filter((s) => s !== "school");
-
-  // Other units (excluding primary unit and Khoa CNTT for clean quick list)
-  const otherDepartments = React.useMemo(() => {
-    return standardDepartments.filter(
-      (dept) => dept.code !== "K_CNTT" && dept.code !== primaryUnitCode
-    );
-  }, [standardDepartments, primaryUnitCode]);
 
   // Close popover on outside click or ESC key
   React.useEffect(() => {
@@ -465,26 +565,21 @@ export function ScopeSwitcher({ className }: { className?: string }) {
   const renderIcon = (type: ScopeDetails["iconType"]) => {
     switch (type) {
       case "School":
-        return <School className="w-3.5 h-3.5 text-primary shrink-0" />;
+        return <School className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.5} />;
       case "Building2":
-        return <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />;
+        return <Building2 className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.5} />;
       case "User":
       default:
-        return <User className="w-3.5 h-3.5 text-primary shrink-0" />;
+        return <User className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={1.5} />;
     }
   };
 
-  // Determine which scope is currently selected for checkmarks
+  // Determine active selection state
   const isPrimaryUnitSelected =
     currentScope.scope === "unit" &&
-    (!deptParam ||
-      deptParam === primaryUnitCode ||
-      deptParam === "P_QTM_CNTT" ||
-      currentScope.label === primaryUnitName);
-
-  const isKhoaCnttSelected =
-    currentScope.scope === "unit" &&
-    (deptParam === "K_CNTT" || currentScope.department?.code === "K_CNTT");
+    (deptParam === primaryUnitCode ||
+      currentScope.department?.code === primaryUnitCode ||
+      (!deptParam && !currentScope.department && !isExecutive));
 
   const isSchoolSelected = currentScope.scope === "school";
   const isMySelected = currentScope.scope === "my";
@@ -520,65 +615,15 @@ export function ScopeSwitcher({ className }: { className?: string }) {
         <div
           role="menu"
           aria-orientation="vertical"
-          className="absolute left-0 top-full mt-1.5 w-72 sm:w-80 max-w-[calc(100vw-32px)] rounded-xl border border-border/70 bg-card/95 p-1.5 text-popover-foreground shadow-xl backdrop-blur-md z-50 animate-in fade-in-0 zoom-in-95 focus:outline-none"
+          className="absolute left-0 top-full mt-1.5 w-80 max-w-[calc(100vw-32px)] rounded-xl border border-border/70 bg-card/95 p-1.5 text-popover-foreground shadow-xl backdrop-blur-md z-50 animate-in fade-in-0 zoom-in-95 focus:outline-none"
         >
-          {/* Header Title */}
+          {/* Section 1: Primary Scopes */}
           <div className="px-3 pt-2 pb-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-            PHẠM VI ĐANG XEM
+            Phạm vi chính
           </div>
 
-          <div className="space-y-0.5 mt-1">
-            {/* 1. Primary Unit (e.g. Phòng Quản trị Mạng và CNTT) */}
-            <button
-              type="button"
-              onClick={() => handleSelectScope("unit", primaryUnitCode)}
-              className={cn(
-                "w-full flex items-center justify-between px-3 py-2 rounded-lg text-left text-xs transition-colors cursor-pointer",
-                isPrimaryUnitSelected
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "hover:bg-muted text-foreground"
-              )}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Building2
-                  className={cn(
-                    "w-4 h-4 shrink-0",
-                    isPrimaryUnitSelected ? "text-primary" : "text-muted-foreground"
-                  )}
-                />
-                <span className="truncate">{primaryUnitName}</span>
-              </div>
-              {isPrimaryUnitSelected && (
-                <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
-              )}
-            </button>
-
-            {/* 2. Khoa CNTT */}
-            <button
-              type="button"
-              onClick={() => handleSelectScope("unit", "K_CNTT")}
-              className={cn(
-                "w-full flex items-center justify-between px-3 py-2 rounded-lg text-left text-xs transition-colors cursor-pointer",
-                isKhoaCnttSelected
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "hover:bg-muted text-foreground"
-              )}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Building2
-                  className={cn(
-                    "w-4 h-4 shrink-0",
-                    isKhoaCnttSelected ? "text-primary" : "text-muted-foreground"
-                  )}
-                />
-                <span className="truncate">Khoa CNTT</span>
-              </div>
-              {isKhoaCnttSelected && (
-                <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
-              )}
-            </button>
-
-            {/* 3. Toàn trường - only visible to executive role */}
+          <div className="space-y-0.5 mt-0.5">
+            {/* 1. Toàn trường - only visible to executive role */}
             {allowedScopes.includes("school") && (
               <button
                 type="button"
@@ -596,21 +641,53 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                       "w-4 h-4 shrink-0",
                       isSchoolSelected ? "text-primary" : "text-muted-foreground"
                     )}
+                    strokeWidth={1.5}
                   />
                   <div className="truncate">
-                    <span>Toàn trường</span>
-                    <span className="text-xs text-muted-foreground ml-1.5 hidden sm:inline">
-                      (BGH điều hành)
+                    <span>Toàn trường (BGH QCET)</span>
+                    <span className="text-[11px] text-muted-foreground block truncate">
+                      Chỉ đạo, điều hành chiến lược
                     </span>
                   </div>
                 </div>
                 {isSchoolSelected && (
-                  <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
+                  <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
                 )}
               </button>
             )}
 
-            {/* 4. Cá nhân (Của tôi) */}
+            {/* 2. Primary Unit (Đơn vị của tôi / Ban Giám hiệu) */}
+            <button
+              type="button"
+              onClick={() => handleSelectScope("unit", primaryUnitCode)}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 rounded-lg text-left text-xs transition-colors cursor-pointer",
+                isPrimaryUnitSelected
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "hover:bg-muted text-foreground"
+              )}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Building2
+                  className={cn(
+                    "w-4 h-4 shrink-0",
+                    isPrimaryUnitSelected ? "text-primary" : "text-muted-foreground"
+                  )}
+                  strokeWidth={1.5}
+                />
+                <div className="truncate">
+                  <span>{primaryUnitName}</span>
+                  <span className="text-[11px] text-muted-foreground block truncate">
+                    {isExecutive ? "Đơn vị điều hành" : "Đơn vị của tôi"}
+                  </span>
+                </div>
+              </div>
+              {isPrimaryUnitSelected && (
+                <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
+              )}
+            </button>
+
+            {/* 3. Cá nhân (Của tôi) */}
             <button
               type="button"
               onClick={() => handleSelectScope("my")}
@@ -627,82 +704,117 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                     "w-4 h-4 shrink-0",
                     isMySelected ? "text-primary" : "text-muted-foreground"
                   )}
+                  strokeWidth={1.5}
                 />
                 <div className="truncate">
-                  <span>Cá nhân</span>
-                  <span className="text-xs text-muted-foreground ml-1.5 hidden sm:inline">
-                    (Công việc của tôi)
+                  <span>Cá nhân (Của tôi)</span>
+                  <span className="text-[11px] text-muted-foreground block truncate">
+                    Nhiệm vụ và kế hoạch cá nhân
                   </span>
                 </div>
               </div>
               {isMySelected && (
-                <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
+                <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
               )}
             </button>
+          </div>
 
-            {/* Expandable Other Units */}
-            {otherDepartments.length > 0 && (
-              <div className="pt-1">
+          {/* Divider */}
+          <div className="my-1.5 border-t border-border/60" />
+
+          {/* Section 2: Searchable Combobox of 16 Subordinate Units */}
+          <div className="px-3 pt-1 pb-1 flex items-center justify-between text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            <span>Đơn vị trực thuộc</span>
+            <span className="text-[10px] font-normal text-muted-foreground">16 đơn vị</span>
+          </div>
+
+          {/* Search Filter Input */}
+          <div className="px-2 pt-1 pb-1.5">
+            <div className="relative">
+              <Search
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none"
+                strokeWidth={1.5}
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm đơn vị (VD: CNTT, Đào tạo, Điện)..."
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-muted/40 hover:bg-muted/70 focus:bg-background border border-border/60 rounded-lg placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+              />
+              {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setShowOtherUnits((prev) => !prev)}
-                  className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors cursor-pointer"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded transition-colors"
+                  aria-label="Xóa tìm kiếm"
                 >
-                  <span>Đơn vị khác ({otherDepartments.length} đơn vị)...</span>
-                  <ChevronDown
-                    className={cn(
-                      "w-3.5 h-3.5 transition-transform duration-150",
-                      showOtherUnits && "rotate-180"
-                    )}
-                  />
+                  <X className="w-3 h-3" strokeWidth={1.5} />
                 </button>
+              )}
+            </div>
+          </div>
 
-                {showOtherUnits && (
-                  <div className="max-h-40 overflow-y-auto mt-1 space-y-0.5 pr-1 border-t border-border/40 pt-1">
-                    {otherDepartments.map((dept) => {
-                      const isSelected =
-                        currentScope.scope === "unit" &&
-                        (deptParam === dept.code ||
-                          deptParam === dept.id ||
-                          currentScope.department?.code === dept.code);
+          {/* 3-Tier Categorized List */}
+          <div className="max-h-56 overflow-y-auto px-1 space-y-2">
+            {filteredTiers.map((tier) => (
+              <div key={tier.category} className="space-y-0.5">
+                <div className="px-2 py-0.5 text-[10px] font-bold text-muted-foreground/90 uppercase tracking-wider flex items-center justify-between bg-muted/40 rounded">
+                  <span>{tier.label}</span>
+                  <span className="text-[10px] font-medium text-muted-foreground/70">
+                    {tier.departments.length}
+                  </span>
+                </div>
+                {tier.departments.map((dept) => {
+                  const isSelected =
+                    currentScope.scope === "unit" &&
+                    (deptParam === dept.code ||
+                      deptParam === dept.id ||
+                      currentScope.department?.code === dept.code);
 
-                      return (
-                        <button
-                          key={dept.id}
-                          type="button"
-                          onClick={() => handleSelectScope("unit", dept.code)}
-                          className={cn(
-                            "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-left text-xs transition-colors cursor-pointer",
-                            isSelected
-                              ? "bg-primary/10 text-primary font-semibold"
-                              : "hover:bg-muted text-foreground"
-                          )}
-                        >
-                          <span className="truncate">{formatDepartmentLabel(dept)}</span>
-                          {isSelected && (
-                            <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-2" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                  return (
+                    <button
+                      key={dept.id}
+                      type="button"
+                      onClick={() => handleSelectScope("unit", dept.code)}
+                      className={cn(
+                        "w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left text-xs transition-colors cursor-pointer min-h-[32px]",
+                        isSelected
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "hover:bg-muted text-foreground"
+                      )}
+                    >
+                      <span className="truncate">{formatDepartmentLabel(dept)}</span>
+                      {isSelected && (
+                        <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-1.5" strokeWidth={1.5} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+
+            {totalMatches === 0 && (
+              <div className="py-4 text-center text-xs text-muted-foreground">
+                Không tìm thấy đơn vị phù hợp với &quot;{searchQuery}&quot;
               </div>
             )}
           </div>
 
-          {/* Divider */}
-          <div className="my-1.5 border-t border-border/50" />
-
-          {/* Footer: Quản lý phạm vi */}
-          <button
-            type="button"
-            onClick={handleOpenDelegationModal}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-          >
-            <Settings className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-            <span>Quản lý phạm vi</span>
-          </button>
+          {/* Sticky Footer: Phân quyền & Ủy quyền phạm vi */}
+          <div className="sticky bottom-0 pt-2 pb-0.5 mt-1 border-t border-border/60 bg-card/95 backdrop-blur-xs">
+            <button
+              type="button"
+              onClick={handleOpenDelegationModal}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer min-h-[36px]"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Shield className="w-3.5 h-3.5 shrink-0 text-primary" strokeWidth={1.5} />
+                <span className="truncate font-medium">Phân quyền & Ủy quyền phạm vi</span>
+              </div>
+              <span className="size-2 rounded-full bg-emerald-500 shrink-0" title="Đang hiệu lực" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -723,96 +835,25 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                 aria-label="Đóng bảng chọn phạm vi"
                 className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
               >
-                <X size={18} />
+                <X size={18} strokeWidth={1.5} />
               </BottomSheetClose>
             </div>
           </BottomSheetHeader>
 
-          <div className="p-4 space-y-3">
+          <div className="p-4 space-y-4">
+            {/* Primary Scopes Section */}
             <div>
               <div className="px-1 pb-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                 Phạm vi chính
               </div>
-              <div className="space-y-1.5">
-                {/* 1. Primary Unit */}
-                <button
-                  type="button"
-                  onClick={() => handleSelectScope("unit", primaryUnitCode)}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-sm transition-all cursor-pointer min-h-[48px] active:scale-[0.99]",
-                    isPrimaryUnitSelected
-                      ? "bg-primary/10 border border-primary/25 text-primary font-semibold shadow-xs"
-                      : "bg-muted/40 hover:bg-muted/70 text-foreground border border-border/40"
-                  )}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={cn(
-                        "size-8 rounded-lg flex items-center justify-center shrink-0",
-                        isPrimaryUnitSelected
-                          ? "bg-primary/20 text-primary"
-                          : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      <Building2 className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium leading-tight">{primaryUnitName}</p>
-                      <p className="text-xs text-muted-foreground leading-tight mt-0.5">
-                        Đơn vị công tác chính
-                      </p>
-                    </div>
-                  </div>
-                  {isPrimaryUnitSelected && (
-                    <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
-                  )}
-                </button>
-
-                {/* 2. Khoa CNTT */}
-                {primaryUnitCode !== "K_CNTT" && (
-                  <button
-                    type="button"
-                    onClick={() => handleSelectScope("unit", "K_CNTT")}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-sm transition-all cursor-pointer min-h-[48px] active:scale-[0.99]",
-                      isKhoaCnttSelected
-                        ? "bg-primary/10 border border-primary/25 text-primary font-semibold shadow-xs"
-                        : "bg-muted/40 hover:bg-muted/70 text-foreground border border-border/40"
-                    )}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className={cn(
-                          "size-8 rounded-lg flex items-center justify-center shrink-0",
-                          isKhoaCnttSelected
-                            ? "bg-primary/20 text-primary"
-                            : "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        <Building2 className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium leading-tight">
-                          Khoa Công nghệ Thông tin
-                        </p>
-                        <p className="text-xs text-muted-foreground leading-tight mt-0.5">
-                          Khoa chuyên môn (K_CNTT)
-                        </p>
-                      </div>
-                    </div>
-                    {isKhoaCnttSelected && (
-                      <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
-                    )}
-                  </button>
-                )}
-
-                {/* 3. Toàn trường - only visible to executive role */}
+              <div className="space-y-2">
+                {/* 1. Toàn trường - only visible to executive role */}
                 {allowedScopes.includes("school") && (
                   <button
                     type="button"
                     onClick={() => handleSelectScope("school")}
                     className={cn(
-                      "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-sm transition-all cursor-pointer min-h-[48px] active:scale-[0.99]",
+                      "w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left text-sm transition-all cursor-pointer min-h-[48px] active:scale-[0.99]",
                       isSchoolSelected
                         ? "bg-primary/10 border border-primary/25 text-primary font-semibold shadow-xs"
                         : "bg-muted/40 hover:bg-muted/70 text-foreground border border-border/40"
@@ -827,27 +868,61 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                             : "bg-muted text-muted-foreground"
                         )}
                       >
-                        <School className="w-4 h-4" />
+                        <School className="w-4 h-4" strokeWidth={1.5} />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-medium leading-tight">Toàn trường QCET</p>
+                        <p className="truncate font-medium leading-tight">Toàn trường (BGH QCET)</p>
                         <p className="text-xs text-muted-foreground leading-tight mt-0.5">
                           Ban Giám hiệu chỉ đạo điều hành
                         </p>
                       </div>
                     </div>
                     {isSchoolSelected && (
-                      <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
+                      <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
                     )}
                   </button>
                 )}
 
-                {/* 4. Cá nhân (Của tôi) */}
+                {/* 2. Primary Unit */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectScope("unit", primaryUnitCode)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left text-sm transition-all cursor-pointer min-h-[48px] active:scale-[0.99]",
+                    isPrimaryUnitSelected
+                      ? "bg-primary/10 border border-primary/25 text-primary font-semibold shadow-xs"
+                      : "bg-muted/40 hover:bg-muted/70 text-foreground border border-border/40"
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={cn(
+                        "size-8 rounded-lg flex items-center justify-center shrink-0",
+                        isPrimaryUnitSelected
+                          ? "bg-primary/20 text-primary"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      <Building2 className="w-4 h-4" strokeWidth={1.5} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium leading-tight">{primaryUnitName}</p>
+                      <p className="text-xs text-muted-foreground leading-tight mt-0.5">
+                        {isExecutive ? "Đơn vị điều hành" : "Đơn vị của tôi"}
+                      </p>
+                    </div>
+                  </div>
+                  {isPrimaryUnitSelected && (
+                    <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
+                  )}
+                </button>
+
+                {/* 3. Cá nhân (Của tôi) */}
                 <button
                   type="button"
                   onClick={() => handleSelectScope("my")}
                   className={cn(
-                    "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-sm transition-all cursor-pointer min-h-[48px] active:scale-[0.99]",
+                    "w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-left text-sm transition-all cursor-pointer min-h-[48px] active:scale-[0.99]",
                     isMySelected
                       ? "bg-primary/10 border border-primary/25 text-primary font-semibold shadow-xs"
                       : "bg-muted/40 hover:bg-muted/70 text-foreground border border-border/40"
@@ -862,7 +937,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                           : "bg-muted text-muted-foreground"
                       )}
                     >
-                      <User className="w-4 h-4" />
+                      <User className="w-4 h-4" strokeWidth={1.5} />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate font-medium leading-tight">Cá nhân (Của tôi)</p>
@@ -872,32 +947,55 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                     </div>
                   </div>
                   {isMySelected && (
-                    <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
+                    <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
                   )}
                 </button>
               </div>
             </div>
 
-            {/* Other Units list on mobile */}
-            {otherDepartments.length > 0 && (
-              <div className="pt-2 border-t border-border/50">
-                <button
-                  type="button"
-                  onClick={() => setShowOtherUnits((prev) => !prev)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-xl transition-colors cursor-pointer min-h-[44px]"
-                >
-                  <span>CÁC ĐƠN VỊ KHÁC ({otherDepartments.length})</span>
-                  <ChevronDown
-                    className={cn(
-                      "w-4 h-4 transition-transform duration-200",
-                      showOtherUnits && "rotate-180"
-                    )}
-                  />
-                </button>
+            {/* Subordinate Units Combobox */}
+            <div className="pt-2 border-t border-border/50">
+              <div className="px-1 pb-2 flex items-center justify-between text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                <span>Đơn vị trực thuộc</span>
+                <span className="text-[11px] font-normal text-muted-foreground">16 đơn vị</span>
+              </div>
 
-                {showOtherUnits && (
-                  <div className="max-h-48 overflow-y-auto mt-1 space-y-1 pr-1">
-                    {otherDepartments.map((dept) => {
+              {/* Mobile Search input */}
+              <div className="relative mb-3">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
+                  strokeWidth={1.5}
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm đơn vị (VD: CNTT, Đào tạo, Điện)..."
+                  className="w-full pl-9 pr-9 py-2.5 text-sm bg-muted/40 border border-border/60 rounded-xl placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-primary min-h-[44px]"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded"
+                    aria-label="Xóa tìm kiếm"
+                  >
+                    <X className="w-4 h-4" strokeWidth={1.5} />
+                  </button>
+                )}
+              </div>
+
+              {/* 3-Tier Categorized List on Mobile */}
+              <div className="max-h-60 overflow-y-auto space-y-3 pr-1">
+                {filteredTiers.map((tier) => (
+                  <div key={tier.category} className="space-y-1">
+                    <div className="px-2 py-1 text-xs font-bold text-muted-foreground/90 uppercase tracking-wider flex items-center justify-between bg-muted/40 rounded-lg">
+                      <span>{tier.label}</span>
+                      <span className="text-xs font-medium text-muted-foreground/70">
+                        {tier.departments.length}
+                      </span>
+                    </div>
+                    {tier.departments.map((dept) => {
                       const isSelected =
                         currentScope.scope === "unit" &&
                         (deptParam === dept.code ||
@@ -910,33 +1008,45 @@ export function ScopeSwitcher({ className }: { className?: string }) {
                           type="button"
                           onClick={() => handleSelectScope("unit", dept.code)}
                           className={cn(
-                            "w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-left text-xs transition-colors cursor-pointer min-h-[44px]",
+                            "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-xs sm:text-sm transition-colors cursor-pointer min-h-[44px] active:scale-[0.99]",
                             isSelected
-                              ? "bg-primary/10 text-primary font-semibold"
-                              : "hover:bg-muted/60 text-foreground"
+                              ? "bg-primary/10 text-primary font-semibold border border-primary/20"
+                              : "hover:bg-muted/60 text-foreground bg-muted/20"
                           )}
                         >
                           <span className="truncate">{formatDepartmentLabel(dept)}</span>
                           {isSelected && (
-                            <Check className="w-4 h-4 text-primary shrink-0 ml-2" />
+                            <Check className="w-4 h-4 text-primary shrink-0 ml-2" strokeWidth={1.5} />
                           )}
                         </button>
                       );
                     })}
                   </div>
+                ))}
+
+                {totalMatches === 0 && (
+                  <div className="py-4 text-center text-xs text-muted-foreground">
+                    Không tìm thấy đơn vị phù hợp với &quot;{searchQuery}&quot;
+                  </div>
                 )}
               </div>
-            )}
+            </div>
 
-            {/* Quản lý phạm vi */}
-            <div className="pt-2 border-t border-border/50">
+            {/* Sticky Footer: Phân quyền & Ủy quyền phạm vi */}
+            <div className="sticky bottom-0 pt-3 pb-2 border-t border-border/50 bg-background/95 backdrop-blur-xs">
               <button
                 type="button"
                 onClick={handleOpenDelegationModal}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/80 transition-colors cursor-pointer min-h-[44px]"
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-foreground bg-muted/40 hover:bg-muted/80 transition-colors cursor-pointer min-h-[48px] active:scale-[0.99] border border-border/40"
               >
-                <Settings className="w-4 h-4 shrink-0 text-muted-foreground" />
-                <span>Quản lý phạm vi & Ủy quyền</span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Shield className="w-4 h-4 shrink-0 text-primary" strokeWidth={1.5} />
+                  <span className="truncate">Phân quyền & Ủy quyền phạm vi</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-xs text-muted-foreground">Hiệu lực</span>
+                  <span className="size-2 rounded-full bg-emerald-500" />
+                </div>
               </button>
             </div>
           </div>
