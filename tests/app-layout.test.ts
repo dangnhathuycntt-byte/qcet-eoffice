@@ -188,16 +188,15 @@ describe("AppTopbar Component Contracts", () => {
     assert.ok(!content.includes("devRoles"), "devRoles must NOT be in app-topbar");
   });
 
-  it("anti-pattern assertions: cleans legacy widgets and preserves event listeners", () => {
+  it("anti-pattern assertions: cleans legacy widgets and eliminates duplicate CreateTaskModal", () => {
     const content = fs.readFileSync(topbarPath, "utf-8");
     assert.ok(!content.includes("LiveClock"), "LiveClock must NOT be rendered in AppTopbar");
     assert.ok(!content.includes("ZoomToggle"), "ZoomToggle must NOT be rendered in AppTopbar");
     assert.ok(!content.includes("RoleSwitcherPill"), "RoleSwitcherPill must NOT be rendered in AppTopbar");
 
-    // Modal backward compatibility event listeners preserved
-    assert.ok(content.includes("CreateTaskModal"), "Must preserve CreateTaskModal");
-    assert.ok(content.includes("qcet:open-create-task"), "Must listen to qcet:open-create-task event");
-    assert.ok(content.includes("qcet:task-created"), "Must dispatch qcet:task-created event");
+    // Modal collision elimination: CreateTaskModal is delegated to dedicated modal host
+    assert.ok(!content.includes("<CreateTaskModal"), "Must NOT mount CreateTaskModal directly to prevent double-modal collision");
+    assert.ok(!content.includes("isCreateModalOpen"), "Must NOT maintain isCreateModalOpen state");
   });
 });
 

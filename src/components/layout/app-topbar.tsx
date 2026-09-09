@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   Search,
   Bell,
-  Plus,
   Compass,
   Smartphone,
   LogIn,
@@ -24,15 +23,8 @@ import dynamic from "next/dynamic";
 import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
 import { ScopeSwitcher } from "@/components/layout/scope-switcher";
 import { useAuth } from "@/lib/auth-context";
-import { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-// Lazy-loaded modal to avoid loading on initial topbar render
-const CreateTaskModal = dynamic(
-  () => import("@/components/dashboard/create-task-modal").then((m) => m.CreateTaskModal),
-  { ssr: false }
-);
 
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
@@ -107,8 +99,6 @@ export function AppTopbar() {
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
-  const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
 
   // Close profile dropdown on outside click
   React.useEffect(() => {
@@ -136,28 +126,6 @@ export function AppTopbar() {
     window.addEventListener("qcet:toggle-notifications", handleToggleNotifications);
     return () => window.removeEventListener("qcet:toggle-notifications", handleToggleNotifications);
   }, [router]);
-
-  // Backward compatibility event listener for opening create modal
-  React.useEffect(() => {
-    const handleOpenCreateTask = (e: Event) => {
-      const customEvent = e as CustomEvent<{ leadAssigneeName?: string }>;
-      if (customEvent?.detail?.leadAssigneeName) {
-        setInitialAssigneeName(customEvent.detail.leadAssigneeName);
-      } else {
-        setInitialAssigneeName(undefined);
-      }
-      setIsCreateModalOpen(true);
-    };
-    window.addEventListener("qcet:open-create-task", handleOpenCreateTask);
-    return () => window.removeEventListener("qcet:open-create-task", handleOpenCreateTask);
-  }, []);
-
-  const handleCreateTaskFromTopbar = (data: CreateTaskFormData) => {
-    window.dispatchEvent(
-      new CustomEvent("qcet:task-created", { detail: data })
-    );
-    setIsCreateModalOpen(false);
-  };
 
   const handleOpenSearch = React.useCallback(() => {
     window.dispatchEvent(new CustomEvent("qcet:open-command-search"));
@@ -247,28 +215,23 @@ export function AppTopbar() {
           </button>
         </div>
 
-        {/* Right Zone: Create Task Button, Notification Bell, Theme Switcher & User Profile */}
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          {/* Quick Create Task Button */}
-          <Button
-            id="tour-create-task-btn"
+        {/* Right Zone: Notification Bell, Theme Switcher & User Profile */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* Mobile Quick Search Trigger */}
+          <button
             type="button"
-            size="sm"
-            onClick={() => {
-              setInitialAssigneeName(undefined);
-              setIsCreateModalOpen(true);
-            }}
-            className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xs cursor-pointer active:scale-95"
-            title="Tạo việc mới (N)"
+            onClick={handleOpenSearch}
+            className="flex sm:hidden min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer touch-manipulation"
+            title="Tìm kiếm"
+            aria-label="Tìm nhanh công việc, nhân sự"
           >
-            <Plus size={14} strokeWidth={2} />
-            <span>Tạo việc</span>
-          </Button>
+            <Search size={18} strokeWidth={1.75} />
+          </button>
 
           {/* Notification Bell: Direct Link to /notifications */}
           <Link
             href="/notifications"
-            className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer touch-manipulation"
+            className="relative hidden md:flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer touch-manipulation"
             title="Thông báo điều hành"
             aria-label="Thông báo điều hành"
           >
@@ -290,7 +253,7 @@ export function AppTopbar() {
             }}
             aria-label="Cài đặt ứng dụng di động"
             title="Cài đặt ứng dụng di động"
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-primary transition-colors cursor-pointer touch-manipulation"
+            className="hidden sm:flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-primary transition-colors cursor-pointer touch-manipulation"
           >
             <Smartphone size={16} strokeWidth={1.5} />
           </Button>
@@ -451,19 +414,6 @@ export function AppTopbar() {
           )}
         </div>
       </div>
-
-      {/* Quick Task Modal (rendered on-demand via dynamic import) */}
-      {isCreateModalOpen && (
-        <CreateTaskModal
-          isOpen={isCreateModalOpen}
-          onClose={() => {
-            setIsCreateModalOpen(false);
-            setInitialAssigneeName(undefined);
-          }}
-          onSubmit={handleCreateTaskFromTopbar}
-          initialLeadAssigneeName={initialAssigneeName}
-        />
-      )}
 
       {/* User Profile Modal */}
       {isProfileModalOpen && <UserProfileModal />}
