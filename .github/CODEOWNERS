@@ -1,0 +1,75 @@
+# ==============================================================================
+# QCET E-Office Code Ownership Specification
+# ==============================================================================
+# Lines starting with '#' are comments.
+# Each line defines a file pattern followed by one or more owners.
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# ==============================================================================
+
+# Default global owners for the entire repository
+* @cdktcnqn-admin @qcet-core-team
+
+# ------------------------------------------------------------------------------
+# 1. DATABASE & PERSISTENCE SUBSYSTEM
+# ------------------------------------------------------------------------------
+# Schema definitions, migrations, audit logging, transactions, database clients
+prisma/                               @qcet-data-team @cdktcnqn-admin
+prisma/schema.prisma                  @qcet-data-team @cdktcnqn-admin
+prisma/migrations/                    @qcet-data-team @cdktcnqn-admin
+src/lib/db/                           @qcet-data-team
+src/lib/prisma.ts                     @qcet-data-team
+
+# ------------------------------------------------------------------------------
+# 2. AUTHENTICATION, AUTHORIZATION & SECURITY
+# ------------------------------------------------------------------------------
+# Session handling, JWT signing, OAuth flows, RBAC policies, CSRF, encryption
+src/app/api/auth/                     @qcet-security-team @cdktcnqn-admin
+src/components/auth/                  @qcet-security-team
+src/lib/auth-context.tsx              @qcet-security-team
+src/lib/auth/                         @qcet-security-team
+src/lib/jwt-session.ts                @qcet-security-team @cdktcnqn-admin
+src/lib/google-oauth.ts               @qcet-security-team
+src/lib/password.ts                   @qcet-security-team
+src/server/security/                  @qcet-security-team @cdktcnqn-admin
+src/config/security-headers.ts        @qcet-security-team
+
+# ------------------------------------------------------------------------------
+# 3. ENVIRONMENT & RUNTIME CONFIGURATION
+# ------------------------------------------------------------------------------
+# Environment schemas, runtime configuration, build guards
+.env*                                 @qcet-core-infra @cdktcnqn-admin
+src/config/                           @qcet-core-infra
+next.config.ts                        @qcet-core-infra
+
+# ------------------------------------------------------------------------------
+# 4. TASK MANAGEMENT, DACUM WORKFLOWS & WORKBENCH
+# ------------------------------------------------------------------------------
+# Tasks engine, deliverables, cascading task table, workbench, delegation
+src/server/tasks/                     @qcet-workflow-team
+src/lib/tasks/                        @qcet-workflow-team
+src/lib/dacum*                        @qcet-workflow-team
+src/lib/unified-task-hub.ts           @qcet-workflow-team
+src/components/tasks/                 @qcet-workflow-team
+src/components/workspace/             @qcet-workflow-team
+
+# ------------------------------------------------------------------------------
+# 5. DOCUMENT MANAGEMENT & NUMBERING
+# ------------------------------------------------------------------------------
+# Official document repository, numbering sequence, directives, resolutions
+src/server/policies/                  @qcet-document-team
+src/server/dto/                       @qcet-document-team
+src/lib/documents/                    @qcet-document-team
+src/lib/document-numbering.ts         @qcet-document-team
+src/components/documents/             @qcet-document-team
+
+# ------------------------------------------------------------------------------
+# 6. TELEMETRY, LOGGING & SANITIZATION
+# ------------------------------------------------------------------------------
+# Structured logging, telemetry sanitization, web vitals
+src/telemetry/                        @qcet-security-team @qcet-core-infra
+
+# ------------------------------------------------------------------------------
+# 7. CI/CD, AUTOMATION & GOVERNANCE
+# ------------------------------------------------------------------------------
+.github/                              @qcet-core-infra @cdktcnqn-admin
+.claude/                              @qcet-core-infra @cdktcnqn-admin
