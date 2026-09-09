@@ -21,8 +21,6 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
-import { ScopeSwitcher } from "@/components/layout/scope-switcher";
-import { GlobalMonthSelector } from "@/components/layout/global-month-selector";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -164,7 +162,7 @@ export function AppTopbar() {
       className="sticky top-0 z-30 w-full h-[calc(52px+env(safe-area-inset-top,0px))] border-b border-border/50 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] transition-colors"
     >
       <div className="h-full w-full px-3.5 sm:px-6 flex items-center justify-between gap-3">
-        {/* Left Zone: Mobile Menu, Desktop Collapse Toggle, Dynamic Breadcrumbs & Scope Switcher */}
+        {/* Left Zone: Desktop Collapse Toggle & Dynamic Breadcrumbs */}
         <div className="flex items-center min-w-0 gap-2 sm:gap-3">
           {/* Mobile Menu Trigger (< 768px) đã được thay thế bằng tab 'Thêm' ở Bottom Nav để tránh xung đột 2 drawer */}
 
@@ -184,23 +182,6 @@ export function AppTopbar() {
           <Suspense fallback={<TopbarBreadcrumbsFallback pathname={pathname} />}>
             <TopbarBreadcrumbs pathname={pathname} />
           </Suspense>
-
-          {/* Breadcrumb - Scope Separator */}
-          <div className="h-4 w-px bg-border/60 shrink-0 hidden sm:block" />
-
-          {/* Scope Switcher Dropdown */}
-          <div id="tour-scope-switcher">
-            <Suspense fallback={<div className="h-8 w-44 rounded-lg bg-muted/40 animate-pulse" />}>
-              <ScopeSwitcher />
-            </Suspense>
-          </div>
-
-          {/* Global Academic Month Selector */}
-          <div id="tour-month-selector">
-            <Suspense fallback={<div className="h-8 w-32 rounded-lg bg-muted/40 animate-pulse" />}>
-              <GlobalMonthSelector />
-            </Suspense>
-          </div>
         </div>
 
         {/* Center Zone: Global Command / Quick Search */}
