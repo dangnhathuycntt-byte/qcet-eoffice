@@ -367,10 +367,15 @@ describe("Command Palette & Keyboard Ergonomics (Task 11)", () => {
         !content.includes("text-[10px]"),
         "No text-[10px] classes permitted; floor is text-xs (12px)"
       );
-      assert.ok(
-        content.includes("text-xs"),
-        "Footer kbd elements must use standard text-xs"
-      );
+      // Ensure all kbd elements explicitly use text-xs
+      const kbdMatches = content.match(/<kbd[^>]*>/g) || [];
+      assert.ok(kbdMatches.length >= 5, "Must contain kbd elements in footer");
+      for (const kbd of kbdMatches) {
+        assert.ok(
+          kbd.includes("text-xs"),
+          `All kbd elements must have text-xs: ${kbd}`
+        );
+      }
     });
   });
 
