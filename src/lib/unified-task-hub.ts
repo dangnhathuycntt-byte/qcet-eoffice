@@ -1,5 +1,6 @@
 import type { SchoolTask, TaskCategory, TaskStatus } from "@/types/dashboard";
 import type { AuthUser, UserRole } from "@/types/auth";
+import type { WorkspaceScope } from "@/types/workspace";
 import {
   type TaskScope,
   type TaskViewMode,
@@ -12,6 +13,66 @@ import { filterTasksForTable } from "@/components/dashboard/cascading-task-table
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 
 export const TODAY_ISO = "2026-09-06";
+
+/**
+ * Converts TaskScope ("SCHOOL_TASKS" | "UNIT_TASKS" | "MY_TASKS") to WorkspaceScope ("school" | "unit" | "my").
+ */
+export function scopeToWorkspaceScope(scope: TaskScope): WorkspaceScope {
+  switch (scope) {
+    case "SCHOOL_TASKS":
+      return "school";
+    case "UNIT_TASKS":
+      return "unit";
+    case "MY_TASKS":
+    default:
+      return "my";
+  }
+}
+
+/**
+ * Converts WorkspaceScope ("school" | "unit" | "my") to TaskScope ("SCHOOL_TASKS" | "UNIT_TASKS" | "MY_TASKS").
+ */
+export function workspaceScopeToTaskScope(scope: WorkspaceScope): TaskScope {
+  switch (scope) {
+    case "school":
+      return "SCHOOL_TASKS";
+    case "unit":
+      return "UNIT_TASKS";
+    case "my":
+    default:
+      return "MY_TASKS";
+  }
+}
+
+/**
+ * Converts WorkspaceScope to URL parameter representation ("all" | "unit" | "personal").
+ */
+export function workspaceScopeToUrlParam(scope: WorkspaceScope): string {
+  switch (scope) {
+    case "school":
+      return "all";
+    case "unit":
+      return "unit";
+    case "my":
+    default:
+      return "personal";
+  }
+}
+
+/**
+ * Parses URL scope parameter into WorkspaceScope, supporting both legacy and modern values.
+ */
+export function urlParamToWorkspaceScope(
+  param: string | null | undefined,
+  fallback: WorkspaceScope = "school"
+): WorkspaceScope {
+  if (!param) return fallback;
+  const p = param.trim().toLowerCase();
+  if (p === "all" || p === "school") return "school";
+  if (p === "unit") return "unit";
+  if (p === "personal" || p === "my") return "my";
+  return fallback;
+}
 
 /**
  * Returns system reference date as Date object.
@@ -115,8 +176,8 @@ export function parseScopeParam(
   if (!param) return defaultScope;
   const normalized = param.trim().toLowerCase();
 
-  if (normalized === "my" || normalized === "my_tasks") return "MY_TASKS";
-  if (normalized === "school" || normalized === "school_tasks") {
+  if (normalized === "my" || normalized === "my_tasks" || normalized === "personal") return "MY_TASKS";
+  if (normalized === "school" || normalized === "school_tasks" || normalized === "all") {
     if (userRole !== undefined && userRole !== null) {
       const rawRole = typeof userRole === "object" ? userRole.role : userRole;
       const role = String(rawRole || "").toUpperCase();

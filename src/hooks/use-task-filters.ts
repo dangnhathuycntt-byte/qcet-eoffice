@@ -13,11 +13,13 @@ import type {
   ExecutiveFilter,
   ExecutiveActionStats,
   DepartmentHealthSummary,
+  ExecutiveActionItem,
 } from "@/lib/executive-matrix-aggregator";
 import {
   computeExecutiveActionStats,
   computeDepartmentHealthMatrix,
   filterTasksByExecutive,
+  extractExecutiveActionItems,
 } from "@/lib/executive-matrix-aggregator";
 import type { TaskScope } from "@/components/dashboard/unified-task-toolbar";
 import { filterTasksByScope } from "@/components/dashboard/unified-task-toolbar";
@@ -84,6 +86,7 @@ export interface TaskFiltersReturn {
   monthlyDepartmentHealth: DepartmentHealthSummary[];
   executiveStats: ExecutiveActionStats | null;
   monthlyExecutiveStats: ExecutiveActionStats | null;
+  executiveActionItems: ExecutiveActionItem[];
   handleSelectUpcoming: (item: UpcomingItem) => SchoolTask | StaffTask | undefined;
 }
 
@@ -245,6 +248,14 @@ export function useTaskFilters({
     [monthFilteredSchoolTasks, isExecutive, activeZone, referenceDate]
   );
 
+  const executiveActionItems = React.useMemo(
+    () =>
+      isExecutive && activeZone === "dashboard"
+        ? extractExecutiveActionItems(monthFilteredSchoolTasks, referenceDate)
+        : [],
+    [monthFilteredSchoolTasks, isExecutive, activeZone, referenceDate]
+  );
+
   const filteredTasks = React.useMemo(() => {
     if (activeZone === "portal" || activeZone === "org") return [];
     let result = filterTasksHub({
@@ -345,6 +356,7 @@ export function useTaskFilters({
     monthlyDepartmentHealth: departmentHealth,
     executiveStats,
     monthlyExecutiveStats: executiveStats,
+    executiveActionItems,
     handleSelectUpcoming,
   };
 }
