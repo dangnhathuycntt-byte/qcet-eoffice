@@ -15,3 +15,8 @@ export * from "./components/subtask-inline-row";
 export * from "./components/task-pagination-bar";
 export * from "./components/task-empty-state";
 export * from "./components/mobile-task-card";
+
+// Interactive Toolbars & Bulk Actions
+export * from "./components/task-table-toolbar";
+export * from "./components/task-bulk-action-bar";
+
