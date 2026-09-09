@@ -1,12 +1,12 @@
 import { ZodError } from 'zod';
 
 export interface ApiErrorResponse {
-  error: {
-    code: string;
-    message: string;
-    fieldErrors?: Record<string, string[]>;
-    requestId: string;
-  };
+  success: false;
+  error: string; // for backward compatibility with .claude/rules/30-api.md
+  code: string; // AUTH_REQUIRED | FORBIDDEN | VALIDATION_ERROR | NOT_FOUND | CONFLICT | INVALID_TRANSITION | RATE_LIMITED | INTERNAL_ERROR
+  message: string;
+  fieldErrors?: Record<string, string[]>;
+  requestId: string;
 }
 
 export class ApiError extends Error {
@@ -115,12 +115,12 @@ export function toApiErrorResponse(
     return {
       status: error.statusCode,
       body: {
-        error: {
-          code: error.code,
-          message: error.message,
-          ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
-          requestId,
-        },
+        success: false,
+        error: error.message,
+        code: error.code,
+        message: error.message,
+        ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
+        requestId,
       },
     };
   }
@@ -147,12 +147,28 @@ export function toApiErrorResponse(
     return {
       status: 400,
       body: {
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Validation failed',
-          fieldErrors,
-          requestId,
-        },
+        success: false,
+        error: 'Validation failed',
+        code: 'VALIDATION_ERROR',
+        message: 'Validation failed',
+        fieldErrors,
+        requestId,
+      },
+    };
+  }
+
+  if (error && typeof error === 'object' && 'rejectionCode' in error) {
+    const authError = error as { message?: string; rejectionCode?: string; statusCode?: number };
+    const status = authError.statusCode || 403;
+    const message = authError.message || 'Access forbidden';
+    return {
+      status,
+      body: {
+        success: false,
+        error: message,
+        code: authError.rejectionCode || 'FORBIDDEN',
+        message,
+        requestId,
       },
     };
   }
@@ -160,11 +176,101 @@ export function toApiErrorResponse(
   return {
     status: 500,
     body: {
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Internal server error',
-        requestId,
-      },
+      success: false,
+      error: 'Internal server error',
+      code: 'INTERNAL_ERROR',
+      message: 'Internal server error',
+      requestId,
     },
+  };
+}
+
+export interface ParsedApiError {
+  code: string;
+  message: string;
+  fieldErrors?: Record<string, string[]>;
+  requestId?: string;
+}
+
+/**
+ * Client-side parsing helper that safely parses API error payloads
+ * so UI components never need to parse raw Vietnamese error strings.
+ * Supports canonical flat error shapes, legacy `{ error: string }`,
+ * and nested error responses.
+ */
+export function parseApiError(data: unknown): ParsedApiError {
+  if (!data) {
+    return {
+      code: 'INTERNAL_ERROR',
+      message: 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.',
+    };
+  }
+
+  if (typeof data === 'string') {
+    return {
+      code: 'UNKNOWN_ERROR',
+      message: data,
+    };
+  }
+
+  if (data instanceof Error) {
+    return {
+      code: 'INTERNAL_ERROR',
+      message: data.message || 'Đã xảy ra lỗi hệ thống.',
+    };
+  }
+
+  if (typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+
+    // Case 1: Nested error object { error: { code, message, fieldErrors, requestId } }
+    if (obj.error && typeof obj.error === 'object') {
+      const nested = obj.error as Record<string, unknown>;
+      const code = typeof nested.code === 'string' ? nested.code : 'UNKNOWN_ERROR';
+      const message =
+        typeof nested.message === 'string'
+          ? nested.message
+          : typeof nested.error === 'string'
+            ? nested.error
+            : 'Đã xảy ra lỗi.';
+      const requestId = typeof nested.requestId === 'string' ? nested.requestId : undefined;
+      const fieldErrors =
+        nested.fieldErrors && typeof nested.fieldErrors === 'object'
+          ? (nested.fieldErrors as Record<string, string[]>)
+          : undefined;
+
+      return {
+        code,
+        message,
+        ...(fieldErrors ? { fieldErrors } : {}),
+        ...(requestId ? { requestId } : {}),
+      };
+    }
+
+    // Case 2: Canonical flat contract { error: string, code: string, message: string, fieldErrors?, requestId }
+    const code = typeof obj.code === 'string' ? obj.code : 'UNKNOWN_ERROR';
+    const message =
+      typeof obj.message === 'string'
+        ? obj.message
+        : typeof obj.error === 'string'
+          ? obj.error
+          : 'Đã xảy ra lỗi.';
+    const requestId = typeof obj.requestId === 'string' ? obj.requestId : undefined;
+    const fieldErrors =
+      obj.fieldErrors && typeof obj.fieldErrors === 'object'
+        ? (obj.fieldErrors as Record<string, string[]>)
+        : undefined;
+
+    return {
+      code,
+      message,
+      ...(fieldErrors ? { fieldErrors } : {}),
+      ...(requestId ? { requestId } : {}),
+    };
+  }
+
+  return {
+    code: 'INTERNAL_ERROR',
+    message: 'Đã xảy ra lỗi không xác định.',
   };
 }
