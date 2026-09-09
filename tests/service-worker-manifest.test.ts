@@ -209,11 +209,12 @@ describe("Task 5: Service Worker & PWA Manifest", () => {
 
       // Verify listeners registered
       assert.ok(listeners.install, "install listener must be registered");
+      assert.ok(listeners.message, "message listener must be registered");
       assert.ok(listeners.activate, "activate listener must be registered");
       assert.ok(listeners.push, "push listener must be registered");
       assert.ok(listeners.notificationclick, "notificationclick listener must be registered");
 
-      // Trigger install
+      // Trigger install (precaches assets without premature skipWaiting)
       let installWaited: Promise<any> | null = null;
       listeners.install({
         waitUntil: (p: Promise<any>) => {
@@ -221,7 +222,10 @@ describe("Task 5: Service Worker & PWA Manifest", () => {
         },
       });
       if (installWaited) await installWaited;
-      assert.equal(skippedWaiting, true, "install must call skipWaiting");
+
+      // Trigger SKIP_WAITING via message event
+      listeners.message({ data: { type: "SKIP_WAITING" } });
+      assert.equal(skippedWaiting, true, "SKIP_WAITING message must call skipWaiting");
 
       // Trigger activate
       let activateWaited: Promise<any> | null = null;

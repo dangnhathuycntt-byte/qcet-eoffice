@@ -1,9 +1,14 @@
 // QCET E-Office Service Worker
-// Version: 2.0.0 - Unified Mobile PWA Modernization
-// Handles push notifications, badge counts, client navigation, and two-tier offline caching
+// Version: 2026.09.09.1 - PWA Architecture Improvement
+// Contract: Versioned caches, controlled lifecycle, resource-tailored caching matrix, same-origin deep-link routing
 
-const CACHE_NAME = 'qcet-eoffice-v4';
-const API_CACHE_NAME = 'qcet-api-v1';
+const APP_VERSION = '2026.09.09.1';
+const CACHE_STATIC_NAME = 'qcet-static-2026.09.09.1';
+const CACHE_SHELL_NAME = 'qcet-shell-2026.09.09.1';
+const CACHE_NAME = 'qcet-eoffice-v4'; // Legacy alias for backward compatibility
+const API_CACHE_NAME = 'qcet-api-v1'; // Legacy API cache constant
+const CURRENT_CACHES = [CACHE_STATIC_NAME, CACHE_SHELL_NAME, API_CACHE_NAME];
+
 const OFFLINE_FALLBACK_URL = '/?zone=tasks';
 const API_TIMEOUT_MS = 2500;
 
@@ -15,24 +20,31 @@ const PRECACHE_ASSETS = [
   '/icon-512.png',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
+  '/icons/badge-72x72.png',
   '/logo-qcet.png',
   '/logo-qcet.webp',
 ];
 
+// 1. Install: Precache shell & static assets without automatic skipWaiting
 self.addEventListener('install', (event) => {
-  const installTasks = [self.skipWaiting()];
-  if (typeof caches !== 'undefined') {
-    installTasks.push(
-      caches.open(CACHE_NAME).then(async (cache) => {
-        await Promise.allSettled(
-          PRECACHE_ASSETS.map((asset) => cache.add(asset).catch(() => {}))
-        );
-      })
-    );
-  }
-  event.waitUntil(Promise.all(installTasks));
+  if (typeof caches === 'undefined') return;
+  event.waitUntil(
+    caches.open(CACHE_SHELL_NAME).then(async (cache) => {
+      await Promise.allSettled(
+        PRECACHE_ASSETS.map((asset) => cache.add(asset).catch(() => {}))
+      );
+    })
+  );
 });
 
+// 2. Message: Controlled update execution via SKIP_WAITING
+self.addEventListener('message', (event) => {
+  if (event.data && (event.data.type === 'SKIP_WAITING' || event.data === 'SKIP_WAITING')) {
+    self.skipWaiting();
+  }
+});
+
+// 3. Activate: Immediate client claim & purge stale cache buckets
 self.addEventListener('activate', (event) => {
   const activateTasks = [self.clients.claim()];
   if (typeof caches !== 'undefined') {
@@ -42,7 +54,7 @@ self.addEventListener('activate', (event) => {
         .then((cacheNames) =>
           Promise.all(
             cacheNames
-              .filter((name) => name !== CACHE_NAME && name !== API_CACHE_NAME)
+              .filter((name) => !CURRENT_CACHES.includes(name))
               .map((name) => caches.delete(name))
           )
         )
@@ -51,23 +63,31 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(Promise.all(activateTasks));
 });
 
+// 4. Fetch: Resource-tailored caching strategy matrix
 self.addEventListener('fetch', (event) => {
+  // Mutation Endpoints (POST, PUT, PATCH, DELETE): Network Only. Never intercept in SW.
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
 
   const url = new URL(event.request.url);
 
-  if (typeof caches === 'undefined') {
-    return;
-  }
+  if (typeof caches === 'undefined') return;
 
   // Never cache static Next.js assets on localhost/dev to prevent cache poisoning
   if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
     return;
   }
 
-  // 1. Static Assets: Cache-First Strategy for Next.js chunks and static files
-  if (url.pathname.startsWith('/_next/static/') || url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|woff2|woff)$/)) {
+  // Auth Endpoints: Network Only. Never cache.
+  if (url.pathname.startsWith('/api/auth/')) {
+    return;
+  }
+
+  // A. Static Assets: Cache First Strategy (Next.js bundles, chunks, images, fonts, icons)
+  if (
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|woff2|woff|ttf|eot)$/)
+  ) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) {
@@ -76,7 +96,7 @@ self.addEventListener('fetch', (event) => {
         return fetch(event.request).then((networkResponse) => {
           if (networkResponse.status === 200) {
             const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
+            caches.open(CACHE_STATIC_NAME).then((cache) => {
               cache.put(event.request, responseClone).catch(() => {});
             });
           }
@@ -87,15 +107,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Dashboard & Tasks APIs: Network-First with 2.5s Timeout fallback
+  // B. Sensitive Internal API Endpoints (/api/dashboard/*, /api/tasks/*)
+  // Network First with tight timeout (2.5s) only when client explicitly requests offline fallback; never cache without header checks.
   if (url.pathname.startsWith('/api/dashboard/') || url.pathname.startsWith('/api/tasks')) {
+    const allowsOffline =
+      event.request.headers.get('x-qcet-offline-fallback') === 'true' ||
+      event.request.headers.get('x-offline-fallback') === 'true' ||
+      url.searchParams.get('offline_fallback') === 'true';
+
+    // Disallow unprompted / indiscriminate caching for sensitive internal API endpoints
+    if (!allowsOffline) {
+      return;
+    }
+
     event.respondWith(
       new Promise((resolve) => {
         let isTimedOut = false;
         const timer = setTimeout(() => {
           isTimedOut = true;
-          // Timeout reached: attempt cache fallback
-          caches.open(API_CACHE_NAME).then((cache) => {
+          caches.open(CACHE_SHELL_NAME).then((cache) => {
             cache.match(event.request).then((cached) => {
               if (cached) {
                 const headers = new Headers(cached.headers);
@@ -132,9 +162,15 @@ self.addEventListener('fetch', (event) => {
           .then((networkResponse) => {
             clearTimeout(timer);
             if (!isTimedOut) {
-              if (networkResponse.status === 200) {
+              const cacheControl = networkResponse.headers.get('Cache-Control') || '';
+              const canCache =
+                networkResponse.status === 200 &&
+                !cacheControl.includes('no-store') &&
+                !cacheControl.includes('no-cache');
+
+              if (canCache) {
                 const responseClone = networkResponse.clone();
-                caches.open(API_CACHE_NAME).then((cache) => {
+                caches.open(CACHE_SHELL_NAME).then((cache) => {
                   cache.put(event.request, responseClone).catch(() => {});
                 });
               }
@@ -144,7 +180,7 @@ self.addEventListener('fetch', (event) => {
           .catch(() => {
             clearTimeout(timer);
             if (!isTimedOut) {
-              caches.open(API_CACHE_NAME).then((cache) => {
+              caches.open(CACHE_SHELL_NAME).then((cache) => {
                 cache.match(event.request).then((cached) => {
                   if (cached) {
                     const headers = new Headers(cached.headers);
@@ -182,42 +218,72 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Bypass other APIs
+  // Bypass all other API routes
   if (url.pathname.startsWith('/api/')) return;
 
-  // 3. Navigation & Document Requests: Network-First with Offline Page Fallback
-  event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        if (
-          networkResponse.status === 200 &&
-          event.request.url.startsWith(self.location.origin)
-        ) {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone).catch(() => {});
-          });
-        }
-        return networkResponse;
-      })
-      .catch(async () => {
-        const cachedResponse = await caches.match(event.request);
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        if (event.request.mode === 'navigate') {
-          const fallback = await caches.match(OFFLINE_FALLBACK_URL);
-          if (fallback) return fallback;
-        }
-        return new Response('Hệ thống đang ngoại tuyến. Vui lòng kiểm tra lại kết nối mạng.', {
-          status: 503,
-          statusText: 'Service Unavailable',
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-        });
-      })
-  );
+  // C. Navigation / App Shell: Network First -> fallback to cached shell -> offline HTML response
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (
+            networkResponse.status === 200 &&
+            event.request.url.startsWith(self.location.origin)
+          ) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_SHELL_NAME).then((cache) => {
+              cache.put(event.request, responseClone).catch(() => {});
+            });
+          }
+          return networkResponse;
+        })
+        .catch(async () => {
+          const cachedDirect = await caches.match(event.request);
+          if (cachedDirect) return cachedDirect;
+
+          const cachedZone = await caches.match(OFFLINE_FALLBACK_URL);
+          if (cachedZone) return cachedZone;
+
+          const cachedRoot = await caches.match('/');
+          if (cachedRoot) return cachedRoot;
+
+          return new Response(
+            `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ngoại tuyến - QCET E-Office</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #fbfbfb; color: #1e293b; padding: 20px; box-sizing: border-box; text-align: center; }
+    .card { background: white; border-radius: 12px; padding: 32px 24px; max-width: 420px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+    h1 { font-size: 1.25rem; margin: 0 0 12px; color: #0f172a; }
+    p { font-size: 0.925rem; color: #64748b; line-height: 1.5; margin: 0 0 24px; }
+    button { background: #1e3a8a; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.925rem; font-weight: 500; cursor: pointer; }
+    button:hover { background: #1e40af; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Hệ thống đang ngoại tuyến</h1>
+    <p>Hiện không có kết nối mạng. Vui lòng kiểm tra lại đường truyền của bạn.</p>
+    <button onclick="window.location.reload()">Thử lại</button>
+  </div>
+</body>
+</html>`,
+            {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            }
+          );
+        })
+    );
+    return;
+  }
 });
 
+// 5. Push: Deduplication by tag (task:{taskId}:{action}) and badge updates
 self.addEventListener('push', (event) => {
   let payload = {
     title: 'QCET E-Office',
@@ -238,24 +304,31 @@ self.addEventListener('push', (event) => {
   }
 
   const title = payload.title || 'QCET E-Office';
+
+  // Tag deduplication: task:{taskId}:{action} or custom namespace
+  let notificationTag = payload.tag;
+  if (!notificationTag && payload.data && payload.data.taskId) {
+    const action = payload.data.action || 'view';
+    notificationTag = `task:${payload.data.taskId}:${action}`;
+  } else if (!notificationTag) {
+    notificationTag = 'qcet-notification';
+  }
+
   const options = {
     body: payload.body || '',
     icon: payload.icon || '/logo-qcet.png',
     badge: payload.badge || '/icons/badge-72x72.png',
     data: payload.data || { linkHref: '/?zone=tasks' },
     vibrate: payload.vibrate || [100, 50, 100],
-    tag: payload.tag || 'qcet-notification',
+    tag: notificationTag,
     renotify: typeof payload.renotify === 'boolean' ? payload.renotify : true,
     requireInteraction: typeof payload.requireInteraction === 'boolean' ? payload.requireInteraction : false,
     actions: payload.actions || [],
   };
 
-  const tasks = [];
+  const tasks = [self.registration.showNotification(title, options)];
 
-  // 1. Show web notification
-  tasks.push(self.registration.showNotification(title, options));
-
-  // 2. Update app badge if supported
+  // Update app badge if supported
   if (typeof navigator !== 'undefined' && typeof navigator.setAppBadge === 'function') {
     const badgeCount =
       payload.data && typeof payload.data.badgeCount === 'number'
@@ -265,30 +338,35 @@ self.addEventListener('push', (event) => {
         : 1;
 
     try {
-      tasks.push(
-        navigator.setAppBadge(badgeCount).catch(() => {})
-      );
+      tasks.push(navigator.setAppBadge(badgeCount).catch(() => {}));
     } catch {
-      // Ignore errors in environments without badge permission
+      // Ignore in environments without badge permission
     }
   }
 
   event.waitUntil(Promise.all(tasks));
 });
 
+// 6. Notification Click: Deep links with same-origin validation, client window focus / navigation
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const data = event.notification.data || {};
-  const rawTargetUrl = data.linkHref || '/?zone=tasks'; // Default navigation fallback (/portal or /?zone=tasks)
+  const rawTargetUrl = data.linkHref || data.url || '/?zone=tasks'; // Default navigation fallback (/portal or /?zone=tasks)
 
-  // Build target URL relative or absolute
-  let targetUrl = rawTargetUrl;
+  // Enforce same-origin route validation
+  let targetUrl = '/?zone=tasks';
   try {
-    const base = self.location ? self.location.origin : 'http://localhost:3000';
-    targetUrl = new URL(rawTargetUrl, base).href;
+    const baseOrigin = self.location ? self.location.origin : 'http://localhost:3000';
+    const parsed = new URL(rawTargetUrl, baseOrigin);
+    if (parsed.origin === baseOrigin) {
+      targetUrl = parsed.href;
+    } else {
+      targetUrl = new URL('/?zone=tasks', baseOrigin).href;
+    }
   } catch {
-    targetUrl = rawTargetUrl;
+    const baseOrigin = self.location ? self.location.origin : 'http://localhost:3000';
+    targetUrl = new URL('/?zone=tasks', baseOrigin).href;
   }
 
   const tasks = [];
@@ -302,23 +380,27 @@ self.addEventListener('notificationclick', (event) => {
     }
   }
 
-  // Focus existing matching window or open a new one
+  // Click handling: match existing window and focus/navigate, or openWindow
   const windowPromise = self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     .then((clientList) => {
-      // Check if there is already an open window
+      // 1. Exact URL match -> focus
+      for (const client of clientList) {
+        if (client.url === targetUrl && 'focus' in client) {
+          return client.focus();
+        }
+      }
+
+      // 2. Same-origin window -> navigate and focus
       for (const client of clientList) {
         if ('focus' in client) {
-          // If already on the same page or origin
-          if (client.url === targetUrl) {
-            return client.focus();
-          }
           if ('navigate' in client) {
-            return client.navigate(targetUrl).then(() => client.focus());
+            return client.navigate(targetUrl).then((navigated) => (navigated || client).focus());
           }
           return client.focus();
         }
       }
 
+      // 3. No existing window -> open new window
       if (self.clients.openWindow) {
         return self.clients.openWindow(targetUrl);
       }
