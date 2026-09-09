@@ -134,6 +134,25 @@ export function isUserUnassignedDepartment(
   return false;
 }
 
+export const UNASSIGNED_DEPT_PROMPT_KEY = "qcet_profile_unassigned_prompted";
+export const UNASSIGNED_DEPT_DISMISSED_KEY = "qcet_dept_prompt_dismissed";
+
+export function shouldPromptUnassignedDepartment(
+  user?: { role?: string; department?: string | null; departmentCode?: string | null } | null,
+  storage?: { getItem: (key: string) => string | null } | null
+): boolean {
+  if (!user || !isUserUnassignedDepartment(user)) return false;
+  if (!storage) return false;
+  try {
+    const prompted =
+      storage.getItem(UNASSIGNED_DEPT_PROMPT_KEY) ||
+      storage.getItem(UNASSIGNED_DEPT_DISMISSED_KEY);
+    return !prompted;
+  } catch {
+    return false;
+  }
+}
+
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   switchRole: () => {},

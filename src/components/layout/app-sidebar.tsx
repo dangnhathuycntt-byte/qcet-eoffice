@@ -33,6 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 const ICON_MAP: Record<CanonicalRouteConfig["iconName"], LucideIcon> = {
@@ -110,6 +111,11 @@ export function handleSidebarShortcut(
     const items = getSidebarNavItems().filter((i) => i.id !== "settings");
     const targetItem = items[navIndex - 1];
     if (targetItem && options.onNavigate) {
+      if (targetItem.id === "documents") {
+        // Feature is under development - disable shortcut navigation
+        e.preventDefault?.();
+        return true;
+      }
       e.preventDefault?.();
       options.onNavigate(targetItem.href);
       return true;
@@ -134,6 +140,26 @@ export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, setIsProfileModalOpen } = useAuth();
+
+  // Automatic profile prompt on first visit if user has unassigned department
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !user) return;
+    if (isUserUnassignedDepartment(user)) {
+      const alreadyPrompted =
+        window.sessionStorage.getItem("qcet_profile_unassigned_prompted") ||
+        window.sessionStorage.getItem("qcet_dept_prompt_dismissed");
+      if (!alreadyPrompted) {
+        setIsProfileModalOpen(true);
+        try {
+          window.sessionStorage.setItem("qcet_profile_unassigned_prompted", "true");
+          window.sessionStorage.setItem("qcet_dept_prompt_dismissed", "true");
+        } catch {
+          // ignore storage access restrictions
+        }
+      }
+    }
+  }, [user, setIsProfileModalOpen]);
 
   // Maintenance dialog state for items undergoing maintenance
   const [maintenanceDialog, setMaintenanceDialog] = React.useState<{
@@ -308,8 +334,12 @@ export function AppSidebar() {
                           <TooltipTrigger asChild>
                             <Link
                               id={item.id === "documents" ? "tour-nav-documents" : undefined}
-                              href={item.href}
+                              href={item.isComingSoon ? "#" : item.href}
                               onClick={(e) => {
+                                if (item.isComingSoon) {
+                                  e.preventDefault();
+                                  return;
+                                }
                                 if (item.isMaintenance) {
                                   e.preventDefault();
                                   setMaintenanceDialog({
@@ -320,13 +350,16 @@ export function AppSidebar() {
                                   return;
                                 }
                               }}
-                              aria-label={`${item.label}${item.isComingSoon ? " (Sắp có)" : badge ? ` (${badge.text})` : ""}${item.isMaintenance ? " (Đang bảo trì)" : ""}`}
+                              aria-disabled={item.isComingSoon ? true : undefined}
+                              tabIndex={item.isComingSoon ? -1 : undefined}
+                              aria-label={`${item.label}${item.isComingSoon ? " (Đang phát triển - Chưa thể truy cập)" : badge ? ` (${badge.text})` : ""}${item.isMaintenance ? " (Đang bảo trì)" : ""}`}
                               aria-current={active ? "page" : undefined}
                               className={cn(
                                 "size-9 rounded-lg relative flex items-center justify-center transition-colors",
+                                item.isComingSoon && "cursor-not-allowed opacity-60 hover:bg-transparent",
                                 active
                                   ? "bg-primary/10 text-primary font-semibold"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-accent/40"
+                                  : !item.isComingSoon && "text-muted-foreground hover:text-foreground hover:bg-accent/40"
                               )}
                             >
                               <Icon size={18} strokeWidth={active ? 2 : 1.5} />
@@ -399,8 +432,12 @@ export function AppSidebar() {
                         <Link
                           id={item.id === "documents" ? "tour-nav-documents" : undefined}
                           key={item.id}
-                          href={item.href}
+                          href={item.isComingSoon ? "#" : item.href}
                           onClick={(e) => {
+                            if (item.isComingSoon) {
+                              e.preventDefault();
+                              return;
+                            }
                             if (item.isMaintenance) {
                               e.preventDefault();
                               setMaintenanceDialog({
@@ -411,12 +448,16 @@ export function AppSidebar() {
                               return;
                             }
                           }}
+                          aria-disabled={item.isComingSoon ? true : undefined}
+                          tabIndex={item.isComingSoon ? -1 : undefined}
+                          aria-label={`${item.label}${item.isComingSoon ? " (Đang phát triển - Chưa thể truy cập)" : ""}`}
                           aria-current={active ? "page" : undefined}
                           className={cn(
                             "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 min-h-[36px] text-[13px] tracking-tight transition-colors select-none",
+                            item.isComingSoon && "cursor-not-allowed opacity-60 hover:bg-transparent",
                             active
                               ? "bg-primary/10 text-primary font-semibold shadow-2xs"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                              : !item.isComingSoon && "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                           )}
                         >
                           {active && (
