@@ -17,9 +17,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { SchoolTask, StaffTask, DashboardPayload, TaskStatus, isSchoolTask } from "@/types/dashboard";
 import {
+  CalendarWorkspace,
   ExecutiveCalendarWorkspace,
-  CalendarTimeEvent,
-} from "@/components/calendar/executive-calendar-workspace";
+  CalendarEventDetailModal,
+  type CalendarTimeEvent,
+  type CalendarViewMode,
+} from "@/components/calendar/calendar-workspace";
 import type { WorkCalendarItem } from "@/lib/work-calendar-adapter";
 import {
   CreateTaskModal,
@@ -31,7 +34,7 @@ import {
 } from "@/components/dashboard/task-detail-side-sheet";
 import { useAuth } from "@/lib/auth-context";
 import { getSystemReferenceDate } from "@/lib/academic-calendar";
-import { computeSchoolTaskRollup, computeDashboardStats } from "@/lib/dashboard-aggregator";
+import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
 import { cn } from "@/lib/utils";
 
 function CalendarLoadingSkeleton() {
@@ -39,45 +42,37 @@ function CalendarLoadingSkeleton() {
     <div className="space-y-6 animate-pulse" aria-label="Đang tải lịch công tác">
       {/* Breadcrumb & Header Skeleton */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/50 pb-5">
-        <div className="space-y-2.5">
-          <div className="h-4 w-48 bg-muted/60 rounded" />
-          <div className="h-8 w-72 bg-muted/80 rounded-lg" />
-          <div className="h-4 w-96 bg-muted/50 rounded" />
+        <div className="space-y-2">
+          <div className="h-4 w-48 bg-muted/60 rounded-md" />
+          <div className="flex items-center gap-2.5">
+            <div className="size-9 rounded-lg bg-muted/70" />
+            <div className="space-y-1">
+              <div className="h-6 w-64 bg-muted/70 rounded-md" />
+              <div className="h-3.5 w-96 bg-muted/50 rounded-md" />
+            </div>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="h-9 w-24 bg-muted/60 rounded-lg" />
-          <div className="h-9 w-32 bg-muted/80 rounded-lg" />
+          <div className="h-9 w-36 bg-muted/70 rounded-lg" />
         </div>
       </div>
 
-      {/* Control Bar Skeleton */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-border/60 bg-card/60">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 bg-muted/60 rounded-lg" />
-          <div className="h-8 w-8 bg-muted/60 rounded-lg" />
-          <div className="h-8 w-44 bg-muted/60 rounded-lg" />
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-24 bg-muted/60 rounded-lg" />
-          <div className="h-8 w-24 bg-muted/60 rounded-lg" />
-        </div>
-      </div>
+      {/* Control Bar & Filter Skeleton */}
+      <div className="h-14 rounded-xl bg-muted/40 border border-border/60" />
+      <div className="h-12 rounded-xl bg-muted/30 border border-border/50" />
 
-      {/* Week Grid Skeleton */}
+      {/* Grid Layout Skeleton */}
       <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-border/60 bg-muted/20">
+        <div className="h-12 bg-muted/40 border-b border-border/60" />
+        <div className="grid grid-cols-7 divide-x divide-border/50 h-[480px]">
           {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="p-3 border-r border-border/40 last:border-r-0 space-y-1">
-              <div className="h-3 w-10 bg-muted/50 rounded mx-auto" />
-              <div className="h-4 w-6 bg-muted/70 rounded mx-auto" />
+            <div key={i} className="p-2 space-y-2">
+              <div className="h-4 w-12 bg-muted/50 rounded mx-auto" />
+              <div className="h-16 w-full bg-muted/30 rounded-lg" />
+              <div className="h-14 w-full bg-muted/20 rounded-lg" />
             </div>
           ))}
-        </div>
-        <div className="h-[460px] p-4 bg-card/30 flex items-center justify-center text-muted-foreground text-xs">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="size-4 animate-spin text-primary" />
-            <span>Đang chuẩn bị lịch công tác và đồng bộ tiến độ nhiệm vụ...</span>
-          </div>
         </div>
       </div>
     </div>
@@ -88,10 +83,11 @@ function CalendarRouteContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
-  // URL Query Parameters support: ?zone=calendar, ?date=YYYY-MM-DD, ?view=week_grid|agenda_list
+  // URL Query Parameters support: ?zone=calendar, ?date=YYYY-MM-DD, ?view=..., ?taskId=...
   const zoneParam = searchParams?.get("zone") || "calendar";
   const dateParam = searchParams?.get("date") || undefined;
-  const viewParam = searchParams?.get("view") === "agenda_list" ? "agenda_list" : "week_grid";
+  const initialViewParam = (searchParams?.get("view") as CalendarViewMode) || undefined;
+  const taskIdParam = searchParams?.get("taskId") || undefined;
 
   const [tasks, setTasks] = useState<SchoolTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,10 +99,44 @@ function CalendarRouteContent() {
   const [createInitialDueDate, setCreateInitialDueDate] = useState<string | undefined>(undefined);
   const [createInitialLevel, setCreateInitialLevel] = useState<TaskLevel>("TRUONG");
 
+  // Selected task state for TaskDetailSideSheet
   const [selectedTask, setSelectedTask] = useState<SchoolTask | StaffTask | null>(null);
+
+  // Selected non-task event for lightweight event modal
+  const [selectedNonTaskEvent, setSelectedNonTaskEvent] = useState<CalendarTimeEvent | null>(null);
 
   useEffect(() => {
     document.title = "Lịch Công Tác BGH & Lịch Biểu | QCET E-Office";
+  }, []);
+
+  // Update URL search parameters without client-side redirect or reload
+  const updateUrlParam = useCallback((key: string, value: string | null) => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (value && value.trim()) {
+      url.searchParams.set(key, value.trim());
+    } else {
+      url.searchParams.delete(key);
+    }
+    window.history.pushState(null, "", url.toString());
+  }, []);
+
+  const updateUrlTaskId = useCallback((taskId: string | null) => {
+    updateUrlParam("taskId", taskId);
+  }, [updateUrlParam]);
+
+  const updateUrlDate = useCallback((dateStr: string) => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("date", dateStr);
+    window.history.replaceState(null, "", url.toString());
+  }, []);
+
+  const updateUrlView = useCallback((viewMode: CalendarViewMode) => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", viewMode);
+    window.history.replaceState(null, "", url.toString());
   }, []);
 
   const loadTasksData = useCallback(async (showRefreshingSpinner = false) => {
@@ -139,12 +169,70 @@ function CalendarRouteContent() {
     loadTasksData();
   }, [loadTasksData]);
 
+  // Synchronize task selection from URL ?taskId=... on initial load and when tasks populate
+  useEffect(() => {
+    if (!taskIdParam || tasks.length === 0) return;
+
+    // Find in school tasks
+    const matchedSchool = tasks.find((t) => t.id === taskIdParam);
+    if (matchedSchool) {
+      setSelectedTask(matchedSchool);
+      return;
+    }
+
+    // Find in subtasks
+    for (const st of tasks) {
+      if (st.subTasks) {
+        const matchedSub = st.subTasks.find((sub) => sub.id === taskIdParam);
+        if (matchedSub) {
+          setSelectedTask(matchedSub);
+          return;
+        }
+      }
+    }
+  }, [taskIdParam, tasks]);
+
+  // Handle browser back/forward buttons (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const currentUrl = new URL(window.location.href);
+      const tid = currentUrl.searchParams.get("taskId");
+      if (!tid) {
+        setSelectedTask(null);
+      } else if (tasks.length > 0) {
+        const matchedSchool = tasks.find((t) => t.id === tid);
+        if (matchedSchool) {
+          setSelectedTask(matchedSchool);
+          return;
+        }
+        for (const st of tasks) {
+          if (st.subTasks) {
+            const matchedSub = st.subTasks.find((sub) => sub.id === tid);
+            if (matchedSub) {
+              setSelectedTask(matchedSub);
+              return;
+            }
+          }
+        }
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [tasks]);
+
   // Handle adding task from calendar slot
   const handleOpenAddTask = useCallback((dateStr?: string) => {
     setCreateInitialDueDate(dateStr);
     setCreateInitialLevel(user?.role === "ADMIN" ? "TRUONG" : "DON_VI");
     setIsCreateModalOpen(true);
   }, [user?.role]);
+
+  // Select Task with URL synchronization
+  const handleSelectTask = useCallback((task: SchoolTask | StaffTask) => {
+    setSelectedTask(task);
+    updateUrlTaskId(task.id);
+  }, [updateUrlTaskId]);
 
   // Handle selecting a work calendar item (milestone, subtask, deliverable, backlog)
   const handleSelectWorkItem = useCallback((item: WorkCalendarItem) => {
@@ -153,7 +241,7 @@ function CalendarRouteContent() {
       (t) => t.id === item.sourceTaskId || t.id === item.parentSchoolTaskId || `milestone-${t.id}` === item.id
     );
     if (schoolTask && (item.type === "school_milestone" || !item.parentSchoolTaskId || item.sourceTaskId === schoolTask.id)) {
-      setSelectedTask(schoolTask);
+      handleSelectTask(schoolTask);
       return;
     }
 
@@ -162,7 +250,7 @@ function CalendarRouteContent() {
       if (st.subTasks) {
         const matchedSub = st.subTasks.find((sub) => sub.id === item.sourceTaskId || sub.id === item.id);
         if (matchedSub) {
-          setSelectedTask(matchedSub);
+          handleSelectTask(matchedSub);
           return;
         }
       }
@@ -170,7 +258,7 @@ function CalendarRouteContent() {
 
     // 3. If parent school task exists, open parent school task
     if (schoolTask) {
-      setSelectedTask(schoolTask);
+      handleSelectTask(schoolTask);
       return;
     }
 
@@ -189,8 +277,8 @@ function CalendarRouteContent() {
       updatedAt: item.dueDate,
       deliverableDescription: item.deliverableSummary,
     };
-    setSelectedTask(fallbackTask);
-  }, [tasks]);
+    handleSelectTask(fallbackTask);
+  }, [tasks, handleSelectTask]);
 
   // Handle selecting an event on the calendar
   const handleSelectEvent = useCallback((event: CalendarTimeEvent) => {
@@ -201,62 +289,81 @@ function CalendarRouteContent() {
     if (event.taskId) {
       for (const t of tasks) {
         if (t.id === event.taskId) {
-          setSelectedTask(t);
+          handleSelectTask(t);
           return;
         }
         if (t.subTasks) {
           const matchedSub = t.subTasks.find((st) => st.id === event.taskId);
           if (matchedSub) {
-            setSelectedTask(matchedSub);
+            handleSelectTask(matchedSub);
             return;
           }
         }
       }
     }
-  }, [tasks, handleSelectWorkItem]);
+
+    // Non-task event -> open lightweight event modal
+    setSelectedNonTaskEvent(event);
+  }, [tasks, handleSelectWorkItem, handleSelectTask]);
+
+  // Handle non-task event explicitly
+  const handleSelectNonTaskEvent = useCallback((event: CalendarTimeEvent) => {
+    setSelectedNonTaskEvent(event);
+  }, []);
+
+  // Handle close TaskDetailSideSheet
+  const handleCloseSideSheet = useCallback(() => {
+    setSelectedTask(null);
+    updateUrlTaskId(null);
+  }, [updateUrlTaskId]);
 
   // Handle task submission
   const handleCreateTaskSubmit = useCallback(async (data: CreateTaskFormData) => {
     setIsCreateModalOpen(false);
-    const todayStr = getSystemReferenceDate();
+
+    // Optimistic UI state insertion
+    const tempId = `task-created-${Date.now()}`;
+    const cleanDueDate = data.dueDate ? `${data.dueDate}T17:00:00.000Z` : undefined;
 
     setTasks((prevTasks) => {
-      let updated = [...prevTasks];
+      const updated = [...prevTasks];
+
       if (data.level === "TRUONG") {
-        const newTask: SchoolTask = {
-          id: `task-cal-${Date.now()}`,
-          code: `NV-${todayStr.replace(/-/g, "").slice(2)}-${Math.floor(100 + Math.random() * 900)}`,
+        const newSchoolTask: SchoolTask = {
+          id: tempId,
           title: data.title,
-          category: data.category,
-          categoryLabel: data.category,
-          leadAssigneeName: data.leadAssigneeName,
-          coAssignees: data.coAssignees || [],
-          assignedDate: todayStr,
-          dueDate: data.dueDate,
+          code: `NV-${new Date().getFullYear()}-${String(prevTasks.length + 1).padStart(2, "0")}`,
+          taskCode: `NV-${new Date().getFullYear()}-${String(prevTasks.length + 1).padStart(2, "0")}`,
+          category: data.category || "CNTT",
+          categoryLabel: data.category || "Công nghệ thông tin",
+          status: "IN_PROGRESS",
+          dueDate: cleanDueDate || `${new Date().toISOString().split("T")[0]}T17:00:00.000Z`,
+          progressPercent: 0,
           totalSubTasks: 0,
           completedSubTasks: 0,
-          status: "IN_PROGRESS",
-          progressPercent: 0,
+          leadAssigneeName: user?.name || "Lãnh đạo phụ trách",
+          assignedDate: new Date().toISOString().split("T")[0],
+          coAssignees: [],
           subTasks: [],
         };
-        updated = [newTask, ...updated];
+        updated.unshift(newSchoolTask);
       } else {
         const newSubTask: StaffTask = {
-          id: `sub-cal-${Date.now()}`,
+          id: tempId,
+          taskId: data.parentTaskId || (updated[0]?.id ?? "task-root"),
           title: data.title,
-          assigneeName: data.leadAssigneeName,
-          status: "NEW",
-          dueDate: data.dueDate,
-          internalDueDate: data.internalDueDate,
-          deliverableDescription: data.requiredDeliverables,
-          vtvlRole: data.vtvlRole,
-          requiresReview: data.requiresReview,
-          parentSchoolTaskId: data.parentTaskId || updated[0]?.id || "",
-          updatedAt: todayStr,
+          status: "IN_PROGRESS",
+          dueDate: cleanDueDate || `${new Date().toISOString().split("T")[0]}T17:00:00.000Z`,
+          assigneeName: user?.name || "Chuyên viên phụ trách",
+          assignedToDepartmentId: user?.department || "BGH",
+          assignedToDepartmentName: "Ban Giám hiệu",
+          department: "Ban Giám hiệu",
+          parentSchoolTaskId: data.parentTaskId || updated[0]?.id,
+          updatedAt: new Date().toISOString(),
         };
 
         if (data.parentTaskId) {
-          updated = updated.map((st) => {
+          return updated.map((st) => {
             if (st.id === data.parentTaskId) {
               return {
                 ...st,
@@ -354,23 +461,32 @@ function CalendarRouteContent() {
       {/* Executive Page Breadcrumb & Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/50 pb-5">
         <div className="space-y-1.5">
-          {/* Breadcrumb Navigation */}
+          {/* Breadcrumb Navigation - Preserves Task Selection & Date Context */}
           <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Link
               href="/"
               className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
             >
-              <Home className="size-3.5" />
+              <Home className="size-3.5" strokeWidth={1.5} />
               <span>Bàn làm việc</span>
             </Link>
-            <ChevronRight className="size-3 text-muted-foreground/60" />
+            <ChevronRight className="size-3 text-muted-foreground/60" strokeWidth={1.5} />
+            <Link
+              href={selectedTask ? `/tasks?taskId=${selectedTask.id}` : "/tasks"}
+              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+              title="Xem trong Không gian Quản lý Nhiệm vụ"
+            >
+              <CheckSquare className="size-3.5" strokeWidth={1.5} />
+              <span>Nhiệm vụ</span>
+            </Link>
+            <ChevronRight className="size-3 text-muted-foreground/60" strokeWidth={1.5} />
             <span className="font-semibold text-foreground">Lịch Công Tác & Lịch Biểu BGH</span>
           </nav>
 
           {/* Heading and Executive Subtitle */}
           <div className="flex items-center gap-2.5 pt-0.5">
             <div className="size-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-              <Calendar className="size-5" />
+              <Calendar className="size-5" strokeWidth={1.5} />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
@@ -392,7 +508,7 @@ function CalendarRouteContent() {
             disabled={isRefreshing}
             className="h-9 gap-1.5 text-xs border-border/70 text-muted-foreground hover:text-foreground cursor-pointer"
           >
-            <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} />
+            <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} strokeWidth={1.5} />
             <span>{isRefreshing ? "Đang đồng bộ..." : "Làm mới"}</span>
           </Button>
 
@@ -401,7 +517,7 @@ function CalendarRouteContent() {
             onClick={() => handleOpenAddTask()}
             className="h-9 gap-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs cursor-pointer"
           >
-            <Plus className="size-4" />
+            <Plus className="size-4" strokeWidth={1.5} />
             <span>Thêm sự kiện / Nhiệm vụ</span>
           </Button>
         </div>
@@ -411,7 +527,7 @@ function CalendarRouteContent() {
       {error && (
         <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 flex items-center justify-between gap-3 text-destructive">
           <div className="flex items-center gap-2 text-xs">
-            <AlertCircle className="size-4 shrink-0" />
+            <AlertCircle className="size-4 shrink-0" strokeWidth={1.5} />
             <span>{error} (hiển thị lịch mẫu tiêu chuẩn BGH)</span>
           </div>
           <Button
@@ -425,18 +541,22 @@ function CalendarRouteContent() {
         </div>
       )}
 
-      {/* Main Executive Calendar Workspace */}
+      {/* Main Unified Calendar Workspace */}
       {isLoading && tasks.length === 0 ? (
         <CalendarLoadingSkeleton />
       ) : (
         <ExecutiveCalendarWorkspace
           tasks={tasks}
           initialDate={dateParam}
-          initialViewMode={viewParam}
+          initialViewMode={initialViewParam}
           onAddTask={handleOpenAddTask}
           onOpenAddTask={handleOpenAddTask}
           onSelectEvent={handleSelectEvent}
           onSelectWorkItem={handleSelectWorkItem}
+          onSelectTask={handleSelectTask}
+          onSelectNonTaskEvent={handleSelectNonTaskEvent}
+          onDateChange={updateUrlDate}
+          onViewChange={updateUrlView}
           isExecutive={user?.role === "ADMIN" || user?.role === "MANAGER"}
         />
       )}
@@ -451,11 +571,11 @@ function CalendarRouteContent() {
         initialDueDate={createInitialDueDate}
       />
 
-      {/* Task Detail Side Sheet */}
+      {/* Unified Detail Surface: Task Detail Side Sheet */}
       <TaskDetailSideSheet
         task={selectedTask}
         isOpen={!!selectedTask}
-        onClose={() => setSelectedTask(null)}
+        onClose={handleCloseSideSheet}
         onStatusChange={handleStatusChange}
         currentUser={user || undefined}
         onSelectSubTask={(sub) => {
@@ -463,12 +583,12 @@ function CalendarRouteContent() {
             for (const t of tasks) {
               const found = t.subTasks?.find((st) => st.id === sub);
               if (found) {
-                setSelectedTask(found);
+                handleSelectTask(found);
                 return;
               }
             }
           } else {
-            setSelectedTask(sub);
+            handleSelectTask(sub);
           }
         }}
         parentSchoolTaskTitle={
@@ -476,6 +596,13 @@ function CalendarRouteContent() {
             ? tasks.find((t) => t.id === (selectedTask as StaffTask).parentSchoolTaskId)?.title
             : undefined
         }
+      />
+
+      {/* Lightweight Event Detail Modal for Events without Tasks */}
+      <CalendarEventDetailModal
+        event={selectedNonTaskEvent}
+        isOpen={Boolean(selectedNonTaskEvent)}
+        onClose={() => setSelectedNonTaskEvent(null)}
       />
     </div>
   );
