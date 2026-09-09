@@ -4,6 +4,8 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import {
   X,
+  ArrowLeft,
+  MoreHorizontal,
   Calendar,
   User,
   Users,
@@ -27,6 +29,8 @@ import {
   Link2,
   ShieldCheck,
   ListTodo,
+  Share2,
+  Copy,
 } from "lucide-react";
 import { DashboardModalContext } from "@/components/dashboard/dashboard-context";
 import {
@@ -413,6 +417,9 @@ export function TaskDetailSideSheet({
   const [rejectionReasonInput, setRejectionReasonInput] = React.useState("");
   const [rejectionError, setRejectionError] = React.useState<string | null>(null);
 
+  // Mobile overflow menu state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
   // SchoolTask executive feedback
   const [executiveActionFeedback, setExecutiveActionFeedback] = React.useState<string | null>(null);
 
@@ -431,6 +438,7 @@ export function TaskDetailSideSheet({
     setRejectionReasonInput("");
     setRejectionError(null);
     setExecutiveActionFeedback(null);
+    setIsMobileMenuOpen(false);
   }, [task?.id]);
 
   // Handle ESC key and scroll lock
@@ -666,11 +674,11 @@ export function TaskDetailSideSheet({
       <aside
         data-slot="task-detail-side-sheet"
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex h-full flex-col border-l border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-right duration-300 !m-0",
+          "fixed inset-0 md:inset-y-0 md:right-0 md:left-auto z-50 flex h-full flex-col border-l border-border/50 bg-card shadow-2xl animate-in slide-in-from-right duration-300 !m-0",
           // Mobile (< 768px): Full-screen detail surface
-          "w-full inset-0 sm:inset-y-0 sm:right-0 sm:left-auto",
+          "w-full max-w-none rounded-none",
           // Tablet & Desktop (768-1439px): 520px side sheet overlay
-          "md:w-[520px] md:max-w-[520px]",
+          "md:w-[520px] md:max-w-[520px] md:rounded-l-2xl",
           // Large Desktop (>= 1440px): 560px side sheet overlay
           "2xl:w-[560px] 2xl:max-w-[560px]",
           className
@@ -679,10 +687,20 @@ export function TaskDetailSideSheet({
         aria-modal="true"
         aria-labelledby="task-detail-title"
       >
-        {/* Sticky Header Bar: Status & Quick Actions */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 px-5 sm:px-6 py-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] bg-card/90 backdrop-blur-xl gap-3">
+        {/* Sticky Header Bar: Status, Mobile Back & Quick Actions */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-card/90 backdrop-blur-xl gap-2">
+          {/* Mobile Back Button (< 768px) */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="md:hidden inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95 shrink-0"
+            aria-label="Quay lại danh sách nhiệm vụ"
+          >
+            <ArrowLeft className="size-5" strokeWidth={1.5} />
+          </button>
+
           {/* Status Indicator Pill */}
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0",
@@ -709,7 +727,7 @@ export function TaskDetailSideSheet({
             {relativeTime && !isOverdue && (
               <span
                 className={cn(
-                  "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden sm:inline font-mono",
+                  "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden md:inline font-mono",
                   relativeTime.color
                 )}
               >
@@ -720,7 +738,7 @@ export function TaskDetailSideSheet({
             {!isSchool && (
               <span
                 className={cn(
-                  "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden sm:inline font-medium",
+                  "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden md:inline font-medium",
                   (task as StaffTask).requiresReview
                     ? "border-amber-500/20 bg-amber-500/10 text-amber-600"
                     : "border-blue-500/20 bg-blue-500/10 text-blue-600"
@@ -740,7 +758,7 @@ export function TaskDetailSideSheet({
                 onChange={(e) =>
                   onStatusChange(task.id, e.target.value as TaskStatus)
                 }
-                className="min-h-[44px] sm:min-h-8 sm:h-8 rounded-lg border border-border/60 bg-background px-2.5 text-xs font-medium text-foreground hover:border-border transition-all cursor-pointer outline-none focus:border-ring focus:ring-1 focus:ring-ring"
+                className="min-h-[44px] md:min-h-8 md:h-8 rounded-lg border border-border/60 bg-background px-2.5 text-xs font-medium text-foreground hover:border-border transition-all cursor-pointer outline-none focus:border-ring focus:ring-1 focus:ring-ring"
                 aria-label="Cập nhật trạng thái nhiệm vụ"
               >
                 <option value="NEW">Mới</option>
@@ -757,7 +775,7 @@ export function TaskDetailSideSheet({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95"
+              className="inline-flex min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95"
               aria-label="Đóng bảng chi tiết"
             >
               <X className="size-4" strokeWidth={1.5} />
@@ -1831,6 +1849,150 @@ export function TaskDetailSideSheet({
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Contextual Sticky Bottom Action Bar (< 768px) */}
+        <div className="md:hidden sticky bottom-0 z-20 border-t border-border/60 bg-card/95 backdrop-blur-xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg space-y-2">
+          <div className="flex items-center gap-2">
+            {/* Condition 1: Manager / BGH Review Mode */}
+            {(canReview && task.status === "NEEDS_REVIEW") ||
+            (isSchool && task.status === "PENDING_EXECUTIVE_APPROVAL" && canCloseSchool) ? (
+              <div className="flex items-center gap-2 flex-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsRejectionModalOpen(true)}
+                  className="flex-1 min-h-[44px] h-11 text-xs font-semibold border-amber-500/30 bg-amber-50 text-amber-800 hover:bg-amber-100 rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
+                >
+                  <AlertTriangle className="size-4 text-amber-600" strokeWidth={1.5} />
+                  <span>Yêu cầu sửa</span>
+                </Button>
+                <Button
+                  type="button"
+                  onClick={isSchool ? handleExecutiveClose : handleManagerApprove}
+                  className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
+                >
+                  <CheckCircle2 className="size-4" strokeWidth={1.5} />
+                  <span>Phê duyệt</span>
+                </Button>
+              </div>
+            ) : canSubmitDeliverable || (user?.role === "STAFF" && !isSchool && task.status !== "COMPLETED") ? (
+              /* Condition 2: Staff Reporting Mode */
+              <Button
+                type="button"
+                onClick={() => {
+                  const form = document.getElementById("deliverable-form");
+                  if (form) {
+                    form.scrollIntoView({ behavior: "smooth", block: "center" });
+                    document.getElementById("deliverable-name")?.focus();
+                  }
+                }}
+                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
+              >
+                <FileCheck className="size-4" strokeWidth={1.5} />
+                <span>Nộp báo cáo</span>
+              </Button>
+            ) : (
+              /* Condition 3: Normal In-Progress Mode */
+              <Button
+                type="button"
+                onClick={() => {
+                  if (task.status === "NEW" && onStatusChange) {
+                    onStatusChange(task.id, "IN_PROGRESS");
+                  } else if (task.status === "IN_PROGRESS" && onStatusChange) {
+                    onStatusChange(task.id, "COMPLETED");
+                  } else {
+                    document.getElementById("status-select")?.focus();
+                  }
+                }}
+                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
+              >
+                <Play className="size-4" strokeWidth={1.5} />
+                <span>Cập nhật tiến độ</span>
+              </Button>
+            )}
+
+            {/* Secondary Action Menu / Overflow "..." */}
+            <div className="relative">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="min-h-[44px] min-w-[44px] h-11 w-11 p-0 rounded-xl border-border/70 hover:bg-muted cursor-pointer inline-flex items-center justify-center shrink-0 touch-manipulation active:scale-95"
+                aria-label="Thao tác khác"
+              >
+                <MoreHorizontal className="size-5 text-muted-foreground" strokeWidth={1.5} />
+              </Button>
+
+              {/* Overflow Dropdown */}
+              {isMobileMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div className="absolute right-0 bottom-full mb-2 w-52 rounded-xl border border-border/70 bg-card p-1.5 shadow-xl z-40 space-y-0.5 animate-in fade-in slide-in-from-bottom-2 duration-150 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const code = isSchool ? (task as SchoolTask).taskCode : (task as StaffTask).code;
+                        if (code && typeof navigator !== "undefined" && navigator.clipboard) {
+                          navigator.clipboard.writeText(code);
+                        }
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground hover:bg-muted font-medium transition-colors text-left cursor-pointer min-h-[36px]"
+                    >
+                      <Copy className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      <span>Sao chép mã NV</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== "undefined" && navigator.clipboard) {
+                          const url = new URL(window.location.href);
+                          url.searchParams.set("taskId", task.id);
+                          navigator.clipboard.writeText(url.toString());
+                        }
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground hover:bg-muted font-medium transition-colors text-left cursor-pointer min-h-[36px]"
+                    >
+                      <Share2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      <span>Chia sẻ liên kết</span>
+                    </button>
+                    {isSchool && effectiveOnAddSubTask && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          effectiveOnAddSubTask(task.id);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-primary hover:bg-primary/10 font-semibold transition-colors text-left cursor-pointer min-h-[36px]"
+                      >
+                        <Plus className="size-3.5 text-primary" strokeWidth={1.5} />
+                        <span>Thêm việc con</span>
+                      </button>
+                    )}
+                    {onStatusChange && task.status !== "BLOCKED" && task.status !== "COMPLETED" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          onStatusChange(task.id, "BLOCKED");
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-rose-700 hover:bg-rose-50 font-medium transition-colors text-left cursor-pointer min-h-[36px]"
+                      >
+                        <AlertTriangle className="size-3.5 text-rose-600" strokeWidth={1.5} />
+                        <span>Báo bị nghẽn (BLOCKED)</span>
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

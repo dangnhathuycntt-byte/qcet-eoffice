@@ -3,7 +3,7 @@ import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-cont
 
 export function isPrivilegedUser(user: { role: string }): boolean {
   const norm = normalizeRole(user.role);
-  return norm === 'ADMIN' || ['BAN_GIAM_HIEU', 'ADMIN'].includes(user.role);
+  return norm === 'ADMIN';
 }
 
 export function isDepartmentLeader(
@@ -12,8 +12,7 @@ export function isDepartmentLeader(
 ): boolean {
   if (!departmentId || !user.departmentId) return false;
   const norm = normalizeRole(user.role);
-  const isManager = norm === 'MANAGER' || ['TRUONG_PHONG', 'MANAGER'].includes(user.role);
-  return isManager && user.departmentId === departmentId;
+  return norm === 'MANAGER' && user.departmentId === departmentId;
 }
 
 export async function checkActiveDelegation(
@@ -172,6 +171,13 @@ export function canUserSubmitDeliverable(
     assignees?: Array<{ userId: string }>;
   }
 ): { allowed: boolean; reason?: string } {
+  if (task.status === TaskStatus.CANCELLED) {
+    return {
+      allowed: false,
+      reason: 'Không thể nộp minh chứng cho nhiệm vụ đã bị hủy.',
+    };
+  }
+
   const isPrivileged = isPrivilegedUser(user);
   const isCreator = task.createdById === user.id;
   const isAssignee = Boolean(task.assignees?.some((a) => a.userId === user.id));

@@ -17,12 +17,14 @@ import {
 import { safeAfter, dispatchTaskAssignedPush } from '@/lib/push-dispatch';
 import { generateTaskCodeAtomic } from '@/lib/task-code-generator';
 import {
+  canUserCreateTask,
   canUserUpdateTask,
   canUserDeleteTask,
   canUserSubmitDeliverable,
   canUserReviewDeliverable,
   canUserTransitionStatus,
   checkActiveDelegation,
+  isPrivilegedUser,
 } from './task-policy';
 
 export interface CreateTaskInput {
@@ -109,12 +111,13 @@ export class TaskCommandService {
       departmentId: string | null;
       academicMonth: number;
       academicYear: string;
+      scope: TaskScope;
     } | null = null;
 
     if (parentTaskId) {
       parentTask = await prisma.task.findUnique({
         where: { id: parentTaskId },
-        select: { id: true, departmentId: true, academicMonth: true, academicYear: true },
+        select: { id: true, departmentId: true, academicMonth: true, academicYear: true, scope: true },
       });
       if (!parentTask) {
         throw new NotFoundError('Không tìm thấy nhiệm vụ cha');
@@ -133,11 +136,22 @@ export class TaskCommandService {
 
     const curYear = new Date().getFullYear();
 
-    let taskScope: TaskScope = TaskScope.SCHOOL;
+    let taskScope: TaskScope = parentTask?.scope || TaskScope.SCHOOL;
     if (scope) {
       const s = String(scope).toLowerCase();
       if (s === 'department') taskScope = TaskScope.DEPARTMENT;
       else if (s === 'individual') taskScope = TaskScope.INDIVIDUAL;
+      else if (s === 'school') taskScope = TaskScope.SCHOOL;
+    }
+
+    const createCheck = canUserCreateTask(user, {
+      scope: taskScope,
+      departmentId: effectiveDepartmentId,
+    });
+    if (!createCheck.allowed) {
+      throw new AuthorizationError(
+        createCheck.reason || 'Forbidden: Insufficient authority to create task'
+      );
     }
 
     let taskPriority: TaskPriority = TaskPriority.NORMAL;
@@ -173,15 +187,7 @@ export class TaskCommandService {
 
     // Thực hiện trong transaction
     const newTask = await prisma.$transaction(async (tx) => {
-      let effectiveCreatorId = creatorId || user.id;
-      const userExists = await tx.user.findUnique({
-        where: { id: effectiveCreatorId },
-        select: { id: true },
-      });
-      if (!userExists) {
-        const fallbackUser = await tx.user.findFirst({ select: { id: true } });
-        if (fallbackUser) effectiveCreatorId = fallbackUser.id;
-      }
+      const effectiveCreatorId = isPrivilegedUser(user) && creatorId ? creatorId : user.id;
 
       // Sinh mã tự động atomic O(1)
       const code =
@@ -601,24 +607,33 @@ export class TaskCommandService {
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      select: { id: true, status: true, createdById: true, departmentId: true },
+      select: {
+        id: true,
+        status: true,
+        createdById: true,
+        departmentId: true,
+        assignees: { select: { userId: true } },
+      },
     });
 
     if (!task) {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const { title, fileUrl, fileType, fileSize, uploadedById } = input;
+    const authCheck = canUserSubmitDeliverable(user, task);
+    if (!authCheck.allowed) {
+      throw new AuthorizationError(
+        authCheck.reason || 'Forbidden: Insufficient authority to submit deliverable'
+      );
+    }
+
+    const { title, fileUrl, fileType, fileSize } = input;
 
     if (!title || !fileUrl) {
       throw new ValidationError('Tiêu đề và đường dẫn file minh chứng là bắt buộc');
     }
 
-    const effectiveUserId =
-      uploadedById ||
-      user.id ||
-      (await prisma.user.findFirst({ select: { id: true } }))?.id ||
-      '';
+    const uploadedById = user.id;
 
     const result = await prisma.$transaction(async (tx) => {
       const deliverable = await tx.taskDeliverable.create({
@@ -628,7 +643,7 @@ export class TaskCommandService {
           fileUrl,
           fileType: fileType || 'LINK',
           fileSize: typeof fileSize === 'number' ? fileSize : null,
-          uploadedById: effectiveUserId,
+          uploadedById,
           reviewStatus: DeliverableReviewStatus.PENDING,
         },
         include: {

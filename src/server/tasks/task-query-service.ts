@@ -105,20 +105,29 @@ export class TaskQueryService {
     if (year && year !== 'all') {
       where.academicYear = String(year);
     }
+    const assigneeConditions: Prisma.TaskWhereInput[] = [];
     if (scope && scope !== 'all') {
       const s = scope.toLowerCase();
       if (s === 'school') where.scope = TaskScope.SCHOOL;
       else if (s === 'department') where.scope = TaskScope.DEPARTMENT;
       else if (s === 'individual') where.scope = TaskScope.INDIVIDUAL;
       else if (s === 'my' && user) {
-        where.assignees = { some: { userId: user.id } };
+        assigneeConditions.push({ assignees: { some: { userId: user.id } } });
       }
     }
     if (assignedTo && assignedTo !== 'all') {
       const targetUserId = assignedTo === 'me' ? user?.id : assignedTo;
       if (targetUserId) {
-        where.assignees = { some: { userId: targetUserId } };
+        assigneeConditions.push({ assignees: { some: { userId: targetUserId } } });
       }
+    }
+    if (assigneeConditions.length === 1) {
+      where.assignees = assigneeConditions[0].assignees;
+    } else if (assigneeConditions.length > 1) {
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        ...assigneeConditions,
+      ];
     }
     if (parentTaskId) {
       if (parentTaskId === 'null' || parentTaskId === 'root') {
@@ -298,17 +307,29 @@ export class TaskQueryService {
     if (filters.departmentId && filters.departmentId !== 'all') {
       where.departmentId = filters.departmentId;
     }
+    const metricAssigneeConditions: Prisma.TaskWhereInput[] = [];
     if (filters.scope && filters.scope !== 'all') {
       const s = filters.scope.toLowerCase();
       if (s === 'school') where.scope = TaskScope.SCHOOL;
       else if (s === 'department') where.scope = TaskScope.DEPARTMENT;
       else if (s === 'individual') where.scope = TaskScope.INDIVIDUAL;
       else if (s === 'my' && user) {
-        where.assignees = { some: { userId: user.id } };
+        metricAssigneeConditions.push({ assignees: { some: { userId: user.id } } });
       }
     }
     if (filters.userId) {
-      where.assignees = { some: { userId: filters.userId } };
+      const targetUserId = filters.userId === 'me' ? user?.id : filters.userId;
+      if (targetUserId) {
+        metricAssigneeConditions.push({ assignees: { some: { userId: targetUserId } } });
+      }
+    }
+    if (metricAssigneeConditions.length === 1) {
+      where.assignees = metricAssigneeConditions[0].assignees;
+    } else if (metricAssigneeConditions.length > 1) {
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        ...metricAssigneeConditions,
+      ];
     }
 
     const tasks = await prisma.task.findMany({

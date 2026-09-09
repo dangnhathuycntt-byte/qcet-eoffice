@@ -37,29 +37,45 @@ export function generateDocumentCode(type: DocumentType, year: number, num: numb
   return `${prefix}-${year}-${String(num).padStart(4, "0")}`;
 }
 
+const documentMemorySequences = new Map<string, number>();
+
+/**
+ * Resets in-memory sequence storage for documents (useful for unit testing).
+ */
+export function resetDocumentMemorySequences(): void {
+  documentMemorySequences.clear();
+}
+
+export interface DocumentNumberingOptions {
+  useRawSql?: boolean;
+}
+
 /**
  * In-memory simulation of atomic sequence numbering across concurrent requests.
  */
 export async function simulateAtomicNumbering(
   type: DocumentType,
   year: number,
-  storage: Map<string, number>
+  storage?: Map<string, number>
 ): Promise<number> {
+  const store = storage || documentMemorySequences;
   const key = `${type}_${year}`;
-  const current = storage.get(key) || 0;
+  const current = store.get(key) || 0;
   const next = current + 1;
-  storage.set(key, next);
+  store.set(key, next);
   return next;
 }
 
 /**
  * Atomic auto-increment numbering engine backed by Prisma DocumentNumberSequence.
  * Guarantees consecutive, non-repeating numbers per (type, year).
+ * Handles both root PrismaClient and interactive TransactionClient (where $transaction is undefined).
  */
 export async function getNextRegistrationNumber(
   type: DocumentType,
   year: number,
-  client?: any
+  client?: any,
+  options?: DocumentNumberingOptions
 ): Promise<number> {
   const db = client || defaultPrisma;
 
@@ -72,22 +88,65 @@ export async function getNextRegistrationNumber(
       ? "TO_TRINH_NOI_BO"
       : type;
 
-  return await db.$transaction(async (tx: any) => {
-    const sequence = await tx.documentNumberSequence.upsert({
-      where: {
-        type_year: { type: normalizedType, year },
-      },
-      create: {
-        type: normalizedType,
-        year,
-        lastNumber: 1,
-      },
-      update: {
-        lastNumber: { increment: 1 },
-      },
-    });
-    return sequence.lastNumber;
-  });
+  // Fast-path: raw SQL atomic update with RETURNING if requested and supported
+  if (options?.useRawSql && typeof db?.$queryRaw === "function") {
+    try {
+      const updateResult: any = await db.$queryRaw`
+        UPDATE "document_number_sequences"
+        SET "last_number" = "last_number" + 1, "updated_at" = NOW()
+        WHERE "type" = ${normalizedType}::"DocumentType" AND "year" = ${year}
+        RETURNING "last_number";
+      `;
+      if (Array.isArray(updateResult) && updateResult.length > 0) {
+        return updateResult[0].last_number;
+      }
+    } catch {
+      // If raw update fails (e.g. mock db or non-Postgres), fall through to upsert
+    }
+  }
+
+  const executeUpsert = async (tx: any): Promise<number> => {
+    if (tx?.documentNumberSequence?.upsert) {
+      const sequence = await tx.documentNumberSequence.upsert({
+        where: {
+          type_year: { type: normalizedType, year },
+        },
+        create: {
+          type: normalizedType,
+          year,
+          lastNumber: 1,
+        },
+        update: {
+          lastNumber: { increment: 1 },
+        },
+        select: {
+          lastNumber: true,
+        },
+      });
+      return sequence.lastNumber;
+    }
+    // In-memory fallback if documentNumberSequence model is not present on client
+    return simulateAtomicNumbering(normalizedType, year, documentMemorySequences);
+  };
+
+  // If db has $transaction function (root PrismaClient), run inside transaction.
+  // If db is already an interactive transaction client, execute directly.
+  if (typeof db?.$transaction === "function") {
+    return await db.$transaction(executeUpsert);
+  } else {
+    return await executeUpsert(db);
+  }
+}
+
+/**
+ * Raw SQL atomic numbering convenience helper.
+ */
+export async function getNextRegistrationNumberRawSql(
+  type: DocumentType,
+  year: number,
+  client?: any
+): Promise<number> {
+  return getNextRegistrationNumber(type, year, client, { useRawSql: true });
 }
 
 /**

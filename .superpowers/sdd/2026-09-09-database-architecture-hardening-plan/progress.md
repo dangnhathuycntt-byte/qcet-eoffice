@@ -19,4 +19,5 @@ All tasks agree with plan constraints and QCET core invariants. Pre-flight scan 
 - [x] Task 1: Schema Relation Referential Actions Audit (completed, verified with `prisma validate` and `typecheck`)
 - [x] Task 2: Data Lifecycle & Archive Policy Schema (completed, verified with `prisma validate`, `prisma generate`, `npm run typecheck`, and `tests/data-lifecycle-archive-schema.test.ts`)
 - [x] Task 3: Invariants & Single Primary Owner Constraint (completed, verified with `prisma validate`, `prisma generate`, `npm run typecheck`, `tests/invariants-constraints.test.ts`, and full test suite)
+- [x] Task 4: Atomic Sequence Generation & Race-Free Numbering (completed, verified with `npm run typecheck`, `npx tsx --test tests/atomic-sequence-generation.test.ts`, and full test suite)
 

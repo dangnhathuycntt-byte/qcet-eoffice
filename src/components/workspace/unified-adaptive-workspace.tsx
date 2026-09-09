@@ -607,14 +607,15 @@ export function UnifiedAdaptiveWorkspace({
         onViewModeChange?.(urlParams.view);
       }
       if (urlParams.taskId && tasks.length > 0) {
-        let found: SchoolTask | StaffTask | undefined = tasks.find(
-          (t) => t.id === urlParams.taskId || (t as any).code === urlParams.taskId
-        );
+        const isMatch = (t: SchoolTask | StaffTask) =>
+          t.id === urlParams.taskId ||
+          (t as any).code === urlParams.taskId ||
+          (t as any).taskCode === urlParams.taskId;
+
+        let found: SchoolTask | StaffTask | undefined = tasks.find(isMatch);
         if (!found) {
           for (const t of tasks) {
-            const sub = t.subTasks?.find(
-              (s) => s.id === urlParams.taskId || (s as any).code === urlParams.taskId
-            );
+            const sub = t.subTasks?.find(isMatch);
             if (sub) {
               found = sub;
               break;
@@ -651,14 +652,15 @@ export function UnifiedAdaptiveWorkspace({
       try {
         const urlParams = parseTaskUrlParams(window.location.search);
         if (urlParams.taskId) {
-          let found: SchoolTask | StaffTask | undefined = tasks.find(
-            (t) => t.id === urlParams.taskId || (t as any).code === urlParams.taskId
-          );
+          const isMatch = (t: SchoolTask | StaffTask) =>
+            t.id === urlParams.taskId ||
+            (t as any).code === urlParams.taskId ||
+            (t as any).taskCode === urlParams.taskId;
+
+          let found: SchoolTask | StaffTask | undefined = tasks.find(isMatch);
           if (!found) {
             for (const t of tasks) {
-              const sub = t.subTasks?.find(
-                (s) => s.id === urlParams.taskId || (s as any).code === urlParams.taskId
-              );
+              const sub = t.subTasks?.find(isMatch);
               if (sub) {
                 found = sub;
                 break;
@@ -685,14 +687,15 @@ export function UnifiedAdaptiveWorkspace({
   // Synchronize when propSelectedTaskId changes externally
   React.useEffect(() => {
     if (propSelectedTaskId) {
-      let found: SchoolTask | StaffTask | undefined = tasks.find(
-        (t) => t.id === propSelectedTaskId || (t as any).code === propSelectedTaskId
-      );
+      const isMatch = (t: SchoolTask | StaffTask) =>
+        t.id === propSelectedTaskId ||
+        (t as any).code === propSelectedTaskId ||
+        (t as any).taskCode === propSelectedTaskId;
+
+      let found: SchoolTask | StaffTask | undefined = tasks.find(isMatch);
       if (!found) {
         for (const t of tasks) {
-          const sub = t.subTasks?.find(
-            (s) => s.id === propSelectedTaskId || (s as any).code === propSelectedTaskId
-          );
+          const sub = t.subTasks?.find(isMatch);
           if (sub) {
             found = sub;
             break;
@@ -719,7 +722,9 @@ export function UnifiedAdaptiveWorkspace({
         view: viewMode,
         taskId:
           isDetailOpen && internalSelectedTask
-            ? (internalSelectedTask as any).code || internalSelectedTask.id
+            ? (internalSelectedTask as any).code ||
+              (internalSelectedTask as any).taskCode ||
+              internalSelectedTask.id
             : null,
       },
       router ?? undefined
@@ -735,6 +740,7 @@ export function UnifiedAdaptiveWorkspace({
     isDetailOpen,
     internalSelectedTask?.id,
     (internalSelectedTask as any)?.code,
+    (internalSelectedTask as any)?.taskCode,
     router,
   ]);
 
@@ -1468,13 +1474,18 @@ export function UnifiedAdaptiveWorkspace({
           }}
           onSelectSubTask={(subTaskOrId) => {
             if (typeof subTaskOrId === "string") {
-              const foundSchool = displayedTasks.find((t) => t.id === subTaskOrId);
+              const isMatch = (t: SchoolTask | StaffTask) =>
+                t.id === subTaskOrId ||
+                (t as any).code === subTaskOrId ||
+                (t as any).taskCode === subTaskOrId;
+
+              const foundSchool = displayedTasks.find(isMatch);
               if (foundSchool) {
                 handleSelectTask(foundSchool);
                 return;
               }
               for (const t of displayedTasks) {
-                const sub = t.subTasks?.find((s) => s.id === subTaskOrId);
+                const sub = t.subTasks?.find(isMatch);
                 if (sub) {
                   handleSelectTask(sub);
                   return;

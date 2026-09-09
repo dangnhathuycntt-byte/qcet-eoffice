@@ -280,6 +280,63 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       assert.strictEqual(collabs[0].userId, staffUser2.id);
     });
 
+    test('createTask: enforces canUserCreateTask authority and rejects non-privileged user creating SCHOOL scope', async () => {
+      await assert.rejects(
+        async () => {
+          await taskCommandService.createTask(
+            { user: staffUser1 },
+            {
+              title: 'Nhiệm vụ cấp trường trái quyền',
+              departmentId: testDept1Id,
+              dueDate: new Date('2026-11-20T17:00:00.000Z'),
+              scope: 'school',
+            }
+          );
+        },
+        /Chỉ Ban Giám hiệu hoặc Quản trị viên/i
+      );
+    });
+
+    test('createTask: prevents actor spoofing for non-privileged user and allows for privileged user', async () => {
+      // 1. Non-privileged user attempts to spoof creatorId
+      const staffCreatedTask = await taskCommandService.createTask(
+        { user: staffUser1 },
+        {
+          title: 'Nhiệm vụ kiểm thử chống mạo danh creatorId',
+          departmentId: testDept1Id,
+          dueDate: new Date('2026-11-20T17:00:00.000Z'),
+          scope: 'department',
+          creatorId: adminUser.id, // Attempt to spoof admin
+        }
+      );
+      assert.ok(staffCreatedTask?.id);
+      createdTaskIds.push(staffCreatedTask.id);
+      assert.strictEqual(
+        staffCreatedTask.createdById,
+        staffUser1.id,
+        'Non-privileged user cannot spoof creatorId; must be user.id'
+      );
+
+      // 2. Privileged user can specify creatorId
+      const adminCreatedTask = await taskCommandService.createTask(
+        { user: adminUser },
+        {
+          title: 'Nhiệm vụ do BGH tạo hộ cấp dưới',
+          departmentId: testDept1Id,
+          dueDate: new Date('2026-11-20T17:00:00.000Z'),
+          scope: 'department',
+          creatorId: staffUser1.id,
+        }
+      );
+      assert.ok(adminCreatedTask?.id);
+      createdTaskIds.push(adminCreatedTask.id);
+      assert.strictEqual(
+        adminCreatedTask.createdById,
+        staffUser1.id,
+        'Privileged user can specify effective creatorId'
+      );
+    });
+
     test('createTask: creates subtask and inherits department and academic metadata', async () => {
       const subtask = await taskCommandService.createTask(
         { user: staffUser1 },
@@ -325,7 +382,22 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
     });
 
     test('submitDeliverable and reviewDeliverable: runs complete approval workflow with SoD enforcement', async () => {
-      // 1. Staff submits deliverable
+      // 0. Unrelated user attempts to submit deliverable -> rejected by canUserSubmitDeliverable
+      await assert.rejects(
+        async () => {
+          await taskCommandService.submitDeliverable(
+            { user: otherDeptManager },
+            createdRootTaskId,
+            {
+              title: 'Minh chứng trái phép.pdf',
+              fileUrl: 'https://qcet.edu.vn/files/unauthorized.pdf',
+            }
+          );
+        },
+        /Bạn không có quyền nộp minh chứng/i
+      );
+
+      // 1. Staff submits deliverable with attempted actor spoofing (uploadedById: adminUser.id)
       const deliverable = await taskCommandService.submitDeliverable(
         { user: staffUser2 },
         createdRootTaskId,
@@ -333,11 +405,17 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
           title: 'Báo cáo hoàn thành giai đoạn 1.pdf',
           fileUrl: 'https://qcet.edu.vn/files/report-01.pdf',
           fileType: 'PDF',
+          uploadedById: adminUser.id, // Attempt to spoof admin
         }
       );
 
       assert.ok(deliverable.id);
       assert.strictEqual(deliverable.reviewStatus, DeliverableReviewStatus.PENDING);
+      assert.strictEqual(
+        deliverable.uploadedById,
+        staffUser2.id,
+        'uploadedById must always be authenticated user.id; client spoofing ignored'
+      );
 
       // Verify task status moved to WAITING_APPROVAL
       const taskAfterSubmit = await prisma.task.findUnique({ where: { id: createdRootTaskId } });
@@ -455,6 +533,26 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       );
       const user2HasTask = user2Result.tasks.some(t => t.id === metricTaskId);
       assert.strictEqual(user2HasTask, false);
+    });
+
+    test('queryTasks: combines scope=my and assignedTo using AND when both are passed', async () => {
+      // Both match staffUser1 -> task found
+      const matchResult = await taskQueryService.queryTasks(
+        { user: staffUser1 },
+        { scope: 'my', assignedTo: staffUser1.id }
+      );
+      const hasMetricTask = matchResult.tasks.some(t => t.id === metricTaskId);
+      assert.strictEqual(hasMetricTask, true);
+
+      // scope=my is staffUser1, but assignedTo is staffUser2 (who is not assigned to metricTask)
+      // If assignedTo overwrote scope, or if scope overwrote assignedTo, results would be wrong.
+      // With AND combination, it returns empty because no task has both assigned as primary owner
+      const mismatchResult = await taskQueryService.queryTasks(
+        { user: staffUser1 },
+        { scope: 'my', assignedTo: staffUser2.id }
+      );
+      const mismatchHasTask = mismatchResult.tasks.some(t => t.id === metricTaskId);
+      assert.strictEqual(mismatchHasTask, false);
     });
 
     test('getTaskById: returns mapped task and raw Prisma graph with relations', async () => {
