@@ -87,22 +87,33 @@ const DEFAULT_VAPID_SUBJECT = "mailto:admin@qcet.edu.vn";
 let isVapidConfigured = false;
 
 export function ensureVapidConfigured(): { publicKey: string; privateKey: string; subject: string } {
-  if (serverEnv.NODE_ENV === "production") {
-    if (!serverEnv.VAPID_PUBLIC_KEY || !serverEnv.VAPID_PRIVATE_KEY) {
+  const isProduction = process.env.NODE_ENV === "production";
+  const publicKeyCandidate =
+    process.env.VAPID_PUBLIC_KEY ||
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+    (!isProduction ? FALLBACK_VAPID_PUBLIC_KEY : undefined);
+  const privateKeyCandidate =
+    process.env.VAPID_PRIVATE_KEY ||
+    (!isProduction ? FALLBACK_VAPID_PRIVATE_KEY : undefined);
+  const subjectCandidate =
+    process.env.VAPID_SUBJECT || DEFAULT_VAPID_SUBJECT;
+
+  if (isProduction) {
+    if (!publicKeyCandidate || !privateKeyCandidate) {
       throw new Error("Missing required VAPID credentials in production environment");
     }
   }
 
-  let publicKey = serverEnv.VAPID_PUBLIC_KEY || FALLBACK_VAPID_PUBLIC_KEY;
-  let privateKey = serverEnv.VAPID_PRIVATE_KEY || FALLBACK_VAPID_PRIVATE_KEY;
-  const subject = serverEnv.VAPID_SUBJECT || DEFAULT_VAPID_SUBJECT;
+  let publicKey = publicKeyCandidate || FALLBACK_VAPID_PUBLIC_KEY;
+  let privateKey = privateKeyCandidate || FALLBACK_VAPID_PRIVATE_KEY;
+  const subject = subjectCandidate;
 
   if (!isVapidConfigured) {
     try {
       webpush.setVapidDetails(subject, publicKey, privateKey);
       isVapidConfigured = true;
     } catch (err) {
-      if (serverEnv.NODE_ENV === "production") {
+      if (isProduction) {
         throw err;
       }
       // In case the configured keys are malformed, fallback to deterministic keys

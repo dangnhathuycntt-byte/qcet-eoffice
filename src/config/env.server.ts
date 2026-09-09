@@ -29,7 +29,12 @@ export function isBuildPhase(env: Record<string, unknown> = process.env): boolea
 export const ServerEnvSchema = z
   .object({
     NODE_ENV: z
-      .enum(["development", "production", "test"])
+      .preprocess((val) => {
+        if (!val || val === "undefined" || val === "") {
+          return "development";
+        }
+        return val;
+      }, z.enum(["development", "production", "test"]))
       .default("development"),
     PORT: z
       .union([z.string(), z.number()])
@@ -173,7 +178,21 @@ let _cachedServerEnv: ServerEnv | null = null;
 /**
  * Returns validated server environment configuration singleton.
  */
+function isTestingOrNonProduction(): boolean {
+  return (
+    process.env.NODE_ENV === "test" ||
+    !process.env.NODE_ENV ||
+    process.env.NODE_ENV === "development" ||
+    process.env.NODE_TEST_CONTEXT !== undefined ||
+    process.execArgv.includes("--test") ||
+    process.argv.some((arg) => arg.includes("test"))
+  );
+}
+
 export function getServerEnv(): ServerEnv {
+  if (isTestingOrNonProduction()) {
+    return validateServerEnv(process.env);
+  }
   if (!_cachedServerEnv) {
     _cachedServerEnv = validateServerEnv(process.env);
   }
@@ -186,6 +205,8 @@ export function getServerEnv(): ServerEnv {
 export function resetServerEnv(): void {
   _cachedServerEnv = null;
 }
+
+export const resetServerEnvCacheForTesting = resetServerEnv;
 
 /**
  * Lazy proxy to access server environment variables.

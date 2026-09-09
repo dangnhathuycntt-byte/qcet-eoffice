@@ -22,7 +22,12 @@ export const FORBIDDEN_SERVER_SECRETS = [
 export const ClientEnvSchema = z
   .object({
     NODE_ENV: z
-      .enum(["development", "production", "test"])
+      .preprocess((val) => {
+        if (!val || val === "undefined" || val === "") {
+          return "development";
+        }
+        return val;
+      }, z.enum(["development", "production", "test"]))
       .default("development"),
     NEXT_PUBLIC_APP_URL: z.string().optional(),
     NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
