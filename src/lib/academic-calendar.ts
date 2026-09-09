@@ -9,6 +9,8 @@
  * - 12 operational months ordered: 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8
  */
 
+import type { SchoolTask } from "@/types/dashboard";
+
 export interface AcademicMonthPeriod {
   monthNumber: number; // 1 to 12 (12 operational months: 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8)
   monthIndexInYear: number; // 0 for Month 9, 11 for Month 8
@@ -177,3 +179,209 @@ export function getAdjacentAcademicMonth(
 
   return buildAcademicMonthPeriod(targetYear, targetMonth);
 }
+
+export interface SubTask {
+  id: string;
+  taskId?: string;
+  parentSchoolTaskId?: string;
+  title: string;
+  status: string;
+  dueDate: string;
+  assignedToDepartmentId?: string;
+  assignedToDepartmentName?: string;
+  assigneeName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: any;
+}
+
+export interface MonthPartitionBucket<T = SchoolTask> {
+  monthNumber: number;
+  academicYear: string;
+  period: AcademicMonthPeriod;
+  tasks: T[];
+  priorOverdueBacklog: T[];
+  stats: {
+    totalTasks: number;
+    completedTasks: number;
+    inProgressTasks: number;
+    overdueTasks: number;
+    completionRate: number;
+  };
+}
+
+/**
+ * Resolves the operational AcademicMonthPeriod for a given month number (1-12) and academic year.
+ */
+export function getAcademicMonthPeriod(
+  monthNumber: number,
+  academicYear?: string
+): AcademicMonthPeriod {
+  const yearStr = academicYear || getAcademicYear(new Date());
+  const startYear = parseInt(yearStr.split("-")[0], 10);
+  const calendarYear = monthNumber >= 9 ? startYear : startYear + 1;
+  return buildAcademicMonthPeriod(calendarYear, monthNumber, yearStr);
+}
+
+function extractDateString(val: unknown): string | null {
+  if (!val) return null;
+  if (typeof val === "string") {
+    const match = val.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+    const dt = new Date(val);
+    if (!isNaN(dt.getTime())) {
+      return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+    }
+    return null;
+  }
+  if (val instanceof Date && !isNaN(val.getTime())) {
+    return `${val.getFullYear()}-${pad(val.getMonth() + 1)}-${pad(val.getDate())}`;
+  }
+  return null;
+}
+
+/**
+ * Lọc các nhiệm vụ thuộc về tháng nghiệp vụ chỉ định theo chu kỳ 25 - 24.
+ * Hỗ trợ "ALL" để giữ nguyên toàn bộ nhiệm vụ.
+ * Cắt tỉa (prune) các subtask không thuộc tháng đang lọc để đảm bảo thống kê chính xác.
+ */
+export function filterTasksByAcademicMonthStrict<T extends { dueDate?: string | Date | null } = SchoolTask>(
+  tasks: T[],
+  month: number | "ALL",
+  academicYear?: string
+): T[] {
+  if (month === "ALL") {
+    return tasks;
+  }
+
+  const period = getAcademicMonthPeriod(month, academicYear);
+
+  return tasks.reduce<T[]>((acc, task) => {
+    const taskDue = extractDateString(task.dueDate);
+    const taskStart =
+      extractDateString(
+        (task as any).startDate || (task as any).assignedDate || (task as any).createdAt
+      ) || taskDue;
+
+    const rawSubTasks = (task as any).subTasks;
+    const hasSubTasks = Array.isArray(rawSubTasks);
+
+    // 1. Task dueDate falls in period
+    const dueInPeriod = Boolean(taskDue && taskDue >= period.startDate && taskDue <= period.endDate);
+
+    // 2. Multi-month spanning task (startDate <= period.endDate && dueDate >= period.startDate)
+    const spanInPeriod = Boolean(
+      taskStart && taskDue && taskStart <= period.endDate && taskDue >= period.startDate
+    );
+
+    // 3. Any subtask dueDate falls in period
+    const subDueInPeriod =
+      hasSubTasks &&
+      rawSubTasks.some((st: any) => {
+        const stDue = extractDateString(st.dueDate);
+        return stDue && stDue >= period.startDate && stDue <= period.endDate;
+      });
+
+    if (!dueInPeriod && !spanInPeriod && !subDueInPeriod) {
+      return acc;
+    }
+
+    if (hasSubTasks) {
+      const prunedSubTasks = rawSubTasks.filter((st: any) => {
+        const stDue = extractDateString(st.dueDate);
+        if (!stDue) return dueInPeriod || spanInPeriod;
+        return stDue >= period.startDate && stDue <= period.endDate;
+      });
+
+      const totalSubTasks = prunedSubTasks.length;
+      const completedSubTasks = prunedSubTasks.filter((st: any) => st.status === "COMPLETED").length;
+
+      acc.push({
+        ...task,
+        subTasks: prunedSubTasks,
+        totalSubTasks,
+        completedSubTasks,
+      });
+    } else {
+      acc.push(task);
+    }
+
+    return acc;
+  }, []);
+}
+
+/**
+ * Tính toán danh sách nợ đọng/tồn đọng (overdue backlog) từ các chu kỳ trước chưa hoàn thành.
+ * Nhiệm vụ có hạn chót trước ngày bắt đầu của tháng nghiệp vụ hiện tại và chưa hoàn thành.
+ */
+export function computePriorOverdueBacklog<
+  T extends { dueDate?: string | Date | null; status?: string } = SchoolTask,
+>(
+  tasks: T[],
+  month: number,
+  academicYear: string,
+  referenceDate?: string
+): T[] {
+  const period = getAcademicMonthPeriod(month, academicYear);
+  const cutoffDate =
+    referenceDate && referenceDate < period.startDate ? referenceDate : period.startDate;
+
+  return tasks.filter((t) => {
+    if (!t.dueDate) return false;
+    if (t.status === "COMPLETED" || (t.status as string) === "CANCELLED") return false;
+    const due = extractDateString(t.dueDate);
+    if (!due) return false;
+    return due < cutoffDate;
+  });
+}
+
+/**
+ * Phân vùng dữ liệu nhiệm vụ cho một tháng học thuật cụ thể cùng với backlog từ trước và thống kê hoàn chỉnh.
+ */
+export function computeMonthPartitionBucket<
+  T extends { dueDate?: string | Date | null; status?: string } = SchoolTask,
+>(
+  tasks: T[],
+  month: number,
+  academicYear: string,
+  referenceDate?: string
+): MonthPartitionBucket<T> {
+  const period = getAcademicMonthPeriod(month, academicYear);
+  const monthTasks = filterTasksByAcademicMonthStrict(tasks, month, academicYear);
+  const priorOverdueBacklog = computePriorOverdueBacklog(tasks, month, academicYear, referenceDate);
+
+  const refDateStr = referenceDate
+    ? extractDateString(referenceDate)
+    : extractDateString(new Date());
+
+  const totalTasks = monthTasks.length;
+  const completedTasks = monthTasks.filter((t) => t.status === "COMPLETED").length;
+  const inProgressTasks = monthTasks.filter(
+    (t) => t.status !== "COMPLETED" && (t.status as string) !== "CANCELLED"
+  ).length;
+
+  const overdueTasks = monthTasks.filter((t) => {
+    if (t.status === "COMPLETED" || (t.status as string) === "CANCELLED") return false;
+    if ((t.status as string) === "OVERDUE") return true;
+    const due = extractDateString(t.dueDate);
+    return Boolean(due && refDateStr && due < refDateStr);
+  }).length;
+
+  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  return {
+    monthNumber: month,
+    academicYear,
+    period,
+    tasks: monthTasks,
+    priorOverdueBacklog,
+    stats: {
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      overdueTasks,
+      completionRate,
+    },
+  };
+}
+
