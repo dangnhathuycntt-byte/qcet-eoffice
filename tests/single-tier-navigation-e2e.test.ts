@@ -267,13 +267,16 @@ describe("Topbar ScopeSwitcher Component (scope-switcher.tsx & app-topbar.tsx)",
 
 describe("Workspace URL Scope Synchronization (page.tsx)", () => {
   const pagePath = path.resolve(__dirname, "../src/app/page.tsx");
+  const urlSyncPath = path.resolve(__dirname, "../src/hooks/use-url-params-sync.ts");
 
   it("page.tsx synchronizes scope state with URL query parameters", () => {
     assert.ok(fs.existsSync(pagePath), "page.tsx must exist");
-    const content = fs.readFileSync(pagePath, "utf-8");
+    const pageContent = fs.readFileSync(pagePath, "utf-8");
+    const syncContent = fs.existsSync(urlSyncPath) ? fs.readFileSync(urlSyncPath, "utf-8") : "";
+    const combined = pageContent + "\n" + syncContent;
 
-    assert.ok(content.includes("searchParams.get(\"scope\")"), "Must read scope query parameter");
-    assert.ok(content.includes("parseScopeParam(scopeQuery"), "Must parse scope query parameter");
+    assert.ok(combined.includes("searchParams.get(\"scope\")"), "Must read scope query parameter");
+    assert.ok(combined.includes("parseScopeParam(scopeQuery"), "Must parse scope query parameter");
   });
 
   it("verifies legacy in-page scope switcher button is removed", () => {
