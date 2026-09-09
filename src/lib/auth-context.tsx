@@ -106,6 +106,34 @@ export function mapDbUserToAuthUser(dbUser: {
   };
 }
 
+export function isUserUnassignedDepartment(
+  user?: { role?: string; department?: string | null; departmentCode?: string | null } | null
+): boolean {
+  if (!user) return false;
+  const role = (user.role || "").toUpperCase();
+  const isExecutive =
+    role === "ADMIN" ||
+    role === "BGH" ||
+    role === "BAN_GIAM_HIEU" ||
+    role === "HIEU_TRUONG" ||
+    role === "PHO_HIEU_TRUONG";
+  if (isExecutive) return false;
+
+  const dept = (user.department || "").trim();
+  const code = (user.departmentCode || "").trim().toUpperCase();
+
+  if (!dept || !code) return true;
+  if (code === "QCET" || code === "UNASSIGNED") return true;
+  if (
+    dept === "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn" ||
+    dept === "Chưa cập nhật đơn vị" ||
+    dept === "Chưa chọn đơn vị"
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   switchRole: () => {},

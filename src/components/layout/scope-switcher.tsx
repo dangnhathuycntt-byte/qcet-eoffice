@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/bottom-sheet";
 import { cn } from "@/lib/utils";
 import { QCET_DEPARTMENTS, type DepartmentNode } from "@/components/org/organization-tree";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 
 export type ScopeType = "school" | "unit" | "my";
 
@@ -32,6 +32,7 @@ export interface ScopeDetails {
   triggerLabel: string;
   iconType: "School" | "Building2" | "User";
   department?: DepartmentNode;
+  isWarning?: boolean;
 }
 
 /**
@@ -117,7 +118,7 @@ export function isManagerUser(
 export function resolveScopeDetails(
   scopeParam?: string | null,
   deptParam?: string | null,
-  fallbackUser?: { role?: string; department?: string; departmentCode?: string } | null
+  fallbackUser?: { role?: string; department?: string | null; departmentCode?: string | null } | null
 ): ScopeDetails {
   const normScope = (scopeParam || "").trim().toLowerCase();
 
@@ -126,6 +127,16 @@ export function resolveScopeDetails(
     // Access control guard: non-executive users must never access school scope
     if (fallbackUser && !isExecutiveUser(fallbackUser)) {
       if (isManagerUser(fallbackUser)) {
+        if (!deptParam && isUserUnassignedDepartment(fallbackUser)) {
+          return {
+            scope: "unit",
+            label: "Chưa chọn đơn vị",
+            shortLabel: "Chưa chọn đ/vị",
+            triggerLabel: "Phạm vi: Chưa chọn đơn vị",
+            iconType: "Building2",
+            isWarning: true,
+          };
+        }
         const targetCodeOrName =
           deptParam || fallbackUser.departmentCode || fallbackUser.department;
         const dept = resolveDepartment(targetCodeOrName);
@@ -170,6 +181,16 @@ export function resolveScopeDetails(
 
   // Explicit unit scope
   if (normScope === "unit" || normScope === "unit_tasks") {
+    if (!deptParam && isUserUnassignedDepartment(fallbackUser)) {
+      return {
+        scope: "unit",
+        label: "Chưa chọn đơn vị",
+        shortLabel: "Chưa chọn đ/vị",
+        triggerLabel: "Phạm vi: Chưa chọn đơn vị",
+        iconType: "Building2",
+        isWarning: true,
+      };
+    }
     const targetCodeOrName = deptParam || fallbackUser?.departmentCode || fallbackUser?.department;
     const dept = resolveDepartment(targetCodeOrName);
     if (dept) {
@@ -216,6 +237,16 @@ export function resolveScopeDetails(
       };
     }
     if (fallbackUser.role === "MANAGER") {
+      if (isUserUnassignedDepartment(fallbackUser)) {
+        return {
+          scope: "unit",
+          label: "Chưa chọn đơn vị",
+          shortLabel: "Chưa chọn đ/vị",
+          triggerLabel: "Phạm vi: Chưa chọn đơn vị",
+          iconType: "Building2",
+          isWarning: true,
+        };
+      }
       const target = fallbackUser.departmentCode || fallbackUser.department;
       const dept = resolveDepartment(target);
       if (dept) {
@@ -467,7 +498,7 @@ export function ScopeSwitcher({ className }: { className?: string }) {
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label="Chuyển đổi phạm vi hoạt động"
-        className="group inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/40 hover:bg-secondary/80 px-2.5 text-xs font-medium text-foreground transition-all cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.98]"
+        className="group inline-flex min-h-[44px] sm:min-h-[32px] h-auto sm:h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/40 hover:bg-secondary/80 px-2.5 text-xs font-medium text-foreground transition-all cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.98] touch-manipulation"
       >
         {renderIcon(currentScope.iconType)}
         <span className="truncate max-w-[110px] xs:max-w-[140px] sm:max-w-[190px] md:max-w-[240px]">
