@@ -2,13 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Building2,
   Calendar,
   FileText,
-  BarChart3,
-  Tv,
   User,
   Settings,
   LogOut,
@@ -32,21 +30,43 @@ import {
   BottomSheetClose,
 } from "@/components/ui/bottom-sheet";
 import { useAuth } from "@/context/auth-context";
+import { useSidebarContext } from "@/components/layout/sidebar-context";
 import { usePushNotification } from "@/hooks/use-push-notification";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import { getMobileDrawerItems } from "@/lib/navigation/canonical-navigation-registry";
+import { isRouteActive } from "@/lib/navigation/active-matcher";
 
 export interface MobileMenuDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+const DRAWER_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  Calendar,
+  FileText,
+  Building2,
+  Settings,
+};
+
+const DRAWER_SUBTITLES: Record<string, string> = {
+  calendar: "Lịch tuần, sự kiện",
+  documents: "Sổ công văn, tờ trình",
+  org: "Đơn vị & danh bạ",
+  settings: "Hệ thống & tùy chọn",
+};
+
 export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) {
   const { user, logout, setIsProfileModalOpen } = useAuth();
-  const pathname = usePathname();
+  const pathname = usePathname() || "/";
+  const searchParams = useSearchParams();
+  const { badgeCounts } = useSidebarContext();
   const [isTestingPush, setIsTestingPush] = React.useState(false);
   const [testPushResult, setTestPushResult] = React.useState<"success" | "failed" | null>(null);
+
+  // Canonical drawer routes: /documents (Văn bản & Điều hành), /calendar, /org, /settings
+  const drawerItems = getMobileDrawerItems();
 
   const {
     isSupported,
@@ -83,7 +103,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 </BottomSheetDescription>
               </div>
             </div>
-            <BottomSheetClose className="flex items-center justify-center min-w-[48px] min-h-[48px] p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer">
+            <BottomSheetClose className="flex items-center justify-center min-w-[48px] min-h-[48px] p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors cursor-pointer touch-manipulation">
               <X size={18} />
             </BottomSheetClose>
           </div>
@@ -96,120 +116,60 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
               LỐI TẮT HỆ THỐNG
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Link
-                href="/documents"
-                onClick={() => {
-                  triggerHaptic("light");
-                  onOpenChange(false);
-                }}
-                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <FileText size={16} />
-                  </div>
-                  <span className="text-xs font-semibold truncate">Văn bản</span>
-                  <span className="sr-only">Đang phát triển</span>
-                </div>
-                <span className="text-xs text-muted-foreground truncate">
-                  Sổ công văn, tờ trình
-                </span>
-              </Link>
+              {drawerItems.map((item) => {
+                const IconComponent = DRAWER_ICONS[item.iconName] || FileText;
+                const isActive = isRouteActive(item.href, pathname, searchParams, item.aliases);
+                const subtitle = DRAWER_SUBTITLES[item.id] || item.shortLabel;
+                const badgeCount = item.badgeKey ? Number(badgeCounts?.[item.badgeKey]) || 0 : 0;
 
-              <Link
-                href="/dashboard"
-                onClick={() => {
-                  triggerHaptic("light");
-                  onOpenChange(false);
-                }}
-                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <BarChart3 size={16} />
-                  </div>
-                  <span className="text-xs font-semibold truncate">Báo cáo KPI</span>
-                </div>
-                <span className="text-xs text-muted-foreground truncate">
-                  Tiến độ & chỉ số
-                </span>
-              </Link>
-
-              <Link
-                href="/calendar"
-                onClick={() => {
-                  triggerHaptic("light");
-                  onOpenChange(false);
-                }}
-                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Calendar size={16} />
-                  </div>
-                  <span className="text-xs font-semibold truncate">Lịch công tác</span>
-                </div>
-                <span className="text-xs text-muted-foreground truncate">
-                  Lịch tuần, sự kiện
-                </span>
-              </Link>
-
-              <Link
-                href="/org"
-                onClick={() => {
-                  triggerHaptic("light");
-                  onOpenChange(false);
-                }}
-                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Building2 size={16} />
-                  </div>
-                  <span className="text-xs font-semibold truncate">Cơ cấu tổ chức</span>
-                </div>
-                <span className="text-xs text-muted-foreground truncate">
-                  Đơn vị & danh bạ
-                </span>
-              </Link>
-
-              <Link
-                href="/kiosk"
-                onClick={() => {
-                  triggerHaptic("light");
-                  onOpenChange(false);
-                }}
-                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Tv size={16} />
-                  </div>
-                  <span className="text-xs font-semibold truncate">Kiosk TV</span>
-                </div>
-                <span className="text-xs text-muted-foreground truncate">
-                  Màn hình điều hành
-                </span>
-              </Link>
-
-              <Link
-                href="/settings"
-                onClick={() => {
-                  triggerHaptic("light");
-                  onOpenChange(false);
-                }}
-                className="flex flex-col justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] group cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Settings size={16} />
-                  </div>
-                  <span className="text-xs font-semibold truncate">Cài đặt</span>
-                </div>
-                <span className="text-xs text-muted-foreground truncate">
-                  Hệ thống & tùy chọn
-                </span>
-              </Link>
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    onClick={() => {
+                      triggerHaptic("light");
+                      onOpenChange(false);
+                    }}
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "flex flex-col justify-between p-3 min-h-[48px] rounded-xl border transition-all active:scale-[0.98] group cursor-pointer touch-manipulation",
+                      isActive
+                        ? "bg-primary/10 border-primary/40 font-semibold text-primary shadow-xs"
+                        : "border-border/50 bg-card hover:bg-muted/50 text-foreground"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div
+                        className={cn(
+                          "size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                        )}
+                      >
+                        <IconComponent size={16} />
+                      </div>
+                      <span className="text-xs font-semibold truncate">{item.label}</span>
+                      {item.id === "documents" && (
+                        <span className="sr-only">Đang phát triển</span>
+                      )}
+                      {badgeCount > 0 && (
+                        <span className="ml-auto px-1.5 py-0.5 rounded-full text-xs font-bold bg-primary text-primary-foreground">
+                          {badgeCount}
+                        </span>
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "text-xs truncate",
+                        isActive ? "text-primary/80" : "text-muted-foreground"
+                      )}
+                    >
+                      {subtitle}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
 
             {/* Profile Quick Link */}
@@ -224,7 +184,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                   window.dispatchEvent(new CustomEvent("qcet:open-profile-modal"));
                 }
               }}
-              className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] cursor-pointer"
+              className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl border border-border/50 bg-card hover:bg-muted/50 text-foreground transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
             >
               <div className="flex items-center gap-3">
                 <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -278,7 +238,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     }
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl text-xs font-medium transition-colors border cursor-pointer",
+                    "w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl text-xs font-medium transition-colors border cursor-pointer touch-manipulation",
                     isSubscribed
                       ? "bg-muted/40 hover:bg-muted/60 border-border/50 text-foreground"
                       : "bg-primary/10 hover:bg-primary/15 border-primary/30 text-primary font-semibold"
@@ -320,7 +280,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                       setIsTestingPush(false);
                     }
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors cursor-pointer border border-border/40"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-muted/40 hover:bg-muted/70 text-xs font-medium text-foreground transition-colors cursor-pointer border border-border/40 touch-manipulation"
                 >
                   <div className="flex items-center gap-3">
                     {isTestingPush ? (
@@ -348,7 +308,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                     await installApp();
                     onOpenChange(false);
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary text-primary-foreground font-semibold text-xs transition-colors cursor-pointer shadow-sm"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary text-primary-foreground font-semibold text-xs transition-colors cursor-pointer shadow-sm touch-manipulation"
                 >
                   <div className="flex items-center gap-3">
                     <Download size={17} />
@@ -370,7 +330,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                       window.dispatchEvent(new CustomEvent("qcet:open-push-onboarding"));
                     }
                   }}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-medium text-xs transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-medium text-xs transition-colors cursor-pointer touch-manipulation"
                 >
                   <div className="flex items-center gap-3">
                     <Smartphone size={17} />
@@ -390,7 +350,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                 logout();
                 onOpenChange(false);
               }}
-              className="w-full flex items-center justify-center gap-2 p-3 min-h-[48px] rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 p-3 min-h-[48px] rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-semibold transition-colors cursor-pointer touch-manipulation"
             >
               <LogOut size={16} />
               <span>Đăng xuất</span>

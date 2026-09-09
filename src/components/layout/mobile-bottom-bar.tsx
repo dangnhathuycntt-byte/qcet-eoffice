@@ -14,18 +14,30 @@ import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { useSidebarContext } from "@/components/layout/sidebar-context";
 import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import {
+  getMobileBottomBarItems,
+  type CanonicalRouteConfig,
+} from "@/lib/navigation/canonical-navigation-registry";
 import { isRouteActive } from "@/lib/navigation/active-matcher";
 
-export function MobileBottomNav({ className }: { className?: string }) {
+export function MobileBottomBar({ className }: { className?: string }) {
   const pathname = usePathname() || "/";
   const searchParams = useSearchParams();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const { badgeCounts } = useSidebarContext();
   const unreadNotifications = Number(badgeCounts?.notifications) || 0;
 
-  const isHomeActive = isRouteActive("/?zone=dashboard", pathname, searchParams);
-  const isTasksActive = isRouteActive("/?zone=tasks", pathname, searchParams);
-  const isNotificationsActive = isRouteActive("/notifications", pathname, searchParams);
+  const [deskItem, tasksItem, notifItem] = getMobileBottomBarItems();
+
+  const isDeskActive = deskItem
+    ? isRouteActive(deskItem.href, pathname, searchParams, deskItem.aliases)
+    : false;
+  const isTasksActive = tasksItem
+    ? isRouteActive(tasksItem.href, pathname, searchParams, tasksItem.aliases)
+    : false;
+  const isNotifActive = notifItem
+    ? isRouteActive(notifItem.href, pathname, searchParams, notifItem.aliases)
+    : false;
 
   const handleCenterAction = () => {
     triggerHaptic("medium");
@@ -47,32 +59,40 @@ export function MobileBottomNav({ className }: { className?: string }) {
         <div className="grid grid-cols-5 items-center h-14 px-2 max-w-lg mx-auto">
           {/* 1. Tổng quan */}
           <Link
-            href="/?zone=dashboard"
+            href={deskItem ? deskItem.href : "/"}
             onClick={() => triggerHaptic("light")}
             aria-label="Trang tổng quan"
-            aria-current={isHomeActive ? "page" : undefined}
+            aria-current={isDeskActive ? "page" : undefined}
             className={cn(
               "flex flex-col items-center justify-center gap-0.5 h-full min-h-[48px] min-w-[48px] transition-colors active:scale-95 touch-manipulation",
-              isHomeActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
+              isDeskActive
+                ? "text-primary font-semibold"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <LayoutDashboard size={20} strokeWidth={isHomeActive ? 2.2 : 1.7} />
-            <span className="text-xs tracking-tight">Tổng quan</span>
+            <LayoutDashboard size={20} strokeWidth={isDeskActive ? 2.2 : 1.7} />
+            <span className="text-xs tracking-tight">
+              {deskItem?.shortLabel || "Tổng quan"}
+            </span>
           </Link>
 
           {/* 2. Nhiệm vụ (Công việc) */}
           <Link
-            href="/?zone=tasks"
+            href={tasksItem ? tasksItem.href : "/tasks"}
             onClick={() => triggerHaptic("light")}
             aria-label="Nhiệm vụ - Công việc"
             aria-current={isTasksActive ? "page" : undefined}
             className={cn(
               "flex flex-col items-center justify-center gap-0.5 h-full min-h-[48px] min-w-[48px] transition-colors active:scale-95 touch-manipulation",
-              isTasksActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
+              isTasksActive
+                ? "text-primary font-semibold"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             <CheckSquare size={20} strokeWidth={isTasksActive ? 2.2 : 1.7} />
-            <span className="text-xs tracking-tight">Nhiệm vụ</span>
+            <span className="text-xs tracking-tight">
+              {tasksItem?.shortLabel || "Nhiệm vụ"}
+            </span>
           </Link>
 
           {/* 3. Center Action Pill (Tạo việc mới) */}
@@ -92,22 +112,26 @@ export function MobileBottomNav({ className }: { className?: string }) {
 
           {/* 4. Thông báo */}
           <Link
-            href="/notifications"
+            href={notifItem ? notifItem.href : "/notifications"}
             onClick={() => triggerHaptic("light")}
             aria-label="Thông báo hệ thống"
-            aria-current={isNotificationsActive ? "page" : undefined}
+            aria-current={isNotifActive ? "page" : undefined}
             className={cn(
               "relative flex flex-col items-center justify-center gap-0.5 h-full min-h-[48px] min-w-[48px] transition-colors active:scale-95 touch-manipulation",
-              isNotificationsActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
+              isNotifActive
+                ? "text-primary font-semibold"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             <div className="relative">
-              <Bell size={20} strokeWidth={isNotificationsActive ? 2.2 : 1.7} />
+              <Bell size={20} strokeWidth={isNotifActive ? 2.2 : 1.7} />
               {unreadNotifications > 0 && (
                 <span className="absolute -top-1 -right-1 size-2 rounded-full bg-rose-500 ring-2 ring-card" />
               )}
             </div>
-            <span className="text-xs tracking-tight">Thông báo</span>
+            <span className="text-xs tracking-tight">
+              {notifItem?.shortLabel || "Thông báo"}
+            </span>
           </Link>
 
           {/* 5. Menu mở rộng */}
@@ -131,3 +155,5 @@ export function MobileBottomNav({ className }: { className?: string }) {
     </>
   );
 }
+
+export const MobileBottomNav = MobileBottomBar;

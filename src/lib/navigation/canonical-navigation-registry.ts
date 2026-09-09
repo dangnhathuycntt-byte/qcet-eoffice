@@ -118,6 +118,8 @@ export function getMobileBottomNavItems(): CanonicalRouteConfig[] {
   return CANONICAL_ROUTES.filter((r) => r.mobilePlacement === "bottom-bar").sort((a, b) => a.order - b.order);
 }
 
+export const getMobileBottomBarItems = getMobileBottomNavItems;
+
 export function getMobileDrawerItems(): CanonicalRouteConfig[] {
   return CANONICAL_ROUTES.filter((r) => r.mobilePlacement === "drawer").sort((a, b) => a.order - b.order);
 }
@@ -128,3 +130,5 @@ export function getRouteByPath(pathname: string): CanonicalRouteConfig | undefin
     (r) => r.href === cleanPath || r.aliases?.some((alias) => alias === cleanPath || cleanPath.startsWith(`${alias}/`))
   );
 }
+
+export { isRouteActive } from "./active-matcher";
