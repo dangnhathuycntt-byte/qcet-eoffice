@@ -27,9 +27,9 @@ describe("ExecutiveStatStrip Helpers", () => {
 
   test("getStatCardData assigns matching WorkboxFilter key to each card", () => {
     const cards = getStatCardData(mockStats);
-    assert.equal(cards[0].filterKey, "URGENT_OVERDUE");
+    assert.equal(cards[0].filterKey, "ALL");
     assert.equal(cards[1].filterKey, "MY_ACTION");
-    assert.equal(cards[2].filterKey, "ASSIGNED_BY_ME");
+    assert.equal(cards[2].filterKey, "URGENT_OVERDUE");
     assert.equal(cards[3].filterKey, "COMPLETED");
   });
 
@@ -127,63 +127,69 @@ describe("ExecutiveStatStrip Helpers", () => {
     assert.equal(cards[3].progress, 0);
   });
 
-  test("renders triage queue card when pendingTriageCount is present and > 0", () => {
+  test("integrates triage queue into urgent card when pendingTriageCount is present and > 0", () => {
     const stats: DashboardStats = {
       ...mockStats,
       pendingTriageCount: 2,
     };
     const cards = getStatCardData(stats);
-    const triageCard = cards.find((c) => c.id === "triage-queue");
-    assert.ok(triageCard, "triage-queue card must exist when pendingTriageCount > 0");
-    assert.equal(triageCard!.title, "Chờ tiếp nhận");
-    assert.equal(triageCard!.value, "2");
-    assert.equal(triageCard!.iconName, "Clock");
+    assert.equal(cards.length, 4, "Must maintain exactly 4 cards");
+    const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
+    assert.ok(urgentCard, "urgent-tasks card must exist");
     assert.ok(
-      triageCard!.subtext.length > 0,
-      "triage card must have non-empty subtext"
+      urgentCard.subtext.includes("2 chờ tiếp nhận"),
+      "urgent card must include triage count in subtext"
     );
   });
 
-  test("renders escalated review card when escalatedReviewCount is present and > 0", () => {
+  test("integrates escalated review into urgent card when escalatedReviewCount is present and > 0", () => {
     const stats: DashboardStats = {
       ...mockStats,
       escalatedReviewCount: 3,
     };
     const cards = getStatCardData(stats);
-    const escalatedCard = cards.find((c) => c.id === "escalated-reviews");
-    assert.ok(escalatedCard, "escalated-reviews card must exist when escalatedReviewCount > 0");
-    assert.equal(escalatedCard!.title, "Quá hạn thẩm định");
-    assert.equal(escalatedCard!.value, "3");
-    assert.equal(escalatedCard!.iconName, "AlertTriangle");
+    assert.equal(cards.length, 4, "Must maintain exactly 4 cards");
+    const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
+    assert.ok(urgentCard, "urgent-tasks card must exist");
     assert.ok(
-      escalatedCard!.subtext.length > 0,
-      "escalated card must have non-empty subtext"
+      urgentCard.subtext.includes("3 quá hạn"),
+      "urgent card must include escalated count in subtext"
+    );
+    assert.ok(
+      urgentCard.badge?.label.includes("quá hạn"),
+      "urgent card badge must indicate overdue/escalated"
     );
   });
 
-  test("renders both triage and escalated cards when both counts are > 0", () => {
+  test("strictly maintains 4 cards when both triage and escalated counts are > 0", () => {
     const stats: DashboardStats = {
       ...mockStats,
       pendingTriageCount: 2,
       escalatedReviewCount: 3,
     };
     const cards = getStatCardData(stats);
-    const triageCard = cards.find((c) => c.id === "triage-queue");
-    const escalatedCard = cards.find((c) => c.id === "escalated-reviews");
-    assert.ok(triageCard, "triage-queue card must be present");
-    assert.ok(escalatedCard, "escalated-reviews card must be present");
-    assert.equal(cards.length, 6, "should have 4 base cards + 2 new cards");
+    assert.equal(cards.length, 4, "should always strictly maintain 4 cards");
+    const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
+    assert.ok(urgentCard.subtext.includes("chờ tiếp nhận"));
+    assert.ok(urgentCard.subtext.includes("quá hạn"));
   });
 
-  test("omits triage and escalated cards when counts are 0 or absent", () => {
+  test("omits triage and escalated text from urgent card when counts are 0 or absent", () => {
     const cards = getStatCardData(mockStats);
-    const triageCard = cards.find((c) => c.id === "triage-queue");
-    const escalatedCard = cards.find((c) => c.id === "escalated-reviews");
-    assert.equal(triageCard, undefined, "triage-queue card must not appear when count is 0/absent");
-    assert.equal(escalatedCard, undefined, "escalated-reviews card must not appear when count is 0/absent");
+    const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
+    assert.equal(
+      urgentCard.subtext.includes("chờ tiếp nhận"),
+      false,
+      "triage text must not appear when count is 0/absent"
+    );
+    assert.equal(
+      urgentCard.subtext.includes("quá hạn"),
+      false,
+      "escalated text must not appear when count is 0/absent"
+    );
   });
 
-  test("triage and escalated cards contain zero decorative emojis", () => {
+  test("all cards contain zero decorative emojis even with triage and escalated counts", () => {
     const stats: DashboardStats = {
       ...mockStats,
       pendingTriageCount: 5,
@@ -191,11 +197,8 @@ describe("ExecutiveStatStrip Helpers", () => {
     };
     const cards = getStatCardData(stats);
     const emojiRegex = /\p{Extended_Pictographic}/u;
-    const newCards = cards.filter(
-      (c) => c.id === "triage-queue" || c.id === "escalated-reviews"
-    );
-    assert.equal(newCards.length, 2, "both new cards must exist");
-    newCards.forEach((card) => {
+    assert.equal(cards.length, 4, "always 4 cards");
+    cards.forEach((card) => {
       assert.equal(
         emojiRegex.test(card.title),
         false,
@@ -216,18 +219,16 @@ describe("ExecutiveStatStrip Helpers", () => {
     });
   });
 
-  test("triage and escalated cards use tabular-nums compatible values", () => {
+  test("urgent card uses tabular-nums compatible values when integrating triage and escalated", () => {
     const stats: DashboardStats = {
       ...mockStats,
       pendingTriageCount: 12,
       escalatedReviewCount: 8,
     };
     const cards = getStatCardData(stats);
-    const triageCard = cards.find((c) => c.id === "triage-queue")!;
-    const escalatedCard = cards.find((c) => c.id === "escalated-reviews")!;
+    const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
     // Values should be numeric strings (formatted by formatNumber)
-    assert.equal(triageCard.value, "12");
-    assert.equal(escalatedCard.value, "8");
+    assert.equal(urgentCard.value, formatNumber(42 + 5 + 12 + 8));
   });
 
   test("toggle logic switches between selected filterKey and ALL", () => {
@@ -235,11 +236,11 @@ describe("ExecutiveStatStrip Helpers", () => {
     const getNextFilter = (active: WorkboxFilter | undefined, target: WorkboxFilter): WorkboxFilter =>
       active === target ? "ALL" : target;
 
-    // Initially ALL, click card 0 (URGENT_OVERDUE) -> URGENT_OVERDUE
-    assert.equal(getNextFilter("ALL", cards[0].filterKey!), "URGENT_OVERDUE");
+    // Initially ALL, click card 2 (URGENT_OVERDUE) -> URGENT_OVERDUE
+    assert.equal(getNextFilter("ALL", cards[2].filterKey!), "URGENT_OVERDUE");
 
-    // Already URGENT_OVERDUE, click card 0 again -> toggles back to ALL
-    assert.equal(getNextFilter("URGENT_OVERDUE", cards[0].filterKey!), "ALL");
+    // Already URGENT_OVERDUE, click card 2 again -> toggles back to ALL
+    assert.equal(getNextFilter("URGENT_OVERDUE", cards[2].filterKey!), "ALL");
 
     // From URGENT_OVERDUE, click card 1 (MY_ACTION) -> switches to MY_ACTION
     assert.equal(getNextFilter("URGENT_OVERDUE", cards[1].filterKey!), "MY_ACTION");
