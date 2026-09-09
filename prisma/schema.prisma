@@ -138,6 +138,8 @@ model User {
   leaderDirectives      DocumentDirective[]   @relation("LeaderDirectives")
   pushSubscriptions PushSubscription[]
   notifications     Notification[]
+  positionAssignments  PositionAssignment[]  @relation("UserPositionAssignments")
+  bodyMemberships      BodyMembership[]
 
   @@map("users")
 }
@@ -204,6 +206,7 @@ model Task {
   archivedById    String?               @map("archived_by_id")
   archiveReason   String?               @map("archive_reason") @db.Text
   archivedBy      User?                 @relation("TaskArchiver", fields: [archivedById], references: [id], onDelete: SetNull)
+  version         Int                   @default(1) @map("version")
   createdAt       DateTime              @default(now()) @map("created_at")
   updatedAt       DateTime              @updatedAt @map("updated_at")
 
@@ -266,6 +269,7 @@ model DacumDelegation {
   department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   grantor        User        @relation("DelegationGrantor", fields: [grantorId], references: [id], onDelete: Restrict)
   delegate       User        @relation("DelegationDelegate", fields: [delegateId], references: [id], onDelete: Restrict)
+  version        Int         @default(1) @map("version")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 
@@ -353,7 +357,7 @@ model Document {
   // Liên thông Unified Task Hub
   linkedTaskId       String?               @unique @map("linked_task_id")
   linkedTask         Task?                 @relation(fields: [linkedTaskId], references: [id], onDelete: SetNull)
-
+  version            Int                   @default(1) @map("version")
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
 
@@ -416,7 +420,7 @@ model DocumentDirective {
   document         Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
   leader           User        @relation("LeaderDirectives", fields: [leaderId], references: [id], onDelete: Restrict)
   assignedDept     Department  @relation("DirectiveDepartments", fields: [assignedDeptId], references: [id], onDelete: Restrict)
-
+  version          Int         @default(1) @map("version")
   createdAt        DateTime    @default(now()) @map("created_at")
 
   @@index([documentId, leaderId])
@@ -508,6 +512,7 @@ model JobCatalogItem {
   description   String?         @db.Text
   competencyReq String?         @map("competency_req") @db.Text
   duties        DacumDuty[]
+  positionDefinitions PositionDefinition[]
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
@@ -548,6 +553,261 @@ model DacumTaskDef {
   @@unique([dutyId, code])
   @@map("dacum_task_defs")
 }
+
+// ===================================================
+// 8. CƠ CẤU TỔ CHỨC, VỊ TRÍ VIỆC LÀM & ỦY QUYỀN (PHASE 3)
+// Đáp ứng QĐ 282/QĐ-CĐKTCNQN, QĐ 420/QĐ-CĐKTCNQN & Nghị định 232/2026/NĐ-CP
+// ===================================================
+
+enum UnitType {
+  SCHOOL
+  FACULTY
+  DEPARTMENT
+  CENTER
+  SECTION
+  OTHER
+}
+
+enum UnitStatus {
+  ACTIVE
+  REORGANIZING
+  MERGED
+  DISSOLVED
+  SUSPENDED
+}
+
+enum OrganizationalBodyType {
+  COUNCIL
+  COMMITTEE
+  STEERING_COMMITTEE
+  WORKING_GROUP
+}
+
+enum BodyStatus {
+  ACTIVE
+  CONCLUDED
+  SUSPENDED
+  DISSOLVED
+}
+
+enum BodyMemberRole {
+  CHAIR
+  VICE_CHAIR
+  SECRETARY
+  MEMBER
+}
+
+enum AssignmentType {
+  PRIMARY
+  CONCURRENT
+  ACTING
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  ON_LEAVE
+  TERMINATED
+  SUPERSEDED
+}
+
+enum ResponsibilityCategory {
+  EXECUTIVE
+  ACADEMIC
+  OPERATIONAL
+}
+
+enum DelegationStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+  PENDING
+}
+
+model OrganizationalUnit {
+  id               String               @id @default(cuid())
+  code             String               @unique @db.VarChar(50)
+  name             String               @db.VarChar(255)
+  type             UnitType
+  parentId         String?              @map("parent_id")
+  status           UnitStatus           @default(ACTIVE)
+  effectiveFrom    DateTime             @default(now()) @map("effective_from")
+  effectiveTo      DateTime?            @map("effective_to")
+  metadata         Json?
+  parent           OrganizationalUnit?  @relation("UnitHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children         OrganizationalUnit[] @relation("UnitHierarchy")
+  ancestorPaths    UnitClosurePath[]    @relation("UnitClosureAncestor")
+  descendantPaths  UnitClosurePath[]    @relation("UnitClosureDescendant")
+  positionAssignments PositionAssignment[]
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  @@index([type, status])
+  @@map("organizational_units")
+}
+
+model UnitClosurePath {
+  ancestorId   String             @map("ancestor_id")
+  descendantId String             @map("descendant_id")
+  depth        Int
+  ancestor     OrganizationalUnit @relation("UnitClosureAncestor", fields: [ancestorId], references: [id], onDelete: Cascade)
+  descendant   OrganizationalUnit @relation("UnitClosureDescendant", fields: [descendantId], references: [id], onDelete: Cascade)
+
+  @@id([ancestorId, descendantId])
+  @@index([descendantId])
+  @@map("unit_closure_paths")
+}
+
+model OrganizationalBody {
+  id            String                 @id @default(cuid())
+  code          String                 @unique @db.VarChar(50)
+  name          String                 @db.VarChar(255)
+  type          OrganizationalBodyType
+  establishedBy String?                @map("established_by") @db.VarChar(255)
+  effectiveFrom DateTime               @default(now()) @map("effective_from")
+  effectiveTo   DateTime?              @map("effective_to")
+  status        BodyStatus             @default(ACTIVE)
+  memberships   BodyMembership[]
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+
+  @@index([type, status])
+  @@map("organizational_bodies")
+}
+
+model BodyMembership {
+  id                   String              @id @default(cuid())
+  bodyId               String              @map("body_id")
+  positionAssignmentId String?             @map("position_assignment_id")
+  userId               String?             @map("user_id")
+  role                 BodyMemberRole
+  appointedAt          DateTime            @default(now()) @map("appointed_at")
+  expiresAt            DateTime?           @map("expires_at")
+  body                 OrganizationalBody  @relation(fields: [bodyId], references: [id], onDelete: Cascade)
+  positionAssignment   PositionAssignment? @relation(fields: [positionAssignmentId], references: [id], onDelete: SetNull)
+  user                 User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+
+  @@index([bodyId, role])
+  @@index([userId])
+  @@index([positionAssignmentId])
+  @@map("body_memberships")
+}
+
+model PositionDefinition {
+  id                String               @id @default(cuid())
+  code              String               @unique @db.VarChar(50)
+  title             String               @db.VarChar(255)
+  group             JobCatalogGroup
+  minLevel          Int?                 @default(1) @map("min_level")
+  isLeadership      Boolean              @default(false) @map("is_leadership")
+  dacumJobCatalogId String?              @map("dacum_job_catalog_id") @db.VarChar(50)
+  dacumJobCatalog   JobCatalogItem?      @relation(fields: [dacumJobCatalogId], references: [id], onDelete: SetNull)
+  assignments       PositionAssignment[]
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  @@index([group])
+  @@map("position_definitions")
+}
+
+model PositionAssignment {
+  id                   String                 @id @default(cuid())
+  userId               String                 @map("user_id")
+  positionDefinitionId String                 @map("position_definition_id")
+  unitId               String                 @map("unit_id")
+  type                 AssignmentType         @default(PRIMARY)
+  effectiveFrom        DateTime               @default(now()) @map("effective_from")
+  effectiveTo          DateTime?              @map("effective_to")
+  status               AssignmentStatus       @default(ACTIVE)
+  sourceDecisionNumber String?                @map("source_decision_number") @db.VarChar(100)
+  user                 User                   @relation("UserPositionAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  positionDefinition   PositionDefinition     @relation(fields: [positionDefinitionId], references: [id], onDelete: Restrict)
+  unit                 OrganizationalUnit     @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  portfolios           PortfolioAssignment[]
+  bodyMemberships      BodyMembership[]
+  delegationsGranted   DelegationGrant[]      @relation("GrantorDelegations")
+  delegationsReceived  DelegationGrant[]      @relation("GranteeDelegations")
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([unitId, status])
+  @@index([positionDefinitionId])
+  @@map("position_assignments")
+}
+
+model ResponsibilityArea {
+  id                   String                 @id @default(cuid())
+  code                 String                 @unique @db.VarChar(50)
+  name                 String                 @db.VarChar(255)
+  description          String?                @db.Text
+  category             ResponsibilityCategory
+  portfolioAssignments PortfolioAssignment[]
+  delegationGrants     DelegationGrant[]
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+
+  @@map("responsibility_areas")
+}
+
+model PortfolioAssignment {
+  id                   String             @id @default(cuid())
+  positionAssignmentId String             @map("position_assignment_id")
+  responsibilityAreaId String             @map("responsibility_area_id")
+  effectiveFrom        DateTime           @default(now()) @map("effective_from")
+  effectiveTo          DateTime?          @map("effective_to")
+  sourceDecisionNumber String?            @map("source_decision_number") @db.VarChar(100)
+  positionAssignment   PositionAssignment @relation(fields: [positionAssignmentId], references: [id], onDelete: Cascade)
+  responsibilityArea   ResponsibilityArea @relation(fields: [responsibilityAreaId], references: [id], onDelete: Restrict)
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  @@unique([positionAssignmentId, responsibilityAreaId], name: "assignment_responsibility_unique")
+  @@index([responsibilityAreaId])
+  @@map("portfolio_assignments")
+}
+
+model DelegationGrant {
+  id                   String               @id @default(cuid())
+  grantorAssignmentId  String               @map("grantor_assignment_id")
+  granteeAssignmentId  String               @map("grantee_assignment_id")
+  responsibilityAreaId String?              @map("responsibility_area_id")
+  action               String               @db.VarChar(100)
+  resourceScope        String               @map("resource_scope") @db.VarChar(100)
+  validFrom            DateTime             @map("valid_from")
+  validUntil           DateTime             @map("valid_until")
+  sourceDocumentNumber String               @map("source_document_number") @db.VarChar(100)
+  reason               String?              @db.Text
+  status               DelegationStatus     @default(ACTIVE)
+  revokedAt            DateTime?            @map("revoked_at")
+  revokedReason        String?              @map("revoked_reason") @db.Text
+  grantorAssignment    PositionAssignment   @relation("GrantorDelegations", fields: [grantorAssignmentId], references: [id], onDelete: Restrict)
+  granteeAssignment    PositionAssignment   @relation("GranteeDelegations", fields: [granteeAssignmentId], references: [id], onDelete: Restrict)
+  responsibilityArea   ResponsibilityArea?  @relation(fields: [responsibilityAreaId], references: [id], onDelete: SetNull)
+  scopeRules           DelegationScopeRule[]
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  @@index([grantorAssignmentId, status])
+  @@index([granteeAssignmentId, status])
+  @@index([validFrom, validUntil, status])
+  @@map("delegation_grants")
+}
+
+model DelegationScopeRule {
+  id                String          @id @default(cuid())
+  delegationGrantId String          @map("delegation_grant_id")
+  entityType        String          @map("entity_type") @db.VarChar(50)
+  entityId          String?         @map("entity_id") @db.VarChar(100)
+  constraintType    String          @map("constraint_type") @db.VarChar(50)
+  delegationGrant   DelegationGrant @relation(fields: [delegationGrantId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  @@index([delegationGrantId])
+  @@map("delegation_scope_rules")
+}
+
 
 
 
