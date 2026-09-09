@@ -11,6 +11,7 @@ import {
   CheckCheck,
   Send,
   FileCheck,
+  CornerDownRight,
 } from "lucide-react";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
@@ -54,13 +55,13 @@ export function UniversalActionQueue({
 
   const totalOverdue = overdueSubmissionsCount + overdueApprovalsCount;
 
-  // Empty state when there are no urgent items
+  // Empty state when there are no urgent items: hidden on mobile to conserve above-the-fold viewport density
   if (pendingApprovals.length === 0 && myPendingSubmissions.length === 0) {
     return (
       <div
         data-slot="universal-action-queue"
         className={cn(
-          "rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 flex items-center justify-between gap-3 shadow-2xs transition-all",
+          "hidden sm:flex rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 items-center justify-between gap-3 shadow-2xs transition-all",
           className
         )}
       >
@@ -72,7 +73,10 @@ export function UniversalActionQueue({
             <h4 className="text-xs sm:text-sm font-semibold text-foreground">
               Không có nhiệm vụ cần xử lý gấp
             </h4>
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="text-xs text-muted-foreground leading-relaxed sm:hidden">
+              Không có việc gấp • Tiến độ ổn định
+            </p>
+            <p className="hidden sm:block text-xs text-muted-foreground truncate">
               Tất cả công việc đều đúng tiến độ và không có hồ sơ tồn đọng cần phê duyệt.
             </p>
           </div>
@@ -168,7 +172,7 @@ export function UniversalActionQueue({
       >
         {/* Lane 1: Incoming Approvals */}
         {pendingApprovals.length > 0 && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.03] p-3.5 space-y-2.5">
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.02] p-3 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
@@ -188,12 +192,50 @@ export function UniversalActionQueue({
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {displayedApprovals.map((item, idx) => {
                 const ActionIcon = approvalConfig.icon;
+                const parentTitle =
+                  (item.task as any).parentTaskTitle ||
+                  (item.task as any).parentSchoolTaskTitle ||
+                  (item.task as any).parentTask?.title;
+                const parentCode =
+                  (item.task as any).parentTaskCode ||
+                  (item.task as any).parentSchoolTaskCode ||
+                  (item.task as any).parentTask?.code;
+                const parentId =
+                  (item.task as any).parentTaskId ||
+                  (item.task as any).parentSchoolTaskId ||
+                  (item.task as any).parentTask?.id;
+
                 return (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-amber-500/20 hover:border-amber-500/40 transition-all shadow-2xs group gap-2"
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border/70 hover:border-amber-500/40 transition-colors shadow-2xs group gap-2"
                   >
                     <div className="min-w-0 flex-1 pr-1">
+                      {parentTitle && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5 truncate">
+                          <CornerDownRight className="size-3 text-muted-foreground/70 shrink-0" />
+                          {parentCode && (
+                            <span className="font-mono text-xs font-semibold text-primary/80 shrink-0">
+                              [{parentCode}]
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectTask({
+                                id: parentId || "parent",
+                                title: parentTitle,
+                                taskCode: parentCode,
+                              } as SchoolTask);
+                            }}
+                            className="hover:underline hover:text-foreground truncate text-left cursor-pointer font-medium"
+                            title={`Nhiệm vụ cha: ${parentTitle}`}
+                          >
+                            {parentTitle}
+                          </button>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => onSelectTask(item.task)}
@@ -243,7 +285,7 @@ export function UniversalActionQueue({
                 variant="ghost"
                 size="xs"
                 aria-expanded={isApprovalsExpanded}
-                className="w-full text-xs font-semibold text-amber-800 hover:bg-amber-500/10 justify-center h-8 min-h-[32px] cursor-pointer"
+                className="w-full text-xs font-semibold text-amber-800 hover:bg-amber-500/10 justify-center min-h-[44px] sm:min-h-[32px] cursor-pointer touch-manipulation"
                 onClick={() => setIsApprovalsExpanded(!isApprovalsExpanded)}
               >
                 {isApprovalsExpanded ? (
@@ -270,7 +312,7 @@ export function UniversalActionQueue({
 
         {/* Lane 2: My Pending Submissions */}
         {myPendingSubmissions.length > 0 && (
-          <div className="rounded-xl border border-blue-500/30 bg-blue-500/[0.03] p-3.5 space-y-2.5">
+          <div className="rounded-xl border border-blue-500/25 bg-blue-500/[0.02] p-3 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-blue-500 animate-pulse" />
@@ -288,42 +330,81 @@ export function UniversalActionQueue({
             </div>
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {displayedSubmissions.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-blue-500/20 hover:border-blue-500/40 transition-all shadow-2xs group gap-2"
-                >
-                  <div className="min-w-0 flex-1 pr-1">
-                    <button
-                      type="button"
-                      onClick={() => onSelectTask(item.task)}
-                      className="text-left text-xs font-semibold text-foreground hover:text-blue-900 focus-visible:underline focus-visible:outline-none transition-colors truncate block w-full cursor-pointer"
-                    >
-                      {item.task.title}
-                    </button>
-                    <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
-                      {item.isOverdue ? (
-                        <span className="text-rose-700 font-semibold flex items-center gap-1">
-                          <AlertTriangle className="size-3" strokeWidth={1.5} />
-                          Quá hạn:{" "}
-                          <span className="font-mono tabular-nums">
-                            {item.dueDate}
-                          </span>
-                        </span>
-                      ) : (
-                        <span>
-                          Hạn:{" "}
-                          <span className="font-mono tabular-nums">
-                            {item.dueDate || "Trong tuần"}
-                          </span>
-                        </span>
+              {displayedSubmissions.map((item, idx) => {
+                const parentTitle =
+                  (item.task as any).parentTaskTitle ||
+                  (item.task as any).parentSchoolTaskTitle ||
+                  (item.task as any).parentTask?.title;
+                const parentCode =
+                  (item.task as any).parentTaskCode ||
+                  (item.task as any).parentSchoolTaskCode ||
+                  (item.task as any).parentTask?.code;
+                const parentId =
+                  (item.task as any).parentTaskId ||
+                  (item.task as any).parentSchoolTaskId ||
+                  (item.task as any).parentTask?.id;
+
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border/70 hover:border-blue-500/40 transition-colors shadow-2xs group gap-2"
+                  >
+                    <div className="min-w-0 flex-1 pr-1">
+                      {parentTitle && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5 truncate">
+                          <CornerDownRight className="size-3 text-muted-foreground/70 shrink-0" />
+                          {parentCode && (
+                            <span className="font-mono text-xs font-semibold text-primary/80 shrink-0">
+                              [{parentCode}]
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectTask({
+                                id: parentId || "parent",
+                                title: parentTitle,
+                                taskCode: parentCode,
+                              } as SchoolTask);
+                            }}
+                            className="hover:underline hover:text-foreground truncate text-left cursor-pointer font-medium"
+                            title={`Nhiệm vụ cha: ${parentTitle}`}
+                          >
+                            {parentTitle}
+                          </button>
+                        </div>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => onSelectTask(item.task)}
+                        className="text-left text-xs font-semibold text-foreground hover:text-blue-900 focus-visible:underline focus-visible:outline-none transition-colors truncate block w-full cursor-pointer"
+                      >
+                        {item.task.title}
+                      </button>
+                      <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
+                        {item.isOverdue ? (
+                          <span className="text-rose-700 font-semibold flex items-center gap-1">
+                            <AlertTriangle className="size-3" strokeWidth={1.5} />
+                            Quá hạn:{" "}
+                            <span className="font-mono tabular-nums">
+                              {item.dueDate}
+                            </span>
+                          </span>
+                        ) : (
+                          <span>
+                            Hạn:{" "}
+                            <span className="font-mono tabular-nums">
+                              {item.dueDate || "Trong tuần"}
+                            </span>
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <Button
-                    size="xs"
-                    className="min-h-[44px] touch-manipulation px-3.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shrink-0 gap-1.5 cursor-pointer"
-                    onClick={() => {
+                    <Button
+                      size="xs"
+                      className="min-h-[44px] touch-manipulation px-3.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shrink-0 gap-1.5 cursor-pointer"
+                      onClick={() => {
                       if (onOpenSubmit) {
                         const staffTask: StaffTask = ("assigneeName" in item.task)
                           ? (item.task as StaffTask)
@@ -353,8 +434,9 @@ export function UniversalActionQueue({
                     <span>Nộp minh chứng</span>
                   </Button>
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
             {/* Collapsible tray button when count > 3 */}
             {myPendingSubmissions.length > 3 && (
@@ -362,7 +444,7 @@ export function UniversalActionQueue({
                 variant="ghost"
                 size="xs"
                 aria-expanded={isSubmissionsExpanded}
-                className="w-full text-xs font-semibold text-blue-800 hover:bg-blue-500/10 justify-center h-8 min-h-[32px] cursor-pointer"
+                className="w-full text-xs font-semibold text-blue-800 hover:bg-blue-500/10 justify-center min-h-[44px] sm:min-h-[32px] cursor-pointer touch-manipulation"
                 onClick={() => setIsSubmissionsExpanded(!isSubmissionsExpanded)}
               >
                 {isSubmissionsExpanded ? (

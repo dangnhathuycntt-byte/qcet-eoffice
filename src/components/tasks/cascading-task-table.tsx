@@ -26,6 +26,8 @@ import {
   RotateCcw,
   SlidersHorizontal,
   X,
+  CornerDownRight,
+  UploadCloud,
 } from "lucide-react";
 import {
   BottomSheet,
@@ -368,6 +370,142 @@ function isPastDueDate(dateStr?: string): boolean {
 
 export type WorkboxFilter = "ALL" | "MY_RECEIVED" | "MY_ASSIGNED" | "URGENT";
 
+export interface FlattenedPersonalTaskRow extends SchoolTask {
+  isSubtask?: boolean;
+  parentSchoolTaskId?: string;
+  parentSchoolTaskTitle?: string;
+  parentSchoolTaskCode?: string;
+  rawSubtask?: StaffTask;
+}
+
+/**
+ * Flattens subtasks assigned to a user into first-class task rows for the personal workbox ("MY_RECEIVED").
+ * - Subtasks where user is lead assignee or collaborator are extracted as first-class rows with parent breadcrumb.
+ * - Parent tasks where user is lead assignee are included (mapped) with proper subtasks count.
+ * - Parent tasks where user is NOT the lead assignee are excluded as top-level blocks.
+ */
+export function flattenPersonalTasks(
+  tasks: SchoolTask[],
+  currentUserName: string,
+  currentUserId?: string
+): StaffTask[] {
+  const result: StaffTask[] = [];
+  const normalizedName = currentUserName?.trim().toLowerCase() || "";
+  const normalizedId = currentUserId?.trim() || "";
+
+  const isUserMatch = (name?: string, id?: string): boolean => {
+    if (normalizedId && id && id === normalizedId) return true;
+    if (!name || !normalizedName) return false;
+    const n = name.trim().toLowerCase();
+    return n === normalizedName || n.includes(normalizedName) || normalizedName.includes(n);
+  };
+
+  const isCollaborator = (
+    collaborators?: { id?: string; name?: string }[],
+    coAssignees?: (string | { id?: string; name?: string })[]
+  ): boolean => {
+    if (collaborators?.some((c) => isUserMatch(c.name, c.id))) return true;
+    if (
+      coAssignees?.some((c) =>
+        typeof c === "string" ? isUserMatch(c, undefined) : isUserMatch(c.name, c.id)
+      )
+    )
+      return true;
+    return false;
+  };
+
+  for (const task of tasks) {
+    const isLeadOfParent = isUserMatch(task.leadAssigneeName, task.leadAssigneeId);
+    const parentCode = task.taskCode || task.code || task.id;
+
+    // 1. If user is lead of parent task, include parent task as first-class personal row
+    if (isLeadOfParent) {
+      const totalSubs = task.totalSubTasks ?? task.subTasks?.length ?? 0;
+      const completedSubs =
+        task.completedSubTasks ??
+        task.subTasks?.filter((s) => s.status === "COMPLETED").length ??
+        0;
+
+      result.push({
+        id: task.id,
+        code: parentCode,
+        title: task.title,
+        assigneeName: task.leadAssigneeName,
+        assigneeId: task.leadAssigneeId,
+        assigneeAvatar: task.leadAssigneeAvatar,
+        status: task.status,
+        dueDate: task.dueDate,
+        updatedAt:
+          (task as { updatedAt?: string }).updatedAt ||
+          task.assignedDate ||
+          new Date().toISOString(),
+        progressPercent: task.progressPercent,
+        department: task.department || task.leadDepartment,
+        departmentCode: task.departmentCode || task.leadDepartmentCode,
+        departmentId: task.departmentId || task.leadDepartmentId,
+        subItems: task.subTasks?.map((s) => ({
+          id: s.id,
+          title: s.title,
+          assigneeId: s.assigneeId,
+          assigneeName: s.assigneeName,
+          dueDate: s.dueDate,
+          status: s.status,
+        })),
+        deliverables: [],
+        ...( {
+          category: task.category,
+          categoryLabel: task.categoryLabel,
+          totalSubTasks: totalSubs,
+          completedSubTasks: completedSubs,
+          subTasks: task.subTasks,
+        } as any ),
+      });
+    }
+
+    // 2. Extract subtasks assigned to user (as DRI assignee or collaborator)
+    if (task.subTasks && task.subTasks.length > 0) {
+      for (const sub of task.subTasks) {
+        const isSubAssignee = isUserMatch(sub.assigneeName, sub.assigneeId);
+        const isSubCollab = isCollaborator(sub.collaborators, sub.coAssignees);
+
+        if (isSubAssignee || isSubCollab) {
+          result.push({
+            ...sub,
+            id: sub.id,
+            code: sub.code || sub.id,
+            title: sub.title,
+            assigneeName: sub.assigneeName,
+            assigneeId: sub.assigneeId,
+            assigneeAvatar: sub.assigneeAvatar,
+            status: sub.status,
+            dueDate: sub.dueDate,
+            internalDueDate: sub.internalDueDate,
+            parentSchoolTaskId: task.id,
+            parentSchoolTaskTitle: task.title,
+            parentSchoolTaskCode: parentCode,
+            parentTaskScope: "SCHOOL",
+            parentTask: {
+              id: task.id,
+              code: parentCode,
+              title: task.title,
+              scope: "SCHOOL",
+            },
+            updatedAt: sub.updatedAt || task.assignedDate || new Date().toISOString(),
+            deliverables: sub.deliverables || [],
+            deliverableDescription: sub.deliverableDescription,
+            progressPercent: sub.progressPercent ?? (sub.status === "COMPLETED" ? 100 : 0),
+            department: sub.department || task.department || task.leadDepartment,
+            departmentCode: sub.departmentCode || task.leadDepartmentCode,
+            departmentId: sub.departmentId || task.leadDepartmentId,
+          });
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
 export interface CascadingTaskTableProps {
   tasks: SchoolTask[];
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
@@ -383,12 +521,13 @@ export interface CascadingTaskTableProps {
 }
 
 interface MobileTaskCardProps {
-  task: SchoolTask;
+  task: SchoolTask | FlattenedPersonalTaskRow;
   isExpanded: boolean;
   onToggleExpand: (id: string, e: React.MouseEvent) => void;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
   selectedAcademicMonth?: number | "ALL";
+  onOpenSubmitModal?: (task: StaffTask) => void;
 }
 
 function MobileTaskCard({
@@ -398,8 +537,14 @@ function MobileTaskCard({
   onSelectTask,
   onStatusChange,
   selectedAcademicMonth,
+  onOpenSubmitModal,
 }: MobileTaskCardProps) {
   const statusConfig = getStatusBadgeConfig(task.status);
+  const isSubtaskRow = (task as FlattenedPersonalTaskRow).isSubtask;
+  const parentSchoolTaskId = (task as FlattenedPersonalTaskRow).parentSchoolTaskId;
+  const parentSchoolTaskTitle = (task as FlattenedPersonalTaskRow).parentSchoolTaskTitle;
+  const parentSchoolTaskCode = (task as FlattenedPersonalTaskRow).parentSchoolTaskCode;
+  const rawSubtask = (task as FlattenedPersonalTaskRow).rawSubtask;
 
   const swipe = useSwipeAction({
     threshold: 72,
@@ -432,9 +577,16 @@ function MobileTaskCard({
 
       {/* Card Header: Task code & Status Badge */}
       <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-xs font-bold text-primary">
-          {task.taskCode || "NV-QCET"}
-        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-mono text-xs font-bold text-primary">
+            {task.taskCode || "NV-QCET"}
+          </span>
+          {isSubtaskRow && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+              Việc thành phần
+            </span>
+          )}
+        </div>
         <span
           className={cn(
             "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border",
@@ -445,9 +597,40 @@ function MobileTaskCard({
         </span>
       </div>
 
+      {/* Parent Task Breadcrumb on Flattened Subtasks */}
+      {parentSchoolTaskId && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-0.5">
+          <CornerDownRight className="size-3 text-muted-foreground/70 shrink-0" />
+          <span className="font-mono text-xs font-semibold text-primary/80">
+            [{parentSchoolTaskCode || parentSchoolTaskId}]
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectTask?.({
+                id: parentSchoolTaskId,
+                title: parentSchoolTaskTitle || "Nhiệm vụ cha",
+                taskCode: parentSchoolTaskCode,
+              } as SchoolTask);
+            }}
+            className="hover:underline hover:text-foreground truncate max-w-[220px] text-left cursor-pointer font-medium"
+            title={`Xem nhiệm vụ cha: ${parentSchoolTaskTitle}`}
+          >
+            {parentSchoolTaskTitle}
+          </button>
+        </div>
+      )}
+
       {/* Card Title */}
       <h4
-        onClick={() => onSelectTask?.(task)}
+        onClick={() => {
+          if (isSubtaskRow && rawSubtask) {
+            onSelectTask?.(rawSubtask);
+          } else {
+            onSelectTask?.(task);
+          }
+        }}
         className="text-sm font-semibold text-foreground line-clamp-2 leading-snug cursor-pointer active:text-primary"
       >
         {task.title}
@@ -462,22 +645,30 @@ function MobileTaskCard({
       </div>
 
       {/* Quick Action Buttons - Always Visible on Mobile */}
-      {onStatusChange && (
-        <div className="flex items-center gap-2 pt-1">
-          {task.status === "IN_PROGRESS" && (
-            <button
-              type="button"
-              onClick={() => onStatusChange(task.id, "COMPLETED")}
-              className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold text-xs active:scale-[0.98] touch-manipulation cursor-pointer"
-            >
-              Duyệt nhanh
-            </button>
-          )}
-        </div>
-      )}
+      <div className="flex items-center gap-2 pt-1">
+        {isSubtaskRow && onOpenSubmitModal && (
+          <button
+            type="button"
+            onClick={() => onOpenSubmitModal(rawSubtask || (task as any))}
+            className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-white font-semibold text-xs active:scale-[0.98] touch-manipulation cursor-pointer shadow-2xs"
+          >
+            <UploadCloud className="size-3.5" />
+            <span>Nộp minh chứng</span>
+          </button>
+        )}
+        {onStatusChange && task.status === "IN_PROGRESS" && (
+          <button
+            type="button"
+            onClick={() => onStatusChange(task.id, "COMPLETED")}
+            className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold text-xs active:scale-[0.98] touch-manipulation cursor-pointer shadow-2xs"
+          >
+            {isSubtaskRow ? "Hoàn thành" : "Duyệt nhanh"}
+          </button>
+        )}
+      </div>
 
-      {/* Subtask Accordion Trigger */}
-      {task.subTasks && task.subTasks.length > 0 && (
+      {/* Subtask Accordion Trigger (Only for hierarchical parent tasks) */}
+      {!isSubtaskRow && task.subTasks && task.subTasks.length > 0 && (
         <>
           <button
             type="button"
@@ -646,9 +837,49 @@ export function CascadingTaskTable({
     if (hideWorkbox || activeWorkbox === "ALL") return tasks;
     const userName = user?.name?.toLowerCase() || "";
 
-    // ADMIN (BGH) sees all tasks in "Việc tôi giao/nhận" context
+    if (activeWorkbox === "MY_RECEIVED") {
+      const flattened = flattenPersonalTasks(tasks, user?.name || "", user?.id);
+      return flattened.map((item) => {
+        const isSub = Boolean(item.parentSchoolTaskId);
+        const originalParent = isSub ? tasks.find((t) => t.id === item.parentSchoolTaskId) : undefined;
+        const row: FlattenedPersonalTaskRow = {
+          id: item.id,
+          taskCode: item.code || (isSub ? item.id.toUpperCase() : item.id),
+          code: item.code,
+          title: item.title,
+          category: (item as any).category || originalParent?.category || "CHUYEN_DOI_SO",
+          categoryLabel:
+            (item as any).categoryLabel ||
+            originalParent?.categoryLabel ||
+            (isSub ? "Việc thành phần" : "Nhiệm vụ"),
+          status: item.status,
+          dueDate: item.dueDate,
+          assignedDate: (item as any).assignedDate || originalParent?.assignedDate || item.dueDate || "2026-09-01",
+          progressPercent:
+            item.progressPercent ?? (item.status === "COMPLETED" ? 100 : 0),
+          leadAssigneeName: item.assigneeName,
+          leadAssigneeId: item.assigneeId,
+          leadAssigneeAvatar: item.assigneeAvatar,
+          coAssignees: [],
+          totalSubTasks: (item as any).totalSubTasks ?? item.subItems?.length ?? 0,
+          completedSubTasks: (item as any).completedSubTasks ?? 0,
+          subTasks: (item as any).subTasks || [],
+          isSubtask: isSub,
+          parentSchoolTaskId: item.parentSchoolTaskId,
+          parentSchoolTaskTitle: item.parentSchoolTaskTitle,
+          parentSchoolTaskCode: item.parentSchoolTaskCode,
+          rawSubtask: isSub ? item : undefined,
+          department: item.department || originalParent?.department,
+          departmentCode: item.departmentCode || originalParent?.departmentCode,
+          departmentId: item.departmentId || originalParent?.departmentId,
+        };
+        return row;
+      });
+    }
+
+    // ADMIN (BGH) sees all tasks in "Việc tôi giao" context
     if (user?.role === "ADMIN") {
-      if (activeWorkbox === "MY_RECEIVED" || activeWorkbox === "MY_ASSIGNED") {
+      if (activeWorkbox === "MY_ASSIGNED") {
         return tasks;
       }
       if (activeWorkbox === "URGENT") {
@@ -661,19 +892,6 @@ export function CascadingTaskTable({
         });
       }
       return tasks;
-    }
-
-    if (activeWorkbox === "MY_RECEIVED") {
-      return tasks.filter((t) => {
-        const isLead = matchesUser(t.leadAssigneeName, user) || (userName && t.leadAssigneeName.toLowerCase().includes(userName));
-        const isCo = t.coAssignees?.some((c) =>
-          matchesUser(c, user) || (userName && c.toLowerCase().includes(userName))
-        );
-        const hasSub = t.subTasks?.some((s) =>
-          matchesUser(s.assigneeName, user) || (userName && s.assigneeName.toLowerCase().includes(userName))
-        );
-        return isLead || isCo || hasSub;
-      });
     }
 
     if (activeWorkbox === "MY_ASSIGNED") {
@@ -697,22 +915,17 @@ export function CascadingTaskTable({
 
   // Compute workbox counts for badge numbers
   const workboxCounts = React.useMemo(() => {
-    const userName = user?.name?.toLowerCase() || "";
+    const userName = user?.name || "";
+    const userId = user?.id || "";
     const isAdmin = user?.role === "ADMIN";
 
-    let received = 0;
+    const personalReceivedTasks = flattenPersonalTasks(tasks, userName, userId);
+    const received = personalReceivedTasks.length;
     let assigned = 0;
     let urgent = 0;
 
     for (const t of tasks) {
-      const isLead = matchesUser(t.leadAssigneeName, user) || (userName && t.leadAssigneeName.toLowerCase().includes(userName));
-      const isCo = t.coAssignees?.some((c) =>
-        matchesUser(c, user) || (userName && c.toLowerCase().includes(userName))
-      );
-      const hasSub = t.subTasks?.some((s) =>
-        matchesUser(s.assigneeName, user) || (userName && s.assigneeName.toLowerCase().includes(userName))
-      );
-      if (isAdmin || isLead || isCo || hasSub) received++;
+      const isLead = matchesUser(t.leadAssigneeName, user) || (userName && t.leadAssigneeName.toLowerCase().includes(userName.toLowerCase()));
       if (isAdmin || isLead) assigned++;
 
       const isPastDue = isPastDueDate(t.dueDate) && t.status !== "COMPLETED";
@@ -1282,17 +1495,32 @@ export function CascadingTaskTable({
                   const isExpanded = expandedTaskIds.has(task.id);
                   const hasSubtasks =
                     task.subTasks && task.subTasks.length > 0;
+                  const isSubtaskRow = (task as FlattenedPersonalTaskRow).isSubtask;
+                  const parentSchoolTaskId = (task as FlattenedPersonalTaskRow).parentSchoolTaskId;
+                  const parentSchoolTaskTitle = (task as FlattenedPersonalTaskRow).parentSchoolTaskTitle;
+                  const parentSchoolTaskCode = (task as FlattenedPersonalTaskRow).parentSchoolTaskCode;
+                  const rawSubtask = (task as FlattenedPersonalTaskRow).rawSubtask;
 
                   return (
                     <React.Fragment key={task.id}>
-                      {/* Tier 1 Parent Row */}
+                      {/* Tier 1 Parent Row or Flattened Subtask Row */}
                       <tr
                         tabIndex={0}
-                        onClick={() => onSelectTask?.(task)}
+                        onClick={() => {
+                          if (isSubtaskRow && rawSubtask) {
+                            onSelectTask?.(rawSubtask);
+                          } else {
+                            onSelectTask?.(task);
+                          }
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            onSelectTask?.(task);
+                            if (isSubtaskRow && rawSubtask) {
+                              onSelectTask?.(rawSubtask);
+                            } else {
+                              onSelectTask?.(task);
+                            }
                           }
                         }}
                         className={cn(
@@ -1301,11 +1529,13 @@ export function CascadingTaskTable({
                           isExpanded && "bg-muted/20"
                         )}
                         data-task-id={task.id}
-                        data-task-tier="1"
+                        data-task-tier={isSubtaskRow ? "subtask" : "1"}
                       >
-                        {/* Expand / Collapse Caret */}
+                        {/* Expand / Collapse Caret or Subtask Indicator */}
                         <td className={cn("table-cell-dense px-4 text-center align-middle", density === "compact" ? "py-1.5" : "py-3")}>
-                          {hasSubtasks ? (
+                          {isSubtaskRow ? (
+                            <CornerDownRight className="size-3.5 text-primary/70 inline-block" strokeWidth={1.75} />
+                          ) : hasSubtasks ? (
                             <button
                               type="button"
                               onClick={(e) => toggleExpand(task.id, e)}
@@ -1327,34 +1557,71 @@ export function CascadingTaskTable({
 
                         {/* Task Code */}
                         <td className={cn("w-24 table-cell-dense px-4 align-middle whitespace-nowrap font-mono text-xs sm:text-[13px] tabular-nums text-muted-foreground font-semibold", density === "compact" ? "py-1.5" : "py-3")}>
-                          {task.id.toUpperCase()}
+                          {(task.code || task.taskCode || task.id).toUpperCase()}
                         </td>
 
                         {/* Task Title */}
                         <td className={cn("table-cell-dense px-4 align-middle text-sm font-medium text-foreground leading-snug", density === "compact" ? "py-1.5" : "py-3")}>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="line-clamp-1 text-sm font-medium text-foreground leading-snug">{task.title}</span>
-                            {hasSubtasks && (
-                              <span className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground">
-                                {task.completedSubTasks}/{task.totalSubTasks}
-                              </span>
+                          <div className="flex flex-col gap-0.5 py-0.5">
+                            {/* Breadcrumb to parent task */}
+                            {parentSchoolTaskId && (
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <CornerDownRight className="size-3 text-muted-foreground/70 shrink-0" />
+                                <span className="font-mono text-xs font-semibold text-primary/80">
+                                  [{parentSchoolTaskCode || parentSchoolTaskId}]
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const parent = tasks.find((t) => t.id === parentSchoolTaskId);
+                                    if (parent) {
+                                      onSelectTask?.(parent);
+                                    } else {
+                                      onSelectTask?.({
+                                        id: parentSchoolTaskId,
+                                        title: parentSchoolTaskTitle || "Nhiệm vụ cha",
+                                        taskCode: parentSchoolTaskCode,
+                                      } as SchoolTask);
+                                    }
+                                  }}
+                                  className="hover:underline hover:text-foreground truncate max-w-[240px] text-left cursor-pointer font-medium"
+                                  title={`Xem nhiệm vụ cha: ${parentSchoolTaskTitle}`}
+                                >
+                                  {parentSchoolTaskTitle}
+                                </button>
+                              </div>
                             )}
-                            {selectedAcademicMonth !== "ALL" && hasSubtasks && (() => {
-                              const dueInMonthCount = task.subTasks?.filter(
-                                (s) => s.dueDate && isDateInAcademicMonth(s.dueDate, selectedAcademicMonth, "2026-2027")
-                              ).length || 0;
-                              if (dueInMonthCount > 0) {
-                                return (
-                                  <span
-                                    className="rounded-md bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums"
-                                    title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
-                                  >
-                                    Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount} NV con)
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
+
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {isSubtaskRow && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
+                                  Việc thành phần
+                                </span>
+                              )}
+                              <span className="line-clamp-1 text-sm font-medium text-foreground leading-snug">{task.title}</span>
+                              {!isSubtaskRow && hasSubtasks && (
+                                <span className="rounded-md bg-secondary px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+                                  {task.completedSubTasks}/{task.totalSubTasks}
+                                </span>
+                              )}
+                              {selectedAcademicMonth !== "ALL" && hasSubtasks && (() => {
+                                const dueInMonthCount = task.subTasks?.filter(
+                                  (s) => s.dueDate && isDateInAcademicMonth(s.dueDate, selectedAcademicMonth, "2026-2027")
+                                ).length || 0;
+                                if (dueInMonthCount > 0) {
+                                  return (
+                                    <span
+                                      className="rounded-md bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums"
+                                      title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
+                                    >
+                                      Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount} NV con)
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
                           </div>
                         </td>
 
@@ -1392,6 +1659,25 @@ export function CascadingTaskTable({
                           <div className="flex items-center justify-end gap-2">
                             {/* Micro-ghost Quick Actions */}
                             <div className="flex items-center gap-1">
+                              {isSubtaskRow && (onOpenSubmitModal || onSelectTask) && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onOpenSubmitModal && rawSubtask) {
+                                      onOpenSubmitModal(rawSubtask);
+                                    } else {
+                                      onSelectTask?.(rawSubtask || task);
+                                    }
+                                  }}
+                                  className="inline-flex h-6 items-center gap-1 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 text-xs font-semibold tabular-nums text-blue-700 hover:bg-blue-500/20 cursor-pointer active:scale-[0.98] transition-colors"
+                                  title="Nộp minh chứng hoàn thành nhiệm vụ con"
+                                >
+                                  <UploadCloud className="size-3" strokeWidth={1.5} />
+                                  <span>Nộp minh chứng</span>
+                                </button>
+                              )}
+
                               {onStatusChange && task.status === "IN_PROGRESS" && (
                                 <button
                                   type="button"
@@ -1400,14 +1686,14 @@ export function CascadingTaskTable({
                                     onStatusChange(task.id, "COMPLETED");
                                   }}
                                   className="inline-flex h-6 items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 text-xs font-semibold tabular-nums text-emerald-700 hover:bg-emerald-500/20 cursor-pointer active:scale-[0.98] transition-colors"
-                                  title="Duyệt nhanh hoàn thành nhiệm vụ"
+                                  title={isSubtaskRow ? "Hoàn thành nhiệm vụ" : "Duyệt nhanh hoàn thành nhiệm vụ"}
                                 >
                                   <Check className="size-3" strokeWidth={1.5} />
-                                  <span>Duyệt nhanh</span>
+                                  <span>{isSubtaskRow ? "Hoàn thành" : "Duyệt nhanh"}</span>
                                 </button>
                               )}
 
-                              {task.status !== "COMPLETED" && (
+                              {!isSubtaskRow && task.status !== "COMPLETED" && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -1421,7 +1707,7 @@ export function CascadingTaskTable({
                                 </button>
                               )}
 
-                              {canAssign && onAddTask && (
+                              {!isSubtaskRow && canAssign && onAddTask && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -1493,7 +1779,7 @@ export function CascadingTaskTable({
                       </tr>
 
                       {/* Tier 2 Nested Container (Sub-tasks) */}
-                      {isExpanded && hasSubtasks && (
+                      {!isSubtaskRow && isExpanded && hasSubtasks && (
                         <tr>
                           <td
                             colSpan={6}

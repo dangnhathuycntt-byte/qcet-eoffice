@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { filterTasksByRole } from "@/lib/role-task-filter";
+import { getDepartmentForMember } from "@/lib/departments";
 import {
   LayoutGrid,
   List,
@@ -167,7 +168,7 @@ export default function TasksPage() {
   };
 
   // Handle Task Creation
-  const handleCreateTask = (data: CreateTaskFormData) => {
+  const handleCreateTask = async (data: CreateTaskFormData) => {
     const todayStr = new Date().toISOString().split("T")[0];
 
     setDashboardData((prev) => {
@@ -198,6 +199,7 @@ export default function TasksPage() {
           id: `sub-${Date.now()}`,
           title: data.title,
           assigneeName: data.leadAssigneeName,
+          coAssignees: data.coAssignees?.map((name, idx) => ({ id: `co-${idx}-${Date.now()}`, name })),
           status: "NEW",
           dueDate: data.dueDate,
           internalDueDate: data.internalDueDate,
@@ -234,6 +236,33 @@ export default function TasksPage() {
         stats: computeDashboardStats(rolledUp),
       };
     });
+
+    try {
+      const deptGroup = getDepartmentForMember(data.leadAssigneeName);
+      const departmentId = deptGroup?.id || user?.department || "BGH";
+
+      const payload = {
+        title: data.title,
+        description: data.description || data.requiredDeliverables || "",
+        dueDate: data.dueDate,
+        departmentId,
+        scope: data.level === "TRUONG" ? "SCHOOL" : "DEPARTMENT",
+        parentTaskId: data.level === "DON_VI" ? data.parentTaskId : undefined,
+        creatorId: user?.id,
+      };
+
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (err) {
+      console.warn("Lỗi khi kết nối đến máy chủ để lưu nhiệm vụ:", err);
+    }
   };
 
   const openCreateModal = (level: TaskLevel, parentId?: string) => {
