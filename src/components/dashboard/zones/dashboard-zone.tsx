@@ -8,6 +8,7 @@ import { ExecutiveActionCenter } from "@/components/dashboard/executive-action-c
 import { DepartmentProgressMatrix } from "@/components/dashboard/department-progress-matrix";
 import { UpcomingDeadlinesWidget } from "@/components/dashboard/upcoming-deadlines-widget";
 import { ActivityFeedWidget } from "@/components/dashboard/activity-feed-widget";
+import { PriorOverdueBacklogBanner } from "@/components/dashboard/prior-overdue-backlog-banner";
 import {
   useDashboardData,
   useDashboardActions,
@@ -22,6 +23,9 @@ function DashboardZoneComponent() {
     executiveFilter,
     departmentHealth,
     selectedDepartment,
+    selectedAcademicMonth,
+    selectedMonthPeriod,
+    priorOverdueBacklog,
     roleUpcoming,
     activities,
     isRefreshing,
@@ -44,6 +48,13 @@ function DashboardZoneComponent() {
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
               Phân khu Điều hành
             </span>
+            {selectedAcademicMonth !== "ALL" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-900 border border-amber-500/20 shadow-2xs font-mono">
+                {selectedMonthPeriod
+                  ? `KỲ VẬN HÀNH THÁNG ${selectedAcademicMonth} (${selectedMonthPeriod.shortDateSpan}/2026)`
+                  : `KỲ VẬN HÀNH THÁNG ${selectedAcademicMonth}`}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground font-medium">
               {isExecutive ? "BGH Giám sát toàn trường" : `Đơn vị: ${user?.department || "QCET"}`}
             </span>
@@ -62,7 +73,7 @@ function DashboardZoneComponent() {
             size="sm"
             onClick={handleManualRefresh}
             disabled={isRefreshing}
-            className="gap-1.5 text-xs rounded-xl"
+            className="hidden sm:inline-flex gap-1.5 text-xs rounded-xl"
           >
             <RefreshCw
               size={14}
@@ -81,6 +92,15 @@ function DashboardZoneComponent() {
           onFilterChange={(filter) => setActiveWorkbox(filter)}
         />
       </section>
+
+      {/* Prior Overdue Backlog Banner */}
+      {priorOverdueBacklog && priorOverdueBacklog.length > 0 && selectedAcademicMonth !== "ALL" && (
+        <PriorOverdueBacklogBanner
+          tasks={priorOverdueBacklog}
+          selectedMonth={selectedAcademicMonth}
+          monthPeriod={selectedMonthPeriod}
+        />
+      )}
 
       {/* Executive Cockpit (BGH only) */}
       {isExecutive && executiveStats && (
