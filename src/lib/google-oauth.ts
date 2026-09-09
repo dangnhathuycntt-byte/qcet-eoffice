@@ -1,3 +1,5 @@
+import { serverEnv } from "@/config/env.server";
+
 export interface GoogleTokens {
   access_token: string;
   id_token?: string;
@@ -32,8 +34,8 @@ export function isAllowedDomain(email?: string | null, _hd?: string | null): boo
  * Phân giải URL gốc của ứng dụng (Base URL), hỗ trợ Nginx/Docker reverse proxy
  */
 export function getAppBaseUrl(req?: Request): string {
-  if (process.env.NEXTAUTH_URL) {
-    return process.env.NEXTAUTH_URL.replace(/\/$/, "");
+  if (serverEnv.NEXTAUTH_URL) {
+    return serverEnv.NEXTAUTH_URL.replace(/\/$/, "");
   }
   if (process.env.NEXT_PUBLIC_APP_URL) {
     return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");

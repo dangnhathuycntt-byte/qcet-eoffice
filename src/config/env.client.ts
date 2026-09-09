@@ -56,6 +56,20 @@ export const ClientEnvSchema = z
 export type ClientEnv = z.infer<typeof ClientEnvSchema>;
 
 /**
+ * Static client source map.
+ * Next.js bundlers (Webpack / Turbopack) only inline process.env.NEXT_PUBLIC_*
+ * when referenced statically as member expressions. Dynamic access fails in browser runtime.
+ */
+export const clientSource = {
+  NODE_ENV: process.env.NODE_ENV,
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+  NEXT_PUBLIC_REFERENCE_DATE: process.env.NEXT_PUBLIC_REFERENCE_DATE,
+  NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
+};
+
+/**
  * Safely extracts only NEXT_PUBLIC_* and NODE_ENV variables from an environment record.
  * This guarantees server secrets in process.env are never passed to the client validator.
  */
@@ -75,10 +89,20 @@ export function extractClientEnv(
  * Validates client environment variables.
  * If rawEnv is explicitly provided, validates it directly through ClientEnvSchema
  * (rejecting any unrecognized or secret keys).
+ * Otherwise uses clientSource with static process.env.NEXT_PUBLIC_* references.
  */
 export function validateClientEnv(rawEnv?: Record<string, unknown>): ClientEnv {
-  const source =
-    rawEnv ?? (typeof window !== "undefined" ? process.env : extractClientEnv(process.env));
+  if (rawEnv) {
+    for (const secretKey of FORBIDDEN_SERVER_SECRETS) {
+      if (secretKey in rawEnv) {
+        throw new Error(
+          `[QCET-ENV] Client environment validation failed:\n  - [${secretKey}]: Server secret key '${secretKey}' forbidden in client environment`
+        );
+      }
+    }
+  }
+
+  const source = rawEnv ?? clientSource;
 
   const result = ClientEnvSchema.safeParse(source);
   if (!result.success) {

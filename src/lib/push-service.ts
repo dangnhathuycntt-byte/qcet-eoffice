@@ -1,5 +1,6 @@
 import * as webpush from "web-push";
 import { prisma } from "@/lib/prisma";
+import { serverEnv } from "@/config/env.server";
 
 export type TaskPushEventType =
   | "TASK_ASSIGNED"
@@ -86,22 +87,22 @@ const DEFAULT_VAPID_SUBJECT = "mailto:admin@qcet.edu.vn";
 let isVapidConfigured = false;
 
 export function ensureVapidConfigured(): { publicKey: string; privateKey: string; subject: string } {
-  if (process.env.NODE_ENV === "production") {
-    if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+  if (serverEnv.NODE_ENV === "production") {
+    if (!serverEnv.VAPID_PUBLIC_KEY || !serverEnv.VAPID_PRIVATE_KEY) {
       throw new Error("Missing required VAPID credentials in production environment");
     }
   }
 
-  let publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || FALLBACK_VAPID_PUBLIC_KEY;
-  let privateKey = process.env.VAPID_PRIVATE_KEY || FALLBACK_VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT || DEFAULT_VAPID_SUBJECT;
+  let publicKey = serverEnv.VAPID_PUBLIC_KEY || FALLBACK_VAPID_PUBLIC_KEY;
+  let privateKey = serverEnv.VAPID_PRIVATE_KEY || FALLBACK_VAPID_PRIVATE_KEY;
+  const subject = serverEnv.VAPID_SUBJECT || DEFAULT_VAPID_SUBJECT;
 
   if (!isVapidConfigured) {
     try {
       webpush.setVapidDetails(subject, publicKey, privateKey);
       isVapidConfigured = true;
     } catch (err) {
-      if (process.env.NODE_ENV === "production") {
+      if (serverEnv.NODE_ENV === "production") {
         throw err;
       }
       // In case the configured keys are malformed, fallback to deterministic keys

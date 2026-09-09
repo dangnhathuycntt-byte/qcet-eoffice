@@ -10,8 +10,21 @@ export const DEV_DATABASE_URL_FALLBACK =
   "postgresql://localhost:5432/qcet_eoffice?schema=public";
 
 /**
+ * Detects whether we are in a Next.js build phase or explicit CI/Docker build bypass.
+ * In Docker builds (`RUN npm run build`), NODE_ENV=production is set but runtime secrets
+ * are intentionally not present during static compilation.
+ */
+export function isBuildPhase(env: Record<string, unknown> = process.env): boolean {
+  return (
+    env.NEXT_PHASE === "phase-production-build" ||
+    env.SKIP_ENV_VALIDATION === "true"
+  );
+}
+
+/**
  * Zod schema for server environment configuration.
  * Enforces strict validation and fail-fast behavior in production.
+ * Uses immutable transform without mutating input objects in superRefine.
  */
 export const ServerEnvSchema = z
   .object({
@@ -38,12 +51,22 @@ export const ServerEnvSchema = z
     TEMP_STORAGE_DIR: z.string().optional(),
   })
   .transform((raw) => {
-    // Resolve aliases and fallbacks for backward compatibility
-    const authSecret = raw.AUTH_SECRET || raw.JWT_SECRET;
-    const vapidPublicKey = raw.VAPID_PUBLIC_KEY || raw.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    // Resolve aliases and development fallbacks immutably
+    const isProduction = raw.NODE_ENV === "production";
+    const authSecret =
+      raw.AUTH_SECRET ||
+      raw.JWT_SECRET ||
+      (!isProduction ? DEV_AUTH_SECRET_FALLBACK : undefined);
+    const databaseUrl =
+      raw.DATABASE_URL ||
+      (!isProduction ? DEV_DATABASE_URL_FALLBACK : undefined);
+    const vapidPublicKey =
+      raw.VAPID_PUBLIC_KEY || raw.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
     return {
       ...raw,
       AUTH_SECRET: authSecret,
+      DATABASE_URL: databaseUrl,
       VAPID_PUBLIC_KEY: vapidPublicKey,
     };
   })
@@ -93,13 +116,7 @@ export const ServerEnvSchema = z
         });
       }
     } else {
-      // In development / test: apply safe dev fallbacks if missing
-      if (!data.DATABASE_URL || data.DATABASE_URL.trim().length === 0) {
-        data.DATABASE_URL = DEV_DATABASE_URL_FALLBACK;
-      }
-      if (!data.AUTH_SECRET || data.AUTH_SECRET.trim().length === 0) {
-        data.AUTH_SECRET = DEV_AUTH_SECRET_FALLBACK;
-      } else if (data.AUTH_SECRET.length < 32) {
+      if (data.AUTH_SECRET && data.AUTH_SECRET.length < 32) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `AUTH_SECRET must be at least 32 characters (received ${data.AUTH_SECRET.length})`,
@@ -114,6 +131,7 @@ export type ServerEnv = z.infer<typeof ServerEnvSchema>;
 /**
  * Startup validation helper that validates server environment.
  * Throws immediately with clear error messages if required server secrets are missing in production.
+ * In Docker or CI builds, bypasses missing runtime secrets if NEXT_PHASE or SKIP_ENV_VALIDATION is present.
  */
 export function validateServerEnv(
   rawEnv: Record<string, unknown> = process.env
@@ -124,7 +142,22 @@ export function validateServerEnv(
     );
   }
 
-  const result = ServerEnvSchema.safeParse(rawEnv);
+  // During Docker or Next.js production build phase, synthesize build placeholders if runtime secrets are absent
+  const isBuilding = isBuildPhase(rawEnv);
+  const effectiveEnv = isBuilding
+    ? {
+        ...rawEnv,
+        DATABASE_URL:
+          (rawEnv.DATABASE_URL as string) ||
+          "postgresql://build-placeholder:5432/qcet_build?schema=public",
+        AUTH_SECRET:
+          (rawEnv.AUTH_SECRET as string) ||
+          (rawEnv.JWT_SECRET as string) ||
+          "qcet_build_placeholder_secret_key_2026_min_32_chars",
+      }
+    : rawEnv;
+
+  const result = ServerEnvSchema.safeParse(effectiveEnv);
   if (!result.success) {
     const errorDetails = result.error.issues
       .map((issue) => `  - [${issue.path.join(".") || "ROOT"}]: ${issue.message}`)
@@ -164,7 +197,11 @@ export const serverEnv: ServerEnv = new Proxy({} as ServerEnv, {
   },
 });
 
-// Fail-fast on server startup when in production
-if (typeof window === "undefined" && process.env.NODE_ENV === "production") {
+// Fail-fast on server startup when in production, skipping during Next.js/Docker build phase
+if (
+  typeof window === "undefined" &&
+  process.env.NODE_ENV === "production" &&
+  !isBuildPhase()
+) {
   validateServerEnv(process.env);
 }

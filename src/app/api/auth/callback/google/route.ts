@@ -8,6 +8,7 @@ import {
 import { signSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/jwt-session";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
+import { serverEnv } from "@/config/env.server";
 
 export async function GET(req: NextRequest) {
   const baseUrl = getAppBaseUrl(req);
@@ -38,8 +39,8 @@ export async function GET(req: NextRequest) {
     return response;
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = serverEnv.GOOGLE_CLIENT_ID;
+  const clientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
     const response = NextResponse.redirect(new URL("/login?error=oauth_not_configured", baseUrl));
@@ -202,7 +203,7 @@ export async function GET(req: NextRequest) {
     response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: serverEnv.NODE_ENV === "production",
       maxAge: SESSION_MAX_AGE_SECONDS,
       path: "/",
     });

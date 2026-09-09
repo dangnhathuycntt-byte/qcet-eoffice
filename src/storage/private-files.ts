@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { openByteRangeStream, StreamResult } from "@/lib/storage";
+import { serverEnv } from "@/config/env.server";
 
 export type PrivateFileClassification = "INTERNAL" | "CONFIDENTIAL" | "SECRET" | "PUBLIC";
 
@@ -67,11 +68,11 @@ export const ALLOWED_MIME_TYPES: Record<string, string> = {
  * Returns canonical root directory for private file storage
  */
 export function getPrivateStorageDir(): string {
-  if (process.env.PRIVATE_STORAGE_DIR) {
-    return path.resolve(process.env.PRIVATE_STORAGE_DIR);
+  if (serverEnv.PRIVATE_STORAGE_DIR) {
+    return path.resolve(serverEnv.PRIVATE_STORAGE_DIR);
   }
-  if (process.env.UPLOADS_DIR) {
-    return path.resolve(process.env.UPLOADS_DIR);
+  if (serverEnv.UPLOADS_DIR) {
+    return path.resolve(serverEnv.UPLOADS_DIR);
   }
   return path.resolve(process.cwd(), "storage/private");
 }

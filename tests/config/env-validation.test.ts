@@ -3,12 +3,15 @@ import assert from "node:assert/strict";
 import {
   ServerEnvSchema,
   validateServerEnv,
+  isBuildPhase,
   DEV_AUTH_SECRET_FALLBACK,
   DEV_DATABASE_URL_FALLBACK,
 } from "@/config/env.server";
 import {
   ClientEnvSchema,
   validateClientEnv,
+  extractClientEnv,
+  clientSource,
   FORBIDDEN_SERVER_SECRETS,
 } from "@/config/env.client";
 import {
@@ -155,6 +158,37 @@ describe("Central Environment Configuration & Secret Isolation (Task 2)", () => 
         }
       );
     });
+
+    it("isBuildPhase detects Next.js build and Docker compilation bypass flags", () => {
+      assert.strictEqual(isBuildPhase({ NEXT_PHASE: "phase-production-build" }), true);
+      assert.strictEqual(isBuildPhase({ SKIP_ENV_VALIDATION: "true" }), true);
+      assert.strictEqual(isBuildPhase({ NODE_ENV: "production" }), false);
+      assert.strictEqual(isBuildPhase({}), false);
+    });
+
+    it("validateServerEnv permits Docker build when NEXT_PHASE=phase-production-build without runtime secrets", () => {
+      const buildEnv = validateServerEnv({
+        NODE_ENV: "production",
+        NEXT_PHASE: "phase-production-build",
+      });
+
+      assert.ok(buildEnv);
+      assert.strictEqual(buildEnv.NODE_ENV, "production");
+      assert.ok(Boolean(buildEnv.DATABASE_URL && buildEnv.DATABASE_URL.includes("build-placeholder")));
+      assert.ok(Boolean(buildEnv.AUTH_SECRET && buildEnv.AUTH_SECRET.length >= 32));
+    });
+
+    it("validateServerEnv permits CI build when SKIP_ENV_VALIDATION=true without runtime secrets", () => {
+      const buildEnv = validateServerEnv({
+        NODE_ENV: "production",
+        SKIP_ENV_VALIDATION: "true",
+      });
+
+      assert.ok(buildEnv);
+      assert.strictEqual(buildEnv.NODE_ENV, "production");
+      assert.ok(Boolean(buildEnv.DATABASE_URL && buildEnv.DATABASE_URL.includes("build-placeholder")));
+      assert.ok(Boolean(buildEnv.AUTH_SECRET && buildEnv.AUTH_SECRET.length >= 32));
+    });
   });
 
   describe("ClientEnvSchema & Client Secret Rejection", () => {
@@ -172,6 +206,34 @@ describe("Central Environment Configuration & Secret Isolation (Task 2)", () => 
       assert.strictEqual(parsed.NODE_ENV, "production");
       assert.strictEqual(parsed.NEXT_PUBLIC_APP_URL, validClientConfig.NEXT_PUBLIC_APP_URL);
       assert.strictEqual(parsed.NEXT_PUBLIC_GOOGLE_CLIENT_ID, validClientConfig.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+    });
+
+    it("clientSource statically accesses NEXT_PUBLIC_* variables", () => {
+      assert.ok(clientSource !== undefined);
+      assert.ok("NODE_ENV" in clientSource);
+      assert.ok("NEXT_PUBLIC_APP_URL" in clientSource);
+      assert.ok("NEXT_PUBLIC_GOOGLE_CLIENT_ID" in clientSource);
+    });
+
+    it("extractClientEnv filters out all private server secrets from raw environment", () => {
+      const rawMixedEnv = {
+        NODE_ENV: "production",
+        DATABASE_URL: "postgresql://admin:secret@db:5432/prod",
+        AUTH_SECRET: "server_master_secret_key_long_enough",
+        JWT_SECRET: "jwt_secret_value",
+        GOOGLE_CLIENT_SECRET: "google_secret_123",
+        NEXT_PUBLIC_APP_URL: "https://e-office.cdktcnqn.edu.vn",
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: "google_client_id_pub",
+      };
+
+      const extracted = extractClientEnv(rawMixedEnv);
+      assert.strictEqual(extracted.NODE_ENV, "production");
+      assert.strictEqual(extracted.NEXT_PUBLIC_APP_URL, "https://e-office.cdktcnqn.edu.vn");
+      assert.strictEqual(extracted.NEXT_PUBLIC_GOOGLE_CLIENT_ID, "google_client_id_pub");
+      assert.strictEqual(extracted.DATABASE_URL, undefined);
+      assert.strictEqual(extracted.AUTH_SECRET, undefined);
+      assert.strictEqual(extracted.JWT_SECRET, undefined);
+      assert.strictEqual(extracted.GOOGLE_CLIENT_SECRET, undefined);
     });
 
     it("rejects DATABASE_URL in client environment", () => {

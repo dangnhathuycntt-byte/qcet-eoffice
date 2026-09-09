@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { detectMimeType } from "./private-files";
+import { serverEnv } from "@/config/env.server";
 
 export type TemporaryFileStatus = "active" | "expired" | "deleted" | "purged";
 
@@ -40,8 +41,8 @@ export const DEFAULT_TEMP_TTL_MS = 60 * 60 * 1000; // 1 hour
  * Returns canonical directory for temporary file storage
  */
 export function getTempStorageDir(): string {
-  if (process.env.TEMP_STORAGE_DIR) {
-    return path.resolve(process.env.TEMP_STORAGE_DIR);
+  if (serverEnv.TEMP_STORAGE_DIR) {
+    return path.resolve(serverEnv.TEMP_STORAGE_DIR);
   }
   return path.resolve(process.cwd(), "storage/temp");
 }

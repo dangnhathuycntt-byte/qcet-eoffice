@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppBaseUrl, buildGoogleAuthUrl } from "@/lib/google-oauth";
+import { serverEnv } from "@/config/env.server";
 
 export async function GET(req: NextRequest) {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = serverEnv.GOOGLE_CLIENT_ID;
+  const clientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
 
   const baseUrl = getAppBaseUrl(req);
 
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
   response.cookies.set("qcet_oauth_state", state, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: serverEnv.NODE_ENV === "production",
     maxAge: 300, // 5 minutes
     path: "/api/auth",
   });
