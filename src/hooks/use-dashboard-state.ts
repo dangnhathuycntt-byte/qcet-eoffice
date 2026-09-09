@@ -7,6 +7,11 @@ import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { useUrlParamsSync, type UrlParamsSyncReturn } from "./use-url-params-sync";
 import { useTaskMutations, type TaskMutationsReturn } from "./use-task-mutations";
 import { useTaskFilters, type TaskFiltersReturn } from "./use-task-filters";
+import {
+  getSystemReferenceDate,
+  getSystemReferenceDateStr,
+  isTaskPastDue,
+} from "@/lib/unified-task-hub";
 
 export type DashboardStateReturn = UrlParamsSyncReturn & TaskMutationsReturn & TaskFiltersReturn & {
   user: ReturnType<typeof useAuth>["user"];
@@ -40,14 +45,15 @@ export function useDashboardState(
 
   // Sync Dynamic Badge Counts with left sidebar
   React.useEffect(() => {
+    const refDateStr = getSystemReferenceDateStr();
+    const systemRefDate = getSystemReferenceDate();
     const urgentTasks = mutations.dashboardData.tasks.filter(
       (t) =>
-        (t.status === "PENDING_EXECUTIVE_APPROVAL" || t.dueDate <= "2026-09-08") &&
+        (t.status === "PENDING_EXECUTIVE_APPROVAL" || isTaskPastDue(t.dueDate, systemRefDate)) &&
         t.status !== "COMPLETED"
     ).length;
-    const todayStr = "2026-09-06";
     const todayEvents = mutations.dashboardData.upcoming.filter(
-      (item) => item.dueDate === todayStr
+      (item) => item.dueDate === refDateStr
     ).length;
 
     const nextTasks = urgentTasks > 0 ? urgentTasks : undefined;

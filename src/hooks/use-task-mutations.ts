@@ -17,6 +17,7 @@ import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
 import type { DelegationRule } from "@/types/delegation";
 import type { AuthUser } from "@/types/auth";
 import { isOnline, enqueueOfflineMutation } from "@/lib/offline-sync";
+import { getSystemReferenceDateStr } from "@/lib/unified-task-hub";
 
 export const EMPTY_DASHBOARD_PAYLOAD: DashboardPayload = {
   stats: {
@@ -212,7 +213,7 @@ export function useTaskMutations(
     async (payload: DeliverableSubmissionPayload) => {
       const previousData = dashboardData;
       setErrorMessage(null);
-      const todayStr = "2026-09-06";
+      const todayStr = getSystemReferenceDateStr();
 
       // Optimistic state update
       setDashboardData((prev) => {
@@ -319,7 +320,7 @@ export function useTaskMutations(
     async (payload: ApprovalActionPayload) => {
       const previousData = dashboardData;
       setErrorMessage(null);
-      const todayStr = "2026-09-06";
+      const todayStr = getSystemReferenceDateStr();
       let statusToSet: TaskStatus = "IN_PROGRESS";
       if (payload.decision === "approved") {
         statusToSet = "COMPLETED";
@@ -420,7 +421,7 @@ export function useTaskMutations(
 
   const handleCreateTask = React.useCallback(
     (data: CreateTaskFormData) => {
-      const todayStr = "2026-09-04";
+      const todayStr = getSystemReferenceDateStr();
 
       setDashboardData((prev) => {
         let updatedTasks = [...prev.tasks];

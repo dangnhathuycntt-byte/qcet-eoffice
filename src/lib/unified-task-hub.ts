@@ -11,15 +11,50 @@ import { matchesUser } from "@/lib/role-task-filter";
 import { filterTasksForTable } from "@/components/dashboard/cascading-task-table";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 
-export const TODAY_ISO = "2026-09-04";
+export const TODAY_ISO = "2026-09-06";
+
+/**
+ * Returns system reference date as Date object.
+ */
+export function getSystemReferenceDate(): Date {
+  const envDate = typeof process !== "undefined" && process.env?.NEXT_PUBLIC_REFERENCE_DATE;
+  const raw = envDate || "2026-09-06";
+  const [y, m, d] = raw.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
+/**
+ * Returns system reference date as YYYY-MM-DD string.
+ */
+export function getSystemReferenceDateStr(): string {
+  const d = getSystemReferenceDate();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 /**
  * Checks if a date string is strictly past due.
  */
-export function isTaskPastDue(dateStr?: string, referenceDate: string = TODAY_ISO): boolean {
+export function isTaskPastDue(
+  dateStr?: string,
+  referenceDate?: string | Date
+): boolean {
   if (!dateStr) return false;
   const clean = dateStr.length > 10 ? dateStr.slice(0, 10) : dateStr;
-  return clean < referenceDate;
+  let ref: string;
+  if (!referenceDate) {
+    ref = getSystemReferenceDateStr();
+  } else if (referenceDate instanceof Date) {
+    const y = referenceDate.getFullYear();
+    const m = String(referenceDate.getMonth() + 1).padStart(2, "0");
+    const d = String(referenceDate.getDate()).padStart(2, "0");
+    ref = `${y}-${m}-${d}`;
+  } else {
+    ref = referenceDate.length > 10 ? referenceDate.slice(0, 10) : referenceDate;
+  }
+  return clean < ref;
 }
 
 /**
