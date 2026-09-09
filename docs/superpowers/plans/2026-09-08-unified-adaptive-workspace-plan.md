@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-08-unified-adaptive-workspace-plan.md

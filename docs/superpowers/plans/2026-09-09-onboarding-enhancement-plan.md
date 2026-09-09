@@ -1,0 +1,1 @@
+../../plans/completed/2026-09-09-onboarding-enhancement-plan.md

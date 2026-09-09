@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-07-role-based-ux-simplification-plan.md

@@ -1,0 +1,1 @@
+../../plans/completed/2026-09-08-eradicate-mockups-and-real-qcet-alignment-plan.md

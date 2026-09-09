@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-06-executive-header-redesign-plan.md

@@ -1,3 +1,9 @@
+---
+status: completed
+domain: ux
+created: 2026-09-09
+---
+
 # QUY CHUẨN THIẾT KẾ UI/UX BÀN LÀM VIỆC (EXECUTIVE WORKBENCH SPECIFICATION)
 ## HỆ THỐNG ĐIỀU HÀNH VĂN PHÒNG ĐIỆN TỬ QCET E-OFFICE
 **Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn**
