@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { pwaOnboardingCoordinator } from '@/lib/pwa/onboarding-coordinator';
 
 export interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -100,12 +101,14 @@ export function usePWAInstall(): UsePWAInstallReturn {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setIsInstallable(true);
+      pwaOnboardingCoordinator.handleBeforeInstallPrompt(e as BeforeInstallPromptEvent);
     };
 
     const handleAppInstalled = () => {
       setDeferredPrompt(null);
       setIsInstalled(true);
       setIsInstallable(false);
+      pwaOnboardingCoordinator.handleAppInstalled();
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -118,6 +121,16 @@ export function usePWAInstall(): UsePWAInstallReturn {
   }, []);
 
   const installApp = useCallback(async (): Promise<'accepted' | 'dismissed' | null> => {
+    // Try via coordinator first if available
+    const coordChoice = await pwaOnboardingCoordinator.promptInstall();
+    if (coordChoice === 'accepted' || coordChoice === 'dismissed') {
+      if (coordChoice === 'accepted') {
+        setIsInstalled(true);
+        setIsInstallable(false);
+      }
+      return coordChoice;
+    }
+
     if (!deferredPrompt) {
       return null;
     }
@@ -130,6 +143,7 @@ export function usePWAInstall(): UsePWAInstallReturn {
       if (choice.outcome === 'accepted') {
         setIsInstalled(true);
         setIsInstallable(false);
+        pwaOnboardingCoordinator.handleAppInstalled();
       }
       return choice.outcome;
     } catch (err) {

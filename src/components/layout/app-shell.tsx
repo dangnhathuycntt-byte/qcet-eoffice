@@ -14,7 +14,13 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { useOnboarding } from "@/hooks/use-onboarding";
+import { pwaOnboardingCoordinator } from "@/lib/pwa/onboarding-coordinator";
 import { cn } from "@/lib/utils";
+
+const PWAInstallPrompt = dynamic(
+  () => import("@/components/pwa/pwa-install-prompt").then((m) => m.PWAInstallPrompt),
+  { ssr: false }
+);
 
 const PushOnboardingSheet = dynamic(
   () => import("@/components/pwa/push-onboarding-sheet").then((m) => m.PushOnboardingSheet),
@@ -45,6 +51,12 @@ export function OnboardingHub() {
   const onboarding = useOnboarding();
 
   React.useEffect(() => {
+    if (onboarding.state.hasSeenWelcome) {
+      pwaOnboardingCoordinator.completeWelcome();
+    }
+  }, [onboarding.state.hasSeenWelcome]);
+
+  React.useEffect(() => {
     const handleRestart = () => {
       onboarding.restartOnboarding();
       onboarding.setIsChecklistExpanded(true);
@@ -66,7 +78,10 @@ export function OnboardingHub() {
           !onboarding.isSnoozed
         }
         onStartTour={onboarding.startTour}
-        onDismiss={onboarding.dismissOnboarding}
+        onDismiss={() => {
+          onboarding.dismissOnboarding();
+          pwaOnboardingCoordinator.completeWelcome();
+        }}
       />
       <SpotlightTour
         isActive={onboarding.isTourActive}
@@ -77,10 +92,14 @@ export function OnboardingHub() {
             onboarding.setCurrentTourIndex((i) => i + 1);
           } else {
             onboarding.endTour();
+            pwaOnboardingCoordinator.recordAction("tour_completed");
           }
         }}
         onPrev={() => onboarding.setCurrentTourIndex((i) => Math.max(0, i - 1))}
-        onClose={onboarding.endTour}
+        onClose={() => {
+          onboarding.endTour();
+          pwaOnboardingCoordinator.recordAction("tour_closed");
+        }}
       />
       {onboarding.isMounted && (
         <OnboardingChecklistWidget
@@ -93,7 +112,10 @@ export function OnboardingHub() {
           onToggleExpand={() => onboarding.setIsChecklistExpanded((v) => !v)}
           onDismiss={onboarding.dismissOnboarding}
           onSnooze={() => onboarding.snoozeOnboarding(24)}
-          onCompleteStep={onboarding.completeStep}
+          onCompleteStep={(stepId) => {
+            onboarding.completeStep(stepId);
+            pwaOnboardingCoordinator.recordAction(`step_${stepId}`);
+          }}
           onStartTour={onboarding.startTour}
         />
       )}
@@ -170,6 +192,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <MobileMenuDrawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen} />
       </React.Suspense>
 
+      <PWAInstallPrompt />
       <PushOnboardingSheet />
       <MobileAppInstallModalContainer />
       <OnboardingHub />
