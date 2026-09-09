@@ -675,6 +675,7 @@ export class OutgoingDocumentService {
           documentId: input.documentId,
           version: existing.currentVersion,
           signerUserId: user.id,
+          signerAssignmentId: (user as any).activeAssignmentId || null,
           signingCapacity,
           signatureType: input.signatureType || SignatureType.PERSONAL_DIGITAL,
           certificateMetadata: (input.certificateMetadata as Prisma.InputJsonValue) || {
@@ -855,7 +856,7 @@ export class OutgoingDocumentService {
         beforeData: { status: existing.status },
         afterData: {
           status: updatedWorkflow.status,
-          outgoingNumber: seq.lastNumber,
+          outgoingNumber: allocatedNumber,
           outgoingNumberStr,
           numberedAt: now,
           numbererId: user.id,
@@ -868,7 +869,7 @@ export class OutgoingDocumentService {
         aggregateId: input.documentId,
         payload: {
           documentId: input.documentId,
-          outgoingNumber: seq.lastNumber,
+          outgoingNumber: allocatedNumber,
           outgoingNumberStr,
           numbererId: user.id,
         },
@@ -938,6 +939,7 @@ export class OutgoingDocumentService {
           documentId: input.documentId,
           version: existing.currentVersion,
           signerUserId: user.id,
+          signerAssignmentId: (user as any).activeAssignmentId || null,
           signingCapacity: "VĂN PHÒNG / TRƯỜNG CAO ĐẲNG KINH TẾ VÀ CÔNG NGHỆ QUẢNG NINH",
           signatureType: SignatureType.ORGANIZATION_DIGITAL,
           certificateMetadata: (input.certificateMetadata as Prisma.InputJsonValue) || {

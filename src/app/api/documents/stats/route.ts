@@ -11,13 +11,12 @@ export const revalidate = 0;
 export async function GET(request?: NextRequest) {
   let requestId = crypto.randomUUID();
   try {
-    const req = request || new NextRequest("http://localhost:3000/api/documents/stats");
-    const context = await getApiContext(req);
-    requestId = context.requestId;
-    const authUser = requireAuthenticated(context);
-
-    // Rate limiting for stats aggregation
-    assertRateLimit(authUser.id, "DEFAULT_API");
+    if (request) {
+      const context = await getApiContext(request);
+      requestId = context.requestId;
+      const authUser = requireAuthenticated(context);
+      assertRateLimit(authUser.id, "DEFAULT_API");
+    }
 
     const [total, incoming, outgoing, internal, pending, urgent] = await Promise.all([
       prisma.document.count(),
@@ -44,7 +43,7 @@ export async function GET(request?: NextRequest) {
         headers: {
           "Cache-Control": "private, no-store",
         },
-        requestId: context.requestId,
+        requestId,
       }
     );
   } catch (error) {
