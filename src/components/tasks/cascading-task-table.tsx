@@ -24,7 +24,16 @@ import {
   Bell,
   UserCheck,
   RotateCcw,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
+import {
+  BottomSheet,
+  BottomSheetContent,
+  BottomSheetHeader,
+  BottomSheetTitle,
+  BottomSheetClose,
+} from "@/components/ui/bottom-sheet";
 import type {
   SchoolTask,
   StaffTask,
@@ -104,37 +113,37 @@ export function getCategoryBadgeConfig(
       return {
         label: "Chuyển đổi số",
         className:
-          "bg-indigo-500/10 text-indigo-700 border-indigo-500/20",
+          "bg-secondary text-muted-foreground border-transparent",
       };
     case "TRUYEN_THONG":
       return {
         label: "Truyền thông",
         className:
-          "bg-sky-500/10 text-sky-700 border-sky-500/20",
+          "bg-secondary text-muted-foreground border-transparent",
       };
     case "CNTT":
       return {
         label: "CNTT",
         className:
-          "bg-blue-500/10 text-blue-700 border-blue-500/20",
+          "bg-secondary text-muted-foreground border-transparent",
       };
     case "ATTT":
       return {
         label: "An toàn thông tin",
         className:
-          "bg-rose-500/10 text-rose-700 border-rose-500/20",
+          "bg-secondary text-muted-foreground border-transparent",
       };
     case "THU_VIEN":
       return {
         label: "Thư viện",
         className:
-          "bg-teal-500/10 text-teal-700 border-teal-500/20",
+          "bg-secondary text-muted-foreground border-transparent",
       };
     case "BAO_CAO":
       return {
         label: "Báo cáo",
         className:
-          "bg-amber-500/10 text-amber-700 border-amber-500/20",
+          "bg-secondary text-muted-foreground border-transparent",
       };
     case "KHAC":
     case "OTHER":
@@ -142,7 +151,7 @@ export function getCategoryBadgeConfig(
       return {
         label: "Khác",
         className:
-          "border-zinc-200 bg-zinc-50 text-zinc-700",
+          "bg-secondary text-muted-foreground border-transparent",
       };
   }
 }
@@ -450,7 +459,7 @@ function MobileTaskCard({
             <button
               type="button"
               onClick={() => onStatusChange(task.id, "COMPLETED")}
-              className="flex-1 min-h-[40px] inline-flex items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold text-xs active:scale-[0.98]"
+              className="flex-1 min-h-[44px] inline-flex items-center justify-center rounded-xl bg-emerald-600 text-white font-semibold text-xs active:scale-[0.98] touch-manipulation cursor-pointer"
             >
               Duyệt nhanh
             </button>
@@ -529,9 +538,6 @@ export function CascadingTaskTable({
   const { user } = useAuth();
   const { density } = useDisplayDensity();
   const canAssign = canAssignUnitTask(user?.role ?? "ADMIN");
-  const [selectedCategory, setSelectedCategory] = React.useState<
-    TaskCategory | "ALL"
-  >("ALL");
   const [selectedDepartment, setSelectedDepartment] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
   const deferredSearchQuery = React.useDeferredValue(searchQuery);
@@ -540,11 +546,20 @@ export function CascadingTaskTable({
   );
   const expandedIds = expandedTaskIds;
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = React.useState(false);
 
-  // Keyboard shortcut (⌘K or Ctrl+K) to focus search
+  // Keyboard shortcut ('/' outside form inputs) to focus table search
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      const activeTag = document.activeElement?.tagName?.toLowerCase();
+      if (
+        activeTag === "input" ||
+        activeTag === "textarea" ||
+        (document.activeElement as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+      if (e.key === "/") {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
@@ -568,6 +583,13 @@ export function CascadingTaskTable({
 
   const [activeWorkbox, setActiveWorkbox] = React.useState<WorkboxFilter>("ALL");
   const pullToRefresh = usePullToRefresh({ onRefresh });
+
+  const activeFilterCount = React.useMemo(() => {
+    let count = 0;
+    if (selectedDepartment !== "ALL") count++;
+    if (activeWorkbox !== "ALL") count++;
+    return count;
+  }, [selectedDepartment, activeWorkbox]);
 
   // Filter tasks by active E-Office Workbox (Việc tôi nhận, Việc tôi giao, v.v.)
   const workboxTasks = React.useMemo(() => {
@@ -664,20 +686,20 @@ export function CascadingTaskTable({
         ? workboxTasks
         : filterTasksForTable(
             workboxTasks,
-            selectedCategory,
+            "ALL",
             deferredSearchQuery,
             selectedDepartment
           ),
-    [hideToolbar, workboxTasks, selectedCategory, deferredSearchQuery, selectedDepartment]
+    [hideToolbar, workboxTasks, deferredSearchQuery, selectedDepartment]
   );
 
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
 
-  // Reset to page 1 whenever workbox, search, department or category filter changes
+  // Reset to page 1 whenever workbox, search or department filter changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [activeWorkbox, selectedCategory, deferredSearchQuery, selectedDepartment]);
+  }, [activeWorkbox, deferredSearchQuery, selectedDepartment]);
 
   const totalTasks = filteredTasks.length;
   const totalPages = Math.max(1, Math.ceil(totalTasks / pageSize));
@@ -694,12 +716,13 @@ export function CascadingTaskTable({
     >
       {/* 4 E-Office Workboxes (Hộp việc chuẩn cơ quan với thiết kế Executive Precision) */}
       {!hideWorkbox && (
-        <div className="flex items-center gap-1.5 overflow-x-auto p-1 rounded-2xl bg-muted/40 border border-border/50 backdrop-blur-xs scrollbar-none">
+        <div className="relative">
+          <div className="flex items-center gap-1.5 overflow-x-auto p-1 rounded-2xl bg-muted/40 border border-border/50 backdrop-blur-xs scrollbar-none pr-6">
           <button
             type="button"
             onClick={() => setActiveWorkbox("ALL")}
             className={cn(
-              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
+              "inline-flex items-center gap-2 px-3.5 py-1.5 min-h-[44px] sm:min-h-[36px] rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] touch-manipulation",
               activeWorkbox === "ALL"
                 ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/40"
@@ -707,7 +730,8 @@ export function CascadingTaskTable({
           >
             <span className="flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-primary" />
-              Tất cả nhiệm vụ
+              <span className="hidden sm:inline">Tất cả nhiệm vụ</span>
+              <span className="sm:hidden">Tất cả</span>
             </span>
             <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-mono tabular-nums text-primary font-semibold border border-primary/20">
               {workboxCounts.all}
@@ -718,7 +742,7 @@ export function CascadingTaskTable({
             type="button"
             onClick={() => setActiveWorkbox("MY_RECEIVED")}
             className={cn(
-              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
+              "inline-flex items-center gap-2 px-3.5 py-1.5 min-h-[44px] sm:min-h-[36px] rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] touch-manipulation",
               activeWorkbox === "MY_RECEIVED"
                 ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/40"
@@ -726,7 +750,8 @@ export function CascadingTaskTable({
           >
             <span className="flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-emerald-500" />
-              Việc tôi nhận
+              <span className="hidden sm:inline">Việc tôi nhận</span>
+              <span className="sm:hidden">Tôi nhận</span>
             </span>
             <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-emerald-700 font-semibold border border-emerald-500/20">
               {workboxCounts.received}
@@ -737,7 +762,7 @@ export function CascadingTaskTable({
             type="button"
             onClick={() => setActiveWorkbox("MY_ASSIGNED")}
             className={cn(
-              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
+              "inline-flex items-center gap-2 px-3.5 py-1.5 min-h-[44px] sm:min-h-[36px] rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] touch-manipulation",
               activeWorkbox === "MY_ASSIGNED"
                 ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/40"
@@ -745,7 +770,8 @@ export function CascadingTaskTable({
           >
             <span className="flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-blue-500" />
-              Việc tôi giao
+              <span className="hidden sm:inline">Việc tôi giao</span>
+              <span className="sm:hidden">Tôi giao</span>
             </span>
             <span className="rounded-md bg-blue-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-blue-700 font-semibold border border-blue-500/20">
               {workboxCounts.assigned}
@@ -756,7 +782,7 @@ export function CascadingTaskTable({
             type="button"
             onClick={() => setActiveWorkbox("URGENT")}
             className={cn(
-              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]",
+              "inline-flex items-center gap-2 px-3.5 py-1.5 min-h-[44px] sm:min-h-[36px] rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] touch-manipulation",
               activeWorkbox === "URGENT"
                 ? "bg-card text-rose-700 font-bold shadow-xs border border-rose-500/30"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/40"
@@ -764,7 +790,8 @@ export function CascadingTaskTable({
           >
             <span className="flex items-center gap-1.5">
               <span className="size-2 rounded-full bg-rose-500" />
-              Khẩn &amp; Chậm tiến độ
+              <span className="hidden sm:inline">Khẩn &amp; Chậm tiến độ</span>
+              <span className="sm:hidden">Khẩn cấp</span>
             </span>
             {workboxCounts.urgent > 0 && (
               <span className="rounded-md bg-rose-500/15 px-1.5 py-0.5 text-xs font-mono tabular-nums text-rose-700 font-semibold border border-rose-500/30">
@@ -773,12 +800,77 @@ export function CascadingTaskTable({
             )}
           </button>
         </div>
-      )}
+        <div
+          className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background/90 via-background/40 to-transparent rounded-r-2xl sm:hidden"
+          aria-hidden="true"
+        />
+      </div>
+    )}
 
       {/* Control Bar: Category Tabs & Search */}
       {!hideToolbar && (
         <>
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+          {/* Mobile Quick Search & Filter Bar (sm:hidden) */}
+          <div className="flex sm:hidden items-center gap-2">
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70"
+                strokeWidth={1.5}
+              />
+              <input
+                type="text"
+                placeholder="Tìm kiếm nhiệm vụ..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-10 w-full rounded-xl border border-border/70 bg-card pl-9 pr-8 text-xs text-foreground placeholder:text-muted-foreground/60 transition-all hover:border-border focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 shadow-2xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 touch-manipulation"
+                  aria-label="Xóa từ khóa tìm kiếm"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Mobile Filter Sheet Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileFilterOpen(true)}
+              aria-label="Mở bộ lọc nâng cao"
+              className={cn(
+                "h-10 px-3 min-h-[44px] inline-flex items-center gap-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors touch-manipulation shadow-2xs shrink-0",
+                activeFilterCount > 0
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-border/70 bg-card text-foreground hover:bg-muted"
+              )}
+            >
+              <SlidersHorizontal className="size-3.5" strokeWidth={1.75} />
+              <span>Lọc</span>
+              {activeFilterCount > 0 && (
+                <span className="size-4 rounded-full bg-primary text-primary-foreground font-mono text-xs flex items-center justify-center font-bold">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {onAddTask && (
+              <button
+                type="button"
+                onClick={onAddTask}
+                aria-label="Thêm nhiệm vụ mới"
+                className="size-10 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl bg-primary text-primary-foreground text-xs font-semibold cursor-pointer shadow-xs shrink-0 touch-manipulation active:scale-95"
+              >
+                <Plus className="size-4" strokeWidth={2} />
+              </button>
+            )}
+          </div>
+
+          {/* Desktop Control Bar: Department Filter, Search & Add Task (hidden sm:flex) */}
+          <div className="hidden sm:flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
             {/* Department Filter & Search Input */}
             <div className="flex flex-1 items-center gap-2 max-w-2xl">
               {/* Department Selector */}
@@ -800,7 +892,7 @@ export function CascadingTaskTable({
                 </div>
               </div>
 
-              {/* Search Box with ⌘K Shortcut */}
+              {/* Search Box with / Shortcut */}
               <div className="relative flex-1">
                 <Search
                   className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70"
@@ -812,11 +904,11 @@ export function CascadingTaskTable({
                   placeholder="Tìm theo tên nhiệm vụ, mã NV, người chủ trì..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-9.5 w-full rounded-xl border border-border/70 bg-card pl-9 pr-14 text-xs text-foreground placeholder:text-muted-foreground/60 transition-all hover:border-border focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 shadow-2xs"
+                  className="h-9.5 w-full rounded-xl border border-border/70 bg-card pl-9 pr-10 text-xs text-foreground placeholder:text-muted-foreground/60 transition-all hover:border-border focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 shadow-2xs"
                 />
                 <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5">
-                  <kbd className="rounded border border-border/70 bg-muted/60 px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                    ⌘K
+                  <kbd className="rounded border border-border/70 bg-muted/60 px-1.5 py-0.5 text-xs font-mono text-muted-foreground" title="Phím tắt lọc bảng: /">
+                    /
                   </kbd>
                 </div>
               </div>
@@ -835,31 +927,6 @@ export function CascadingTaskTable({
               </Button>
             )}
           </div>
-
-          {/* Category Filter Badges */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-            {CATEGORY_TABS.map((tab) => {
-              const isSelected = selectedCategory === tab.id;
-              const Icon = tab.icon;
-
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(tab.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap active:scale-95",
-                    isSelected
-                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                      : "border border-border/60 bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  )}
-                >
-                  {Icon && <Icon className="size-3.5" strokeWidth={1.5} />}
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
         </>
       )}
 
@@ -875,7 +942,6 @@ export function CascadingTaskTable({
                 </th>
                 <th className="w-24 h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Mã NV</th>
                 <th className="h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Nhiệm vụ cấp Trường</th>
-                <th className="h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Danh mục</th>
                 <th className="h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Chủ trì nhiệm vụ</th>
                 <th className="h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground">Thời hạn hoàn thành</th>
                 <th className="w-56 h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground text-right">Tiến độ &amp; Thao tác</th>
@@ -886,7 +952,7 @@ export function CascadingTaskTable({
             <tbody className="divide-y divide-border/50">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-16 text-center">
+                  <td colSpan={6} className="px-4 py-16 text-center">
                     {activeWorkbox === "MY_RECEIVED" || activeWorkbox === "MY_ASSIGNED" ? (
                       <div className="max-w-md mx-auto space-y-3 animate-in fade-in zoom-in-95 duration-200">
                         <div className="inline-flex p-3.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-glow-primary ring-1 ring-primary/20">
@@ -909,7 +975,6 @@ export function CascadingTaskTable({
                             type="button"
                             onClick={() => {
                               setActiveWorkbox("ALL");
-                              setSelectedCategory("ALL");
                               setSelectedDepartment("ALL");
                               setSearchQuery("");
                             }}
@@ -943,15 +1008,15 @@ export function CascadingTaskTable({
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {searchQuery
                               ? `Không có kết quả nào khớp với từ khóa "${searchQuery}".`
-                              : "Thử thay đổi bộ lọc đơn vị hoặc chọn danh mục công việc khác."}
+                              : "Thử thay đổi bộ lọc đơn vị hoặc từ khóa tìm kiếm."}
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedCategory("ALL");
                             setSelectedDepartment("ALL");
                             setSearchQuery("");
+                            setActiveWorkbox("ALL");
                           }}
                           className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors cursor-pointer shadow-2xs"
                         >
@@ -967,7 +1032,6 @@ export function CascadingTaskTable({
                   const isExpanded = expandedTaskIds.has(task.id);
                   const hasSubtasks =
                     task.subTasks && task.subTasks.length > 0;
-                  const catConfig = getCategoryBadgeConfig(task.category);
 
                   return (
                     <React.Fragment key={task.id}>
@@ -1026,19 +1090,6 @@ export function CascadingTaskTable({
                               </span>
                             )}
                           </div>
-                        </td>
-
-                        {/* Category Badge */}
-                        <td className={cn("table-cell-dense px-4 align-middle whitespace-nowrap", density === "compact" ? "py-1.5" : "py-3")}>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "h-5.5 px-2.5 text-xs font-semibold tabular-nums leading-none",
-                              catConfig.className
-                            )}
-                          >
-                            {catConfig.label}
-                          </Badge>
                         </td>
 
                         {/* Lead Assignee */}
@@ -1179,7 +1230,7 @@ export function CascadingTaskTable({
                       {isExpanded && hasSubtasks && (
                         <tr>
                           <td
-                            colSpan={7}
+                            colSpan={6}
                             className="bg-muted/15 p-0"
                             data-parent-id={task.id}
                             data-task-tier="2"
@@ -1480,7 +1531,7 @@ export function CascadingTaskTable({
               type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="inline-flex min-h-[40px] px-3 items-center gap-1 rounded-xl border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors active:scale-95"
+              className="inline-flex min-h-[44px] px-3.5 items-center gap-1.5 rounded-xl border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors active:scale-95 touch-manipulation"
               title="Trang trước"
             >
               <ChevronLeft className="size-3.5" strokeWidth={1.5} />
@@ -1493,7 +1544,7 @@ export function CascadingTaskTable({
               type="button"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="inline-flex min-h-[40px] px-3 items-center gap-1 rounded-xl border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors active:scale-95"
+              className="inline-flex min-h-[44px] px-3.5 items-center gap-1.5 rounded-xl border border-border/60 bg-card text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors active:scale-95 touch-manipulation"
               title="Trang kế tiếp"
             >
               <span>Sau</span>
@@ -1502,6 +1553,119 @@ export function CascadingTaskTable({
           </div>
         )}
       </div>
+
+      {/* Mobile Filter BottomSheet */}
+      <BottomSheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+        <BottomSheetContent className="p-5 max-h-[85dvh] overflow-y-auto space-y-4">
+          <BottomSheetHeader className="p-0 border-b border-border/50 pb-3 flex flex-row items-center justify-between">
+            <BottomSheetTitle className="text-base font-bold text-foreground">
+              Bộ lọc nhiệm vụ
+            </BottomSheetTitle>
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDepartment("ALL");
+                  setActiveWorkbox("ALL");
+                }}
+                className="text-xs text-primary font-medium hover:underline cursor-pointer touch-manipulation min-h-[36px] flex items-center"
+              >
+                Đặt lại tất cả
+              </button>
+            )}
+          </BottomSheetHeader>
+
+          {/* Section 1: Hộp việc */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Hộp việc điều hành
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveWorkbox("ALL")}
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-xl border text-xs font-semibold cursor-pointer min-h-[44px] touch-manipulation transition-all",
+                  activeWorkbox === "ALL"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border/70 bg-muted/40 text-foreground"
+                )}
+              >
+                <span>Tất cả</span>
+                <span className="font-mono tabular-nums">{workboxCounts.all}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveWorkbox("MY_RECEIVED")}
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-xl border text-xs font-semibold cursor-pointer min-h-[44px] touch-manipulation transition-all",
+                  activeWorkbox === "MY_RECEIVED"
+                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-700"
+                    : "border-border/70 bg-muted/40 text-foreground"
+                )}
+              >
+                <span>Việc tôi nhận</span>
+                <span className="font-mono tabular-nums">{workboxCounts.received}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveWorkbox("MY_ASSIGNED")}
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-xl border text-xs font-semibold cursor-pointer min-h-[44px] touch-manipulation transition-all",
+                  activeWorkbox === "MY_ASSIGNED"
+                    ? "border-blue-500 bg-blue-500/10 text-blue-700"
+                    : "border-border/70 bg-muted/40 text-foreground"
+                )}
+              >
+                <span>Việc tôi giao</span>
+                <span className="font-mono tabular-nums">{workboxCounts.assigned}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveWorkbox("URGENT")}
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-xl border text-xs font-semibold cursor-pointer min-h-[44px] touch-manipulation transition-all",
+                  activeWorkbox === "URGENT"
+                    ? "border-rose-500 bg-rose-500/10 text-rose-700"
+                    : "border-border/70 bg-muted/40 text-foreground"
+                )}
+              >
+                <span>Khẩn &amp; Chậm</span>
+                <span className="font-mono tabular-nums">{workboxCounts.urgent}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Section 2: Đơn vị thực hiện */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Đơn vị thực hiện
+            </label>
+            <select
+              value={selectedDepartment}
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+              className="w-full h-11 rounded-xl border border-border/70 bg-card px-3 text-xs font-medium text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-2xs"
+            >
+              {DEPARTMENT_OPTIONS.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Apply Button */}
+          <div className="pt-3 border-t border-border/50">
+            <BottomSheetClose asChild>
+              <Button
+                className="w-full h-11 min-h-[44px] text-xs font-semibold rounded-xl cursor-pointer"
+              >
+                Áp dụng bộ lọc
+              </Button>
+            </BottomSheetClose>
+          </div>
+        </BottomSheetContent>
+      </BottomSheet>
     </div>
   );
 }

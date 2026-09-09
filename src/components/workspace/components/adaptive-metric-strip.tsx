@@ -89,7 +89,7 @@ export function AdaptiveMetricStrip({
             status: "COMPLETED",
             title: "Tiến độ chung",
             value: formatRate(safeMetrics.completedRate),
-            subtitle: "Tỷ lệ hoàn thành (DACUM)",
+            subtitle: "Tỷ lệ hoàn thành",
             icon: CheckCircle2,
             iconColor: "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
           },
@@ -141,7 +141,7 @@ export function AdaptiveMetricStrip({
             status: "COMPLETED",
             title: "Tiến độ đơn vị",
             value: formatRate(safeMetrics.completedRate),
-            subtitle: "Đã nghiệm thu (DACUM)",
+            subtitle: "Đã nghiệm thu",
             icon: CheckCircle2,
             iconColor: "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
           },
@@ -194,7 +194,7 @@ export function AdaptiveMetricStrip({
             status: "COMPLETED",
             title: "Hoàn tất kỳ này",
             value: formatRate(safeMetrics.completedRate),
-            subtitle: "Tỷ lệ hoàn thành (DACUM)",
+            subtitle: "Tỷ lệ hoàn thành",
             icon: CheckCircle2,
             iconColor: "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
           },
@@ -208,7 +208,10 @@ export function AdaptiveMetricStrip({
   return (
     <div
       data-slot="adaptive-metric-strip"
-      className={cn("grid grid-cols-2 lg:grid-cols-4 gap-3", className)}
+      className={cn(
+        "grid grid-cols-2 lg:grid-cols-4 divide-x divide-border/50 rounded-xl bg-card border border-border/70 shadow-2xs overflow-hidden",
+        className
+      )}
     >
       {cards.map((card) => {
         const Icon = card.icon;
@@ -236,9 +239,9 @@ export function AdaptiveMetricStrip({
                 : undefined
             }
             className={cn(
-              "p-3.5 rounded-xl bg-card border border-border/70 flex flex-col justify-between space-y-2 shadow-2xs",
+              "p-3 sm:p-3.5 flex flex-col justify-between space-y-1 sm:space-y-1.5 transition-colors",
               isInteractive &&
-                "cursor-pointer transition-all hover:border-border hover:shadow-xs active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                "cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
             )}
           >
             <div className="flex items-center justify-between">
@@ -247,7 +250,7 @@ export function AdaptiveMetricStrip({
               </span>
               <div
                 className={cn(
-                  "p-1.5 rounded-lg border flex items-center justify-center shrink-0 select-none",
+                  "p-1 rounded-md border flex items-center justify-center shrink-0 select-none",
                   card.iconColor
                 )}
               >
@@ -259,10 +262,10 @@ export function AdaptiveMetricStrip({
               </div>
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-foreground select-text">
+              <div className="text-base sm:text-xl font-bold font-mono tabular-nums text-foreground select-text">
                 {card.value}
               </div>
-              <p className="text-xs text-muted-foreground line-clamp-1 leading-snug mt-0.5">
+              <p className="text-xs text-muted-foreground truncate leading-snug mt-0.5">
                 {card.subtitle}
               </p>
             </div>

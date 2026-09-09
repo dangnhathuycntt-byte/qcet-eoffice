@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import {
   SchoolTask,
   StaffTask,
@@ -354,23 +353,6 @@ export default function TasksPage() {
       className="max-w-[1440px] w-full mx-auto space-y-5 pb-20 md:pb-10"
       data-slot="tasks-page"
     >
-      {/* Breadcrumb Navigation */}
-      <nav
-        aria-label="Breadcrumb"
-        className="flex items-center gap-1.5 text-xs text-muted-foreground"
-      >
-        <Link
-          href="/"
-          className="hover:text-foreground transition-colors"
-        >
-          Trang chủ
-        </Link>
-        <span className="text-muted-foreground/40">/</span>
-        <span className="text-foreground font-medium">
-          Nhiệm vụ cấp Trường
-        </span>
-      </nav>
-
       {/* Header with Title and Primary Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
