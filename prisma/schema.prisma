@@ -978,7 +978,25 @@ model IdempotencyRecord {
   @@map("idempotency_records")
 }
 
+// ===================================================
+// 11. BẢNG GHI AUDIT LOG BẤT BIẾN (TASK 9)
+// ===================================================
 
+model AuditEvent {
+  id         String   @id @default(uuid())
+  actorId    String?  @map("actor_id")
+  action     String   @map("action")
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  requestId  String?  @map("request_id")
+  beforeData Json?    @map("before_data")
+  afterData  Json?    @map("after_data")
+  metadata   Json?    @map("metadata")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([requestId])
+  @@map("audit_events")
+}
 

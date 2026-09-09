@@ -38,6 +38,7 @@ import { prisma as defaultPrisma } from "../prisma";
 import { generateTaskCodeAtomic, type TaskCodeOptions } from "../task-code-generator";
 import { getAcademicYear, getAcademicMonthInfo } from "../academic-calendar";
 import { updateTaskWithOCC, updateDocumentWithOCC, type DbClient } from "./occ";
+import { logAuditEvent } from "./audit";
 
 /**
  * Options for configuring interactive transactions.
@@ -118,19 +119,15 @@ async function recordTransactionAudit(
     return;
   }
 
-  // If tx has an auditEvent model (introduced in Task 9), record automatically
-  if (typeof (tx as any).auditEvent?.create === "function") {
-    await (tx as any).auditEvent.create({
-      data: {
-        actorId: info.actorId,
-        action: info.action,
-        entityType: info.entityType,
-        entityId: info.entityId,
-        requestId: info.requestId ?? null,
-        metadata: info.metadata ?? null,
-      },
-    });
-  }
+  // Record into audit_events table via canonical logAuditEvent (Task 9)
+  await logAuditEvent(tx, {
+    actorId: info.actorId,
+    action: info.action,
+    entityType: info.entityType,
+    entityId: info.entityId,
+    requestId: info.requestId ?? null,
+    metadata: info.metadata ?? null,
+  });
 }
 
 // ============================================================================
