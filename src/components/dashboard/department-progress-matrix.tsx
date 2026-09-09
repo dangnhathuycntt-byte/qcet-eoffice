@@ -1,15 +1,49 @@
 "use client";
 
 import * as React from "react";
-import { Building2 } from "lucide-react";
+import { Building2, LayoutGrid, TableProperties, ArrowUpDown, ChevronRight } from "lucide-react";
 import type { DepartmentHealthSummary } from "@/lib/executive-matrix-aggregator";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+
+export type DepartmentMatrixViewMode = "cards" | "compact_table";
 
 export interface DepartmentProgressMatrixProps {
   departments: DepartmentHealthSummary[];
   selectedDepartment: string;
   onSelectDepartment: (deptId: string) => void;
+  viewMode?: DepartmentMatrixViewMode | "grid" | "table";
+  defaultViewMode?: DepartmentMatrixViewMode | "grid" | "table";
+  onViewModeChange?: (mode: DepartmentMatrixViewMode) => void;
+}
+
+function normalizeMode(mode?: string): DepartmentMatrixViewMode {
+  if (mode === "compact_table" || mode === "table") return "compact_table";
+  return "cards";
+}
+
+function getDeptId(dept: DepartmentHealthSummary): string {
+  return dept.departmentId || dept.code || dept.departmentCode || "";
+}
+
+function getDeptName(dept: DepartmentHealthSummary): string {
+  return dept.departmentName || (dept as { name?: string }).name || getDeptId(dept);
+}
+
+function getDeptOverdueCount(dept: DepartmentHealthSummary): number {
+  return dept.overdueTasksCount ?? dept.overdueTasks ?? 0;
+}
+
+function getDeptCompletedCount(dept: DepartmentHealthSummary): number {
+  return dept.completedTasksCount ?? dept.completedTasks ?? 0;
+}
+
+function getDeptInProgressCount(dept: DepartmentHealthSummary): number {
+  return dept.inProgressTasksCount ?? dept.inProgressTasks ?? 0;
+}
+
+function getDeptProgressPercent(dept: DepartmentHealthSummary): number {
+  return dept.averageProgressPercent ?? dept.completionRate ?? 0;
 }
 
 function progressBarColor(percent: number): string {
@@ -18,140 +52,444 @@ function progressBarColor(percent: number): string {
   return "bg-rose-500";
 }
 
+function progressTextColor(percent: number): string {
+  if (percent >= 80) return "text-emerald-600";
+  if (percent >= 50) return "text-amber-600";
+  return "text-rose-600";
+}
+
+export function sortDepartmentsByOverdue(
+  departments: DepartmentHealthSummary[],
+  descending = true
+): DepartmentHealthSummary[] {
+  return [...departments].sort((a, b) => {
+    const overdueA = getDeptOverdueCount(a);
+    const overdueB = getDeptOverdueCount(b);
+    if (overdueA !== overdueB) {
+      return descending ? overdueB - overdueA : overdueA - overdueB;
+    }
+    const progA = getDeptProgressPercent(a);
+    const progB = getDeptProgressPercent(b);
+    return progA - progB;
+  });
+}
+
 export function getDepartmentCardData(departments: DepartmentHealthSummary[]) {
   return departments.map((dept) => ({
     ...dept,
-    progressColor: progressBarColor(dept.averageProgressPercent),
+    progressColor: progressBarColor(getDeptProgressPercent(dept)),
   }));
+}
+
+function MiniProgressRing({ percent, colorClass }: { percent: number; colorClass: string }) {
+  const radius = 9;
+  const stroke = 2.2;
+  const normalizedRadius = radius - stroke * 0.5;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (Math.min(100, Math.max(0, percent)) / 100) * circumference;
+
+  return (
+    <svg height={radius * 2} width={radius * 2} className="shrink-0 -rotate-90">
+      <circle
+        stroke="currentColor"
+        fill="transparent"
+        strokeWidth={stroke}
+        r={normalizedRadius}
+        cx={radius}
+        cy={radius}
+        className="text-muted/30"
+      />
+      <circle
+        stroke="currentColor"
+        fill="transparent"
+        strokeWidth={stroke}
+        strokeDasharray={`${circumference} ${circumference}`}
+        style={{ strokeDashoffset }}
+        strokeLinecap="round"
+        r={normalizedRadius}
+        cx={radius}
+        cy={radius}
+        className={colorClass}
+      />
+    </svg>
+  );
 }
 
 export function DepartmentProgressMatrix({
   departments,
   selectedDepartment,
   onSelectDepartment,
+  viewMode: controlledViewMode,
+  defaultViewMode = "cards",
+  onViewModeChange,
 }: DepartmentProgressMatrixProps) {
-  const cards = getDepartmentCardData(departments);
+  const [internalViewMode, setInternalViewMode] = React.useState<DepartmentMatrixViewMode>(() =>
+    normalizeMode(defaultViewMode)
+  );
+  const [sortByOverdue, setSortByOverdue] = React.useState<boolean>(true);
+  const [sortAscending, setSortAscending] = React.useState<boolean>(false);
+
+  const currentViewMode = controlledViewMode ? normalizeMode(controlledViewMode) : internalViewMode;
+
+  const handleViewModeChange = (mode: DepartmentMatrixViewMode) => {
+    if (!controlledViewMode) {
+      setInternalViewMode(mode);
+    }
+    onViewModeChange?.(mode);
+  };
+
+  const cards = React.useMemo(() => getDepartmentCardData(departments), [departments]);
+
+  const displayedTableDepartments = React.useMemo(() => {
+    if (sortByOverdue) {
+      return sortDepartmentsByOverdue(departments, !sortAscending);
+    }
+    return departments;
+  }, [departments, sortByOverdue, sortAscending]);
+
+  const toggleSortByOverdue = () => {
+    if (!sortByOverdue) {
+      setSortByOverdue(true);
+      setSortAscending(false);
+    } else {
+      setSortAscending((prev) => !prev);
+    }
+  };
 
   return (
-    <div
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-      data-slot="department-progress-matrix"
-    >
-      {cards.map((dept) => {
-        const isSelected = selectedDepartment === dept.departmentId;
-
-        return (
-          <div
-            key={dept.departmentId}
-            role="button"
-            tabIndex={0}
-            aria-pressed={isSelected}
-            onClick={() => {
-              onSelectDepartment(isSelected ? "ALL" : dept.departmentId);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onSelectDepartment(isSelected ? "ALL" : dept.departmentId);
-              }
-            }}
-            className={cn(
-              "group relative flex flex-col gap-3 rounded-xl border bg-card p-4 transition-all duration-200 cursor-pointer select-none",
-              "hover:-translate-y-0.5 hover:shadow-xs",
-              isSelected
-                ? "ring-2 ring-indigo-500/30 ring-inset border-indigo-500 bg-indigo-500/[0.04] shadow-xs z-10"
-                : "border-border/60 hover:border-indigo-500/30 hover:bg-muted/15",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-            )}
-            data-slot="department-card"
-            data-dept-id={dept.departmentId}
-            data-active={isSelected ? "true" : "false"}
-          >
-            {/* Department name + lead */}
-            <div className="flex items-start gap-2.5 min-w-0">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
-                <Building2 className="size-4 shrink-0" strokeWidth={1.5} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground truncate leading-tight">
-                  {dept.departmentName}
-                </p>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {dept.leadName}
-                </p>
-              </div>
-            </div>
-
-            {/* Progress bar */}
-            <div className="space-y-1.5">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all duration-500 ease-out",
-                    dept.progressColor
-                  )}
-                  style={{
-                    width: `${Math.min(100, Math.max(0, dept.averageProgressPercent))}%`,
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground font-medium">
-                  Tiến độ
-                </span>
-                <span className="text-xs sm:text-[13px] font-bold font-mono tabular-nums text-foreground">
-                  {dept.averageProgressPercent}%
-                </span>
-              </div>
-            </div>
-
-            {/* Child stats (Hoàn thành / Đang làm / Trễ) */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-xs sm:text-[12.5px] font-medium text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span>Hoàn thành:</span>
-                <span className="font-semibold text-foreground font-mono tabular-nums">
-                  {dept.completedTasksCount}
-                </span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span>Đang làm:</span>
-                <span className="font-semibold text-foreground font-mono tabular-nums">
-                  {dept.inProgressTasksCount}
-                </span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span>Trễ:</span>
-                <span
-                  className={cn(
-                    "font-semibold font-mono tabular-nums",
-                    dept.overdueTasksCount > 0
-                      ? "text-rose-600"
-                      : "text-foreground"
-                  )}
-                >
-                  {dept.overdueTasksCount}
-                </span>
-              </span>
-            </div>
-
-            {/* Warning badges */}
-            {(dept.overdueTasksCount > 0 || dept.blockedTasksCount > 0) && (
-              <div className="flex flex-wrap gap-1.5">
-                {dept.overdueTasksCount > 0 && (
-                  <Badge variant="rose" className="text-xs h-5 px-2">
-                    {dept.overdueTasksCount} trễ hạn
-                  </Badge>
-                )}
-                {dept.blockedTasksCount > 0 && (
-                  <Badge variant="amber" className="text-xs h-5 px-2">
-                    {dept.blockedTasksCount} vướng mắc
-                  </Badge>
-                )}
-              </div>
-            )}
+    <div className="space-y-3" data-slot="department-progress-matrix-container">
+      {/* View mode toggle toolbar */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
+            <Building2 className="size-3.5 shrink-0" strokeWidth={1.5} />
           </div>
-        );
-      })}
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
+            Ma trận tiến độ 11 đơn vị
+          </span>
+          <span className="text-xs text-muted-foreground font-mono tabular-nums">
+            ({departments.length})
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5 shrink-0">
+          <button
+            type="button"
+            aria-label="Chế độ thẻ"
+            title="Chế độ thẻ (Cards View)"
+            onClick={() => handleViewModeChange("cards")}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all select-none",
+              currentViewMode === "cards"
+                ? "bg-background text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            data-mode="cards"
+            aria-pressed={currentViewMode === "cards"}
+          >
+            <LayoutGrid className="size-3.5" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Thẻ</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Chế độ bảng tinh gọn"
+            title="Chế độ bảng tinh gọn (Compact Table View)"
+            onClick={() => handleViewModeChange("compact_table")}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all select-none",
+              currentViewMode === "compact_table"
+                ? "bg-background text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            data-mode="compact_table"
+            aria-pressed={currentViewMode === "compact_table"}
+          >
+            <TableProperties className="size-3.5" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Bảng tinh gọn</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Grid Cards View */}
+      {currentViewMode === "cards" ? (
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          data-slot="department-progress-matrix"
+        >
+          {cards.map((dept) => {
+            const deptId = getDeptId(dept);
+            const deptName = getDeptName(dept);
+            const isSelected = selectedDepartment === deptId;
+            const overdueCount = getDeptOverdueCount(dept);
+            const inProgressCount = getDeptInProgressCount(dept);
+            const completedCount = getDeptCompletedCount(dept);
+            const progressPercent = getDeptProgressPercent(dept);
+            const blockedCount = dept.blockedTasksCount ?? 0;
+
+            return (
+              <div
+                key={deptId}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                onClick={() => {
+                  onSelectDepartment(isSelected ? "ALL" : deptId);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectDepartment(isSelected ? "ALL" : deptId);
+                  }
+                }}
+                className={cn(
+                  "group relative flex flex-col gap-3 rounded-xl border bg-card p-4 transition-all duration-200 cursor-pointer select-none",
+                  "hover:-translate-y-0.5 hover:shadow-xs",
+                  isSelected
+                    ? "ring-2 ring-indigo-500/30 ring-inset border-indigo-500 bg-indigo-500/[0.04] shadow-xs z-10"
+                    : "border-border/60 hover:border-indigo-500/30 hover:bg-muted/15",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                )}
+                data-slot="department-card"
+                data-dept-id={deptId}
+                data-active={isSelected ? "true" : "false"}
+              >
+                {/* Department name + lead */}
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
+                    <Building2 className="size-4 shrink-0" strokeWidth={1.5} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                      {deptName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {dept.leadName}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-1.5">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500 ease-out",
+                        dept.progressColor
+                      )}
+                      style={{
+                        width: `${Math.min(100, Math.max(0, progressPercent))}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground font-medium">
+                      Tiến độ
+                    </span>
+                    <span className="text-xs sm:text-[13px] font-bold font-mono tabular-nums text-foreground">
+                      {progressPercent}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Child stats (Hoàn thành / Đang làm / Trễ) */}
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-xs sm:text-[12.5px] font-medium text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <span>Hoàn thành:</span>
+                    <span className="font-semibold text-foreground font-mono tabular-nums">
+                      {completedCount}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span>Đang làm:</span>
+                    <span className="font-semibold text-foreground font-mono tabular-nums">
+                      {inProgressCount}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span>Trễ:</span>
+                    <span
+                      className={cn(
+                        "font-semibold font-mono tabular-nums",
+                        overdueCount > 0
+                          ? "text-rose-600"
+                          : "text-foreground"
+                      )}
+                    >
+                      {overdueCount}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Warning badges */}
+                {(overdueCount > 0 || blockedCount > 0) && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {overdueCount > 0 && (
+                      <Badge variant="rose" className="text-xs h-5 px-2">
+                        {overdueCount} trễ hạn
+                      </Badge>
+                    )}
+                    {blockedCount > 0 && (
+                      <Badge variant="amber" className="text-xs h-5 px-2">
+                        {blockedCount} vướng mắc
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Compact Hairline Table View */
+        <div
+          className="overflow-x-auto rounded-xl border border-border/80 bg-card shadow-2xs"
+          data-slot="department-progress-matrix-table-container"
+        >
+          <table
+            className="w-full text-left text-xs border-collapse"
+            data-slot="department-progress-matrix-table"
+          >
+            <thead className="bg-muted/40 border-b border-border/60">
+              <tr>
+                <th className="p-2.5 font-medium text-muted-foreground whitespace-nowrap">
+                  Đơn vị
+                </th>
+                <th className="p-2.5 font-medium text-muted-foreground whitespace-nowrap hidden md:table-cell">
+                  Lãnh đạo phụ trách
+                </th>
+                <th className="p-2.5 font-medium text-muted-foreground whitespace-nowrap">
+                  Tiến độ
+                </th>
+                <th
+                  className="p-2.5 font-medium text-muted-foreground text-center cursor-pointer hover:text-foreground select-none whitespace-nowrap transition-colors"
+                  onClick={toggleSortByOverdue}
+                  title="Nhấn để sắp xếp theo số lượng trễ hạn"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <span>Quá hạn</span>
+                    <ArrowUpDown className="size-3 text-muted-foreground" strokeWidth={1.5} />
+                  </span>
+                </th>
+                <th className="p-2.5 font-medium text-muted-foreground text-center whitespace-nowrap">
+                  Đang làm
+                </th>
+                <th className="p-2.5 font-medium text-muted-foreground text-center whitespace-nowrap">
+                  Hoàn thành
+                </th>
+                <th className="p-2.5 font-medium text-muted-foreground text-right whitespace-nowrap pr-3">
+                  Hành động
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {displayedTableDepartments.map((dept) => {
+                const deptId = getDeptId(dept);
+                const deptName = getDeptName(dept);
+                const isSelected = selectedDepartment === deptId;
+                const overdueCount = getDeptOverdueCount(dept);
+                const inProgressCount = getDeptInProgressCount(dept);
+                const completedCount = getDeptCompletedCount(dept);
+                const progressPercent = getDeptProgressPercent(dept);
+                const ringColor = progressTextColor(progressPercent);
+
+                return (
+                  <tr
+                    key={deptId}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    onClick={() => onSelectDepartment(isSelected ? "ALL" : deptId)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSelectDepartment(isSelected ? "ALL" : deptId);
+                      }
+                    }}
+                    className={cn(
+                      "group transition-colors duration-150 cursor-pointer select-none",
+                      isSelected
+                        ? "bg-indigo-500/[0.08] hover:bg-indigo-500/[0.12]"
+                        : "hover:bg-muted/35",
+                      "focus-visible:outline-none focus-visible:bg-muted/50"
+                    )}
+                    data-slot="department-table-row"
+                    data-dept-id={deptId}
+                    data-active={isSelected ? "true" : "false"}
+                  >
+                    {/* Đơn vị */}
+                    <td className="p-2.5 font-medium text-foreground">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
+                          <Building2 className="size-3.5 shrink-0" strokeWidth={1.5} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground truncate leading-tight">
+                            {deptName}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate md:hidden">
+                            {dept.leadName}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Lãnh đạo phụ trách */}
+                    <td className="p-2.5 text-muted-foreground whitespace-nowrap hidden md:table-cell">
+                      {dept.leadName}
+                    </td>
+
+                    {/* Tiến độ */}
+                    <td className="p-2.5 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <MiniProgressRing percent={progressPercent} colorClass={ringColor} />
+                        <span className="font-mono tabular-nums font-bold text-foreground">
+                          {progressPercent}%
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Quá hạn */}
+                    <td className="p-2.5 text-center whitespace-nowrap">
+                      {overdueCount > 0 ? (
+                        <Badge variant="rose" className="text-xs h-5 px-1.5 font-mono tabular-nums">
+                          {overdueCount} trễ
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground font-mono tabular-nums">0</span>
+                      )}
+                    </td>
+
+                    {/* Đang làm */}
+                    <td className="p-2.5 text-center font-mono tabular-nums font-medium text-foreground whitespace-nowrap">
+                      {inProgressCount}
+                    </td>
+
+                    {/* Hoàn thành */}
+                    <td className="p-2.5 text-center font-mono tabular-nums font-medium text-foreground whitespace-nowrap">
+                      {completedCount}
+                    </td>
+
+                    {/* Hành động */}
+                    <td className="p-2.5 text-right whitespace-nowrap pr-3">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-colors",
+                          isSelected
+                            ? "bg-indigo-600 text-white font-semibold shadow-2xs"
+                            : "bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                        )}
+                      >
+                        <span>{isSelected ? "Đang chọn" : "Xem"}</span>
+                        <ChevronRight className="size-3 shrink-0" strokeWidth={1.5} />
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
