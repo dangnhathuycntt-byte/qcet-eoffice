@@ -30,12 +30,8 @@ describe("Topbar Clean Chrome & Contextual Scoping Invariants", () => {
     assert.ok(content.includes("NotificationPopover"), "Topbar must retain NotificationPopover");
   });
 
-  test("dashboard-zone.tsx mounts ScopeSwitcher and GlobalMonthSelector inside React Suspense", (t) => {
+  test("dashboard-zone.tsx mounts ScopeSwitcher and GlobalMonthSelector inside React Suspense", () => {
     const content = fs.readFileSync(dashboardZonePath, "utf-8");
-    if (!content.includes("ScopeSwitcher")) {
-      t.skip("Contextual action bar in dashboard-zone.tsx scheduled for Task 2");
-      return;
-    }
     assert.match(
       content,
       /import\s+\{\s*ScopeSwitcher\s*\}\s+from\s+["']@\/components\/layout\/scope-switcher["']/,

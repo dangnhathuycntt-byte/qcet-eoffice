@@ -1,8 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScopeSwitcher } from "@/components/layout/scope-switcher";
+import { GlobalMonthSelector } from "@/components/layout/global-month-selector";
 import { ExecutiveStatStrip } from "@/components/dashboard/executive-stat-strip";
 import { ExecutiveActionCenter } from "@/components/dashboard/executive-action-center";
 import { DepartmentProgressMatrix } from "@/components/dashboard/department-progress-matrix";
@@ -29,7 +32,6 @@ function DashboardZoneComponent() {
     roleUpcoming,
     activities,
     isRefreshing,
-    user,
   } = useDashboardData();
 
   const {
@@ -42,21 +44,11 @@ function DashboardZoneComponent() {
 
   return (
     <div className="space-y-6" data-slot="zone-dashboard">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="space-y-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs font-mono">
               Phân khu Điều hành
-            </span>
-            {selectedAcademicMonth !== "ALL" && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-900 border border-amber-500/20 shadow-2xs font-mono">
-                {selectedMonthPeriod
-                  ? `KỲ VẬN HÀNH THÁNG ${selectedAcademicMonth} (${selectedMonthPeriod.shortDateSpan}/2026)`
-                  : `KỲ VẬN HÀNH THÁNG ${selectedAcademicMonth}`}
-              </span>
-            )}
-            <span className="text-xs text-muted-foreground font-medium">
-              {isExecutive ? "BGH Giám sát toàn trường" : `Đơn vị: ${user?.department || "QCET"}`}
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground font-heading">
@@ -67,20 +59,39 @@ function DashboardZoneComponent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            className="hidden sm:inline-flex gap-1.5 text-xs rounded-xl"
-          >
-            <RefreshCw
-              size={14}
-              className={isRefreshing ? "animate-spin text-primary" : ""}
-            />
-            <span className="hidden sm:inline">Làm mới dữ liệu</span>
-          </Button>
+        {/* Contextual Action Bar: KỲ VẬN HÀNH THÁNG & Phạm vi */}
+        <div
+          aria-label="Thanh tác vụ ngữ cảnh: KỲ VẬN HÀNH THÁNG và Phạm vi"
+          className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-muted/30 border border-border/50"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <div id="tour-scope-switcher">
+              <Suspense fallback={<div className="h-8 w-44 rounded-lg bg-muted/40 animate-pulse" />}>
+                <ScopeSwitcher />
+              </Suspense>
+            </div>
+            <div id="tour-month-selector">
+              <Suspense fallback={<div className="h-8 w-32 rounded-lg bg-muted/40 animate-pulse" />}>
+                <GlobalMonthSelector />
+              </Suspense>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className="gap-1.5 text-xs rounded-xl min-h-[36px] touch-manipulation"
+            >
+              <RefreshCw
+                size={14}
+                className={isRefreshing ? "animate-spin text-primary" : ""}
+              />
+              <span>Làm mới dữ liệu</span>
+            </Button>
+          </div>
         </div>
       </div>
 

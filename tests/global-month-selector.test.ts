@@ -2,11 +2,13 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import {
+
+const calendarModulePath = path.resolve(process.cwd(), "src/lib/academic-calendar.ts");
+const {
   ACADEMIC_MONTH_ORDER,
   getAcademicMonthPeriod,
   getAcademicMonthInfo,
-} from "../src/lib/academic-calendar";
+} = await import(`file://${calendarModulePath}`);
 
 describe("Global Month Selector Component Invariants", () => {
   const componentPath = path.resolve(process.cwd(), "src/components/layout/global-month-selector.tsx");
@@ -19,10 +21,11 @@ describe("Global Month Selector Component Invariants", () => {
     assert.match(content, /Popover/);
   });
 
-  test("app-topbar.tsx includes GlobalMonthSelector alongside ScopeSwitcher", () => {
-    const topbarPath = path.resolve(process.cwd(), "src/components/layout/app-topbar.tsx");
-    const content = fs.readFileSync(topbarPath, "utf8");
+  test("dashboard-zone.tsx includes GlobalMonthSelector alongside ScopeSwitcher in contextual toolbar", () => {
+    const dashboardZonePath = path.resolve(process.cwd(), "src/components/dashboard/zones/dashboard-zone.tsx");
+    const content = fs.readFileSync(dashboardZonePath, "utf8");
     assert.match(content, /GlobalMonthSelector/);
+    assert.match(content, /ScopeSwitcher/);
   });
 
   test("academic calendar defines 12 operational months in correct order", () => {
