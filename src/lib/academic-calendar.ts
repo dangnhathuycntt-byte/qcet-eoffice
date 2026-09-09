@@ -24,6 +24,13 @@ export interface AcademicMonthPeriod {
 
 export type AcademicMonthInfo = AcademicMonthPeriod;
 
+/**
+ * The 12 operational academic months ordered according to QCET cycle:
+ * Month 9, 10, 11, 12 in the fall, followed by 1, 2, 3, 4, 5 in the spring, and 6, 7, 8 in the summer.
+ */
+export const ACADEMIC_MONTH_ORDER = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8] as const;
+
+
 function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }

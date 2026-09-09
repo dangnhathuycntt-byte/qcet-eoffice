@@ -22,6 +22,7 @@ import {
 import dynamic from "next/dynamic";
 import { useSidebar, resolveBreadcrumb } from "@/components/layout/sidebar-context";
 import { ScopeSwitcher } from "@/components/layout/scope-switcher";
+import { GlobalMonthSelector } from "@/components/layout/global-month-selector";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -187,6 +188,13 @@ export function AppTopbar() {
           <div id="tour-scope-switcher">
             <Suspense fallback={<div className="h-8 w-44 rounded-lg bg-muted/40 animate-pulse" />}>
               <ScopeSwitcher />
+            </Suspense>
+          </div>
+
+          {/* Global Academic Month Selector */}
+          <div id="tour-month-selector">
+            <Suspense fallback={<div className="h-8 w-32 rounded-lg bg-muted/40 animate-pulse" />}>
+              <GlobalMonthSelector />
             </Suspense>
           </div>
         </div>
