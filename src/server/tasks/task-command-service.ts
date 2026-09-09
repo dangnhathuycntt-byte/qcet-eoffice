@@ -16,6 +16,7 @@ import {
 } from '@/server/api/errors';
 import { safeAfter, dispatchTaskAssignedPush } from '@/lib/push-dispatch';
 import { generateTaskCodeAtomic } from '@/lib/task-code-generator';
+import { getAcademicYear, getSystemReferenceDate } from '@/lib/academic-calendar';
 import {
   CreateTaskInputSchema,
   UpdateTaskInputSchema,
@@ -149,7 +150,10 @@ export class TaskCommandService {
     const monthNum = academicMonth
       ? Number(academicMonth)
       : (parentTask?.academicMonth ?? (new Date(dueDate).getMonth() + 1 || 9));
-    const yearStr = academicYear || parentTask?.academicYear || '2026-2027';
+    const yearStr =
+      academicYear ||
+      parentTask?.academicYear ||
+      getAcademicYear(dueDate || getSystemReferenceDate());
 
     if (!title || !dueDate || !effectiveDepartmentId) {
       throw new ValidationError('Thiếu thông tin bắt buộc (Tiêu đề, Hạn chót, Đơn vị)');

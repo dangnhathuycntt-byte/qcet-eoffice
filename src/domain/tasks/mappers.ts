@@ -20,7 +20,7 @@ import type {
   DomainDeliverableStatus,
 } from './types';
 import { formatLocalDate } from '@/lib/adapters/task-db-adapter';
-import { getSystemReferenceDate, isTaskPastDue } from '@/lib/academic-calendar';
+import { getSystemReferenceDate, isTaskPastDue, getAcademicYear } from '@/lib/academic-calendar';
 
 export function toTaskAssigneeDomain(raw: any): TaskAssigneeDomain {
   const roleInTask: DomainAssigneeRole =
@@ -177,7 +177,7 @@ export function toTaskDomainModel(raw: any): TaskDomainModel {
     startDate: raw.startDate ? formatLocalDate(raw.startDate) : null,
     completedAt: raw.completedAt ? formatLocalDate(raw.completedAt) : null,
     academicMonth: typeof raw.academicMonth === 'number' ? raw.academicMonth : 9,
-    academicYear: raw.academicYear || '2026-2027',
+    academicYear: raw.academicYear || getAcademicYear(dueDateStr || getSystemReferenceDate()),
     departmentId: raw.departmentId ?? raw.department?.id ?? null,
     departmentName: raw.department?.name ?? null,
     departmentCode: raw.department?.shortName ?? raw.department?.code ?? null,

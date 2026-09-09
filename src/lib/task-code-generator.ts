@@ -98,11 +98,11 @@ export async function generateTaskCodeAtomic(
       INSERT INTO "task_sequences" ("year", "scope", "department_code", "last_value", "updated_at")
       VALUES (${year}, ${seqScope}, ${seqDept}, ${initialValue}, NOW())
       ON CONFLICT ("year", "scope", "department_code")
-      DO UPDATE SET "last_value" = "task_sequences"."last_value" + 1, "updated_at" = NOW()
+      DO UPDATE SET "last_value" = GREATEST("task_sequences"."last_value" + 1, ${initialValue}), "updated_at" = NOW()
       RETURNING "last_value";
     `;
     initializedSequences.add(seqKey);
-    nextVal = res[0].last_value;
+    nextVal = Number(res[0].last_value);
   } else if (client?.taskSequence?.upsert) {
     // Atomic Prisma upsert with increment (race-free, single atomic statement)
     const record = await client.taskSequence.upsert({
@@ -126,8 +126,23 @@ export async function generateTaskCodeAtomic(
         lastValue: true,
       },
     });
+    let finalVal = record.lastValue;
+    if (finalVal < initialValue) {
+      const updated = await client.taskSequence.update({
+        where: {
+          year_scope_departmentCode: {
+            year,
+            scope: seqScope,
+            departmentCode: seqDept,
+          },
+        },
+        data: { lastValue: initialValue },
+        select: { lastValue: true },
+      });
+      finalVal = updated.lastValue;
+    }
     initializedSequences.add(seqKey);
-    nextVal = record.lastValue;
+    nextVal = finalVal;
   } else {
     // In-memory or fallback mode for unit testing or when client lacks taskSequence
     const memKey = `${year}_${seqScope}_${seqDept}`;
