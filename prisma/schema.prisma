@@ -152,6 +152,15 @@ model User {
   workflowsArchived     DocumentIncomingWorkflow[] @relation("DocWorkflowArchivedBy")
   unitAssignmentsGiven  UnitWorkAssignment[]       @relation("UnitWorkAssignedBy")
   unitAssignmentsDri    UnitWorkAssignment[]       @relation("UnitWorkDri")
+  signatures                         SignatureRecord[]          @relation("UserSignatures")
+  outgoingWorkflowsContentReviewed   DocumentOutgoingWorkflow[] @relation("DocWorkflowContentReviewer")
+  outgoingWorkflowsFormatReviewed    DocumentOutgoingWorkflow[] @relation("DocWorkflowFormatReviewer")
+  outgoingWorkflowsAuthorizedSigned  DocumentOutgoingWorkflow[] @relation("DocWorkflowAuthorizedSigner")
+  outgoingWorkflowsNumbered          DocumentOutgoingWorkflow[] @relation("DocWorkflowNumberer")
+  outgoingWorkflowsOrgSigned         DocumentOutgoingWorkflow[] @relation("DocWorkflowOrgSigner")
+  outgoingWorkflowsIssued            DocumentOutgoingWorkflow[] @relation("DocWorkflowIssuer")
+  outgoingWorkflowsFiled             DocumentOutgoingWorkflow[] @relation("DocWorkflowOutgoingFiledBy")
+  outgoingWorkflowsArchived          DocumentOutgoingWorkflow[] @relation("DocWorkflowOutgoingArchivedBy")
 
   @@map("users")
 }
@@ -385,6 +394,8 @@ model Document {
   attachments        DocumentAttachment[]
   directives         DocumentDirective[]
   incomingWorkflow   DocumentIncomingWorkflow?
+  outgoingWorkflow   DocumentOutgoingWorkflow?
+  signatures         SignatureRecord[]
 
   // Liên thông Unified Task Hub
   linkedTaskId       String?               @unique @map("linked_task_id")
@@ -562,6 +573,125 @@ model UnitWorkAssignment {
   @@index([unitId])
   @@index([driUserId])
   @@map("unit_work_assignments")
+}
+
+// ===================================================
+// 4B. OUTGOING DOCUMENTS V2 & DIGITAL SIGNATURES (NĐ 30/2020 & NĐ 68/2024)
+// ===================================================
+enum OutgoingDocumentStatus {
+  DRAFT
+  CONTENT_REVIEW
+  FORMAT_CHECK
+  AUTHORIZED_SIGN
+  NUMBERED
+  ORGANIZATION_SIGNED
+  ISSUED
+  DELIVERED
+  FILED
+  ARCHIVED
+}
+
+enum SignatureType {
+  PERSONAL_DIGITAL
+  ORGANIZATION_DIGITAL
+  PHYSICAL
+}
+
+enum SignatureVerificationStatus {
+  VALID
+  INVALID
+  REVOKED
+  UNVERIFIED
+}
+
+model DocumentOutgoingWorkflow {
+  id                        String                 @id @default(cuid())
+  documentId                String                 @unique @map("document_id")
+  document                  Document               @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status                    OutgoingDocumentStatus @default(DRAFT)
+  currentVersion            Int                    @default(1) @map("current_version")
+
+  // Content Review (Phê duyệt nội dung)
+  contentReviewSubmittedAt  DateTime?              @map("content_review_submitted_at")
+  contentReviewerId         String?                @map("content_reviewer_id")
+  contentReviewer           User?                  @relation("DocWorkflowContentReviewer", fields: [contentReviewerId], references: [id], onDelete: SetNull)
+  contentApprovedAt         DateTime?              @map("content_approved_at")
+  contentReviewNotes        String?                @map("content_review_notes") @db.Text
+
+  // Format Check (Kiểm tra thể thức kỹ thuật NĐ 30/2020)
+  formatReviewSubmittedAt   DateTime?              @map("format_review_submitted_at")
+  formatReviewerId          String?                @map("format_reviewer_id")
+  formatReviewer            User?                  @relation("DocWorkflowFormatReviewer", fields: [formatReviewerId], references: [id], onDelete: SetNull)
+  formatApprovedAt          DateTime?              @map("format_approved_at")
+  formatReviewNotes         String?                @map("format_review_notes") @db.Text
+
+  // Authorized Sign (Ký chức danh / Thẩm quyền)
+  authorizedSignerId        String?                @map("authorized_signer_id")
+  authorizedSigner          User?                  @relation("DocWorkflowAuthorizedSigner", fields: [authorizedSignerId], references: [id], onDelete: SetNull)
+  authorizedSignedAt        DateTime?              @map("authorized_signed_at")
+  signingNotes              String?                @map("signing_notes") @db.Text
+
+  // Numbering (Văn thư cấp số đi)
+  numberedAt                DateTime?              @map("numbered_at")
+  numbererId                String?                @map("numberer_id")
+  numberer                  User?                  @relation("DocWorkflowNumberer", fields: [numbererId], references: [id], onDelete: SetNull)
+  outgoingNumber            Int?                   @map("outgoing_number")
+  outgoingNumberStr         String?                @map("outgoing_number_str") @db.VarChar(100)
+
+  // Organization Digital Signature (Văn thư đóng dấu số cơ quan NĐ 30 & NĐ 68)
+  orgSignedAt               DateTime?              @map("org_signed_at")
+  orgSignerId               String?                @map("org_signer_id")
+  orgSigner                 User?                  @relation("DocWorkflowOrgSigner", fields: [orgSignerId], references: [id], onDelete: SetNull)
+
+  // Issue (Phát hành)
+  issuedAt                  DateTime?              @map("issued_at")
+  issuerId                  String?                @map("issuer_id")
+  issuer                    User?                  @relation("DocWorkflowIssuer", fields: [issuerId], references: [id], onDelete: SetNull)
+  recipientList             String?                @map("recipient_list") @db.Text
+  deliveryMethod            String?                @map("delivery_method") @db.VarChar(100)
+
+  // Delivery, Filing & Archival
+  deliveredAt               DateTime?              @map("delivered_at")
+  filedAt                   DateTime?              @map("filed_at")
+  filedById                 String?                @map("filed_by_id")
+  filedBy                   User?                  @relation("DocWorkflowOutgoingFiledBy", fields: [filedById], references: [id], onDelete: SetNull)
+  dossierId                 String?                @map("dossier_id") @db.VarChar(100)
+
+  archivedAt                DateTime?              @map("archived_at")
+  archivedById              String?                @map("archived_by_id")
+  archivedBy                User?                  @relation("DocWorkflowOutgoingArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+
+  createdAt                 DateTime               @default(now()) @map("created_at")
+  updatedAt                 DateTime               @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([authorizedSignerId])
+  @@index([contentReviewerId])
+  @@index([formatReviewerId])
+  @@map("document_outgoing_workflows")
+}
+
+model SignatureRecord {
+  id                   String                      @id @default(cuid())
+  documentId           String                      @map("document_id")
+  document             Document                    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version              Int                         @default(1)
+  signerUserId         String                      @map("signer_user_id")
+  signerUser           User                        @relation("UserSignatures", fields: [signerUserId], references: [id], onDelete: Restrict)
+  signerAssignmentId   String?                     @map("signer_assignment_id")
+  signerAssignment     PositionAssignment?         @relation(fields: [signerAssignmentId], references: [id], onDelete: SetNull)
+  signingCapacity      String                      @map("signing_capacity") @db.VarChar(100)
+  signatureType        SignatureType               @default(PERSONAL_DIGITAL) @map("signature_type")
+  certificateMetadata  Json?                       @map("certificate_metadata")
+  signedAt             DateTime                    @default(now()) @map("signed_at")
+  verificationStatus   SignatureVerificationStatus @default(VALID) @map("verification_status")
+  createdAt            DateTime                    @default(now()) @map("created_at")
+  updatedAt            DateTime                    @updatedAt @map("updated_at")
+
+  @@index([documentId, version])
+  @@index([signerUserId])
+  @@index([verificationStatus])
+  @@map("signature_records")
 }
 
 // ===================================================
@@ -873,6 +1003,7 @@ model PositionAssignment {
   delegationsReceived  DelegationGrant[]      @relation("GranteeDelegations")
   primaryTasks         Task[]                 @relation("TaskPrimaryAssignment")
   taskApprovalSteps    TaskApprovalStep[]
+  signatures           SignatureRecord[]
   createdAt            DateTime               @default(now()) @map("created_at")
   updatedAt            DateTime               @updatedAt @map("updated_at")
 
