@@ -76,8 +76,22 @@ export class InvalidTransitionError extends ApiError {
 }
 
 export class RateLimitError extends ApiError {
-  constructor(message = 'Too many requests', code = 'RATE_LIMITED') {
+  public retryAfter?: number;
+
+  constructor(
+    message = 'Too many requests',
+    codeOrRetryAfter: string | number = 'RATE_LIMITED',
+    retryAfter?: number
+  ) {
+    let code = 'RATE_LIMITED';
+    let retry = retryAfter;
+    if (typeof codeOrRetryAfter === 'number') {
+      retry = codeOrRetryAfter;
+    } else if (typeof codeOrRetryAfter === 'string') {
+      code = codeOrRetryAfter;
+    }
     super(429, code, message);
+    this.retryAfter = retry;
   }
 }
 
