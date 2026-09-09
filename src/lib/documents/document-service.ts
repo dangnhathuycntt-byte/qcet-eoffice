@@ -75,18 +75,51 @@ export interface ListDocumentsFilter {
 }
 
 const defaultInclude = {
-  draftingDept: true,
-  leadDepartment: true,
-  leadUser: true,
-  registeredBy: true,
+  draftingDept: {
+    select: {
+      id: true,
+      name: true,
+      shortName: true,
+    },
+  },
+  leadDepartment: {
+    select: {
+      id: true,
+      name: true,
+      shortName: true,
+    },
+  },
+  leadUser: {
+    select: {
+      id: true,
+      name: true,
+      title: true,
+    },
+  },
+  registeredBy: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
   attachments: true,
   directives: {
     include: {
-      leader: true,
-      assignedDept: true,
+      leader: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      assignedDept: {
+        select: {
+          id: true,
+          name: true,
+          shortName: true,
+        },
+      },
     },
   },
-  linkedTask: true,
 };
 
 export function mapPrismaDocumentToItem(record: any): DocumentItem {

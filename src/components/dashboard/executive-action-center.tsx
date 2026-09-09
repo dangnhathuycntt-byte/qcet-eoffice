@@ -28,6 +28,7 @@ export interface ExecutiveActionCenterProps {
   onFilterChange: (filter: ExecutiveFilter) => void;
   items?: ExecutiveActionItem[];
   onAction?: (actionType: string, item: ExecutiveActionItem) => void;
+  hideCards?: boolean;
 }
 
 interface ActionCardConfig {
@@ -109,6 +110,7 @@ export function ExecutiveActionCenter({
   onFilterChange,
   items,
   onAction,
+  hideCards = false,
 }: ExecutiveActionCenterProps) {
   const cards = getActionCardData(stats);
   const [isExpanded, setIsExpanded] = React.useState(false);
@@ -130,66 +132,68 @@ export function ExecutiveActionCenter({
   return (
     <div className="space-y-4" data-slot="executive-action-center">
       {/* 3 Metric Action Filter Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {cards.map((card) => {
-          const IconComponent = card.icon;
-          const isActive = activeFilter === card.filterKey;
+      {!hideCards && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {cards.map((card) => {
+            const IconComponent = card.icon;
+            const isActive = activeFilter === card.filterKey;
 
-          return (
-            <button
-              type="button"
-              key={card.id}
-              aria-pressed={isActive}
-              aria-label={`Lọc theo ${card.title}: ${card.value} ${card.subtext}`}
-              onClick={() => {
-                onFilterChange(isActive ? "ALL" : card.filterKey);
-              }}
-              className={cn(
-                "group relative flex flex-col justify-between gap-3 rounded-xl border bg-card p-4 sm:p-5 text-left transition-all duration-200 cursor-pointer select-none overflow-hidden w-full",
-                "hover:-translate-y-0.5 hover:shadow-xs",
-                isActive
-                  ? cn("shadow-xs z-10", card.activeAccent, card.activeBg)
-                  : cn("border-border/60 hover:bg-muted/15", card.hoverBorder),
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-              )}
-              data-slot="action-card"
-              data-card-id={card.id}
-              data-filter-key={card.filterKey}
-              data-active={isActive ? "true" : "false"}
-            >
-              {/* Icon + Title */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <IconComponent className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-                  <span className="text-xs sm:text-sm font-semibold text-foreground/90 tracking-tight truncate group-hover:text-foreground transition-colors">
-                    {card.title}
+            return (
+              <button
+                type="button"
+                key={card.id}
+                aria-pressed={isActive}
+                aria-label={`Lọc theo ${card.title}: ${card.value} ${card.subtext}`}
+                onClick={() => {
+                  onFilterChange(isActive ? "ALL" : card.filterKey);
+                }}
+                className={cn(
+                  "group relative flex flex-col justify-between gap-3 rounded-xl border bg-card p-4 sm:p-5 text-left transition-all duration-200 cursor-pointer select-none overflow-hidden w-full",
+                  "hover:-translate-y-0.5 hover:shadow-xs",
+                  isActive
+                    ? cn("shadow-xs z-10", card.activeAccent, card.activeBg)
+                    : cn("border-border/60 hover:bg-muted/15", card.hoverBorder),
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                )}
+                data-slot="action-card"
+                data-card-id={card.id}
+                data-filter-key={card.filterKey}
+                data-active={isActive ? "true" : "false"}
+              >
+                {/* Icon + Title */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <IconComponent className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                    <span className="text-xs sm:text-sm font-semibold text-foreground/90 tracking-tight truncate group-hover:text-foreground transition-colors">
+                      {card.title}
+                    </span>
+                  </div>
+                  {isActive && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-foreground/10 text-foreground font-mono shrink-0">
+                      Đang lọc
+                    </span>
+                  )}
+                </div>
+
+                {/* Metric Value */}
+                <div className="flex items-baseline my-0.5">
+                  <span className="font-mono tabular-nums text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                    {card.value}
                   </span>
                 </div>
-                {isActive && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-foreground/10 text-foreground font-mono shrink-0">
-                    Đang lọc
+
+                {/* Status dot + Contextual Subtext */}
+                <div className="flex items-center gap-1.5 pt-0.5 text-xs sm:text-[13px] text-muted-foreground">
+                  <span className={cn("size-1.5 rounded-full shrink-0", card.dotColor)} />
+                  <span className="truncate">
+                    {card.subtext}
                   </span>
-                )}
-              </div>
-
-              {/* Metric Value */}
-              <div className="flex items-baseline my-0.5">
-                <span className="font-mono tabular-nums text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                  {card.value}
-                </span>
-              </div>
-
-              {/* Status dot + Contextual Subtext */}
-              <div className="flex items-center gap-1.5 pt-0.5 text-xs sm:text-[13px] text-muted-foreground">
-                <span className={cn("size-1.5 rounded-full shrink-0", card.dotColor)} />
-                <span className="truncate">
-                  {card.subtext}
-                </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Action Items List Queue or Verified Clear Horizon Empty State */}
       {displayItems.length > 0 ? (

@@ -9,6 +9,10 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { DashboardStats } from "@/types/dashboard";
+import type {
+  ExecutiveActionStats,
+  ExecutiveFilter,
+} from "@/lib/executive-matrix-aggregator";
 import { cn } from "@/lib/utils";
 
 export type WorkboxFilter =
@@ -43,6 +47,7 @@ export interface StatCardData {
   value: string;
   subtext: string;
   filterKey?: WorkboxFilter;
+  executiveFilterKey?: ExecutiveFilter;
   badge?: StatCardBadge;
   progress?: number;
   iconName:
@@ -57,9 +62,13 @@ export interface StatCardData {
 
 export interface ExecutiveStatStripProps {
   stats: DashboardStats;
+  executiveStats?: ExecutiveActionStats | null;
   activeFilter?: WorkboxFilter;
+  activeExecutiveFilter?: ExecutiveFilter;
   onFilterChange?: (filter: WorkboxFilter) => void;
+  onExecutiveFilterChange?: (filter: ExecutiveFilter) => void;
   className?: string;
+  isExecutive?: boolean;
 }
 
 const iconMap = {
@@ -182,30 +191,149 @@ export function getStatCardData(statsInput: DashboardStats): StatCardData[] {
   ];
 }
 
+export function getExecutiveStatCardData(
+  statsInput: DashboardStats,
+  executiveStats: ExecutiveActionStats
+): StatCardData[] {
+  const stats = statsInput || defaultStats;
+  const schoolNotStarted = stats.schoolTasksNotStarted ?? 0;
+  const completionRateVal =
+    stats.completionRate ??
+    Math.round((stats.schoolTasksCompleted / (stats.totalSchoolTasks || 1)) * 100);
+
+  const pendingApprovalCount =
+    executiveStats.pendingSchoolApprovalCount ?? stats.needsReviewTasksCount;
+  const totalIssueCount =
+    (executiveStats.blockedTasksCount ?? 0) +
+    (executiveStats.overdueTasksCount ?? stats.overdueTasksCount);
+
+  let urgentSubtext = "Tiến độ thông suốt";
+  if (
+    (executiveStats.blockedTasksCount ?? 0) > 0 &&
+    (executiveStats.overdueTasksCount ?? 0) > 0
+  ) {
+    urgentSubtext = `${executiveStats.blockedTasksCount} vướng mắc · ${executiveStats.overdueTasksCount} trễ hạn`;
+  } else if ((executiveStats.overdueTasksCount ?? 0) > 0) {
+    urgentSubtext = `${executiveStats.overdueTasksCount} nhiệm vụ trễ hạn`;
+  } else if ((executiveStats.blockedTasksCount ?? 0) > 0) {
+    urgentSubtext = `${executiveStats.blockedTasksCount} nhiệm vụ vướng mắc`;
+  }
+
+  return [
+    {
+      id: "school-tasks",
+      title: "Nhiệm vụ cấp Trường",
+      value: formatNumber(stats.totalSchoolTasks),
+      subtext: `${formatNumber(stats.schoolTasksInProgress)} đang làm · ${formatNumber(schoolNotStarted)} chưa làm · ${formatNumber(stats.schoolTasksCompleted)} hoàn thành`,
+      filterKey: "ALL",
+      iconName: "Layers",
+    },
+    {
+      id: "pending-approval",
+      title: "Chờ BGH Phê duyệt",
+      value: formatNumber(pendingApprovalCount),
+      subtext:
+        pendingApprovalCount > 0
+          ? "Tờ trình chờ thẩm định & phê duyệt"
+          : "Không có tờ trình tồn đọng",
+      filterKey: "NEEDS_REVIEW",
+      executiveFilterKey: "PENDING_APPROVAL",
+      badge: {
+        label: pendingApprovalCount > 0 ? "Cần duyệt" : "Ổn định",
+        variant: pendingApprovalCount > 0 ? "warning" : "success",
+      },
+      iconName: "CheckCircle2",
+    },
+    {
+      id: "blocked-overdue",
+      title: "Vướng mắc & Trễ hạn",
+      value: formatNumber(totalIssueCount),
+      subtext: urgentSubtext,
+      filterKey: "URGENT_OVERDUE",
+      executiveFilterKey: "BLOCKED_OVERDUE",
+      badge: {
+        label: totalIssueCount > 0 ? `${formatNumber(totalIssueCount)} vướng mắc` : "Thông suốt",
+        variant: totalIssueCount > 0 ? "rose" : "success",
+      },
+      iconName: "AlertTriangle",
+    },
+    {
+      id: "overall-progress",
+      title: "Tiến độ trung bình toàn trường",
+      value: `${stats.averageSchoolProgressPercent}%`,
+      subtext: `Hoàn tất ${formatNumber(stats.schoolTasksCompleted)}/${formatNumber(stats.totalSchoolTasks)} (${completionRateVal}%)`,
+      filterKey: "COMPLETED",
+      progress: stats.averageSchoolProgressPercent,
+      iconName: "TrendingUp",
+    },
+    {
+      id: "strategic-active",
+      title: "Nhiệm vụ Chiến lược",
+      value: formatNumber(executiveStats.strategicActiveCount),
+      subtext:
+        executiveStats.strategicActiveCount > 0
+          ? "Nhiệm vụ trọng tâm năm học"
+          : "Đã hoàn thành mục tiêu",
+      filterKey: "ASSIGNED_BY_ME",
+      executiveFilterKey: "STRATEGIC",
+      iconName: "CheckSquare",
+    },
+  ];
+}
+
 export function ExecutiveStatStrip({
   stats,
+  executiveStats,
   activeFilter,
+  activeExecutiveFilter,
   onFilterChange,
+  onExecutiveFilterChange,
   className,
+  isExecutive,
 }: ExecutiveStatStripProps) {
-  const cards = getStatCardData(stats);
+  const isExecutiveView = Boolean(isExecutive && executiveStats);
+  const cards = isExecutiveView
+    ? getExecutiveStatCardData(stats, executiveStats!)
+    : getStatCardData(stats);
+
+  const gridColsClass = isExecutiveView
+    ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
+    : "grid-cols-2 lg:grid-cols-4";
 
   return (
     <div
       className={cn(
-        "grid grid-cols-2 lg:grid-cols-4 divide-x divide-border rounded-xl border border-border bg-card shadow-subtle overflow-hidden",
+        "grid divide-x divide-border rounded-xl border border-border bg-card shadow-subtle overflow-hidden",
+        gridColsClass,
         className
       )}
       data-slot="executive-stat-strip"
     >
       {cards.map((card, idx) => {
         const IconComponent = iconMap[card.iconName];
-        const isUrgentCard = card.id === "urgent-tasks";
+        const isUrgentCard = card.id === "urgent-tasks" || card.id === "blocked-overdue";
         const isOverdueAlert =
           isUrgentCard &&
-          ((stats?.overdueTasksCount ?? 0) > 0 || (stats?.escalatedReviewCount ?? 0) > 0);
-        const isActive = Boolean(card.filterKey && activeFilter === card.filterKey);
-        const isClickable = Boolean(onFilterChange && card.filterKey);
+          ((stats?.overdueTasksCount ?? 0) > 0 ||
+            (stats?.escalatedReviewCount ?? 0) > 0 ||
+            (executiveStats &&
+              ((executiveStats.overdueTasksCount ?? 0) > 0 ||
+                (executiveStats.blockedTasksCount ?? 0) > 0)));
+
+        const isActive = isExecutiveView
+          ? Boolean(
+              (card.executiveFilterKey &&
+                activeExecutiveFilter === card.executiveFilterKey) ||
+                (card.filterKey &&
+                  activeFilter === card.filterKey &&
+                  activeExecutiveFilter === "ALL")
+            )
+          : Boolean(card.filterKey && activeFilter === card.filterKey);
+
+        const isClickable = Boolean(
+          (onExecutiveFilterChange && card.executiveFilterKey) ||
+            (onFilterChange && card.filterKey)
+        );
 
         let dotColor = "bg-primary/70";
 
@@ -213,14 +341,22 @@ export function ExecutiveStatStrip({
           dotColor = "bg-blue-500";
         } else if (card.id === "unit-tasks") {
           dotColor = "bg-indigo-500";
-        } else if (card.id === "urgent-tasks") {
+        } else if (card.id === "pending-approval") {
+          dotColor =
+            (executiveStats?.pendingSchoolApprovalCount ?? 0) > 0
+              ? "bg-amber-500"
+              : "bg-emerald-500";
+        } else if (card.id === "urgent-tasks" || card.id === "blocked-overdue") {
           dotColor = isOverdueAlert
             ? "bg-rose-500"
-            : (stats?.needsReviewTasksCount ?? 0) > 0 || (stats?.pendingTriageCount ?? 0) > 0
+            : (stats?.needsReviewTasksCount ?? 0) > 0 ||
+              (stats?.pendingTriageCount ?? 0) > 0
               ? "bg-amber-500"
               : "bg-emerald-500";
         } else if (card.id === "overall-progress") {
           dotColor = "bg-emerald-500";
+        } else if (card.id === "strategic-active") {
+          dotColor = "bg-emerald-600";
         }
 
         const ariaLabel = card.badge
@@ -235,8 +371,16 @@ export function ExecutiveStatStrip({
             aria-pressed={isClickable ? isActive : undefined}
             aria-label={ariaLabel}
             onClick={() => {
-              if (card.filterKey) {
-                onFilterChange?.(activeFilter === card.filterKey ? "ALL" : card.filterKey);
+              if (card.executiveFilterKey && onExecutiveFilterChange) {
+                const nextExecFilter =
+                  activeExecutiveFilter === card.executiveFilterKey
+                    ? "ALL"
+                    : card.executiveFilterKey;
+                onExecutiveFilterChange(nextExecFilter);
+              } else if (card.filterKey && onFilterChange) {
+                const nextFilter =
+                  activeFilter === card.filterKey ? "ALL" : card.filterKey;
+                onFilterChange(nextFilter);
               }
             }}
             className={cn(
@@ -316,7 +460,7 @@ export function ExecutiveStatStrip({
                       className="font-heading font-semibold text-foreground tabular-nums ml-1 shrink-0"
                       title="Tiến độ bình quân"
                     >
-                      {card.progress}%
+                      Bình quân {card.progress}%
                     </span>
                   </div>
                 </div>

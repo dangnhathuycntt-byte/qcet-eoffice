@@ -6,8 +6,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  Plus,
-  UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -191,6 +189,13 @@ export const TaskRow = React.memo(function TaskRow({
     suppressCategory || (Boolean(activeCategory) && activeCategory !== "ALL");
   const driInfo = parseLeadAssignee(task.leadAssigneeName, task.department);
 
+  const isWaitingApproval =
+    task.status === "WAITING_APPROVAL" ||
+    (task.status as string) === "PENDING_EXECUTIVE_APPROVAL" ||
+    (task.status as string) === "NEEDS_REVIEW" ||
+    Boolean((task as any).needsReview) ||
+    (task as any).approvalStatus === "PENDING";
+
   const dueInMonthCount =
     selectedAcademicMonth && selectedAcademicMonth !== "ALL" && hasSubtasks
       ? task.subTasks?.filter(
@@ -341,17 +346,17 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* Department & DACUM Category */}
-      <td className={cn("w-36 align-middle whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-44 align-middle whitespace-nowrap", paddingClass)}>
         <div className="flex flex-col gap-0.5 justify-center">
           <span
-            className="text-xs font-medium text-foreground truncate max-w-[135px]"
+            className="text-xs font-medium text-foreground truncate max-w-[165px]"
             title={task.department || "Toàn trường"}
           >
             {task.department || "Toàn trường"}
           </span>
           {!shouldSuppressCategory && categoryConfig && (
             <span
-              className="text-xs text-muted-foreground truncate max-w-[135px]"
+              className="text-xs text-muted-foreground truncate max-w-[165px]"
               title={categoryConfig.label}
             >
               {categoryConfig.label}
@@ -360,45 +365,35 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* Lead Assignee (Single DRI) */}
-      <td className={cn("w-40 min-w-[150px] align-middle whitespace-nowrap", paddingClass)}>
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Lead Assignee (Single DRI) - Streamlined for maximum title space */}
+      <td className={cn("w-36 align-middle whitespace-nowrap", paddingClass)}>
+        <div
+          className="flex items-center gap-1.5 min-w-0"
+          title={`${driInfo.primaryName}${driInfo.subtext ? ` (${driInfo.subtext})` : ""}`}
+        >
           {task.leadAssigneeAvatar ? (
             <img
               src={task.leadAssigneeAvatar}
               alt=""
               aria-hidden="true"
-              width={24}
-              height={24}
+              width={22}
+              height={22}
               loading="lazy"
-              className="size-6 rounded-full object-cover shrink-0"
+              className="size-5.5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
             />
           ) : (
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold tabular-nums text-slate-700 border border-slate-200">
+            <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold tabular-nums text-slate-700 border border-slate-200">
               {getInitials(driInfo.primaryName)}
             </span>
           )}
-          <div className="flex flex-col min-w-0 flex-1 justify-center leading-tight">
-            <span
-              className="text-xs font-medium text-foreground/90 truncate"
-              title={driInfo.primaryName}
-            >
-              {driInfo.primaryName}
-            </span>
-            {driInfo.subtext && (
-              <span
-                className="text-xs text-muted-foreground truncate"
-                title={driInfo.subtext}
-              >
-                {driInfo.subtext}
-              </span>
-            )}
-          </div>
+          <span className="text-xs font-medium text-foreground/90 truncate">
+            {driInfo.primaryName}
+          </span>
         </div>
       </td>
 
       {/* Due Date & SLA Badge */}
-      <td className={cn("w-32 align-middle whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground font-mono tabular-nums text-xs font-semibold">
             {formatTableDate(task.dueDate)}
@@ -429,11 +424,11 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* Progress Bar & Actions */}
-      <td className={cn("w-48 align-middle text-right whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-36 align-middle text-right whitespace-nowrap", paddingClass)}>
         <div className="flex items-center justify-end gap-2">
-          {/* Quick Action Micro-buttons */}
+          {/* Quick Action Micro-buttons (Contextual only when action needed) */}
           <div className="flex items-center gap-1">
-            {onStatusChange && task.status === "IN_PROGRESS" && (
+            {onStatusChange && isWaitingApproval && (
               <button
                 type="button"
                 onClick={handleStatusToggle}
@@ -445,7 +440,7 @@ export const TaskRow = React.memo(function TaskRow({
               </button>
             )}
 
-            {task.status !== "COMPLETED" && onUrge && (
+            {task.status !== "COMPLETED" && (slaStatus.isOverdue || (task.status as string) === "BLOCKED") && onUrge && (
               <button
                 type="button"
                 onClick={handleUrgeClick}
@@ -454,18 +449,6 @@ export const TaskRow = React.memo(function TaskRow({
               >
                 <Bell className="size-3" strokeWidth={1.5} />
                 <span>Đôn đốc</span>
-              </button>
-            )}
-
-            {onAddSubTask && (
-              <button
-                type="button"
-                onClick={handleAddSubTaskClick}
-                className="inline-flex h-6 items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 text-xs font-semibold tabular-nums text-primary hover:bg-primary/20 cursor-pointer active:scale-95 transition-colors shadow-2xs"
-                title="Phân rã việc con cho nhiệm vụ này"
-              >
-                <Plus className="size-3" strokeWidth={1.5} />
-                <span>+ Việc con</span>
               </button>
             )}
           </div>

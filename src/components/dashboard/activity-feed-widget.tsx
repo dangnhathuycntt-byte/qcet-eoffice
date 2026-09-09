@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { History, Activity, CheckCircle2, Upload, RefreshCw, PlusCircle, AlertCircle, Clock } from "lucide-react";
+import { History, Activity, CheckCircle2, Upload, RefreshCw, PlusCircle, AlertCircle, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import type { ActivityEvent } from "@/types/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 export interface ActivityFeedWidgetProps {
   activities?: ActivityEvent[];
   className?: string;
+  initialLimit?: number;
 }
 
 export interface ActivityActionConfig {
@@ -92,7 +93,11 @@ const actionIcons = {
 export function ActivityFeedWidget({
   activities = [],
   className,
+  initialLimit = 5,
 }: ActivityFeedWidgetProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const displayedActivities = initialLimit && !isExpanded ? activities.slice(0, initialLimit) : activities;
+
   return (
     <div
       className={cn(
@@ -111,24 +116,33 @@ export function ActivityFeedWidget({
               Hoạt động vừa cập nhật
             </h3>
             <p className="text-xs text-muted-foreground">
-              Dòng nhật ký tương tác và tiến độ thời gian thực
+              {activities.length > initialLimit && !isExpanded
+                ? `Hiển thị ${displayedActivities.length} hoạt động gần nhất`
+                : "Dòng nhật ký tương tác và tiến độ thời gian thực"}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-semibold">
-          <span className="size-1.5 rounded-full bg-emerald-500" />
-          <span>Live</span>
+        <div className="flex items-center gap-2">
+          {activities.length > initialLimit && !isExpanded && (
+            <span className="text-xs font-mono text-muted-foreground hidden sm:inline">
+              Top 5 / {activities.length}
+            </span>
+          )}
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-semibold">
+            <span className="size-1.5 rounded-full bg-emerald-500" />
+            <span>Live</span>
+          </div>
         </div>
       </div>
 
       {/* Activity Timeline List */}
       <div className="flex flex-col divide-y divide-border/50 pt-1">
-        {activities.length === 0 ? (
+        {displayedActivities.length === 0 ? (
           <div className="py-8 text-center text-xs text-muted-foreground">
             Chưa có hoạt động mới nào được ghi nhận
           </div>
         ) : (
-          activities.map((item) => {
+          displayedActivities.map((item) => {
             const config = getActivityActionConfig(item.action);
             const ActionIcon = actionIcons[config.iconName] || Activity;
             const initials = getActorInitials(item.actorName);
@@ -181,6 +195,30 @@ export function ActivityFeedWidget({
           })
         )}
       </div>
+
+      {/* Expand / Collapse Footer */}
+      {activities.length > initialLimit && (
+        <div className="pt-3 mt-1 border-t border-border/40 text-center">
+          <button
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+            aria-expanded={isExpanded}
+          >
+            {isExpanded ? (
+              <>
+                <span>Thu gọn (hiển thị {initialLimit} mục)</span>
+                <ChevronUp className="size-3.5" strokeWidth={1.5} />
+              </>
+            ) : (
+              <>
+                <span>Xem tất cả {activities.length} hoạt động</span>
+                <ChevronDown className="size-3.5" strokeWidth={1.5} />
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

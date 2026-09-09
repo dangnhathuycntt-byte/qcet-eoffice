@@ -1,24 +1,25 @@
 "use client";
 
 import * as React from "react";
-import { Building2, LayoutGrid, TableProperties, ArrowUpDown, ChevronRight } from "lucide-react";
+import { Building2, LayoutGrid, TableProperties, BarChart3, ArrowUpDown, ChevronRight, X } from "lucide-react";
 import type { DepartmentHealthSummary } from "@/lib/executive-matrix-aggregator";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export type DepartmentMatrixViewMode = "cards" | "compact_table";
+export type DepartmentMatrixViewMode = "cards" | "compact_table" | "ranking";
 
 export interface DepartmentProgressMatrixProps {
   departments: DepartmentHealthSummary[];
   selectedDepartment: string;
   onSelectDepartment: (deptId: string) => void;
-  viewMode?: DepartmentMatrixViewMode | "grid" | "table";
-  defaultViewMode?: DepartmentMatrixViewMode | "grid" | "table";
+  viewMode?: DepartmentMatrixViewMode | "grid" | "table" | "chart";
+  defaultViewMode?: DepartmentMatrixViewMode | "grid" | "table" | "chart";
   onViewModeChange?: (mode: DepartmentMatrixViewMode) => void;
 }
 
 function normalizeMode(mode?: string): DepartmentMatrixViewMode {
   if (mode === "compact_table" || mode === "table") return "compact_table";
+  if (mode === "ranking" || mode === "chart") return "ranking";
   return "cards";
 }
 
@@ -71,6 +72,22 @@ export function sortDepartmentsByOverdue(
     const progA = getDeptProgressPercent(a);
     const progB = getDeptProgressPercent(b);
     return progA - progB;
+  });
+}
+
+export function sortDepartmentsByProgress(
+  departments: DepartmentHealthSummary[],
+  descending = true
+): DepartmentHealthSummary[] {
+  return [...departments].sort((a, b) => {
+    const progA = getDeptProgressPercent(a);
+    const progB = getDeptProgressPercent(b);
+    if (progA !== progB) {
+      return descending ? progB - progA : progA - progB;
+    }
+    const overdueA = getDeptOverdueCount(a);
+    const overdueB = getDeptOverdueCount(b);
+    return overdueA - overdueB;
   });
 }
 
@@ -128,6 +145,7 @@ export function DepartmentProgressMatrix({
   );
   const [sortByOverdue, setSortByOverdue] = React.useState<boolean>(true);
   const [sortAscending, setSortAscending] = React.useState<boolean>(false);
+  const [rankingSortBy, setRankingSortBy] = React.useState<"progress" | "overdue">("progress");
 
   const currentViewMode = controlledViewMode ? normalizeMode(controlledViewMode) : internalViewMode;
 
@@ -147,6 +165,18 @@ export function DepartmentProgressMatrix({
     return departments;
   }, [departments, sortByOverdue, sortAscending]);
 
+  const displayedRankingDepartments = React.useMemo(() => {
+    if (rankingSortBy === "overdue") {
+      return sortDepartmentsByOverdue(departments, true);
+    }
+    return sortDepartmentsByProgress(departments, true);
+  }, [departments, rankingSortBy]);
+
+  const selectedDeptObj = React.useMemo(() => {
+    if (!selectedDepartment || selectedDepartment === "ALL") return null;
+    return departments.find((d) => getDeptId(d) === selectedDepartment);
+  }, [departments, selectedDepartment]);
+
   const toggleSortByOverdue = () => {
     if (!sortByOverdue) {
       setSortByOverdue(true);
@@ -159,8 +189,8 @@ export function DepartmentProgressMatrix({
   return (
     <div className="space-y-3" data-slot="department-progress-matrix-container">
       {/* View mode toggle toolbar */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
             <Building2 className="size-3.5 shrink-0" strokeWidth={1.5} />
           </div>
@@ -170,9 +200,46 @@ export function DepartmentProgressMatrix({
           <span className="text-xs text-muted-foreground font-mono tabular-nums">
             ({departments.length})
           </span>
+
+          {selectedDeptObj && (
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-medium">
+              <span className="truncate max-w-[150px] sm:max-w-[220px]">
+                Đang lọc: {getDeptName(selectedDeptObj)}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectDepartment("ALL");
+                }}
+                className="p-0.5 hover:bg-indigo-100 rounded-full transition-colors cursor-pointer text-indigo-600 hover:text-indigo-900"
+                aria-label="Bỏ chọn đơn vị"
+                title="Xem toàn trường"
+              >
+                <X className="size-3" strokeWidth={1.5} />
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5 shrink-0">
+          <button
+            type="button"
+            aria-label="Chế độ xếp hạng"
+            title="Chế độ xếp hạng tiến độ (Ranking Bar Chart)"
+            onClick={() => handleViewModeChange("ranking")}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all select-none",
+              currentViewMode === "ranking"
+                ? "bg-background text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            data-mode="ranking"
+            aria-pressed={currentViewMode === "ranking"}
+          >
+            <BarChart3 className="size-3.5" strokeWidth={1.5} />
+            <span className="hidden sm:inline">Xếp hạng</span>
+          </button>
           <button
             type="button"
             aria-label="Chế độ thẻ"
@@ -210,8 +277,149 @@ export function DepartmentProgressMatrix({
         </div>
       </div>
 
-      {/* Grid Cards View */}
-      {currentViewMode === "cards" ? (
+      {/* Ranking Bar Chart View */}
+      {currentViewMode === "ranking" ? (
+        <div className="space-y-3" data-slot="department-ranking-chart">
+          {/* Sorting controls */}
+          <div className="flex items-center justify-between gap-2 px-1 text-xs">
+            <span className="text-muted-foreground font-medium">
+              Xếp hạng theo {rankingSortBy === "progress" ? "tỷ lệ hoàn thành (cao xuống thấp)" : "số lượng việc trễ hạn (cần đôn đốc)"}
+            </span>
+            <div className="flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 p-0.5">
+              <button
+                type="button"
+                onClick={() => setRankingSortBy("progress")}
+                className={cn(
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer",
+                  rankingSortBy === "progress"
+                    ? "bg-background text-foreground shadow-2xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Tiến độ
+              </button>
+              <button
+                type="button"
+                onClick={() => setRankingSortBy("overdue")}
+                className={cn(
+                  "px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer",
+                  rankingSortBy === "overdue"
+                    ? "bg-background text-rose-600 shadow-2xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Cần đôn đốc
+              </button>
+            </div>
+          </div>
+
+          {/* Ranking list */}
+          <div className="divide-y divide-border/40 rounded-xl border border-border/80 bg-card shadow-2xs overflow-hidden">
+            {displayedRankingDepartments.map((dept, index) => {
+              const deptId = getDeptId(dept);
+              const deptName = getDeptName(dept);
+              const isSelected = selectedDepartment === deptId;
+              const overdueCount = getDeptOverdueCount(dept);
+              const inProgressCount = getDeptInProgressCount(dept);
+              const completedCount = getDeptCompletedCount(dept);
+              const progressPercent = getDeptProgressPercent(dept);
+              const barColor = progressBarColor(progressPercent);
+
+              return (
+                <div
+                  key={deptId}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSelected}
+                  onClick={() => onSelectDepartment(isSelected ? "ALL" : deptId)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectDepartment(isSelected ? "ALL" : deptId);
+                    }
+                  }}
+                  className={cn(
+                    "group flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 transition-colors cursor-pointer select-none",
+                    isSelected
+                      ? "bg-indigo-500/[0.08] hover:bg-indigo-500/[0.12]"
+                      : "hover:bg-muted/30",
+                    "focus-visible:outline-none focus-visible:bg-muted/50"
+                  )}
+                  data-slot="department-ranking-row"
+                  data-dept-id={deptId}
+                  data-active={isSelected ? "true" : "false"}
+                >
+                  {/* Rank index & Info */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1 sm:max-w-xs">
+                    <span
+                      className={cn(
+                        "flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs font-bold tabular-nums",
+                        index === 0
+                          ? "bg-amber-100 text-amber-800 border border-amber-300"
+                          : index === 1
+                          ? "bg-slate-200 text-slate-700 border border-slate-300"
+                          : index === 2
+                          ? "bg-amber-50 text-amber-700 border border-amber-200"
+                          : "bg-muted/60 text-muted-foreground"
+                      )}
+                    >
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-semibold text-foreground truncate leading-tight">
+                        {deptName}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {dept.leadName}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Horizontal Progress Bar */}
+                  <div className="flex items-center gap-3 flex-1 px-1 sm:px-4">
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className={cn("h-full rounded-full transition-all duration-500 ease-out", barColor)}
+                        style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
+                      />
+                    </div>
+                    <span className="w-12 text-right text-xs sm:text-sm font-bold font-mono tabular-nums text-foreground shrink-0">
+                      {progressPercent}%
+                    </span>
+                  </div>
+
+                  {/* Metrics & Filter status */}
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 text-xs">
+                    <div className="flex items-center gap-2 text-muted-foreground font-mono tabular-nums">
+                      <span className="hidden md:inline" title="Hoàn thành">HT: <strong className="text-foreground font-medium">{completedCount}</strong></span>
+                      <span className="hidden md:inline" title="Đang làm">ĐL: <strong className="text-foreground font-medium">{inProgressCount}</strong></span>
+                      {overdueCount > 0 ? (
+                        <Badge variant="rose" className="text-xs h-5 px-1.5 font-mono tabular-nums">
+                          {overdueCount} trễ
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground/60 hidden md:inline">0 trễ</span>
+                      )}
+                    </div>
+
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors shrink-0",
+                        isSelected
+                          ? "bg-indigo-600 text-white font-semibold shadow-2xs"
+                          : "bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                      )}
+                    >
+                      <span>{isSelected ? "Đang chọn" : "Lọc"}</span>
+                      <ChevronRight className="size-3 shrink-0" strokeWidth={1.5} />
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : currentViewMode === "cards" ? (
         <div
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
           data-slot="department-progress-matrix"

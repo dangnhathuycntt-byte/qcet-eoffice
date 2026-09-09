@@ -38,13 +38,13 @@ interface ColumnDefinition {
 }
 
 const TABLE_COLUMNS: ColumnDefinition[] = [
-  { id: "code", label: "Mã NV", sortable: true, widthClass: "w-[105px]" },
+  { id: "code", label: "Mã NV", sortable: true, widthClass: "w-[100px]" },
   { id: "title", label: "Nhiệm vụ cấp Trường", sortable: true },
-  { id: "department", label: "Đơn vị & Danh mục", sortable: true, widthClass: "w-36" },
-  { id: "leadAssignee", label: "Chủ trì (DRI)", sortable: true, widthClass: "w-40 min-w-[150px]" },
-  { id: "dueDate", label: "Thời hạn & SLA", sortable: true, widthClass: "w-32" },
+  { id: "department", label: "Đơn vị & Danh mục", sortable: true, widthClass: "w-44" },
+  { id: "leadAssignee", label: "Chủ trì (DRI)", sortable: true, widthClass: "w-36" },
+  { id: "dueDate", label: "Thời hạn & SLA", sortable: true, widthClass: "w-28" },
   { id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-20" },
-  { id: "progress", label: "Tiến độ & Thao tác", sortable: true, align: "right", widthClass: "w-48" },
+  { id: "progress", label: "Tiến độ & Thao tác", sortable: true, align: "right", widthClass: "w-36" },
 ];
 
 export function TaskTableHeader({

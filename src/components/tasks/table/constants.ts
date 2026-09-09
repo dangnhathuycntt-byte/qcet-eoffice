@@ -275,8 +275,8 @@ export const DEFAULT_DENSITY: TableDensity = "comfortable";
 /**
  * Cấu hình phân trang mặc định
  */
-export const DEFAULT_PAGE_SIZE = 15;
-export const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
+export const DEFAULT_PAGE_SIZE = 10;
+export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 export const DEFAULT_PAGE_SIZES = [10, 20, 50, 100];
 
 /**

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Calendar, Clock, AlertTriangle, Building2, Layers, CheckCircle } from "lucide-react";
+import { Calendar, Clock, AlertTriangle, Building2, Layers, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import type { UpcomingItem } from "@/types/dashboard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ export interface UpcomingDeadlinesWidgetProps {
   items?: UpcomingItem[];
   onSelectTask?: (item: UpcomingItem) => void;
   className?: string;
+  initialLimit?: number;
 }
 
 export function parseDateOnly(input: string | Date): { year: number; month: number; day: number } {
@@ -100,7 +101,11 @@ export function UpcomingDeadlinesWidget({
   items = [],
   onSelectTask,
   className,
+  initialLimit = 5,
 }: UpcomingDeadlinesWidgetProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const displayedItems = initialLimit && !isExpanded ? items.slice(0, initialLimit) : items;
+
   return (
     <div
       className={cn(
@@ -119,23 +124,32 @@ export function UpcomingDeadlinesWidget({
               Hạn chót 7 ngày tới
             </h3>
             <p className="text-xs text-muted-foreground">
-              Nhiệm vụ cần ưu tiên hoàn tất theo tiến độ
+              {items.length > initialLimit && !isExpanded
+                ? `Hiển thị ${displayedItems.length} nhiệm vụ sát hạn nhất`
+                : "Nhiệm vụ cần ưu tiên hoàn tất theo tiến độ"}
             </p>
           </div>
         </div>
-        <Badge variant="secondary" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full">
-          {items.length}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {items.length > initialLimit && !isExpanded && (
+            <span className="text-xs font-mono text-muted-foreground hidden sm:inline">
+              Top 5 / {items.length}
+            </span>
+          )}
+          <Badge variant="secondary" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full">
+            {items.length}
+          </Badge>
+        </div>
       </div>
 
       {/* List content */}
       <div className="flex flex-col divide-y divide-border/50 pt-1">
-        {items.length === 0 ? (
+        {displayedItems.length === 0 ? (
           <div className="py-8 text-center text-xs text-muted-foreground">
             Không có nhiệm vụ nào có hạn chót trong 7 ngày tới
           </div>
         ) : (
-          items.map((item) => {
+          displayedItems.map((item) => {
             const overdue = item.isOverdue || isDateOverdue(item.dueDate);
             const relativeDistance = formatDeadlineDistance(item.dueDate);
             const displayDate = formatDisplayDate(item.dueDate);
@@ -249,6 +263,30 @@ export function UpcomingDeadlinesWidget({
           })
         )}
       </div>
+
+      {/* Expand / Collapse Footer */}
+      {items.length > initialLimit && (
+        <div className="pt-3 mt-1 border-t border-border/40 text-center">
+          <button
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+            aria-expanded={isExpanded}
+          >
+            {isExpanded ? (
+              <>
+                <span>Thu gọn (hiển thị {initialLimit} mục)</span>
+                <ChevronUp className="size-3.5" strokeWidth={1.5} />
+              </>
+            ) : (
+              <>
+                <span>Xem tất cả {items.length} nhiệm vụ hạn chót</span>
+                <ChevronDown className="size-3.5" strokeWidth={1.5} />
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

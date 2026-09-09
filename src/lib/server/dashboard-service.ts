@@ -38,30 +38,82 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     };
   }
 
-  // Tải danh sách nhiệm vụ cấp trường & đơn vị độc lập kèm subTasks và assignees
-  const dbTasks = await prisma.task.findMany({
-    where: whereTask,
-    include: {
-      department: true,
-      assignees: { include: { user: true } },
-      deliverables: true,
-      resolutions: true,
-      parentTask: {
-        select: { id: true, code: true, title: true, scope: true },
-      },
-      subTasks: {
-        where: {
-          status: { not: TaskStatus.CANCELLED },
+  // Ma trận 11 phòng ban
+  const deptTaskWhere: any = {
+    status: { not: TaskStatus.CANCELLED },
+  };
+  if (options?.academicMonth) deptTaskWhere.academicMonth = options.academicMonth;
+  if (options?.academicYear) deptTaskWhere.academicYear = options.academicYear;
+
+  // Tối ưu hóa truy vấn song song (Parallel execution) & loại bỏ overfetching (QCET-PERF-2025-01)
+  const [dbTasks, departments, recentNotifications] = await Promise.all([
+    prisma.task.findMany({
+      where: whereTask,
+      include: {
+        department: true,
+        assignees: {
+          include: {
+            user: {
+              select: { id: true, name: true, avatarUrl: true },
+            },
+          },
         },
-        include: {
-          department: true,
-          assignees: { include: { user: true } },
-          deliverables: true,
+        parentTask: {
+          select: { id: true, code: true, title: true, scope: true },
+        },
+        subTasks: {
+          where: {
+            status: { not: TaskStatus.CANCELLED },
+          },
+          include: {
+            department: true,
+            assignees: {
+              include: {
+                user: {
+                  select: { id: true, name: true, avatarUrl: true },
+                },
+              },
+            },
+            deliverables: {
+              select: { id: true, title: true, fileUrl: true, createdAt: true },
+            },
+          },
         },
       },
-    },
-    orderBy: { dueDate: "asc" },
-  });
+      orderBy: { dueDate: "asc" },
+    }),
+    prisma.department.findMany({
+      include: {
+        tasks: {
+          where: deptTaskWhere,
+          select: {
+            id: true,
+            status: true,
+            dueDate: true,
+            progressPercent: true,
+          },
+        },
+      },
+    }),
+    prisma.notification.findMany({
+      take: 15,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        actorName: true,
+        title: true,
+        type: true,
+        category: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    }),
+  ]);
 
   // Chuyển đổi Prisma Tasks sang định dạng SchoolTask[]
   const mappedTasks: SchoolTask[] = dbTasks.map((t) => {
@@ -186,20 +238,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
     averageSchoolProgressPercent,
   };
 
-  // Ma trận 11 phòng ban
-  const deptTaskWhere: any = {
-    status: { not: TaskStatus.CANCELLED },
-  };
-  if (options?.academicMonth) deptTaskWhere.academicMonth = options.academicMonth;
-  if (options?.academicYear) deptTaskWhere.academicYear = options.academicYear;
-
-  const departments = await prisma.department.findMany({
-    include: {
-      tasks: {
-        where: deptTaskWhere,
-      },
-    },
-  });
+// departments đã được tải song song ở Promise.all phía trên
 
   const departmentHealth: DepartmentHealthSummary[] = departments.map((d) => {
     const dTasks = d.tasks || [];
@@ -281,11 +320,7 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
   // Tổng hợp Activity Events từ thông báo hệ thống và tác vụ gần nhất (khi có tasks)
   let activities: ActivityEvent[] = [];
   if (mappedTasks.length > 0) {
-    const recentNotifications = await prisma.notification.findMany({
-      take: 15,
-      orderBy: { createdAt: "desc" },
-      include: { user: true },
-    });
+// recentNotifications đã được tải song song ở Promise.all phía trên
 
     activities = recentNotifications.map((n) => {
       let action = "cập nhật trạng thái";

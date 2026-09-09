@@ -61,6 +61,11 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
 
+  const effectivePageSizeOptions = React.useMemo(() => {
+    if (pageSizeOptions.includes(pageSize)) return pageSizeOptions;
+    return [...pageSizeOptions, pageSize].sort((a, b) => a - b);
+  }, [pageSizeOptions, pageSize]);
+
   const startItem = totalItems === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
   const endItem = Math.min(totalItems, safeCurrentPage * pageSize);
 
@@ -131,7 +136,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
             className="h-8 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-foreground shadow-2xs focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             aria-label="Số lượng công việc trên mỗi trang"
           >
-            {pageSizeOptions.map((size) => (
+            {effectivePageSizeOptions.map((size) => (
               <option key={size} value={size}>
                 {size} / trang
               </option>

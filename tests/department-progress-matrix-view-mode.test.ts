@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   DepartmentProgressMatrix,
   sortDepartmentsByOverdue,
+  sortDepartmentsByProgress,
   getDepartmentCardData,
   type DepartmentMatrixViewMode,
 } from "../src/components/dashboard/department-progress-matrix";
@@ -147,6 +148,42 @@ describe("DepartmentProgressMatrix View Mode & Compact Table Engine", () => {
 
     assert.match(htmlTable, /data-slot="department-progress-matrix-table"/);
     assert.match(htmlTable, /aria-pressed="true"/, "Selected department DIEN must have aria-pressed=true");
+  });
+
+  test("sortDepartmentsByProgress sorts by averageProgressPercent descending", () => {
+    const sorted = sortDepartmentsByProgress(mockDepartments, true);
+    assert.equal(sorted[0].departmentId, "CNTT", "Highest progress (78%) must come first");
+    assert.equal(sorted[1].departmentId, "CO_KHI", "Second highest progress (75%) must come second");
+    assert.equal(sorted[2].departmentId, "DIEN", "Lowest progress (45%) must come last");
+  });
+
+  test("renders in ranking mode when defaultViewMode is ranking", () => {
+    const htmlRanking = renderToStaticMarkup(
+      React.createElement(DepartmentProgressMatrix, {
+        departments: mockDepartments,
+        selectedDepartment: "ALL",
+        onSelectDepartment: () => {},
+        defaultViewMode: "ranking",
+      })
+    );
+
+    assert.match(htmlRanking, /data-slot="department-ranking-chart"/, "Must render ranking chart container");
+    assert.match(htmlRanking, /data-slot="department-ranking-row"/, "Must render ranking rows");
+    assert.match(htmlRanking, /data-mode="ranking"/, "Must have ranking view toggle button");
+    assert.match(htmlRanking, /Xếp hạng/, "Must have Xếp hạng text");
+  });
+
+  test("renders active filter chip with clear button when department is selected", () => {
+    const htmlSelected = renderToStaticMarkup(
+      React.createElement(DepartmentProgressMatrix, {
+        departments: mockDepartments,
+        selectedDepartment: "CNTT",
+        onSelectDepartment: () => {},
+      })
+    );
+
+    assert.match(htmlSelected, /Đang lọc:\s*Khoa Công nghệ thông tin/, "Must display active department filter chip");
+    assert.match(htmlSelected, /Bỏ chọn đơn vị/, "Must have clear filter button");
   });
 
   test("adheres to anti-slop, light-only, and typography guidelines", () => {
