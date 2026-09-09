@@ -53,22 +53,23 @@ export function useDashboardState(
     const nextTasks = urgentTasks > 0 ? urgentTasks : undefined;
     const nextCalendar = todayEvents > 0 ? todayEvents : undefined;
     const nextOrg = undefined;
-    const nextNotifications = 5;
 
     setBadgeCounts((prev) => {
+      const currentNotifications = prev.notifications ?? 0;
       if (
         prev.tasks === nextTasks &&
         prev.calendar === nextCalendar &&
         prev.org === nextOrg &&
-        prev.notifications === nextNotifications
+        prev.notifications === currentNotifications
       ) {
         return prev;
       }
       return {
+        ...prev,
         tasks: nextTasks,
         calendar: nextCalendar,
         org: nextOrg,
-        notifications: nextNotifications,
+        notifications: currentNotifications,
       };
     });
   }, [mutations.dashboardData.tasks, mutations.dashboardData.upcoming, setBadgeCounts]);

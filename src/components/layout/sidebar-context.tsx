@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
+import type { UserRole } from "@/types/auth";
+import { resolveBreadcrumb } from "@/lib/navigation/active-matcher";
 import {
   Briefcase,
   FileText,
@@ -82,6 +84,8 @@ export interface SidebarItem {
   isComingSoon?: boolean;
   isMaintenance?: boolean;
   hasSubmenu?: boolean;
+  aliases?: string[];
+  allowedRoles?: UserRole[];
 }
 
 export const MODULE_NAV_ITEMS: Record<NavigationModule, SidebarItem[]> = {
@@ -197,7 +201,7 @@ export const MODULE_NAV_ITEMS: Record<NavigationModule, SidebarItem[]> = {
 };
 
 export const SINGLE_TIER_NAV_ITEMS: SidebarItem[] = [
-  // SECTION 1: CÁ NHÂN
+  // SECTION 1: ĐIỀU HÀNH & CÁ NHÂN (OPERATIONS & PERSONAL)
   {
     id: "desk",
     label: "Bàn làm việc",
@@ -216,34 +220,35 @@ export const SINGLE_TIER_NAV_ITEMS: SidebarItem[] = [
   },
   {
     id: "notifications",
-    label: "Thông báo",
+    label: "Thông báo & Hoạt động",
     href: "/notifications",
     icon: Bell,
     section: "personal",
     badgeKey: "notifications",
   },
-  // SECTION 2: CÔNG VIỆC
+  // SECTION 2: NGHIỆP VỤ CỐT LÕI (CORE MODULES)
   {
     id: "tasks",
-    label: "Kho nhiệm vụ",
+    label: "Quản lý nhiệm vụ",
     href: "/tasks",
     icon: CheckSquare,
     section: "workspace",
     badgeKey: "allTasks",
+    aliases: ["/unit-tasks"],
   },
-  // SECTION 3: VĂN BẢN & ĐIỀU HÀNH
   {
     id: "documents",
     label: "Sổ văn bản đến/đi",
     href: "/documents",
     icon: FileText,
-    section: "operations",
+    section: "workspace",
     badgeKey: "docsInbox",
     isComingSoon: true,
   },
+  // SECTION 3: HỆ THỐNG & TỔ CHỨC (SYSTEM & DIRECTORY)
   {
     id: "org",
-    label: "Cơ cấu & Danh bạ",
+    label: "Cơ cấu tổ chức & Danh bạ",
     href: "/org",
     icon: Building2,
     section: "operations",
@@ -339,8 +344,6 @@ export const QCET_CDS_MENU_ITEMS: QCETMenuItem[] = [
     href: "/notifications",
     icon: Headphones,
     hasSubmenu: true,
-    badge: "5",
-    badgeVariant: "danger",
   },
   {
     id: "system-settings",
@@ -387,7 +390,7 @@ export interface SidebarBadgeCounts {
 
 export const DEFAULT_SIDEBAR_BADGES: SidebarBadgeCounts = {
   calendar: 1,
-  notifications: 5,
+  notifications: 0,
   docsInbox: 6,
   docsOutbox: 4,
   docsPending: 2,
@@ -406,109 +409,52 @@ export const SIDEBAR_ZONE_ITEMS: NavigationItem[] = [
   { href: "/calendar", label: "Lịch công tác", icon: Calendar, zone: "calendar" },
   { href: "/documents", label: "Sổ văn bản đến/đi", icon: FileText, zone: "documents" },
   { href: "/org", label: "Sơ đồ tổ chức & Nhân sự", icon: Network, zone: "org" },
-  { href: "/notifications", label: "Thông báo & Nhắc việc", icon: Bell, badge: "5", badgeVariant: "danger" },
+  { href: "/notifications", label: "Thông báo & Nhắc việc", icon: Bell },
 ];
 
 export const SIDEBAR_STORAGE_KEY = "qcet_sidebar_collapsed";
 
-export function resolveBreadcrumb(
-  pathname: string,
-  searchParams?: string | URLSearchParams | null
-): [string, string] {
-  let path = pathname || "/";
-  let zone: string | null = null;
-  let view: string | null = null;
-  let scope: string | null = null;
+export { resolveBreadcrumb };
 
-  // Extract query if contained in pathname (e.g. "/?zone=portal")
-  if (path.includes("?")) {
-    const parts = path.split("?");
-    path = parts[0] || "/";
-    const queryStr = parts.slice(1).join("?");
-    if (!searchParams && queryStr) {
-      searchParams = queryStr;
-    }
-  }
-
-  // Extract zone from searchParams (supports URLSearchParams, query string, or direct zone name)
-  if (searchParams) {
-    if (typeof searchParams === "object" && typeof searchParams.get === "function") {
-      zone = searchParams.get("zone");
-      view = searchParams.get("view");
-      scope = searchParams.get("scope");
-    } else if (typeof searchParams === "string") {
-      const trimmed = searchParams.startsWith("?") ? searchParams.slice(1) : searchParams;
-      if (trimmed.includes("=")) {
-        try {
-          const sp = new URLSearchParams(trimmed);
-          zone = sp.get("zone");
-          view = sp.get("view");
-          scope = sp.get("scope");
-        } catch {
-          zone = null;
-        }
-      } else {
-        zone = trimmed;
-      }
-    }
-  }
-
-  // Zone and query overrides
-  if (zone === "portal") return ["QCET E-Office", "Cổng Portal Điều hành"];
-  if (zone === "dashboard") return ["QCET E-Office", "Dashboard Điều hành & KPI"];
-  if (zone === "calendar" || view === "calendar" || view === "month") return ["QCET E-Office", "Lịch công tác"];
-  if (zone === "tasks" || scope === "school" || scope === "unit") return ["QCET E-Office", "Quản lý công việc"];
-  if (zone === "documents") return ["QCET E-Office", "Văn bản & Công văn"];
-  if (zone === "org") return ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"];
-
-  if (path === "/") {
-    return ["QCET E-Office", "Quản lý công việc"];
-  }
-
-  if (path.startsWith("/maintenance")) return ["QCET E-Office", "Bảo trì & Nâng cấp"];
-  if (path.startsWith("/settings")) return ["QCET E-Office", "Cài đặt hệ thống"];
-  if (path.startsWith("/documents")) return ["QCET E-Office", "Văn bản & Công văn"];
-  if (path.startsWith("/unit-tasks")) return ["QCET E-Office", "Công việc Đơn vị"];
-  if (path.startsWith("/tasks")) return ["QCET E-Office", "Nhiệm vụ cấp Trường"];
-  if (path.startsWith("/calendar")) return ["QCET E-Office", "Lịch công tác"];
-  if (path.startsWith("/dashboard")) return ["QCET E-Office", "Báo cáo & Thống kê KPI"];
-  if (path.startsWith("/org")) return ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"];
-  if (path.startsWith("/notifications")) return ["QCET E-Office", "Thông báo điều hành"];
-  if (path.startsWith("/login")) return ["QCET E-Office", "Đăng nhập"];
-
-  return ["QCET E-Office", "Tổng quan"];
-}
-
-export interface SidebarContextType {
+export interface SidebarLayoutContextType {
   isCollapsed: boolean;
   toggleCollapse: () => void;
   setCollapsed: (collapsed: boolean) => void;
   isMobileOpen: boolean;
   setIsMobileOpen: (open: boolean) => void;
   toggleMobile: () => void;
-  badgeCounts: SidebarBadgeCounts;
-  setBadgeCounts: React.Dispatch<React.SetStateAction<SidebarBadgeCounts>>;
   currentModule: NavigationModule;
   setCurrentModule: (module: NavigationModule) => void;
   isMounted: boolean;
   sidebarWidth: number;
 }
 
+export interface SidebarBadgeContextType {
+  badgeCounts: SidebarBadgeCounts;
+  setBadgeCounts: React.Dispatch<React.SetStateAction<SidebarBadgeCounts>>;
+}
+
+export interface SidebarContextType extends SidebarLayoutContextType, SidebarBadgeContextType {}
+
 export type SidebarContextValue = SidebarContextType;
 
+export const SidebarLayoutContext = React.createContext<SidebarLayoutContextType | undefined>(undefined);
+export const SidebarBadgeContext = React.createContext<SidebarBadgeContextType | undefined>(undefined);
 const SidebarContext = React.createContext<SidebarContextType | undefined>(undefined);
 
-export function SidebarProvider({ children }: { children: React.ReactNode }) {
+export function SidebarLayoutProvider({ children }: { children?: React.ReactNode }) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = React.useState<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = React.useState<boolean>(false);
   const [isMounted, setIsMounted] = React.useState<boolean>(false);
-  const [badgeCounts, setBadgeCounts] = React.useState<SidebarBadgeCounts>(DEFAULT_SIDEBAR_BADGES);
 
-  const [currentModule, setCurrentModule] = React.useState<NavigationModule>(() =>
-    resolveModuleFromPathname(pathname || "")
-  );
-  const lastPathnameRef = React.useRef(pathname);
+  const currentModule = React.useMemo<NavigationModule>(() => {
+    return resolveModuleFromPathname(pathname || "");
+  }, [pathname]);
+
+  const setCurrentModule = React.useCallback((_module: NavigationModule) => {
+    // Pure derivation from pathname, setter retained for interface contract compatibility
+  }, []);
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -521,13 +467,6 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       // safe fallback if storage unavailable
     }
   }, []);
-
-  React.useEffect(() => {
-    if (pathname && pathname !== lastPathnameRef.current) {
-      lastPathnameRef.current = pathname;
-      setCurrentModule(resolveModuleFromPathname(pathname));
-    }
-  }, [pathname]);
 
   const toggleCollapse = React.useCallback(() => {
     setIsCollapsed((prev) => {
@@ -557,7 +496,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const effectiveCollapsed = isMounted ? isCollapsed : false;
   const sidebarWidth = effectiveCollapsed ? 64 : 248;
 
-  const value = React.useMemo<SidebarContextType>(
+  const value = React.useMemo<SidebarLayoutContextType>(
     () => ({
       isCollapsed: effectiveCollapsed,
       toggleCollapse,
@@ -565,8 +504,6 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       isMobileOpen,
       setIsMobileOpen,
       toggleMobile,
-      badgeCounts,
-      setBadgeCounts,
       currentModule,
       setCurrentModule,
       isMounted,
@@ -579,20 +516,78 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
       isMobileOpen,
       setIsMobileOpen,
       toggleMobile,
-      badgeCounts,
       currentModule,
       isMounted,
       sidebarWidth,
     ]
   );
 
-  return <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>;
+  return (
+    <SidebarLayoutContext.Provider value={value}>
+      {children}
+    </SidebarLayoutContext.Provider>
+  );
 }
 
-export function useSidebar(): SidebarContextType {
-  const context = React.useContext(SidebarContext);
+export function SidebarBadgeProvider({
+  children,
+  initialBadges = DEFAULT_SIDEBAR_BADGES,
+}: {
+  children?: React.ReactNode;
+  initialBadges?: SidebarBadgeCounts;
+}) {
+  const [badgeCounts, setBadgeCounts] = React.useState<SidebarBadgeCounts>(initialBadges);
+
+  const value = React.useMemo<SidebarBadgeContextType>(
+    () => ({
+      badgeCounts,
+      setBadgeCounts,
+    }),
+    [badgeCounts]
+  );
+
+  return (
+    <SidebarBadgeContext.Provider value={value}>
+      {children}
+    </SidebarBadgeContext.Provider>
+  );
+}
+
+export function SidebarProvider({ children }: { children?: React.ReactNode }) {
+  return (
+    <SidebarLayoutProvider>
+      <SidebarBadgeProvider>{children}</SidebarBadgeProvider>
+    </SidebarLayoutProvider>
+  );
+}
+
+export function useSidebarLayout(): SidebarLayoutContextType {
+  const context = React.useContext(SidebarLayoutContext);
   if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider");
+    throw new Error("useSidebarLayout must be used within a SidebarLayoutProvider or SidebarProvider");
   }
   return context;
 }
+
+export function useSidebarBadges(): SidebarBadgeContextType {
+  const context = React.useContext(SidebarBadgeContext);
+  if (!context) {
+    throw new Error("useSidebarBadges must be used within a SidebarBadgeProvider or SidebarProvider");
+  }
+  return context;
+}
+
+export function useSidebar(): SidebarContextType {
+  const layout = useSidebarLayout();
+  const badges = useSidebarBadges();
+  return React.useMemo<SidebarContextType>(
+    () => ({
+      ...layout,
+      ...badges,
+    }),
+    [layout, badges]
+  );
+}
+
+export const useSidebarContext = useSidebar;
+

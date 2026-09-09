@@ -26,6 +26,7 @@ import { GlobalMonthSelector } from "@/components/layout/global-month-selector";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { NotificationPopover } from "@/components/notifications/notification-popover";
 
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
@@ -101,6 +102,9 @@ export function AppTopbar() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
 
+  const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
+  const notificationRef = React.useRef<HTMLDivElement>(null);
+
   // Close profile dropdown on outside click
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -119,14 +123,14 @@ export function AppTopbar() {
     };
   }, [isProfileDropdownOpen]);
 
-  // Global event listener for navigating to notifications
+  // Global event listener for toggling notifications
   React.useEffect(() => {
     const handleToggleNotifications = () => {
-      router.push("/notifications");
+      setIsNotificationOpen((prev) => !prev);
     };
     window.addEventListener("qcet:toggle-notifications", handleToggleNotifications);
     return () => window.removeEventListener("qcet:toggle-notifications", handleToggleNotifications);
-  }, [router]);
+  }, []);
 
   const handleOpenSearch = React.useCallback(() => {
     window.dispatchEvent(new CustomEvent("qcet:open-command-search"));
@@ -236,18 +240,30 @@ export function AppTopbar() {
             <Search size={18} strokeWidth={1.75} />
           </button>
 
-          {/* Notification Bell: Direct Link to /notifications */}
-          <Link
-            href="/notifications"
-            className="relative hidden md:flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer touch-manipulation"
-            title="Thông báo điều hành"
-            aria-label="Thông báo điều hành"
-          >
-            <Bell size={16} strokeWidth={1.5} className="size-4" />
-            {Number(badgeCounts?.notifications) > 0 && (
-              <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
-            )}
-          </Link>
+          {/* Notification Bell: Popover Trigger */}
+          <div ref={notificationRef} className="relative hidden md:block">
+            <button
+              type="button"
+              onClick={() => setIsNotificationOpen((prev) => !prev)}
+              className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer touch-manipulation"
+              title="Thông báo điều hành"
+              aria-label="Thông báo điều hành"
+              aria-expanded={isNotificationOpen}
+            >
+              <Bell size={16} strokeWidth={1.5} className="size-4" />
+              {Number(badgeCounts?.notifications) > 0 && (
+                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
+              )}
+            </button>
+            <Link href="/notifications" className="sr-only">
+              Xem tất cả thông báo điều hành
+            </Link>
+            <NotificationPopover
+              isOpen={isNotificationOpen}
+              onClose={() => setIsNotificationOpen(false)}
+              containerRef={notificationRef}
+            />
+          </div>
 
           {/* Mobile App Install Button */}
           <Button
