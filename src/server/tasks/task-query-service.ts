@@ -1,7 +1,12 @@
 import { prisma } from '@/lib/prisma';
 import { mapPrismaTaskToSchoolTask, type SchoolTask, formatLocalDate } from '@/lib/adapters/task-db-adapter';
-import { TaskScope, TaskStatus, Prisma } from '@prisma/client';
+import { TaskScope, TaskStatus, Prisma, AssignmentStatus } from '@prisma/client';
 import type { ApiRequestContext, AuthenticatedUser } from '@/server/api/request-context';
+import {
+  type AuthorizationContext,
+  type ActivePositionAssignment,
+  SystemRole,
+} from '@/server/authorization/authorization-context';
 import { getSystemReferenceDate, isTaskPastDue } from '@/lib/academic-calendar';
 import { calculateTaskMetrics } from '@/lib/task-metrics';
 import { toTaskDomainModel, toTaskDTO } from '@/domain/tasks';
@@ -112,15 +117,197 @@ const TASK_INCLUDE = {
   },
 } as const;
 
+export function isAuthorizationContext(target: unknown): target is AuthorizationContext {
+  if (!target || typeof target !== 'object') return false;
+  const candidate = target as Record<string, unknown>;
+  return (
+    typeof candidate.hasPosition === 'function' ||
+    (Array.isArray(candidate.positions) && Array.isArray(candidate.systemRoles))
+  );
+}
+
+function isPositionActive(pos: ActivePositionAssignment, now: Date = new Date()): boolean {
+  if (pos.status && pos.status !== 'ACTIVE' && (pos.status as any) !== AssignmentStatus.ACTIVE) {
+    return false;
+  }
+  if (pos.effectiveFrom && new Date(pos.effectiveFrom) > now) {
+    return false;
+  }
+  if (pos.effectiveTo && new Date(pos.effectiveTo) < now) {
+    return false;
+  }
+  return true;
+}
+
+function isInstitutionalLeadershipPosition(pos: ActivePositionAssignment, now: Date = new Date()): boolean {
+  if (!isPositionActive(pos, now)) return false;
+  const code = (pos.positionCode || '').toUpperCase();
+  const title = (pos.positionTitle || '').toLowerCase();
+
+  if (
+    code === 'HIEU_TRUONG' ||
+    code.startsWith('HIEU_TRUONG_') ||
+    code === 'PHO_HIEU_TRUONG' ||
+    code.startsWith('PHO_HIEU_TRUONG_') ||
+    code === 'BAN_GIAM_HIEU' ||
+    code === 'BGH' ||
+    title.includes('hiệu trưởng')
+  ) {
+    return true;
+  }
+
+  // Active positions with school-wide oversight (BOARD or SCHOOL units)
+  if (
+    pos.isLeadership &&
+    (
+      (pos.unitType as string) === 'BOARD' ||
+      (pos.unitType as string) === 'SCHOOL' ||
+      pos.unitCode === 'BGH' ||
+      pos.unitCode === 'BGH_UNIT' ||
+      pos.unitCode === 'SCHOOL'
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Canonical task read authorization filter builder (Phase 2 Cutover / F02).
+ * Constructs Prisma.TaskWhereInput enforcing server-side authorization:
+ * - Institutional Leadership (HIEU_TRUONG, PHO_HIEU_TRUONG, BGH, school oversight) or System Admin: {} (school-wide oversight)
+ * - Unit Manager / Head (TRUONG_PHONG, TRUONG_KHOA): sees tasks in assigned units + direct participant tasks
+ * - Staff / Individual: sees tasks in own unit + direct participant tasks; never cross-department or unassigned school tasks
+ * - Expired assignments drop back to active scopes
+ */
+export function buildTaskReadWhere(
+  context: AuthorizationContext | AuthenticatedUser
+): Prisma.TaskWhereInput {
+  if (!context) {
+    return { id: '__DENY_ANONYMOUS__' };
+  }
+
+  const now = new Date();
+
+  // 1. System Admin Evaluation
+  let isSystemAdmin = false;
+  if (isAuthorizationContext(context)) {
+    isSystemAdmin =
+      context.isSystemAdmin?.() === true ||
+      context.systemRoles?.includes(SystemRole.SYSTEM_ADMIN) ||
+      (context.systemRoles as unknown[] as string[])?.includes('SYSTEM_ADMIN');
+  } else {
+    const roleUpper = (context.role || '').toUpperCase();
+    const systemRoleUpper = ((context as any).systemRole || '').toUpperCase();
+    isSystemAdmin =
+      roleUpper === 'ADMIN' ||
+      systemRoleUpper === 'SYSTEM_ADMIN' ||
+      (Array.isArray((context as any).systemRoles) &&
+        (context as any).systemRoles.includes('SYSTEM_ADMIN'));
+  }
+
+  if (isSystemAdmin) {
+    return {};
+  }
+
+  // 2. Institutional Leadership Evaluation (School-wide oversight)
+  let isLeadership = false;
+  if (isAuthorizationContext(context)) {
+    isLeadership =
+      context.positions?.some((p) => isInstitutionalLeadershipPosition(p, now)) ??
+      false;
+  } else {
+    const posCode = (context.positionCode || '').toUpperCase();
+    const roleUpper = (context.role || '').toUpperCase();
+    const titleLower = (context.title || '').toLowerCase();
+    isLeadership =
+      posCode === 'HIEU_TRUONG' ||
+      posCode.startsWith('HIEU_TRUONG_') ||
+      posCode === 'PHO_HIEU_TRUONG' ||
+      posCode.startsWith('PHO_HIEU_TRUONG_') ||
+      posCode === 'BAN_GIAM_HIEU' ||
+      posCode === 'BGH' ||
+      titleLower.includes('hiệu trưởng') ||
+      roleUpper === 'BAN_GIAM_HIEU' ||
+      roleUpper === 'BGH' ||
+      roleUpper === 'HIEU_TRUONG' ||
+      roleUpper === 'PHO_HIEU_TRUONG';
+  }
+
+  if (isLeadership) {
+    return {};
+  }
+
+  // 3. Extract User Identity and Assigned Unit IDs
+  const userId = isAuthorizationContext(context)
+    ? context.userId || context.user?.id
+    : context.id;
+
+  if (!userId) {
+    return { id: '__DENY_ANONYMOUS__' };
+  }
+
+  const unitIdSet = new Set<string>();
+  if (isAuthorizationContext(context)) {
+    if (Array.isArray(context.primaryUnitIds)) {
+      for (const id of context.primaryUnitIds) {
+        if (id) unitIdSet.add(id);
+      }
+    }
+    if (Array.isArray(context.positions)) {
+      for (const pos of context.positions) {
+        if (isPositionActive(pos, now) && pos.unitId) {
+          unitIdSet.add(pos.unitId);
+        }
+      }
+    }
+    if ((context as any).user?.departmentId) {
+      unitIdSet.add((context as any).user.departmentId);
+    }
+  } else {
+    if (context.departmentId) {
+      unitIdSet.add(context.departmentId);
+    }
+    if (Array.isArray((context as any).primaryUnitIds)) {
+      for (const id of (context as any).primaryUnitIds) {
+        if (id) unitIdSet.add(id);
+      }
+    }
+  }
+
+  const unitIds = Array.from(unitIdSet);
+
+  // 4. Build Filter Conditions for Manager / Staff
+  const authConditions: Prisma.TaskWhereInput[] = [
+    { assignees: { some: { userId } } },
+    { actors: { some: { userId } } },
+  ];
+
+  if (unitIds.length === 1) {
+    authConditions.push({ departmentId: unitIds[0] });
+  } else if (unitIds.length > 1) {
+    authConditions.push({ departmentId: { in: unitIds } });
+  }
+
+  return {
+    OR: authConditions,
+  };
+}
+
 export class TaskQueryService {
   /**
    * Truy vấn danh sách nhiệm vụ chuẩn hoá có phân trang, lọc scope, đơn vị, trạng thái, người thực hiện.
    */
   async queryTasks(
-    ctx: ApiRequestContext | { user?: AuthenticatedUser | null },
+    ctx:
+      | ApiRequestContext
+      | { user?: AuthenticatedUser | null; authorizationContext?: AuthorizationContext }
+      | AuthorizationContext,
     filters: TaskQueryFilters = {}
   ): Promise<TaskQueryResult> {
-    const user = ctx.user || null;
+    const user = isAuthorizationContext(ctx) ? ctx.user : ctx.user || null;
+    const userId = isAuthorizationContext(ctx) ? ctx.userId : ctx.user?.id;
 
     const month = filters.academicMonth ?? filters.month;
     const dept = filters.departmentId ?? filters.dept;
@@ -148,12 +335,12 @@ export class TaskQueryService {
       if (s === 'school') where.scope = TaskScope.SCHOOL;
       else if (s === 'department' || s === 'unit') where.scope = TaskScope.DEPARTMENT;
       else if (s === 'individual' || s === 'personal') where.scope = TaskScope.INDIVIDUAL;
-      else if (s === 'my' && user) {
-        assigneeConditions.push({ assignees: { some: { userId: user.id } } });
+      else if (s === 'my' && (userId || user)) {
+        assigneeConditions.push({ assignees: { some: { userId: userId || user!.id } } });
       }
     }
     if (assignedTo && assignedTo !== 'all') {
-      const targetUserId = assignedTo === 'me' ? user?.id : assignedTo;
+      const targetUserId = assignedTo === 'me' ? (userId || user?.id) : assignedTo;
       if (targetUserId) {
         assigneeConditions.push({ assignees: { some: { userId: targetUserId } } });
       }
@@ -221,32 +408,24 @@ export class TaskQueryService {
       ];
     }
 
-    // Task list authorization at database level (F02)
-    const isSystemAdmin =
-      (user as any)?.role === 'ADMIN' ||
-      (user as any)?.systemRole === 'SYSTEM_ADMIN';
-    const isLeadership =
-      user?.positionCode === "HIEU_TRUONG" ||
-      user?.positionCode === "PHO_HIEU_TRUONG" ||
-      user?.title?.toLowerCase()?.includes("hiệu trưởng") ||
-      user?.role === "BAN_GIAM_HIEU" ||
-      (user as any)?.role === "BGH";
+    // Task list authorization at database level (F02 / Canonical Task Read)
+    let authTarget: AuthorizationContext | AuthenticatedUser | null = null;
+    if (isAuthorizationContext(ctx)) {
+      authTarget = ctx;
+    } else if ((ctx as any).authorizationContext) {
+      authTarget = (ctx as any).authorizationContext;
+    } else if (ctx.user) {
+      authTarget = ctx.user;
+    }
 
-    if (!isSystemAdmin && !isLeadership && user) {
-      const authConditions: Prisma.TaskWhereInput[] = [
-        { assignees: { some: { userId: user.id } } },
-        { actors: { some: { userId: user.id } } },
-      ];
-      if (user.departmentId) {
-        authConditions.push({ departmentId: user.departmentId });
+    if (authTarget) {
+      const authWhere = buildTaskReadWhere(authTarget);
+      if (authWhere && Object.keys(authWhere).length > 0) {
+        where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+          authWhere,
+        ];
       }
-      const authWhere: Prisma.TaskWhereInput = {
-        OR: authConditions,
-      };
-      where.AND = [
-        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
-        authWhere,
-      ];
     }
 
     const isAll =
