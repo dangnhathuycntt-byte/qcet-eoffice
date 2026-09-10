@@ -77,7 +77,34 @@ function isReadOnlyAgent(agentType, agentId, agentRole, subagentLabel) {
 // -----------------------------------------------------------------------------
 // SHARD MAPPING RESOLUTION
 // -----------------------------------------------------------------------------
-function resolveActiveShard(agentId, agentType) {
+function extractCandidateShardIds(agentId, subagentLabel) {
+  const candidates = new Set();
+  for (const raw of [agentId, subagentLabel].filter(Boolean)) {
+    const s = String(raw).trim();
+    candidates.add(s);
+
+    // Strip leading prefix like builder:, repair:, implement:, etc.
+    const withoutPrefix = s.replace(/^(builder|repair|implement|reconcile|attempt)[:\-_]/i, '');
+    candidates.add(withoutPrefix);
+
+    // Strip trailing suffix like :repair, :repair-1, :attempt-1, :1
+    const withoutSuffix = withoutPrefix.replace(/[:\-_](repair(-\d+)?|implement|attempt(-\d+)?|\d+)$/i, '');
+    candidates.add(withoutSuffix);
+
+    // Match colon/hyphen separated segments
+    if (s.includes(':')) {
+      const parts = s.split(':');
+      for (const p of parts) {
+        if (p && !['builder', 'repair', 'attempt', 'implement', 'reconcile'].includes(p.toLowerCase())) {
+          candidates.add(p);
+        }
+      }
+    }
+  }
+  return [...candidates].filter(Boolean);
+}
+
+function resolveActiveShard(agentId, agentType, subagentLabel) {
   // 1. Check explicit environment variables
   if (process.env.QCET_CURRENT_SHARD) {
     try {
@@ -108,11 +135,13 @@ function resolveActiveShard(agentId, agentType) {
     };
   }
 
-  // 2. Candidate state file locations
+  // 2. Candidate state file locations (prioritize run-scoped files)
+  const runId = process.env.QCET_RUN_ID || '';
   const sessionScope = process.env.QCET_SESSION_ID || process.env.CLAUDE_CONVERSATION_ID || '';
   const candidateFiles = [
     process.env.QCET_ACTIVE_SHARDS_FILE,
     process.env.QCET_STATE_FILE,
+    runId ? path.join('/tmp', `qcet-active-shards-${runId}.json`) : null,
     sessionScope ? path.join('/tmp', `qcet-active-shards-${sessionScope}.json`) : null,
     path.join('/tmp', 'qcet-active-shards.json'),
     path.join('/tmp', 'qcet-shard-ownership.json'),
@@ -146,63 +175,46 @@ function resolveActiveShard(agentId, agentType) {
 
   if (!stateData) return null;
 
-  // Resolve shard from stateData structure
+  const candidateIds = extractCandidateShardIds(agentId, subagentLabel);
+
+  // Helper to match shard against candidate IDs
+  function matchesShard(shard) {
+    if (!shard || typeof shard !== 'object') return false;
+    const shardId = shard.id || shard.agentId || shard.agent_id;
+    if (!shardId) return false;
+    if (candidateIds.includes(shardId)) return true;
+    for (const c of candidateIds) {
+      if (shardId === c || shardId.startsWith(c + ':') || c.startsWith(shardId + ':')) return true;
+    }
+    return false;
+  }
+
   // Structure A: Array of shards
   if (Array.isArray(stateData)) {
-    if (agentId) {
-      const baseId = agentId.replace(/:(repair(-\d+)?|implement|attempt(-\d+)?)$/i, '');
-      const shardPrefix = agentId.includes(':') ? agentId.split(':')[0] : '';
-      const match = stateData.find(
-        (s) =>
-          s.agentId === agentId ||
-          s.agent_id === agentId ||
-          s.id === agentId ||
-          s.id === baseId ||
-          s.agentId === baseId ||
-          (shardPrefix && (s.id === shardPrefix || s.agentId === shardPrefix))
-      );
+    if (candidateIds.length > 0) {
+      const match = stateData.find(matchesShard);
       if (match) return match;
-      return null;
     }
-    if (stateData.length === 1) return stateData[0];
+    if ((agentId || subagentLabel) && stateData.length === 1) return stateData[0];
     return null;
   }
 
   // Structure B: Object keyed by agent_id or shard_id
   if (typeof stateData === 'object') {
-    if (agentId) {
-      if (stateData[agentId]) return stateData[agentId];
-      const baseId = agentId.replace(/:(repair(-\d+)?|implement|attempt(-\d+)?)$/i, '');
-      if (stateData[baseId]) return stateData[baseId];
-      const shardPrefix = agentId.includes(':') ? agentId.split(':')[0] : '';
-      if (shardPrefix && stateData[shardPrefix]) return stateData[shardPrefix];
+    for (const c of candidateIds) {
+      if (stateData[c]) return stateData[c];
     }
     // Nested activeShards property
     if (Array.isArray(stateData.activeShards)) {
-      if (agentId) {
-        const baseId = agentId.replace(/:(repair(-\d+)?|implement|attempt(-\d+)?)$/i, '');
-        const shardPrefix = agentId.includes(':') ? agentId.split(':')[0] : '';
-        const match = stateData.activeShards.find(
-          (s) =>
-            s.agentId === agentId ||
-            s.agent_id === agentId ||
-            s.id === agentId ||
-            s.id === baseId ||
-            s.agentId === baseId ||
-            (shardPrefix && (s.id === shardPrefix || s.agentId === shardPrefix))
-        );
+      if (candidateIds.length > 0) {
+        const match = stateData.activeShards.find(matchesShard);
         if (match) return match;
-        return null;
       }
-      if (stateData.activeShards.length === 1) return stateData.activeShards[0];
+      if ((agentId || subagentLabel) && stateData.activeShards.length === 1) return stateData.activeShards[0];
     }
     // Single shard object with 'owns'
     if (Array.isArray(stateData.owns)) {
-      if (!agentId || stateData.id === agentId || stateData.agentId === agentId) {
-        return stateData;
-      }
-      const baseId = agentId.replace(/:(repair(-\d+)?|implement|attempt(-\d+)?)$/i, '');
-      if (stateData.id === baseId || stateData.agentId === baseId) {
+      if ((agentId || subagentLabel) && (candidateIds.length === 0 || matchesShard(stateData))) {
         return stateData;
       }
     }
@@ -300,7 +312,7 @@ function main() {
   }
 
   // 2. Resolve active shard ownership
-  const shard = resolveActiveShard(agentId, agentType);
+  const shard = resolveActiveShard(agentId, agentType, subagentLabel);
 
   // Fail-closed invariant: builder agents MUST have an active shard ownership context
   if (!shard) {

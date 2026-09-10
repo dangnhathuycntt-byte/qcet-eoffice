@@ -1,0 +1,30 @@
+{
+  "runId": "eval-case-2-parallel",
+  "planPath": "docs/plans/eval-case-2.md",
+  "requirements": [
+    { "id": "REQ-201", "description": "Implement user service methods" },
+    { "id": "REQ-202", "description": "Implement document router methods" }
+  ],
+  "shards": [
+    {
+      "id": "shard-user-service",
+      "objective": "Implement user service methods",
+      "owns": ["src/server/services/user-service.ts"],
+      "antiOwns": ["src/server/routers/**"],
+      "requirements": ["REQ-201"],
+      "dependsOn": [],
+      "isolated": false,
+      "testHints": ["tests/user-service.test.ts"]
+    },
+    {
+      "id": "shard-document-router",
+      "objective": "Implement document router methods",
+      "owns": ["src/server/routers/document-router.ts"],
+      "antiOwns": ["src/server/services/**"],
+      "requirements": ["REQ-202"],
+      "dependsOn": [],
+      "isolated": false,
+      "testHints": ["tests/document-router.test.ts"]
+    }
+  ]
+}

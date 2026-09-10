@@ -23,16 +23,16 @@ const path = require('path');
 const EXIT_ALLOW = 0;
 const EXIT_BLOCK = 2;
 
-const sessionScope = process.env.QCET_SESSION_ID || process.env.CLAUDE_CONVERSATION_ID || '';
+const runScope = process.env.QCET_RUN_ID || process.env.QCET_SESSION_ID || process.env.CLAUDE_CONVERSATION_ID || '';
 const BOUNCEBACK_STATE_FILE =
   process.env.QCET_BOUNCEBACK_STATE_FILE ||
-  (sessionScope
-    ? path.join('/tmp', `qcet-subagent-bounceback-${sessionScope}.json`)
+  (runScope
+    ? path.join('/tmp', `qcet-subagent-bounceback-${runScope}.json`)
     : path.join('/tmp', 'qcet-subagent-bounceback.json'));
 const GATE_TELEMETRY_FILE =
   process.env.QCET_GATE_TELEMETRY_FILE ||
-  (sessionScope
-    ? path.join('/tmp', `qcet-gate-telemetry-${sessionScope}.json`)
+  (runScope
+    ? path.join('/tmp', `qcet-gate-telemetry-${runScope}.json`)
     : path.join('/tmp', 'qcet-gate-telemetry.json'));
 
 // -----------------------------------------------------------------------------

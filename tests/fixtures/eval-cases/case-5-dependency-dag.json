@@ -1,0 +1,41 @@
+{
+  "runId": "eval-case-5-dag",
+  "planPath": "docs/plans/eval-case-5.md",
+  "requirements": [
+    { "id": "REQ-501", "description": "Database schema migration" },
+    { "id": "REQ-502", "description": "Core entity service implementation" },
+    { "id": "REQ-503", "description": "API route and UI controller" }
+  ],
+  "shards": [
+    {
+      "id": "shard-core-schema",
+      "objective": "Database schema migration",
+      "owns": ["prisma/schema.prisma"],
+      "antiOwns": ["src/**"],
+      "requirements": ["REQ-501"],
+      "dependsOn": [],
+      "isolated": false,
+      "testHints": []
+    },
+    {
+      "id": "shard-core-service",
+      "objective": "Core entity service implementation",
+      "owns": ["src/server/services/core-service.ts"],
+      "antiOwns": ["prisma/**", "src/server/routers/**"],
+      "requirements": ["REQ-502"],
+      "dependsOn": ["shard-core-schema"],
+      "isolated": false,
+      "testHints": ["tests/core-service.test.ts"]
+    },
+    {
+      "id": "shard-core-router",
+      "objective": "API route and UI controller",
+      "owns": ["src/server/routers/core-router.ts"],
+      "antiOwns": ["prisma/**", "src/server/services/**"],
+      "requirements": ["REQ-503"],
+      "dependsOn": ["shard-core-service"],
+      "isolated": false,
+      "testHints": ["tests/core-router.test.ts"]
+    }
+  ]
+}

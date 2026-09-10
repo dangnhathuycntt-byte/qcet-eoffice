@@ -1,0 +1,19 @@
+{
+  "runId": "eval-case-4-violation",
+  "planPath": "docs/plans/eval-case-4.md",
+  "requirements": [
+    { "id": "REQ-401", "description": "Update UI styling with forbidden classes" }
+  ],
+  "shards": [
+    {
+      "id": "shard-bad-ui",
+      "objective": "Update UI styling with forbidden classes",
+      "owns": ["src/components/dashboard-bad.tsx"],
+      "antiOwns": [],
+      "requirements": ["REQ-401"],
+      "dependsOn": [],
+      "isolated": false,
+      "testHints": []
+    }
+  ]
+}

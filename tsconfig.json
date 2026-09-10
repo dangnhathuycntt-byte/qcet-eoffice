@@ -36,6 +36,7 @@
   ],
   "exclude": [
     "node_modules",
+    "tests/executor",
     "tests/incoming-documents-v2.test.ts",
     "tests/outgoing-documents-v2.test.ts"
   ]

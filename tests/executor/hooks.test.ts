@@ -1,0 +1,222 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '../..');
+const ownershipGuard = path.join(rootDir, '.claude', 'hooks', 'pre-tool-use-ownership-guard');
+const evidenceGate = path.join(rootDir, '.claude', 'hooks', 'subagent-stop-evidence-gate');
+
+function runHook(hookPath: string, stdinJson: Record<string, any>, env: Record<string, any> = {}) {
+  const res = spawnSync('node', [hookPath], {
+    cwd: rootDir,
+    input: JSON.stringify(stdinJson),
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      ...env,
+    },
+  });
+  return {
+    status: res.status,
+    stdout: res.stdout,
+    stderr: res.stderr,
+  };
+}
+
+test('pre-tool-use-ownership-guard: non-Write/Edit tools are immediately allowed (exit 0)', () => {
+  const res = runHook(ownershipGuard, {
+    tool_name: 'Read',
+    tool_input: { file_path: 'src/secret.ts' },
+  });
+  assert.equal(res.status, 0);
+});
+
+test('pre-tool-use-ownership-guard: read-only agent cannot call Write (exit 2 blocked)', () => {
+  const res = runHook(ownershipGuard, {
+    tool_name: 'Write',
+    agent_type: 'qcet-recon',
+    tool_input: { file_path: 'src/app.ts', content: 'test' },
+  });
+  assert.equal(res.status, 2);
+  assert.ok(res.stderr.includes('read-only role'));
+});
+
+test('pre-tool-use-ownership-guard: skeptic agent cannot call Edit (exit 2 blocked)', () => {
+  const res = runHook(ownershipGuard, {
+    tool_name: 'Edit',
+    agent_type: 'qcet-skeptic',
+    tool_input: { file_path: 'src/app.ts', old_string: 'a', new_string: 'b' },
+  });
+  assert.equal(res.status, 2);
+  assert.ok(res.stderr.includes('read-only role'));
+});
+
+test('pre-tool-use-ownership-guard: builder with subagent label resolves shard and allows owned file', () => {
+  const runId = 'test-run-' + Date.now();
+  const stateFile = path.join('/tmp', `qcet-active-shards-${runId}.json`);
+  const activeShards = [
+    {
+      id: 'shard-auth',
+      owns: ['src/server/auth/**'],
+      antiOwns: ['src/server/db/**'],
+    },
+  ];
+  fs.writeFileSync(stateFile, JSON.stringify(activeShards), 'utf8');
+
+  try {
+    const res = runHook(
+      ownershipGuard,
+      {
+        tool_name: 'Write',
+        agent_type: 'qcet-builder',
+        subagent_label: 'builder:shard-auth',
+        tool_input: { file_path: 'src/server/auth/jwt.ts', content: 'export const x = 1;' },
+      },
+      { QCET_RUN_ID: runId }
+    );
+    assert.equal(res.status, 0);
+  } finally {
+    if (fs.existsSync(stateFile)) fs.unlinkSync(stateFile);
+  }
+});
+
+test('pre-tool-use-ownership-guard: builder modifying file outside owns is blocked (exit 2)', () => {
+  const runId = 'test-run-' + Date.now();
+  const stateFile = path.join('/tmp', `qcet-active-shards-${runId}.json`);
+  const activeShards = [
+    {
+      id: 'shard-auth',
+      owns: ['src/server/auth/**'],
+      antiOwns: ['src/server/db/**'],
+    },
+  ];
+  fs.writeFileSync(stateFile, JSON.stringify(activeShards), 'utf8');
+
+  try {
+    const res = runHook(
+      ownershipGuard,
+      {
+        tool_name: 'Write',
+        agent_type: 'qcet-builder',
+        subagent_label: 'builder:shard-auth',
+        tool_input: { file_path: 'src/ui/dashboard.tsx', content: 'export const y = 2;' },
+      },
+      { QCET_RUN_ID: runId }
+    );
+    assert.equal(res.status, 2);
+    assert.ok(res.stderr.includes('outside assigned ownership scope'));
+  } finally {
+    if (fs.existsSync(stateFile)) fs.unlinkSync(stateFile);
+  }
+});
+
+test('pre-tool-use-ownership-guard: builder modifying file matching antiOwns is blocked (exit 2)', () => {
+  const runId = 'test-run-' + Date.now();
+  const stateFile = path.join('/tmp', `qcet-active-shards-${runId}.json`);
+  const activeShards = [
+    {
+      id: 'shard-auth',
+      owns: ['src/server/**'],
+      antiOwns: ['src/server/db/**'],
+    },
+  ];
+  fs.writeFileSync(stateFile, JSON.stringify(activeShards), 'utf8');
+
+  try {
+    const res = runHook(
+      ownershipGuard,
+      {
+        tool_name: 'Write',
+        agent_type: 'qcet-builder',
+        subagent_label: 'builder:shard-auth',
+        tool_input: { file_path: 'src/server/db/client.ts', content: 'export const db = null;' },
+      },
+      { QCET_RUN_ID: runId }
+    );
+    assert.equal(res.status, 2);
+    assert.ok(res.stderr.includes('violates antiOwns constraint'));
+  } finally {
+    if (fs.existsSync(stateFile)) fs.unlinkSync(stateFile);
+  }
+});
+
+test('pre-tool-use-ownership-guard: external file never matches repo owns (exit 2 blocked for builder)', () => {
+  const runId = 'test-run-' + Date.now();
+  const stateFile = path.join('/tmp', `qcet-active-shards-${runId}.json`);
+  const activeShards = [
+    {
+      id: 'shard-auth',
+      owns: ['src/server/auth/**'],
+    },
+  ];
+  fs.writeFileSync(stateFile, JSON.stringify(activeShards), 'utf8');
+
+  try {
+    const res = runHook(
+      ownershipGuard,
+      {
+        tool_name: 'Write',
+        agent_type: 'qcet-builder',
+        subagent_label: 'builder:shard-auth',
+        tool_input: { file_path: '/tmp/other/src/server/auth/leak.ts', content: 'test' },
+      },
+      { QCET_RUN_ID: runId }
+    );
+    assert.equal(res.status, 2);
+  } finally {
+    if (fs.existsSync(stateFile)) fs.unlinkSync(stateFile);
+  }
+});
+
+test('subagent-stop-evidence-gate: non-builder agent exit allowed without evidence', () => {
+  const res = runHook(evidenceGate, {
+    agent_type: 'qcet-recon',
+    last_assistant_message: 'Completed reconnaissance analysis.',
+  });
+  assert.equal(res.status, 0);
+});
+
+test('subagent-stop-evidence-gate: builder agent without structured evidence is bounced back (exit 2)', () => {
+  const runId = 'test-gate-' + Date.now();
+  const res = runHook(
+    evidenceGate,
+    {
+      agent_type: 'qcet-builder',
+      agent_id: 'builder:shard-1',
+      last_assistant_message: 'I finished modifying the files.',
+    },
+    { QCET_RUN_ID: runId }
+  );
+  assert.equal(res.status, 2);
+  assert.ok(
+    res.stderr.includes('Incomplete execution evidence') ||
+      res.stdout.includes('missing mandatory execution evidence')
+  );
+});
+
+test('subagent-stop-evidence-gate: builder agent with complete structured evidence is allowed (exit 0)', () => {
+  const runId = 'test-gate-' + Date.now();
+  const res = runHook(
+    evidenceGate,
+    {
+      agent_type: 'qcet-builder',
+      agent_id: 'builder:shard-1',
+      last_assistant_message: {
+        structuredOutput: {
+          status: 'success',
+          changedFiles: ['src/a.ts'],
+          testsRun: ['npm test'],
+          requirementsSatisfied: ['REQ-1'],
+        },
+      },
+    },
+    { QCET_RUN_ID: runId }
+  );
+  assert.equal(res.status, 0);
+});
+

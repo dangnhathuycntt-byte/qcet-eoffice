@@ -1,0 +1,19 @@
+{
+  "runId": "eval-case-1-single",
+  "planPath": "docs/plans/eval-case-1.md",
+  "requirements": [
+    { "id": "REQ-101", "description": "Implement authentication helper function" }
+  ],
+  "shards": [
+    {
+      "id": "shard-auth-helper",
+      "objective": "Implement authentication helper function",
+      "owns": ["src/lib/auth-helper.ts"],
+      "antiOwns": ["tests/**"],
+      "requirements": ["REQ-101"],
+      "dependsOn": [],
+      "isolated": false,
+      "testHints": ["tests/auth-helper.test.ts"]
+    }
+  ]
+}

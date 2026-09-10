@@ -1,0 +1,30 @@
+{
+  "runId": "eval-case-3-worktree",
+  "planPath": "docs/plans/eval-case-3.md",
+  "requirements": [
+    { "id": "REQ-301", "description": "Extend shared types for task management" },
+    { "id": "REQ-302", "description": "Extend shared types for meeting management" }
+  ],
+  "shards": [
+    {
+      "id": "shard-task-types",
+      "objective": "Extend shared types for task management",
+      "owns": ["src/types/shared.ts", "src/server/task-types.ts"],
+      "antiOwns": [],
+      "requirements": ["REQ-301"],
+      "dependsOn": [],
+      "isolated": true,
+      "testHints": ["tests/task-types.test.ts"]
+    },
+    {
+      "id": "shard-meeting-types",
+      "objective": "Extend shared types for meeting management",
+      "owns": ["src/types/shared.ts", "src/server/meeting-types.ts"],
+      "antiOwns": [],
+      "requirements": ["REQ-302"],
+      "dependsOn": [],
+      "isolated": true,
+      "testHints": ["tests/meeting-types.test.ts"]
+    }
+  ]
+}
