@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-09-source-architecture-improvement-plan.md

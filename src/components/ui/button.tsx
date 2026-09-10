@@ -19,18 +19,18 @@ const buttonVariants = cva(
           "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20",
         link: "text-primary underline-offset-4 hover:underline",
         premium:
-          "border-transparent bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-card hover:shadow-card-hover",
+          "border-transparent bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-card hover:opacity-95 font-medium",
       },
       size: {
         default:
-          "h-9 gap-2 px-3.5 text-sm rounded-lg has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
-        xs: "h-6 gap-1 px-2 text-xs rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 px-2.5 text-xs rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-10 gap-2 px-4 text-sm rounded-lg has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
-        icon: "size-9 rounded-lg",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8 rounded-lg",
-        "icon-lg": "size-10 rounded-lg",
+          "h-10 gap-2 px-4 py-2 text-sm font-medium rounded-lg has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
+        xs: "h-7 gap-1 px-2.5 text-xs rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "h-8.5 gap-1.5 rounded-lg px-3 text-xs font-semibold has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5",
+        lg: "h-11 gap-2 px-6 text-base font-semibold rounded-lg has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
+        icon: "size-10 rounded-lg",
+        "icon-xs": "size-7 rounded-md [&_svg:not([class*='size-'])]:size-3.5",
+        "icon-sm": "size-8.5 rounded-lg",
+        "icon-lg": "size-11 rounded-lg",
       },
     },
     defaultVariants: {
@@ -47,14 +47,26 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "default", asChild = false, ...props }, ref) => {
+  ({ className, variant = "default", size = "default", asChild = false, children, ...props }, ref) => {
+    if (asChild && React.isValidElement(children)) {
+      const child = children as React.ReactElement<any>;
+      return React.cloneElement(child, {
+        ref,
+        "data-slot": "button",
+        className: cn(buttonVariants({ variant, size, className }), child.props.className),
+        ...props,
+      });
+    }
+
     return (
       <button
         ref={ref}
         data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
         {...props}
-      />
+      >
+        {children}
+      </button>
     );
   }
 );

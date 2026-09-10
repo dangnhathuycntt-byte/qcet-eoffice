@@ -3,31 +3,32 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   CheckSquare,
   Network,
+  Calendar,
+  Menu,
   Bell,
   Clock,
-  Sun,
-  Moon,
   Plus,
   User,
   CheckCircle2,
   ChevronDown,
   LogOut,
   Settings,
+  LogIn,
 } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { triggerHaptic } from "@/lib/haptics";
+import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import {
   CreateTaskModal,
   CreateTaskFormData,
 } from "@/components/dashboard/create-task-modal";
 import { useAuth } from "@/lib/auth-context";
-import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
 import { UserProfileModal } from "@/components/auth/user-profile-modal";
 
 export function getInitials(name: string): string {
@@ -42,6 +43,11 @@ export function getInitials(name: string): string {
 export { NAVIGATION_ITEMS } from "@/components/layout/sidebar-context";
 import { NAVIGATION_ITEMS } from "@/components/layout/sidebar-context";
 
+/**
+ * @deprecated Legacy header live clock component.
+ * Deprecated as part of Executive Header Redesign. Replaced by clean 3-zone AppTopbar.
+ * Preserved for backwards compatibility.
+ */
 export function LiveClock() {
   const [timeStr, setTimeStr] = React.useState<string>("");
 
@@ -72,6 +78,11 @@ export function LiveClock() {
   );
 }
 
+/**
+ * @deprecated Legacy UI zoom toggle component.
+ * Deprecated as part of Executive Header Redesign. Replaced by clean 3-zone AppTopbar.
+ * Preserved for backwards compatibility.
+ */
 export function ZoomToggle() {
   const [zoomLevel, setZoomLevel] = React.useState<number>(1.0);
   const [mounted, setMounted] = React.useState(false);
@@ -104,69 +115,148 @@ export function ZoomToggle() {
       className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary/80 text-xs font-medium text-foreground transition-colors cursor-pointer active:scale-[0.98]"
       title="Bật / Tắt phóng to giao diện (100% / 120%)"
     >
-      <span className="text-[10px] text-muted-foreground font-normal">Zoom</span>
-      <span className="font-mono text-[11px] text-foreground font-semibold tabular-nums">
+      <span className="text-xs text-muted-foreground font-normal">Zoom</span>
+      <span className="font-mono text-xs text-foreground font-semibold tabular-nums">
         {mounted ? `${Math.round(zoomLevel * 100)}%` : "100%"}
       </span>
     </button>
   );
 }
 
-export function MobileNav({ pathname }: { pathname: string }) {
+export function MobileNav({ pathname: initialPathname }: { pathname?: string } = {}) {
+  const currentPathname = usePathname();
+  const searchParams = useSearchParams();
+  const pathname = initialPathname ?? currentPathname ?? "/";
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+
+  const zoneParam = searchParams?.get("zone");
+  const isOverviewActive =
+    (pathname === "/" && (!zoneParam || zoneParam === "dashboard" || zoneParam === "overview")) ||
+    pathname === "/dashboard";
+  const isTasksActive =
+    (pathname === "/" && zoneParam === "tasks") || pathname === "/tasks";
+  const isCalendarActive =
+    (pathname === "/" && zoneParam === "calendar") || pathname === "/calendar";
+  const isOrgActive =
+    (pathname === "/" && zoneParam === "org") || pathname === "/org";
+
+  const tabs = [
+    {
+      id: "overview",
+      // Tổng quan / Bàn làm việc (Executive Workbench)
+      label: "Bàn làm việc",
+      href: "/",
+      icon: LayoutDashboard,
+      active: isOverviewActive,
+    },
+    {
+      id: "tasks",
+      label: "Nhiệm vụ",
+      href: "/tasks",
+      icon: CheckSquare,
+      active: isTasksActive,
+    },
+    {
+      id: "calendar",
+      label: "Lịch",
+      href: "/calendar",
+      icon: Calendar,
+      active: isCalendarActive,
+    },
+    {
+      id: "org",
+      label: "Tổ chức",
+      href: "/org",
+      icon: Network,
+      active: isOrgActive,
+    },
+  ];
+
   return (
-    <nav
-      data-slot="mobile-nav"
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/90 backdrop-blur-md border-t border-border/50 px-2 py-1.5 shadow-lg"
-      aria-label="Điều hướng di động"
-    >
-      <div className="flex items-center justify-around">
-        {NAVIGATION_ITEMS.map((item) => {
-          const active =
-            pathname === item.href ||
-            (item.href !== "/" &&
-              (pathname === item.href || pathname.startsWith(item.href + "/")));
-          const Icon = item.icon;
-          const shortLabel =
-            item.label === "Quản lý công việc"
-              ? "Công việc"
-              : item.label === "Cơ cấu & Danh bạ" || item.label === "Cơ cấu tổ chức"
-              ? "Tổ chức"
-              : item.label === "Báo cáo KPI"
-              ? "KPI"
-              : item.label === "Thông báo"
-              ? "Thông báo"
-              : item.label;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium transition-colors",
-                active
-                  ? "text-primary font-semibold bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon
-                size={16}
-                strokeWidth={1.5}
+    <>
+      <nav
+        data-slot="mobile-nav"
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-md border-t border-border/70 shadow-lg",
+          "pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
+        )}
+        aria-label="Điều hướng di động"
+      >
+        <div className="grid grid-cols-5 items-stretch h-14 px-1 max-w-lg mx-auto">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <Link
+                key={tab.id}
+                href={tab.href}
+                onClick={() => triggerHaptic("light")}
                 className={cn(
-                  "mb-0.5",
-                  active ? "text-primary" : "text-muted-foreground"
+                  "relative flex flex-col items-center justify-center min-h-[48px] min-w-[48px] rounded-lg text-xs font-medium transition-colors active:scale-95 touch-manipulation select-none",
+                  tab.active
+                    ? "text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
+                aria-current={tab.active ? "page" : undefined}
+              >
+                {tab.active && (
+                  <span
+                    className="absolute top-0 w-8 h-0.5 bg-primary rounded-full"
+                    aria-hidden="true"
+                  />
+                )}
+                <Icon
+                  size={19}
+                  strokeWidth={tab.active ? 2 : 1.6}
+                  className={cn(
+                    "mb-0.5 transition-colors",
+                    tab.active ? "text-primary" : "text-muted-foreground"
+                  )}
+                />
+                <span className="text-xs leading-tight truncate max-w-[64px]">
+                  {tab.label}
+                </span>
+              </Link>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic("light");
+              setDrawerOpen(true);
+            }}
+            className={cn(
+              "relative flex flex-col items-center justify-center min-h-[48px] min-w-[48px] rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors active:scale-95 touch-manipulation cursor-pointer select-none",
+              drawerOpen && "text-primary font-semibold"
+            )}
+            aria-label="Menu mở rộng và tài khoản"
+          >
+            {drawerOpen && (
+              <span
+                className="absolute top-0 w-8 h-0.5 bg-primary rounded-full"
+                aria-hidden="true"
               />
-              <span className="truncate max-w-[68px]">{shortLabel}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+            )}
+            <Menu size={19} strokeWidth={1.6} className="mb-0.5" />
+            <span className="text-xs leading-tight truncate max-w-[64px]">
+              Thêm
+            </span>
+          </button>
+        </div>
+      </nav>
+
+      <MobileMenuDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
+    </>
   );
 }
 
+/**
+ * @deprecated Legacy topbar navigation component.
+ * Replaced by AppTopbar and AppSidebar in the Executive Two-Tier layout.
+ * Preserved for backwards compatibility.
+ */
 export function Navigation() {
   const pathname = usePathname();
-  const { resolved, toggleTheme } = useTheme();
   const { user, logout, setIsProfileModalOpen } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [initialAssigneeName, setInitialAssigneeName] = React.useState<string | undefined>(undefined);
@@ -266,8 +356,8 @@ export function Navigation() {
               <span className="text-sm font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">
                 QCET E-Office
               </span>
-              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-muted-foreground bg-muted border border-border/50 select-none">
-                v1.2 Enterprise
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium text-muted-foreground bg-muted border border-border/50 select-none">
+                Năm học 2025-2026
               </span>
             </div>
           </Link>
@@ -277,8 +367,7 @@ export function Navigation() {
             {NAVIGATION_ITEMS.map((item) => {
               const active =
                 pathname === item.href ||
-                (item.href !== "/" &&
-                  (pathname === item.href || pathname.startsWith(item.href + "/")));
+                (item.href !== "/" && pathname.startsWith(item.href + "/"));
               const Icon = item.icon;
               return (
                 <Link
@@ -307,11 +396,10 @@ export function Navigation() {
           </nav>
         </div>
 
-        {/* Right: LiveClock | ZoomToggle | RoleSwitcherPill | Quick Create Task | Theme | Avatar */}
+        {/* Right: LiveClock | ZoomToggle | Quick Create Task | Theme | Avatar */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           <LiveClock />
           <ZoomToggle />
-          <RoleSwitcherPill />
 
           {/* Sleek Linear-style Quick Create Task Button */}
           <Button
@@ -319,32 +407,17 @@ export function Navigation() {
             size="sm"
             onClick={() => setIsCreateModalOpen(true)}
             className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all cursor-pointer active:scale-[0.98]"
-            title="Giao việc mới (phím ⌘K hoặc N)"
+            title={user?.role === "STAFF" ? "Tạo việc cá nhân mới (phím ⌘K hoặc N)" : "Tạo việc / Giao việc mới (phím ⌘K hoặc N)"}
           >
             <Plus size={14} strokeWidth={1.5} className="shrink-0" />
-            <span className="hidden sm:inline font-medium">Giao việc</span>
-            <kbd className="ml-0.5 hidden items-center gap-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1 py-0.5 text-[10px] font-mono leading-none sm:inline-flex opacity-90">
+            <span className="hidden sm:inline font-medium">Tạo việc</span>
+            <kbd className="ml-0.5 hidden items-center gap-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1.5 py-0.5 text-xs font-mono leading-none sm:inline-flex opacity-90">
               ⌘K
             </kbd>
           </Button>
 
-          {/* Theme Switcher Button */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={toggleTheme}
-            aria-label="Chuyển đổi giao diện sáng/tối"
-            className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-          >
-            {resolved === "dark" ? (
-              <Sun size={15} strokeWidth={1.5} className="text-amber-400" />
-            ) : (
-              <Moon size={15} strokeWidth={1.5} className="text-muted-foreground" />
-            )}
-          </Button>
-
-          {/* User Avatar + Profile Dropdown */}
+          {/* User Avatar + Profile Dropdown or Login */}
+          {user ? (
           <div className="relative" ref={profileDropdownRef}>
             <button
               type="button"
@@ -364,7 +437,7 @@ export function Navigation() {
                   {user.name}
                 </p>
                 <p
-                  className="text-[10.5px] text-muted-foreground font-medium max-w-[130px] truncate"
+                  className="text-xs text-muted-foreground font-medium max-w-[130px] truncate"
                   title={user.roleLabel}
                 >
                   {user.role === "ADMIN"
@@ -393,23 +466,23 @@ export function Navigation() {
                         {user.name}
                       </p>
                       {user.emailVerified && (
-                        <span title="Đã xác thực Google Workspace" className="shrink-0 text-emerald-600 dark:text-emerald-400">
+                        <span title="Tài khoản email trường đã xác minh" className="shrink-0 text-emerald-600">
                           <CheckCircle2 size={13} strokeWidth={1.5} />
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] font-mono text-muted-foreground truncate" title={user.email}>
+                    <p className="text-xs font-mono text-muted-foreground truncate" title={user.email}>
                       {user.email}
                     </p>
                     <div className="mt-1 flex items-center gap-1 flex-wrap">
-                      <span className="rounded bg-secondary px-1.5 py-0.5 text-[9.5px] font-medium text-foreground border border-border/50">
+                      <span className="rounded bg-secondary px-2 py-0.5 text-xs font-medium text-foreground border border-border/50">
                         {user.role === "ADMIN"
                           ? "Ban Giám hiệu"
                           : user.role === "MANAGER"
                           ? "Trưởng đơn vị"
                           : "Chuyên viên"}
                       </span>
-                      <span className="text-[10px] text-muted-foreground truncate">
+                      <span className="text-xs text-muted-foreground truncate">
                         {user.departmentCode || "QCET"}
                       </span>
                     </div>
@@ -454,6 +527,15 @@ export function Navigation() {
               </div>
             )}
           </div>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs ml-1"
+            >
+              <LogIn size={13} strokeWidth={1.5} />
+              <span>Đăng nhập</span>
+            </Link>
+          )}
         </div>
       </div>
 

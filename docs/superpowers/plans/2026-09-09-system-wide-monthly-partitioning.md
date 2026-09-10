@@ -1,0 +1,1 @@
+../../plans/completed/2026-09-09-system-wide-monthly-partitioning.md

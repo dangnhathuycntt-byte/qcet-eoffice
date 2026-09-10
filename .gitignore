@@ -25,10 +25,22 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
 .cache/
 *.log
+
+# sqlite database artifacts
+*.db
+*.db-journal
+dev.db
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 qcet-backend-api/
+
+# runtime file storage & sandboxes
+/storage/temp/
+/uploads/
+/test_storage_*/
+/test_uploads_*/

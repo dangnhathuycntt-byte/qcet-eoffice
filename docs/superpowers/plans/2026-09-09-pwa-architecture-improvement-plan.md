@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-09-pwa-architecture-improvement-plan.md

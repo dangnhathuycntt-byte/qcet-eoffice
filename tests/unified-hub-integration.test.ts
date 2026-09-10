@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { filterTasksByScope } from "../src/components/dashboard/unified-task-toolbar";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
 import {
@@ -8,6 +8,7 @@ import {
   scopeToParam,
   parseViewModeParam,
   getDefaultScopeForRole,
+  getDefaultViewModeForRole,
   filterTasksByWorkbox,
   filterTasksHub,
 } from "../src/lib/unified-task-hub";
@@ -23,6 +24,13 @@ describe("Unified Task Hub Integration", () => {
     assert.equal(getDefaultScopeForRole("MANAGER"), "UNIT_TASKS");
     assert.equal(getDefaultScopeForRole("STAFF"), "MY_TASKS");
     assert.equal(getDefaultScopeForRole(undefined), "MY_TASKS");
+  });
+
+  test("Role-based default view modes prioritize executive command for ADMIN", () => {
+    assert.equal(getDefaultViewModeForRole("ADMIN"), "executive");
+    assert.equal(getDefaultViewModeForRole("MANAGER"), "table");
+    assert.equal(getDefaultViewModeForRole("STAFF"), "table");
+    assert.equal(getDefaultViewModeForRole(undefined), "table");
   });
 
   test("URL query parameter mapping for scope and viewMode", () => {
@@ -45,8 +53,15 @@ describe("Unified Task Hub Integration", () => {
     assert.equal(parseViewModeParam("table"), "table");
     assert.equal(parseViewModeParam("kanban"), "kanban");
     assert.equal(parseViewModeParam("calendar"), "calendar");
+    assert.equal(parseViewModeParam("department"), "department");
+    assert.equal(parseViewModeParam("don-vi"), "department");
+    assert.equal(parseViewModeParam("executive"), "executive");
+    assert.equal(parseViewModeParam("chi-huy"), "executive");
+    assert.equal(parseViewModeParam("bgh"), "executive");
+    assert.equal(parseViewModeParam("command"), "executive");
     assert.equal(parseViewModeParam("invalid"), "table");
     assert.equal(parseViewModeParam(null), "table");
+    assert.equal(parseViewModeParam(null, "executive"), "executive");
   });
 
   test("Scope switching produces distinct task sets for manager", () => {

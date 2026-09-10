@@ -1,0 +1,1 @@
+../../plans/completed/2026-09-08-security-and-architecture-remediation-plan.md

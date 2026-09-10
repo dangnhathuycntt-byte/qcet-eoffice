@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-07-executive-cockpit-redesign-plan.md

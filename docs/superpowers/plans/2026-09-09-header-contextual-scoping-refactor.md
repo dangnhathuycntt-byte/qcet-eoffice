@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-09-header-contextual-scoping-refactor.md

@@ -1,0 +1,1 @@
+../../plans/completed/2026-09-09-work-operations-calendar-plan.md

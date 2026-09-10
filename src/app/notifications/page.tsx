@@ -2,56 +2,492 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Bell, ArrowLeft, CheckCircle2, Clock } from "lucide-react";
-import { getMockDashboardPayload } from "@/lib/mock-dashboard-data";
+import {
+  ArrowLeft,
+  Check,
+  CheckCheck,
+  CheckCircle2,
+  Clock,
+  FileText,
+  AlertTriangle,
+  Bell,
+  RefreshCw,
+  ShieldCheck,
+  Filter,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import {
+  QCETNotification,
+  NotificationTriageTab,
+  filterNotificationsByTab,
+  formatNotificationContent,
+  getDeterministicAvatarStyle,
+  getActorInitials,
+  getTypeBadge,
+  mapDbNotification,
+  resolveActionableDeepLink,
+  extractNotificationEntity,
+} from "@/lib/notification-triage";
+import { MobileNotificationInbox } from "@/components/notifications/mobile-notification-inbox";
+
+interface TabMeta {
+  id: NotificationTriageTab;
+  label: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+}
+
+const TRIAGE_TABS: TabMeta[] = [
+  { id: "all", label: "Tất cả", icon: Bell },
+  { id: "action_required", label: "Việc cần làm", icon: FileText },
+  { id: "approvals", label: "Chờ phê duyệt", icon: ShieldCheck },
+  { id: "reminders", label: "Nhắc hạn", icon: AlertTriangle },
+];
 
 export default function NotificationsPage() {
-  const payload = getMockDashboardPayload();
+  const [notifications, setNotifications] = React.useState<QCETNotification[]>([]);
+  const [activeTab, setActiveTab] = React.useState<NotificationTriageTab>("all");
+  const [unreadOnly, setUnreadOnly] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  const fetchNotifications = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/notifications");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.notifications)) {
+          setNotifications(data.notifications.map(mapDbNotification));
+        }
+      }
+    } catch {
+      // Best-effort
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const unreadCount = React.useMemo(() => {
+    return notifications.filter((n) => !n.isRead).length;
+  }, [notifications]);
+
+  // Live item counts for all 4 triage tabs
+  const tabCounts = React.useMemo(() => {
+    return {
+      all: notifications.length,
+      action_required: filterNotificationsByTab(notifications, "action_required").length,
+      approvals: filterNotificationsByTab(notifications, "approvals").length,
+      reminders: filterNotificationsByTab(notifications, "reminders").length,
+    };
+  }, [notifications]);
+
+  // Live unread counts for all 4 triage tabs
+  const tabUnreadCounts = React.useMemo(() => {
+    const unreadList = notifications.filter((n) => !n.isRead);
+    return {
+      all: unreadList.length,
+      action_required: filterNotificationsByTab(unreadList, "action_required").length,
+      approvals: filterNotificationsByTab(unreadList, "approvals").length,
+      reminders: filterNotificationsByTab(unreadList, "reminders").length,
+    };
+  }, [notifications]);
+
+  // Mark a single notification as read
+  const markAsRead = async (id: string) => {
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, isRead: true } : item))
+    );
+    try {
+      await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+    } catch {
+      // Best-effort
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    try {
+      await fetch("/api/notifications", { method: "PATCH" });
+    } catch {
+      // Best-effort
+    }
+  };
+
+  // Filter by active triage tab and optional unreadOnly flag
+  const displayedNotifications = React.useMemo(() => {
+    const tabItems = filterNotificationsByTab(notifications, activeTab);
+    if (unreadOnly) {
+      return tabItems.filter((n) => !n.isRead);
+    }
+    return tabItems;
+  }, [notifications, activeTab, unreadOnly]);
+
+  const newItems = React.useMemo(() => {
+    return displayedNotifications.filter((n) => n.timeGroup === "new");
+  }, [displayedNotifications]);
+
+  const earlierItems = React.useMemo(() => {
+    return displayedNotifications.filter((n) => n.timeGroup === "earlier");
+  }, [displayedNotifications]);
+
+  // Informative empty state configuration per tab
+  const getEmptyStateContent = () => {
+    if (unreadOnly) {
+      return {
+        title: "Không có thông báo chưa đọc nào trong mục này",
+        description: "Tất cả các thông báo liên quan đã được nắm bắt và đánh dấu đã đọc.",
+      };
+    }
+    switch (activeTab) {
+      case "action_required":
+        return {
+          title: "Không có việc cần làm",
+          description: "Tất cả nhiệm vụ phân công và chỉ đạo điều hành trực tiếp đã được xử lý hoàn tất.",
+        };
+      case "approvals":
+        return {
+          title: "Không có sản phẩm chờ phê duyệt",
+          description: "Hiện không có báo cáo tiến độ, minh chứng hoặc hồ sơ DACUM nào cần bạn thẩm định.",
+        };
+      case "reminders":
+        return {
+          title: "Không có thông báo nhắc hạn",
+          description: "Không có công việc nào cận hạn trong 24 giờ tới hoặc cần gửi cảnh báo nhắc nhở.",
+        };
+      case "all":
+      default:
+        return {
+          title: "Hiện tại Đồng chí không có thông báo nào",
+          description: "Bạn đã nắm bắt toàn bộ hoạt động điều hành và văn bản nghiệp vụ của Nhà trường.",
+        };
+    }
+  };
+
+  const emptyState = getEmptyStateContent();
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex items-center gap-3">
+    <div className="max-w-3xl mx-auto py-4 px-2 sm:px-0 space-y-4">
+      {/* Top back action */}
+      <div className="flex items-center justify-between">
         <Link href="/">
-          <Button variant="ghost" size="icon-sm" className="size-8">
-            <ArrowLeft className="size-4" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+          >
+            <ArrowLeft size={14} strokeWidth={1.5} />
+            <span>Quay lại Bảng điều hành</span>
           </Button>
         </Link>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-            Thông báo hệ thống
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Cập nhật trạng thái nhiệm vụ và hoạt động điều hành QCET E-Office
-          </p>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchNotifications}
+          disabled={isLoading}
+          className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8 cursor-pointer"
+        >
+          <RefreshCw size={13} strokeWidth={1.5} className={isLoading ? "animate-spin" : ""} />
+          <span>Làm mới</span>
+        </Button>
+      </div>
+
+      {/* Mobile Actionable Notification Inbox (< 640px / sm:hidden) */}
+      <div className="block sm:hidden">
+        <MobileNotificationInbox
+          notifications={notifications}
+          isLoading={isLoading}
+          onRefresh={fetchNotifications}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+        />
+      </div>
+
+      {/* Desktop Notification Center (sm:block / >= 640px) */}
+      <div className="hidden sm:block">
+        {/* Card Container */}
+        <div className="rounded-2xl border border-border/80 bg-card shadow-card overflow-hidden select-none">
+        {/* Header */}
+        <div className="p-4 sm:p-5 pb-3 border-b border-border/50 bg-muted/20">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading">
+                Trung tâm thông báo điều hành
+              </h1>
+              {unreadCount > 0 ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/20 tabular-nums">
+                  {unreadCount} mới
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                  <Check size={13} strokeWidth={1.5} className="text-emerald-500" />
+                  <span>Đã cập nhật toàn bộ</span>
+                </span>
+              )}
+            </div>
+
+            {/* Mark All As Read Action */}
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={markAllAsRead}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer border border-border/50 bg-card shadow-2xs"
+                title="Đánh dấu tất cả là đã đọc"
+              >
+                <CheckCheck size={14} strokeWidth={1.5} className="text-primary" />
+                <span>Đã đọc tất cả</span>
+              </button>
+            )}
+          </div>
+
+          {/* 4 Triage Tabs with Live Item Counts */}
+          <div className="flex items-center gap-1.5 mt-4 pt-2 border-t border-border/40 overflow-x-auto thin-scrollbar pb-1">
+            <div className="inline-flex items-center p-0.5 rounded-xl bg-muted/70 border border-border/50 text-xs shrink-0">
+              {TRIAGE_TABS.map((tab) => {
+                const TabIcon = tab.icon;
+                const count = tabCounts[tab.id];
+                const unreadTabCount = tabUnreadCounts[tab.id];
+                const isActive = activeTab === tab.id;
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                      isActive
+                        ? "bg-card text-foreground shadow-xs border border-border/60"
+                        : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                    )}
+                  >
+                    <TabIcon size={13} strokeWidth={1.5} className={isActive ? "text-primary" : "text-muted-foreground"} />
+                    <span>{tab.label}</span>
+                    <span
+                      className={cn(
+                        "px-1.5 py-0.2 rounded font-mono text-xs tabular-nums",
+                        isActive
+                          ? "bg-muted text-foreground font-bold"
+                          : "bg-muted/50 text-muted-foreground"
+                      )}
+                    >
+                      {count}
+                    </span>
+                    {unreadTabCount > 0 && !isActive && (
+                      <span className="size-1.5 rounded-full bg-primary" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Unread Toggle & Total Counter */}
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setUnreadOnly((prev) => !prev)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border",
+                  unreadOnly
+                    ? "bg-primary/10 text-primary border-primary/30 font-semibold"
+                    : "bg-muted/40 text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted/70"
+                )}
+                title="Lọc thông báo chưa đọc trong mục này"
+              >
+                <Filter size={11} strokeWidth={1.5} />
+                <span>Chưa đọc</span>
+                {tabUnreadCounts[activeTab] > 0 && (
+                  <span className="px-1.5 py-0.2 rounded font-mono text-xs font-bold bg-destructive/15 text-destructive border border-destructive/20 tabular-nums">
+                    {tabUnreadCounts[activeTab]}
+                  </span>
+                )}
+              </button>
+
+              <span className="text-xs font-mono tabular-nums text-muted-foreground hidden sm:inline-block">
+                {displayedNotifications.length} mục
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* List Content */}
+        <div className="p-2 divide-y divide-border/30">
+          {isLoading && notifications.length === 0 ? (
+            <div className="py-12 space-y-3 px-4 animate-pulse">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-start gap-3.5 p-3 rounded-xl bg-muted/20">
+                  <div className="size-11 rounded-full bg-muted/60 shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-3/4 rounded bg-muted/60" />
+                    <div className="h-3 w-1/3 rounded bg-muted/40" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : displayedNotifications.length === 0 ? (
+            <div className="py-16 px-4 text-center">
+              <div className="size-12 rounded-full bg-secondary/80 text-muted-foreground flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 size={22} strokeWidth={1.5} className="text-emerald-600" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                {emptyState.title}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                {emptyState.description}
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Section: Mới cập nhật (< 2h) */}
+              {newItems.length > 0 && (
+                <div className="pb-2">
+                  <div className="flex items-center justify-between px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20 rounded-lg mb-1">
+                    <span>Mới cập nhật</span>
+                    <span className="font-mono text-xs">{newItems.length}</span>
+                  </div>
+                  <div className="space-y-1">
+                    {newItems.map((item) => (
+                      <PageNotificationRow
+                        key={item.id}
+                        item={item}
+                        onRead={() => markAsRead(item.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Section: Trước đó */}
+              {earlierItems.length > 0 && (
+                <div className="pt-2 pb-1">
+                  <div className="flex items-center justify-between px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20 rounded-lg mb-1">
+                    <span>Trước đó</span>
+                    <span className="font-mono text-xs">{earlierItems.length}</span>
+                  </div>
+                  <div className="space-y-1">
+                    {earlierItems.map((item) => (
+                      <PageNotificationRow
+                        key={item.id}
+                        item={item}
+                        onRead={() => markAsRead(item.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      </div>
+    </div>
+  );
+}
+
+function PageNotificationRow({
+  item,
+  onRead,
+}: {
+  item: QCETNotification;
+  onRead: () => void;
+}) {
+  const badge = getTypeBadge(item.type);
+  const BadgeIcon = badge.icon;
+  const avatarStyle = getDeterministicAvatarStyle(item.actorName);
+  const formatted = formatNotificationContent(item);
+
+  const destinationHref = resolveActionableDeepLink(item);
+
+  return (
+    <Link
+      href={destinationHref}
+      onClick={() => {
+        if (!item.isRead) {
+          onRead();
+        }
+      }}
+      className={cn(
+        "group relative flex items-start gap-3.5 p-3 rounded-xl transition-all cursor-pointer border border-transparent",
+        item.isRead
+          ? "hover:bg-muted/50 opacity-85 hover:opacity-100"
+          : "bg-primary/[0.04] hover:bg-muted/70 font-medium border-l-primary"
+      )}
+    >
+      {/* Avatar with Micro Badge */}
+      <div className="relative shrink-0 mt-0.5">
+        <div
+          className={cn(
+            "size-11 rounded-full flex items-center justify-center font-bold font-mono text-xs select-none shadow-2xs ring-1",
+            avatarStyle.bg,
+            avatarStyle.text,
+            avatarStyle.ring
+          )}
+          title={`${formatted.actorName} (QCET)`}
+        >
+          {getActorInitials(formatted.actorName)}
+        </div>
+
+        <div
+          className={cn(
+            "absolute -bottom-1 -right-1 size-5 rounded-full ring-2 ring-card flex items-center justify-center shadow-2xs",
+            badge.bg
+          )}
+        >
+          <BadgeIcon size={11} strokeWidth={1.5} />
         </div>
       </div>
 
-      <div className="rounded-lg border border-border/80 bg-card p-4 shadow-xs divide-y divide-border/50">
-        {payload.activities.map((act) => (
-          <div key={act.id} className="py-3 flex items-start gap-3 first:pt-0 last:pb-0">
-            <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
-              <Bell className="size-3.5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-foreground">
-                  {act.actorName}
-                </span>
-                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <Clock className="size-3" />
-                  {act.timestamp}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                <span className="font-medium text-foreground">{act.action}</span>{" "}
-                &ldquo;{act.targetTitle}&rdquo;
-              </p>
-            </div>
-          </div>
-        ))}
+      {/* Main Content Area - Formatted without string duplication glitch */}
+      <div className="flex-1 min-w-0 pr-2">
+        <p className="text-xs sm:text-sm text-foreground leading-snug line-clamp-2">
+          <span className="font-bold text-foreground">{formatted.actorName}</span>{" "}
+          <span className="text-muted-foreground">{formatted.actionText}</span>{" "}
+          {formatted.targetTitle && (
+            <span className="font-semibold text-foreground">&ldquo;{formatted.targetTitle}&rdquo;</span>
+          )}
+          {formatted.directiveNote && (
+            <span className="italic text-foreground/90 font-medium"> &ldquo;{formatted.directiveNote}&rdquo;</span>
+          )}
+        </p>
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          <span className="px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-muted text-muted-foreground border border-border/50">
+            {item.category}
+          </span>
+          {formatted.extraBadge && (
+            <span className="px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+              {formatted.extraBadge}
+            </span>
+          )}
+          <span className="text-xs text-muted-foreground font-mono tabular-nums flex items-center gap-1">
+            <Clock size={11} strokeWidth={1.5} className="text-muted-foreground/80 shrink-0" />
+            <span>{item.timestamp}</span>
+          </span>
+        </div>
       </div>
-    </div>
+
+      {/* Unread Indicator or Quick Mark Read Button on hover */}
+      {!item.isRead ? (
+        <div className="self-center shrink-0 flex items-center gap-1.5 pr-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRead();
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-card hover:shadow-xs text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+            title="Đánh dấu là đã đọc"
+          >
+            <Check size={16} strokeWidth={1.5} />
+          </button>
+          <span className="size-2.5 rounded-full bg-primary ring-2 ring-primary/20 group-hover:hidden" />
+        </div>
+      ) : null}
+    </Link>
   );
 }

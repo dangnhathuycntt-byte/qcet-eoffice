@@ -1,0 +1,97 @@
+/**
+ * API Route: /api/organization/bodies/[id]
+ * GET - Chi tiết hội đồng/ban chỉ đạo
+ * POST - Thêm thành viên vào hội đồng (CHAIR, VICE_CHAIR, SECRETARY, MEMBER)
+ */
+
+import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
+import { apiSuccess, apiError } from '@/server/api/response';
+import { AddBodyMembershipSchema } from '@/contracts/meeting';
+import { logAuditEvent, AuditAction } from '@/lib/db/audit';
+import { NotFoundError } from '@/server/api/errors';
+
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  let requestId = crypto.randomUUID();
+  try {
+    const params = await props.params;
+    const ctx = await getApiContext(request);
+    requestId = ctx.requestId;
+    requireAuthenticated(ctx);
+
+    const body = await prisma.organizationalBody.findUnique({
+      where: { id: params.id },
+      include: {
+        memberships: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, role: true },
+            },
+            positionAssignment: {
+              include: {
+                positionDefinition: true,
+                unit: true,
+              },
+            },
+          },
+        },
+        meetings: {
+          orderBy: { startTime: 'desc' },
+          take: 10,
+        },
+      },
+    });
+
+    if (!body) {
+      throw new NotFoundError('Hội đồng / Ban chỉ đạo không tồn tại');
+    }
+
+    return apiSuccess(body, { requestId, status: 200 });
+  } catch (error: any) {
+    return apiError(error, requestId);
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  let requestId = crypto.randomUUID();
+  try {
+    const params = await props.params;
+    const ctx = await getApiContext(request);
+    requestId = ctx.requestId;
+    const authUser = requireAuthenticated(ctx);
+
+    const reqBody = await request.json();
+    const input = AddBodyMembershipSchema.parse(reqBody);
+
+    const membership = await prisma.bodyMembership.create({
+      data: {
+        bodyId: params.id,
+        userId: input.userId,
+        positionAssignmentId: input.positionAssignmentId,
+        role: input.role,
+        appointedAt: input.appointedAt ? new Date(input.appointedAt) : undefined,
+        expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
+      },
+    });
+
+    await logAuditEvent({
+      actorId: authUser.id,
+      action: AuditAction.USER_ROLE_CHANGED,
+      entityType: 'BodyMembership',
+      entityId: membership.id,
+      requestId,
+      afterData: { bodyId: params.id, userId: input.userId, role: input.role },
+    });
+
+    return apiSuccess(membership, { requestId, status: 201 });
+  } catch (error: any) {
+    return apiError(error, requestId);
+  }
+}

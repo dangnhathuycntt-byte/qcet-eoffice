@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-08-login-ux-jargon-detox.md

@@ -69,7 +69,7 @@ export function Drawer({
         onClick={onClose}
       />
       <div
-        className={`relative z-50 flex h-full w-full sm:max-w-3xl flex-col bg-card border-l border-border/60 shadow-[0_0_50px_rgba(0,0,0,0.18)] dark:shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`relative z-50 flex h-full w-full sm:max-w-3xl flex-col bg-card border-l border-border/60 shadow-[0_0_50px_rgba(0,0,0,0.18)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           visible ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -90,7 +90,7 @@ export function Drawer({
               className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 border border-transparent hover:border-border/60 transition-all duration-200 active:scale-95 shrink-0 cursor-pointer"
               aria-label="Đóng"
             >
-              <X size={18} strokeWidth={2} />
+              <X size={18} strokeWidth={1.5} />
             </button>
           </div>
 
@@ -111,18 +111,18 @@ export function Drawer({
                 value={stats.completionRate}
                 className="[&_[data-slot=progress-track]]:h-2.5 [&_[data-slot=progress-indicator]]:bg-emerald-500 rounded-full"
               />
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium pt-0.5">
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold tabular-nums">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium pt-0.5">
+                <span className="text-emerald-600 font-bold tabular-nums">
                   {stats.completed} hoàn thành
                 </span>
                 <span>·</span>
-                <span className="text-blue-600 dark:text-blue-400 font-semibold tabular-nums">
+                <span className="text-blue-600 font-semibold tabular-nums">
                   {stats.inProgress} đang làm
                 </span>
                 {stats.overdue > 0 && (
                   <>
                     <span>·</span>
-                    <span className="text-rose-600 dark:text-rose-400 font-bold tabular-nums animate-pulse">
+                    <span className="text-rose-600 font-bold tabular-nums animate-pulse">
                       {stats.overdue} quá hạn
                     </span>
                   </>

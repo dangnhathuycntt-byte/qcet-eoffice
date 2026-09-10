@@ -8,7 +8,16 @@ import {
   ActivityEvent,
 } from "../types/dashboard";
 import { computeSchoolTaskRollup, computeDashboardStats } from "./dashboard-aggregator";
-import { getMockDashboardPayload, CATEGORY_LABELS } from "./mock-dashboard-data";
+
+export const CATEGORY_LABELS: Record<TaskCategory, string> = {
+  CHUYEN_DOI_SO: "Chuyển đổi số",
+  TRUYEN_THONG: "Truyền thông",
+  ATTT: "An toàn thông tin",
+  CNTT: "Hạ tầng CNTT",
+  THU_VIEN: "Thư viện",
+  BAO_CAO: "Báo cáo",
+  KHAC: "Nhiệm vụ khác",
+};
 
 export const NOTION_TOKEN = process.env.NOTION_TOKEN || "";
 
@@ -30,6 +39,31 @@ let memoryCache: CacheEntry | null = null;
 
 export function clearNotionCache(): void {
   memoryCache = null;
+}
+
+export function getEmptyDashboardPayload(source: string = "notion-empty"): DashboardPayload {
+  return {
+    stats: {
+      totalSchoolTasks: 0,
+      schoolTasksInProgress: 0,
+      schoolTasksCompleted: 0,
+      totalStaffTasks: 0,
+      staffTasksInProgress: 0,
+      staffTasksCompleted: 0,
+      needsReviewTasksCount: 0,
+      overdueTasksCount: 0,
+      averageSchoolProgressPercent: 0,
+      totalTasks: 0,
+      inProgressTasks: 0,
+      completedTasks: 0,
+      overdueTasks: 0,
+      completionRate: 0,
+    },
+    tasks: [],
+    upcoming: [],
+    activities: [],
+    source: source as any,
+  };
 }
 
 export function mapNotionCategory(name?: string): TaskCategory {
@@ -107,11 +141,11 @@ export async function fetchNotionDashboardData(): Promise<DashboardPayload> {
     return memoryCache.data;
   }
 
-  // If no Notion token is configured, immediately fall back to mock data
+  // If no Notion token is configured, return empty payload without falling back to mock
   if (!NOTION_TOKEN) {
-    console.warn("NOTION_TOKEN not set; using mock fallback.");
-    const mock = getMockDashboardPayload();
-    return { ...mock, source: "mock-fallback" };
+    console.warn("NOTION_TOKEN not set; returning empty dashboard payload.");
+    const emptyPayload = getEmptyDashboardPayload("notion-missing-token");
+    return emptyPayload;
   }
 
   try {
@@ -266,7 +300,7 @@ export async function fetchNotionDashboardData(): Promise<DashboardPayload> {
       stats,
       tasks: schoolTasks,
       upcoming: upcoming.slice(0, 7),
-      activities: activities.length > 0 ? activities : getMockDashboardPayload().activities,
+      activities: activities,
       source: "notion-live",
     };
 
@@ -277,19 +311,15 @@ export async function fetchNotionDashboardData(): Promise<DashboardPayload> {
 
     return payload;
   } catch (err) {
-    console.warn("Notion live fetch failed or offline; using mock fallback:", err);
-    const mock = getMockDashboardPayload();
-    const fallbackPayload: DashboardPayload = {
-      ...mock,
-      source: "mock-fallback",
-    };
+    console.warn("Notion live fetch failed or offline; returning empty payload:", err);
+    const emptyPayload = getEmptyDashboardPayload("notion-error");
 
-    // Cache fallback briefly (15s) so repeated hits don't hammer failed endpoints
+    // Cache briefly (15s) so repeated hits don't hammer failed endpoints
     memoryCache = {
-      data: fallbackPayload,
+      data: emptyPayload,
       timestamp: now - (CACHE_TTL_MS - 15000),
     };
 
-    return fallbackPayload;
+    return emptyPayload;
   }
 }

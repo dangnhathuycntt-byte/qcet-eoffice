@@ -1,0 +1,315 @@
+"use client";
+
+import * as React from "react";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Target,
+  ArrowRight,
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+import type {
+  ExecutiveActionStats,
+  ExecutiveFilter,
+  ExecutiveActionItem,
+} from "@/lib/executive-matrix-aggregator";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+export type { ExecutiveFilter, ExecutiveActionItem };
+
+export const INITIAL_LIMIT = 5;
+
+export interface ExecutiveActionCenterProps {
+  stats: ExecutiveActionStats;
+  activeFilter: ExecutiveFilter;
+  onFilterChange: (filter: ExecutiveFilter) => void;
+  items?: ExecutiveActionItem[];
+  onAction?: (actionType: string, item: ExecutiveActionItem) => void;
+  hideCards?: boolean;
+}
+
+interface ActionCardConfig {
+  id: string;
+  filterKey: Exclude<ExecutiveFilter, "ALL">;
+  title: string;
+  getValue: (stats: ExecutiveActionStats) => number;
+  getSubtext: (stats: ExecutiveActionStats) => string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement> & { strokeWidth?: number }>;
+  activeAccent: string;
+  activeBg: string;
+  hoverBorder: string;
+  dotColor: string;
+}
+
+const ACTION_CARDS: ActionCardConfig[] = [
+  {
+    id: "pending-approval",
+    filterKey: "PENDING_APPROVAL",
+    title: "Chờ BGH Phê duyệt",
+    getValue: (s) => s.pendingSchoolApprovalCount,
+    getSubtext: (s) =>
+      s.pendingSchoolApprovalCount > 0
+        ? "Tờ trình chờ thẩm định & phê duyệt"
+        : "Không có tờ trình tồn đọng",
+    icon: CheckCircle2,
+    activeAccent: "border-indigo-500 ring-2 ring-indigo-500/20",
+    activeBg: "bg-indigo-500/[0.04]",
+    hoverBorder: "hover:border-indigo-500/40 hover:bg-indigo-500/[0.02]",
+    dotColor: "bg-indigo-500",
+  },
+  {
+    id: "blocked-overdue",
+    filterKey: "BLOCKED_OVERDUE",
+    title: "Vướng mắc & Trễ hạn",
+    getValue: (s) => s.blockedTasksCount + s.overdueTasksCount,
+    getSubtext: (s) => {
+      if (s.blockedTasksCount > 0 && s.overdueTasksCount > 0) {
+        return `${s.blockedTasksCount} vướng mắc · ${s.overdueTasksCount} trễ hạn`;
+      }
+      if (s.overdueTasksCount > 0) return `${s.overdueTasksCount} nhiệm vụ trễ hạn`;
+      if (s.blockedTasksCount > 0) return `${s.blockedTasksCount} nhiệm vụ vướng mắc`;
+      return "Tiến độ thông suốt";
+    },
+    icon: AlertTriangle,
+    activeAccent: "border-rose-500 ring-2 ring-rose-500/20",
+    activeBg: "bg-rose-500/[0.04]",
+    hoverBorder: "hover:border-rose-500/40 hover:bg-rose-500/[0.02]",
+    dotColor: "bg-rose-500",
+  },
+  {
+    id: "strategic-active",
+    filterKey: "STRATEGIC",
+    title: "Nhiệm vụ Chiến lược",
+    getValue: (s) => s.strategicActiveCount,
+    getSubtext: (s) =>
+      s.strategicActiveCount > 0
+        ? "Nhiệm vụ trọng tâm năm học"
+        : "Đã hoàn thành các mục tiêu",
+    icon: Target,
+    activeAccent: "border-emerald-500 ring-2 ring-emerald-500/20",
+    activeBg: "bg-emerald-500/[0.04]",
+    hoverBorder: "hover:border-emerald-500/40 hover:bg-emerald-500/[0.02]",
+    dotColor: "bg-emerald-500",
+  },
+];
+
+export function getActionCardData(stats: ExecutiveActionStats) {
+  return ACTION_CARDS.map((card) => ({
+    ...card,
+    value: card.getValue(stats),
+    subtext: card.getSubtext(stats),
+  }));
+}
+
+export function ExecutiveActionCenter({
+  stats,
+  activeFilter,
+  onFilterChange,
+  items,
+  onAction,
+  hideCards = false,
+}: ExecutiveActionCenterProps) {
+  const cards = getActionCardData(stats);
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsExpanded(false);
+  }, [activeFilter]);
+
+  const displayItems = React.useMemo(() => {
+    const pool = items ?? [];
+    if (activeFilter === "ALL") return pool;
+    return pool.filter((item) => item.filterType === activeFilter);
+  }, [items, activeFilter]);
+
+  const visibleItems = isExpanded
+    ? displayItems
+    : displayItems.slice(0, INITIAL_LIMIT);
+
+  return (
+    <div className="space-y-4" data-slot="executive-action-center">
+      {/* 3 Metric Action Filter Cards */}
+      {!hideCards && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {cards.map((card) => {
+            const IconComponent = card.icon;
+            const isActive = activeFilter === card.filterKey;
+
+            return (
+              <button
+                type="button"
+                key={card.id}
+                aria-pressed={isActive}
+                aria-label={`Lọc theo ${card.title}: ${card.value} ${card.subtext}`}
+                onClick={() => {
+                  onFilterChange(isActive ? "ALL" : card.filterKey);
+                }}
+                className={cn(
+                  "group relative flex flex-col justify-between gap-3 rounded-xl border bg-card p-4 sm:p-5 text-left transition-all duration-200 cursor-pointer select-none overflow-hidden w-full",
+                  "hover:-translate-y-0.5 hover:shadow-xs",
+                  isActive
+                    ? cn("shadow-xs z-10", card.activeAccent, card.activeBg)
+                    : cn("border-border/60 hover:bg-muted/15", card.hoverBorder),
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                )}
+                data-slot="action-card"
+                data-card-id={card.id}
+                data-filter-key={card.filterKey}
+                data-active={isActive ? "true" : "false"}
+              >
+                {/* Icon + Title */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <IconComponent className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                    <span className="text-xs sm:text-sm font-semibold text-foreground/90 tracking-tight truncate group-hover:text-foreground transition-colors">
+                      {card.title}
+                    </span>
+                  </div>
+                  {isActive && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-foreground/10 text-foreground font-mono shrink-0">
+                      Đang lọc
+                    </span>
+                  )}
+                </div>
+
+                {/* Metric Value */}
+                <div className="flex items-baseline my-0.5">
+                  <span className="font-mono tabular-nums text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                    {card.value}
+                  </span>
+                </div>
+
+                {/* Status dot + Contextual Subtext */}
+                <div className="flex items-center gap-1.5 pt-0.5 text-xs sm:text-[13px] text-muted-foreground">
+                  <span className={cn("size-1.5 rounded-full shrink-0", card.dotColor)} />
+                  <span className="truncate">
+                    {card.subtext}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Action Items List Queue or Verified Clear Horizon Empty State */}
+      {displayItems.length > 0 ? (
+        <div className="space-y-2.5 pt-1" data-slot="action-items-queue">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs sm:text-[13px] font-semibold text-muted-foreground">
+              {activeFilter === "ALL"
+                ? "Nhiệm vụ trọng tâm cần chỉ đạo trực tiếp"
+                : `Hàng đợi: ${
+                    activeFilter === "PENDING_APPROVAL"
+                      ? "Hồ sơ chờ phê duyệt"
+                      : activeFilter === "BLOCKED_OVERDUE"
+                        ? "Vướng mắc & Quá hạn cần đôn đốc"
+                        : "Nhiệm vụ chiến lược năm học"
+                  }`}
+            </span>
+            <span className="text-xs font-mono text-muted-foreground tabular-nums">
+              {displayItems.length} nhiệm vụ
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
+            {visibleItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3.5 min-h-[64px] transition-all hover:bg-muted/20"
+                data-slot="action-item-card"
+              >
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm font-semibold text-foreground leading-snug truncate">
+                      {item.title}
+                    </h4>
+                  </div>
+                  <p className="text-xs sm:text-[13px] text-muted-foreground flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-foreground/80">
+                      {item.departmentName || item.department}
+                    </span>
+                    <span>·</span>
+                    <span>Chủ trì: {item.leadName || item.assignee}</span>
+                    <span>·</span>
+                    <span className="font-mono tabular-nums">Hạn: {item.dueDate}</span>
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant={item.filterType === "BLOCKED_OVERDUE" ? "destructive" : "default"}
+                    className="min-h-[44px] sm:min-h-[36px] h-9 px-3 text-xs font-semibold rounded-lg shadow-2xs gap-1.5"
+                    aria-label={`${item.actionLabel || "Xử lý ngay"}: ${item.title}`}
+                    onClick={() => onAction?.(item.actionType || item.filterType, item)}
+                  >
+                    <span>{item.actionLabel || "Xử lý ngay"}</span>
+                    <ArrowRight className="size-3.5" strokeWidth={1.5} />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {displayItems.length > INITIAL_LIMIT && (
+            <div className="pt-1 flex justify-center">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 min-h-[44px] sm:min-h-[36px] py-2 gap-1.5"
+                onClick={() => setIsExpanded((prev) => !prev)}
+                aria-expanded={isExpanded}
+                aria-label={
+                  isExpanded
+                    ? "Thu gọn danh sách"
+                    : `Xem thêm ${displayItems.length - INITIAL_LIMIT} nhiệm vụ trong hàng đợi`
+                }
+              >
+                <span>
+                  {isExpanded
+                    ? "Thu gọn danh sách"
+                    : `Xem thêm ${displayItems.length - INITIAL_LIMIT} nhiệm vụ trong hàng đợi`}
+                </span>
+                {isExpanded ? (
+                  <ChevronUp className="size-3.5" strokeWidth={1.5} />
+                ) : (
+                  <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          className="flex flex-col sm:flex-row sm:items-center gap-3.5 rounded-xl border border-border/70 bg-card/60 p-3.5 min-h-[64px] transition-all"
+          data-slot="action-center-empty-state"
+        >
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+            <ShieldCheck className="size-5" strokeWidth={1.5} />
+          </div>
+          <div className="space-y-0.5 min-w-0 flex-1">
+            <h4 className="text-sm font-semibold text-foreground leading-snug">
+              Hàng đợi điều hành thông suốt
+            </h4>
+            <p className="text-xs sm:text-[13px] text-muted-foreground">
+              Không có nhiệm vụ cần phê duyệt hoặc đôn đốc trực tiếp trong phạm vi hiện tại.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 font-mono tabular-nums">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              Verified Clear
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ExecutiveActionCenter;

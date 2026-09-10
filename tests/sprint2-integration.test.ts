@@ -13,7 +13,7 @@ import {
   computeSchoolTaskRollup,
   computeDashboardStats,
 } from "../src/lib/dashboard-aggregator";
-import { getMockDashboardPayload } from "../src/lib/mock-dashboard-data";
+import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import type { SchoolTask, StaffTask } from "../src/types/dashboard";
 
 describe("Sprint 2 Integration & Navigation", () => {
@@ -68,17 +68,22 @@ describe("Sprint 2 Integration & Navigation", () => {
       [
         {
           source: "/tasks",
-          destination: "/?scope=school",
+          destination: "/?zone=tasks&scope=school",
           permanent: false,
         },
         {
           source: "/unit-tasks",
-          destination: "/?scope=unit",
+          destination: "/?zone=tasks&scope=unit",
           permanent: false,
         },
         {
           source: "/calendar",
-          destination: "/?view=calendar",
+          destination: "/?zone=calendar",
+          permanent: false,
+        },
+        {
+          source: "/org",
+          destination: "/?zone=org",
           permanent: false,
         },
       ]

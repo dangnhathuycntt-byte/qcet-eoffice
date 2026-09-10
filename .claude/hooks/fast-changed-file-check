@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# -----------------------------------------------------------------------------
+# QCET Deterministic Hook: fast-changed-file-check
+# Fast git-diff / file linter for QCET architectural invariants:
+# 1. No tailwind.config.js (Tailwind CSS v4 violation)
+# 2. No dark: variants (Light-only standard violation)
+# 3. No text-[9px] or text-[10px] (Typography floor 12px violation)
+# -----------------------------------------------------------------------------
+
+FILES_TO_CHECK=()
+
+# 1. Read stdin if available (Claude Code PostToolUse JSON)
+STDIN_DATA=""
+if [ ! -t 0 ]; then
+  STDIN_DATA=$(cat || true)
+fi
+
+if [ -n "$STDIN_DATA" ]; then
+  if echo "$STDIN_DATA" | jq -e . >/dev/null 2>&1; then
+    FP=$(echo "$STDIN_DATA" | jq -r '.tool_response.filePath // .tool_input.file_path // .tool_input.path // empty' 2>/dev/null || true)
+    if [ -n "$FP" ] && [ -f "$FP" ]; then
+      FILES_TO_CHECK+=("$FP")
+    fi
+  fi
+fi
+
+# 2. Add CLI arguments if provided
+if [ $# -gt 0 ]; then
+  for arg in "$@"; do
+    if [ -f "$arg" ]; then
+      FILES_TO_CHECK+=("$arg")
+    fi
+  done
+fi
+
+# 3. If no specific files provided, inspect git changed & untracked files
+if [ ${#FILES_TO_CHECK[@]} -eq 0 ]; then
+  while IFS= read -r f; do
+    [ -n "$f" ] && [ -f "$f" ] && FILES_TO_CHECK+=("$f")
+  done < <(
+    {
+      git diff --name-only HEAD 2>/dev/null || true
+      git diff --cached --name-only 2>/dev/null || true
+      git status --porcelain 2>/dev/null | awk '{print $2}' || true
+    } | sort -u
+  )
+fi
+
+VIOLATIONS=0
+REPORT=""
+
+add_violation() {
+  local msg="$1"
+  VIOLATIONS=$((VIOLATIONS + 1))
+  REPORT="${REPORT}${msg}\n"
+}
+
+# Always check if any tailwind.config.* exists in project root
+for cfg in tailwind.config.js tailwind.config.ts tailwind.config.mjs tailwind.config.cjs; do
+  if [ -f "$cfg" ]; then
+    add_violation "CRITICAL: Found forbidden '$cfg'. QCET uses Tailwind CSS v4 with @tailwindcss/postcss (globals.css). Do NOT create tailwind.config.* (Root Rule 2)."
+  fi
+done
+
+# Scan target files
+for file in "${FILES_TO_CHECK[@]}"; do
+  # Check if file is a tailwind config
+  base=$(basename "$file")
+  if [[ "$base" =~ ^tailwind\.config\.(js|ts|mjs|cjs)$ ]]; then
+    add_violation "CRITICAL: Forbidden file '$file' detected. Tailwind v4 resolves via globals.css @import 'tailwindcss' (Rule 2)."
+    continue
+  fi
+
+  # Skip files outside src/ (such as tests/, docs/, .claude/, node_modules/)
+  if [[ ! "$file" =~ ^(\./)?src/ ]]; then
+    continue
+  fi
+
+  # Only check relevant source files
+  if [[ ! "$file" =~ \.(tsx|ts|jsx|js|css|html)$ ]]; then
+    continue
+  fi
+
+  [ -f "$file" ] || continue
+
+  # Check 1: dark: variant classes (excluding comments)
+  DARK_MATCHES=$(grep -nE "dark:[][a-zA-Z0-9_/-]+" "$file" | grep -vE "^[[:space:]]*(\/\/|\/\*|\*)" || true)
+  if [ -n "$DARK_MATCHES" ]; then
+    add_violation "VIOLATION (Light-Only Standard - dark: variant) in $file:"
+    while IFS= read -r line; do
+      [ -n "$line" ] && add_violation "  -> Line $line"
+    done <<< "$DARK_MATCHES"
+  fi
+
+  # Check 2: typography micro-sizes below 12px (text-[9px], text-[10px])
+  TYPO_MATCHES=$(grep -nE "text-\[(9|10)px\]" "$file" | grep -vE "^[[:space:]]*(\/\/|\/\*|\*)" || true)
+  if [ -n "$TYPO_MATCHES" ]; then
+    add_violation "VIOLATION (Typography Floor < 12px - text-[9px|10px]) in $file:"
+    while IFS= read -r line; do
+      [ -n "$line" ] && add_violation "  -> Line $line"
+    done <<< "$TYPO_MATCHES"
+  fi
+done
+
+if [ "$VIOLATIONS" -gt 0 ]; then
+  >&2 echo "================================================================================"
+  >&2 echo "[QCET Fast Linter] Found $VIOLATIONS architectural invariant violation(s):"
+  >&2 echo "================================================================================"
+  >&2 printf "%b" "$REPORT"
+  >&2 echo "================================================================================"
+
+  cat <<EOF
+{
+  "continue": false,
+  "stopReason": "Found $VIOLATIONS architectural invariant violation(s). Fix before proceeding.",
+  "decision": "block",
+  "reason": "Banned pattern detected in changed files",
+  "systemMessage": "[QCET Linter] Banned pattern detected: check stderr for details."
+}
+EOF
+  exit 1
+fi
+
+echo "[QCET Fast Linter] All inspected files adhere to QCET architectural invariants."
+exit 0

@@ -1,0 +1,253 @@
+"use client";
+
+import * as React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { WorkspaceZone, parseZoneParam } from "@/types/workspace";
+import type { TaskScope, TaskViewMode } from "@/components/dashboard/unified-task-toolbar";
+import {
+  getDefaultScopeForRole,
+  getDefaultViewModeForRole,
+  parseScopeParam,
+  scopeToParam,
+  parseViewModeParam,
+} from "@/lib/unified-task-hub";
+import { getAcademicMonthInfo } from "@/lib/academic-calendar";
+import type { UserRole } from "@/types/auth";
+
+export interface UrlParamsSyncReturn {
+  activeZone: WorkspaceZone;
+  scope: TaskScope;
+  viewMode: TaskViewMode;
+  selectedDepartment: string;
+  selectedAcademicMonth: number | "ALL";
+  isStaffExpanded: boolean;
+  useAdvancedToolbar: boolean;
+  handleZoneChange: (zone: WorkspaceZone) => void;
+  handleScopeChange: (scope: TaskScope) => void;
+  handleViewModeChange: (view: TaskViewMode) => void;
+  handleDepartmentChange: (dept: string) => void;
+  handleAcademicMonthChange: (month: number | "ALL") => void;
+  handleToggleStaffExpanded: () => void;
+  setIsStaffExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+  setUseAdvancedToolbar: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const zoneQuery = searchParams.get("zone");
+  const scopeQuery = searchParams.get("scope");
+  const viewQuery = searchParams.get("view");
+  const deptQuery = searchParams.get("dept");
+  const monthQuery = searchParams.get("month");
+
+  const defaultScope = React.useMemo(() => getDefaultScopeForRole(userRole), [userRole]);
+  const defaultViewMode = React.useMemo(() => getDefaultViewModeForRole(userRole), [userRole]);
+
+  const isExecutive = React.useMemo(() => {
+    if (!userRole) return false;
+    const roleStr = String(userRole).toUpperCase();
+    return (
+      roleStr === "ADMIN" ||
+      roleStr === "BGH" ||
+      roleStr === "BAN_GIAM_HIEU" ||
+      roleStr === "HIEU_TRUONG" ||
+      roleStr === "PHO_HIEU_TRUONG"
+    );
+  }, [userRole]);
+
+  const [activeZone, setActiveZone] = React.useState<WorkspaceZone>(() => {
+    if (viewQuery === "calendar" && !zoneQuery) return "calendar";
+    return parseZoneParam(zoneQuery);
+  });
+  const [scope, setScope] = React.useState<TaskScope>(() => {
+    const rawParsed = parseScopeParam(scopeQuery, defaultScope, userRole);
+    if (rawParsed === "SCHOOL_TASKS" && !isExecutive) {
+      return defaultScope;
+    }
+    return rawParsed;
+  });
+  const [viewMode, setViewMode] = React.useState<TaskViewMode>(() => parseViewModeParam(viewQuery, defaultViewMode));
+  const [selectedDepartment, setSelectedDepartment] = React.useState<string>(deptQuery || "ALL");
+  const [selectedAcademicMonth, setSelectedAcademicMonth] = React.useState<number | "ALL">(() => {
+    if (monthQuery === "ALL") return "ALL";
+    if (monthQuery) {
+      const parsed = parseInt(monthQuery, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) return parsed;
+    }
+    return getAcademicMonthInfo(new Date()).monthNumber;
+  });
+
+  const [isStaffExpanded, setIsStaffExpanded] = React.useState<boolean>(
+    () => viewQuery !== null && viewQuery !== "focus"
+  );
+  const [useAdvancedToolbar, setUseAdvancedToolbar] = React.useState<boolean>(false);
+
+  const updateUrlParams = React.useCallback(
+    (updates: {
+      zone?: WorkspaceZone;
+      scope?: TaskScope;
+      view?: TaskViewMode;
+      dept?: string;
+      month?: number | "ALL";
+    }) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (updates.zone !== undefined) {
+        if (updates.zone === "portal" || updates.zone === "dashboard") params.delete("zone");
+        else params.set("zone", updates.zone);
+      }
+      if (updates.scope !== undefined) params.set("scope", scopeToParam(updates.scope));
+      if (updates.view !== undefined) params.set("view", updates.view);
+      if (updates.dept !== undefined) {
+        if (updates.dept && updates.dept !== "ALL") params.set("dept", updates.dept);
+        else params.delete("dept");
+      }
+      if (updates.month !== undefined) {
+        if (updates.month === "ALL") params.set("month", "ALL");
+        else params.set("month", String(updates.month));
+      }
+      const qs = params.toString();
+      router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+    },
+    [router, searchParams]
+  );
+
+  // Sync from URL
+  React.useEffect(() => {
+    if (zoneQuery === "portal") {
+      router.replace("/portal");
+      return;
+    }
+    if (viewQuery === "calendar" && !zoneQuery) {
+      setActiveZone((prev) => (prev === "calendar" ? prev : "calendar"));
+      return;
+    }
+    const targetZone = parseZoneParam(zoneQuery);
+    setActiveZone((prev) => (prev === targetZone ? prev : targetZone));
+  }, [zoneQuery, viewQuery, router]);
+
+  React.useEffect(() => {
+    let resolved = scopeQuery ? parseScopeParam(scopeQuery, defaultScope, userRole) : defaultScope;
+    if (resolved === "SCHOOL_TASKS" && !isExecutive) {
+      resolved = defaultScope;
+      const norm = (scopeQuery || "").toLowerCase();
+      if (norm === "school" || norm === "school_tasks") {
+        updateUrlParams({ scope: defaultScope });
+      }
+    }
+    setScope((prev) => (prev === resolved ? prev : resolved));
+  }, [scopeQuery, defaultScope, userRole, isExecutive, updateUrlParams]);
+
+  React.useEffect(() => {
+    if (viewQuery) {
+      const parsed = parseViewModeParam(viewQuery, defaultViewMode);
+      setViewMode((prev) => (prev === parsed ? prev : parsed));
+      const expanded = viewQuery !== "focus";
+      setIsStaffExpanded((prev) => (prev === expanded ? prev : expanded));
+    } else {
+      setViewMode((prev) => (prev === defaultViewMode ? prev : defaultViewMode));
+      setIsStaffExpanded((prev) => (!prev ? prev : false));
+    }
+  }, [viewQuery, defaultViewMode]);
+
+  React.useEffect(() => {
+    if (deptQuery !== null) {
+      setSelectedDepartment((prev) => (prev === deptQuery ? prev : deptQuery));
+    }
+  }, [deptQuery]);
+
+  React.useEffect(() => {
+    if (monthQuery !== null) {
+      if (monthQuery === "ALL") {
+        setSelectedAcademicMonth((prev) => (prev === "ALL" ? prev : "ALL"));
+      } else {
+        const parsed = parseInt(monthQuery, 10);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
+          setSelectedAcademicMonth((prev) => (prev === parsed ? prev : parsed));
+        }
+      }
+    }
+  }, [monthQuery]);
+
+  const handleZoneChange = React.useCallback(
+    (newZone: WorkspaceZone) => {
+      if (newZone === "portal") {
+        router.push("/portal");
+        return;
+      }
+      setActiveZone(newZone);
+      updateUrlParams({ zone: newZone });
+    },
+    [updateUrlParams, router]
+  );
+
+  const handleScopeChange = React.useCallback(
+    (newScope: TaskScope) => {
+      let resolved = newScope;
+      if (newScope === "SCHOOL_TASKS" && !isExecutive) {
+        resolved = defaultScope;
+      }
+      setScope(resolved);
+      updateUrlParams({ scope: resolved });
+    },
+    [updateUrlParams, isExecutive, defaultScope]
+  );
+
+  const handleViewModeChange = React.useCallback(
+    (newMode: TaskViewMode) => {
+      setViewMode(newMode);
+      updateUrlParams({ view: newMode });
+    },
+    [updateUrlParams]
+  );
+
+  const handleDepartmentChange = React.useCallback(
+    (newDept: string) => {
+      setSelectedDepartment(newDept);
+      updateUrlParams({ dept: newDept });
+    },
+    [updateUrlParams]
+  );
+
+  const handleAcademicMonthChange = React.useCallback(
+    (newMonth: number | "ALL") => {
+      setSelectedAcademicMonth(newMonth);
+      updateUrlParams({ month: newMonth });
+    },
+    [updateUrlParams]
+  );
+
+  const handleToggleStaffExpanded = React.useCallback(() => {
+    setIsStaffExpanded((prev) => {
+      const next = !prev;
+      if (next) {
+        updateUrlParams({ view: "table" });
+      } else {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("view");
+        const qs = params.toString();
+        router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+      }
+      return next;
+    });
+  }, [updateUrlParams, searchParams, router]);
+
+  return {
+    activeZone,
+    scope,
+    viewMode,
+    selectedDepartment,
+    selectedAcademicMonth,
+    isStaffExpanded,
+    useAdvancedToolbar,
+    handleZoneChange,
+    handleScopeChange,
+    handleViewModeChange,
+    handleDepartmentChange,
+    handleAcademicMonthChange,
+    handleToggleStaffExpanded,
+    setIsStaffExpanded,
+    setUseAdvancedToolbar,
+  };
+}

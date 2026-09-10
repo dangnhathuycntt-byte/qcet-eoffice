@@ -8,34 +8,177 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { AuthUser, UserRole } from "../types/auth";
-import { DEFAULT_DEMO_USERS } from "./role-task-filter";
+import { AuthUser, CachedUser, UserRole, OnboardingData, AuthState } from "../types/auth";
+import { purgeUserOfflineData } from "./pwa/offline-store";
 
 export const AUTH_STORAGE_KEY = "qcet_active_user";
 export const REGISTERED_USERS_KEY = "qcet_registered_users";
 
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  name: string;
+  departmentId?: string;
+  title?: string;
+  role?: string;
+}
+
 export interface AuthContextType {
-  user: AuthUser;
+  user: AuthUser | CachedUser | null;
+  isAuthenticated: boolean;
+  isOfflineReadOnly: boolean;
+  authState: AuthState;
+  canMutate: boolean;
   switchRole: (role: UserRole) => void;
-  loginWithGoogle: (payload: {
-    email: string;
-    name: string;
+  switchUser: (userId: string) => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
+  register: (data: RegisterPayload) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
+  /**
+   * @deprecated Google login is handled via server OAuth at /api/auth/google.
+   */
+  loginWithGoogle: (payload?: {
+    email?: string;
+    name?: string;
     avatar?: string;
   }) => AuthUser;
   updateProfile: (updates: Partial<AuthUser>) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isProfileModalOpen: boolean;
   setIsProfileModalOpen: (open: boolean) => void;
+  isLoading?: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: DEFAULT_DEMO_USERS[0],
+export function mapDbUserToAuthUser(dbUser: {
+  id?: string;
+  email: string;
+  name: string;
+  role?: string;
+  departmentId?: string | null;
+  department?: { name?: string; shortName?: string | null } | null;
+  title?: string | null;
+  avatarUrl?: string | null;
+  avatar?: string | null;
+  phone?: string | null;
+  provider?: string | null;
+  onboardedAt?: Date | string | null;
+  onboardingData?: OnboardingData | any | null;
+}): AuthUser {
+  const roleStr = String(dbUser.role || "").toUpperCase();
+  let role: UserRole = "STAFF";
+  let roleLabel = "Chuyên viên";
+
+  if (roleStr === "BAN_GIAM_HIEU" || roleStr === "ADMIN") {
+    role = "ADMIN";
+    roleLabel = "Ban Giám hiệu";
+  } else if (roleStr === "TRUONG_PHONG" || roleStr === "MANAGER") {
+    role = "MANAGER";
+    roleLabel = "Trưởng đơn vị";
+  } else {
+    role = "STAFF";
+    roleLabel = "Chuyên viên";
+  }
+
+  return {
+    id: dbUser.id || `user-${Date.now()}`,
+    name: dbUser.name || "Cán bộ QCET",
+    email: dbUser.email,
+    role,
+    roleLabel,
+    department:
+      dbUser.department?.name ||
+      (dbUser.departmentId === "BGH"
+        ? "Ban Giám hiệu Nhà trường"
+        : dbUser.departmentId === "CNTT"
+        ? "Phòng Quản trị Mạng và CNTT"
+        : dbUser.departmentId === "TCHC"
+        ? "Phòng Tổ chức Hành chính"
+        : dbUser.departmentId === "KHTC"
+        ? "Phòng Kế hoạch Tài chính"
+        : dbUser.departmentId === "DT_QLKH"
+        ? "Phòng Đào tạo & Quản lý Khoa học"
+        : "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"),
+    departmentCode: dbUser.departmentId || "QCET",
+    title: dbUser.title || roleLabel,
+    avatar: dbUser.avatarUrl || dbUser.avatar || undefined,
+    phone: dbUser.phone || undefined,
+    isFirstLogin: false,
+    emailVerified: true,
+    provider: (dbUser.provider as "google" | "demo" | "system") || "system",
+    dbRole: dbUser.role,
+    onboardedAt: dbUser.onboardedAt
+      ? typeof dbUser.onboardedAt === "string"
+        ? dbUser.onboardedAt
+        : dbUser.onboardedAt.toISOString()
+      : null,
+    onboardingData: (dbUser.onboardingData as OnboardingData) || null,
+  };
+}
+
+export function isUserUnassignedDepartment(
+  user?: { role?: string; department?: string | null; departmentCode?: string | null } | null
+): boolean {
+  if (!user) return false;
+  const role = (user.role || "").toUpperCase();
+  const isExecutive =
+    role === "ADMIN" ||
+    role === "BGH" ||
+    role === "BAN_GIAM_HIEU" ||
+    role === "HIEU_TRUONG" ||
+    role === "PHO_HIEU_TRUONG";
+  if (isExecutive) return false;
+
+  const dept = (user.department || "").trim();
+  const code = (user.departmentCode || "").trim().toUpperCase();
+
+  if (!dept || !code) return true;
+  if (code === "QCET" || code === "UNASSIGNED") return true;
+  if (
+    dept === "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn" ||
+    dept === "Chưa cập nhật đơn vị" ||
+    dept === "Chưa chọn đơn vị"
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export const UNASSIGNED_DEPT_PROMPT_KEY = "qcet_profile_unassigned_prompted";
+export const UNASSIGNED_DEPT_DISMISSED_KEY = "qcet_dept_prompt_dismissed";
+
+export function shouldPromptUnassignedDepartment(
+  user?: { role?: string; department?: string | null; departmentCode?: string | null } | null,
+  storage?: { getItem: (key: string) => string | null } | null
+): boolean {
+  if (!user || !isUserUnassignedDepartment(user)) return false;
+  if (!storage) return false;
+  try {
+    const prompted =
+      storage.getItem(UNASSIGNED_DEPT_PROMPT_KEY) ||
+      storage.getItem(UNASSIGNED_DEPT_DISMISSED_KEY);
+    return !prompted;
+  } catch {
+    return false;
+  }
+}
+
+export const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isAuthenticated: false,
+  isOfflineReadOnly: false,
+  authState: { status: "anonymous" },
+  canMutate: false,
   switchRole: () => {},
-  loginWithGoogle: () => DEFAULT_DEMO_USERS[0],
+  switchUser: () => {},
+  login: async () => ({ success: false, error: "Not initialized" }),
+  register: async () => ({ success: false, error: "Not initialized" }),
+  loginWithGoogle: () => {
+    throw new Error("Google login is handled via server OAuth at /api/auth/google");
+  },
   updateProfile: () => {},
-  logout: () => {},
+  logout: async () => {},
   isProfileModalOpen: false,
   setIsProfileModalOpen: () => {},
+  isLoading: true,
 });
 
 export function useAuth(): AuthContextType {
@@ -46,9 +189,133 @@ export function useAuth(): AuthContextType {
   return context;
 }
 
+export interface SessionResolutionResult {
+  state: AuthState;
+  canMutate: boolean;
+  user: AuthUser | CachedUser | null;
+  isAuthenticated: boolean;
+  isOfflineReadOnly: boolean;
+}
+
+/**
+ * Pure session state resolver enforcing Server Session Truth (31-auth-security.md):
+ * - Server session is the sole authority for active authentication.
+ * - If server session is valid (200 with authenticated: true):
+ *     state: { status: 'authenticated', user }, canMutate: true, isAuthenticated: true, isOfflineReadOnly: false
+ * - If server returns 401 / unauthenticated / offline error, but localStorage has cached identity:
+ *     state: { status: 'offline-cached', user }, canMutate: false, isAuthenticated: false, isOfflineReadOnly: true
+ * - If server returns 401 / unauthenticated and no cached identity exists:
+ *     state: { status: 'anonymous' }, canMutate: false, user: null, isAuthenticated: false, isOfflineReadOnly: false
+ */
+export function resolveSessionState(
+  serverAuth: { authenticated: boolean; user?: any } | null,
+  cachedUserStr: string | object | null
+): SessionResolutionResult {
+  if (serverAuth && serverAuth.authenticated && serverAuth.user) {
+    const serverUser = mapDbUserToAuthUser(serverAuth.user);
+    return {
+      state: { status: "authenticated", user: serverUser },
+      canMutate: true,
+      user: serverUser,
+      isAuthenticated: true,
+      isOfflineReadOnly: false,
+    };
+  }
+
+  if (cachedUserStr) {
+    try {
+      const parsed = typeof cachedUserStr === "string" ? JSON.parse(cachedUserStr) : cachedUserStr;
+      if (parsed && typeof parsed === "object" && parsed.id) {
+        const cachedUser: CachedUser = {
+          ...parsed,
+          cachedAt: parsed.cachedAt || new Date().toISOString(),
+          isOfflineCached: true,
+        };
+        return {
+          state: { status: "offline-cached", user: cachedUser },
+          canMutate: false,
+          user: cachedUser,
+          isAuthenticated: false,
+          isOfflineReadOnly: true,
+        };
+      }
+    } catch {
+      // not valid JSON
+    }
+  }
+
+  return {
+    state: { status: "anonymous" },
+    canMutate: false,
+    user: null,
+    isAuthenticated: false,
+    isOfflineReadOnly: false,
+  };
+}
+
+/**
+ * Guard assertion enforcing Server Session Truth (31-auth-security.md):
+ * Mutations are only permitted when the session is authenticated by the server
+ * and canMutate is true. Offline-cached or anonymous sessions cannot mutate data.
+ */
+export function assertCanMutate(canMutate: boolean, authState: AuthState): void {
+  if (!canMutate || authState.status !== "authenticated") {
+    const errorMsg =
+      "Mutations not permitted: session is offline-cached or unauthenticated (Server Session Truth)";
+    throw new Error(errorMsg);
+  }
+}
+
+export async function performSessionSync(
+  fetchFn: typeof fetch = fetch,
+  storage: { getItem: (key: string) => string | null; setItem?: (key: string, value: string) => void } | null = typeof window !== "undefined" ? localStorage : null
+): Promise<SessionResolutionResult> {
+  let serverAuth: { authenticated: boolean; user?: any } | null = null;
+  try {
+    const res = await fetchFn("/api/auth/me");
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === "object") {
+        serverAuth = data;
+      }
+    } else {
+      serverAuth = { authenticated: false };
+    }
+  } catch (err) {
+    console.warn("Session check /api/auth/me encountered error, using local fallback:", err);
+    serverAuth = null;
+  }
+
+  let cachedUserStr: string | null = null;
+  if (storage) {
+    try {
+      cachedUserStr = storage.getItem(AUTH_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }
+
+  const resolution = resolveSessionState(serverAuth, cachedUserStr);
+
+  if (resolution.isAuthenticated && resolution.user && storage?.setItem) {
+    try {
+      storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(resolution.user));
+    } catch {
+      // ignore
+    }
+  }
+
+  return resolution;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser>(DEFAULT_DEMO_USERS[0]);
+  const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
+  const [user, setUser] = useState<AuthUser | CachedUser | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isOfflineReadOnly, setIsOfflineReadOnly] = useState<boolean>(false);
+  const [canMutate, setCanMutate] = useState<boolean>(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Helper to load registered users from localStorage
   const getRegisteredUsers = (): AuthUser[] => {
@@ -74,214 +341,341 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Restore user from localStorage on client mount
+  // Sync session with server /api/auth/me on mount
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === "object" && parsed.id) {
-            // Check in registered users list first
-            const registered = getRegisteredUsers();
-            const foundRegistered = registered.find((u) => u.id === parsed.id || u.email === parsed.email);
-            if (foundRegistered) {
-              setUser(foundRegistered);
-              if (foundRegistered.isFirstLogin) {
-                setIsProfileModalOpen(true);
-              }
-              return;
-            }
+    let isMounted = true;
 
-            // Check if demo user
-            const foundDemo = DEFAULT_DEMO_USERS.find((u) => u.id === parsed.id);
-            if (foundDemo) {
-              setUser(foundDemo);
-              return;
-            }
+    async function syncSession() {
+      const storage = typeof window !== "undefined" ? localStorage : null;
+      const resolution = await performSessionSync(fetch, storage);
 
-            // Otherwise restore the parsed custom user
-            setUser(parsed as AuthUser);
-            if (parsed.isFirstLogin) {
-              setIsProfileModalOpen(true);
-            }
-            return;
-          }
-        } catch {
-          // not JSON, check string
-        }
+      if (!isMounted) return;
 
-        const found = DEFAULT_DEMO_USERS.find(
-          (u) => u.role === saved || u.id === saved
-        );
-        if (found) {
-          setUser(found);
-        }
-      }
-    } catch {
-      // localStorage may be unavailable or disabled
+      setAuthState(resolution.state);
+      setUser(resolution.user);
+      setIsAuthenticated(resolution.isAuthenticated);
+      setIsOfflineReadOnly(resolution.isOfflineReadOnly);
+      setCanMutate(resolution.canMutate);
+      setIsLoading(false);
     }
+
+    syncSession();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const switchRole = useCallback((role: UserRole) => {
-    const targetUser =
-      DEFAULT_DEMO_USERS.find((u) => u.role === role) || DEFAULT_DEMO_USERS[0];
-    setUser(targetUser);
-    if (typeof window !== "undefined") {
+  const login = useCallback(
+    async (email: string, password: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
       try {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(targetUser));
-      } catch {
-        // ignore
-      }
-    }
-  }, []);
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
 
-  const loginWithGoogle = useCallback(
-    (payload: { email: string; name: string; avatar?: string }): AuthUser => {
-      const normalizedEmail = payload.email.trim().toLowerCase();
-      const registered = getRegisteredUsers();
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          const errorMsg =
+            data.error?.message ||
+            (typeof data.error === "string" ? data.error : data.message) ||
+            "Email hoặc mật khẩu không chính xác";
+          return {
+            success: false,
+            error: errorMsg,
+          };
+        }
 
-      // 1. Check if user already exists in registered list
-      const existingUser = registered.find(
-        (u) => u.email.toLowerCase() === normalizedEmail
-      );
+        const authenticatedUser = mapDbUserToAuthUser(data.user);
+        setAuthState({ status: "authenticated", user: authenticatedUser });
+        setUser(authenticatedUser);
+        setIsAuthenticated(true);
+        setIsOfflineReadOnly(false);
+        setCanMutate(true);
 
-      if (existingUser) {
-        // Update avatar if provided
-        const updated = {
-          ...existingUser,
-          avatar: payload.avatar || existingUser.avatar,
-        };
-        setUser(updated);
         if (typeof window !== "undefined") {
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+          try {
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authenticatedUser));
+          } catch {
+            // ignore
+          }
         }
-        return updated;
-      }
 
-      // 2. Check if email matches one of the demo users
-      const matchingDemo = DEFAULT_DEMO_USERS.find(
-        (u) => u.email.toLowerCase() === normalizedEmail
-      );
-      if (matchingDemo) {
-        const demoWithAvatar = {
-          ...matchingDemo,
-          avatar: payload.avatar || matchingDemo.avatar,
+        return { success: true, user: authenticatedUser };
+      } catch (error) {
+        console.error("Login request failed:", error);
+        return {
+          success: false,
+          error: "Không thể kết nối đến máy chủ xác thực",
         };
-        setUser(demoWithAvatar);
-        if (typeof window !== "undefined") {
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(demoWithAvatar));
-        }
-        return demoWithAvatar;
       }
-
-      // 3. Auto-provision (JIT Sign-up) a new AuthUser
-      const emailPrefix = normalizedEmail.split("@")[0];
-      // Format human-friendly name if provided or format from email prefix
-      const formattedName =
-        payload.name ||
-        emailPrefix
-          .replace(/[._-]+/g, " ")
-          .split(" ")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ");
-
-      const isBgh = normalizedEmail.includes("bgh") || normalizedEmail.includes("hieutruong");
-      const isLeader = normalizedEmail.includes("truongphong") || normalizedEmail.includes("daotao");
-
-      const newUser: AuthUser = {
-        id: `user-staff-${Date.now()}`,
-        name: formattedName,
-        email: normalizedEmail,
-        role: isBgh ? "ADMIN" : isLeader ? "MANAGER" : "STAFF",
-        roleLabel: isBgh
-          ? "Ban Giám hiệu"
-          : isLeader
-          ? "Trưởng đơn vị"
-          : "Viên chức / Giảng viên",
-        department: "Chưa cập nhật đơn vị",
-        departmentCode: "QCET",
-        title: "Viên chức",
-        avatar: payload.avatar,
-        isFirstLogin: true,
-        emailVerified: true,
-        provider: "google",
-      };
-
-      // Save to registered list
-      const nextRegistered = [...registered, newUser];
-      saveRegisteredUsers(nextRegistered);
-
-      // Set as active user
-      setUser(newUser);
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
-        } catch {
-          // ignore
-        }
-      }
-
-      // Open profile modal for initial setup
-      setIsProfileModalOpen(true);
-
-      return newUser;
     },
     []
   );
 
-  const updateProfile = useCallback((updates: Partial<AuthUser>) => {
-    setUser((prev) => {
-      const updated: AuthUser = {
-        ...prev,
-        ...updates,
-        isFirstLogin: false, // Once updated, mark onboarding complete
-      };
+  const register = useCallback(
+    async (data: RegisterPayload): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
 
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
-
-          // Also update in registered users list if found
-          const registered = getRegisteredUsers();
-          const index = registered.findIndex((u) => u.id === updated.id || u.email === updated.email);
-          if (index >= 0) {
-            registered[index] = updated;
-            saveRegisteredUsers(registered);
-          } else {
-            saveRegisteredUsers([...registered, updated]);
-          }
-        } catch {
-          // ignore
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+          const errorMsg =
+            result.error?.message ||
+            (typeof result.error === "string" ? result.error : result.message) ||
+            "Không thể tạo tài khoản mới";
+          return {
+            success: false,
+            error: errorMsg,
+          };
         }
+
+        const createdUser = mapDbUserToAuthUser(result.user);
+        setAuthState({ status: "authenticated", user: createdUser });
+        setUser(createdUser);
+        setIsAuthenticated(true);
+        setIsOfflineReadOnly(false);
+        setCanMutate(true);
+        return { success: true, user: createdUser };
+      } catch (error) {
+        console.error("Register request failed:", error);
+        return {
+          success: false,
+          error: "Không thể kết nối đến máy chủ xác thực",
+        };
       }
+    },
+    []
+  );
 
-      return updated;
-    });
-  }, []);
+  const logout = useCallback(async (): Promise<void> => {
+    let userIdToPurge = user?.id;
+    if (!userIdToPurge && typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          userIdToPurge = parsed?.id;
+        }
+      } catch {
+        // ignore
+      }
+    }
 
-  const logout = useCallback(() => {
-    setUser(DEFAULT_DEMO_USERS[0]);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.warn("Logout request error:", err);
+    }
+
+    if (userIdToPurge) {
+      try {
+        await purgeUserOfflineData(userIdToPurge);
+      } catch (err) {
+        console.warn("Error purging user offline data during logout:", err);
+      }
+    }
+
+    setAuthState({ status: "anonymous" });
+    setUser(null);
+    setIsAuthenticated(false);
+    setIsOfflineReadOnly(false);
+    setCanMutate(false);
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY);
       } catch {
         // ignore
       }
+      window.location.href = "/login";
     }
+  }, [user?.id]);
+
+  const switchRole = useCallback((role: UserRole) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated: AuthUser = {
+        ...(prev as AuthUser),
+        role,
+        roleLabel:
+          role === "ADMIN"
+            ? "Ban Giám hiệu"
+            : role === "MANAGER"
+            ? "Trưởng đơn vị"
+            : "Chuyên viên",
+      };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+      }
+      return updated;
+    });
+    setAuthState((prev) => {
+      if (prev.status === "authenticated") {
+        return {
+          status: "authenticated",
+          user: {
+            ...prev.user,
+            role,
+            roleLabel:
+              role === "ADMIN"
+                ? "Ban Giám hiệu"
+                : role === "MANAGER"
+                ? "Trưởng đơn vị"
+                : "Chuyên viên",
+          },
+        };
+      }
+      if (prev.status === "offline-cached") {
+        return {
+          status: "offline-cached",
+          user: {
+            ...prev.user,
+            role,
+            roleLabel:
+              role === "ADMIN"
+                ? "Ban Giám hiệu"
+                : role === "MANAGER"
+                ? "Trưởng đơn vị"
+                : "Chuyên viên",
+          },
+        };
+      }
+      return prev;
+    });
   }, []);
+
+  const switchUser = useCallback(
+    (userId: string) => {
+      const registered = getRegisteredUsers();
+      const targetUser = registered.find((u) => u.id === userId || u.email === userId);
+      if (targetUser) {
+        const isServerSession =
+          authState.status === "authenticated" &&
+          (authState.user.id === targetUser.id || authState.user.email === targetUser.email);
+
+        if (isServerSession) {
+          setAuthState({ status: "authenticated", user: targetUser });
+          setUser(targetUser);
+          setIsAuthenticated(true);
+          setIsOfflineReadOnly(false);
+          setCanMutate(true);
+        } else {
+          // Switching user locally must NEVER unilaterally elevate state to authenticated or canMutate: true
+          const cachedUser: CachedUser = {
+            ...targetUser,
+            cachedAt: new Date().toISOString(),
+            isOfflineCached: true,
+          };
+          setAuthState({ status: "offline-cached", user: cachedUser });
+          setUser(cachedUser);
+          setIsAuthenticated(false);
+          setIsOfflineReadOnly(true);
+          setCanMutate(false);
+        }
+
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(targetUser));
+          } catch {
+            // ignore
+          }
+        }
+      }
+    },
+    [authState]
+  );
+
+  /**
+   * @deprecated Client-side Google session synthesis is deprecated and prohibited by Server Session Truth.
+   * Google login is handled via server OAuth flow at /api/auth/google.
+   */
+  const loginWithGoogle = useCallback(
+    (_payload?: { email?: string; name?: string; avatar?: string }): AuthUser => {
+      if (typeof window !== "undefined") {
+        window.location.href = "/api/auth/google";
+      }
+      throw new Error(
+        "Google login is handled via server OAuth at /api/auth/google"
+      );
+    },
+    []
+  );
+
+  const updateProfile = useCallback(
+    (updates: Partial<AuthUser>) => {
+      assertCanMutate(canMutate, authState);
+
+      setUser((prev) => {
+        if (!prev) return null;
+        const updated: AuthUser = {
+          ...(prev as AuthUser),
+          ...updates,
+          isFirstLogin: false,
+        };
+
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+
+            const registered = getRegisteredUsers();
+            const index = registered.findIndex((u) => u.id === updated.id || u.email === updated.email);
+            if (index >= 0) {
+              registered[index] = updated;
+              saveRegisteredUsers(registered);
+            } else {
+              saveRegisteredUsers([...registered, updated]);
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        return updated;
+      });
+
+      setAuthState((prev) => {
+        if (prev.status === "authenticated") {
+          return {
+            status: "authenticated",
+            user: {
+              ...prev.user,
+              ...updates,
+              isFirstLogin: false,
+            },
+          };
+        }
+        return prev;
+      });
+    },
+    [canMutate, authState.status]
+  );
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        isAuthenticated,
+        isOfflineReadOnly,
+        authState,
+        canMutate,
         switchRole,
+        switchUser,
+        login,
+        register,
         loginWithGoogle,
         updateProfile,
         logout,
         isProfileModalOpen,
         setIsProfileModalOpen,
+        isLoading,
       }}
     >
       {children}

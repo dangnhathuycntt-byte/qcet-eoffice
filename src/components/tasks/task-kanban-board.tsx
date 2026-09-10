@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  AlertTriangle,
   Circle,
   FolderTree,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import {
   CATEGORY_TABS,
 } from "@/components/dashboard/cascading-task-table";
 import { cn } from "@/lib/utils";
+import { triggerHaptic } from "@/lib/haptics";
 
 export type TaskLevelFilter = "ALL" | "TRUONG" | "DON_VI";
 
@@ -48,10 +50,10 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Mới / Tiếp nhận",
     emoji: "",
     dotColor: "bg-slate-500",
-    iconColor: "text-slate-500 dark:text-slate-400",
+    iconColor: "text-slate-500",
     accentBorder: "border-t-slate-500",
     headerAccent: "border-t-2 border-t-slate-500",
-    badgeClass: "border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-400",
+    badgeClass: "border-slate-500/20 bg-slate-500/10 text-slate-600",
     bgClass: "bg-muted/10",
   },
   {
@@ -60,10 +62,10 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Đang thực hiện",
     emoji: "",
     dotColor: "bg-blue-500",
-    iconColor: "text-blue-500 dark:text-blue-400",
+    iconColor: "text-blue-500",
     accentBorder: "border-t-blue-500",
     headerAccent: "border-t-2 border-t-blue-500",
-    badgeClass: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    badgeClass: "border-blue-500/20 bg-blue-500/10 text-blue-600",
     bgClass: "bg-muted/10",
   },
   {
@@ -72,10 +74,10 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Cần chỉnh sửa",
     emoji: "",
     dotColor: "bg-amber-500",
-    iconColor: "text-amber-500 dark:text-amber-400",
+    iconColor: "text-amber-500",
     accentBorder: "border-t-amber-500",
     headerAccent: "border-t-2 border-t-amber-500",
-    badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-600",
     bgClass: "bg-muted/10",
   },
   {
@@ -84,10 +86,10 @@ export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
     label: "Hoàn thành",
     emoji: "",
     dotColor: "bg-emerald-500",
-    iconColor: "text-emerald-500 dark:text-emerald-400",
+    iconColor: "text-emerald-500",
     accentBorder: "border-t-emerald-500",
     headerAccent: "border-t-2 border-t-emerald-500",
-    badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600",
     bgClass: "bg-muted/10",
   },
 ];
@@ -97,9 +99,15 @@ const COLUMN_ICONS: Record<
   React.ComponentType<{ className?: string; strokeWidth?: number }>
 > = {
   NEW: Circle,
+  NOT_STARTED: Circle,
   IN_PROGRESS: Clock,
+  WAITING_APPROVAL: Clock,
+  PENDING_EXECUTIVE_APPROVAL: Clock,
   NEEDS_REVIEW: AlertCircle,
+  BLOCKED: AlertTriangle,
   COMPLETED: CheckCircle2,
+  OVERDUE: AlertCircle,
+  CANCELLED: AlertTriangle,
 };
 
 export interface KanbanItem {
@@ -242,9 +250,15 @@ export function groupTasksByStatus(
 
   const grouped: Record<TaskStatus, KanbanItem[]> = {
     NEW: [],
+    NOT_STARTED: [],
     IN_PROGRESS: [],
+    WAITING_APPROVAL: [],
+    PENDING_EXECUTIVE_APPROVAL: [],
     NEEDS_REVIEW: [],
+    BLOCKED: [],
     COMPLETED: [],
+    OVERDUE: [],
+    CANCELLED: [],
   };
 
   for (const item of filtered) {
@@ -313,10 +327,41 @@ export function TaskKanbanBoard({
   const deferredSearchQuery = React.useDeferredValue(searchQuery);
   const [colLimits, setColLimits] = React.useState<Record<TaskStatus, number>>({
     NEW: 30,
+    NOT_STARTED: 30,
     IN_PROGRESS: 30,
+    WAITING_APPROVAL: 30,
+    PENDING_EXECUTIVE_APPROVAL: 30,
     NEEDS_REVIEW: 30,
+    BLOCKED: 30,
     COMPLETED: 30,
+    OVERDUE: 30,
+    CANCELLED: 30,
   });
+
+  const [activeColumnIndex, setActiveColumnIndex] = React.useState(0);
+  const columnRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+  const carouselRef = React.useRef<HTMLDivElement | null>(null);
+
+  const scrollToColumn = (idx: number) => {
+    setActiveColumnIndex(idx);
+    triggerHaptic("selection");
+    columnRefs.current[idx]?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (!el || el.clientWidth === 0) return;
+    const scrollLeft = el.scrollLeft;
+    const itemWidth = el.scrollWidth / KANBAN_COLUMNS.length;
+    const newIdx = Math.round(scrollLeft / itemWidth);
+    if (newIdx >= 0 && newIdx < KANBAN_COLUMNS.length && newIdx !== activeColumnIndex) {
+      setActiveColumnIndex(newIdx);
+    }
+  };
 
   const groupedTasks = React.useMemo(() => {
     return groupTasksByStatus(
@@ -332,8 +377,32 @@ export function TaskKanbanBoard({
       className={cn("w-full overflow-x-auto pb-4", className)}
       data-slot="task-kanban-board"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 min-w-[320px]">
-        {KANBAN_COLUMNS.map((col) => {
+      {/* Mobile Stage Tab Bar */}
+      <div className="flex md:hidden items-center gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none">
+        {KANBAN_COLUMNS.map((col, idx) => (
+          <button
+            key={col.id}
+            type="button"
+            onClick={() => scrollToColumn(idx)}
+            className={cn(
+              "min-h-[40px] px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer active:scale-95",
+              activeColumnIndex === idx
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted"
+            )}
+          >
+            {col.title} ({groupedTasks[col.id]?.length || 0})
+          </button>
+        ))}
+      </div>
+
+      {/* Responsive Board: Carousel on mobile, Grid on tablet/desktop */}
+      <div
+        ref={carouselRef}
+        onScroll={handleScroll}
+        className="flex md:grid md:grid-cols-2 xl:grid-cols-4 gap-3.5 overflow-x-auto snap-x snap-mandatory scrollbar-none -mx-3.5 px-3.5 md:mx-0 md:px-0"
+      >
+        {KANBAN_COLUMNS.map((col, idx) => {
           const colTasks = groupedTasks[col.id] || [];
           const count = colTasks.length;
           const limit = colLimits[col.id] || 30;
@@ -343,8 +412,11 @@ export function TaskKanbanBoard({
           return (
             <div
               key={col.id}
+              ref={(el) => {
+                columnRefs.current[idx] = el;
+              }}
               className={cn(
-                "flex flex-col rounded-xl border border-border/60 bg-muted/20 backdrop-blur-xs p-3.5 transition-all",
+                "w-[86vw] max-w-[340px] shrink-0 snap-center flex flex-col md:w-auto md:max-w-none rounded-2xl border border-border/60 bg-muted/20 backdrop-blur-xs p-3.5 transition-all",
                 col.bgClass
               )}
             >
@@ -413,7 +485,7 @@ export function TaskKanbanBoard({
                             <div className="flex items-center justify-between gap-1.5 flex-wrap">
                               <div className="flex items-center gap-1.5">
                                 {item.level === "TRUONG" ? (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20">
                                     <Building2
                                       strokeWidth={1.5}
                                       className="size-3"
@@ -421,7 +493,7 @@ export function TaskKanbanBoard({
                                     <span>Cấp Trường</span>
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
                                     <Users
                                       strokeWidth={1.5}
                                       className="size-3"
@@ -432,7 +504,7 @@ export function TaskKanbanBoard({
 
                                 <span
                                   className={cn(
-                                    "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border border-border/50",
+                                    "inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border border-border/50",
                                     categoryConfig.className
                                   )}
                                 >
@@ -444,7 +516,7 @@ export function TaskKanbanBoard({
                             {/* Title & Parent School Task */}
                             <div>
                               {item.parentSchoolTaskTitle && (
-                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1 line-clamp-1">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1 line-clamp-1">
                                   <FolderTree
                                     strokeWidth={1.5}
                                     className="size-3 shrink-0 text-muted-foreground/70"
@@ -465,7 +537,7 @@ export function TaskKanbanBoard({
                             {/* 2px Micro Progress Bar (h-1) */}
                             {item.level === "TRUONG" && (
                               <div className="space-y-1">
-                                <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono tabular-nums">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground font-mono tabular-nums">
                                   <span className="text-muted-foreground/70">
                                     Tiến độ
                                   </span>
@@ -497,12 +569,12 @@ export function TaskKanbanBoard({
                               {/* Assignee & Due Date */}
                               <div className="flex items-center gap-2 min-w-0">
                                 <div
-                                  className="size-[22px] rounded-full bg-secondary text-foreground border border-border/80 flex items-center justify-center text-[10px] font-semibold font-mono shrink-0"
+                                  className="size-[22px] rounded-full bg-secondary text-foreground border border-border/80 flex items-center justify-center text-xs font-semibold font-mono shrink-0"
                                   title={item.assigneeName}
                                 >
                                   {getInitials(item.assigneeName)}
                                 </div>
-                                <div className="flex items-center gap-1 text-[11px] truncate text-muted-foreground">
+                                <div className="flex items-center gap-1 text-xs truncate text-muted-foreground">
                                   <Calendar
                                     strokeWidth={1.5}
                                     className={cn(
@@ -512,7 +584,7 @@ export function TaskKanbanBoard({
                                   />
                                   <span
                                     className={cn(
-                                      "truncate font-mono tabular-nums text-[11px]",
+                                      "truncate font-mono tabular-nums text-xs",
                                       overdue
                                         ? "text-destructive font-semibold"
                                         : ""
@@ -531,6 +603,7 @@ export function TaskKanbanBoard({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (prevStatus && onStatusChange) {
+                                      triggerHaptic("selection");
                                       onStatusChange(item.id, prevStatus);
                                     }
                                   }}
@@ -540,7 +613,7 @@ export function TaskKanbanBoard({
                                       : "Không thể lùi"
                                   }
                                   className={cn(
-                                    "size-6 flex items-center justify-center rounded border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer",
+                                    "size-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95",
                                     !prevStatus &&
                                       "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
                                   )}
@@ -557,6 +630,7 @@ export function TaskKanbanBoard({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (nextStatus && onStatusChange) {
+                                      triggerHaptic("selection");
                                       onStatusChange(item.id, nextStatus);
                                     }
                                   }}
@@ -566,7 +640,7 @@ export function TaskKanbanBoard({
                                       : "Không thể tiến"
                                   }
                                   className={cn(
-                                    "size-6 flex items-center justify-center rounded border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer",
+                                    "size-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95",
                                     !nextStatus &&
                                       "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
                                   )}
@@ -603,6 +677,24 @@ export function TaskKanbanBoard({
             </div>
           );
         })}
+      </div>
+
+      {/* Mobile Active Column Indicator Dots */}
+      <div className="flex md:hidden items-center justify-center gap-1.5 pt-3">
+        {KANBAN_COLUMNS.map((col, idx) => (
+          <button
+            key={col.id}
+            type="button"
+            onClick={() => scrollToColumn(idx)}
+            aria-label={`Chuyển tới cột ${col.title}`}
+            className={cn(
+              "h-1.5 rounded-full transition-all cursor-pointer",
+              activeColumnIndex === idx
+                ? "w-6 bg-primary"
+                : "w-2 bg-border hover:bg-muted-foreground/40"
+            )}
+          />
+        ))}
       </div>
     </div>
   );

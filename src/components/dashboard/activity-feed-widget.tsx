@@ -1,20 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { Zap, Activity, CheckCircle2, Upload, RefreshCw, PlusCircle, AlertCircle, Clock } from "lucide-react";
+import Link from "next/link";
+import { History, Activity, CheckCircle2, Upload, RefreshCw, PlusCircle, AlertCircle, Clock, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import type { ActivityEvent } from "@/types/dashboard";
+export type { ActivityEvent };
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export interface ActivityFeedWidgetProps {
   activities?: ActivityEvent[];
   className?: string;
+  initialLimit?: number;
+  auditLogHref?: string;
 }
 
 export interface ActivityActionConfig {
   type: "completed" | "assigned" | "upload" | "updated" | "created" | "review" | "default";
   badgeVariant: "default" | "secondary" | "destructive" | "outline" | "ghost" | "success" | "progress" | "warning";
-  iconName: "CheckCircle2" | "Zap" | "Upload" | "RefreshCw" | "PlusCircle" | "AlertCircle" | "Activity";
+  iconName: "CheckCircle2" | "History" | "Upload" | "RefreshCw" | "PlusCircle" | "AlertCircle" | "Activity";
 }
 
 export function getActorInitials(name: string): string {
@@ -40,7 +44,7 @@ export function getActivityActionConfig(action: string): ActivityActionConfig {
     return {
       type: "assigned",
       badgeVariant: "secondary",
-      iconName: "Zap",
+      iconName: "History",
     };
   }
   if (act.includes("tải lên") || act.includes("upload") || act.includes("đính kèm")) {
@@ -81,7 +85,7 @@ export function getActivityActionConfig(action: string): ActivityActionConfig {
 
 const actionIcons = {
   CheckCircle2,
-  Zap,
+  History,
   Upload,
   RefreshCw,
   PlusCircle,
@@ -92,7 +96,12 @@ const actionIcons = {
 export function ActivityFeedWidget({
   activities = [],
   className,
+  initialLimit = 5,
+  auditLogHref = "/tasks?view=audit",
 }: ActivityFeedWidgetProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const displayedActivities = initialLimit && !isExpanded ? activities.slice(0, initialLimit) : activities;
+
   return (
     <div
       className={cn(
@@ -103,35 +112,50 @@ export function ActivityFeedWidget({
       {/* Header */}
       <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <Zap className="size-4 fill-amber-500/20" />
+          <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <History className="size-4" strokeWidth={1.5} />
           </div>
           <div>
             <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
               Hoạt động vừa cập nhật
             </h3>
-            <p className="text-[11px] text-muted-foreground">
-              Dòng nhật ký tương tác và tiến độ thời gian thực
+            <p className="text-xs text-muted-foreground">
+              {activities.length > initialLimit && !isExpanded
+                ? `Hiển thị ${displayedActivities.length} hoạt động gần nhất`
+                : "Dòng nhật ký tương tác và tiến độ thời gian thực"}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold">
-          <span className="relative flex size-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-          </span>
-          <span>Live</span>
+        <div className="flex items-center gap-2">
+          {activities.length > initialLimit && !isExpanded && (
+            <span className="text-xs font-mono text-muted-foreground hidden sm:inline">
+              Top 5 / {activities.length}
+            </span>
+          )}
+          <Link
+            href={auditLogHref}
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            data-slot="activity-audit-link"
+            title="Xem nhật ký kiểm toán hệ thống"
+          >
+            <span className="hidden sm:inline">Nhật ký</span>
+            <ExternalLink className="size-3" strokeWidth={1.5} />
+          </Link>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-semibold">
+            <span className="size-1.5 rounded-full bg-emerald-500" />
+            <span>Live</span>
+          </div>
         </div>
       </div>
 
       {/* Activity Timeline List */}
       <div className="flex flex-col divide-y divide-border/50 pt-1">
-        {activities.length === 0 ? (
+        {displayedActivities.length === 0 ? (
           <div className="py-8 text-center text-xs text-muted-foreground">
             Chưa có hoạt động mới nào được ghi nhận
           </div>
         ) : (
-          activities.map((item) => {
+          displayedActivities.map((item) => {
             const config = getActivityActionConfig(item.action);
             const ActionIcon = actionIcons[config.iconName] || Activity;
             const initials = getActorInitials(item.actorName);
@@ -147,7 +171,7 @@ export function ActivityFeedWidget({
                     {initials}
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-card ring-1 ring-border/60 shadow-xs">
-                    <ActionIcon className="size-2.5 text-foreground/80" />
+                    <ActionIcon className="size-2.5 text-foreground/80" strokeWidth={1.5} />
                   </div>
                 </div>
 
@@ -159,7 +183,7 @@ export function ActivityFeedWidget({
                       <span className="text-muted-foreground font-normal">{item.action}</span>
                     </div>
                     {item.category && (
-                      <span className="shrink-0 inline-flex items-center rounded-md bg-secondary/80 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                      <span className="shrink-0 inline-flex items-center rounded-md bg-secondary/80 px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
                         {item.category}
                       </span>
                     )}
@@ -174,8 +198,8 @@ export function ActivityFeedWidget({
                   </div>
 
                   {/* Timestamp */}
-                  <div className="flex items-center gap-1 pt-0.5 text-[10px] text-muted-foreground font-mono">
-                    <Clock className="size-2.5 opacity-70" />
+                  <div className="flex items-center gap-1 pt-0.5 text-xs text-muted-foreground font-mono">
+                    <Clock className="size-2.5 opacity-70" strokeWidth={1.5} />
                     <span>{item.timestamp}</span>
                   </div>
                 </div>
@@ -184,6 +208,30 @@ export function ActivityFeedWidget({
           })
         )}
       </div>
+
+      {/* Expand / Collapse Footer */}
+      {activities.length > initialLimit && (
+        <div className="pt-3 mt-1 border-t border-border/40 text-center">
+          <button
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+            aria-expanded={isExpanded}
+          >
+            {isExpanded ? (
+              <>
+                <span>Thu gọn (hiển thị {initialLimit} mục)</span>
+                <ChevronUp className="size-3.5" strokeWidth={1.5} />
+              </>
+            ) : (
+              <>
+                <span>Xem tất cả {activities.length} hoạt động</span>
+                <ChevronDown className="size-3.5" strokeWidth={1.5} />
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

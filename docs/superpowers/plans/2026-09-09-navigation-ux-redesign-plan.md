@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-09-navigation-ux-redesign-plan.md

@@ -1,0 +1,687 @@
+openapi: 3.1.0
+info:
+  title: QCET E-Office Canonical API Contract
+  version: 1.0.0
+  description: >
+    Canonical OpenAPI 3.1 contract for QCET E-Office (Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh).
+    Documents public, authenticated, and privileged endpoints with strict authorization rules,
+    standard error contracts, and DTO schemas.
+servers:
+  - url: http://localhost:3000
+    description: Local development / test server
+  - url: https://eoffice.qcet.edu.vn
+    description: Institutional on-premise production server
+
+security:
+  - sessionCookie: []
+
+paths:
+  /api/health/live:
+    get:
+      summary: Liveness health check
+      operationId: getLivenessHealth
+      security: []
+      responses:
+        '200':
+          description: Process is running and responsive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: alive
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptimeSeconds:
+                    type: integer
+
+  /api/health/ready:
+    get:
+      summary: Readiness health check
+      operationId: getReadinessHealth
+      security: []
+      responses:
+        '200':
+          description: Service and database are ready
+        '503':
+          description: Service or database is degraded/unreachable
+
+  /api/auth/login:
+    post:
+      summary: Authenticate user session
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Login successful, session cookie set
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                description: HttpOnly, Secure, SameSite=Lax session token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaTypeError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /api/auth/register:
+    post:
+      summary: Register self-service account
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+      responses:
+        '201':
+          description: Account created successfully (CHUYEN_VIEN default role)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /api/auth/me:
+    get:
+      summary: Get active session context
+      operationId: getCurrentSession
+      responses:
+        '200':
+          description: Authenticated user context or guest state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+
+  /api/auth/logout:
+    post:
+      summary: Terminate session
+      operationId: logout
+      responses:
+        '200':
+          description: Session terminated, cookie cleared
+
+  /api/tasks:
+    get:
+      summary: List tasks with role and scope filtering
+      operationId: listTasks
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [school, unit, personal]
+            default: personal
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 100
+            default: 20
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Paginated tasks list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      summary: Create new task (Creator / Assignee)
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskInput'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/tasks/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get task details by ID with object-level authorization
+      operationId: getTaskById
+      responses:
+        '200':
+          description: Task detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      summary: Update task metadata or advance workflow state
+      operationId: updateTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskInput'
+      responses:
+        '200':
+          description: Task updated successfully
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Optimistic Concurrency Conflict (version mismatch)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorBody'
+
+    delete:
+      summary: Delete task (Creator or Administrator only)
+      operationId: deleteTask
+      responses:
+        '200':
+          description: Task removed
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/tasks/{id}/deliverables:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Submit work deliverable for task
+      operationId: submitDeliverable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitDeliverableInput'
+      responses:
+        '201':
+          description: Deliverable recorded and task advanced to WAITING_APPROVAL
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/documents:
+    get:
+      summary: List incoming and outgoing official documents
+      operationId: listDocuments
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [INCOMING, OUTGOING]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Document list
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      summary: Register incoming/outgoing official document (Clerk/Admin/Manager)
+      operationId: createDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDocumentInput'
+      responses:
+        '201':
+          description: Document registered
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/documents/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get document details
+      operationId: getDocumentById
+      responses:
+        '200':
+          description: Document details
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/documents/{id}/directives:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Issue leadership directive for an official document
+      operationId: createDirective
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDirectiveInput'
+      responses:
+        '201':
+          description: Directive recorded and linked
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/notifications:
+    get:
+      summary: List notifications for authenticated user
+      operationId: listNotifications
+      responses:
+        '200':
+          description: Notifications list
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/notifications/{id}/read:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Mark notification as read (Owner only)
+      operationId: markNotificationRead
+      responses:
+        '200':
+          description: Notification marked read
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/notifications/read-all:
+    post:
+      summary: Mark all personal notifications as read
+      operationId: markAllNotificationsRead
+      responses:
+        '200':
+          description: All user notifications marked read
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: qcet_session
+
+  schemas:
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    RegisterInput:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        departmentId:
+          type: string
+
+    AuthSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/UserPublicDTO'
+
+    MeResponse:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/UserPublicDTO'
+
+    UserPublicDTO:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, BAN_GIAM_HIEU, TRUONG_PHONG, PHO_PHONG, CHUYEN_VIEN, VAN_THU]
+        departmentId:
+          type: string
+          nullable: true
+
+    CreateTaskInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 300
+        description:
+          type: string
+          maxLength: 5000
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        assigneeId:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+
+    UpdateTaskInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          description: Optimistic concurrency control check
+        title:
+          type: string
+          minLength: 3
+          maxLength: 300
+        description:
+          type: string
+          maxLength: 5000
+        status:
+          type: string
+          enum: [NEW, IN_PROGRESS, WAITING_APPROVAL, COMPLETED, REJECTED, CANCELLED]
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        deadline:
+          type: string
+          format: date-time
+
+    SubmitDeliverableInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 300
+        content:
+          type: string
+          maxLength: 10000
+        fileUrls:
+          type: array
+          items:
+            type: string
+            format: uri
+
+    CreateDocumentInput:
+      type: object
+      required: [title, documentNumber]
+      properties:
+        title:
+          type: string
+          maxLength: 300
+        documentNumber:
+          type: string
+          maxLength: 100
+        documentType:
+          type: string
+          enum: [INCOMING, OUTGOING]
+        issuingAuthority:
+          type: string
+
+    CreateDirectiveInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 5
+          maxLength: 2000
+        deadline:
+          type: string
+          format: date-time
+
+    TaskListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskSummaryDTO'
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            pageSize:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+
+    TaskSummaryDTO:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+
+    TaskDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+            title:
+              type: string
+            description:
+              type: string
+            status:
+              type: string
+            priority:
+              type: string
+            version:
+              type: integer
+            deadline:
+              type: string
+              format: date-time
+
+    ApiErrorBody:
+      type: object
+      required: [code, message, requestId]
+      properties:
+        success:
+          type: boolean
+          example: false
+        code:
+          type: string
+          example: FORBIDDEN
+        message:
+          type: string
+          example: Access denied to requested resource
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        requestId:
+          type: string
+          example: req-12345-67890
+
+  responses:
+    ValidationError:
+      description: Bad Request / Input validation failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorBody'
+    UnauthorizedError:
+      description: Authentication required or invalid session
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorBody'
+    ForbiddenError:
+      description: Authenticated but unauthorized for this object/action
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorBody'
+    NotFoundError:
+      description: Target resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorBody'
+    ConflictError:
+      description: Conflict or state machine violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorBody'
+    UnsupportedMediaTypeError:
+      description: Content-Type must be application/json
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorBody'
+    RateLimitError:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorBody'

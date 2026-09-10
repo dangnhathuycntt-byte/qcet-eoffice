@@ -27,9 +27,9 @@ describe("ExecutiveStatStrip Helpers", () => {
 
   test("getStatCardData assigns matching WorkboxFilter key to each card", () => {
     const cards = getStatCardData(mockStats);
-    assert.equal(cards[0].filterKey, "URGENT_OVERDUE");
+    assert.equal(cards[0].filterKey, "ALL");
     assert.equal(cards[1].filterKey, "MY_ACTION");
-    assert.equal(cards[2].filterKey, "ASSIGNED_BY_ME");
+    assert.equal(cards[2].filterKey, "URGENT_OVERDUE");
     assert.equal(cards[3].filterKey, "COMPLETED");
   });
 
@@ -39,12 +39,12 @@ describe("ExecutiveStatStrip Helpers", () => {
     // Card 1: Nhiệm vụ cấp Trường
     assert.equal(cards[0].title, "Nhiệm vụ cấp Trường");
     assert.ok(cards[0].subtext?.includes("212 đang làm"));
-    assert.ok(cards[0].subtext?.includes("92 xong"));
+    assert.ok(cards[0].subtext?.includes("92 hoàn thành"));
 
     // Card 2: Công việc Đơn vị
     assert.equal(cards[1].title, "Công việc Đơn vị");
     assert.ok(cards[1].subtext?.includes("580 đang làm"));
-    assert.ok(cards[1].subtext?.includes("290 xong"));
+    assert.ok(cards[1].subtext?.includes("290 hoàn thành"));
 
     // Card 3: Cần xử lý & Trễ hạn
     assert.equal(cards[2].title, "Cần xử lý & Trễ hạn");
@@ -52,8 +52,8 @@ describe("ExecutiveStatStrip Helpers", () => {
     assert.ok(cards[2].subtext?.includes("42"));
     assert.ok(cards[2].subtext?.includes("5"));
 
-    // Card 4: Tỷ lệ hoàn thành toàn trường
-    assert.equal(cards[3].title, "Tỷ lệ hoàn thành toàn trường");
+    // Card 4: Tiến độ trung bình toàn trường
+    assert.equal(cards[3].title, "Tiến độ trung bình toàn trường");
     assert.equal(cards[3].progress, 74);
   });
 
@@ -127,16 +127,120 @@ describe("ExecutiveStatStrip Helpers", () => {
     assert.equal(cards[3].progress, 0);
   });
 
+  test("integrates triage queue into urgent card when pendingTriageCount is present and > 0", () => {
+    const stats: DashboardStats = {
+      ...mockStats,
+      pendingTriageCount: 2,
+    };
+    const cards = getStatCardData(stats);
+    assert.equal(cards.length, 4, "Must maintain exactly 4 cards");
+    const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
+    assert.ok(urgentCard, "urgent-tasks card must exist");
+    assert.ok(
+      urgentCard.subtext.includes("2 chờ tiếp nhận"),
+      "urgent card must include triage count in subtext"
+    );
+  });
+
+  test("integrates escalated review into urgent card when escalatedReviewCount is present and > 0", () => {
+    const stats: DashboardStats = {
+      ...mockStats,
+      escalatedReviewCount: 3,
+    };
+    const cards = getStatCardData(stats);
+    assert.equal(cards.length, 4, "Must maintain exactly 4 cards");
+    const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
+    assert.ok(urgentCard, "urgent-tasks card must exist");
+    assert.ok(
+      urgentCard.subtext.includes("3 quá hạn"),
+      "urgent card must include escalated count in subtext"
+    );
+    assert.ok(
+      urgentCard.badge?.label.includes("quá hạn"),
+      "urgent card badge must indicate overdue/escalated"
+    );
+  });
+
+  test("strictly maintains 4 cards when both triage and escalated counts are > 0", () => {
+    const stats: DashboardStats = {
+      ...mockStats,
+      pendingTriageCount: 2,
+      escalatedReviewCount: 3,
+    };
+    const cards = getStatCardData(stats);
+    assert.equal(cards.length, 4, "should always strictly maintain 4 cards");
+    const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
+    assert.ok(urgentCard.subtext.includes("chờ tiếp nhận"));
+    assert.ok(urgentCard.subtext.includes("quá hạn"));
+  });
+
+  test("omits triage and escalated text from urgent card when counts are 0 or absent", () => {
+    const cards = getStatCardData(mockStats);
+    const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
+    assert.equal(
+      urgentCard.subtext.includes("chờ tiếp nhận"),
+      false,
+      "triage text must not appear when count is 0/absent"
+    );
+    assert.equal(
+      urgentCard.subtext.includes("quá hạn"),
+      false,
+      "escalated text must not appear when count is 0/absent"
+    );
+  });
+
+  test("all cards contain zero decorative emojis even with triage and escalated counts", () => {
+    const stats: DashboardStats = {
+      ...mockStats,
+      pendingTriageCount: 5,
+      escalatedReviewCount: 7,
+    };
+    const cards = getStatCardData(stats);
+    const emojiRegex = /\p{Extended_Pictographic}/u;
+    assert.equal(cards.length, 4, "always 4 cards");
+    cards.forEach((card) => {
+      assert.equal(
+        emojiRegex.test(card.title),
+        false,
+        `Card title "${card.title}" must not contain emojis`
+      );
+      assert.equal(
+        emojiRegex.test(card.subtext),
+        false,
+        `Card subtext "${card.subtext}" must not contain emojis`
+      );
+      if (card.badge) {
+        assert.equal(
+          emojiRegex.test(card.badge.label),
+          false,
+          `Card badge "${card.badge.label}" must not contain emojis`
+        );
+      }
+    });
+  });
+
+  test("urgent card uses tabular-nums compatible values when integrating triage and escalated", () => {
+    const stats: DashboardStats = {
+      ...mockStats,
+      pendingTriageCount: 12,
+      escalatedReviewCount: 8,
+    };
+    const cards = getStatCardData(stats);
+    const urgentCard = cards.find((c) => c.id === "urgent-tasks")!;
+    // Values should be numeric strings (formatted by formatNumber)
+    assert.equal(urgentCard.value, formatNumber(42 + 5 + 12 + 8));
+  });
+
   test("toggle logic switches between selected filterKey and ALL", () => {
     const cards = getStatCardData(mockStats);
     const getNextFilter = (active: WorkboxFilter | undefined, target: WorkboxFilter): WorkboxFilter =>
       active === target ? "ALL" : target;
 
-    // Initially ALL, click card 0 (URGENT_OVERDUE) -> URGENT_OVERDUE
-    assert.equal(getNextFilter("ALL", cards[0].filterKey!), "URGENT_OVERDUE");
+    // Initially ALL, click card 2 (URGENT_OVERDUE) -> URGENT_OVERDUE
+    assert.equal(getNextFilter("ALL", cards[2].filterKey!), "URGENT_OVERDUE");
 
-    // Already URGENT_OVERDUE, click card 0 again -> toggles back to ALL
-    assert.equal(getNextFilter("URGENT_OVERDUE", cards[0].filterKey!), "ALL");
+    // Already URGENT_OVERDUE, click card 2 again -> toggles back to ALL
+    assert.equal(getNextFilter("URGENT_OVERDUE", cards[2].filterKey!), "ALL");
 
     // From URGENT_OVERDUE, click card 1 (MY_ACTION) -> switches to MY_ACTION
     assert.equal(getNextFilter("URGENT_OVERDUE", cards[1].filterKey!), "MY_ACTION");

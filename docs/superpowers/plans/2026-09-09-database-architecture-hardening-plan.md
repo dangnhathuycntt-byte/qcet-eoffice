@@ -1,0 +1,1 @@
+../../plans/active/2026-09-09-database-architecture-hardening-plan.md

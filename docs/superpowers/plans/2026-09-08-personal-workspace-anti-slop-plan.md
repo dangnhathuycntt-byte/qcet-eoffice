@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-08-personal-workspace-anti-slop-plan.md

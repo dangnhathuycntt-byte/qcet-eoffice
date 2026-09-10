@@ -1,0 +1,1 @@
+../../plans/completed/2026-09-08-web-performance-optimization-plan.md

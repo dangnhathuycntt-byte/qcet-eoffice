@@ -1,0 +1,1 @@
+../../plans/superseded/2026-09-07-single-tier-sidebar-scope-switcher-plan.md

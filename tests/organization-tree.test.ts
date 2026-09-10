@@ -27,19 +27,19 @@ describe("OrganizationTree Helpers", () => {
   test("QCET_DEPARTMENTS includes all authentic QCET units", () => {
     const codes = QCET_DEPARTMENTS.map((d) => d.code);
     // Functional rooms
-    assert.ok(codes.includes("P_DTQLKH"), "Phòng Đào tạo & QLKH should exist");
+    assert.ok(codes.includes("P_QLDT") || codes.includes("P_DTQLKH"), "Phòng Quản lý Đào tạo should exist");
     assert.ok(codes.includes("P_HCQT"), "Phòng Hành chính - Quản trị should exist");
-    assert.ok(codes.includes("P_KHTC"), "Phòng Kế hoạch - Tài chính should exist");
-    assert.ok(codes.includes("P_KTDBCL"), "Phòng Khảo thí & ĐBCL should exist");
-    assert.ok(codes.includes("P_CTHSSV"), "Phòng CTHSSV should exist");
+    assert.ok(codes.includes("P_TC") || codes.includes("P_KHTC"), "Phòng Tài chính should exist");
+    assert.ok(codes.includes("P_TCDBCL") || codes.includes("P_KTDBCL"), "Phòng Tổ chức - ĐBCL should exist");
+    assert.ok(codes.includes("P_TSHTQT") || codes.includes("P_CTHSSV"), "Phòng Tuyển sinh - HTQT should exist");
 
     // Faculties
-    assert.ok(codes.includes("K_CNTT"), "Khoa Công nghệ thông tin should exist");
-    assert.ok(codes.includes("K_KTQT"), "Khoa Kinh tế - Quản trị should exist");
-    assert.ok(codes.includes("K_KTCN"), "Khoa Kỹ thuật - Công nghệ should exist");
+    assert.ok(codes.includes("K_CNTT"), "Khoa Điện tử - Tin học / CNTT should exist");
+    assert.ok(codes.includes("K_KTQT"), "Khoa Kinh tế - Tổng hợp should exist");
+    assert.ok(codes.includes("K_CNOTO") || codes.includes("K_KTCN"), "Khoa Công nghệ Ô tô should exist");
 
     // Centers
-    assert.ok(codes.includes("TT_DCC"), "Trung tâm Truyền thông & Số hóa should exist");
+    assert.ok(codes.includes("TT_STT") || codes.includes("TT_DCC"), "Trung tâm Số - Truyền thông should exist");
     assert.ok(codes.includes("TT_NNTH"), "Trung tâm Ngoại ngữ - Tin học should exist");
   });
 

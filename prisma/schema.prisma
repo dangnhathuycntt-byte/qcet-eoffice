@@ -1,0 +1,1498 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  BAN_GIAM_HIEU
+  TRUONG_PHONG
+  CHUYEN_VIEN
+  VAN_THU
+  ADMIN
+}
+
+enum DocumentType {
+  VAN_BAN_DEN
+  VAN_BAN_DI
+  TO_TRINH_NOI_BO
+}
+
+enum DocumentUrgency {
+  THUONG
+  KHAN
+  THUONG_KHAN
+  HOA_TOC
+}
+
+enum DocumentSecurityLevel {
+  THUONG
+  MAT
+  TOI_MAT
+  TUYET_MAT
+}
+
+enum DocumentStatus {
+  CHO_PHAN_CONG
+  DANG_XU_LY
+  CHO_PHE_DUYET
+  DA_HOAN_THANH
+  LUU_THEO_DOI
+}
+
+enum TaskScope {
+  SCHOOL
+  DEPARTMENT
+  INDIVIDUAL
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  WAITING_APPROVAL
+  COMPLETED
+  OVERDUE
+  CANCELLED
+}
+
+enum TaskPriority {
+  URGENT
+  HIGH
+  NORMAL
+  LOW
+}
+
+enum AssigneeRole {
+  PRIMARY_OWNER
+  COLLABORATOR
+  SUPERVISOR
+}
+
+enum DeliverableReviewStatus {
+  PENDING
+  APPROVED
+  REVISION_REQUIRED
+}
+
+enum ResolutionType {
+  EXTEND_DEADLINE
+  REASSIGN_OWNER
+  DIRECTIVE_NOTE
+  DISMISS_BOTTLENECK
+}
+
+model Department {
+  id          String   @id @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  shortName   String?  @map("short_name") @db.VarChar(50)
+  color       String?  @db.VarChar(20)
+  users       User[]
+  tasks       Task[]
+  draftingDocs Document[]          @relation("DraftingDeptDocs")
+  leadDocs     Document[]          @relation("LeadDepartmentDocs")
+  directives   DocumentDirective[] @relation("DirectiveDepartments")
+  jobCatalogItems JobCatalogItem[]
+  dacumDuties     DacumDuty[]
+  delegations     DacumDelegation[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("departments")
+}
+
+model User {
+  id                    String                @id @default(cuid())
+  email                 String                @unique @db.VarChar(255)
+  name                  String                @db.VarChar(255)
+  passwordHash          String?               @map("password_hash")
+  role                  UserRole              @default(CHUYEN_VIEN)
+  departmentId          String?               @map("department_id") @db.VarChar(50)
+  department            Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  title                 String?               @db.VarChar(150)
+  phone                 String?               @db.VarChar(20)
+  avatarUrl             String?               @map("avatar_url")
+  provider              String                @default("credentials") @db.VarChar(50)
+  isActive              Boolean               @default(true) @map("is_active")
+  deactivatedAt         DateTime?             @map("deactivated_at")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+  onboardedAt           DateTime?             @map("onboarded_at")
+  onboardingData        Json?                 @map("onboarding_data")
+
+  accounts              Account[]
+  sessions              Session[]
+  tasksCreated          Task[]                @relation("TaskCreatedBy")
+  archivedTasks         Task[]                @relation("TaskArchiver")
+  taskAssignees         TaskAssignee[]
+  deliverablesUploaded  TaskDeliverable[]     @relation("DeliverableUploadedBy")
+  deliverablesReviewed  TaskDeliverable[]     @relation("DeliverableReviewer")
+  delegationsGranted    DacumDelegation[]     @relation("DelegationGrantor")
+  delegationsReceived   DacumDelegation[]     @relation("DelegationDelegate")
+  resolutionsEnacted    ExecutiveResolution[] @relation("ResolutionActor")
+  leadDocs              Document[]            @relation("LeadUserDocs")
+  docsRegistered        Document[]            @relation("DocRegisteredBy")
+  archivedDocuments     Document[]            @relation("DocumentArchiver")
+  leaderDirectives      DocumentDirective[]   @relation("LeaderDirectives")
+  pushSubscriptions     PushSubscription[]
+  notifications         Notification[]
+  positionAssignments   PositionAssignment[]  @relation("UserPositionAssignments")
+  bodyMemberships       BodyMembership[]
+  taskActors            TaskActor[]
+  assignedActors        TaskActor[]           @relation("ActorAssignedBy")
+  taskApprovalSteps     TaskApprovalStep[]
+  taskResultsSubmitted  TaskResult[]          @relation("TaskResultSubmitter")
+  taskResultsVerified   TaskResult[]          @relation("TaskResultVerifier")
+  workflowsPresented    DocumentIncomingWorkflow[] @relation("DocWorkflowPresentedBy")
+  workflowsDirected     DocumentIncomingWorkflow[] @relation("DocWorkflowLeader")
+  workflowsResolved     DocumentIncomingWorkflow[] @relation("DocWorkflowResolvedBy")
+  workflowsFiled        DocumentIncomingWorkflow[] @relation("DocWorkflowFiledBy")
+  workflowsArchived     DocumentIncomingWorkflow[] @relation("DocWorkflowArchivedBy")
+  unitAssignmentsGiven  UnitWorkAssignment[]       @relation("UnitWorkAssignedBy")
+  unitAssignmentsDri    UnitWorkAssignment[]       @relation("UnitWorkDri")
+  signatures                         SignatureRecord[]          @relation("UserSignatures")
+  outgoingWorkflowsContentReviewed   DocumentOutgoingWorkflow[] @relation("DocWorkflowContentReviewer")
+  outgoingWorkflowsFormatReviewed    DocumentOutgoingWorkflow[] @relation("DocWorkflowFormatReviewer")
+  outgoingWorkflowsAuthorizedSigned  DocumentOutgoingWorkflow[] @relation("DocWorkflowAuthorizedSigner")
+  outgoingWorkflowsNumbered          DocumentOutgoingWorkflow[] @relation("DocWorkflowNumberer")
+  outgoingWorkflowsOrgSigned         DocumentOutgoingWorkflow[] @relation("DocWorkflowOrgSigner")
+  outgoingWorkflowsIssued            DocumentOutgoingWorkflow[] @relation("DocWorkflowIssuer")
+  outgoingWorkflowsFiled             DocumentOutgoingWorkflow[] @relation("DocWorkflowOutgoingFiledBy")
+  outgoingWorkflowsArchived          DocumentOutgoingWorkflow[] @relation("DocWorkflowOutgoingArchivedBy")
+  dossiersResponsible               WorkDossier[]              @relation("DossierResponsiblePerson")
+  dossiersSubmitted                 WorkDossier[]              @relation("DossierSubmittedBy")
+  dossiersArchived                  WorkDossier[]              @relation("DossierArchivedBy")
+  dossierItemsAdded                 DossierItem[]              @relation("DossierItemAddedBy")
+  organizedMeetings                 Meeting[]                  @relation("MeetingOrganizer")
+  meetingParticipations             MeetingParticipant[]
+  meetingResolutionsLead            MeetingResolution[]        @relation("MeetingResolutionLead")
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Task {
+  id              String                @id @default(cuid())
+  code            String                @unique @db.VarChar(50)
+  title           String                @db.VarChar(500)
+  description     String?               @db.Text
+  scope           TaskScope             @default(SCHOOL)
+  status          TaskStatus            @default(NOT_STARTED)
+  priority        TaskPriority          @default(NORMAL)
+  progressPercent Int                   @default(0) @map("progress_percent")
+  academicMonth   Int                   @map("academic_month")
+  academicYear    String                @map("academic_year") @db.VarChar(20)
+  startDate       DateTime              @default(now()) @map("start_date")
+  dueDate         DateTime              @map("due_date")
+  completedAt     DateTime?             @map("completed_at")
+  departmentId    String?               @map("department_id") @db.VarChar(50)
+  department      Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  createdById     String                @map("created_by_id")
+  createdBy       User                  @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  parentTaskId    String?               @map("parent_task_id")
+  parentTask      Task?                 @relation("SubTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subTasks        Task[]                @relation("SubTasks")
+  assignees       TaskAssignee[]
+  deliverables    TaskDeliverable[]
+  delegations     DacumDelegation[]
+  resolutions     ExecutiveResolution[]
+  linkedDocument  Document?
+  dacumTaskDefId  String?               @map("dacum_task_def_id") @db.VarChar(50)
+  dacumTaskDef    DacumTaskDef?         @relation(fields: [dacumTaskDefId], references: [id], onDelete: SetNull)
+  archivedAt          DateTime?             @map("archived_at")
+  archivedById        String?               @map("archived_by_id")
+  archiveReason       String?               @map("archive_reason") @db.Text
+  archivedBy          User?                 @relation("TaskArchiver", fields: [archivedById], references: [id], onDelete: SetNull)
+  originLevel         TaskOriginLevel       @default(SCHOOL) @map("origin_level")
+  leadUnitId          String?               @map("lead_unit_id")
+  leadUnit            OrganizationalUnit?   @relation("TaskLeadUnit", fields: [leadUnitId], references: [id], onDelete: SetNull)
+  primaryAssignmentId String?               @map("primary_assignment_id")
+  primaryAssignment   PositionAssignment?   @relation("TaskPrimaryAssignment", fields: [primaryAssignmentId], references: [id], onDelete: SetNull)
+  actors              TaskActor[]
+  approvalProcesses   TaskApprovalProcess[]
+  taskResults         TaskResult[]
+  unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
+  sourceRelations     TaskRelation[]        @relation("SourceTaskRelations")
+  targetRelations     TaskRelation[]        @relation("TargetTaskRelations")
+  meetingResolutions  MeetingResolution[]
+  version             Int                   @default(1) @map("version")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  @@index([departmentId, academicYear, academicMonth])
+  @@index([academicYear])
+  @@index([status, dueDate])
+  @@index([scope, status, dueDate])
+  @@index([departmentId, status, dueDate])
+  @@index([parentTaskId])
+  @@index([createdById])
+  @@index([updatedAt(sort: Desc)])
+  @@index([scope, priority])
+  @@index([leadUnitId])
+  @@index([primaryAssignmentId])
+  @@map("tasks")
+}
+
+model TaskAssignee {
+  id         String       @id @default(cuid())
+  taskId     String       @map("task_id")
+  userId     String       @map("user_id")
+  roleInTask AssigneeRole @default(PRIMARY_OWNER) @map("role_in_task")
+  assignedAt DateTime     @default(now()) @map("assigned_at")
+  task       Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId, roleInTask], name: "task_user_role_unique")
+  @@index([userId, roleInTask])
+  @@map("task_assignees")
+}
+
+model TaskDeliverable {
+  id           String                  @id @default(cuid())
+  taskId       String                  @map("task_id")
+  title        String                  @db.VarChar(255)
+  fileUrl      String                  @map("file_url") @db.Text
+  fileType     String?                 @map("file_type") @db.VarChar(50)
+  fileSize     Int?                    @map("file_size")
+  uploadedById String                  @map("uploaded_by_id")
+  reviewStatus DeliverableReviewStatus @default(PENDING) @map("review_status")
+  reviewerId   String?                 @map("reviewer_id")
+  reviewNote   String?                 @map("review_note") @db.Text
+  reviewedAt   DateTime?               @map("reviewed_at")
+  task         Task                    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy   User                    @relation("DeliverableUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict)
+  reviewer     User?                   @relation("DeliverableReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  createdAt    DateTime                @default(now()) @map("created_at")
+  updatedAt    DateTime                @updatedAt @map("updated_at")
+
+  @@index([taskId, reviewStatus])
+  @@map("task_deliverables")
+}
+
+model DacumDelegation {
+  id             String      @id @default(cuid())
+  taskId         String?     @map("task_id")
+  grantorId      String      @map("grantor_id")
+  delegateId     String      @map("delegate_id")
+  committeeRole  String      @map("committee_role") @db.VarChar(100)
+  authorityScope String      @map("authority_scope") @db.VarChar(255)
+  departmentId   String?     @map("department_id") @db.VarChar(50)
+  startDate      DateTime?   @default(now()) @map("start_date")
+  expiresAt      DateTime    @map("expires_at")
+  isActive       Boolean     @default(true) @map("is_active")
+  reason         String?     @db.Text
+  documentRef    String?     @map("document_ref") @db.VarChar(100)
+  task           Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  grantor        User        @relation("DelegationGrantor", fields: [grantorId], references: [id], onDelete: Restrict)
+  delegate       User        @relation("DelegationDelegate", fields: [delegateId], references: [id], onDelete: Restrict)
+  version        Int         @default(1) @map("version")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  @@index([delegateId, isActive, expiresAt])
+  @@index([departmentId, isActive])
+  @@map("dacum_delegations")
+}
+
+model ExecutiveResolution {
+  id              String         @id @default(cuid())
+  taskId          String         @map("task_id")
+  actorId         String         @map("actor_id")
+  resolutionType  ResolutionType @map("resolution_type")
+  directiveNote   String?        @map("directive_note") @db.Text
+  grantedDays     Int?           @map("granted_days")
+  previousDueDate DateTime?      @map("previous_due_date")
+  newDueDate      DateTime?      @map("new_due_date")
+  previousOwnerId String?        @map("previous_owner_id")
+  newOwnerId      String?        @map("new_owner_id")
+  task            Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor           User           @relation("ResolutionActor", fields: [actorId], references: [id], onDelete: Restrict)
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  @@index([taskId, resolutionType])
+  @@map("executive_resolutions")
+}
+
+// ===================================================
+// 1. BẢNG SỔ VĂN BẢN (DOCUMENTS)
+// Đáp ứng đồng thời Phụ lục IV và Phụ lục VI NĐ 30/2020
+// ===================================================
+model Document {
+  id                 String                @id @default(cuid())
+  type               DocumentType          @map("type")
+
+  // Thông tin đăng ký sổ (Số đến hoặc Số đi liên tục theo năm)
+  registrationNumber Int                   @map("registration_number")
+  documentYear       Int                   @map("document_year")
+  registeredDate     DateTime              @default(now()) @map("registered_date")
+
+  // Thông tin văn bản gốc
+  originalNumber     String                @map("original_number") @db.VarChar(100)
+  issuedDate         DateTime              @map("issued_date")
+  issuingAuthority   String                @map("issuing_authority") @db.VarChar(255)
+
+  // Trích yếu nội dung & Phân loại hành chính
+  category           String                @db.VarChar(100)
+  summary            String                @db.Text
+  urgency            DocumentUrgency       @default(THUONG)
+  securityLevel      DocumentSecurityLevel @default(THUONG) @map("security_level")
+
+  // Các trường đặc thù Văn bản Đi (Phụ lục IV Mẫu Sổ Văn bản Đi)
+  signerName         String?               @map("signer_name") @db.VarChar(150)
+  signerTitle        String?               @map("signer_title") @db.VarChar(100)
+  draftingDeptId     String?               @map("drafting_dept_id") @db.VarChar(50)
+  draftingDept       Department?           @relation("DraftingDeptDocs", fields: [draftingDeptId], references: [id], onDelete: SetNull)
+  recipientList      String?               @map("recipient_list") @db.Text
+  distributedCopies  Int?                  @default(1) @map("distributed_copies")
+
+  // Các trường đặc thù Văn bản Đến (Phụ lục IV Mẫu Sổ Văn bản Đến)
+  dueDate            DateTime?             @map("due_date")
+  leadDepartmentId   String?               @map("lead_department_id") @db.VarChar(50)
+  leadDepartment     Department?           @relation("LeadDepartmentDocs", fields: [leadDepartmentId], references: [id], onDelete: SetNull)
+  leadUserId         String?               @map("lead_user_id")
+  leadUser           User?                 @relation("LeadUserDocs", fields: [leadUserId], references: [id], onDelete: SetNull)
+
+  // Trạng thái vòng đời văn bản
+  status             DocumentStatus        @default(CHO_PHAN_CONG)
+  notes              String?               @db.Text
+
+  // Văn thư thực hiện vào sổ
+  registeredById     String                @map("registered_by_id")
+  registeredBy       User                  @relation("DocRegisteredBy", fields: [registeredById], references: [id], onDelete: Restrict)
+
+  // Lưu trữ & Hủy/Lưu trữ vòng đời
+  archivedAt         DateTime?             @map("archived_at")
+  archivedById       String?               @map("archived_by_id")
+  archiveReason      String?               @map("archive_reason") @db.Text
+  archivedBy         User?                 @relation("DocumentArchiver", fields: [archivedById], references: [id], onDelete: SetNull)
+
+  // Quan hệ tệp đính kèm & Bút phê BGH
+  attachments        DocumentAttachment[]
+  directives         DocumentDirective[]
+  incomingWorkflow   DocumentIncomingWorkflow?
+  outgoingWorkflow   DocumentOutgoingWorkflow?
+  signatures         SignatureRecord[]
+
+  // Liên thông Unified Task Hub
+  linkedTaskId       String?               @unique @map("linked_task_id")
+  linkedTask         Task?                 @relation(fields: [linkedTaskId], references: [id], onDelete: SetNull)
+  version            Int                   @default(1) @map("version")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+
+  @@unique([type, documentYear, registrationNumber])
+  @@index([type, documentYear, registeredDate])
+  @@index([type, status, dueDate])
+  @@index([status, urgency, dueDate])
+  @@index([originalNumber])
+  @@index([leadDepartmentId])
+  @@index([draftingDeptId])
+  @@map("documents")
+}
+
+// ===================================================
+// 2. BỘ ĐẾM SỐ TỰ ĐỘNG ATOMIC (NUMBER SEQUENCE)
+// Đảm bảo nguyên tắc cấp số liên tục Điều 15 & Điều 22
+// ===================================================
+model DocumentNumberSequence {
+  id         String       @id @default(cuid())
+  type       DocumentType
+  year       Int
+  lastNumber Int          @default(0) @map("last_number")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  @@unique([type, year])
+  @@map("document_number_sequences")
+}
+
+// ===================================================
+// 3. TỆP ĐÍNH KÈM SỐ HÓA (ATTACHMENTS)
+// Tiêu chuẩn scan màu PDF/A có dấu đỏ (Phụ lục I NĐ 30)
+// ===================================================
+model DocumentAttachment {
+  id         String   @id @default(cuid())
+  documentId String   @map("document_id")
+  fileName   String   @map("file_name") @db.VarChar(255)
+  fileUrl    String   @map("file_url") @db.Text
+  fileSize   Int      @map("file_size")
+  mimeType   String   @map("mime_type") @db.VarChar(100)
+  sha256Hash String?  @map("sha256_hash") @db.VarChar(64)
+  isOriginal Boolean  @default(true) @map("is_original")
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@map("document_attachments")
+}
+
+// ===================================================
+// 4. BÚT PHÊ & Ý KIẾN CHỈ ĐẠO BGH (DIRECTIVES)
+// Quy chuẩn Điều 24 NĐ 30
+// ===================================================
+model DocumentDirective {
+  id               String      @id @default(cuid())
+  documentId       String      @map("document_id")
+  leaderId         String      @map("leader_id")
+  instruction      String      @db.Text
+  deadline         DateTime?
+  assignedDeptId   String      @map("assigned_dept_id") @db.VarChar(50)
+  collaboratorIds  String?     @map("collaborator_ids") @db.Text
+  isTaskGenerated  Boolean     @default(false) @map("is_task_generated")
+
+  document         Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  leader           User        @relation("LeaderDirectives", fields: [leaderId], references: [id], onDelete: Restrict)
+  assignedDept     Department  @relation("DirectiveDepartments", fields: [assignedDeptId], references: [id], onDelete: Restrict)
+  version          Int         @default(1) @map("version")
+  createdAt        DateTime    @default(now()) @map("created_at")
+
+  @@index([documentId, leaderId])
+  @@map("document_directives")
+}
+
+// ===================================================
+// 4B. VÒNG ĐỜI VĂN BẢN ĐẾN & PHÂN CÔNG TÁC NGHIỆP 2 CẤP
+// Tiêu chuẩn Nghị định 30/2020/NĐ-CP & Mô hình Điều hành QCET
+// ===================================================
+enum IncomingDocumentStatus {
+  RECEIVED
+  REGISTERED
+  PRESENTED
+  DIRECTED
+  ASSIGNED_TO_LEAD_UNIT
+  UNIT_ASSIGNED_PERSON
+  IN_PROGRESS
+  RESOLVED
+  FILED
+  ARCHIVED
+}
+
+model DocumentIncomingWorkflow {
+  id                    String                 @id @default(cuid())
+  documentId            String                 @unique @map("document_id")
+  document              Document               @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status                IncomingDocumentStatus @default(REGISTERED)
+
+  // Presentation (Trình Lãnh đạo)
+  presentedAt           DateTime?              @map("presented_at")
+  presentedById         String?                @map("presented_by_id")
+  presentedBy           User?                  @relation("DocWorkflowPresentedBy", fields: [presentedById], references: [id], onDelete: SetNull)
+  presenterNotes        String?                @map("presenter_notes") @db.Text
+
+  // Leadership Direction (Tier 1: BGH chỉ đạo)
+  directedAt            DateTime?              @map("directed_at")
+  leaderId              String?                @map("leader_id")
+  leader                User?                  @relation("DocWorkflowLeader", fields: [leaderId], references: [id], onDelete: SetNull)
+  leadUnitId            String?                @map("lead_unit_id")
+  leadUnit              OrganizationalUnit?    @relation("DocWorkflowLeadUnit", fields: [leadUnitId], references: [id], onDelete: SetNull)
+  coordinatingUnitIds   Json?                  @map("coordinating_unit_ids")
+  leadershipInstruction String?                @map("leadership_instruction") @db.Text
+  deadline              DateTime?              @map("deadline")
+  responsibilityAreaId  String?                @map("responsibility_area_id")
+  responsibilityArea    ResponsibilityArea?    @relation("DocWorkflowRespArea", fields: [responsibilityAreaId], references: [id], onDelete: SetNull)
+
+  // Tier 2: Unit Work Assignment (Trưởng đơn vị phân công)
+  unitAssignments       UnitWorkAssignment[]
+
+  // Resolution (Giải quyết xong)
+  resolvedAt            DateTime?              @map("resolved_at")
+  resolvedById          String?                @map("resolved_by_id")
+  resolvedBy            User?                  @relation("DocWorkflowResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolutionSummary     String?                @map("resolution_summary") @db.Text
+  resolutionDocUrl      String?                @map("resolution_doc_url") @db.Text
+
+  // Filing / Archival (Lập hồ sơ / Lưu trữ)
+  filedAt               DateTime?              @map("filed_at")
+  filedById             String?                @map("filed_by_id")
+  filedBy               User?                  @relation("DocWorkflowFiledBy", fields: [filedById], references: [id], onDelete: SetNull)
+  dossierId             String?                @map("dossier_id") @db.VarChar(100)
+  filingNotes           String?                @map("filing_notes") @db.Text
+
+  archivedAt            DateTime?              @map("archived_at")
+  archivedById          String?                @map("archived_by_id")
+  archivedBy            User?                  @relation("DocWorkflowArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([leadUnitId])
+  @@index([leaderId])
+  @@map("document_incoming_workflows")
+}
+
+model UnitWorkAssignment {
+  id                  String                   @id @default(cuid())
+  workflowId          String                   @map("workflow_id")
+  workflow            DocumentIncomingWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  unitId              String                   @map("unit_id")
+  unit                OrganizationalUnit       @relation("UnitWorkAssignmentUnit", fields: [unitId], references: [id], onDelete: Restrict)
+  assignedById        String                   @map("assigned_by_id")
+  assignedBy          User                     @relation("UnitWorkAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  driUserId           String                   @map("dri_user_id")
+  driUser             User                     @relation("UnitWorkDri", fields: [driUserId], references: [id], onDelete: Restrict)
+  collaboratorUserIds Json?                    @map("collaborator_user_ids")
+
+  instruction         String?                  @db.Text
+  deadline            DateTime?
+  status              String                   @default("ASSIGNED") @db.VarChar(50)
+
+  // Link to generated task if any
+  taskId              String?                  @map("task_id")
+  task                Task?                    @relation("UnitWorkTask", fields: [taskId], references: [id], onDelete: SetNull)
+
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+
+  @@index([workflowId])
+  @@index([unitId])
+  @@index([driUserId])
+  @@map("unit_work_assignments")
+}
+
+// ===================================================
+// 4B. OUTGOING DOCUMENTS V2 & DIGITAL SIGNATURES (NĐ 30/2020 & NĐ 68/2024)
+// ===================================================
+enum OutgoingDocumentStatus {
+  DRAFT
+  CONTENT_REVIEW
+  FORMAT_CHECK
+  AUTHORIZED_SIGN
+  NUMBERED
+  ORGANIZATION_SIGNED
+  ISSUED
+  DELIVERED
+  FILED
+  ARCHIVED
+}
+
+enum SignatureType {
+  PERSONAL_DIGITAL
+  ORGANIZATION_DIGITAL
+  PHYSICAL
+}
+
+enum SignatureVerificationStatus {
+  VALID
+  INVALID
+  REVOKED
+  UNVERIFIED
+}
+
+model DocumentOutgoingWorkflow {
+  id                        String                 @id @default(cuid())
+  documentId                String                 @unique @map("document_id")
+  document                  Document               @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status                    OutgoingDocumentStatus @default(DRAFT)
+  currentVersion            Int                    @default(1) @map("current_version")
+
+  // Content Review (Phê duyệt nội dung)
+  contentReviewSubmittedAt  DateTime?              @map("content_review_submitted_at")
+  contentReviewerId         String?                @map("content_reviewer_id")
+  contentReviewer           User?                  @relation("DocWorkflowContentReviewer", fields: [contentReviewerId], references: [id], onDelete: SetNull)
+  contentApprovedAt         DateTime?              @map("content_approved_at")
+  contentReviewNotes        String?                @map("content_review_notes") @db.Text
+
+  // Format Check (Kiểm tra thể thức kỹ thuật NĐ 30/2020)
+  formatReviewSubmittedAt   DateTime?              @map("format_review_submitted_at")
+  formatReviewerId          String?                @map("format_reviewer_id")
+  formatReviewer            User?                  @relation("DocWorkflowFormatReviewer", fields: [formatReviewerId], references: [id], onDelete: SetNull)
+  formatApprovedAt          DateTime?              @map("format_approved_at")
+  formatReviewNotes         String?                @map("format_review_notes") @db.Text
+
+  // Authorized Sign (Ký chức danh / Thẩm quyền)
+  authorizedSignerId        String?                @map("authorized_signer_id")
+  authorizedSigner          User?                  @relation("DocWorkflowAuthorizedSigner", fields: [authorizedSignerId], references: [id], onDelete: SetNull)
+  authorizedSignedAt        DateTime?              @map("authorized_signed_at")
+  signingNotes              String?                @map("signing_notes") @db.Text
+
+  // Numbering (Văn thư cấp số đi)
+  numberedAt                DateTime?              @map("numbered_at")
+  numbererId                String?                @map("numberer_id")
+  numberer                  User?                  @relation("DocWorkflowNumberer", fields: [numbererId], references: [id], onDelete: SetNull)
+  outgoingNumber            Int?                   @map("outgoing_number")
+  outgoingNumberStr         String?                @map("outgoing_number_str") @db.VarChar(100)
+
+  // Organization Digital Signature (Văn thư đóng dấu số cơ quan NĐ 30 & NĐ 68)
+  orgSignedAt               DateTime?              @map("org_signed_at")
+  orgSignerId               String?                @map("org_signer_id")
+  orgSigner                 User?                  @relation("DocWorkflowOrgSigner", fields: [orgSignerId], references: [id], onDelete: SetNull)
+
+  // Issue (Phát hành)
+  issuedAt                  DateTime?              @map("issued_at")
+  issuerId                  String?                @map("issuer_id")
+  issuer                    User?                  @relation("DocWorkflowIssuer", fields: [issuerId], references: [id], onDelete: SetNull)
+  recipientList             String?                @map("recipient_list") @db.Text
+  deliveryMethod            String?                @map("delivery_method") @db.VarChar(100)
+
+  // Delivery, Filing & Archival
+  deliveredAt               DateTime?              @map("delivered_at")
+  filedAt                   DateTime?              @map("filed_at")
+  filedById                 String?                @map("filed_by_id")
+  filedBy                   User?                  @relation("DocWorkflowOutgoingFiledBy", fields: [filedById], references: [id], onDelete: SetNull)
+  dossierId                 String?                @map("dossier_id") @db.VarChar(100)
+
+  archivedAt                DateTime?              @map("archived_at")
+  archivedById              String?                @map("archived_by_id")
+  archivedBy                User?                  @relation("DocWorkflowOutgoingArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+
+  createdAt                 DateTime               @default(now()) @map("created_at")
+  updatedAt                 DateTime               @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([authorizedSignerId])
+  @@index([contentReviewerId])
+  @@index([formatReviewerId])
+  @@map("document_outgoing_workflows")
+}
+
+model SignatureRecord {
+  id                   String                      @id @default(cuid())
+  documentId           String                      @map("document_id")
+  document             Document                    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version              Int                         @default(1)
+  signerUserId         String                      @map("signer_user_id")
+  signerUser           User                        @relation("UserSignatures", fields: [signerUserId], references: [id], onDelete: Restrict)
+  signerAssignmentId   String?                     @map("signer_assignment_id")
+  signerAssignment     PositionAssignment?         @relation(fields: [signerAssignmentId], references: [id], onDelete: SetNull)
+  signingCapacity      String                      @map("signing_capacity") @db.VarChar(100)
+  signatureType        SignatureType               @default(PERSONAL_DIGITAL) @map("signature_type")
+  certificateMetadata  Json?                       @map("certificate_metadata")
+  signedAt             DateTime                    @default(now()) @map("signed_at")
+  verificationStatus   SignatureVerificationStatus @default(VALID) @map("verification_status")
+  createdAt            DateTime                    @default(now()) @map("created_at")
+  updatedAt            DateTime                    @updatedAt @map("updated_at")
+
+  @@index([documentId, version])
+  @@index([signerUserId])
+  @@index([verificationStatus])
+  @@map("signature_records")
+}
+
+// ===================================================
+// 5. PUSH NOTIFICATIONS & PWA SUBSCRIPTIONS
+// ===================================================
+enum PushSubscriptionStatus {
+  ACTIVE
+  REVOKED
+}
+
+model PushSubscription {
+  id               String                 @id @default(cuid())
+  userId           String                 @map("user_id")
+  endpoint         String                 @unique
+  p256dh           String
+  auth             String
+  userAgent        String?                @map("user_agent")
+  deviceType       String?                @map("device_type")
+  status           PushSubscriptionStatus @default(ACTIVE)
+  failureCount     Int                    @default(0) @map("failure_count")
+  lastFailureCode  Int?                   @map("last_failure_code")
+  lastSeenAt       DateTime?              @map("last_seen_at")
+  disabledAt       DateTime?              @map("disabled_at")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("push_subscriptions")
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  actorName   String?   @map("actor_name")
+  title       String
+  body        String
+  category    String    @default("task")
+  type        String
+  linkHref    String    @map("link_href")
+  isRead      Boolean   @default(false) @map("is_read")
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ===================================================
+// 6. ATOMIC TASK SEQUENCING (QCET-PERF-2025-01)
+// ===================================================
+model TaskSequence {
+  year           Int
+  scope          String
+  departmentCode String   @map("department_code")
+  lastValue      Int      @default(0) @map("last_value")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@id([year, scope, departmentCode])
+  @@map("task_sequences")
+}
+
+// ===================================================
+// 7. VỊ TRÍ VIỆC LÀM (NGHỊ ĐỊNH 106/2020/NĐ-CP) & MA TRẬN DACUM
+// ===================================================
+enum JobCatalogGroup {
+  LDPU // Lãnh đạo, quản lý (Điều 4 NĐ 106)
+  VCMN // Chức danh nghề nghiệp chuyên ngành (Giảng viên, Giáo viên GDNN)
+  VCDC // Chức danh nghề nghiệp chuyên môn dùng chung (Kế toán, CNTT, Hành chính)
+  HTPV // Vị trí việc làm hỗ trợ, phục vụ (Văn thư, Bảo vệ, Phục vụ xưởng)
+}
+
+model JobCatalogItem {
+  id            String          @id @db.VarChar(50)
+  code          String          @unique @db.VarChar(50)
+  title         String          @db.VarChar(255)
+  group         JobCatalogGroup
+  departmentId  String?         @map("department_id") @db.VarChar(50)
+  department    Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  description   String?         @db.Text
+  competencyReq String?         @map("competency_req") @db.Text
+  duties        DacumDuty[]
+  positionDefinitions PositionDefinition[]
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@index([group, departmentId])
+  @@map("job_catalog_items")
+}
+
+model DacumDuty {
+  id               String          @id @db.VarChar(50)
+  code             String          @db.VarChar(20)
+  title            String          @db.VarChar(255)
+  departmentId     String          @map("department_id") @db.VarChar(50)
+  department       Department      @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  jobCatalogItemId String?         @map("job_catalog_item_id") @db.VarChar(50)
+  jobCatalogItem   JobCatalogItem? @relation(fields: [jobCatalogItemId], references: [id], onDelete: SetNull)
+  taskDefs         DacumTaskDef[]
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  @@unique([departmentId, code])
+  @@map("dacum_duties")
+}
+
+model DacumTaskDef {
+  id                   String          @id @db.VarChar(50)
+  code                 String          @db.VarChar(20)
+  title                String          @db.VarChar(500)
+  dutyId               String          @map("duty_id") @db.VarChar(50)
+  duty                 DacumDuty       @relation(fields: [dutyId], references: [id], onDelete: Cascade)
+  criteria             String?         @db.Text
+  tools                String?         @db.Text
+  requiredDeliverables String?         @map("required_deliverables") @db.Text
+  standardHours        Float           @default(0) @map("standard_hours")
+  tasks                Task[]
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  @@unique([dutyId, code])
+  @@map("dacum_task_defs")
+}
+
+// ===================================================
+// 8. CƠ CẤU TỔ CHỨC, VỊ TRÍ VIỆC LÀM & ỦY QUYỀN (PHASE 3)
+// Đáp ứng QĐ 282/QĐ-CĐKTCNQN, QĐ 420/QĐ-CĐKTCNQN & Nghị định 232/2026/NĐ-CP
+// ===================================================
+
+enum UnitType {
+  SCHOOL
+  FACULTY
+  DEPARTMENT
+  CENTER
+  SECTION
+  OTHER
+}
+
+enum UnitStatus {
+  ACTIVE
+  REORGANIZING
+  MERGED
+  DISSOLVED
+  SUSPENDED
+}
+
+enum OrganizationalBodyType {
+  COUNCIL
+  COMMITTEE
+  STEERING_COMMITTEE
+  WORKING_GROUP
+}
+
+enum BodyStatus {
+  ACTIVE
+  CONCLUDED
+  SUSPENDED
+  DISSOLVED
+}
+
+enum BodyMemberRole {
+  CHAIR
+  VICE_CHAIR
+  SECRETARY
+  MEMBER
+}
+
+enum AssignmentType {
+  PRIMARY
+  CONCURRENT
+  ACTING
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  ON_LEAVE
+  TERMINATED
+  SUPERSEDED
+}
+
+enum ResponsibilityCategory {
+  EXECUTIVE
+  ACADEMIC
+  OPERATIONAL
+}
+
+enum DelegationStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+  PENDING
+}
+
+model OrganizationalUnit {
+  id               String               @id @default(cuid())
+  code             String               @unique @db.VarChar(50)
+  name             String               @db.VarChar(255)
+  type             UnitType
+  parentId         String?              @map("parent_id")
+  status           UnitStatus           @default(ACTIVE)
+  effectiveFrom    DateTime             @default(now()) @map("effective_from")
+  effectiveTo      DateTime?            @map("effective_to")
+  metadata         Json?
+  parent           OrganizationalUnit?  @relation("UnitHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children         OrganizationalUnit[] @relation("UnitHierarchy")
+  ancestorPaths    UnitClosurePath[]    @relation("UnitClosureAncestor")
+  descendantPaths  UnitClosurePath[]    @relation("UnitClosureDescendant")
+  positionAssignments PositionAssignment[]
+  leadTasks           Task[]               @relation("TaskLeadUnit")
+  taskActors          TaskActor[]
+  leadWorkflows       DocumentIncomingWorkflow[] @relation("DocWorkflowLeadUnit")
+  unitAssignments     UnitWorkAssignment[]       @relation("UnitWorkAssignmentUnit")
+  workDossiers        WorkDossier[]
+  meetings            Meeting[]
+  meetingResolutions  MeetingResolution[]        @relation("UnitMeetingResolutions")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+
+  @@index([type, status])
+  @@map("organizational_units")
+}
+
+model UnitClosurePath {
+  ancestorId   String             @map("ancestor_id")
+  descendantId String             @map("descendant_id")
+  depth        Int
+  ancestor     OrganizationalUnit @relation("UnitClosureAncestor", fields: [ancestorId], references: [id], onDelete: Cascade)
+  descendant   OrganizationalUnit @relation("UnitClosureDescendant", fields: [descendantId], references: [id], onDelete: Cascade)
+
+  @@id([ancestorId, descendantId])
+  @@index([descendantId])
+  @@map("unit_closure_paths")
+}
+
+model OrganizationalBody {
+  id            String                 @id @default(cuid())
+  code          String                 @unique @db.VarChar(50)
+  name          String                 @db.VarChar(255)
+  type          OrganizationalBodyType
+  establishedBy String?                @map("established_by") @db.VarChar(255)
+  effectiveFrom DateTime               @default(now()) @map("effective_from")
+  effectiveTo   DateTime?              @map("effective_to")
+  status        BodyStatus             @default(ACTIVE)
+  memberships   BodyMembership[]
+  meetings      Meeting[]
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+
+  @@index([type, status])
+  @@map("organizational_bodies")
+}
+
+model BodyMembership {
+  id                   String              @id @default(cuid())
+  bodyId               String              @map("body_id")
+  positionAssignmentId String?             @map("position_assignment_id")
+  userId               String?             @map("user_id")
+  role                 BodyMemberRole
+  appointedAt          DateTime            @default(now()) @map("appointed_at")
+  expiresAt            DateTime?           @map("expires_at")
+  body                 OrganizationalBody  @relation(fields: [bodyId], references: [id], onDelete: Cascade)
+  positionAssignment   PositionAssignment? @relation(fields: [positionAssignmentId], references: [id], onDelete: SetNull)
+  user                 User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+
+  @@index([bodyId, role])
+  @@index([userId])
+  @@index([positionAssignmentId])
+  @@map("body_memberships")
+}
+
+model PositionDefinition {
+  id                String               @id @default(cuid())
+  code              String               @unique @db.VarChar(50)
+  title             String               @db.VarChar(255)
+  group             JobCatalogGroup
+  minLevel          Int?                 @default(1) @map("min_level")
+  isLeadership      Boolean              @default(false) @map("is_leadership")
+  dacumJobCatalogId String?              @map("dacum_job_catalog_id") @db.VarChar(50)
+  dacumJobCatalog   JobCatalogItem?      @relation(fields: [dacumJobCatalogId], references: [id], onDelete: SetNull)
+  assignments       PositionAssignment[]
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  @@index([group])
+  @@map("position_definitions")
+}
+
+model PositionAssignment {
+  id                   String                 @id @default(cuid())
+  userId               String                 @map("user_id")
+  positionDefinitionId String                 @map("position_definition_id")
+  unitId               String                 @map("unit_id")
+  type                 AssignmentType         @default(PRIMARY)
+  effectiveFrom        DateTime               @default(now()) @map("effective_from")
+  effectiveTo          DateTime?              @map("effective_to")
+  status               AssignmentStatus       @default(ACTIVE)
+  sourceDecisionNumber String?                @map("source_decision_number") @db.VarChar(100)
+  user                 User                   @relation("UserPositionAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  positionDefinition   PositionDefinition     @relation(fields: [positionDefinitionId], references: [id], onDelete: Restrict)
+  unit                 OrganizationalUnit     @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  portfolios           PortfolioAssignment[]
+  bodyMemberships      BodyMembership[]
+  delegationsGranted   DelegationGrant[]      @relation("GrantorDelegations")
+  delegationsReceived  DelegationGrant[]      @relation("GranteeDelegations")
+  primaryTasks         Task[]                 @relation("TaskPrimaryAssignment")
+  taskApprovalSteps    TaskApprovalStep[]
+  signatures           SignatureRecord[]
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([unitId, status])
+  @@index([positionDefinitionId])
+  @@map("position_assignments")
+}
+
+model ResponsibilityArea {
+  id                   String                 @id @default(cuid())
+  code                 String                 @unique @db.VarChar(50)
+  name                 String                 @db.VarChar(255)
+  description          String?                @db.Text
+  category             ResponsibilityCategory
+  portfolioAssignments PortfolioAssignment[]
+  delegationGrants     DelegationGrant[]
+  incomingWorkflows    DocumentIncomingWorkflow[] @relation("DocWorkflowRespArea")
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+
+  @@map("responsibility_areas")
+}
+
+model PortfolioAssignment {
+  id                   String             @id @default(cuid())
+  positionAssignmentId String             @map("position_assignment_id")
+  responsibilityAreaId String             @map("responsibility_area_id")
+  effectiveFrom        DateTime           @default(now()) @map("effective_from")
+  effectiveTo          DateTime?          @map("effective_to")
+  sourceDecisionNumber String?            @map("source_decision_number") @db.VarChar(100)
+  positionAssignment   PositionAssignment @relation(fields: [positionAssignmentId], references: [id], onDelete: Cascade)
+  responsibilityArea   ResponsibilityArea @relation(fields: [responsibilityAreaId], references: [id], onDelete: Restrict)
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  @@unique([positionAssignmentId, responsibilityAreaId], name: "assignment_responsibility_unique")
+  @@index([responsibilityAreaId])
+  @@map("portfolio_assignments")
+}
+
+model DelegationGrant {
+  id                   String               @id @default(cuid())
+  grantorAssignmentId  String               @map("grantor_assignment_id")
+  granteeAssignmentId  String               @map("grantee_assignment_id")
+  responsibilityAreaId String?              @map("responsibility_area_id")
+  action               String               @db.VarChar(100)
+  resourceScope        String               @map("resource_scope") @db.VarChar(100)
+  validFrom            DateTime             @map("valid_from")
+  validUntil           DateTime             @map("valid_until")
+  sourceDocumentNumber String               @map("source_document_number") @db.VarChar(100)
+  reason               String?              @db.Text
+  status               DelegationStatus     @default(ACTIVE)
+  revokedAt            DateTime?            @map("revoked_at")
+  revokedReason        String?              @map("revoked_reason") @db.Text
+  grantorAssignment    PositionAssignment   @relation("GrantorDelegations", fields: [grantorAssignmentId], references: [id], onDelete: Restrict)
+  granteeAssignment    PositionAssignment   @relation("GranteeDelegations", fields: [granteeAssignmentId], references: [id], onDelete: Restrict)
+  responsibilityArea   ResponsibilityArea?  @relation(fields: [responsibilityAreaId], references: [id], onDelete: SetNull)
+  scopeRules           DelegationScopeRule[]
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  @@index([grantorAssignmentId, status])
+  @@index([granteeAssignmentId, status])
+  @@index([validFrom, validUntil, status])
+  @@map("delegation_grants")
+}
+
+model DelegationScopeRule {
+  id                String          @id @default(cuid())
+  delegationGrantId String          @map("delegation_grant_id")
+  entityType        String          @map("entity_type") @db.VarChar(50)
+  entityId          String?         @map("entity_id") @db.VarChar(100)
+  constraintType    String          @map("constraint_type") @db.VarChar(50)
+  delegationGrant   DelegationGrant @relation(fields: [delegationGrantId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  @@index([delegationGrantId])
+  @@map("delegation_scope_rules")
+}
+
+// ===================================================
+// 9. QUẢN LÝ NHIỆM VỤ REBAC, TIẾN ĐỘ & QUY TRÌNH DUYỆT (PHASE 5)
+// Đáp ứng QĐ 283/QĐ-CĐKTCNQN, QĐ 203/QĐ-CĐKTCNQN & QĐ 420/QĐ-CĐKTCNQN
+// ===================================================
+
+enum TaskActorRole {
+  ASSIGNER
+  LEAD_UNIT
+  COORDINATING_UNIT
+  DRI
+  COLLABORATOR
+  FOLLOWER
+  REVIEWER
+  APPROVER
+  OBSERVER
+}
+
+enum TaskOriginLevel {
+  SCHOOL
+  UNIT
+  PERSONAL
+}
+
+enum ApprovalProcessStatus {
+  NOT_STARTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ApprovalStepStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  BYPASSED
+}
+
+enum TaskRelationType {
+  BLOCKS
+  DEPENDS_ON
+  PARENT_CHILD
+  DUPLICATE_OF
+  DERIVED_FROM
+}
+
+model TaskActor {
+  id           String              @id @default(cuid())
+  taskId       String              @map("task_id")
+  task         Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId       String?             @map("user_id")
+  user         User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  unitId       String?             @map("unit_id")
+  unit         OrganizationalUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  role         TaskActorRole
+  isPrimaryDRI Boolean             @default(false) @map("is_primary_dri")
+  assignedById String?             @map("assigned_by_id")
+  assignedBy   User?               @relation("ActorAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+  appointedAt  DateTime            @default(now()) @map("appointed_at")
+  notes        String?             @db.Text
+
+  @@index([taskId, role])
+  @@index([userId])
+  @@index([unitId])
+  @@map("task_actors")
+}
+
+model TaskApprovalProcess {
+  id               String                @id @default(cuid())
+  taskId           String                @map("task_id")
+  task             Task                  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  status           ApprovalProcessStatus @default(NOT_STARTED)
+  totalSteps       Int                   @default(1) @map("total_steps")
+  currentStepIndex Int                   @default(0) @map("current_step_index")
+  steps            TaskApprovalStep[]
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+
+  @@index([taskId, status])
+  @@map("task_approval_processes")
+}
+
+model TaskApprovalStep {
+  id                   String              @id @default(cuid())
+  processId            String              @map("process_id")
+  process              TaskApprovalProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  stepOrder            Int                 @map("step_order")
+  title                String              @db.VarChar(255)
+  reviewerAssignmentId String?             @map("reviewer_assignment_id")
+  reviewerAssignment   PositionAssignment? @relation(fields: [reviewerAssignmentId], references: [id], onDelete: SetNull)
+  reviewerUserId       String?             @map("reviewer_user_id")
+  reviewerUser         User?               @relation(fields: [reviewerUserId], references: [id], onDelete: SetNull)
+  status               ApprovalStepStatus  @default(PENDING)
+  decisionNote         String?             @map("decision_note") @db.Text
+  decidedAt            DateTime?           @map("decided_at")
+
+  @@index([processId, stepOrder])
+  @@map("task_approval_steps")
+}
+
+model TaskResult {
+  id                String    @id @default(cuid())
+  taskId            String    @map("task_id")
+  task              Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submittedByUserId String    @map("submitted_by_user_id")
+  submittedByUser   User      @relation("TaskResultSubmitter", fields: [submittedByUserId], references: [id])
+  summary           String    @db.Text
+  reportUrl         String?   @map("report_url") @db.Text
+  submittedAt       DateTime  @default(now()) @map("submitted_at")
+  verifiedByUserId  String?   @map("verified_by_user_id")
+  verifiedByUser    User?     @relation("TaskResultVerifier", fields: [verifiedByUserId], references: [id])
+  verifiedAt        DateTime? @map("verified_at")
+
+  @@index([taskId])
+  @@map("task_results")
+}
+
+model TaskRelation {
+  id           String           @id @default(cuid())
+  sourceTaskId String           @map("source_task_id")
+  sourceTask   Task             @relation("SourceTaskRelations", fields: [sourceTaskId], references: [id], onDelete: Cascade)
+  targetTaskId String           @map("target_task_id")
+  targetTask   Task             @relation("TargetTaskRelations", fields: [targetTaskId], references: [id], onDelete: Cascade)
+  relationType TaskRelationType @map("relation_type")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  @@unique([sourceTaskId, targetTaskId, relationType])
+  @@map("task_relations")
+}
+
+// ===================================================
+// 10. BẢNG GHI IDEMPOTENCY CHO MOBILE/PWA RETRIES (TASK 8)
+// ===================================================
+
+model IdempotencyRecord {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  operation   String   @map("operation")
+  key         String   @map("key")
+  status      String   @default("PENDING") @map("status") // PENDING, COMPLETED, FAILED
+  response    Json?    @map("response")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, operation, key])
+  @@index([expiresAt])
+  @@map("idempotency_records")
+}
+
+// ===================================================
+// 11. BẢNG GHI AUDIT LOG BẤT BIẾN (TASK 9)
+// ===================================================
+
+model AuditEvent {
+  id         String   @id @default(uuid())
+  actorId    String?  @map("actor_id")
+  action     String   @map("action")
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  requestId  String?  @map("request_id")
+  beforeData Json?    @map("before_data")
+  afterData  Json?    @map("after_data")
+  metadata   Json?    @map("metadata")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([requestId])
+  @@map("audit_events")
+}
+
+// ===================================================
+// 12. TRANSACTIONAL OUTBOX PATTERN (TASK 10)
+// ===================================================
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model OutboxEvent {
+  id            String       @id @default(uuid())
+  eventType     String       @map("event_type")
+  aggregateType String       @map("aggregate_type")
+  aggregateId   String       @map("aggregate_id")
+  payload       Json         @map("payload")
+  status        OutboxStatus @default(PENDING) @map("status")
+  attempts      Int          @default(0) @map("attempts")
+  lastError     String?      @map("last_error")
+  availableAt   DateTime     @default(now()) @map("available_at")
+  processedAt   DateTime?    @map("processed_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@index([status, availableAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}
+
+// ===================================================
+// 13. WORK DOSSIER & ARCHIVAL DOMAIN (PHASE 7 / NĐ 30/2020)
+// ===================================================
+
+enum DossierStatus {
+  OPEN
+  ACTIVE
+  CLOSED
+  READY_FOR_ARCHIVE
+  SUBMITTED_TO_ARCHIVE
+  ACCEPTED
+  ARCHIVED
+}
+
+enum DossierItemType {
+  DOCUMENT
+  TASK
+  RESULT
+  DECISION
+  MEETING_MINUTES
+  ATTACHMENT
+}
+
+enum DataClassification {
+  PUBLIC
+  INTERNAL
+  RESTRICTED
+  PERSONAL_DATA
+}
+
+model RetentionRule {
+  id            String        @id @default(cuid())
+  code          String        @unique @db.VarChar(50)
+  name          String        @db.VarChar(255)
+  durationYears Int?          @map("duration_years") // null = vĩnh viễn
+  legalBasis    String?       @map("legal_basis") @db.VarChar(255)
+  description   String?       @db.Text
+  dossiers      WorkDossier[]
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@map("retention_rules")
+}
+
+model WorkDossier {
+  id                  String             @id @default(cuid())
+  code                String             @unique @db.VarChar(100)
+  title               String             @db.VarChar(500)
+  owningUnitId        String             @map("owning_unit_id")
+  owningUnit          OrganizationalUnit @relation(fields: [owningUnitId], references: [id], onDelete: Restrict)
+  responsiblePersonId String             @map("responsible_person_id")
+  responsiblePerson   User               @relation("DossierResponsiblePerson", fields: [responsiblePersonId], references: [id], onDelete: Restrict)
+  openedAt            DateTime           @default(now()) @map("opened_at")
+  closedAt            DateTime?          @map("closed_at")
+  retentionRuleId     String?            @map("retention_rule_id")
+  retentionRule       RetentionRule?     @relation(fields: [retentionRuleId], references: [id], onDelete: SetNull)
+  status              DossierStatus      @default(OPEN)
+  classification      DataClassification @default(INTERNAL)
+  storageLocation     String?            @map("storage_location") @db.VarChar(255)
+  submittedArchiveAt  DateTime?          @map("submitted_archive_at")
+  submittedById       String?            @map("submitted_by_id")
+  submittedBy         User?              @relation("DossierSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  archivedAt          DateTime?          @map("archived_at")
+  archivedById        String?            @map("archived_by_id")
+  archivedBy          User?              @relation("DossierArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  notes               String?            @db.Text
+  items               DossierItem[]
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  @@index([owningUnitId])
+  @@index([responsiblePersonId])
+  @@index([submittedById])
+  @@index([status])
+  @@index([classification])
+  @@map("work_dossiers")
+}
+
+model DossierItem {
+  id             String          @id @default(cuid())
+  dossierId      String          @map("dossier_id")
+  dossier        WorkDossier     @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  itemType       DossierItemType @map("item_type")
+  itemId         String?         @map("item_id") @db.VarChar(100)
+  title          String          @db.VarChar(500)
+  documentNumber String?         @map("document_number") @db.VarChar(100)
+  documentDate   DateTime?       @map("document_date")
+  pageCount      Int?            @map("page_count")
+  sequence       Int             @default(1)
+  addedById      String          @map("added_by_id")
+  addedBy        User            @relation("DossierItemAddedBy", fields: [addedById], references: [id], onDelete: Restrict)
+  addedAt        DateTime        @default(now()) @map("added_at")
+  notes          String?         @db.Text
+
+  @@index([dossierId])
+  @@index([itemType, itemId])
+  @@map("dossier_items")
+}
+
+// ===================================================
+// 14. INSTITUTIONAL MEETINGS, BODIES & RESOLUTIONS (PHASE 8)
+// ===================================================
+
+enum MeetingStatus {
+  DRAFT_AGENDA
+  INVITED
+  HELD
+  MINUTES_DRAFT
+  MINUTES_CONFIRMED
+  CANCELLED
+}
+
+enum MeetingParticipantRole {
+  CHAIR
+  SECRETARY
+  ATTENDEE
+  INVITED_GUEST
+}
+
+enum AttendanceStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+  ATTENDED
+  ABSENT
+}
+
+model Meeting {
+  id                   String                 @id @default(cuid())
+  title                String                 @db.VarChar(500)
+  code                 String?                @unique @db.VarChar(100)
+  bodyId               String?                @map("body_id")
+  unitId               String?                @map("unit_id")
+  organizerId          String                 @map("organizer_id")
+  status               MeetingStatus          @default(DRAFT_AGENDA)
+  startTime            DateTime               @map("start_time")
+  endTime              DateTime?              @map("end_time")
+  location             String?                @db.VarChar(255)
+  agenda               String?                @db.Text
+  materialsUrl         String?                @map("materials_url") @db.Text
+  minutes              String?                @db.Text
+  minutesConfirmedAt   DateTime?              @map("minutes_confirmed_at")
+  minutesConfirmedById String?                @map("minutes_confirmed_by_id")
+  body                 OrganizationalBody?    @relation(fields: [bodyId], references: [id], onDelete: SetNull)
+  unit                 OrganizationalUnit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  organizer            User                   @relation("MeetingOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+  participants         MeetingParticipant[]
+  resolutions          MeetingResolution[]
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+
+  @@index([status, startTime])
+  @@index([bodyId])
+  @@index([unitId])
+  @@index([organizerId])
+  @@map("meetings")
+}
+
+model MeetingParticipant {
+  id               String                 @id @default(cuid())
+  meetingId        String                 @map("meeting_id")
+  userId           String                 @map("user_id")
+  role             MeetingParticipantRole @default(ATTENDEE)
+  attendanceStatus AttendanceStatus       @default(INVITED) @map("attendance_status")
+  notes            String?                @db.Text
+  meeting          Meeting                @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  @@unique([meetingId, userId])
+  @@index([userId])
+  @@map("meeting_participants")
+}
+
+model MeetingResolution {
+  id              String              @id @default(cuid())
+  meetingId       String              @map("meeting_id")
+  code            String?             @db.VarChar(100)
+  title           String              @db.VarChar(500)
+  content         String              @db.Text
+  leadUnitId      String?             @map("lead_unit_id")
+  leadUserId      String?             @map("lead_user_id")
+  deadline        DateTime?
+  resultingTaskId String?             @map("resulting_task_id")
+  meeting         Meeting             @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  leadUnit        OrganizationalUnit? @relation("UnitMeetingResolutions", fields: [leadUnitId], references: [id], onDelete: SetNull)
+  leadUser        User?               @relation("MeetingResolutionLead", fields: [leadUserId], references: [id], onDelete: SetNull)
+  resultingTask   Task?               @relation(fields: [resultingTaskId], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  @@index([meetingId])
+  @@index([leadUnitId])
+  @@index([leadUserId])
+  @@map("meeting_resolutions")
+}
+
+

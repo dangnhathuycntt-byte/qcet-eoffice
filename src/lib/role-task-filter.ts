@@ -6,47 +6,61 @@ export { type AuthUser, type UserRole } from "../types/auth";
 export const DEFAULT_DEMO_USERS: AuthUser[] = [
   {
     id: "user-admin-bgh",
-    name: "Ban Giám hiệu (Hiệu trưởng)",
-    email: "bgh@cdktcnqn.edu.vn",
+    name: "ThS. Phạm Văn Tường",
+    email: "tuongpv@cdktcnqn.edu.vn",
     role: "ADMIN",
-    roleLabel: "Ban Giám hiệu (Hiệu trưởng)",
+    roleLabel: "Ban Giám hiệu (Hiệu trưởng - ThS. Phạm Văn Tường)",
     department: "Ban Giám hiệu",
     departmentCode: "BGH",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+    title: "Hiệu trưởng",
+    aliases: ["Ban Giám hiệu", "Hiệu trưởng", "Phạm Văn Tường", "bgh@cdktcnqn.edu.vn"],
   },
   {
-    id: "user-manager-daotao",
-    name: "Trần Hùng",
-    email: "daotao@cdktcnqn.edu.vn",
+    id: "user-manager-qldt",
+    name: "ThS. Lê Văn Thí",
+    email: "levanthi@cdktcnqn.edu.vn",
     role: "MANAGER",
-    roleLabel: "Trưởng phòng Đào tạo & QLKH (Trần Hùng)",
-    department: "Phòng Đào tạo & QLKH",
-    departmentCode: "DAO_TAO",
+    roleLabel: "Trưởng phòng Quản lý Đào tạo (ThS. Lê Văn Thí)",
+    department: "Phòng Quản lý Đào tạo",
+    departmentCode: "P_QLDT",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+    title: "Trưởng phòng",
+    aliases: [
+      "Lê Văn Thí",
+      "Trần Hùng",
+      "Trưởng phòng Đào tạo & QLKH",
+      "Phòng Đào tạo & QLKH",
+      "daotao@cdktcnqn.edu.vn",
+    ],
   },
   {
     id: "user-staff-vinh",
-    name: "Nguyễn Ngọc Vinh",
+    name: "KS. Nguyễn Ngọc Vinh",
     email: "vinhnn@cdktcnqn.edu.vn",
     role: "STAFF",
-    roleLabel: "Chuyên viên CNTT (Nguyễn Ngọc Vinh)",
-    department: "Khoa Công nghệ thông tin",
-    departmentCode: "CNTT",
+    roleLabel: "Chuyên viên CNTT (KS. Nguyễn Ngọc Vinh)",
+    department: "Trung tâm Số - Truyền thông",
+    departmentCode: "TT_STT",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80",
+    title: "Chuyên viên CNTT",
+    aliases: ["Nguyễn Ngọc Vinh", "Vinh"],
   },
 ];
 
-export function canCreateSchoolTask(roleOrUser: UserRole | AuthUser): boolean {
+export function canCreateSchoolTask(roleOrUser?: UserRole | AuthUser | null): boolean {
+  if (!roleOrUser) return false;
   const role = typeof roleOrUser === "string" ? roleOrUser : roleOrUser.role;
   return role === "ADMIN";
 }
 
-export function canAssignUnitTask(roleOrUser: UserRole | AuthUser): boolean {
+export function canAssignUnitTask(roleOrUser?: UserRole | AuthUser | null): boolean {
+  if (!roleOrUser) return false;
   const role = typeof roleOrUser === "string" ? roleOrUser : roleOrUser.role;
   return role === "ADMIN" || role === "MANAGER";
 }
 
-export function matchesUser(assigneeName?: string, user?: AuthUser): boolean {
+export function matchesUser(assigneeName?: string, user?: AuthUser | null): boolean {
   if (!assigneeName || !user) return false;
   const a = assigneeName.trim().toLowerCase();
   const uName = user.name.trim().toLowerCase();
@@ -54,12 +68,24 @@ export function matchesUser(assigneeName?: string, user?: AuthUser): boolean {
   if (uName.includes(a) || a.includes(uName)) return true;
   if (user.roleLabel) {
     const rLabel = user.roleLabel.trim().toLowerCase();
-    if (rLabel.includes(a) || a.includes(rLabel)) return true;
+    if (rLabel === a) return true;
+    const genericRoles = ["trưởng phòng", "chuyên viên", "giảng viên", "phó phòng", "hiệu trưởng", "phó hiệu trưởng"];
+    if (rLabel.includes(a) && a.length > 3 && !genericRoles.includes(a)) return true;
+  }
+  if (user.aliases && Array.isArray(user.aliases)) {
+    for (const alias of user.aliases) {
+      const al = alias.trim().toLowerCase();
+      if (a === al || al.includes(a) || a.includes(al)) return true;
+    }
   }
   return false;
 }
 
-export function filterTasksByRole(tasks: SchoolTask[], user: AuthUser): SchoolTask[] {
+export function filterTasksByRole(tasks: SchoolTask[], user?: AuthUser | null): SchoolTask[] {
+  if (!user) {
+    return [];
+  }
+
   if (user.role === "ADMIN") {
     return [...tasks];
   }
@@ -76,17 +102,35 @@ export function filterTasksByRole(tasks: SchoolTask[], user: AuthUser): SchoolTa
     });
   }
 
-  // STAFF role: only school tasks that have subtasks assigned to staff,
-  // with subtasks filtered down to user's subtasks only, with rollup recalculated
+  // STAFF role:
+  // 1. If staff is DRI (leadAssigneeName), they see the task with all subtasks for coordination.
+  // 2. If staff is coAssignee without subtasks, they see the task in observing/awaiting assignment mode.
+  // 3. If staff has assigned subtasks, they see the task filtered down to their subtasks.
   const result: SchoolTask[] = [];
   for (const task of tasks) {
-    const userSubTasks = (task.subTasks || []).filter((sub) => matchesUser(sub.assigneeName, user));
-    if (userSubTasks.length > 0) {
+    const isLead = matchesUser(task.leadAssigneeName, user);
+    const isCoAssignee = Boolean(
+      task.coAssignees && task.coAssignees.some((ca) => matchesUser(ca, user))
+    );
+    const userSubTasks = (task.subTasks || []).filter((sub) =>
+      matchesUser(sub.assigneeName, user)
+    );
+
+    if (isLead) {
+      // DRI retains full task with all subtasks
+      result.push({ ...task });
+    } else if (userSubTasks.length > 0) {
+      // Participant with assigned subtasks: filtered to user's subtasks, with recalculated rollup
       const totalSubTasks = userSubTasks.length;
-      const completedSubTasks = userSubTasks.filter((st) => st.status === "COMPLETED").length;
-      const progressPercent = totalSubTasks > 0
-        ? Math.round((completedSubTasks / totalSubTasks) * 100)
-        : (task.status === "COMPLETED" ? 100 : 0);
+      const completedSubTasks = userSubTasks.filter(
+        (st) => st.status === "COMPLETED"
+      ).length;
+      const progressPercent =
+        totalSubTasks > 0
+          ? Math.round((completedSubTasks / totalSubTasks) * 100)
+          : task.status === "COMPLETED"
+          ? 100
+          : 0;
 
       result.push({
         ...task,
@@ -94,6 +138,15 @@ export function filterTasksByRole(tasks: SchoolTask[], user: AuthUser): SchoolTa
         totalSubTasks,
         completedSubTasks,
         progressPercent,
+      });
+    } else if (isCoAssignee) {
+      // Co-assignee awaiting assignment: preserve task with empty subtasks for staff view
+      result.push({
+        ...task,
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: task.status === "COMPLETED" ? 100 : 0,
       });
     }
   }
@@ -103,9 +156,13 @@ export function filterTasksByRole(tasks: SchoolTask[], user: AuthUser): SchoolTa
 
 export function filterUpcomingByRole(
   items: UpcomingItem[],
-  user: AuthUser,
+  user?: AuthUser | null,
   visibleTasks?: SchoolTask[]
 ): UpcomingItem[] {
+  if (!user) {
+    return [];
+  }
+
   if (user.role === "ADMIN") {
     return [...items];
   }

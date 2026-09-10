@@ -1,0 +1,54 @@
+version: 2
+updates:
+  # Weekly dependencies maintenance for npm packages
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "cdktcnqn-admin"
+    labels:
+      - "dependencies"
+      - "supply-chain"
+      - "npm"
+    versioning-strategy: increase-if-necessary
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    # Security update prioritization & dependency groupings
+    groups:
+      nextjs-core:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+      prisma-database:
+        patterns:
+          - "@prisma/*"
+          - "prisma"
+      types:
+        patterns:
+          - "@types/*"
+
+  # Monthly updates for GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "first-day-of-month"
+      time: "03:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "cdktcnqn-admin"
+    labels:
+      - "ci"
+      - "github-actions"
+      - "supply-chain"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"

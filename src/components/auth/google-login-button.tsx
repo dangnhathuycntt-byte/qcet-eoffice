@@ -1,19 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import {
-  CheckCircle2,
-  ShieldCheck,
-  AlertCircle,
+  ShieldAlert,
   X,
+  Database,
   ArrowRight,
-  User,
-  Sparkles,
-  Lock,
+  Loader2,
+  Copy,
+  Check,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
+import { clientEnv } from "@/config/env.client";
 
 // Official Google Multi-Color SVG Icon
 export function GoogleIcon({ className = "size-5" }: { className?: string }) {
@@ -44,110 +42,42 @@ export function GoogleIcon({ className = "size-5" }: { className?: string }) {
 }
 
 interface GoogleLoginButtonProps {
-  onSuccess?: () => void;
   className?: string;
 }
 
-export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonProps) {
-  const router = useRouter();
-  const { loginWithGoogle } = useAuth();
-
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [customEmail, setCustomEmail] = React.useState("");
-  const [customName, setCustomName] = React.useState("");
+export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
   const [isLoading, setIsLoading] = React.useState(false);
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
 
-  // Common quick-login accounts for the school
-  const SUGGESTED_ACCOUNTS = [
-    {
-      name: "Đặng Nhật Huy",
-      email: "dangnhathuy@cdktcnqn.edu.vn",
-      roleDesc: "Cán bộ / Giảng viên nhà trường",
-      badge: "Mới / Auto-provision",
-    },
-    {
-      name: "TS. Nguyễn Văn Tuấn",
-      email: "bgh@cdktcnqn.edu.vn",
-      roleDesc: "Ban Giám hiệu - Hiệu trưởng",
-      badge: "Quản trị cấp cao",
-    },
-  ];
+  const googleClientId = clientEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const isDev = clientEnv.NODE_ENV === "development";
 
-  const handleSelectAccount = (accountEmail: string, accountName: string) => {
+  const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3001";
+  const callbackUrl = `${origin}/api/auth/callback/google`;
+
+  const handleStartOAuth = () => {
     setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      loginWithGoogle({
-        email: accountEmail,
-        name: accountName,
-      });
-
-      if (onSuccess) onSuccess();
-
-      setTimeout(() => {
-        router.push("/");
-      }, 300);
-    } catch (err: unknown) {
-      setIsLoading(false);
-      setErrorMessage("Đăng nhập không thành công. Vui lòng thử lại.");
+    if (typeof window !== "undefined") {
+      window.location.href = "/api/auth/google";
     }
   };
 
-  const handleCustomGoogleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-
-    const trimmed = customEmail.trim().toLowerCase();
-    if (!trimmed) {
-      setErrorMessage("Vui lòng nhập địa chỉ email Google công vụ của trường");
+  const handleClick = () => {
+    if (isDev && !googleClientId) {
+      setIsModalOpen(true);
       return;
     }
+    handleStartOAuth();
+  };
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmed)) {
-      setErrorMessage("Địa chỉ email không đúng định dạng");
-      return;
-    }
-
-    // Educational domain check - verify institution email
-    const isValidSchoolDomain =
-      trimmed.endsWith("@cdktcnqn.edu.vn") ||
-      trimmed.endsWith("@qcet.edu.vn") ||
-      trimmed.endsWith(".edu.vn");
-
-    if (!isValidSchoolDomain) {
-      setErrorMessage(
-        "Hệ thống chỉ chấp nhận tài khoản Google Workspace thuộc tên miền công vụ nhà trường (@cdktcnqn.edu.vn hoặc @qcet.edu.vn)."
-      );
-      return;
-    }
-
-    setIsLoading(true);
+  const handleCopyCallback = async () => {
     try {
-      const emailPrefix = trimmed.split("@")[0];
-      const displayName =
-        customName.trim() ||
-        emailPrefix
-          .replace(/[._-]+/g, " ")
-          .split(" ")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ");
-
-      loginWithGoogle({
-        email: trimmed,
-        name: displayName,
-      });
-
-      if (onSuccess) onSuccess();
-
-      setTimeout(() => {
-        router.push("/");
-      }, 300);
+      await navigator.clipboard.writeText(callbackUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
-      setIsLoading(false);
-      setErrorMessage("Có lỗi xảy ra khi xác thực Google. Vui lòng thử lại.");
+      // Clipboard write failed or not supported in current environment
     }
   };
 
@@ -156,184 +86,149 @@ export function GoogleLoginButton({ onSuccess, className }: GoogleLoginButtonPro
       {/* Google Login Trigger Button */}
       <button
         type="button"
-        onClick={() => setIsModalOpen(true)}
+        disabled={isLoading}
+        onClick={handleClick}
+        aria-label="Đăng nhập bằng email trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (@cdktcnqn.edu.vn)"
         className={cn(
-          "group relative flex w-full items-center justify-center gap-3 rounded-xl border border-border/80 bg-background px-4 py-3 text-xs font-semibold text-foreground shadow-xs transition-all hover:bg-secondary/70 hover:border-primary/40 hover:shadow-card active:scale-[0.99] cursor-pointer",
+          "relative flex h-12 w-full select-none items-center justify-center gap-3 rounded-xl border border-border/90 bg-card px-4 text-sm font-semibold text-foreground shadow-xs transition-colors hover:bg-secondary/70 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed",
           className
         )}
       >
-        <GoogleIcon className="size-5 shrink-0 transition-transform group-hover:scale-105" />
-        <span className="font-bold text-foreground">
-          Đăng nhập trực tiếp với Google Workspace
-        </span>
-        <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-          @cdktcnqn.edu.vn
-        </span>
+        {isLoading ? (
+          <>
+            <Loader2 className="size-5 shrink-0 animate-spin text-primary" strokeWidth={1.5} />
+            <span className="font-semibold text-foreground whitespace-nowrap">
+              Đang chuyển hướng đăng nhập...
+            </span>
+          </>
+        ) : (
+          <>
+            <GoogleIcon className="size-5 shrink-0" />
+            <span className="font-semibold text-foreground whitespace-nowrap">
+              Đăng nhập bằng Email công vụ Nhà trường
+            </span>
+          </>
+        )}
       </button>
 
-      {/* Google OAuth Modal Dialog */}
+      {/* Guidance Dialog when GOOGLE_CLIENT_ID is unconfigured in development */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
-            onClick={() => !isLoading && setIsModalOpen(false)}
+            className="fixed inset-0"
+            onClick={() => setIsModalOpen(false)}
+            aria-hidden="true"
           />
 
-          {/* Dialog Body */}
-          <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="flex items-start justify-between border-b border-border/60 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-muted/60 border border-border/80">
-                  <GoogleIcon className="size-6" />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="google-dialog-title"
+            className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150"
+          >
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+              aria-label="Đóng thông báo"
+            >
+              <X className="size-4" strokeWidth={1.5} />
+            </button>
+
+            <div className="flex items-start gap-3.5 mb-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                <ShieldAlert className="size-5" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h3
+                  id="google-dialog-title"
+                  className="text-sm font-bold text-foreground"
+                >
+                  Cấu hình dịch vụ đăng nhập Google
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Dịch vụ xác thực tài khoản tập trung dành cho Nhà trường
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs leading-relaxed text-foreground">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 text-amber-900">
+                <p className="font-semibold">
+                  Môi trường phát triển chưa cấu hình NEXT_PUBLIC_GOOGLE_CLIENT_ID trong tệp .env.local.
+                </p>
+                <p className="mt-1 text-amber-800">
+                  Vui lòng đăng ký OAuth 2.0 Client ID trên Google Cloud Console với Authorized redirect URI bên dưới:
+                </p>
+              </div>
+
+              {/* Callback URL Box with Copy Button */}
+              <div className="rounded-xl border border-border/80 bg-secondary/30 p-3 space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                  <span>Authorized redirect URI (Callback URL):</span>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">
-                    Cổng xác thực Google Workspace
-                  </h3>
-                  <p className="text-[11.5px] text-muted-foreground">
-                    Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (QCET)
-                  </p>
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-background p-2">
+                  <code className="flex-1 font-mono text-xs text-foreground select-all break-all">
+                    {callbackUrl}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={handleCopyCallback}
+                    className="flex items-center gap-1 shrink-0 rounded-md bg-secondary px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
+                    title="Sao chép địa chỉ callback"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="size-3.5 text-emerald-600" strokeWidth={1.5} />
+                        <span className="text-emerald-600 font-semibold">Đã sao chép</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                        <span>Sao chép</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
+
+              <div className="rounded-xl border border-border/80 bg-secondary/30 p-3 space-y-2">
+                <div className="flex items-center gap-2 font-medium text-foreground">
+                  <Database className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+                  <span>Quy định tài khoản đăng nhập:</span>
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1 text-xs">
+                  <li>
+                    Đăng nhập bằng tài khoản email trường do Nhà trường quản lý.
+                  </li>
+                  <li>
+                    Tài khoản cán bộ, giảng viên có đuôi @cdktcnqn.edu.vn được tự động phân quyền theo đơn vị công tác.
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  handleStartOAuth();
+                }}
+                className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer"
+              >
+                <span>Tiếp tục kết nối xác thực Google</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                disabled={isLoading}
-                aria-label="Đóng"
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
               >
-                <X className="size-4" />
+                <span>Đóng thông báo</span>
+                <ArrowRight className="size-3.5" strokeWidth={1.5} />
               </button>
-            </div>
-
-            {/* Error banner if any */}
-            {errorMessage && (
-              <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/90 p-3 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 animate-in fade-in">
-                <AlertCircle className="size-4 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
-                <div className="flex-1 leading-snug">{errorMessage}</div>
-              </div>
-            )}
-
-            {/* Account Selection Area */}
-            <div className="mt-4 space-y-3">
-              <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Chọn tài khoản công vụ của bạn:
-              </div>
-
-              {/* Suggested Accounts */}
-              <div className="space-y-2">
-                {SUGGESTED_ACCOUNTS.map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => handleSelectAccount(acc.email, acc.name)}
-                    disabled={isLoading}
-                    className="group flex w-full items-center justify-between rounded-xl border border-border/70 bg-background/80 p-3 text-left transition-all hover:border-primary/50 hover:bg-primary/[0.04] hover:shadow-xs active:scale-[0.99] cursor-pointer disabled:opacity-60"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 text-xs font-bold">
-                        {acc.name
-                          .split(" ")
-                          .slice(-2)
-                          .map((w) => w[0])
-                          .join("")}
-                      </div>
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-foreground">
-                            {acc.name}
-                          </span>
-                          <span className="rounded bg-secondary px-1.5 py-0.5 text-[9.5px] font-semibold text-muted-foreground border border-border/70">
-                            {acc.badge}
-                          </span>
-                        </div>
-                        <p className="text-[11px] font-mono text-muted-foreground">
-                          {acc.email}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center pl-2">
-                      <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                        {isLoading ? "Đang vào..." : "Tiếp tục"}
-                        <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Divider */}
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border/60" />
-                </div>
-                <div className="relative flex justify-center text-[10.5px] uppercase tracking-wider font-semibold">
-                  <span className="bg-card px-2.5 text-muted-foreground">
-                    Hoặc nhập email trường khác
-                  </span>
-                </div>
-              </div>
-
-              {/* Form to enter any other school email */}
-              <form onSubmit={handleCustomGoogleSubmit} className="space-y-3">
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="customGoogleEmail"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Email công vụ Google (@cdktcnqn.edu.vn)
-                  </label>
-                  <input
-                    id="customGoogleEmail"
-                    type="email"
-                    value={customEmail}
-                    onChange={(e) => setCustomEmail(e.target.value)}
-                    placeholder="vidu: hoten@cdktcnqn.edu.vn"
-                    className="block w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="customGoogleName"
-                    className="block text-xs font-semibold text-foreground"
-                  >
-                    Họ và tên cán bộ (tùy chọn)
-                  </label>
-                  <input
-                    id="customGoogleName"
-                    type="text"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    placeholder="Để trống hệ thống sẽ tự nhận diện theo email"
-                    className="block w-full rounded-xl border border-border/80 bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 px-4 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
-                >
-                  {isLoading ? (
-                    <span>Đang xác thực Google...</span>
-                  ) : (
-                    <>
-                      <span>Xác thực & Tạo tài khoản tự động</span>
-                      <ArrowRight className="size-3.5" />
-                    </>
-                  )}
-                </button>
-              </form>
-
-              {/* Security info footer */}
-              <div className="mt-4 flex items-center justify-center gap-1.5 text-center text-[10.5px] text-muted-foreground">
-                <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Xác thực an toàn qua giao thức Google Identity OAuth 2.0</span>
-              </div>
             </div>
           </div>
         </div>

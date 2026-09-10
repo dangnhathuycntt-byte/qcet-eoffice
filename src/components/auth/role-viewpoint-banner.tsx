@@ -4,7 +4,6 @@ import * as React from "react";
 import { useAuth } from "@/lib/auth-context";
 import { AuthUser } from "@/types/auth";
 import { Badge } from "@/components/ui/badge";
-import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
 import { cn } from "@/lib/utils";
 import { Landmark, Building2, User } from "lucide-react";
 
@@ -15,7 +14,7 @@ export function getViewpointText(user: AuthUser): string {
   if (user.role === "MANAGER") {
     return `Góc nhìn Lãnh đạo Đơn vị: ${user.department || "Đơn vị"} — Phụ trách: ${user.name}`;
   }
-  return `Góc nhìn Cá nhân: Nhiệm vụ & Công việc được phân công cho ${user.name}`;
+  return `Nhiệm vụ trực tiếp: Các công việc được phân công cho ${user.name}`;
 }
 
 export function getViewpointIcon(role: string) {
@@ -33,6 +32,7 @@ export function getViewpointEmoji(role: string): string {
 
 export function RoleViewpointBanner({ className }: { className?: string }) {
   const { user } = useAuth();
+  if (!user) return null;
   const Icon = getViewpointIcon(user.role);
   const viewpointText = getViewpointText(user);
 
@@ -50,32 +50,25 @@ export function RoleViewpointBanner({ className }: { className?: string }) {
           <Badge
             variant="outline"
             className={cn(
-              "text-[11px] font-bold px-2.5 py-0.5 rounded-lg shrink-0",
+              "text-xs font-bold px-2.5 py-0.5 rounded-lg shrink-0",
               user.role === "ADMIN" &&
-                "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                "border-amber-500/30 bg-amber-500/10 text-amber-700",
               user.role === "MANAGER" &&
-                "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300",
+                "border-blue-500/30 bg-blue-500/10 text-blue-700",
               user.role === "STAFF" &&
-                "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                "border-emerald-500/30 bg-emerald-500/10 text-emerald-700"
             )}
           >
             {user.role === "ADMIN"
               ? "Ban Giám hiệu"
               : user.role === "MANAGER"
               ? "Lãnh đạo Đơn vị"
-              : "Cá nhân"}
+              : "Viên chức thực hiện"}
           </Badge>
           <span className="text-xs font-semibold text-foreground">
             {viewpointText}
           </span>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-        <span className="text-[11px] text-muted-foreground hidden md:inline font-medium">
-          Chuyển góc nhìn:
-        </span>
-        <RoleSwitcherPill />
       </div>
     </div>
   );

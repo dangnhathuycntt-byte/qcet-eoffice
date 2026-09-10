@@ -45,16 +45,16 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.equal(QCET_TOKENS.colors.light.border, "oklch(0.915 0.006 250)");
       assert.equal(QCET_TOKENS.colors.light.textPrimary, "oklch(0.145 0.015 250)");
 
-      assert.equal(QCET_TOKENS.colors.dark.appBg, "oklch(0.12 0.018 250)");
-      assert.equal(QCET_TOKENS.colors.dark.cardBg, "oklch(0.16 0.018 250)");
-      assert.equal(QCET_TOKENS.colors.dark.border, "oklch(0.24 0.015 250)");
-      assert.equal(QCET_TOKENS.colors.dark.textPrimary, "oklch(0.98 0.003 250)");
+      assert.equal(QCET_TOKENS.colors.dark.appBg, QCET_TOKENS.colors.light.appBg);
+      assert.equal(QCET_TOKENS.colors.dark.cardBg, QCET_TOKENS.colors.light.cardBg);
+      assert.equal(QCET_TOKENS.colors.dark.border, QCET_TOKENS.colors.light.border);
+      assert.equal(QCET_TOKENS.colors.dark.textPrimary, QCET_TOKENS.colors.light.textPrimary);
     });
 
     it("defines QCET signature Sapphire Blue primary action color", () => {
       assert.equal(QCET_TOKENS.colors.light.primary, "oklch(0.42 0.18 250)");
       assert.equal(QCET_TOKENS.colors.light.accentPrimary, "#2563EB");
-      assert.equal(QCET_TOKENS.colors.dark.primary, "oklch(0.70 0.18 250)");
+      assert.equal(QCET_TOKENS.colors.dark.primary, QCET_TOKENS.colors.light.primary);
     });
 
     it("defines authentic task status colors with tailwind classes and OKLCH", () => {
@@ -62,36 +62,47 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.equal(QCET_TOKENS.statusColors.inProgress.name, "Sapphire Blue");
       assert.equal(
         QCET_TOKENS.statusColors.inProgress.classes,
-        "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+        "bg-blue-500/10 text-blue-600 border-blue-500/20"
       );
+      assert.equal(QCET_TOKENS.statusColors.inProgress.text, "text-blue-600");
 
       // Completed: Emerald Green
       assert.equal(QCET_TOKENS.statusColors.completed.name, "Emerald Green");
       assert.equal(
         QCET_TOKENS.statusColors.completed.classes,
-        "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+        "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
       );
+      assert.equal(QCET_TOKENS.statusColors.completed.text, "text-emerald-700");
 
       // Overdue: Crimson Rose
       assert.equal(QCET_TOKENS.statusColors.overdue.name, "Crimson Rose");
       assert.equal(
         QCET_TOKENS.statusColors.overdue.classes,
-        "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+        "bg-rose-500/10 text-rose-600 border-rose-500/20"
       );
+      assert.equal(QCET_TOKENS.statusColors.overdue.text, "text-rose-600");
 
       // Needs Review: Warm Amber
       assert.equal(QCET_TOKENS.statusColors.needsReview.name, "Warm Amber");
       assert.equal(
         QCET_TOKENS.statusColors.needsReview.classes,
-        "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+        "bg-amber-500/10 text-amber-700 border-amber-500/20"
       );
+      assert.equal(QCET_TOKENS.statusColors.needsReview.text, "text-amber-700");
 
       // New: Purple Violet
       assert.equal(QCET_TOKENS.statusColors.new.name, "Purple Violet");
       assert.equal(
         QCET_TOKENS.statusColors.new.classes,
-        "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20"
+        "bg-violet-500/10 text-violet-600 border-violet-500/20"
       );
+      assert.equal(QCET_TOKENS.statusColors.new.text, "text-violet-600");
+
+      // Assert zero dark: classes in any status color
+      Object.values(QCET_TOKENS.statusColors).forEach((status) => {
+        assert.ok(!status.classes.includes("dark:"), `Status ${status.name} classes should not contain dark:`);
+        assert.ok(!status.text.includes("dark:"), `Status ${status.name} text should not contain dark:`);
+      });
     });
 
     it("defines 0.75rem (12px) card radius and 0.5rem (8px) control radius", () => {
@@ -122,9 +133,9 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.ok(cssContent.includes("--primary: oklch(0.42 0.18 250);"), "contains QCET Sapphire Blue primary");
       assert.ok(cssContent.includes("--muted: oklch(0.965 0.005 250);"), "contains light muted");
 
-      assert.ok(cssContent.includes("--background: oklch(0.12 0.018 250);"), "contains dark background");
-      assert.ok(cssContent.includes("--card: oklch(0.16 0.018 250);"), "contains dark card");
-      assert.ok(cssContent.includes("--primary: oklch(0.70 0.18 250);"), "contains dark primary");
+      assert.ok(!cssContent.includes("--background: oklch(0.12 0.018 250);"), "does not contain dark background");
+      assert.ok(!cssContent.includes("--card: oklch(0.16 0.018 250);"), "does not contain dark card");
+      assert.ok(!cssContent.includes("--primary: oklch(0.70 0.18 250);"), "does not contain dark primary");
 
       // Check shadow utilities
       assert.ok(cssContent.includes(".shadow-card {"), "contains .shadow-card");
@@ -176,35 +187,53 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.ok(iconSmButton.includes("size-8"));
     });
 
-    it("badgeVariants generates proper status variants", () => {
+    it("badgeVariants generates proper status variants with no dark classes", () => {
       const defaultBadge = badgeVariants({ variant: "default" });
       assert.ok(defaultBadge.includes("rounded-md"));
 
       const successBadge = badgeVariants({ variant: "success" });
       assert.ok(successBadge.includes("bg-emerald-50"));
+      assert.ok(!successBadge.includes("dark:"), "success badge must not contain dark: classes");
 
       const progressBadge = badgeVariants({ variant: "progress" });
       assert.ok(progressBadge.includes("bg-blue-50"));
+      assert.ok(!progressBadge.includes("dark:"), "progress badge must not contain dark: classes");
+
+      const warningBadge = badgeVariants({ variant: "warning" });
+      assert.ok(warningBadge.includes("bg-amber-50"));
+      assert.ok(!warningBadge.includes("dark:"), "warning badge must not contain dark: classes");
 
       const sapphireBadge = badgeVariants({ variant: "sapphire" });
       assert.ok(sapphireBadge.includes("bg-blue-500/10"));
       assert.ok(sapphireBadge.includes("text-blue-600"));
+      assert.ok(!sapphireBadge.includes("dark:"), "sapphire badge must not contain dark: classes");
 
       const emeraldBadge = badgeVariants({ variant: "emerald" });
       assert.ok(emeraldBadge.includes("bg-emerald-500/10"));
       assert.ok(emeraldBadge.includes("text-emerald-600"));
+      assert.ok(!emeraldBadge.includes("dark:"), "emerald badge must not contain dark: classes");
 
       const amberBadge = badgeVariants({ variant: "amber" });
       assert.ok(amberBadge.includes("bg-amber-500/10"));
       assert.ok(amberBadge.includes("text-amber-600"));
+      assert.ok(!amberBadge.includes("dark:"), "amber badge must not contain dark: classes");
 
       const roseBadge = badgeVariants({ variant: "rose" });
       assert.ok(roseBadge.includes("bg-rose-500/10"));
       assert.ok(roseBadge.includes("text-rose-600"));
+      assert.ok(!roseBadge.includes("dark:"), "rose badge must not contain dark: classes");
 
       const violetBadge = badgeVariants({ variant: "violet" });
       assert.ok(violetBadge.includes("bg-violet-500/10"));
       assert.ok(violetBadge.includes("text-violet-600"));
+      assert.ok(!violetBadge.includes("dark:"), "violet badge must not contain dark: classes");
+    });
+
+    it("drawer component contains no dark classes", () => {
+      const drawerPath = path.resolve(__dirname, "../src/components/ui/drawer.tsx");
+      assert.ok(fs.existsSync(drawerPath), "drawer.tsx should exist");
+      const drawerContent = fs.readFileSync(drawerPath, "utf-8");
+      assert.ok(!drawerContent.includes("dark:"), "drawer.tsx must not contain any dark: classes");
     });
 
     it("exports all new and overhauled Base UI components cleanly", () => {

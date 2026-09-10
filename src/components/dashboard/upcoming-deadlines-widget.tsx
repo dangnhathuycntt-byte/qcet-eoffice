@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Calendar, Clock, AlertTriangle, Building2, Layers, CheckCircle } from "lucide-react";
+import Link from "next/link";
+import { Calendar, Clock, AlertTriangle, Building2, Layers, CheckCircle, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import type { UpcomingItem } from "@/types/dashboard";
+export type { UpcomingItem };
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +12,8 @@ export interface UpcomingDeadlinesWidgetProps {
   items?: UpcomingItem[];
   onSelectTask?: (item: UpcomingItem) => void;
   className?: string;
+  initialLimit?: number;
+  viewAllHref?: string;
 }
 
 export function parseDateOnly(input: string | Date): { year: number; month: number; day: number } {
@@ -100,7 +104,12 @@ export function UpcomingDeadlinesWidget({
   items = [],
   onSelectTask,
   className,
+  initialLimit = 5,
+  viewAllHref = "/tasks?filter=upcoming",
 }: UpcomingDeadlinesWidgetProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const displayedItems = initialLimit && !isExpanded ? items.slice(0, initialLimit) : items;
+
   return (
     <div
       className={cn(
@@ -111,38 +120,56 @@ export function UpcomingDeadlinesWidget({
       {/* Header */}
       <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            <Calendar className="size-4" />
+          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+            <Calendar className="size-4" strokeWidth={1.5} />
           </div>
           <div>
             <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
               Hạn chót 7 ngày tới
             </h3>
-            <p className="text-[11px] text-muted-foreground">
-              Nhiệm vụ cần ưu tiên hoàn tất theo tiến độ
+            <p className="text-xs text-muted-foreground">
+              {items.length > initialLimit && !isExpanded
+                ? `Hiển thị ${displayedItems.length} nhiệm vụ sát hạn nhất`
+                : "Nhiệm vụ cần ưu tiên hoàn tất theo tiến độ"}
             </p>
           </div>
         </div>
-        <Badge variant="secondary" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full">
-          {items.length}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {items.length > initialLimit && !isExpanded && (
+            <span className="text-xs font-mono text-muted-foreground hidden sm:inline">
+              Top 5 / {items.length}
+            </span>
+          )}
+          <Link
+            href={viewAllHref}
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            data-slot="upcoming-view-all"
+            title="Xem tất cả nhiệm vụ hạn chót"
+          >
+            <span>Xem tất cả</span>
+            <ChevronRight className="size-3" strokeWidth={1.5} />
+          </Link>
+          <Badge variant="secondary" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full">
+            {items.length}
+          </Badge>
+        </div>
       </div>
 
       {/* List content */}
       <div className="flex flex-col divide-y divide-border/50 pt-1">
-        {items.length === 0 ? (
+        {displayedItems.length === 0 ? (
           <div className="py-8 text-center text-xs text-muted-foreground">
             Không có nhiệm vụ nào có hạn chót trong 7 ngày tới
           </div>
         ) : (
-          items.map((item) => {
+          displayedItems.map((item) => {
             const overdue = item.isOverdue || isDateOverdue(item.dueDate);
             const relativeDistance = formatDeadlineDistance(item.dueDate);
             const displayDate = formatDisplayDate(item.dueDate);
             const isSchool = item.level === "Trường";
             const levelBg = isSchool
-              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
-              : "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20";
+              ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+              : "bg-violet-500/10 text-violet-600 border-violet-500/20";
 
             return (
               <div
@@ -169,14 +196,14 @@ export function UpcomingDeadlinesWidget({
                     <Badge
                       variant="outline"
                       className={cn(
-                        "text-[10px] px-2 py-0.5 font-semibold h-5 rounded-md border gap-1",
+                        "text-xs px-2 py-0.5 font-semibold h-5 rounded-md border gap-1",
                         levelBg
                       )}
                     >
                       {isSchool ? (
-                        <Building2 className="size-3" />
+                        <Building2 className="size-3" strokeWidth={1.5} />
                       ) : (
-                        <Layers className="size-3" />
+                        <Layers className="size-3" strokeWidth={1.5} />
                       )}
                       {item.level}
                     </Badge>
@@ -185,9 +212,9 @@ export function UpcomingDeadlinesWidget({
                     {overdue ? (
                       <Badge
                         variant="rose"
-                        className="text-[10px] px-2 py-0.5 font-semibold h-5 rounded-md gap-1"
+                        className="text-xs px-2 py-0.5 font-semibold h-5 rounded-md gap-1"
                       >
-                        <AlertTriangle className="size-3" />
+                        <AlertTriangle className="size-3" strokeWidth={1.5} />
                         {relativeDistance.startsWith("Quá hạn")
                           ? relativeDistance
                           : `Quá hạn · ${relativeDistance}`}
@@ -200,16 +227,16 @@ export function UpcomingDeadlinesWidget({
                             ? "amber"
                             : "outline"
                         }
-                        className="text-[10px] px-2 py-0.5 font-medium h-5 rounded-md gap-1"
+                        className="text-xs px-2 py-0.5 font-medium h-5 rounded-md gap-1"
                       >
-                        <Clock className="size-3 opacity-75" />
+                        <Clock className="size-3 opacity-75" strokeWidth={1.5} />
                         {relativeDistance}
                       </Badge>
                     )}
                   </div>
 
                   {/* Absolute date */}
-                  <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap font-medium">
+                  <span className="font-mono text-xs text-muted-foreground whitespace-nowrap font-medium">
                     {displayDate}
                   </span>
                 </div>
@@ -223,7 +250,7 @@ export function UpcomingDeadlinesWidget({
                 </h4>
 
                 {/* Assignee row */}
-                <div className="flex items-center gap-2 pt-0.5 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-2 pt-0.5 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5 min-w-0">
                     {item.assigneeAvatar ? (
                       <img
@@ -235,7 +262,7 @@ export function UpcomingDeadlinesWidget({
                         className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/50"
                       />
                     ) : (
-                      <div className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-[9px] font-semibold text-secondary-foreground ring-1 ring-border/50">
+                      <div className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-xs font-semibold text-secondary-foreground ring-1 ring-border/50">
                         {getInitials(item.assigneeName)}
                       </div>
                     )}
@@ -249,6 +276,37 @@ export function UpcomingDeadlinesWidget({
           })
         )}
       </div>
+
+      {/* Expand / Collapse Footer */}
+      {items.length > initialLimit && (
+        <div className="pt-3 mt-1 border-t border-border/40 flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+            aria-expanded={isExpanded}
+          >
+            {isExpanded ? (
+              <>
+                <span>Thu gọn (hiển thị {initialLimit} mục)</span>
+                <ChevronUp className="size-3.5" strokeWidth={1.5} />
+              </>
+            ) : (
+              <>
+                <span>Xem tất cả {items.length} nhiệm vụ hạn chót</span>
+                <ChevronDown className="size-3.5" strokeWidth={1.5} />
+              </>
+            )}
+          </button>
+          <Link
+            href={viewAllHref}
+            className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+            title="Mở trong Không gian Nhiệm vụ"
+          >
+            <span>Xem trên bảng &rarr;</span>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
