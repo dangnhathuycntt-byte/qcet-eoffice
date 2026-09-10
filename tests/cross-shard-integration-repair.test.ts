@@ -5,7 +5,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 describe('Cross-Shard Integration Repair Verification', () => {
-  const repoRoot = path.resolve(__dirname, '..');
+  const repoRoot = process.cwd();
   let helpers: any;
 
   before(async () => {

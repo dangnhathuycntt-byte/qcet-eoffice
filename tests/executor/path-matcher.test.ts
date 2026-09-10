@@ -37,6 +37,20 @@ test('canonical-path-matcher: E07 fix - external absolute paths NEVER match repo
   assert.equal(matchesOwnership(externalPath3, 'src/utils/math.ts', cwd), false);
   assert.equal(matchesOwnership(externalPath3, 'src/**', cwd), false);
 
+  // External absolute path inside another repository's worktree:
+  const externalWorktreePath = '/tmp/other/.claude/worktrees/x/src/owned.ts';
+  assert.equal(isExternalAbsolutePath(externalWorktreePath, cwd), true);
+  assert.equal(matchesOwnership(externalWorktreePath, 'src/**', cwd), false);
+  assert.equal(matchesOwnership(externalWorktreePath, 'src/owned.ts', cwd), false);
+  assert.equal(toRepoRelativePath(externalWorktreePath, cwd), externalWorktreePath);
+
+  // But internal worktree path MUST match
+  const internalWorktreePath = '/Users/test/repo/.claude/worktrees/shard-1/src/owned.ts';
+  assert.equal(isExternalAbsolutePath(internalWorktreePath, cwd), false);
+  assert.equal(matchesOwnership(internalWorktreePath, 'src/**', cwd), true);
+  assert.equal(matchesOwnership(internalWorktreePath, 'src/owned.ts', cwd), true);
+  assert.equal(toRepoRelativePath(internalWorktreePath, cwd), 'src/owned.ts');
+
   // But internal path MUST match
   const internalPath = '/Users/test/repo/src/app.ts';
   assert.equal(matchesOwnership(internalPath, 'src/app.ts', cwd), true);

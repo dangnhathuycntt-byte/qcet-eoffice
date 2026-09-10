@@ -17,16 +17,31 @@ function normalizePath(p, explicitCwd) {
     return '';
   }
 
-  // Detect and strip worktree prefixes: .claude/worktrees/<name>/
-  const wtMatch = normalized.match(/(?:^|\/)\.claude\/worktrees\/[^/]+\/(.*)$/);
-  if (wtMatch && wtMatch[1]) {
-    normalized = wtMatch[1];
-  }
-
-  // Strip process.cwd() prefix if running in Node environment
   const cwd = (explicitCwd || (typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '')).replace(/\\/g, '/');
-  if (cwd && normalized.startsWith(cwd + '/')) {
-    normalized = normalized.slice(cwd.length + 1);
+
+  // If path is absolute
+  if (normalized.startsWith('/')) {
+    if (cwd) {
+      if (normalized === cwd) {
+        return '';
+      }
+      if (normalized.startsWith(cwd + '/')) {
+        normalized = normalized.slice(cwd.length + 1);
+        // Only strip worktree prefix if it is inside THIS repo: .claude/worktrees/<name>/
+        const wtMatch = normalized.match(/^\.claude\/worktrees\/[^/]+\/(.*)$/);
+        if (wtMatch && wtMatch[1]) {
+          normalized = wtMatch[1];
+        }
+      }
+      // If normalized does NOT start with cwd + '/', it is external to this repo.
+      // Leave it as absolute path so it will never match repo-relative patterns.
+    }
+  } else {
+    // Relative path - check if it starts with .claude/worktrees/<name>/
+    const wtMatch = normalized.match(/^\.claude\/worktrees\/[^/]+\/(.*)$/);
+    if (wtMatch && wtMatch[1]) {
+      normalized = wtMatch[1];
+    }
   }
 
   if (normalized.length > 1 && normalized.endsWith('/')) {
@@ -83,12 +98,11 @@ function isExternalAbsolutePath(filePath, explicitCwd) {
   if (!normalized.startsWith('/')) return false;
 
   const cwd = (explicitCwd || (typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '')).replace(/\\/g, '/');
-  if (cwd && (normalized === cwd || normalized.startsWith(cwd + '/'))) {
-    return false;
-  }
-  // Check if it's inside any worktree
-  if (/\/\.claude\/worktrees\/[^/]+\//.test(normalized)) {
-    return false;
+  if (cwd) {
+    // Inside this repo (main repo or this repo's .claude/worktrees)
+    if (normalized === cwd || normalized.startsWith(cwd + '/')) {
+      return false;
+    }
   }
   return true;
 }
@@ -116,7 +130,7 @@ function matchesOwnership(filePath, pattern, explicitCwd) {
     return false;
   }
 
-  // Directory prefix match: if pattern has no wildcard, match exact directory descendants
+  // Directory prefix match: if pattern is "dir", it should cover "dir/file.ts"
   if (!normPattern.includes('*') && !normPattern.includes('?')) {
     if (normFile.startsWith(normPattern + '/')) return true;
   }
@@ -193,30 +207,30 @@ function pathsOverlap(pathA, pathB, explicitCwd) {
 
 function toRepoRelativePath(targetPath, explicitCwd) {
   if (!targetPath || typeof targetPath !== 'string') return '';
-  const cwd = explicitCwd || (typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '');
-  const rawTarget = targetPath.trim();
+  const cwd = (explicitCwd || (typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '')).replace(/\\/g, '/');
+  const rawTarget = targetPath.trim().replace(/\\/g, '/');
 
   // If already relative, normalize and return
   if (!rawTarget.startsWith('/') && !/^[A-Za-z]:[\\/]/.test(rawTarget)) {
     return normalizePath(rawTarget, cwd);
   }
 
-  const absolutePath = path.resolve(cwd, rawTarget);
+  const absolutePath = (typeof path !== 'undefined' && path.resolve ? path.resolve(cwd || '.', rawTarget) : rawTarget).replace(/\\/g, '/');
 
-  // Check if inside a worktree directory: .claude/worktrees/<name>/
-  const wtMatch = absolutePath.match(/[/\\]\.claude[/\\]worktrees[/\\][^/\\]+[/\\](.*)$/);
-  if (wtMatch && wtMatch[1]) {
-    return normalizePath(wtMatch[1], cwd);
+  if (cwd) {
+    if (absolutePath === cwd) return '';
+    if (absolutePath.startsWith(cwd + '/')) {
+      const rel = absolutePath.slice(cwd.length + 1);
+      const wtMatch = rel.match(/^\.claude\/worktrees\/[^/]+\/(.*)$/);
+      if (wtMatch && wtMatch[1]) {
+        return normalizePath(wtMatch[1], cwd);
+      }
+      return normalizePath(rel, cwd);
+    }
   }
 
-  if (cwd && absolutePath === cwd) return '';
-  if (cwd && absolutePath.startsWith(cwd + path.sep)) {
-    const rel = path.relative(cwd, absolutePath);
-    return normalizePath(rel, cwd);
-  }
-
-  // Path is outside repository and outside worktree
-  return absolutePath.replace(/\\/g, '/');
+  // Path is outside repository
+  return absolutePath;
 }
 
 module.exports = {
