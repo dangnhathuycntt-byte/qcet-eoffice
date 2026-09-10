@@ -21,20 +21,19 @@ import {
   AccountDisabledAuthError,
   AccountNotFoundError,
 } from './errors';
+import { getCachedAuthorizationContext } from './authorization-context-cache';
+
+export interface LoadAuthorizationContextOptions {
+  useCache?: boolean;
+  ttlMs?: number;
+  forceRefresh?: boolean;
+}
 
 /**
- * Loads the canonical AuthorizationContext V2 for a given user.
- *
- * Invariants:
- * 1. "Active means active": all assignments, grants, portfolios, and memberships
- *    must be within their effective date windows (effectiveFrom <= now <= effectiveTo)
- *    and marked ACTIVE (not expired, revoked, or terminated).
- * 2. SystemRole separation: SYSTEM_ADMIN is reserved for technical administrators
- *    (User.role === ADMIN) and is never granted to institutional leadership titles.
- * 3. Canonical delegation: only DelegationGrant records are evaluated, never legacy DacumDelegation.
- * 4. Inactive accounts: throws AccountDisabledAuthError if user.isActive === false.
+ * Loads the canonical AuthorizationContext V2 for a given user directly from the database.
+ * Evaluates live database state without caching.
  */
-export async function loadAuthorizationContext(
+export async function loadFreshAuthorizationContext(
   userId: string,
   now: Date = new Date()
 ): Promise<AuthorizationContext> {
@@ -345,3 +344,34 @@ export async function loadAuthorizationContext(
     generatedAt: now,
   });
 }
+
+/**
+ * Loads the canonical AuthorizationContext V2 for a given user.
+ *
+ * Invariants:
+ * 1. Default to per-request freshness: By default (options.useCache is falsy),
+ *    evaluates live database state to prioritize correctness and security.
+ * 2. Opt-in short-TTL caching: High-throughput read endpoints can set options.useCache = true
+ *    to leverage bounded in-memory caching with explicit invalidation triggers.
+ * 3. Throws AccountDisabledAuthError if user is inactive / disabled.
+ * 4. Throws AccountNotFoundError if user does not exist.
+ */
+export async function loadAuthorizationContext(
+  userId: string,
+  now: Date = new Date(),
+  options?: LoadAuthorizationContextOptions
+): Promise<AuthorizationContext> {
+  if (options?.useCache) {
+    return getCachedAuthorizationContext(userId, now, {
+      ttlMs: options.ttlMs,
+      forceRefresh: options.forceRefresh,
+    });
+  }
+  return loadFreshAuthorizationContext(userId, now);
+}
+
+/**
+ * Direct alias for fresh DB evaluation (bypasses any cache).
+ */
+export const loadAuthorizationContextFromDb = loadFreshAuthorizationContext;
+
