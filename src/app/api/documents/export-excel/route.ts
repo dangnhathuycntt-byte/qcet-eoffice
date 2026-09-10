@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getApiContext } from "@/server/api/context";
+import { requireAuthenticated } from "@/server/api/auth";
+import { apiError } from "@/server/api/response";
+import { assertCsrf } from "@/server/security/csrf";
+import {
+  assertQueryStringLength,
+  assertJsonContentType,
+  assertRequestBodySize,
+  MAX_JSON_BODY_SIZE,
+} from "@/server/api/validation";
+import { assertRateLimit } from "@/server/security/rate-limit";
+import { ExportDocumentQuerySchema } from "@/contracts/documents";
 import { listDocuments } from "@/lib/documents/document-service";
 import { generateAppendixIVCsv } from "@/lib/documents/excel-export";
-import { getSessionFromRequest } from "@/lib/jwt-session";
 import { isFeatureEnabled } from "@/features/flags";
+import { ValidationError } from "@/server/api/errors";
 import type { DocumentType } from "@/types/document";
 
 export async function GET(request: NextRequest) {
+  let requestId = crypto.randomUUID();
   try {
-    const session = getSessionFromRequest(request);
-    if (!session) {
-      return NextResponse.json(
-        {
-          type: "about:blank",
-          title: "Unauthorized",
-          status: 401,
-          detail: "Vui lòng đăng nhập để xuất sổ văn bản",
-          success: false,
-          error: "Vui lòng đăng nhập để xuất sổ văn bản",
-        },
-        { status: 401 }
-      );
-    }
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    const authUser = requireAuthenticated(context);
+
+    // Rate limiting: strict export tier limit
+    assertRateLimit(authUser.id, "EXPORT");
 
     // Operational kill switch: largeExcelExport
     if (!isFeatureEnabled("largeExcelExport")) {
@@ -34,27 +39,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    assertQueryStringLength(request);
     const searchParams = request.nextUrl.searchParams;
-    const typeParam = searchParams.get("type");
+    const rawParams = Object.fromEntries(searchParams.entries());
 
-    let type: DocumentType;
-    if (typeParam === "VAN_BAN_DEN" || typeParam === "inbox") {
-      type = "VAN_BAN_DEN";
-    } else if (typeParam === "VAN_BAN_DI" || typeParam === "outbox") {
-      type = "VAN_BAN_DI";
-    } else {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid document type. Expected 'VAN_BAN_DEN' or 'VAN_BAN_DI'",
-        },
-        { status: 400 }
+    const query = ExportDocumentQuerySchema.safeParse(rawParams);
+    if (!query.success) {
+      throw new ValidationError(
+        "Invalid document export query parameters",
+        query.error.flatten().fieldErrors
       );
     }
 
-    const yearParam = searchParams.get("year") || searchParams.get("documentYear");
+    const typeParam = query.data.type;
+    const type: DocumentType =
+      typeParam === "VAN_BAN_DEN" || typeParam === "inbox" ? "VAN_BAN_DEN" : "VAN_BAN_DI";
+
     const currentYear = new Date().getFullYear();
-    const year = yearParam ? parseInt(yearParam, 10) || currentYear : currentYear;
+    const year = query.data.year || query.data.documentYear || currentYear;
 
     // Fetch documents matching type and year
     const documents = await listDocuments({
@@ -81,14 +83,88 @@ export async function GET(request: NextRequest) {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
-        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Cache-Control": "private, no-store, no-cache, must-revalidate",
+        "X-Request-ID": context.requestId,
       },
     });
-  } catch (error: any) {
-    console.error("Error exporting document registry Excel:", error);
-    return NextResponse.json(
-      { success: false, error: error.message || "Internal Server Error" },
-      { status: 500 }
+  } catch (error) {
+    return apiError(error, requestId, {
+      headers: { "Cache-Control": "private, no-store" },
+      legacyCompat: true,
+    });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  let requestId = crypto.randomUUID();
+  try {
+    const context = await getApiContext(request);
+    requestId = context.requestId;
+    const authUser = requireAuthenticated(context);
+
+    // CSRF and rate limiting assertions
+    assertCsrf(request);
+    assertJsonContentType(request);
+    assertRequestBodySize(request, MAX_JSON_BODY_SIZE);
+    assertRateLimit(authUser.id, "EXPORT");
+
+    if (!isFeatureEnabled("largeExcelExport")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Tính năng xuất sổ văn bản Excel/CSV tạm thời bị vô hiệu hóa bởi cấu hình vận hành hệ thống",
+          code: "FEATURE_DISABLED",
+        },
+        { status: 503 }
+      );
+    }
+
+    const rawBody = await request.json();
+    const query = ExportDocumentQuerySchema.safeParse(rawBody);
+    if (!query.success) {
+      throw new ValidationError(
+        "Invalid document export payload",
+        query.error.flatten().fieldErrors
+      );
+    }
+
+    const typeParam = query.data.type;
+    const type: DocumentType =
+      typeParam === "VAN_BAN_DEN" || typeParam === "inbox" ? "VAN_BAN_DEN" : "VAN_BAN_DI";
+
+    const currentYear = new Date().getFullYear();
+    const year = query.data.year || query.data.documentYear || currentYear;
+
+    const documents = await listDocuments({
+      type,
+      documentYear: year,
+      limit: 5000,
+    });
+
+    const sortedDocs = [...documents].sort(
+      (a, b) => a.registrationNumber - b.registrationNumber
     );
+
+    const csvContent = generateAppendixIVCsv(type, year, sortedDocs);
+
+    const filename =
+      type === "VAN_BAN_DEN"
+        ? `so-van-ban-den-${year}.csv`
+        : `so-van-ban-di-${year}.csv`;
+
+    return new Response(csvContent, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "private, no-store, no-cache, must-revalidate",
+        "X-Request-ID": context.requestId,
+      },
+    });
+  } catch (error) {
+    return apiError(error, requestId, {
+      headers: { "Cache-Control": "private, no-store" },
+      legacyCompat: true,
+    });
   }
 }

@@ -12,6 +12,7 @@ import {
 import {
   getTelemetryLog,
   clearTelemetryLog,
+  maskUserId,
 } from "../../src/lib/pwa/telemetry";
 import { resetMemoryDatabase } from "../../src/lib/pwa/indexed-db";
 
@@ -92,7 +93,8 @@ describe("PWA Background Sync & Outbox Synchronization Suite", () => {
       const logs = getTelemetryLog();
       const queuedEvent = logs.find((l) => l.event === "sync.queued");
       assert.ok(queuedEvent, "Must record sync.queued event");
-      assert.equal(queuedEvent.userId, TEST_USER);
+      assert.equal(queuedEvent.userId, maskUserId(TEST_USER));
+      assert.ok(queuedEvent.userId?.startsWith("user_"), "User ID in telemetry must be masked");
       assert.equal(queuedEvent.metadata?.entityId, "task-fin-01");
       assert.equal(queuedEvent.metadata?.method, "POST");
 

@@ -153,3 +153,17 @@ export async function getNextRegistrationNumberRawSql(
  * Convenience alias for formatDocumentDisplayNumber.
  */
 export const formatRegistrationNumber = formatDocumentDisplayNumber;
+
+/**
+ * Convenience helper to atomically generate the next document sequence number.
+ * Guarantees race-free, consecutive sequence numbers under concurrent requests.
+ */
+export async function getNextDocumentSequence(
+  type: DocumentType,
+  year: number,
+  client?: any,
+  options?: DocumentNumberingOptions
+): Promise<number> {
+  return getNextRegistrationNumber(type, year, client, options);
+}
+

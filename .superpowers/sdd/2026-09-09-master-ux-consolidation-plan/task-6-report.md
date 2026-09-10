@@ -12,6 +12,9 @@
 - `src/components/dashboard/executive-stat-strip.tsx`:
   - Chuẩn hóa thành 5 KPI cốt lõi: `Tổng nhiệm vụ`, `Chờ duyệt`, `Trễ / vướng`, `Trọng tâm`, `Tiến độ toàn trường`.
   - Thiết kế unified stat strip, mật độ dữ liệu cao, font số học `tabular-nums font-mono`.
+  - Hỗ trợ rendering 5 KPI khi `isExecutive || executiveStats` với fallback mượt mà từ `stats` cơ bản khi `executiveStats` chưa khởi tạo xong.
+- `src/components/dashboard/zones/dashboard-zone.tsx`:
+  - Truyền đầy đủ `isExecutive={isExecutive}` và `executiveStats={executiveStats}` sang `<ExecutiveStatStrip />`.
 - `src/components/dashboard/department-progress-matrix.tsx`:
   - Thêm helper `getDepartmentTasksUrl(deptId)` điều hướng sang `/tasks?scope=school&dept=...`.
   - Tích hợp chế độ `ranking` hiển thị danh sách đơn vị tinh gọn, có thanh tiến độ OKLCH sắc thái, thông tin hoàn tất/trễ hạn.
@@ -24,23 +27,39 @@
 - `src/components/dashboard/executive-cockpit-workspace.tsx`:
   - Tạo không gian buồng lái điều hành (Executive Cockpit Workspace) gọn gàng trong 1–2 viewport.
   - Tích hợp Hàng đợi Chú ý BGH (Attention Queue) với thuật toán ưu tiên (Pending Approval -> Blocked -> Overdue -> High Priority In Progress).
+  - Khắc phục Anti-slop ở trạng thái trống (empty state): loại bỏ icon enclosure tròn khổ lớn (`rounded-full bg-emerald-500/10`), thay bằng banner thông báo ngang tối giản, thanh lịch, chuẩn mực hành chính.
   - Bố trí lưới 2 cột cân bằng: Cột trái (Attention Queue + Tiến độ đơn vị), Cột phải (Hạn chót sắp tới + Nhật ký điều hành).
 - `tests/executive-dashboard-streamlining.test.ts`:
-  - Bộ 15 bài kiểm tra tự động bao phủ 5 khía cạnh của Phase 6:
+  - Bộ 18 bài kiểm tra tự động bao phủ toàn diện:
     1. 5 KPI Strip chính xác nhãn, giá trị và không có emoji.
-    2. Hàng đợi Chú ý ưu tiên đúng các mục cần hành động, loại trừ task đã xong, deep link đúng URL.
-    3. Ma trận đơn vị tạo đúng URL `/tasks?scope=school&dept=...`, sắp xếp theo tiến độ và trễ hạn.
-    4. Widget hạn chót và nhật ký xử lý dữ liệu và link đúng.
-    5. Kiểm định Light-Only & Anti-Slop (0 class `dark:`, 0 emoji trang trí).
+    2. Hỗ trợ view 5-KPI khi `isExecutive={true}` không có `executiveStats`, và 4-KPI cho non-executive.
+    3. Hàng đợi Chú ý ưu tiên đúng các mục cần hành động, loại trừ task đã xong, deep link đúng URL.
+    4. Ma trận đơn vị tạo đúng URL `/tasks?scope=school&dept=...`, sắp xếp theo tiến độ và trễ hạn.
+    5. Widget hạn chót và nhật ký xử lý dữ liệu và link đúng.
+    6. Kiểm định Light-Only & Anti-Slop (0 class `dark:`, 0 emoji trang trí, 0 icon enclosure tròn cồng kềnh trong empty state).
 
-## 3. Kết Quả Kiểm Tra (Verification & Test Results)
+## 3. Xử Lý Phản Hồi Đánh Giá (Review Feedback Resolutions)
+1. **5-KPI Strip Điều Hành (`executive-stat-strip.tsx`)**:
+   - Chuyển `isExecutiveView = Boolean(isExecutive || executiveStats)` thay vì `&&`.
+   - Bổ sung logic fallback trong `getExecutiveStatCardData` để khi `executiveStats` vắng mặt vẫn hiển thị đúng 5 KPI tương ứng (`needsReviewTasksCount`, `overdueTasksCount`, 0 trọng tâm, và `averageSchoolProgressPercent`).
+2. **Dashboard Zone (`dashboard-zone.tsx`)**:
+   - Đảm bảo truyền đủ props `isExecutive={isExecutive}` và `executiveStats={executiveStats}` xuống `<ExecutiveStatStrip />`.
+3. **Anti-Slop Trạng Thái Rỗng Attention Queue (`executive-cockpit-workspace.tsx`)**:
+   - Loại bỏ hoàn toàn khối hình tròn màu to `h-10 w-10 rounded-full bg-emerald-500/10`.
+   - Thay thế bằng khung thông báo ngang nhỏ gọn, viền `border-emerald-500/20` mỏng, nền `bg-emerald-50/40`, icon `CheckCircle2` kích thước 16px thanh thoát.
+4. **Kiểm Thử Tự Động (`tests/executive-dashboard-streamlining.test.ts`)**:
+   - Thêm test case xác thực `isExecutive={true}` không có `executiveStats` hiển thị chính xác 5 KPI.
+   - Thêm test case kiểm định loại bỏ icon enclosure tròn ở empty state.
+
+## 4. Kết Quả Kiểm Tra (Verification & Test Results)
 - TypeScript Typecheck (`npm run typecheck`):
-  - Exit code: 0 (Không phát hiện bất kỳ lỗi TypeScript nào).
+  - Exit code: 0 (Không có lỗi TypeScript nào).
 - Executive Dashboard Tests (`tests/executive-dashboard-streamlining.test.ts`):
-  - 15/15 tests passed across 6 test suites.
+  - 18/18 tests passed across 6 test suites (100% pass).
 - Full Project Test Suite (`npm test`):
-  - 273/273 tests passed across 96 suites.
+  - 329/329 tests passed across 109 suites.
   - 0 failures, 0 cancelled, 0 skipped.
 
-## 4. Tình Trạng Hoàn Thành (Status)
+## 5. Tình Trạng Hoàn Thành (Status)
 - **Status**: DONE
+- **Commit**: `25fa1d20b5be42543950a121dcce6315ed8e3b71` (`fix(dashboard): resolve executive 5-kpi strip rendering and attention queue anti-slop`)

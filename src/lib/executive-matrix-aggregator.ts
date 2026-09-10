@@ -55,6 +55,8 @@ export interface DepartmentHealthSummary {
   inProgressTasks?: number;
   overdueTasks?: number;
   completionRate?: number;
+  healthScore?: number;
+  healthStatus?: "HEALTHY" | "AT_RISK" | "CRITICAL" | string;
   status?: "critical" | "warning" | "good";
 }
 

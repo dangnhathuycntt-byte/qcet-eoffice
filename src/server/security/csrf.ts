@@ -281,6 +281,9 @@ export function assertCsrfProtection(request: Request, options?: CsrfOptions): v
   }
 }
 
+/**
+ * Alias for assertCsrfProtection.
+ */
 export const assertCsrf = assertCsrfProtection;
 
 /**

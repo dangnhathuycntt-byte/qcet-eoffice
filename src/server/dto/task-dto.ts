@@ -228,43 +228,47 @@ function extractLeadAssignee(raw: Record<string, any>): UserSummaryDTO | null {
   return null;
 }
 
+export function toTaskDeliverableDTO(d: Record<string, any>): TaskDeliverableDTO {
+  return {
+    id: String(d.id ?? ''),
+    taskId: d.taskId ? String(d.taskId) : undefined,
+    title: String(d.title ?? ''),
+    fileUrl: String(d.fileUrl ?? ''),
+    fileType: d.fileType ?? null,
+    fileSize: typeof d.fileSize === 'number' ? d.fileSize : null,
+    reviewStatus: String(d.reviewStatus ?? 'PENDING'),
+    reviewNote: d.reviewNote ?? null,
+    uploadedBy: d.uploadedBy
+      ? toUserSummaryDTO(d.uploadedBy)
+      : d.uploadedById
+      ? toUserSummaryDTO({
+          id: d.uploadedById,
+          name: d.uploadedByName ?? '',
+          email: '',
+          role: 'CHUYEN_VIEN',
+        })
+      : null,
+    reviewer: d.reviewer
+      ? toUserSummaryDTO(d.reviewer)
+      : d.reviewerId
+      ? toUserSummaryDTO({
+          id: d.reviewerId,
+          name: d.reviewerName ?? '',
+          email: '',
+          role: 'CHUYEN_VIEN',
+        })
+      : null,
+    reviewedAt: d.reviewedAt ? extractDateString(d.reviewedAt) : null,
+    createdAt: d.createdAt ? extractDateString(d.createdAt) : undefined,
+  };
+}
+
 function extractDeliverables(raw: Record<string, any>): TaskDeliverableDTO[] {
   if (!Array.isArray(raw.deliverables)) return [];
 
   return raw.deliverables
     .filter((d: any) => d && typeof d === 'object')
-    .map((d: any) => ({
-      id: String(d.id ?? ''),
-      taskId: d.taskId ? String(d.taskId) : undefined,
-      title: String(d.title ?? ''),
-      fileUrl: String(d.fileUrl ?? ''),
-      fileType: d.fileType ?? null,
-      fileSize: typeof d.fileSize === 'number' ? d.fileSize : null,
-      reviewStatus: String(d.reviewStatus ?? 'PENDING'),
-      reviewNote: d.reviewNote ?? null,
-      uploadedBy: d.uploadedBy
-        ? toUserSummaryDTO(d.uploadedBy)
-        : d.uploadedById
-        ? toUserSummaryDTO({
-            id: d.uploadedById,
-            name: d.uploadedByName ?? '',
-            email: '',
-            role: 'CHUYEN_VIEN',
-          })
-        : null,
-      reviewer: d.reviewer
-        ? toUserSummaryDTO(d.reviewer)
-        : d.reviewerId
-        ? toUserSummaryDTO({
-            id: d.reviewerId,
-            name: d.reviewerName ?? '',
-            email: '',
-            role: 'CHUYEN_VIEN',
-          })
-        : null,
-      reviewedAt: d.reviewedAt ? extractDateString(d.reviewedAt) : null,
-      createdAt: d.createdAt ? extractDateString(d.createdAt) : undefined,
-    }));
+    .map((d: any) => toTaskDeliverableDTO(d));
 }
 
 function extractResolutions(raw: Record<string, any>): TaskResolutionDTO[] {

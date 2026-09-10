@@ -10,6 +10,8 @@
 
 import { sanitizeLogContext, type SanitizeOptions } from "./sanitize";
 
+export { sanitizeLogContext, type SanitizeOptions };
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export interface LogEntry {

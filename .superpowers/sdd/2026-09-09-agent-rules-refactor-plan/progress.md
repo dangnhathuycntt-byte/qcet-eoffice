@@ -20,5 +20,6 @@ Task 4: complete (commits ceec13f..73d07e3, review clean - scoped AGENTS.md in t
 Task 5: complete (commits 73d07e3..04f2025, review clean - ARCHITECTURE.md, docs/product/invariants.md, roles-and-scopes.md, metrics.md, docs/architecture/task-workspace.md, navigation.md, authentication.md, mobile.md)
 Task 6: complete (commits d0ab6a9..215070e, review clean - docs/plans/ active, completed, superseded lifecycle migration & frontmatter)
 Task 7: complete (commits 19144b6..3ce469c, review clean - skills: qcet-verify, qcet-ux-audit, qcet-data-audit, qcet-db-change; permissions in settings.json; hooks: protect-sensitive-files, guard-next-build, fast-changed-file-check)
-Task 8: complete (review clean - specialized reviewer agents: ux-reviewer, data-reviewer, security-reviewer, verifier; navigation index: docs/agent/index.md)
+Task 8: complete (commits eec5155..2a4e263, review clean - specialized reviewer agents: ux-reviewer, data-reviewer, security-reviewer, verifier; navigation index: docs/agent/index.md)
+Task 9: complete (commits b503472..5c3ff35, review clean - line budget verified, anti-duplication audit clean, 233 tests pass)
 

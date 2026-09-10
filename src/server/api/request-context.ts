@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { getSessionFromRequest } from '@/lib/jwt-session';
 import { AuthenticationError, AuthorizationError } from '@/server/api/errors';
+import { getRequestId } from '@/server/observability/logger';
 
 export interface AuthenticatedUser {
   id: string;
@@ -63,10 +64,7 @@ export async function getApiContext(
   request: Request | NextRequest | RequestLike
 ): Promise<ApiRequestContext> {
   // 1. Request ID extraction or generation
-  let requestId = request.headers?.get('x-request-id')?.trim();
-  if (!requestId) {
-    requestId = crypto.randomUUID();
-  }
+  const requestId = getRequestId(request);
 
   // 2. Client IP address extraction
   let ip: string | undefined;

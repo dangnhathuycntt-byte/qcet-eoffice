@@ -12,13 +12,30 @@ export interface ActiveFilterSummaryParams {
   overdue?: boolean;
 }
 
+export function getWorkboxDisplayLabel(workbox: string): string {
+  switch (workbox) {
+    case "my_pending_approval":
+      return "Chờ tôi duyệt";
+    case "my_pending_submission":
+      return "Chờ nộp báo cáo";
+    case "my_tasks":
+      return "Việc của tôi";
+    case "waiting_approval":
+      return "Chờ duyệt";
+    case "pending_submission":
+      return "Chờ nộp BC";
+    default:
+      return workbox;
+  }
+}
+
 export function getActiveFilterSummary(params: ActiveFilterSummaryParams): string[] {
   const parts: string[] = [];
   if (params.dept && params.dept !== "ALL") {
     parts.push(`Đơn vị: ${params.dept}`);
   }
   if (params.workbox && params.workbox !== "ALL") {
-    parts.push(`Hộp việc: ${params.workbox}`);
+    parts.push(`Hộp việc: ${getWorkboxDisplayLabel(params.workbox)}`);
   }
   if (params.search && params.search.trim()) {
     parts.push(`Từ khóa: "${params.search.trim()}"`);
@@ -253,7 +270,7 @@ export function ActiveFilterBreadcrumb({
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-background border border-border/80 text-foreground font-medium shadow-2xs"
           >
             <span>
-              Hộp việc: <strong className="font-semibold">{workbox}</strong>
+              Hộp việc: <strong className="font-semibold">{getWorkboxDisplayLabel(workbox!)}</strong>
             </span>
             {(onRemoveWorkbox || onRemoveFilter) && (
               <button
@@ -262,7 +279,7 @@ export function ActiveFilterBreadcrumb({
                   if (onRemoveWorkbox) onRemoveWorkbox();
                   else if (onRemoveFilter) onRemoveFilter("workbox");
                 }}
-                aria-label={`Xóa lọc Hộp việc: ${workbox}`}
+                aria-label={`Xóa lọc Hộp việc: ${getWorkboxDisplayLabel(workbox!)}`}
                 className="hover:text-foreground text-muted-foreground p-0.5 rounded hover:bg-muted transition-colors focus:outline-hidden touch-manipulation"
               >
                 <X className="size-3" strokeWidth={1.5} />

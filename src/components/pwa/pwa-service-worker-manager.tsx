@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { PWAUpdateDialog } from "@/components/pwa/pwa-update-dialog";
+import { clientEnv } from "@/config/env.client";
 
 declare global {
   interface Window {
@@ -157,8 +158,8 @@ export async function registerServiceWorker(
     return null;
   }
 
-  const isProduction = process.env.NODE_ENV === "production";
-  const isDevEnabled = process.env.NEXT_PUBLIC_ENABLE_SW === "true";
+  const isProduction = clientEnv.NODE_ENV === "production";
+  const isDevEnabled = clientEnv.NEXT_PUBLIC_ENABLE_SW === "true";
   const force = options.force ?? Boolean(window.__QCET_FORCE_SW_REGISTER__);
 
   // If in development and not explicitly enabled, check existing registration for waiting worker

@@ -161,6 +161,13 @@ model User {
   outgoingWorkflowsIssued            DocumentOutgoingWorkflow[] @relation("DocWorkflowIssuer")
   outgoingWorkflowsFiled             DocumentOutgoingWorkflow[] @relation("DocWorkflowOutgoingFiledBy")
   outgoingWorkflowsArchived          DocumentOutgoingWorkflow[] @relation("DocWorkflowOutgoingArchivedBy")
+  dossiersResponsible               WorkDossier[]              @relation("DossierResponsiblePerson")
+  dossiersSubmitted                 WorkDossier[]              @relation("DossierSubmittedBy")
+  dossiersArchived                  WorkDossier[]              @relation("DossierArchivedBy")
+  dossierItemsAdded                 DossierItem[]              @relation("DossierItemAddedBy")
+  organizedMeetings                 Meeting[]                  @relation("MeetingOrganizer")
+  meetingParticipations             MeetingParticipant[]
+  meetingResolutionsLead            MeetingResolution[]        @relation("MeetingResolutionLead")
 
   @@map("users")
 }
@@ -238,6 +245,7 @@ model Task {
   unitAssignments     UnitWorkAssignment[]  @relation("UnitWorkTask")
   sourceRelations     TaskRelation[]        @relation("SourceTaskRelations")
   targetRelations     TaskRelation[]        @relation("TargetTaskRelations")
+  meetingResolutions  MeetingResolution[]
   version             Int                   @default(1) @map("version")
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")
@@ -911,6 +919,9 @@ model OrganizationalUnit {
   taskActors          TaskActor[]
   leadWorkflows       DocumentIncomingWorkflow[] @relation("DocWorkflowLeadUnit")
   unitAssignments     UnitWorkAssignment[]       @relation("UnitWorkAssignmentUnit")
+  workDossiers        WorkDossier[]
+  meetings            Meeting[]
+  meetingResolutions  MeetingResolution[]        @relation("UnitMeetingResolutions")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt        DateTime             @updatedAt @map("updated_at")
 
@@ -940,6 +951,7 @@ model OrganizationalBody {
   effectiveTo   DateTime?              @map("effective_to")
   status        BodyStatus             @default(ACTIVE)
   memberships   BodyMembership[]
+  meetings      Meeting[]
   createdAt     DateTime               @default(now()) @map("created_at")
   updatedAt     DateTime               @updatedAt @map("updated_at")
 
@@ -1283,6 +1295,204 @@ model OutboxEvent {
   @@index([status, availableAt])
   @@index([aggregateType, aggregateId])
   @@map("outbox_events")
+}
+
+// ===================================================
+// 13. WORK DOSSIER & ARCHIVAL DOMAIN (PHASE 7 / NĐ 30/2020)
+// ===================================================
+
+enum DossierStatus {
+  OPEN
+  ACTIVE
+  CLOSED
+  READY_FOR_ARCHIVE
+  SUBMITTED_TO_ARCHIVE
+  ACCEPTED
+  ARCHIVED
+}
+
+enum DossierItemType {
+  DOCUMENT
+  TASK
+  RESULT
+  DECISION
+  MEETING_MINUTES
+  ATTACHMENT
+}
+
+enum DataClassification {
+  PUBLIC
+  INTERNAL
+  RESTRICTED
+  PERSONAL_DATA
+}
+
+model RetentionRule {
+  id            String        @id @default(cuid())
+  code          String        @unique @db.VarChar(50)
+  name          String        @db.VarChar(255)
+  durationYears Int?          @map("duration_years") // null = vĩnh viễn
+  legalBasis    String?       @map("legal_basis") @db.VarChar(255)
+  description   String?       @db.Text
+  dossiers      WorkDossier[]
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@map("retention_rules")
+}
+
+model WorkDossier {
+  id                  String             @id @default(cuid())
+  code                String             @unique @db.VarChar(100)
+  title               String             @db.VarChar(500)
+  owningUnitId        String             @map("owning_unit_id")
+  owningUnit          OrganizationalUnit @relation(fields: [owningUnitId], references: [id], onDelete: Restrict)
+  responsiblePersonId String             @map("responsible_person_id")
+  responsiblePerson   User               @relation("DossierResponsiblePerson", fields: [responsiblePersonId], references: [id], onDelete: Restrict)
+  openedAt            DateTime           @default(now()) @map("opened_at")
+  closedAt            DateTime?          @map("closed_at")
+  retentionRuleId     String?            @map("retention_rule_id")
+  retentionRule       RetentionRule?     @relation(fields: [retentionRuleId], references: [id], onDelete: SetNull)
+  status              DossierStatus      @default(OPEN)
+  classification      DataClassification @default(INTERNAL)
+  storageLocation     String?            @map("storage_location") @db.VarChar(255)
+  submittedArchiveAt  DateTime?          @map("submitted_archive_at")
+  submittedById       String?            @map("submitted_by_id")
+  submittedBy         User?              @relation("DossierSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  archivedAt          DateTime?          @map("archived_at")
+  archivedById        String?            @map("archived_by_id")
+  archivedBy          User?              @relation("DossierArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  notes               String?            @db.Text
+  items               DossierItem[]
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  @@index([owningUnitId])
+  @@index([responsiblePersonId])
+  @@index([submittedById])
+  @@index([status])
+  @@index([classification])
+  @@map("work_dossiers")
+}
+
+model DossierItem {
+  id             String          @id @default(cuid())
+  dossierId      String          @map("dossier_id")
+  dossier        WorkDossier     @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  itemType       DossierItemType @map("item_type")
+  itemId         String?         @map("item_id") @db.VarChar(100)
+  title          String          @db.VarChar(500)
+  documentNumber String?         @map("document_number") @db.VarChar(100)
+  documentDate   DateTime?       @map("document_date")
+  pageCount      Int?            @map("page_count")
+  sequence       Int             @default(1)
+  addedById      String          @map("added_by_id")
+  addedBy        User            @relation("DossierItemAddedBy", fields: [addedById], references: [id], onDelete: Restrict)
+  addedAt        DateTime        @default(now()) @map("added_at")
+  notes          String?         @db.Text
+
+  @@index([dossierId])
+  @@index([itemType, itemId])
+  @@map("dossier_items")
+}
+
+// ===================================================
+// 14. INSTITUTIONAL MEETINGS, BODIES & RESOLUTIONS (PHASE 8)
+// ===================================================
+
+enum MeetingStatus {
+  DRAFT_AGENDA
+  INVITED
+  HELD
+  MINUTES_DRAFT
+  MINUTES_CONFIRMED
+  CANCELLED
+}
+
+enum MeetingParticipantRole {
+  CHAIR
+  SECRETARY
+  ATTENDEE
+  INVITED_GUEST
+}
+
+enum AttendanceStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+  ATTENDED
+  ABSENT
+}
+
+model Meeting {
+  id                   String                 @id @default(cuid())
+  title                String                 @db.VarChar(500)
+  code                 String?                @unique @db.VarChar(100)
+  bodyId               String?                @map("body_id")
+  unitId               String?                @map("unit_id")
+  organizerId          String                 @map("organizer_id")
+  status               MeetingStatus          @default(DRAFT_AGENDA)
+  startTime            DateTime               @map("start_time")
+  endTime              DateTime?              @map("end_time")
+  location             String?                @db.VarChar(255)
+  agenda               String?                @db.Text
+  materialsUrl         String?                @map("materials_url") @db.Text
+  minutes              String?                @db.Text
+  minutesConfirmedAt   DateTime?              @map("minutes_confirmed_at")
+  minutesConfirmedById String?                @map("minutes_confirmed_by_id")
+  body                 OrganizationalBody?    @relation(fields: [bodyId], references: [id], onDelete: SetNull)
+  unit                 OrganizationalUnit?    @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  organizer            User                   @relation("MeetingOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+  participants         MeetingParticipant[]
+  resolutions          MeetingResolution[]
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+
+  @@index([status, startTime])
+  @@index([bodyId])
+  @@index([unitId])
+  @@index([organizerId])
+  @@map("meetings")
+}
+
+model MeetingParticipant {
+  id               String                 @id @default(cuid())
+  meetingId        String                 @map("meeting_id")
+  userId           String                 @map("user_id")
+  role             MeetingParticipantRole @default(ATTENDEE)
+  attendanceStatus AttendanceStatus       @default(INVITED) @map("attendance_status")
+  notes            String?                @db.Text
+  meeting          Meeting                @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  @@unique([meetingId, userId])
+  @@index([userId])
+  @@map("meeting_participants")
+}
+
+model MeetingResolution {
+  id              String              @id @default(cuid())
+  meetingId       String              @map("meeting_id")
+  code            String?             @db.VarChar(100)
+  title           String              @db.VarChar(500)
+  content         String              @db.Text
+  leadUnitId      String?             @map("lead_unit_id")
+  leadUserId      String?             @map("lead_user_id")
+  deadline        DateTime?
+  resultingTaskId String?             @map("resulting_task_id")
+  meeting         Meeting             @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  leadUnit        OrganizationalUnit? @relation("UnitMeetingResolutions", fields: [leadUnitId], references: [id], onDelete: SetNull)
+  leadUser        User?               @relation("MeetingResolutionLead", fields: [leadUserId], references: [id], onDelete: SetNull)
+  resultingTask   Task?               @relation(fields: [resultingTaskId], references: [id], onDelete: SetNull)
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  @@index([meetingId])
+  @@index([leadUnitId])
+  @@index([leadUserId])
+  @@map("meeting_resolutions")
 }
 
 

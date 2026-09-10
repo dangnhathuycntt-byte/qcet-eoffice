@@ -120,10 +120,11 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
       return;
     }
     if (viewQuery === "calendar" && !zoneQuery) {
-      setActiveZone("calendar");
+      setActiveZone((prev) => (prev === "calendar" ? prev : "calendar"));
       return;
     }
-    setActiveZone(parseZoneParam(zoneQuery));
+    const targetZone = parseZoneParam(zoneQuery);
+    setActiveZone((prev) => (prev === targetZone ? prev : targetZone));
   }, [zoneQuery, viewQuery, router]);
 
   React.useEffect(() => {
@@ -135,29 +136,36 @@ export function useUrlParamsSync(userRole?: UserRole): UrlParamsSyncReturn {
         updateUrlParams({ scope: defaultScope });
       }
     }
-    setScope(resolved);
+    setScope((prev) => (prev === resolved ? prev : resolved));
   }, [scopeQuery, defaultScope, userRole, isExecutive, updateUrlParams]);
 
   React.useEffect(() => {
     if (viewQuery) {
-      setViewMode(parseViewModeParam(viewQuery, defaultViewMode));
-      setIsStaffExpanded(viewQuery !== "focus");
+      const parsed = parseViewModeParam(viewQuery, defaultViewMode);
+      setViewMode((prev) => (prev === parsed ? prev : parsed));
+      const expanded = viewQuery !== "focus";
+      setIsStaffExpanded((prev) => (prev === expanded ? prev : expanded));
     } else {
-      setViewMode(defaultViewMode);
-      setIsStaffExpanded(false);
+      setViewMode((prev) => (prev === defaultViewMode ? prev : defaultViewMode));
+      setIsStaffExpanded((prev) => (!prev ? prev : false));
     }
   }, [viewQuery, defaultViewMode]);
 
   React.useEffect(() => {
-    if (deptQuery !== null) setSelectedDepartment(deptQuery);
+    if (deptQuery !== null) {
+      setSelectedDepartment((prev) => (prev === deptQuery ? prev : deptQuery));
+    }
   }, [deptQuery]);
 
   React.useEffect(() => {
     if (monthQuery !== null) {
-      if (monthQuery === "ALL") setSelectedAcademicMonth("ALL");
-      else {
+      if (monthQuery === "ALL") {
+        setSelectedAcademicMonth((prev) => (prev === "ALL" ? prev : "ALL"));
+      } else {
         const parsed = parseInt(monthQuery, 10);
-        if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) setSelectedAcademicMonth(parsed);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
+          setSelectedAcademicMonth((prev) => (prev === parsed ? prev : parsed));
+        }
       }
     }
   }, [monthQuery]);

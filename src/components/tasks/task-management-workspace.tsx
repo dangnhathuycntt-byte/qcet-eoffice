@@ -9,11 +9,7 @@ import {
   type WorkspaceScope,
 } from "@/components/workspace/unified-adaptive-workspace";
 import type { UnifiedAdaptiveWorkspaceProps } from "@/components/workspace/types";
-import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
-import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
-import { CreateTaskModal, type CreateTaskFormData } from "@/components/dashboard/create-task-modal";
-import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
-import { UnassignedDepartmentState } from "@/components/workspace/components/unassigned-department-state";
+import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
 import { useAuth } from "@/lib/auth-context";
 import {
   filterTasksByScope,
@@ -27,6 +23,7 @@ export {
   applyOptimisticCreateTask,
   type WorkspaceScope,
   type ViewMode,
+  type CreateTaskFormData,
 };
 
 export interface TaskManagementWorkspaceProps extends Partial<UnifiedAdaptiveWorkspaceProps> {
@@ -81,3 +78,6 @@ export function TaskManagementWorkspace({
 }
 
 export default TaskManagementWorkspace;
+
+export { useTaskFilters } from "@/hooks/use-task-filters";
+export { useTaskMutations } from "@/hooks/use-task-mutations";

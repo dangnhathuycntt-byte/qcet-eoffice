@@ -461,16 +461,23 @@ export function WorkCalendarCard({
 }
 
 export interface PriorOverdueBacklogBannerProps {
-  overdueItems: WorkCalendarItem[];
+  overdueItems?: WorkCalendarItem[];
+  items?: WorkCalendarItem[];
   onSelectWorkItem?: (item: WorkCalendarItem) => void;
+  onSelect?: (item: WorkCalendarItem) => void;
   className?: string;
 }
 
 export function PriorOverdueBacklogBanner({
-  overdueItems,
+  overdueItems: directOverdueItems,
+  items,
   onSelectWorkItem,
+  onSelect,
   className,
 }: PriorOverdueBacklogBannerProps) {
+  const overdueItems = directOverdueItems ?? items ?? [];
+  const handleSelect = onSelectWorkItem ?? onSelect;
+
   if (!overdueItems || overdueItems.length === 0) return null;
 
   return (
@@ -497,7 +504,7 @@ export function PriorOverdueBacklogBanner({
         {overdueItems.map((item) => (
           <div
             key={item.id}
-            onClick={() => onSelectWorkItem?.(item)}
+            onClick={() => handleSelect?.(item)}
             className="flex items-center justify-between gap-2 rounded-lg border border-rose-200 bg-white/80 p-2 text-xs shadow-2xs hover:bg-white hover:border-rose-300 cursor-pointer transition-all"
             title={`Xem nhiệm vụ: ${item.title}`}
           >

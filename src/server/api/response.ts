@@ -9,24 +9,69 @@ export interface ApiErrorOptions {
 export function apiError(
   error: unknown,
   requestId: string,
-  optionsOrHeaders?: HeadersInit | ApiErrorOptions
-): NextResponse<ApiErrorResponse> {
-  const isOptions =
-    optionsOrHeaders &&
-    typeof optionsOrHeaders === 'object' &&
-    !('append' in optionsOrHeaders) &&
-    !Array.isArray(optionsOrHeaders) &&
-    ('headers' in optionsOrHeaders || 'legacyCompat' in optionsOrHeaders);
+  headersOrOptions?: HeadersInit | ApiErrorOptions,
+  options?: ApiErrorOptions
+): NextResponse<any> {
+  let headers: HeadersInit | undefined;
+  let legacyCompat = false;
 
-  const headers = isOptions
-    ? (optionsOrHeaders as ApiErrorOptions).headers
-    : (optionsOrHeaders as HeadersInit);
+  if (
+    headersOrOptions &&
+    typeof headersOrOptions === 'object' &&
+    !('append' in headersOrOptions) &&
+    !Array.isArray(headersOrOptions) &&
+    ('headers' in headersOrOptions || 'legacyCompat' in headersOrOptions)
+  ) {
+    headers = (headersOrOptions as ApiErrorOptions).headers;
+    legacyCompat = Boolean((headersOrOptions as ApiErrorOptions).legacyCompat);
+  } else {
+    headers = headersOrOptions as HeadersInit | undefined;
+    legacyCompat = Boolean(options?.legacyCompat);
+  }
 
   const { status, body } = toApiErrorResponse(error, requestId);
   const responseHeaders = new Headers(headers);
   if (!responseHeaders.has('x-request-id')) {
     responseHeaders.set('x-request-id', requestId);
   }
+
+  if (legacyCompat) {
+    const rawBody = body as Record<string, any>;
+    const code =
+      rawBody.code ||
+      (typeof rawBody.error === 'object' && rawBody.error?.code) ||
+      'INTERNAL_ERROR';
+    const message =
+      rawBody.message ||
+      (typeof rawBody.error === 'object' && rawBody.error?.message) ||
+      (typeof rawBody.error === 'string' ? rawBody.error : 'Internal server error');
+    const fieldErrors =
+      rawBody.fieldErrors ||
+      (typeof rawBody.error === 'object' && rawBody.error?.fieldErrors);
+
+    const legacyErrorMessage =
+      status === 401 && (code === 'AUTH_REQUIRED' || code === 'UNAUTHORIZED')
+        ? 'Unauthorized: Authentication required'
+        : message;
+
+    const legacyBody = {
+      success: false,
+      error: legacyErrorMessage,
+      errors: fieldErrors
+        ? Object.values(fieldErrors).flat()
+        : [legacyErrorMessage],
+      code,
+      message: legacyErrorMessage,
+      ...(fieldErrors ? { fieldErrors } : {}),
+      errorDetails: typeof rawBody.error === 'object' ? rawBody.error : message,
+      requestId,
+    };
+    return NextResponse.json(legacyBody, {
+      status,
+      headers: responseHeaders,
+    });
+  }
+
   return NextResponse.json(body, {
     status,
     headers: responseHeaders,

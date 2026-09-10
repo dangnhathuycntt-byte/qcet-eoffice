@@ -151,8 +151,11 @@ export interface SchoolTask {
   dueDate: string;
   startDate?: string;
   progressPercent: number;
+  progress?: number;
   totalSubTasks: number;
   completedSubTasks: number;
+  isOverdue?: boolean;
+  requiresReview?: boolean;
   leadDepartment?: string;
   leadDepartmentCode?: string;
   leadDepartmentId?: string;
@@ -175,6 +178,7 @@ export interface SchoolTask {
   parentTaskId?: string;
   parentTaskTitle?: string;
   parentTaskCode?: string;
+  parentTaskScope?: string;
   parentTask?: {
     id: string;
     code: string;

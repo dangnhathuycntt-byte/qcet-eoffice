@@ -18,6 +18,9 @@ export const AuditAction = {
   TASK_DEADLINE_CHANGED: "TASK_DEADLINE_CHANGED",
   TASK_APPROVED: "TASK_APPROVED",
   TASK_REJECTED: "TASK_REJECTED",
+  TASK_REASSIGNED: "TASK_REASSIGNED",
+  TASK_REVISION_REQUESTED: "TASK_REVISION_REQUESTED",
+  TASK_REMINDED: "TASK_REMINDED",
 
   // Deliverable review actions
   DELIVERABLE_SUBMITTED: "DELIVERABLE_SUBMITTED",
@@ -26,11 +29,27 @@ export const AuditAction = {
   // Official document actions
   DOCUMENT_CREATED: "DOCUMENT_CREATED",
   DOCUMENT_DIRECTIVE_CREATED: "DOCUMENT_DIRECTIVE_CREATED",
+  DOCUMENT_PRESENTED: "DOCUMENT_PRESENTED",
+  DOCUMENT_DIRECTED: "DOCUMENT_DIRECTED",
+  DOCUMENT_UNIT_ASSIGNED: "DOCUMENT_UNIT_ASSIGNED",
+  DOCUMENT_RESOLVED: "DOCUMENT_RESOLVED",
+  DOCUMENT_FILED: "DOCUMENT_FILED",
+  DOCUMENT_STATUS_CHANGED: "DOCUMENT_STATUS_CHANGED",
 
   // Organization, roles & delegation actions
   USER_ROLE_CHANGED: "USER_ROLE_CHANGED",
   DELEGATION_CREATED: "DELEGATION_CREATED",
   DELEGATION_REVOKED: "DELEGATION_REVOKED",
+
+  // Work Dossier & Archival actions
+  DOSSIER_CREATED: "DOSSIER_CREATED",
+  DOSSIER_UPDATED: "DOSSIER_UPDATED",
+  DOSSIER_ITEM_ADDED: "DOSSIER_ITEM_ADDED",
+  DOSSIER_ITEM_REMOVED: "DOSSIER_ITEM_REMOVED",
+  DOSSIER_CLOSED: "DOSSIER_CLOSED",
+  DOSSIER_SUBMITTED_ARCHIVE: "DOSSIER_SUBMITTED_ARCHIVE",
+  DOSSIER_ACCEPTED_ARCHIVE: "DOSSIER_ACCEPTED_ARCHIVE",
+  DOSSIER_ARCHIVED: "DOSSIER_ARCHIVED",
 } as const;
 
 export type AuditActionType =
@@ -44,10 +63,19 @@ export const TASK_STATUS_CHANGED = AuditAction.TASK_STATUS_CHANGED;
 export const TASK_DEADLINE_CHANGED = AuditAction.TASK_DEADLINE_CHANGED;
 export const TASK_APPROVED = AuditAction.TASK_APPROVED;
 export const TASK_REJECTED = AuditAction.TASK_REJECTED;
+export const TASK_REASSIGNED = AuditAction.TASK_REASSIGNED;
+export const TASK_REVISION_REQUESTED = AuditAction.TASK_REVISION_REQUESTED;
+export const TASK_REMINDED = AuditAction.TASK_REMINDED;
 export const DELIVERABLE_SUBMITTED = AuditAction.DELIVERABLE_SUBMITTED;
 export const DELIVERABLE_REVIEWED = AuditAction.DELIVERABLE_REVIEWED;
 export const DOCUMENT_CREATED = AuditAction.DOCUMENT_CREATED;
 export const DOCUMENT_DIRECTIVE_CREATED = AuditAction.DOCUMENT_DIRECTIVE_CREATED;
+export const DOCUMENT_PRESENTED = AuditAction.DOCUMENT_PRESENTED;
+export const DOCUMENT_DIRECTED = AuditAction.DOCUMENT_DIRECTED;
+export const DOCUMENT_UNIT_ASSIGNED = AuditAction.DOCUMENT_UNIT_ASSIGNED;
+export const DOCUMENT_RESOLVED = AuditAction.DOCUMENT_RESOLVED;
+export const DOCUMENT_FILED = AuditAction.DOCUMENT_FILED;
+export const DOCUMENT_STATUS_CHANGED = AuditAction.DOCUMENT_STATUS_CHANGED;
 export const USER_ROLE_CHANGED = AuditAction.USER_ROLE_CHANGED;
 export const DELEGATION_CREATED = AuditAction.DELEGATION_CREATED;
 export const DELEGATION_REVOKED = AuditAction.DELEGATION_REVOKED;
@@ -58,10 +86,14 @@ export const DELEGATION_REVOKED = AuditAction.DELEGATION_REVOKED;
 export const AuditEntityType = {
   TASK: "Task",
   DOCUMENT: "Document",
+  DOCUMENT_WORKFLOW: "DocumentIncomingWorkflow",
+  UNIT_WORK_ASSIGNMENT: "UnitWorkAssignment",
   TASK_DELIVERABLE: "TaskDeliverable",
   DOCUMENT_DIRECTIVE: "DocumentDirective",
   USER: "User",
   DELEGATION_GRANT: "DelegationGrant",
+  WORK_DOSSIER: "WorkDossier",
+  DOSSIER_ITEM: "DossierItem",
 } as const;
 
 export type AuditEntityTypeValue =
@@ -349,6 +381,83 @@ export async function countEntityAuditEvents(
 }
 
 /**
+ * Convenience query helper to get the audit trail for a task.
+ * Returns events in descending chronological order (newest first).
+ */
+export async function getTaskAuditTrail(
+  client: DbClient,
+  taskId: string,
+  limit?: number
+): Promise<AuditEvent[]>;
+export async function getTaskAuditTrail(
+  taskId: string,
+  limit?: number
+): Promise<AuditEvent[]>;
+export async function getTaskAuditTrail(
+  clientOrTaskId: DbClient | string,
+  taskIdOrLimit?: string | number,
+  limitMaybe?: number
+): Promise<AuditEvent[]> {
+  let client: DbClient;
+  let taskId: string;
+  let limit: number | undefined;
+
+  if (typeof clientOrTaskId === "string") {
+    client = defaultPrisma;
+    taskId = clientOrTaskId;
+    limit = typeof taskIdOrLimit === "number" ? taskIdOrLimit : undefined;
+  } else {
+    client = clientOrTaskId;
+    taskId = taskIdOrLimit as string;
+    limit = limitMaybe;
+  }
+
+  return getEntityAuditHistory(client, {
+    entityType: AuditEntityType.TASK,
+    entityId: taskId,
+    limit: limit ?? 50,
+  });
+}
+
+/**
+ * Convenience query helper to get the audit trail for a user/actor.
+ * Returns events in descending chronological order (newest first).
+ */
+export async function getUserAuditTrail(
+  client: DbClient,
+  userId: string,
+  limit?: number
+): Promise<AuditEvent[]>;
+export async function getUserAuditTrail(
+  userId: string,
+  limit?: number
+): Promise<AuditEvent[]>;
+export async function getUserAuditTrail(
+  clientOrUserId: DbClient | string,
+  userIdOrLimit?: string | number,
+  limitMaybe?: number
+): Promise<AuditEvent[]> {
+  let client: DbClient;
+  let userId: string;
+  let limit: number | undefined;
+
+  if (typeof clientOrUserId === "string") {
+    client = defaultPrisma;
+    userId = clientOrUserId;
+    limit = typeof userIdOrLimit === "number" ? userIdOrLimit : undefined;
+  } else {
+    client = clientOrUserId;
+    userId = userIdOrLimit as string;
+    limit = limitMaybe;
+  }
+
+  return getActorAuditHistory(client, {
+    actorId: userId,
+    limit: limit ?? 50,
+  });
+}
+
+/**
  * IMMUTABILITY GUARANTEE & ARCHITECTURAL INVARIANT:
  *
  * 1. AuditEvent is strictly append-only (WORM - Write Once, Read Many).
@@ -362,3 +471,21 @@ export const AUDIT_IMMUTABILITY_INVARIANT = Object.freeze({
   modelName: "AuditEvent",
   tableName: "audit_events",
 });
+
+export const recordAuditEvent = logAuditEvent;
+
+/**
+ * Institutional audit service singleton wrapper for centralized event logging and audit inspection.
+ */
+export const auditService = {
+  logEvent: logAuditEvent,
+  logAuditEvent,
+  recordAuditEvent: logAuditEvent,
+  getEntityAuditHistory,
+  getActorAuditHistory,
+  getRequestAuditEvents,
+  countEntityAuditEvents,
+  getTaskAuditTrail,
+  getUserAuditTrail,
+};
+

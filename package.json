@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "build:standalone": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "node scripts/lint.mjs",
     "test": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm test",
+    "verify": "npm run typecheck && npm run lint && npm test",
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {

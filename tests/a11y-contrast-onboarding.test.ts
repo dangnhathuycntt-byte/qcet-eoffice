@@ -28,6 +28,8 @@ const mockAuthValue: AuthContextType = {
   user: testOfficer,
   isAuthenticated: true,
   isOfflineReadOnly: false,
+  authState: { status: "authenticated", user: testOfficer },
+  canMutate: true,
   switchRole: () => {},
   switchUser: () => {},
   login: async () => ({ success: true }),

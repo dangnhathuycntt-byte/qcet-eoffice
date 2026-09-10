@@ -112,6 +112,7 @@ describe("Task 1: Security & Session Binding on Document Endpoints", () => {
       }),
       headers: {
         "Content-Type": "application/json",
+        Origin: "http://localhost:3001",
         Cookie: `${SESSION_COOKIE_NAME}=${token}`,
       },
     });
@@ -474,7 +475,8 @@ describe("Task 2: Task BOLA/IDOR & Directive Role Enforcement", () => {
     const originalEnv = process.env.NODE_ENV;
     (process.env as any).NODE_ENV = "production";
     try {
-      const res = await getNetworkInfo();
+      const req = new NextRequest("http://localhost:3000/api/system/network-info");
+      const res = await getNetworkInfo(req);
       assert.ok([403, 404].includes(res.status));
     } finally {
       (process.env as any).NODE_ENV = originalEnv;

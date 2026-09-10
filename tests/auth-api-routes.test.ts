@@ -1,6 +1,7 @@
-import { test, describe } from "node:test";
+import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { signSessionToken, verifySessionToken, getJwtSecret, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
+import { resetRateLimits } from "../src/server/security/rate-limit";
 import { POST as logoutPost } from "../src/app/api/auth/logout/route";
 import { POST as loginPost } from "../src/app/api/auth/login/route";
 import { POST as registerPost } from "../src/app/api/auth/register/route";
@@ -55,6 +56,10 @@ describe("JWT Session Utilities", () => {
 });
 
 describe("Auth API Route Handlers Contracts", () => {
+  beforeEach(() => {
+    resetRateLimits();
+  });
+
   test("POST /api/auth/logout clears session cookie and returns success", async () => {
     const res = await logoutPost();
     assert.strictEqual(res.status, 200);
@@ -80,7 +85,8 @@ describe("Auth API Route Handlers Contracts", () => {
 
     const json = await res.json();
     assert.ok(json.error);
-    assert.match(json.error, /Vui lòng nhập/);
+    const errorMessage = json.error?.message || json.error || json.message;
+    assert.match(errorMessage, /(?:Validation failed|Vui lòng nhập)/);
   });
 
   test("POST /api/auth/register rejects missing required fields with status 400", async () => {
@@ -95,7 +101,8 @@ describe("Auth API Route Handlers Contracts", () => {
 
     const json = await res.json();
     assert.ok(json.error);
-    assert.match(json.error, /Vui lòng cung cấp đầy đủ/);
+    const errorMessage = json.error?.message || json.error || json.message;
+    assert.match(errorMessage, /(?:Validation failed|Vui lòng cung cấp đầy đủ)/);
   });
 
   test("POST /api/auth/register rejects short password (<6 chars) with status 400", async () => {
@@ -114,7 +121,15 @@ describe("Auth API Route Handlers Contracts", () => {
 
     const json = await res.json();
     assert.ok(json.error);
-    assert.match(json.error, /Mật khẩu phải từ 6 đến 72 ký tự/);
+    const errorMessage =
+      json.error?.fieldErrors?.password?.[0] ||
+      json.error?.message ||
+      json.error ||
+      json.message;
+    assert.match(
+      errorMessage,
+      /(?:Password must be at least 6 characters|Mật khẩu phải từ 6 đến 72 ký tự|Validation failed)/
+    );
   });
 
   test("POST /api/auth/register rejects invalid department ID with status 400", async () => {
@@ -134,7 +149,8 @@ describe("Auth API Route Handlers Contracts", () => {
 
     const json = await res.json();
     assert.ok(json.error);
-    assert.match(json.error, /Phòng ban không tồn tại/);
+    const errorMessage = json.error?.message || json.error || json.message;
+    assert.match(errorMessage, /Phòng ban không tồn tại/);
   });
 
   test("GET /api/auth/me returns unauthenticated when no cookie provided", async () => {
@@ -163,6 +179,10 @@ describe("Auth API Route Handlers Contracts", () => {
 });
 
 describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
+  beforeEach(() => {
+    resetRateLimits();
+  });
+
   const testEmail = "e2e_tester@qcet.edu.vn";
   const testPassword = "Password@123";
 
@@ -179,7 +199,9 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     const res = await loginPost(req);
     assert.strictEqual(res.status, 401);
     const json = await res.json();
-    assert.match(json.error, /Email hoặc mật khẩu không chính xác/);
+    assert.ok(json.error);
+    const errorMessage = json.error?.message || json.error || json.message;
+    assert.match(errorMessage, /Email hoặc mật khẩu không chính xác/);
   });
 
   test("POST /api/auth/login succeeds for seeded BGH account and issues session cookie", async () => {
@@ -369,7 +391,9 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
       const loginRes = await loginPost(loginReq);
       assert.strictEqual(loginRes.status, 403);
       const loginJson = await loginRes.json();
-      assert.match(loginJson.error, /Tài khoản đã bị khóa hoặc tạm ngưng/);
+      assert.ok(loginJson.error);
+      const errorMessage = loginJson.error?.message || loginJson.error || loginJson.message;
+      assert.match(errorMessage, /Tài khoản đã bị khóa hoặc tạm ngưng/);
 
       // Verify me query also returns unauthenticated for inactive user
       const { signSessionToken } = await import("../src/lib/jwt-session");

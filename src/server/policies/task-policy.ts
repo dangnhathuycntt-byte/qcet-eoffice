@@ -4,8 +4,10 @@ export interface TaskEntity {
   id: string;
   departmentId?: string | null;
   creatorId?: string | null;
+  createdById?: string | null;
   assigneeId?: string | null;
   collaboratorIds?: string[] | string | null;
+  assignees?: Array<{ userId: string; roleInTask?: string }> | null;
   status?: string | null;
   scope?: string | null;
   [key: string]: any;
@@ -21,6 +23,19 @@ function isManager(user: AuthenticatedUser): boolean {
 
 function isStaff(user: AuthenticatedUser): boolean {
   return normalizeRole(user.role) === 'STAFF';
+}
+
+function getCreatorId(task: TaskEntity): string | null {
+  return task.creatorId || task.createdById || null;
+}
+
+function getAssigneeId(task: TaskEntity): string | null {
+  if (task.assigneeId) return task.assigneeId;
+  if (Array.isArray(task.assignees)) {
+    const primary = task.assignees.find((a: any) => a.roleInTask === 'PRIMARY_OWNER');
+    if (primary) return primary.userId;
+  }
+  return null;
 }
 
 function isCollaborator(
@@ -54,6 +69,16 @@ function isCollaborator(
   return false;
 }
 
+function isUserCollaborator(user: AuthenticatedUser, task: TaskEntity): boolean {
+  if (isCollaborator(user, task.collaboratorIds)) return true;
+  if (Array.isArray(task.assignees)) {
+    return task.assignees.some(
+      (a: any) => a.roleInTask === 'COLLABORATOR' && a.userId === user.id
+    );
+  }
+  return false;
+}
+
 /**
  * Checks if user can read the specified task.
  * Enforces OWASP API1 (BOLA) and role boundaries.
@@ -65,9 +90,11 @@ export function canReadTask(user: AuthenticatedUser, task: TaskEntity): boolean 
   if (isAdmin(user)) return true;
 
   // 2. Direct participants (Creator, Assignee, Collaborator)
-  if (task.creatorId && task.creatorId === user.id) return true;
-  if (task.assigneeId && task.assigneeId === user.id) return true;
-  if (isCollaborator(user, task.collaboratorIds)) return true;
+  const creatorId = getCreatorId(task);
+  const assigneeId = getAssigneeId(task);
+  if (creatorId && creatorId === user.id) return true;
+  if (assigneeId && assigneeId === user.id) return true;
+  if (isUserCollaborator(user, task)) return true;
 
   // 3. Department boundary: Members of the same department can view department tasks
   if (task.departmentId && user.departmentId && task.departmentId === user.departmentId) {
@@ -106,11 +133,14 @@ export function canUpdateTask(user: AuthenticatedUser, task: TaskEntity): boolea
 
   if (isAdmin(user)) return true;
 
+  const creatorId = getCreatorId(task);
+  const assigneeId = getAssigneeId(task);
+
   // Creator can update
-  if (task.creatorId && task.creatorId === user.id) return true;
+  if (creatorId && creatorId === user.id) return true;
 
   // Assignee can update
-  if (task.assigneeId && task.assigneeId === user.id) return true;
+  if (assigneeId && assigneeId === user.id) return true;
 
   // Department manager of the task's department can update
   if (
@@ -142,8 +172,10 @@ export function canApproveTask(user: AuthenticatedUser, task: TaskEntity): boole
   // ADMIN / BAN_GIAM_HIEU has institutional approval authority
   if (isAdmin(user)) return true;
 
+  const assigneeId = getAssigneeId(task);
+
   // Self-approval check: Assignee cannot approve their own task unless ADMIN
-  if (task.assigneeId && task.assigneeId === user.id) {
+  if (assigneeId && assigneeId === user.id) {
     return false;
   }
 
@@ -181,10 +213,12 @@ export function canChangeTaskStatus(
     return canApproveTask(user, task);
   }
 
+  const creatorId = getCreatorId(task);
+
   // Cancellation requires Admin, Dept Manager, or Creator
   if (statusUpper === 'CANCELLED' || statusUpper === 'HUY') {
     if (isAdmin(user)) return true;
-    if (task.creatorId && task.creatorId === user.id) return true;
+    if (creatorId && creatorId === user.id) return true;
     if (
       isManager(user) &&
       user.departmentId &&
@@ -198,9 +232,10 @@ export function canChangeTaskStatus(
 
   // General operational status changes (IN_PROGRESS, PENDING_REVIEW, etc.)
   if (isAdmin(user)) return true;
-  if (task.creatorId && task.creatorId === user.id) return true;
-  if (task.assigneeId && task.assigneeId === user.id) return true;
-  if (isCollaborator(user, task.collaboratorIds)) return true;
+  if (creatorId && creatorId === user.id) return true;
+  const assigneeId = getAssigneeId(task);
+  if (assigneeId && assigneeId === user.id) return true;
+  if (isUserCollaborator(user, task)) return true;
   if (
     isManager(user) &&
     user.departmentId &&
@@ -229,8 +264,9 @@ export function canSubmitDeliverable(
   }
 
   if (isAdmin(user)) return true;
-  if (task.assigneeId && task.assigneeId === user.id) return true;
-  if (isCollaborator(user, task.collaboratorIds)) return true;
+  const assigneeId = getAssigneeId(task);
+  if (assigneeId && assigneeId === user.id) return true;
+  if (isUserCollaborator(user, task)) return true;
 
   if (
     isManager(user) &&
@@ -252,7 +288,8 @@ export function canDeleteTask(user: AuthenticatedUser, task: TaskEntity): boolea
 
   if (isAdmin(user)) return true;
 
-  if (task.creatorId && task.creatorId === user.id) return true;
+  const creatorId = getCreatorId(task);
+  if (creatorId && creatorId === user.id) return true;
 
   if (
     isManager(user) &&

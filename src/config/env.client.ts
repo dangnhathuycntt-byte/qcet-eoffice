@@ -34,6 +34,7 @@ export const ClientEnvSchema = z
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
     NEXT_PUBLIC_REFERENCE_DATE: z.string().optional(),
     NEXT_PUBLIC_APP_VERSION: z.string().optional(),
+    NEXT_PUBLIC_ENABLE_SW: z.string().optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
@@ -66,12 +67,27 @@ export type ClientEnv = z.infer<typeof ClientEnvSchema>;
  * when referenced statically as member expressions. Dynamic access fails in browser runtime.
  */
 export const clientSource = {
-  NODE_ENV: process.env.NODE_ENV,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-  NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  NEXT_PUBLIC_REFERENCE_DATE: process.env.NEXT_PUBLIC_REFERENCE_DATE,
-  NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
+  get NODE_ENV() {
+    return process.env.NODE_ENV;
+  },
+  get NEXT_PUBLIC_APP_URL() {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  },
+  get NEXT_PUBLIC_GOOGLE_CLIENT_ID() {
+    return process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  },
+  get NEXT_PUBLIC_VAPID_PUBLIC_KEY() {
+    return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  },
+  get NEXT_PUBLIC_REFERENCE_DATE() {
+    return process.env.NEXT_PUBLIC_REFERENCE_DATE;
+  },
+  get NEXT_PUBLIC_APP_VERSION() {
+    return process.env.NEXT_PUBLIC_APP_VERSION;
+  },
+  get NEXT_PUBLIC_ENABLE_SW() {
+    return process.env.NEXT_PUBLIC_ENABLE_SW;
+  },
 };
 
 /**
@@ -143,6 +159,9 @@ export function resetClientEnv(): void {
  */
 export const clientEnv: ClientEnv = new Proxy({} as ClientEnv, {
   get(_target, prop) {
+    if (process.env.NODE_ENV === "test") {
+      return (validateClientEnv() as any)[prop];
+    }
     const env = getClientEnv();
     return Reflect.get(env, prop);
   },

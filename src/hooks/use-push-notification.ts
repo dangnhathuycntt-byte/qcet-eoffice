@@ -74,6 +74,9 @@ export function usePushNotification(): UsePushNotificationReturn {
 
     const initializeRegistration = async () => {
       try {
+        if ('serviceWorker' in navigator) {
+          await navigator.serviceWorker.getRegistration('/');
+        }
         const existingSub = await withTimeout(getPushSubscription(), 4000, null);
         if (!isMounted) return;
 

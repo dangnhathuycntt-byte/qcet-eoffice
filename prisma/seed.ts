@@ -11,6 +11,7 @@ import {
   DocumentStatus,
 } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { seedCanonicalOrg } from './seeds/canonical-org-seed';
 
 const prisma = new PrismaClient();
 
@@ -3290,6 +3291,9 @@ async function main() {
       create: notif,
     });
   }
+
+  // Khởi tạo cơ cấu tổ chức chuẩn tắc QCET (QĐ 282 & QĐ 420)
+  await seedCanonicalOrg(prisma);
 
   console.log(`Seeding completed successfully with ${departments.length} departments, ${users.length} users, ${sampleTasks.length} tasks, and ${sampleDocuments.length} documents.`);
 }

@@ -3,7 +3,7 @@ import os from 'os';
 import { getApiContext } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { NotFoundError } from '@/server/api/errors';
-import { isAdmin } from '@/server/policies/executive-policy';
+import { isAdmin } from '@/server/policies/document-policy';
 
 export const dynamic = 'force-dynamic';
 

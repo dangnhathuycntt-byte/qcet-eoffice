@@ -1,79 +1,123 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload } from '@/lib/jwt-session';
-import { taskCommandService } from '@/server/tasks';
-import { ApiError } from '@/server/api/errors';
-
-function getSessionPayload(request: NextRequest): SessionPayload | null {
-  const authHeader = request.headers.get('authorization');
-  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value || bearerToken;
-  if (!token) return null;
-  return verifySessionToken(token);
-}
+import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
+import { apiError, apiSuccess } from '@/server/api/response';
+import {
+  parseAndValidateJson,
+  assertRequestBodySize,
+  MAX_PAYLOAD_SIZE,
+  assertJsonContentType,
+} from '@/server/api/validation';
+import { assertRateLimit } from '@/server/security/rate-limit';
+import { assertCsrf } from '@/server/security/csrf';
+import { NotFoundError, ForbiddenError } from '@/server/api/errors';
+import { SubmitDeliverableSchema, ReviewDeliverableInputSchema } from '@/contracts/tasks';
+import { taskQueryService, taskCommandService } from '@/server/tasks';
+import { canSubmitDeliverable } from '@/server/policies/task-policy';
+import { toTaskDeliverableDTO } from '@/server/dto/task-dto';
 
 interface RouteContext {
   params: Promise<{ id: string }> | { id: string };
 }
 
-export async function POST(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function POST(req: Request, routeContext: RouteContext) {
+  let requestId = crypto.randomUUID();
   try {
-    const session = getSessionPayload(request);
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    assertCsrf(req);
+    assertJsonContentType(req);
+    assertRequestBodySize(req, MAX_PAYLOAD_SIZE);
+
+    const context = await getApiContext(req);
+    requestId = context.requestId;
+
+    const authUser = requireAuthenticated(context);
+
+    assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
+
+    const { id: taskId } = await Promise.resolve(routeContext.params);
+
+    const taskResult = await taskQueryService.getTaskById(taskId);
+    if (!taskResult) {
+      throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const { id: taskId } = await Promise.resolve(context.params);
-    const body = await request.json();
+    const existingTask = taskResult.raw || taskResult.task;
 
-    const deliverable = await taskCommandService.submitDeliverable(
-      { user: session },
-      taskId,
-      body
-    );
+    // Object authorization check
+    if (!canSubmitDeliverable(authUser, existingTask)) {
+      throw new ForbiddenError(
+        'Bạn không có quyền nộp minh chứng cho nhiệm vụ này hoặc nhiệm vụ đã bị hủy'
+      );
+    }
 
-    return NextResponse.json(
-      { success: true, deliverable, data: deliverable },
-      { status: 201 }
+    const validatedInput = await parseAndValidateJson(req, SubmitDeliverableSchema);
+
+    // Atomic transaction: creates deliverable + updates task state + audit log
+    const deliverable = await taskCommandService.submitDeliverable(context, taskId, {
+      title: validatedInput.title,
+      fileUrl: validatedInput.fileUrl,
+      fileName: validatedInput.fileName,
+      fileType: validatedInput.fileType,
+      fileSize: validatedInput.fileSize,
+      notes: validatedInput.notes ?? validatedInput.note,
+    });
+
+    const deliverableDto = toTaskDeliverableDTO(deliverable);
+
+    return apiSuccess(
+      {
+        success: true,
+        deliverable: deliverableDto,
+        data: deliverableDto,
+      },
+      {
+        status: 201,
+        headers: { 'Cache-Control': 'private, no-store' },
+        requestId: context.requestId,
+      }
     );
-  } catch (error: any) {
-    console.error('Error creating deliverable:', error);
-    const status = error instanceof ApiError ? error.statusCode : 500;
-    return NextResponse.json(
-      { success: false, error: error.message, code: error.code },
-      { status }
-    );
+  } catch (error) {
+    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function PATCH(req: Request, routeContext: RouteContext) {
+  let requestId = crypto.randomUUID();
   try {
-    const session = getSessionPayload(request);
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    assertCsrf(req);
+    assertJsonContentType(req);
+    assertRequestBodySize(req, MAX_PAYLOAD_SIZE);
 
-    const { id: taskId } = await Promise.resolve(context.params);
-    const body = await request.json();
+    const context = await getApiContext(req);
+    requestId = context.requestId;
 
-    const deliverable = await taskCommandService.reviewDeliverable(
-      { user: session },
-      taskId,
-      body
+    const authUser = requireAuthenticated(context);
+
+    assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
+
+    const { id: taskId } = await Promise.resolve(routeContext.params);
+
+    const validatedInput = await parseAndValidateJson(req, ReviewDeliverableInputSchema);
+
+    // Atomic review transaction: checks SoD, updates deliverable & task status, logs audit
+    const deliverable = await taskCommandService.reviewDeliverable(context, taskId, {
+      deliverableId: validatedInput.deliverableId || '',
+      reviewStatus: validatedInput.reviewStatus,
+      reviewNote: validatedInput.reviewNote,
+    });
+
+    const deliverableDto = toTaskDeliverableDTO(deliverable);
+
+    return apiSuccess(
+      {
+        success: true,
+        deliverable: deliverableDto,
+        data: deliverableDto,
+      },
+      {
+        headers: { 'Cache-Control': 'private, no-store' },
+        requestId: context.requestId,
+      }
     );
-
-    return NextResponse.json({ success: true, deliverable, data: deliverable });
-  } catch (error: any) {
-    console.error('Error reviewing deliverable:', error);
-    const status = error instanceof ApiError ? error.statusCode : 500;
-    return NextResponse.json(
-      { success: false, error: error.message, code: error.code },
-      { status }
-    );
+  } catch (error) {
+    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
   }
 }

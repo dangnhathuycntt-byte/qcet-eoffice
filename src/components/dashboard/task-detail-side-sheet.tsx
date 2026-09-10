@@ -1998,15 +1998,13 @@ export function TaskDetailSideSheet({
         </div>
       </aside>
 
-      {/* Rejection Modal Dialog for Manager Review */}
+      {/* In-Sheet Rejection Review Panel: Strictly inside the SideSheet, no nested modal dialogs */}
       {isRejectionModalOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="rejection-dialog-title"
+          className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-xs p-4 sm:p-6 animate-in fade-in duration-150"
+          data-slot="in-sheet-rejection-panel"
         >
-          <div className="w-full max-w-md rounded-xl border border-border/60 bg-card p-5 shadow-2xl space-y-4">
+          <div className="w-full max-w-md rounded-xl border border-border/60 bg-card p-5 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-border/50 pb-3">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="size-4 text-amber-600" strokeWidth={1.5} />

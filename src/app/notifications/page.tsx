@@ -26,7 +26,10 @@ import {
   getActorInitials,
   getTypeBadge,
   mapDbNotification,
+  resolveActionableDeepLink,
+  extractNotificationEntity,
 } from "@/lib/notification-triage";
+import { MobileNotificationInbox } from "@/components/notifications/mobile-notification-inbox";
 
 interface TabMeta {
   id: NotificationTriageTab;
@@ -194,8 +197,21 @@ export default function NotificationsPage() {
         </Button>
       </div>
 
-      {/* Card Container */}
-      <div className="rounded-2xl border border-border/80 bg-card shadow-card overflow-hidden select-none">
+      {/* Mobile Actionable Notification Inbox (< 640px / sm:hidden) */}
+      <div className="block sm:hidden">
+        <MobileNotificationInbox
+          notifications={notifications}
+          isLoading={isLoading}
+          onRefresh={fetchNotifications}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+        />
+      </div>
+
+      {/* Desktop Notification Center (sm:block / >= 640px) */}
+      <div className="hidden sm:block">
+        {/* Card Container */}
+        <div className="rounded-2xl border border-border/80 bg-card shadow-card overflow-hidden select-none">
         {/* Header */}
         <div className="p-4 sm:p-5 pb-3 border-b border-border/50 bg-muted/20">
           <div className="flex items-center justify-between gap-3">
@@ -368,6 +384,7 @@ export default function NotificationsPage() {
           )}
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -384,7 +401,7 @@ function PageNotificationRow({
   const avatarStyle = getDeterministicAvatarStyle(item.actorName);
   const formatted = formatNotificationContent(item);
 
-  const destinationHref = item.linkHref && item.linkHref.trim() !== "" ? item.linkHref : "/notifications";
+  const destinationHref = resolveActionableDeepLink(item);
 
   return (
     <Link

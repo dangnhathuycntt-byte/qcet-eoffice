@@ -286,7 +286,11 @@ export function PushOnboardingSheet({
     subscribeToPush,
   } = usePushNotification();
 
-  const coordinator = usePWAOnboardingCoordinator(userId);
+  const {
+    canShowPushPrompt,
+    recordInterruptionShown,
+    snoozePush,
+  } = usePWAOnboardingCoordinator(userId);
 
   const isControlled = manualOpen !== undefined || forceOpen !== undefined;
   const isOpen = isControlled ? Boolean(manualOpen ?? forceOpen) : internalOpen;
@@ -312,11 +316,11 @@ export function PushOnboardingSheet({
     if (typeof window === "undefined") return;
 
     // The sheet only opens if coordinator allows it (never cold-prompts on initial load)
-    if (coordinator.canShowPushPrompt && !isControlled && !isSubscribed) {
-      coordinator.recordInterruptionShown("PUSH");
+    if (canShowPushPrompt && !isControlled && !isSubscribed) {
+      recordInterruptionShown("PUSH");
       setInternalOpen(true);
     }
-  }, [coordinator, isControlled, isSubscribed]);
+  }, [canShowPushPrompt, isControlled, isSubscribed, recordInterruptionShown]);
 
   // Listen for manual trigger via custom event
   React.useEffect(() => {
@@ -338,7 +342,7 @@ export function PushOnboardingSheet({
     } catch {
       // Ignore
     }
-    coordinator.snoozePush(14);
+    snoozePush(14);
     handleOpenChange(false);
   };
 
@@ -380,7 +384,7 @@ export function PushOnboardingSheet({
 
     const success = await subscribeToPush();
     if (success) {
-      coordinator.snoozePush(365);
+      snoozePush(365);
       onSuccess?.();
       setTimeout(() => {
         handleOpenChange(false);

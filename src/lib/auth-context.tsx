@@ -8,7 +8,7 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { AuthUser, UserRole, OnboardingData } from "../types/auth";
+import { AuthUser, CachedUser, UserRole, OnboardingData, AuthState } from "../types/auth";
 import { purgeUserOfflineData } from "./pwa/offline-store";
 
 export const AUTH_STORAGE_KEY = "qcet_active_user";
@@ -24,16 +24,21 @@ export interface RegisterPayload {
 }
 
 export interface AuthContextType {
-  user: AuthUser | null;
-  isAuthenticated?: boolean;
-  isOfflineReadOnly?: boolean;
+  user: AuthUser | CachedUser | null;
+  isAuthenticated: boolean;
+  isOfflineReadOnly: boolean;
+  authState: AuthState;
+  canMutate: boolean;
   switchRole: (role: UserRole) => void;
   switchUser: (userId: string) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
   register: (data: RegisterPayload) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
-  loginWithGoogle: (payload: {
-    email: string;
-    name: string;
+  /**
+   * @deprecated Google login is handled via server OAuth at /api/auth/google.
+   */
+  loginWithGoogle: (payload?: {
+    email?: string;
+    name?: string;
     avatar?: string;
   }) => AuthUser;
   updateProfile: (updates: Partial<AuthUser>) => void;
@@ -160,19 +165,15 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isOfflineReadOnly: false,
+  authState: { status: "anonymous" },
+  canMutate: false,
   switchRole: () => {},
   switchUser: () => {},
   login: async () => ({ success: false, error: "Not initialized" }),
   register: async () => ({ success: false, error: "Not initialized" }),
-  loginWithGoogle: () => ({
-    id: "uninitialized",
-    name: "",
-    email: "",
-    role: "STAFF",
-    roleLabel: "",
-    department: "",
-    departmentCode: "",
-  }),
+  loginWithGoogle: () => {
+    throw new Error("Google login is handled via server OAuth at /api/auth/google");
+  },
   updateProfile: () => {},
   logout: async () => {},
   isProfileModalOpen: false,
@@ -189,7 +190,9 @@ export function useAuth(): AuthContextType {
 }
 
 export interface SessionResolutionResult {
-  user: AuthUser | null;
+  state: AuthState;
+  canMutate: boolean;
+  user: AuthUser | CachedUser | null;
   isAuthenticated: boolean;
   isOfflineReadOnly: boolean;
 }
@@ -198,19 +201,21 @@ export interface SessionResolutionResult {
  * Pure session state resolver enforcing Server Session Truth (31-auth-security.md):
  * - Server session is the sole authority for active authentication.
  * - If server session is valid (200 with authenticated: true):
- *     isAuthenticated: true, isOfflineReadOnly: false
+ *     state: { status: 'authenticated', user }, canMutate: true, isAuthenticated: true, isOfflineReadOnly: false
  * - If server returns 401 / unauthenticated / offline error, but localStorage has cached identity:
- *     isAuthenticated: false, isOfflineReadOnly: true (cached UI read-only mode)
+ *     state: { status: 'offline-cached', user }, canMutate: false, isAuthenticated: false, isOfflineReadOnly: true
  * - If server returns 401 / unauthenticated and no cached identity exists:
- *     user: null, isAuthenticated: false, isOfflineReadOnly: false
+ *     state: { status: 'anonymous' }, canMutate: false, user: null, isAuthenticated: false, isOfflineReadOnly: false
  */
 export function resolveSessionState(
   serverAuth: { authenticated: boolean; user?: any } | null,
-  cachedUserStr: string | null
+  cachedUserStr: string | object | null
 ): SessionResolutionResult {
   if (serverAuth && serverAuth.authenticated && serverAuth.user) {
     const serverUser = mapDbUserToAuthUser(serverAuth.user);
     return {
+      state: { status: "authenticated", user: serverUser },
+      canMutate: true,
       user: serverUser,
       isAuthenticated: true,
       isOfflineReadOnly: false,
@@ -219,10 +224,17 @@ export function resolveSessionState(
 
   if (cachedUserStr) {
     try {
-      const parsed = JSON.parse(cachedUserStr);
+      const parsed = typeof cachedUserStr === "string" ? JSON.parse(cachedUserStr) : cachedUserStr;
       if (parsed && typeof parsed === "object" && parsed.id) {
+        const cachedUser: CachedUser = {
+          ...parsed,
+          cachedAt: parsed.cachedAt || new Date().toISOString(),
+          isOfflineCached: true,
+        };
         return {
-          user: parsed as AuthUser,
+          state: { status: "offline-cached", user: cachedUser },
+          canMutate: false,
+          user: cachedUser,
           isAuthenticated: false,
           isOfflineReadOnly: true,
         };
@@ -233,10 +245,25 @@ export function resolveSessionState(
   }
 
   return {
+    state: { status: "anonymous" },
+    canMutate: false,
     user: null,
     isAuthenticated: false,
     isOfflineReadOnly: false,
   };
+}
+
+/**
+ * Guard assertion enforcing Server Session Truth (31-auth-security.md):
+ * Mutations are only permitted when the session is authenticated by the server
+ * and canMutate is true. Offline-cached or anonymous sessions cannot mutate data.
+ */
+export function assertCanMutate(canMutate: boolean, authState: AuthState): void {
+  if (!canMutate || authState.status !== "authenticated") {
+    const errorMsg =
+      "Mutations not permitted: session is offline-cached or unauthenticated (Server Session Truth)";
+    throw new Error(errorMsg);
+  }
 }
 
 export async function performSessionSync(
@@ -282,9 +309,11 @@ export async function performSessionSync(
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
+  const [user, setUser] = useState<AuthUser | CachedUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isOfflineReadOnly, setIsOfflineReadOnly] = useState<boolean>(false);
+  const [canMutate, setCanMutate] = useState<boolean>(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -322,9 +351,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!isMounted) return;
 
+      setAuthState(resolution.state);
       setUser(resolution.user);
       setIsAuthenticated(resolution.isAuthenticated);
       setIsOfflineReadOnly(resolution.isOfflineReadOnly);
+      setCanMutate(resolution.canMutate);
       setIsLoading(false);
     }
 
@@ -345,16 +376,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const data = await res.json();
         if (!res.ok || !data.success) {
+          const errorMsg =
+            data.error?.message ||
+            (typeof data.error === "string" ? data.error : data.message) ||
+            "Email hoặc mật khẩu không chính xác";
           return {
             success: false,
-            error: data.error || "Email hoặc mật khẩu không chính xác",
+            error: errorMsg,
           };
         }
 
         const authenticatedUser = mapDbUserToAuthUser(data.user);
+        setAuthState({ status: "authenticated", user: authenticatedUser });
         setUser(authenticatedUser);
         setIsAuthenticated(true);
         setIsOfflineReadOnly(false);
+        setCanMutate(true);
 
         if (typeof window !== "undefined") {
           try {
@@ -387,13 +424,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const result = await res.json();
         if (!res.ok || !result.success) {
+          const errorMsg =
+            result.error?.message ||
+            (typeof result.error === "string" ? result.error : result.message) ||
+            "Không thể tạo tài khoản mới";
           return {
             success: false,
-            error: result.error || "Không thể tạo tài khoản mới",
+            error: errorMsg,
           };
         }
 
         const createdUser = mapDbUserToAuthUser(result.user);
+        setAuthState({ status: "authenticated", user: createdUser });
+        setUser(createdUser);
+        setIsAuthenticated(true);
+        setIsOfflineReadOnly(false);
+        setCanMutate(true);
         return { success: true, user: createdUser };
       } catch (error) {
         console.error("Register request failed:", error);
@@ -434,9 +480,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    setAuthState({ status: "anonymous" });
     setUser(null);
     setIsAuthenticated(false);
     setIsOfflineReadOnly(false);
+    setCanMutate(false);
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -451,7 +499,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((prev) => {
       if (!prev) return null;
       const updated: AuthUser = {
-        ...prev,
+        ...(prev as AuthUser),
         role,
         roleLabel:
           role === "ADMIN"
@@ -469,130 +517,146 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return updated;
     });
-  }, []);
-
-  const switchUser = useCallback((userId: string) => {
-    const registered = getRegisteredUsers();
-    const targetUser = registered.find((u) => u.id === userId || u.email === userId);
-    if (targetUser) {
-      setUser(targetUser);
-      setIsAuthenticated(true);
-      setIsOfflineReadOnly(false);
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(targetUser));
-        } catch {
-          // ignore
-        }
-      }
-    }
-  }, []);
-
-  const loginWithGoogle = useCallback(
-    (payload: { email: string; name: string; avatar?: string }): AuthUser => {
-      const normalizedEmail = payload.email.trim().toLowerCase();
-      const registered = getRegisteredUsers();
-
-      // 1. Check if user already exists in registered list
-      const existingUser = registered.find(
-        (u) => u.email.toLowerCase() === normalizedEmail
-      );
-
-      if (existingUser) {
-        const updated = {
-          ...existingUser,
-          avatar: payload.avatar || existingUser.avatar,
+    setAuthState((prev) => {
+      if (prev.status === "authenticated") {
+        return {
+          status: "authenticated",
+          user: {
+            ...prev.user,
+            role,
+            roleLabel:
+              role === "ADMIN"
+                ? "Ban Giám hiệu"
+                : role === "MANAGER"
+                ? "Trưởng đơn vị"
+                : "Chuyên viên",
+          },
         };
-        setUser(updated);
-        setIsAuthenticated(true);
-        setIsOfflineReadOnly(false);
+      }
+      if (prev.status === "offline-cached") {
+        return {
+          status: "offline-cached",
+          user: {
+            ...prev.user,
+            role,
+            roleLabel:
+              role === "ADMIN"
+                ? "Ban Giám hiệu"
+                : role === "MANAGER"
+                ? "Trưởng đơn vị"
+                : "Chuyên viên",
+          },
+        };
+      }
+      return prev;
+    });
+  }, []);
+
+  const switchUser = useCallback(
+    (userId: string) => {
+      const registered = getRegisteredUsers();
+      const targetUser = registered.find((u) => u.id === userId || u.email === userId);
+      if (targetUser) {
+        const isServerSession =
+          authState.status === "authenticated" &&
+          (authState.user.id === targetUser.id || authState.user.email === targetUser.email);
+
+        if (isServerSession) {
+          setAuthState({ status: "authenticated", user: targetUser });
+          setUser(targetUser);
+          setIsAuthenticated(true);
+          setIsOfflineReadOnly(false);
+          setCanMutate(true);
+        } else {
+          // Switching user locally must NEVER unilaterally elevate state to authenticated or canMutate: true
+          const cachedUser: CachedUser = {
+            ...targetUser,
+            cachedAt: new Date().toISOString(),
+            isOfflineCached: true,
+          };
+          setAuthState({ status: "offline-cached", user: cachedUser });
+          setUser(cachedUser);
+          setIsAuthenticated(false);
+          setIsOfflineReadOnly(true);
+          setCanMutate(false);
+        }
+
         if (typeof window !== "undefined") {
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+          try {
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(targetUser));
+          } catch {
+            // ignore
+          }
         }
-        return updated;
       }
+    },
+    [authState]
+  );
 
-      // 2. Auto-provision new AuthUser
-      const emailPrefix = normalizedEmail.split("@")[0];
-      const formattedName =
-        payload.name ||
-        emailPrefix
-          .replace(/[._-]+/g, " ")
-          .split(" ")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(" ");
-
-      const isBgh = normalizedEmail.includes("bgh") || normalizedEmail.includes("hieutruong");
-      const isLeader = normalizedEmail.includes("truongphong") || normalizedEmail.includes("daotao");
-
-      const newUser: AuthUser = {
-        id: `user-staff-${Date.now()}`,
-        name: formattedName,
-        email: normalizedEmail,
-        role: isBgh ? "ADMIN" : isLeader ? "MANAGER" : "STAFF",
-        roleLabel: isBgh
-          ? "Ban Giám hiệu"
-          : isLeader
-          ? "Trưởng đơn vị"
-          : "Viên chức / Giảng viên",
-        department: "Chưa cập nhật đơn vị",
-        departmentCode: "QCET",
-        title: "Viên chức",
-        avatar: payload.avatar,
-        isFirstLogin: true,
-        emailVerified: true,
-        provider: "google",
-      };
-
-      const nextRegistered = [...registered, newUser];
-      saveRegisteredUsers(nextRegistered);
-
-      setUser(newUser);
-      setIsAuthenticated(true);
-      setIsOfflineReadOnly(false);
+  /**
+   * @deprecated Client-side Google session synthesis is deprecated and prohibited by Server Session Truth.
+   * Google login is handled via server OAuth flow at /api/auth/google.
+   */
+  const loginWithGoogle = useCallback(
+    (_payload?: { email?: string; name?: string; avatar?: string }): AuthUser => {
       if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newUser));
-        } catch {
-          // ignore
-        }
+        window.location.href = "/api/auth/google";
       }
-
-      setIsProfileModalOpen(true);
-      return newUser;
+      throw new Error(
+        "Google login is handled via server OAuth at /api/auth/google"
+      );
     },
     []
   );
 
-  const updateProfile = useCallback((updates: Partial<AuthUser>) => {
-    setUser((prev) => {
-      if (!prev) return null;
-      const updated: AuthUser = {
-        ...prev,
-        ...updates,
-        isFirstLogin: false,
-      };
+  const updateProfile = useCallback(
+    (updates: Partial<AuthUser>) => {
+      assertCanMutate(canMutate, authState);
 
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+      setUser((prev) => {
+        if (!prev) return null;
+        const updated: AuthUser = {
+          ...(prev as AuthUser),
+          ...updates,
+          isFirstLogin: false,
+        };
 
-          const registered = getRegisteredUsers();
-          const index = registered.findIndex((u) => u.id === updated.id || u.email === updated.email);
-          if (index >= 0) {
-            registered[index] = updated;
-            saveRegisteredUsers(registered);
-          } else {
-            saveRegisteredUsers([...registered, updated]);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+
+            const registered = getRegisteredUsers();
+            const index = registered.findIndex((u) => u.id === updated.id || u.email === updated.email);
+            if (index >= 0) {
+              registered[index] = updated;
+              saveRegisteredUsers(registered);
+            } else {
+              saveRegisteredUsers([...registered, updated]);
+            }
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
         }
-      }
 
-      return updated;
-    });
-  }, []);
+        return updated;
+      });
+
+      setAuthState((prev) => {
+        if (prev.status === "authenticated") {
+          return {
+            status: "authenticated",
+            user: {
+              ...prev.user,
+              ...updates,
+              isFirstLogin: false,
+            },
+          };
+        }
+        return prev;
+      });
+    },
+    [canMutate, authState.status]
+  );
 
   return (
     <AuthContext.Provider
@@ -600,6 +664,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthenticated,
         isOfflineReadOnly,
+        authState,
+        canMutate,
         switchRole,
         switchUser,
         login,

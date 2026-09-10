@@ -247,6 +247,21 @@ export class ClientTelemetryQueue {
   public getQueueLength(): number {
     return this.queue.length;
   }
+
+  public configure(options: Partial<ClientTelemetryConfig>): void {
+    this.config = { ...this.config, ...options };
+  }
+
+  public setEnabled(enabled: boolean): void {
+    this.config.enabled = enabled;
+  }
+
+  /**
+   * Enqueues a Web Vital metric directly to telemetry.
+   */
+  public recordWebVital(metric: Record<string, unknown>): boolean {
+    return this.enqueue("web-vital", { ...metric });
+  }
 }
 
 /**

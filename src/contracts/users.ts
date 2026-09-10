@@ -13,6 +13,7 @@ export const UserQuerySchema = PaginationQuerySchema.extend({
   role: z.string().trim().max(50, 'Role cannot exceed 50 characters').optional(),
   q: z.string().trim().max(200, 'Search query cannot exceed 200 characters').optional(),
   search: z.string().trim().max(200, 'Search query cannot exceed 200 characters').optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
 });
 
 export type UserQuery = z.infer<typeof UserQuerySchema>;
@@ -64,3 +65,6 @@ export const OnboardingInputSchema = z
   .strict();
 
 export type OnboardingInput = z.infer<typeof OnboardingInputSchema>;
+
+export const UpdateOnboardingSchema = OnboardingInputSchema;
+export type UpdateOnboardingInput = OnboardingInput;

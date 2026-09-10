@@ -33,6 +33,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { MobileOrgDrillDown } from "./mobile-org-drilldown";
+
+export { MobileOrgDrillDown };
 
 // ============================================================================
 // 1. Data Types & Interfaces
@@ -1443,10 +1446,20 @@ export function OrganizationTree({
 
   return (
     <div className="space-y-6" data-slot="qcet-organization-system">
-      {/* ===================================================================== */}
-      {/* 1. Main Navigation Tabs & Action Strip                                */}
-      {/* ===================================================================== */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-border/70 pb-3">
+      {/* Mobile Hierarchical Drill-Down Navigation (< 640px / sm:hidden) */}
+      <div className="block sm:hidden">
+        <MobileOrgDrillDown
+          initialDepartmentCode={initialDepartmentCode}
+          onSelectStaff={handleOpenStaff}
+        />
+      </div>
+
+      {/* Desktop Visual Organization Tree (sm:block / >= 640px) */}
+      <div className="hidden sm:block space-y-6">
+        {/* ===================================================================== */}
+        {/* 1. Main Navigation Tabs & Action Strip                                */}
+        {/* ===================================================================== */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-border/70 pb-3">
         {/* Modern Segmented Tab Pills */}
         <div className="inline-flex p-1 rounded-xl bg-muted/60 border border-border/70 shadow-2xs self-start">
           <button
@@ -2143,6 +2156,7 @@ export function OrganizationTree({
           </div>
         </div>
       )}
+      </div>
 
       {/* ===================================================================== */}
       {/* 4. Staff Member Detail Modal / Side Sheet                             */}

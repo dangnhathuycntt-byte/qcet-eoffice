@@ -211,6 +211,7 @@ describe("Onboarding Schema & Contracts", () => {
       headers: {
         "Content-Type": "application/json",
         Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        Origin: "http://localhost:3000",
       },
       body: JSON.stringify({
         hasSeenWelcome: true,
@@ -229,6 +230,7 @@ describe("Onboarding Schema & Contracts", () => {
       method: "DELETE",
       headers: {
         Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        Origin: "http://localhost:3000",
       },
     });
     const deleteRes = await DELETE(deleteReq);
@@ -263,6 +265,7 @@ describe("Onboarding Schema & Contracts", () => {
       headers: {
         "Content-Type": "application/json",
         Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        Origin: "http://localhost:3000",
       },
       body: JSON.stringify({
         hasSeenWelcome: true,
@@ -317,6 +320,7 @@ describe("Onboarding Schema & Contracts", () => {
       headers: {
         "Content-Type": "application/json",
         Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        Origin: "http://localhost:3000",
       },
       body: JSON.stringify({
         completedSteps: ["step-profile", "step-push"],
@@ -336,6 +340,7 @@ describe("Onboarding Schema & Contracts", () => {
       headers: {
         "Content-Type": "application/json",
         Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        Origin: "http://localhost:3000",
       },
       body: JSON.stringify({
         completedSteps: ["step-action"],
@@ -367,6 +372,7 @@ describe("Onboarding Schema & Contracts", () => {
       headers: {
         "Content-Type": "application/json",
         Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        Origin: "http://localhost:3000",
       },
       body: JSON.stringify({
         snoozedUntil: null,
@@ -388,6 +394,7 @@ describe("Onboarding Schema & Contracts", () => {
       headers: {
         "Content-Type": "application/json",
         Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        Origin: "http://localhost:3000",
       },
       body: JSON.stringify({
         completedSteps: ["step-search"],
@@ -411,6 +418,7 @@ describe("Onboarding Schema & Contracts", () => {
       headers: {
         "Content-Type": "application/json",
         Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        Origin: "http://localhost:3000",
       },
       body: JSON.stringify({
         isDismissed: true,

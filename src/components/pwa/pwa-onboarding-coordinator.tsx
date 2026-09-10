@@ -19,6 +19,7 @@ export {
   type CoordinatorState,
   type JourneyStage,
   type OnboardingStage,
+  type InterruptionType,
   type InstallGuidance,
   type EngagementSignals,
 } from "@/lib/pwa/onboarding-coordinator";

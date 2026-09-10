@@ -46,9 +46,15 @@ describe('Task 8: Idempotency Record Table & Helper', () => {
         createdAt: { type: 'DateTime', isRequired: true, dbName: 'created_at' },
       };
 
-      const fields = model.fields as unknown as Array<{ name: string; type: string; isRequired: boolean; dbName?: string | null }>;
+      interface DmmfField {
+        name: string;
+        type: string;
+        isRequired: boolean;
+        dbName?: string | null;
+      }
+      const fields = model.fields as unknown as DmmfField[];
       for (const [fieldName, meta] of Object.entries(expectedFields)) {
-        const field: any = fields.find((f: any) => f.name === fieldName);
+        const field = fields.find((f: DmmfField) => f.name === fieldName);
         assert.ok(field, `Field ${fieldName} must exist on IdempotencyRecord`);
         assert.strictEqual(field.type, meta.type, `Field ${fieldName} type must be ${meta.type}`);
         assert.strictEqual(field.isRequired, meta.isRequired, `Field ${fieldName} required status`);

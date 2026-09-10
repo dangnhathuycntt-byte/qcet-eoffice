@@ -13,8 +13,31 @@ describe("Mobile Forms & Virtual Keyboard Suite", () => {
   test("create-task-modal.tsx uses sticky action dock and adaptive drawer", () => {
     const modalPath = path.resolve(process.cwd(), "src/components/dashboard/create-task-modal.tsx");
     const content = fs.readFileSync(modalPath, "utf-8");
-    assert.ok(content.includes("sticky bottom-0") || content.includes("safe-area-inset-bottom"));
-    assert.ok(content.includes("overflow-x-auto") || content.includes("no-scrollbar") || content.includes("scrollbar-none"));
+    assert.ok(content.includes("sticky bottom-0") && content.includes("safe-area-inset-bottom"));
+    assert.ok(content.includes("h-[100dvh]") && content.includes("sm:h-auto"));
+    assert.ok(content.includes("min-h-[44px]"));
+    assert.ok(content.includes("text-base sm:text-xs"));
+    assert.ok(content.includes("scrollActiveInputIntoView"));
+  });
+
+  test("review-action-dialog.tsx enforces touch ergonomics and sticky safe actions", () => {
+    const dialogPath = path.resolve(process.cwd(), "src/components/portal/review-action-dialog.tsx");
+    const content = fs.readFileSync(dialogPath, "utf-8");
+    assert.ok(content.includes("min-h-[44px]"));
+    assert.ok(content.includes("pb-safe") || content.includes("safe-area-inset-bottom"));
+    assert.ok(content.includes("scrollActiveInputIntoView"));
+    assert.ok(content.includes("useVirtualKeyboard"));
+    assert.ok(content.includes("min-h-[56px]")); // radiogroup touch targets
+  });
+
+  test("submit-deliverable-modal.tsx optimizes mobile submission ergonomics", () => {
+    const submitModalPath = path.resolve(process.cwd(), "src/components/portal/submit-deliverable-modal.tsx");
+    const content = fs.readFileSync(submitModalPath, "utf-8");
+    assert.ok(content.includes("min-h-[44px]"));
+    assert.ok(content.includes("sticky bottom-0"));
+    assert.ok(content.includes("pb-safe") || content.includes("safe-area-inset-bottom"));
+    assert.ok(content.includes("scrollActiveInputIntoView"));
+    assert.ok(content.includes("text-base sm:text-xs"));
   });
 
   test("user-profile-modal.tsx includes inputMode tel and sticky footer", () => {

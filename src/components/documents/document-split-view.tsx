@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import {
   Inbox,
   Send,
@@ -26,7 +27,23 @@ import type {
   DocumentStatus,
 } from "@/types/document";
 import { Button } from "@/components/ui/button";
-import { DocumentPdfViewer } from "./document-pdf-viewer";
+import { cn } from "@/lib/utils";
+
+const DocumentPdfViewer = dynamic(
+  () => import("./document-pdf-viewer").then((mod) => mod.DocumentPdfViewer),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        role="status"
+        aria-live="polite"
+        className="p-8 text-center text-sm text-muted-foreground animate-pulse"
+      >
+        Đang tải trình xem PDF...
+      </div>
+    ),
+  }
+);
 
 export interface DocumentSplitViewProps {
   document: DocumentItem;
@@ -200,6 +217,7 @@ export function DocumentSplitView({
   const [selectedAttachmentId, setSelectedAttachmentId] = React.useState<string>(
     attachments[0]?.id || ""
   );
+  const [mobileTab, setMobileTab] = React.useState<"info" | "pdf">("info");
 
   const activeAttachment =
     attachments.find((a) => a.id === selectedAttachmentId) || attachments[0] || null;
@@ -214,18 +232,50 @@ export function DocumentSplitView({
   const isOutgoing = doc.type === "VAN_BAN_DI" || doc.type === "outbox";
 
   return (
-    <div
-      className={`grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 w-full ${className}`}
-    >
-      {/* LEFT PANE: PDF SCAN VIEWER & ATTACHMENT SELECTOR */}
-      <div className="flex flex-col gap-3 min-h-[500px]">
-        {/* Attachment Tabs (when multiple attachments exist) */}
-        {attachments.length > 1 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-border/50">
-            <span className="text-xs font-medium text-muted-foreground mr-1 flex items-center gap-1 shrink-0">
-              <Paperclip className="size-3.5" strokeWidth={1.5} />
-              <span>Tệp đính kèm ({attachments.length}):</span>
-            </span>
+    <div className={cn("space-y-3 w-full", className)}>
+      {/* Mobile View Switcher (eliminates cramped split view on < 640px) */}
+      <div
+        className="flex sm:hidden items-center p-1 rounded-xl bg-muted/60 border border-border/60 gap-1 w-full"
+        data-slot="document-split-mobile-toggle"
+      >
+        <button
+          type="button"
+          onClick={() => setMobileTab("info")}
+          className={cn(
+            "flex-1 min-h-[44px] rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer",
+            mobileTab === "info"
+              ? "bg-card text-foreground shadow-xs border border-border/70"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <FileText className="size-4" strokeWidth={1.5} />
+          <span>Thông tin văn bản</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab("pdf")}
+          className={cn(
+            "flex-1 min-h-[44px] rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer",
+            mobileTab === "pdf"
+              ? "bg-card text-foreground shadow-xs border border-border/70"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Paperclip className="size-4" strokeWidth={1.5} />
+          <span className="font-mono tabular-nums">Bản scan PDF ({attachments.length})</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 lg:gap-6 w-full">
+        {/* LEFT PANE: PDF SCAN VIEWER & ATTACHMENT SELECTOR */}
+        <div className={cn("flex flex-col gap-3 min-h-[450px]", mobileTab !== "pdf" && "hidden sm:flex")}>
+          {/* Attachment Tabs (when multiple attachments exist) */}
+          {attachments.length > 1 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-border/50">
+              <span className="text-xs font-medium text-muted-foreground mr-1 flex items-center gap-1 shrink-0">
+                <Paperclip className="size-3.5" strokeWidth={1.5} />
+                <span>Tệp đính kèm ({attachments.length}):</span>
+              </span>
             {attachments.map((att) => {
               const isSelected = att.id === (activeAttachment?.id || "");
               return (
@@ -259,18 +309,32 @@ export function DocumentSplitView({
 
         {/* PDF Viewer Component */}
         <div className="flex-1 flex flex-col">
-          <DocumentPdfViewer
-            fileUrl={activeAttachment?.fileUrl || null}
-            fileName={activeAttachment?.fileName || `${doc.originalNumber || "van-ban"}.pdf`}
-            fileSize={activeAttachment?.fileSize}
-            mimeType={activeAttachment?.mimeType || "application/pdf"}
-            className="h-full"
-          />
+          {activeAttachment?.fileUrl ? (
+            <DocumentPdfViewer
+              fileUrl={activeAttachment.fileUrl}
+              fileName={activeAttachment.fileName || `${doc.originalNumber || "van-ban"}.pdf`}
+              fileSize={activeAttachment.fileSize}
+              mimeType={activeAttachment.mimeType || "application/pdf"}
+              className="h-full"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center p-8 text-center bg-muted/20 rounded-2xl border border-dashed border-border/80 min-h-[420px] h-full">
+              <div className="p-4 rounded-2xl bg-muted/60 text-muted-foreground mb-3">
+                <FileText className="size-8" strokeWidth={1.5} />
+              </div>
+              <h4 className="text-sm font-semibold text-foreground mb-1">
+                Chưa có bản scan PDF
+              </h4>
+              <p className="text-xs text-muted-foreground max-w-sm leading-relaxed">
+                Văn bản này hiện chưa được số hóa hoặc chưa tải lên tệp PDF scan có dấu đỏ lưu trữ.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* RIGHT PANE: ND 30/2020 LEGAL METADATA & DIRECTIVES */}
-      <div className="flex flex-col gap-4 overflow-y-auto">
+      <div className={cn("flex flex-col gap-4 overflow-y-auto", mobileTab !== "info" && "hidden sm:flex")}>
         {/* Top Header Card */}
         <div className="p-4 sm:p-5 rounded-2xl bg-card border border-border/70 shadow-xs space-y-3.5">
           {/* Badge Strip */}
@@ -506,14 +570,14 @@ export function DocumentSplitView({
             actions
           ) : (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {(onDirectiveClick || onAssignClick) && (
                   <Button
                     size="sm"
                     onClick={onDirectiveClick || onAssignClick}
-                    className="h-8 px-3 text-xs rounded-xl gap-1.5 font-semibold"
+                    className="min-h-[44px] px-3.5 text-xs rounded-xl gap-1.5 font-semibold cursor-pointer"
                   >
-                    <PenTool className="size-3.5" strokeWidth={1.5} />
+                    <PenTool className="size-4" strokeWidth={1.5} />
                     <span>Giao xử lý / Bút phê</span>
                   </Button>
                 )}
@@ -522,9 +586,9 @@ export function DocumentSplitView({
                     variant="outline"
                     size="sm"
                     onClick={onEditClick}
-                    className="h-8 px-3 text-xs rounded-xl gap-1.5"
+                    className="min-h-[44px] px-3.5 text-xs rounded-xl gap-1.5 cursor-pointer"
                   >
-                    <Edit className="size-3.5" strokeWidth={1.5} />
+                    <Edit className="size-4" strokeWidth={1.5} />
                     <span>Chỉnh sửa</span>
                   </Button>
                 )}
@@ -535,7 +599,7 @@ export function DocumentSplitView({
                   variant="outline"
                   size="sm"
                   asChild
-                  className="h-8 px-3 text-xs rounded-xl gap-1.5"
+                  className="min-h-[44px] px-3.5 text-xs rounded-xl gap-1.5 cursor-pointer"
                 >
                   <a
                     href={activeAttachment.fileUrl}
@@ -543,7 +607,7 @@ export function DocumentSplitView({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Download className="size-3.5" strokeWidth={1.5} />
+                    <Download className="size-4" strokeWidth={1.5} />
                     <span>Tải văn bản scan</span>
                   </a>
                 </Button>
@@ -553,5 +617,6 @@ export function DocumentSplitView({
         </div>
       </div>
     </div>
+  </div>
   );
 }

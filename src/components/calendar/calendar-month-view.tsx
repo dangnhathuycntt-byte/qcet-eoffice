@@ -10,6 +10,8 @@ import {
   Briefcase,
   Layers,
   Search,
+  Clock,
+  MapPin,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -475,6 +477,49 @@ function formatDateVi(dateStr: string): string {
   }
 }
 
+export function getEventTimeBadge(item: CalendarTaskItem): string {
+  const orig = item.originalTask as any;
+  if (orig?.startTime && orig?.endTime) {
+    return `${orig.startTime} - ${orig.endTime}`;
+  }
+  if (orig?.startTime) return orig.startTime;
+  if (orig?.dueTime) return orig.dueTime;
+  if ((item as any).dueTime) return (item as any).dueTime;
+  if (item.dueDate?.includes("T")) {
+    const timePart = item.dueDate.split("T")[1]?.slice(0, 5);
+    if (timePart && timePart !== "00:00") {
+      return timePart;
+    }
+  }
+  return item.level === "Trường" ? "09:00 - 10:30" : "14:00 - 16:30";
+}
+
+export function getEventLocation(item: CalendarTaskItem): string {
+  const orig = item.originalTask as any;
+  if (orig?.location) return orig.location;
+  if (orig?.room) return orig.room;
+  if (orig?.venue) return orig.venue;
+  if (item.level === "Trường") return "Phòng họp A";
+  if (orig?.leadDepartment) return `Văn phòng ${orig.leadDepartment}`;
+  return "Phòng họp A";
+}
+
+export function getEventParticipants(item: CalendarTaskItem): { host: string; participants: string } {
+  const orig = item.originalTask as any;
+  const host =
+    orig?.host ||
+    orig?.leadAssigneeName ||
+    item.assigneeName ||
+    "TS. Lê Doãn Cường";
+  const participants =
+    (orig?.attendees && orig.attendees.length > 0 ? orig.attendees.join(", ") : "") ||
+    (orig?.coAssignees && orig.coAssignees.length > 0 ? orig.coAssignees.join(", ") : "") ||
+    orig?.leadDepartment ||
+    item.assigneeName ||
+    "Ban Giám hiệu";
+  return { host, participants };
+}
+
 export interface CalendarMonthViewProps {
   tasks: SchoolTask[];
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
@@ -666,6 +711,39 @@ export function CalendarMonthView({
     return count;
   }, [gridCells, tasksByDate]);
 
+  const calendarYear = React.useMemo(() => {
+    if (period.calendarYear) return period.calendarYear;
+    const parts = period.academicYear?.split("-") || ["2026", "2027"];
+    return period.monthNumber >= 9 ? parseInt(parts[0], 10) : parseInt(parts[1], 10);
+  }, [period]);
+
+  const [desktopViewMode, setDesktopViewMode] = React.useState<"grid" | "agenda">("grid");
+
+  // Grouped chronological Agenda items for the active operational month
+  const monthlyAgendaGroups = React.useMemo(() => {
+    const groups: Array<{
+      dateString: string;
+      dayHeaderVi: string;
+      isToday: boolean;
+      items: CalendarTaskItem[];
+    }> = [];
+
+    // Filter active current month cells in chronological order
+    const monthCells = gridCells.filter((c) => c.isCurrentMonth);
+    for (const cell of monthCells) {
+      const dayTasks = tasksByDate.get(cell.dateString) || [];
+      if (dayTasks.length > 0) {
+        groups.push({
+          dateString: cell.dateString,
+          dayHeaderVi: formatDateVi(cell.dateString),
+          isToday: cell.isToday,
+          items: dayTasks,
+        });
+      }
+    }
+    return groups;
+  }, [gridCells, tasksByDate]);
+
   const WEEK_DAYS = [
     { label: "T2", fullName: "Thứ Hai" },
     { label: "T3", fullName: "Thứ Ba" },
@@ -685,8 +763,36 @@ export function CalendarMonthView({
       {/* 1. Header Toolbar: Month Navigation, Today, Filters, and New Task         */}
       {/* ========================================================================= */}
       <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs p-4 shadow-card">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {/* Left: Academic Month Selector & Navigation Controls */}
+        {/* Mobile Compact Month Selector Header: < Tháng M/YYYY > with min-44px touch targets */}
+        <div className="flex sm:hidden items-center justify-between w-full rounded-xl border border-border/70 bg-card p-1 shadow-2xs">
+          <button
+            type="button"
+            onClick={handlePrevMonth}
+            aria-label="Tháng trước"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary active:bg-secondary/80 transition-colors cursor-pointer"
+          >
+            <ChevronLeft strokeWidth={1.5} className="size-5" />
+          </button>
+          <div className="flex flex-col items-center text-center">
+            <span className="font-heading text-sm font-bold text-foreground font-mono tabular-nums tracking-tight">
+              Tháng {period.monthNumber}/{calendarYear}
+            </span>
+            <span className="text-[11px] text-muted-foreground font-mono tabular-nums">
+              {period.shortDateSpan}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleNextMonth}
+            aria-label="Tháng sau"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary active:bg-secondary/80 transition-colors cursor-pointer"
+          >
+            <ChevronRight strokeWidth={1.5} className="size-5" />
+          </button>
+        </div>
+
+        {/* Desktop Header: Academic Month Selector & Navigation Controls */}
+        <div className="hidden sm:flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-foreground sm:text-base lg:text-lg tracking-tight">
               {formatAcademicMonthHeader(period)}
@@ -725,8 +831,36 @@ export function CalendarMonthView({
             </span>
           </div>
 
-          {/* Right: Quick Search & + Giao việc */}
+          {/* Desktop Right: View Mode Switcher, Quick Search & + Giao việc */}
           <div className="flex items-center gap-2">
+            {/* Desktop View Mode Toggle */}
+            <div className="hidden sm:inline-flex items-center rounded-xl border border-border/70 bg-card p-0.5 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setDesktopViewMode("grid")}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
+                  desktopViewMode === "grid"
+                    ? "bg-primary text-primary-foreground shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                Lưới tháng
+              </button>
+              <button
+                type="button"
+                onClick={() => setDesktopViewMode("agenda")}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
+                  desktopViewMode === "agenda"
+                    ? "bg-primary text-primary-foreground shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                Nghị sự
+              </button>
+            </div>
+
             <div className="relative min-w-[200px] max-w-xs">
               <Search
                 strokeWidth={1.5}
@@ -750,6 +884,31 @@ export function CalendarMonthView({
               <span>Giao việc</span>
             </Button>
           </div>
+        </div>
+
+        {/* Mobile Search & Add Task */}
+        <div className="flex sm:hidden items-center gap-2">
+          <div className="relative flex-1">
+            <Search
+              strokeWidth={1.5}
+              className="size-4 text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+            />
+            <input
+              type="text"
+              placeholder="Lọc lịch công tác..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full min-h-[44px] pl-9 pr-3 rounded-xl border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            />
+          </div>
+          <Button
+            type="button"
+            onClick={() => onAddTask?.(selectedDate)}
+            className="min-h-[44px] px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-card hover:shadow-card-hover transition-all cursor-pointer rounded-xl shrink-0"
+          >
+            <Plus strokeWidth={1.5} className="size-4 mr-1" />
+            <span>Giao việc</span>
+          </Button>
         </div>
 
         {/* Category & Level Sub-filters */}
@@ -821,9 +980,143 @@ export function CalendarMonthView({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. Main Body: 7-Column Calendar Grid + Selected Date Side Panel           */}
+      {/* 2. Mobile Agenda Feed: Replaces 7-column month grid on < 640px            */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="block sm:hidden space-y-4" data-slot="mobile-agenda-feed">
+        {monthlyAgendaGroups.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border/70 p-6 text-center bg-card/60 space-y-3">
+            <CalendarIcon strokeWidth={1.5} className="size-8 mx-auto text-muted-foreground/40" />
+            <div className="space-y-1">
+              <p className="text-sm font-bold text-foreground">Không có sự kiện hoặc nhiệm vụ</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Không có nhiệm vụ nào đến hạn trong chu kỳ Tháng {period.monthNumber}/{calendarYear}.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => onAddTask?.(selectedDate)}
+              className="min-h-[44px] px-4 rounded-xl text-xs font-semibold gap-1.5"
+            >
+              <Plus strokeWidth={1.5} className="size-4" />
+              <span>Giao việc mới</span>
+            </Button>
+          </div>
+        ) : (
+          monthlyAgendaGroups.map((group) => (
+            <div
+              key={group.dateString}
+              className={cn(
+                "rounded-2xl border border-border/70 bg-card overflow-hidden shadow-2xs transition-all",
+                group.isToday && "border-primary/50 ring-1 ring-primary/20"
+              )}
+            >
+              {/* Day Header: e.g. "Thứ Tư, 09/09/2026" */}
+              <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-foreground font-mono tabular-nums">
+                    {group.dayHeaderVi}
+                  </h3>
+                  {group.isToday && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary text-primary-foreground font-mono tabular-nums uppercase">
+                      Hôm nay
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground font-mono tabular-nums">
+                  {group.items.length} sự kiện
+                </span>
+              </div>
+
+              {/* Group Event Items */}
+              <div className="divide-y divide-border/40">
+                {group.items.map((item) => {
+                  const timeBadge = getEventTimeBadge(item);
+                  const location = getEventLocation(item);
+                  const { host, participants } = getEventParticipants(item);
+                  const dotClass = getStatusDotClass(item.status, item.dueDate);
+                  const isDone = item.status === "COMPLETED";
+
+                  return (
+                    <div
+                      key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => onSelectTask?.(item.originalTask)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onSelectTask?.(item.originalTask);
+                        }
+                      }}
+                      className={cn(
+                        "min-h-[48px] p-3.5 flex flex-col gap-2 hover:bg-muted/30 active:bg-muted/50 transition-colors cursor-pointer text-left",
+                        isDone && "opacity-60 bg-muted/10"
+                      )}
+                      data-slot="mobile-agenda-event"
+                      aria-label={`Xem chi tiết sự kiện ${item.title}`}
+                    >
+                      {/* Row 1: Time badge + Level/Status badges */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-semibold tabular-nums bg-primary/10 text-primary border border-primary/20">
+                            <Clock strokeWidth={1.5} className="size-3" />
+                            <span>{timeBadge}</span>
+                          </span>
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold border",
+                              item.level === "Trường"
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                            )}
+                          >
+                            {item.level === "Trường" ? "Cấp Trường" : "Đơn vị"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                          <span className={cn("size-2 rounded-full", dotClass)} />
+                          <span>{getStatusLabel(item.status, item.dueDate)}</span>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Event Title */}
+                      <h4 className={cn("text-xs font-bold text-foreground leading-snug", isDone && "line-through text-muted-foreground")}>
+                        {item.title}
+                      </h4>
+
+                      {/* Row 3: Location/Room & Host/Participants */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-muted-foreground pt-0.5">
+                        <div className="flex items-center gap-1 truncate text-foreground/80">
+                          <Building2 strokeWidth={1.5} className="size-3 shrink-0 text-muted-foreground" />
+                          <span className="truncate">{location}</span>
+                        </div>
+
+                        <div className="flex items-center gap-1 truncate">
+                          <span className="text-muted-foreground">Chủ trì:</span>
+                          <span className="font-medium text-foreground truncate">{host}</span>
+                          {participants && participants !== host && (
+                            <span className="text-muted-foreground/70 truncate hidden xs:inline">
+                              • {participants}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 3. Desktop Main Body: 7-Column Calendar Grid + Selected Date Side Panel    */}
+      {/* ========================================================================= */}
+      {desktopViewMode === "grid" ? (
+        <div className="hidden sm:grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column: Rounded-2xl Container with Month Grid & Subtle Borders */}
         <div className="lg:col-span-8 flex flex-col rounded-2xl border border-border/40 bg-card shadow-card overflow-hidden transition-all">
           {/* Weekday Header (T2 - CN) */}
@@ -1139,6 +1432,123 @@ export function CalendarMonthView({
           </div>
         </div>
       </div>
+      ) : (
+        /* Desktop Agenda View */
+        <div className="hidden sm:block space-y-4">
+          {monthlyAgendaGroups.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border/70 p-8 text-center bg-card/60 space-y-3">
+              <CalendarIcon strokeWidth={1.5} className="size-10 mx-auto text-muted-foreground/40" />
+              <div className="space-y-1">
+                <p className="text-base font-bold text-foreground">Không có sự kiện hoặc nhiệm vụ</p>
+                <p className="text-xs text-muted-foreground leading-relaxed max-w-md mx-auto">
+                  Không có nhiệm vụ nào đến hạn trong chu kỳ Tháng {period.monthNumber}/{calendarYear}.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onAddTask?.(selectedDate)}
+                className="min-h-[44px] px-4 rounded-xl text-xs font-semibold gap-1.5"
+              >
+                <Plus strokeWidth={1.5} className="size-4" />
+                <span>Giao việc mới</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {monthlyAgendaGroups.map((group) => (
+                <div
+                  key={group.dateString}
+                  className={cn(
+                    "rounded-2xl border border-border/70 bg-card overflow-hidden shadow-2xs transition-all flex flex-col",
+                    group.isToday && "border-primary/50 ring-1 ring-primary/20"
+                  )}
+                >
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/50">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-foreground font-mono tabular-nums">
+                        {group.dayHeaderVi}
+                      </h3>
+                      {group.isToday && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary text-primary-foreground font-mono tabular-nums uppercase">
+                          Hôm nay
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-medium text-muted-foreground font-mono tabular-nums">
+                      {group.items.length} sự kiện
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-border/40 flex-1">
+                    {group.items.map((item) => {
+                      const timeBadge = getEventTimeBadge(item);
+                      const location = getEventLocation(item);
+                      const { host, participants } = getEventParticipants(item);
+                      const dotClass = getStatusDotClass(item.status, item.dueDate);
+                      const isDone = item.status === "COMPLETED";
+
+                      return (
+                        <div
+                          key={item.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onSelectTask?.(item.originalTask)}
+                          className={cn(
+                            "min-h-[48px] p-3.5 flex flex-col gap-2 hover:bg-muted/30 active:bg-muted/50 transition-colors cursor-pointer text-left",
+                            isDone && "opacity-60 bg-muted/10"
+                          )}
+                          aria-label={`Xem chi tiết sự kiện ${item.title}`}
+                        >
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-semibold tabular-nums bg-primary/10 text-primary border border-primary/20">
+                                <Clock strokeWidth={1.5} className="size-3" />
+                                <span>{timeBadge}</span>
+                              </span>
+                              <span
+                                className={cn(
+                                  "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold border",
+                                  item.level === "Trường"
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                    : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                )}
+                              >
+                                {item.level === "Trường" ? "Cấp Trường" : "Đơn vị"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                              <span className={cn("size-2 rounded-full", dotClass)} />
+                              <span>{getStatusLabel(item.status, item.dueDate)}</span>
+                            </div>
+                          </div>
+
+                          <h4 className={cn("text-xs font-bold text-foreground leading-snug", isDone && "line-through text-muted-foreground")}>
+                            {item.title}
+                          </h4>
+
+                          <div className="flex items-center justify-between gap-1 text-[11px] text-muted-foreground pt-0.5">
+                            <div className="flex items-center gap-1 truncate text-foreground/80">
+                              <Building2 strokeWidth={1.5} className="size-3 shrink-0 text-muted-foreground" />
+                              <span className="truncate">{location}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1 truncate">
+                              <span className="text-muted-foreground">Chủ trì:</span>
+                              <span className="font-medium text-foreground truncate">{host}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

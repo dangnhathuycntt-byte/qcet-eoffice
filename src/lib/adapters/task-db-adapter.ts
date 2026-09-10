@@ -294,6 +294,7 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations): SchoolT
     progressPercent: progress,
     academicMonth: raw.academicMonth ?? 9,
     academicYear: raw.academicYear || '2026-2027',
+    scope: raw.scope,
     collaborators: collaborators && collaborators.length > 0 ? collaborators : undefined,
     coAssignees: collaborators,
     category: raw.scope === 'SCHOOL' ? 'Chỉ đạo cấp Trường' : 'Chuyên môn Khoa/Phòng',

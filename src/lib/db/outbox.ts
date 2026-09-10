@@ -65,6 +65,12 @@ export const OutboxEventType = {
   // External Webhook & Sync Events
   WEBHOOK_DISPATCH: "WEBHOOK_DISPATCH",
   ACADEMIC_SYNC_DISPATCH: "ACADEMIC_SYNC_DISPATCH",
+
+  // Work Dossier & Archival Events
+  DOSSIER_CREATED_NOTIFICATION: "DOSSIER_CREATED_NOTIFICATION",
+  DOSSIER_CLOSED_NOTIFICATION: "DOSSIER_CLOSED_NOTIFICATION",
+  DOSSIER_SUBMITTED_ARCHIVE_NOTIFICATION: "DOSSIER_SUBMITTED_ARCHIVE_NOTIFICATION",
+  DOSSIER_ACCEPTED_ARCHIVE_NOTIFICATION: "DOSSIER_ACCEPTED_ARCHIVE_NOTIFICATION",
 } as const;
 
 export type OutboxEventTypeValue =
@@ -84,6 +90,8 @@ export const OutboxAggregateType = {
   PUSH_SUBSCRIPTION: "PushSubscription",
   USER: "User",
   DEPARTMENT: "Department",
+  WORK_DOSSIER: "WorkDossier",
+  DOSSIER_ITEM: "DossierItem",
 } as const;
 
 export type OutboxAggregateTypeValue =

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -23,6 +24,8 @@ import {
   ChevronRight,
   RefreshCw,
   Eye,
+  ArrowLeft,
+  Paperclip,
 } from "lucide-react";
 import {
   OfficialDocument,
@@ -39,6 +42,22 @@ import {
   getStatusBadgeConfig,
 } from "./document-detail-dialog";
 import { CreateDocumentModal } from "./create-document-modal";
+
+const DocumentPdfViewer = dynamic(
+  () => import("./document-pdf-viewer").then((mod) => mod.DocumentPdfViewer),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        role="status"
+        aria-live="polite"
+        className="p-8 text-center text-sm text-muted-foreground animate-pulse"
+      >
+        Đang tải trình xem PDF...
+      </div>
+    ),
+  }
+);
 
 interface ApiDocumentItem {
   id: string;
@@ -149,6 +168,22 @@ function mapApiDocumentToOfficial(item: ApiDocumentItem): OfficialDocument {
   };
 }
 
+function getDocTypeLabel(type: string): string {
+  switch (type) {
+    case "inbox":
+    case "VAN_BAN_DEN":
+      return "Văn bản đến";
+    case "outbox":
+    case "VAN_BAN_DI":
+      return "Văn bản đi";
+    case "submission":
+    case "TO_TRINH_NOI_BO":
+      return "Tờ trình duyệt";
+    default:
+      return "Văn bản";
+  }
+}
+
 export function DocumentRegistryView() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -191,6 +226,7 @@ export function DocumentRegistryView() {
   const [selectedDocument, setSelectedDocument] = React.useState<OfficialDocument | null>(null);
   const [isDetailOpen, setIsDetailOpen] = React.useState(false);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+  const [fullscreenPdfDoc, setFullscreenPdfDoc] = React.useState<OfficialDocument | null>(null);
 
   // Fetch document stats from real API route (decoupled from search)
   const fetchStats = React.useCallback(async (signal?: AbortSignal) => {
@@ -301,6 +337,24 @@ export function DocumentRegistryView() {
       controller.abort();
     };
   }, [fetchDocuments]);
+
+  // Deep-link auto-selection: If ?docId=xxx is provided, open detail drawer
+  const docIdParam = searchParams.get("docId");
+  React.useEffect(() => {
+    if (!docIdParam || documents.length === 0) return;
+    const cleanId = decodeURIComponent(docIdParam).toLowerCase().trim();
+    const matched = documents.find(
+      (d) =>
+        d.id.toLowerCase() === cleanId ||
+        (d.documentNumber && d.documentNumber.toLowerCase() === cleanId) ||
+        (d.documentNumber && d.documentNumber.toLowerCase().includes(cleanId)) ||
+        (d.summary && d.summary.toLowerCase().includes(cleanId))
+    );
+    if (matched) {
+      setSelectedDocument(matched);
+      setIsDetailOpen(true);
+    }
+  }, [docIdParam, documents]);
 
   // Switch tab and sync with URL
   const handleTabChange = (tab: string) => {
@@ -649,128 +703,211 @@ export function DocumentRegistryView() {
 
       {/* 3. Filter Bar & Tab Selector */}
       <div className="p-3 sm:p-4 rounded-2xl border border-border/60 bg-card/90 backdrop-blur-xs space-y-3">
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b border-border/50">
-          <button
-            type="button"
-            onClick={() => handleTabChange("all")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "all"
-                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            }`}
-          >
-            <span>Tất cả</span>
-            <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
-              {documents.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("inbox")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "inbox"
-                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            }`}
-          >
-            <Inbox className="size-3.5" strokeWidth={1.5} />
-            <span>Văn bản đến</span>
-            <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
-              {computedStats.totalInbox}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("outbox")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "outbox"
-                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            }`}
-          >
-            <Send className="size-3.5" strokeWidth={1.5} />
-            <span>Văn bản đi</span>
-            <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
-              {computedStats.totalOutbox}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("pending")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "pending"
-                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            }`}
-          >
-            <FileCheck className="size-3.5" strokeWidth={1.5} />
-            <span>Tờ trình duyệt</span>
-            <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
-              {computedStats.totalSubmissions}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("archive")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "archive"
-                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            }`}
-          >
-            <Archive className="size-3.5" strokeWidth={1.5} />
-            <span>Sổ lưu trữ</span>
-          </button>
-        </div>
-
-        {/* Search & Filter Controls */}
-        <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        {/* Mobile Search & Filter Chips (< 640px / sm:hidden) */}
+        <div className="flex sm:hidden flex-col gap-2.5" data-slot="mobile-document-controls">
+          <div className="relative w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
             <input
               type="text"
-              placeholder="Tìm theo số ký hiệu (vd: 128), trích yếu nội dung, hoặc đơn vị..."
+              placeholder="Tìm theo số hiệu, trích yếu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-border/70 bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/30"
+              className="w-full min-h-[44px] pl-10 pr-4 text-xs rounded-xl border border-border/70 bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {/* Urgency Filter */}
-            <select
-              value={urgencyFilter}
-              onChange={(e) => setUrgencyFilter(e.target.value)}
-              className="px-2.5 py-2 text-xs rounded-xl border border-border/70 bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/30 shrink-0"
+          {/* Filter Chips: [Tất cả] [Văn bản đến] [Văn bản đi] [Chờ xử lý] */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => handleTabChange("all")}
+              className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5 transition-all ${
+                activeTab === "all"
+                  ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                  : "bg-background border border-border/70 text-muted-foreground hover:text-foreground active:bg-muted font-medium"
+              }`}
             >
-              <option value="ALL">Độ khẩn: Tất cả</option>
-              <option value="flash">Hỏa tốc</option>
-              <option value="top_urgent">Thượng khẩn</option>
-              <option value="urgent">Khẩn</option>
-              <option value="normal">Thường</option>
-            </select>
+              <span>Tất cả</span>
+              <span className="font-mono tabular-nums text-[11px] opacity-85">
+                ({documents.length})
+              </span>
+            </button>
 
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-2.5 py-2 text-xs rounded-xl border border-border/70 bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/30 shrink-0"
+            <button
+              type="button"
+              onClick={() => handleTabChange("inbox")}
+              className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5 transition-all ${
+                activeTab === "inbox"
+                  ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                  : "bg-background border border-border/70 text-muted-foreground hover:text-foreground active:bg-muted font-medium"
+              }`}
             >
-              <option value="ALL">Trạng thái: Tất cả</option>
-              <option value="pending_assignment">Chờ bút phê</option>
-              <option value="processing">Đang xử lý</option>
-              <option value="delegated">Đã giao việc</option>
-              <option value="approved">Đã ký duyệt</option>
-              <option value="completed">Hoàn tất</option>
-            </select>
+              <Inbox className="size-4" strokeWidth={1.5} />
+              <span>Văn bản đến</span>
+              <span className="font-mono tabular-nums text-[11px] opacity-85">
+                ({computedStats.totalInbox})
+              </span>
+            </button>
 
-            {/* Density Toggle */}
-            <DensityToggle className="h-8.5 rounded-xl border-border/70 shadow-2xs shrink-0" />
+            <button
+              type="button"
+              onClick={() => handleTabChange("outbox")}
+              className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5 transition-all ${
+                activeTab === "outbox"
+                  ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                  : "bg-background border border-border/70 text-muted-foreground hover:text-foreground active:bg-muted font-medium"
+              }`}
+            >
+              <Send className="size-4" strokeWidth={1.5} />
+              <span>Văn bản đi</span>
+              <span className="font-mono tabular-nums text-[11px] opacity-85">
+                ({computedStats.totalOutbox})
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange("pending")}
+              className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs shrink-0 cursor-pointer flex items-center justify-center gap-1.5 transition-all ${
+                activeTab === "pending"
+                  ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                  : "bg-background border border-border/70 text-muted-foreground hover:text-foreground active:bg-muted font-medium"
+              }`}
+            >
+              <FileCheck className="size-4" strokeWidth={1.5} />
+              <span>Chờ xử lý</span>
+              <span className="font-mono tabular-nums text-[11px] opacity-85">
+                ({computedStats.totalSubmissions})
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop Navigation Tabs & Search/Filter Controls (>= 640px / sm:block) */}
+        <div className="hidden sm:block space-y-3">
+          {/* Navigation Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b border-border/50">
+            <button
+              type="button"
+              onClick={() => handleTabChange("all")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "all"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              <span>Tất cả</span>
+              <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
+                {documents.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange("inbox")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "inbox"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              <Inbox className="size-3.5" strokeWidth={1.5} />
+              <span>Văn bản đến</span>
+              <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
+                {computedStats.totalInbox}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange("outbox")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "outbox"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              <Send className="size-3.5" strokeWidth={1.5} />
+              <span>Văn bản đi</span>
+              <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
+                {computedStats.totalOutbox}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange("pending")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "pending"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              <FileCheck className="size-3.5" strokeWidth={1.5} />
+              <span>Tờ trình duyệt</span>
+              <span className="text-xs font-mono px-1.5 py-0.2 rounded-md bg-background/20">
+                {computedStats.totalSubmissions}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange("archive")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "archive"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              <Archive className="size-3.5" strokeWidth={1.5} />
+              <span>Sổ lưu trữ</span>
+            </button>
+          </div>
+
+          {/* Search & Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Tìm theo số ký hiệu (vd: 128), trích yếu nội dung, hoặc đơn vị..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-border/70 bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              {/* Urgency Filter */}
+              <select
+                value={urgencyFilter}
+                onChange={(e) => setUrgencyFilter(e.target.value)}
+                className="px-2.5 py-2 text-xs rounded-xl border border-border/70 bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/30 shrink-0"
+              >
+                <option value="ALL">Độ khẩn: Tất cả</option>
+                <option value="flash">Hỏa tốc</option>
+                <option value="top_urgent">Thượng khẩn</option>
+                <option value="urgent">Khẩn</option>
+                <option value="normal">Thường</option>
+              </select>
+
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-2.5 py-2 text-xs rounded-xl border border-border/70 bg-background text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/30 shrink-0"
+              >
+                <option value="ALL">Trạng thái: Tất cả</option>
+                <option value="pending_assignment">Chờ bút phê</option>
+                <option value="processing">Đang xử lý</option>
+                <option value="delegated">Đã giao việc</option>
+                <option value="approved">Đã ký duyệt</option>
+                <option value="completed">Hoàn tất</option>
+              </select>
+
+              {/* Density Toggle */}
+              <DensityToggle className="h-8.5 rounded-xl border-border/70 shadow-2xs shrink-0" />
+            </div>
           </div>
         </div>
       </div>
@@ -791,7 +928,9 @@ export function DocumentRegistryView() {
           </span>
         </div>
 
-        {isLoading ? (
+        {/* Desktop Table View (>= 640px / sm:block) */}
+        <div className="hidden sm:block">
+          {isLoading ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse table-row-dense">
               <thead>
@@ -1009,6 +1148,130 @@ export function DocumentRegistryView() {
             </table>
           </div>
         )}
+        </div>
+
+        {/* Mobile Document Feed (< 640px / sm:hidden) */}
+        <div className="block sm:hidden p-3 space-y-3" data-slot="mobile-document-feed">
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, idx) => (
+              <div
+                key={`mob-skel-${idx}`}
+                className="p-3.5 rounded-2xl border border-border/60 bg-card/60 animate-pulse space-y-2.5"
+              >
+                <div className="flex justify-between items-center">
+                  <div className="h-4 w-28 bg-muted rounded" />
+                  <div className="h-4 w-16 bg-muted/70 rounded" />
+                </div>
+                <div className="h-4 w-5/6 bg-muted rounded" />
+                <div className="h-3 w-1/2 bg-muted/60 rounded" />
+              </div>
+            ))
+          ) : filteredDocuments.length === 0 ? (
+            <div className="py-10 px-4 text-center space-y-1.5 border border-dashed border-border/70 rounded-2xl bg-muted/10">
+              <FileText className="size-8 mx-auto mb-2 opacity-50 text-muted-foreground" strokeWidth={1.5} />
+              <p className="text-xs font-semibold text-foreground">Không tìm thấy văn bản phù hợp</p>
+              <p className="text-[11px] text-muted-foreground">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm</p>
+            </div>
+          ) : (
+            filteredDocuments.map((doc) => {
+              const urgencyConfig = getUrgencyBadgeConfig(doc.urgency);
+              const statusConfig = getStatusBadgeConfig(doc.status);
+              const StatusIcon = statusConfig.icon;
+              const typeLabel = getDocTypeLabel(doc.type);
+              const displayCode = doc.documentNumber || doc.id;
+
+              return (
+                <div
+                  key={doc.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenDetail(doc)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleOpenDetail(doc);
+                    }
+                  }}
+                  className="p-3.5 rounded-2xl border border-border/70 bg-card shadow-2xs space-y-2.5 transition-all active:bg-muted/40 cursor-pointer min-h-[48px]"
+                  data-slot="mobile-document-card"
+                >
+                  {/* Header Row: Code & Status Badge */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="font-mono tabular-nums font-bold text-sm text-primary tracking-tight break-all">
+                        {displayCode}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {doc.urgency && doc.urgency !== "normal" && doc.urgency !== "THUONG" && (
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${urgencyConfig.className}`}
+                        >
+                          {urgencyConfig.label}
+                        </span>
+                      )}
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${statusConfig.className}`}
+                      >
+                        <StatusIcon className="size-3" strokeWidth={1.5} />
+                        <span>{statusConfig.label}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Document Title / Summary */}
+                  <p className="text-xs font-semibold text-foreground line-clamp-2 leading-relaxed">
+                    {doc.summary}
+                  </p>
+
+                  {/* Metadata Row: Loại văn bản · Ngày ban hành */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50 text-[11px] text-muted-foreground">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="font-medium text-foreground">{typeLabel}</span>
+                      <span>·</span>
+                      <span className="font-mono tabular-nums">{doc.issuedDate || "---"}</span>
+                    </div>
+                    {doc.issuingAuthority && (
+                      <span className="truncate max-w-[140px] text-right font-medium">
+                        {doc.issuingAuthority}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action Chips: View PDF if available & Details */}
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    {doc.fileAttachment && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFullscreenPdfDoc(doc);
+                        }}
+                        className="min-h-[44px] px-3.5 py-1.5 rounded-xl border border-primary/30 bg-primary/10 text-primary text-xs font-semibold flex items-center gap-1.5 active:bg-primary/20 cursor-pointer"
+                        aria-label={`Xem PDF văn bản ${displayCode}`}
+                      >
+                        <FileText strokeWidth={1.5} className="size-4 shrink-0" />
+                        <span>Xem PDF</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDetail(doc);
+                      }}
+                      className="min-h-[44px] px-3.5 py-1.5 rounded-xl border border-border/70 bg-muted/40 text-foreground text-xs font-semibold flex items-center gap-1 hover:bg-muted/80 active:bg-muted cursor-pointer"
+                      aria-label={`Chi tiết văn bản ${displayCode}`}
+                    >
+                      <span>Chi tiết</span>
+                      <ChevronRight strokeWidth={1.5} className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* 5. Modals & Dialogs */}
@@ -1016,7 +1279,61 @@ export function DocumentRegistryView() {
         document={selectedDocument}
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
+        onViewPdf={(doc) => setFullscreenPdfDoc(doc)}
       />
+
+      {/* 6. Fullscreen PDF Viewer (Mobile & Quick Preview) */}
+      {fullscreenPdfDoc && (
+        <div
+          className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Xem tệp PDF toàn màn hình"
+          data-slot="fullscreen-pdf-viewer"
+        >
+          {/* Fullscreen PDF Header */}
+          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border/70 bg-card shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+              <button
+                type="button"
+                onClick={() => setFullscreenPdfDoc(null)}
+                aria-label="Đóng và quay lại"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-border/70 bg-background text-foreground hover:bg-secondary active:bg-secondary/80 cursor-pointer"
+              >
+                <ArrowLeft strokeWidth={1.5} className="size-5" />
+              </button>
+              <div className="truncate">
+                <p className="text-xs font-bold text-foreground font-mono tabular-nums truncate">
+                  {fullscreenPdfDoc.documentNumber || fullscreenPdfDoc.id}
+                </p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {fullscreenPdfDoc.fileAttachment?.name || fullscreenPdfDoc.summary}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFullscreenPdfDoc(null)}
+              className="min-h-[44px] px-4 rounded-xl border border-border/70 text-xs font-semibold text-foreground hover:bg-secondary active:bg-secondary/80 cursor-pointer shrink-0"
+            >
+              Đóng
+            </button>
+          </div>
+
+          {/* Fullscreen PDF Content */}
+          <div className="flex-1 overflow-hidden p-2 sm:p-4 bg-muted/20">
+            <DocumentPdfViewer
+              fileUrl={fullscreenPdfDoc.fileAttachment?.url || "/sample-document.pdf"}
+              fileName={
+                fullscreenPdfDoc.fileAttachment?.name ||
+                `${fullscreenPdfDoc.documentNumber || "van-ban"}.pdf`
+              }
+              fileSize={fullscreenPdfDoc.fileAttachment?.size}
+              className="h-full w-full"
+            />
+          </div>
+        </div>
+      )}
 
       <CreateDocumentModal
         isOpen={isCreateOpen}

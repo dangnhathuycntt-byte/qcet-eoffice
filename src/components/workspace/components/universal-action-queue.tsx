@@ -13,6 +13,7 @@ import {
   CornerDownRight,
   GitFork,
   BellRing,
+  Filter,
 } from "lucide-react";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
@@ -80,6 +81,7 @@ export interface UniversalActionQueueProps {
   onOpenSubmit?: (task: StaffTask) => void;
   onCreateSubtask?: (parentId: string) => void;
   onRemindDRI?: (taskId: string, targetName: string) => void;
+  onFilterCanvas?: (filterType: "approvals" | "submissions" | "overdue" | "all") => void;
 }
 
 export function UniversalActionQueue({
@@ -93,19 +95,22 @@ export function UniversalActionQueue({
   onOpenSubmit,
   onCreateSubtask,
   onRemindDRI,
+  onFilterCanvas,
 }: UniversalActionQueueProps) {
   const { pendingApprovals = [], myPendingSubmissions = [] } = actionQueue;
   const [isApprovalsExpanded, setIsApprovalsExpanded] = React.useState(false);
   const [isSubmissionsExpanded, setIsSubmissionsExpanded] = React.useState(false);
 
   // Calculate overdue items across queue
-  const overdueSubmissionsCount = myPendingSubmissions.filter(
-    (item) => item.isOverdue || (item.dueDate && new Date(item.dueDate) < new Date())
-  ).length;
+  const overdueSubmissionsCount = myPendingSubmissions.filter((item: any) => {
+    const due = item.dueDate || item.task?.dueDate;
+    return item.isOverdue || (due && new Date(due) < new Date());
+  }).length;
 
-  const overdueApprovalsCount = pendingApprovals.filter(
-    (item) => item.task.dueDate && new Date(item.task.dueDate) < new Date()
-  ).length;
+  const overdueApprovalsCount = pendingApprovals.filter((item: any) => {
+    const due = item.task?.dueDate || item.dueDate;
+    return due && new Date(due) < new Date();
+  }).length;
 
   const totalOverdue = overdueSubmissionsCount + overdueApprovalsCount;
 
@@ -178,9 +183,22 @@ export function UniversalActionQueue({
               </div>
             </div>
           </div>
-          <span className="text-xs font-mono font-bold tabular-nums text-rose-800 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 shrink-0">
-            {totalOverdue} QUÁ HẠN
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            {onFilterCanvas && (
+              <button
+                type="button"
+                onClick={() => onFilterCanvas("overdue")}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-rose-900 hover:text-rose-950 underline underline-offset-2 cursor-pointer transition-colors"
+                title="Lọc bảng công việc chỉ hiển thị các nhiệm vụ quá hạn"
+              >
+                <Filter className="size-3" strokeWidth={1.5} />
+                <span>Lọc việc quá hạn</span>
+              </button>
+            )}
+            <span className="text-xs font-mono font-bold tabular-nums text-rose-800 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+              {totalOverdue} QUÁ HẠN
+            </span>
+          </div>
         </div>
       )}
 
@@ -207,13 +225,26 @@ export function UniversalActionQueue({
                   )
                 </h3>
               </div>
-              <span className="text-xs font-medium text-amber-800">
-                {scope === "school"
-                  ? "Chờ BGH phê duyệt"
-                  : scope === "unit"
-                  ? "Cần thẩm định L1"
-                  : "Cần lãnh đạo xử lý"}
-              </span>
+              <div className="flex items-center gap-2">
+                {onFilterCanvas && (
+                  <button
+                    type="button"
+                    onClick={() => onFilterCanvas("approvals")}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-amber-900 hover:text-amber-950 underline underline-offset-2 cursor-pointer transition-colors"
+                    title="Lọc bảng công việc chỉ hiển thị các nhiệm vụ cần thẩm định"
+                  >
+                    <Filter className="size-3" strokeWidth={1.5} />
+                    <span>Xem trên bảng</span>
+                  </button>
+                )}
+                <span className="text-xs font-medium text-amber-800">
+                  {scope === "school"
+                    ? "Chờ BGH phê duyệt"
+                    : scope === "unit"
+                    ? "Cần thẩm định L1"
+                    : "Cần lãnh đạo xử lý"}
+                </span>
+              </div>
             </div>
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -401,9 +432,22 @@ export function UniversalActionQueue({
                   )
                 </h3>
               </div>
-              <span className="text-xs font-medium text-blue-800">
-                Hạn nộp báo cáo
-              </span>
+              <div className="flex items-center gap-2">
+                {onFilterCanvas && (
+                  <button
+                    type="button"
+                    onClick={() => onFilterCanvas("submissions")}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-900 hover:text-blue-950 underline underline-offset-2 cursor-pointer transition-colors"
+                    title="Lọc bảng công việc chỉ hiển thị các nhiệm vụ cần nộp báo cáo / minh chứng"
+                  >
+                    <Filter className="size-3" strokeWidth={1.5} />
+                    <span>Xem trên bảng</span>
+                  </button>
+                )}
+                <span className="text-xs font-medium text-blue-800">
+                  Hạn nộp báo cáo
+                </span>
+              </div>
             </div>
 
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">

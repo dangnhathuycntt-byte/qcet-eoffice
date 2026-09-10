@@ -81,6 +81,10 @@ export interface DocumentDetailDTO extends DocumentListDTO {
   linkedTaskId?: string | null;
   notes?: string | null;
   registeredBy?: UserSummaryDTO | null;
+  registeredById?: string | null;
+  leadDepartmentId?: string | null;
+  draftingDeptId?: string | null;
+  leadUserId?: string | null;
 }
 
 function toISOStringSafe(val: unknown): string {
@@ -311,6 +315,10 @@ export function toDocumentDetailDTO(rawDoc: unknown): DocumentDetailDTO | null {
     linkedTaskId: doc.linkedTaskId ? String(doc.linkedTaskId) : null,
     notes: doc.notes ? String(doc.notes) : null,
     registeredBy: doc.registeredBy ? toUserSummaryDTO(doc.registeredBy) : null,
+    registeredById: doc.registeredById ? String(doc.registeredById) : null,
+    leadDepartmentId: doc.leadDepartmentId ? String(doc.leadDepartmentId) : null,
+    draftingDeptId: doc.draftingDeptId ? String(doc.draftingDeptId) : null,
+    leadUserId: doc.leadUserId ? String(doc.leadUserId) : null,
   };
 }
 
@@ -322,4 +330,45 @@ export function toDocumentListDTOArray(rawDocs: unknown[]): DocumentListDTO[] {
   return rawDocs
     .map(toDocumentListDTO)
     .filter((d): d is DocumentListDTO => d !== null);
+}
+
+/**
+ * Maps raw directive to DocumentDirectiveDTO.
+ * Returns null if raw directive is null, undefined, or not an object.
+ */
+export function toDocumentDirectiveDTO(raw: unknown): DocumentDirectiveDTO | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const d = raw as Record<string, any>;
+  return {
+    id: String(d.id ?? ''),
+    documentId: d.documentId ? String(d.documentId) : undefined,
+    leaderId: String(d.leaderId ?? ''),
+    leaderName: d.leaderName ?? d.leader?.name ?? null,
+    leader: d.leader ? toUserSummaryDTO(d.leader) : null,
+    instruction: String(d.instruction ?? d.content ?? ''),
+    deadline: d.deadline ? extractDateString(d.deadline) : null,
+    assignedDeptId: d.assignedDeptId ? String(d.assignedDeptId) : null,
+    assignedDeptName: d.assignedDeptName ?? d.assignedDept?.name ?? null,
+    assignedDept:
+      d.assignedDept && typeof d.assignedDept === 'object'
+        ? {
+            id: d.assignedDept.id ? String(d.assignedDept.id) : undefined,
+            code: d.assignedDept.code ?? d.assignedDept.shortName ?? null,
+            name: String(d.assignedDept.name ?? ''),
+          }
+        : null,
+    collaboratorIds: d.collaboratorIds ?? null,
+    isTaskGenerated: Boolean(d.isTaskGenerated),
+    createdAt: d.createdAt ? extractDateString(d.createdAt) : undefined,
+  };
+}
+
+/**
+ * Maps an array of raw directives to DocumentDirectiveDTO[].
+ */
+export function toDocumentDirectiveDTOArray(rawList: unknown[]): DocumentDirectiveDTO[] {
+  if (!Array.isArray(rawList)) return [];
+  return rawList
+    .map(toDocumentDirectiveDTO)
+    .filter((d): d is DocumentDirectiveDTO => d !== null);
 }

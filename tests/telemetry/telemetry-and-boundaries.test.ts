@@ -24,8 +24,10 @@ import {
 import {
   POST,
   OPTIONS,
-  parseTelemetryEvents,
 } from "../../src/app/api/telemetry/route";
+import {
+  parseTelemetryEvents,
+} from "../../src/telemetry/schemas";
 import {
   ErrorBoundary,
   SectionErrorFallback,
@@ -186,7 +188,7 @@ describe("Telemetry & Error Boundaries Comprehensive Test Suite", () => {
       );
       originalError.name = "DatabaseConnectionError";
 
-      const sanitized = sanitizeLogContext(originalError) as Record<string, unknown>;
+      const sanitized = sanitizeLogContext(originalError) as unknown as Record<string, unknown>;
 
       assert.equal(sanitized.name, "DatabaseConnectionError");
       assert.ok(typeof sanitized.message === "string");

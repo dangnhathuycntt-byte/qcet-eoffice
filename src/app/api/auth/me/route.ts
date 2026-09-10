@@ -1,42 +1,69 @@
-import { NextRequest, NextResponse } from "next/server";
-import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { prisma } from "@/lib/prisma";
+import { getSessionFromRequest } from "@/lib/jwt-session";
+import { getApiContext } from "@/server/api/request-context";
+import { toUserPublicDTO } from "@/server/dto";
+import { apiError, apiSuccess } from "@/server/api/response";
 
-export async function GET(req: NextRequest) {
-  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+export async function GET(req: Request) {
+  let requestId = crypto.randomUUID();
+  try {
+    const context = await getApiContext(req);
+    requestId = context.requestId;
 
-  if (!token) {
-    return NextResponse.json({ authenticated: false, user: null });
+    // Verify server session truth using getSessionFromRequest(req) supporting cookies and Authorization: Bearer <token>
+    const session = getSessionFromRequest(req as any) || (context.user ? { id: context.user.id } : null);
+
+    if (!session || !session.id) {
+      return apiSuccess(
+        { authenticated: false, user: null },
+        {
+          headers: { "Cache-Control": "private, no-store" },
+          requestId: context.requestId,
+        }
+      );
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.id },
+      include: {
+        department: {
+          select: { id: true, name: true, shortName: true },
+        },
+      },
+    });
+
+    if (!dbUser || !dbUser.isActive) {
+      return apiSuccess(
+        { authenticated: false, user: null },
+        {
+          headers: { "Cache-Control": "private, no-store" },
+          requestId: context.requestId,
+        }
+      );
+    }
+
+    const publicUser = toUserPublicDTO(dbUser);
+    const userResult = {
+      ...publicUser,
+      title: dbUser.title,
+      phone: dbUser.phone,
+      avatarUrl: dbUser.avatarUrl,
+      isActive: dbUser.isActive,
+      onboardedAt: dbUser.onboardedAt ? dbUser.onboardedAt.toISOString() : null,
+      onboardingData: dbUser.onboardingData || null,
+    };
+
+    return apiSuccess(
+      {
+        authenticated: true,
+        user: userResult,
+      },
+      {
+        headers: { "Cache-Control": "private, no-store" },
+        requestId: context.requestId,
+      }
+    );
+  } catch (error) {
+    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
   }
-
-  const payload = verifySessionToken(token);
-  if (!payload) {
-    return NextResponse.json({ authenticated: false, user: null });
-  }
-
-  const dbUser = await prisma.user.findUnique({
-    where: { id: payload.id },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      departmentId: true,
-      title: true,
-      avatarUrl: true,
-      phone: true,
-      isActive: true,
-      onboardedAt: true,
-      onboardingData: true,
-    },
-  });
-
-  if (!dbUser || !dbUser.isActive) {
-    return NextResponse.json({ authenticated: false, user: null });
-  }
-
-  return NextResponse.json({
-    authenticated: true,
-    user: dbUser,
-  });
 }

@@ -81,9 +81,9 @@ export function WelcomeModal({ isOpen, onStartTour, onDismiss }: WelcomeModalPro
           <button
             onClick={onDismiss}
             aria-label="Đóng bảng chào mừng"
-            className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -124,16 +124,16 @@ export function WelcomeModal({ isOpen, onStartTour, onDismiss }: WelcomeModalPro
           <Button
             variant="ghost"
             onClick={onDismiss}
-            className="w-full sm:w-auto text-muted-foreground hover:text-foreground text-xs h-9 px-4"
+            className="w-full sm:w-auto text-muted-foreground hover:text-foreground text-xs sm:text-sm min-h-[44px] px-4"
           >
             Vào bàn làm việc ngay
           </Button>
           {/* Hướng dẫn khởi đầu - Tiền thân: KHÁM PHÁ TRONG 45 GIÂY */}
           <Button
             onClick={onStartTour}
-            className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 text-xs h-9 px-4 font-medium flex items-center justify-center gap-1.5 shadow-sm"
+            className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm min-h-[44px] px-4 font-medium flex items-center justify-center gap-1.5 shadow-sm"
           >
-            Xem hướng dẫn sử dụng <ArrowRight className="w-3.5 h-3.5" />
+            Xem hướng dẫn sử dụng <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
       </div>

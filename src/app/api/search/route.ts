@@ -6,7 +6,7 @@ import { ValidationError } from '@/server/api/errors';
 import { extractFieldErrors } from '@/server/api/validation';
 import { SearchQuerySchema } from '@/contracts/common';
 import { assertRateLimit } from '@/server/security/rate-limit';
-import { isAdmin } from '@/server/policies/executive-policy';
+import { isAdmin } from '@/server/policies/document-policy';
 import {
   foldVietnamese,
   normalizeTelexQuery,
@@ -62,17 +62,24 @@ export interface SearchDocumentResult {
   id: string;
   documentNumber?: string;
   originalNumber?: string | null;
+  registrationNumber?: number | null;
   title: string;
   summary: string;
   type?: string;
   category?: string | null;
   issuingAuthority?: string | null;
   issuedDate?: string;
+  status?: string;
+  urgency?: string;
+  leadDepartment?: {
+    id: string;
+    name: string;
+    shortName: string | null;
+  } | null;
 }
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
 export async function GET(request: NextRequest) {
   let requestId = 'req-search-get';
   try {
@@ -177,6 +184,13 @@ export async function GET(request: NextRequest) {
       andConditions.push({ OR: permittedConditions });
     }
 
+    // Phase 9 & Section 31/43: Data classification filter for tasks
+    if (!userIsAdmin) {
+      andConditions.push({
+        dataClassification: { not: 'STATE_SECRET' as any },
+      });
+    }
+
     const tasksWhere = andConditions.length > 0 ? { AND: andConditions } : {};
 
     // 2. Search Users
@@ -210,7 +224,47 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const [rawTasks, rawUsers] = await Promise.all([
+    // 3. Search Documents
+    let documentsWhere: any = {};
+    if (q) {
+      const docOrConditions: any[] = [
+        { summary: { contains: q, mode: "insensitive" } },
+        { originalNumber: { contains: q, mode: "insensitive" } },
+        { issuingAuthority: { contains: q, mode: "insensitive" } },
+        { category: { contains: q, mode: "insensitive" } },
+      ];
+
+      if (foldedQ && foldedQ !== q.toLowerCase()) {
+        docOrConditions.push(
+          { summary: { contains: foldedQ, mode: "insensitive" } },
+          { originalNumber: { contains: foldedQ, mode: "insensitive" } }
+        );
+      }
+
+      for (const term of acronymTerms) {
+        docOrConditions.push(
+          { summary: { contains: term, mode: "insensitive" } },
+          { issuingAuthority: { contains: term, mode: "insensitive" } }
+        );
+      }
+
+      documentsWhere = { OR: docOrConditions };
+    }
+
+    // Phase 9 & Section 31/43: Classification filter for documents
+    if (!userIsAdmin) {
+      const docAndConditions: any[] = [];
+      if (documentsWhere.OR) {
+        docAndConditions.push(documentsWhere);
+      }
+      // Deny TUYET_MAT by default
+      docAndConditions.push({
+        securityLevel: { not: 'TUYET_MAT' as any },
+      });
+      documentsWhere = { AND: docAndConditions };
+    }
+
+    const [rawTasks, rawUsers, rawDocuments] = await Promise.all([
       prisma.task.findMany({
         where: tasksWhere,
         select: {
@@ -270,11 +324,36 @@ export async function GET(request: NextRequest) {
         orderBy: { name: 'asc' },
         take: Math.min(limit, 20),
       }),
+      prisma.document.findMany({
+        where: documentsWhere,
+        select: {
+          id: true,
+          originalNumber: true,
+          registrationNumber: true,
+          type: true,
+          summary: true,
+          category: true,
+          issuingAuthority: true,
+          issuedDate: true,
+          status: true,
+          urgency: true,
+          leadDepartment: {
+            select: {
+              id: true,
+              name: true,
+              shortName: true,
+            },
+          },
+        },
+        orderBy: [{ issuedDate: "desc" }],
+        take: q ? 20 : 5,
+      }).catch(() => []),
     ]);
 
     // Apply Vietnamese multi-tier scoring if query is present
     let sortedTasks = rawTasks;
     let sortedUsers = rawUsers;
+    let sortedDocuments = rawDocuments;
 
     if (q) {
       sortedTasks = [...rawTasks]
@@ -314,6 +393,28 @@ export async function GET(request: NextRequest) {
         .sort((a, b) => b.score - a.score)
         .slice(0, Math.min(limit, 20))
         .map((item) => item.user);
+
+      if (rawDocuments.length > 0) {
+        sortedDocuments = [...rawDocuments]
+          .map((doc) => {
+            const keywords = [
+              doc.originalNumber,
+              doc.issuingAuthority,
+              doc.category,
+              doc.leadDepartment?.name || "",
+              doc.leadDepartment?.shortName || "",
+            ].filter(Boolean);
+            const score = Math.max(
+              scoreVietnameseSearch(doc.summary, q, keywords),
+              scoreVietnameseSearch(doc.originalNumber, q),
+              scoreVietnameseSearch(doc.issuingAuthority, q)
+            );
+            return { doc, score };
+          })
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 10)
+          .map((item) => item.doc);
+      }
     }
 
     const formattedTasks = sortedTasks.map((t) => ({
@@ -321,15 +422,22 @@ export async function GET(request: NextRequest) {
       dueDate: t.dueDate ? t.dueDate.toISOString() : '',
     }));
 
+    const formattedDocuments = sortedDocuments.map((d) => ({
+      ...d,
+      issuedDate: d.issuedDate ? d.issuedDate.toISOString() : "",
+    }));
+
     return apiSuccess(
       {
         query: q,
         results: {
           tasks: formattedTasks,
+          documents: formattedDocuments,
           users: sortedUsers,
         },
         count: {
           tasks: formattedTasks.length,
+          documents: formattedDocuments.length,
           users: sortedUsers.length,
         },
       },

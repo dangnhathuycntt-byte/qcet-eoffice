@@ -19,6 +19,7 @@ import {
   mapDbNotification,
   formatRelativeTime,
   getTimeGroup,
+  resolveActionableDeepLink,
 } from "@/lib/notification-triage";
 
 // Re-export for backward compatibility
@@ -317,7 +318,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
   const avatarStyle = getDeterministicAvatarStyle(item.actorName);
   const formatted = formatNotificationContent(item);
 
-  const destinationHref = item.linkHref && item.linkHref.trim() !== "" ? item.linkHref : "/notifications";
+  const destinationHref = resolveActionableDeepLink(item);
 
   const handleClick = () => {
     if (!item.isRead) {
@@ -331,7 +332,7 @@ function NotificationRow({ item, onRead, onClose }: NotificationRowProps) {
       href={destinationHref}
       onClick={handleClick}
       className={cn(
-        "group relative flex items-start gap-3 p-2.5 rounded-xl transition-all cursor-pointer border border-transparent",
+        "group relative flex items-start gap-3 p-2.5 min-h-[48px] touch-manipulation rounded-xl transition-all cursor-pointer border border-transparent",
         item.isRead
           ? "hover:bg-muted/50 opacity-85 hover:opacity-100"
           : "bg-primary/[0.04] hover:bg-muted/70 font-medium border-l-primary"

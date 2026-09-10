@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { DisplayDensityProvider } from "@/components/density-provider";
 import { AppShell } from "@/components/layout/app-shell";
 import { PWAServiceWorkerManager } from "@/components/pwa/pwa-service-worker-manager";
+import { WebVitalsReporter } from "@/components/telemetry/web-vitals-reporter";
 
 const fontSans = Be_Vietnam_Pro({
   variable: "--font-sans",
@@ -101,6 +102,7 @@ export default function RootLayout({
             </a>
             <AppShell>{children}</AppShell>
             <PWAServiceWorkerManager />
+            <WebVitalsReporter />
           </DisplayDensityProvider>
         </AuthProvider>
       </body>

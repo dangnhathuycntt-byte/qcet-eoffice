@@ -43,28 +43,38 @@ export function getSessionFromRequest(request: {
   cookies?: { get: (name: string) => { value: string } | undefined };
   headers?: { get: (name: string) => string | null };
 }): SessionPayload | null {
-  let token: string | undefined | null = null;
+  if (!request) return null;
 
-  if (request.cookies && typeof request.cookies.get === "function") {
-    token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  }
-
-  if (!token && request.headers && typeof request.headers.get === "function") {
+  // 1. Authorization: Bearer <token> (used by mobile PWA / API clients)
+  if (request.headers && typeof request.headers.get === "function") {
     const authHeader = request.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
-      token = authHeader.substring(7);
+      const bearerToken = authHeader.substring(7).trim();
+      const verified = verifySessionToken(bearerToken);
+      if (verified) return verified;
     }
-    if (!token) {
-      const cookieHeader = request.headers.get("cookie");
-      if (cookieHeader) {
-        const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]*)`));
-        if (match) {
-          token = decodeURIComponent(match[1]);
-        }
+  }
+
+  // 2. Cookie object (NextRequest / next/headers cookies store)
+  if (request.cookies && typeof request.cookies.get === "function") {
+    const cookieVal = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    if (cookieVal) {
+      const verified = verifySessionToken(cookieVal);
+      if (verified) return verified;
+    }
+  }
+
+  // 3. Fallback: Cookie header raw string
+  if (request.headers && typeof request.headers.get === "function") {
+    const cookieHeader = request.headers.get("cookie");
+    if (cookieHeader) {
+      const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]*)`));
+      if (match) {
+        const verified = verifySessionToken(decodeURIComponent(match[1]));
+        if (verified) return verified;
       }
     }
   }
 
-  if (!token) return null;
-  return verifySessionToken(token);
+  return null;
 }

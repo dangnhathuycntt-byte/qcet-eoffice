@@ -11,6 +11,7 @@ export {
   simulateAtomicNumbering,
   getNextRegistrationNumber,
   getNextRegistrationNumberRawSql,
+  getNextDocumentSequence,
   resetDocumentMemorySequences,
 } from "./documents/numbering-engine";
 

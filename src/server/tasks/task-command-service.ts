@@ -14,6 +14,11 @@ import {
   NotFoundError,
   ValidationError,
 } from '@/server/api/errors';
+import {
+  logAuditEvent,
+  AuditAction,
+  AuditEntityType,
+} from '@/lib/db/audit';
 import { safeAfter, dispatchTaskAssignedPush } from '@/lib/push-dispatch';
 import { generateTaskCodeAtomic } from '@/lib/task-code-generator';
 import { getAcademicYear, getSystemReferenceDate } from '@/lib/academic-calendar';
@@ -58,19 +63,28 @@ export interface UpdateTaskInput {
   progress?: number;
   status?: string | TaskStatus;
   priority?: string | TaskPriority;
-  dueDate?: string | Date;
+  dueDate?: string | Date | null;
   departmentId?: string | null;
   assigneeId?: string | null;
   parentTaskId?: string | null;
   collaboratorIds?: string[];
+  auditAction?: string;
+  academicMonth?: number;
+  academicYear?: string;
+  resolution?: string;
+  comment?: string | null;
+  note?: string | null;
 }
 
 export interface SubmitDeliverableInput {
   title: string;
   fileUrl: string;
+  fileName?: string | null;
   fileType?: string | null;
   fileSize?: number | null;
   uploadedById?: string | null;
+  notes?: string | null;
+  note?: string | null;
 }
 
 export interface ReviewDeliverableInput {
@@ -273,6 +287,47 @@ export class TaskCommandService {
         },
       });
 
+      const requestId =
+        ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
+          ? ctx.requestId
+          : undefined;
+
+      // 1. Business Audit Event: TASK_CREATED
+      await logAuditEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.TASK_CREATED,
+        entityType: AuditEntityType.TASK,
+        entityId: task.id,
+        requestId,
+        beforeData: null,
+        afterData: {
+          code: task.code,
+          title: task.title,
+          departmentId: task.departmentId,
+          scope: task.scope,
+          priority: task.priority,
+          dueDate: task.dueDate.toISOString(),
+          createdById: task.createdById,
+        },
+      });
+
+      // 2. Business Audit Event: TASK_ASSIGNED (if primary owner assigned)
+      if (validAssigneeId) {
+        await logAuditEvent(tx, {
+          actorId: user.id,
+          action: AuditAction.TASK_ASSIGNED,
+          entityType: AuditEntityType.TASK,
+          entityId: task.id,
+          requestId,
+          beforeData: null,
+          afterData: {
+            assigneeId: validAssigneeId,
+            roleInTask: AssigneeRole.PRIMARY_OWNER,
+            collaboratorIds: validCollaboratorIds,
+          },
+        });
+      }
+
       return task;
     });
 
@@ -304,11 +359,14 @@ export class TaskCommandService {
   async updateTask(
     ctx: ApiRequestContext | { user: AuthenticatedUser | null },
     taskId: string,
-    input: UpdateTaskInput
+    input: UpdateTaskInput,
+    options?: { auditAction?: string }
   ) {
     const user = resolveUser(ctx);
+    const { auditAction: inputAuditAction, ...sanitizedInput } = (input as any) || {};
+    const effectiveAuditAction = options?.auditAction || inputAuditAction;
 
-    const validationResult = UpdateTaskInputSchema.safeParse(input);
+    const validationResult = UpdateTaskInputSchema.safeParse(sanitizedInput);
     if (!validationResult.success) {
       const fieldErrors: Record<string, string[]> = {};
       for (const issue of validationResult.error.issues) {
@@ -349,6 +407,8 @@ export class TaskCommandService {
       assigneeId,
       parentTaskId,
       collaboratorIds,
+      academicMonth,
+      academicYear,
     } = input;
 
     const updateData: Prisma.TaskUpdateInput = {};
@@ -375,6 +435,7 @@ export class TaskCommandService {
     if (typeof title === 'string' && title.trim()) {
       updateData.title = title.trim();
     }
+    updateData.version = { increment: 1 };
     if (description !== undefined) {
       updateData.description = description || null;
     }
@@ -388,6 +449,12 @@ export class TaskCommandService {
     }
     if (departmentId) {
       updateData.department = { connect: { id: departmentId } };
+    }
+    if (academicMonth !== undefined) {
+      updateData.academicMonth = Number(academicMonth);
+    }
+    if (academicYear !== undefined) {
+      updateData.academicYear = academicYear;
     }
 
     if (status) {
@@ -463,10 +530,22 @@ export class TaskCommandService {
 
     const updated = await prisma.$transaction(async (tx) => {
       let effectivePrimaryOwnerId: string | null = null;
+      let previousAssigneeId: string | null = null;
+      let assigneeChanged = false;
 
       if (assigneeId !== undefined) {
+        const existingOwner = await tx.taskAssignee.findFirst({
+          where: { taskId, roleInTask: AssigneeRole.PRIMARY_OWNER },
+          select: { userId: true },
+        });
+        previousAssigneeId = existingOwner?.userId || null;
+
         const validAssigneeId =
           typeof assigneeId === 'string' && assigneeId.trim() ? assigneeId.trim() : null;
+        if (validAssigneeId !== previousAssigneeId) {
+          assigneeChanged = true;
+        }
+
         if (validAssigneeId) {
           effectivePrimaryOwnerId = validAssigneeId;
           await tx.taskAssignee.deleteMany({
@@ -521,7 +600,7 @@ export class TaskCommandService {
         }
       }
 
-      return tx.task.update({
+      const updatedTask = await tx.task.update({
         where: { id: taskId },
         data: updateData,
         include: {
@@ -550,6 +629,68 @@ export class TaskCommandService {
           },
         },
       });
+
+      const requestId =
+        ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
+          ? ctx.requestId
+          : undefined;
+
+      // 1. Audit trail: TASK_ASSIGNED if primary assignee changed
+      if (assigneeChanged) {
+        await logAuditEvent(tx, {
+          actorId: user.id,
+          action: AuditAction.TASK_ASSIGNED,
+          entityType: AuditEntityType.TASK,
+          entityId: taskId,
+          requestId,
+          beforeData: { assigneeId: previousAssigneeId },
+          afterData: { assigneeId: effectivePrimaryOwnerId },
+        });
+      }
+
+      // 2. Audit trail: TASK_DEADLINE_CHANGED if due date changed
+      if (updateData.dueDate) {
+        const oldDueTime = existing.dueDate ? new Date(existing.dueDate).getTime() : null;
+        const newDueDate = new Date(updateData.dueDate as Date);
+        if (oldDueTime !== newDueDate.getTime()) {
+          await logAuditEvent(tx, {
+            actorId: user.id,
+            action: AuditAction.TASK_DEADLINE_CHANGED,
+            entityType: AuditEntityType.TASK,
+            entityId: taskId,
+            requestId,
+            beforeData: { dueDate: existing.dueDate ? existing.dueDate.toISOString() : null },
+            afterData: { dueDate: newDueDate.toISOString() },
+          });
+        }
+      }
+
+      // 3. Audit trail: TASK_STATUS_CHANGED, TASK_APPROVED, or TASK_REJECTED if status changed
+      if (updateData.status && updateData.status !== existing.status) {
+        const statusAction =
+          effectiveAuditAction ||
+          (updateData.status === TaskStatus.COMPLETED && existing.status === TaskStatus.WAITING_APPROVAL
+            ? AuditAction.TASK_APPROVED
+            : AuditAction.TASK_STATUS_CHANGED);
+
+        await logAuditEvent(tx, {
+          actorId: user.id,
+          action: statusAction,
+          entityType: AuditEntityType.TASK,
+          entityId: taskId,
+          requestId,
+          beforeData: {
+            status: existing.status,
+            progressPercent: existing.progressPercent,
+          },
+          afterData: {
+            status: updateData.status,
+            progressPercent: updateData.progressPercent ?? existing.progressPercent,
+          },
+        });
+      }
+
+      return updatedTask;
     });
 
     return updated;
@@ -697,12 +838,49 @@ export class TaskCommandService {
         },
       });
 
+      const requestId =
+        ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
+          ? ctx.requestId
+          : undefined;
+
+      // 1. Audit trail: DELIVERABLE_SUBMITTED linked to Task
+      await logAuditEvent(tx, {
+        actorId: user.id,
+        action: AuditAction.DELIVERABLE_SUBMITTED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        requestId,
+        beforeData: null,
+        afterData: {
+          deliverableId: deliverable.id,
+          title: deliverable.title,
+          fileUrl: deliverable.fileUrl,
+          fileType: deliverable.fileType,
+          fileSize: deliverable.fileSize,
+        },
+      });
+
       // Chuyển trạng thái sang WAITING_APPROVAL khi nộp minh chứng nếu task chưa bị hủy
       if (task.status !== TaskStatus.CANCELLED) {
         await tx.task.update({
           where: { id: taskId },
-          data: { status: TaskStatus.WAITING_APPROVAL },
+          data: {
+            status: TaskStatus.WAITING_APPROVAL,
+            version: { increment: 1 },
+          },
         });
+
+        if (task.status !== TaskStatus.WAITING_APPROVAL) {
+          await logAuditEvent(tx, {
+            actorId: user.id,
+            action: AuditAction.TASK_STATUS_CHANGED,
+            entityType: AuditEntityType.TASK,
+            entityId: taskId,
+            requestId,
+            beforeData: { status: task.status },
+            afterData: { status: TaskStatus.WAITING_APPROVAL },
+          });
+        }
       }
 
       return deliverable;
@@ -794,6 +972,11 @@ export class TaskCommandService {
         },
       });
 
+      const requestId =
+        ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
+          ? ctx.requestId
+          : undefined;
+
       if (validStatus === DeliverableReviewStatus.APPROVED) {
         // Kiểm tra xem tất cả minh chứng của nhiệm vụ này đã được duyệt hay chưa
         const allDeliverables = await tx.taskDeliverable.findMany({
@@ -812,6 +995,28 @@ export class TaskCommandService {
               completedAt: new Date(),
             },
           });
+
+          await logAuditEvent(tx, {
+            actorId: user.id,
+            action: AuditAction.TASK_APPROVED,
+            entityType: AuditEntityType.TASK,
+            entityId: taskId,
+            requestId,
+            beforeData: { status: deliverable.task.status },
+            afterData: { status: TaskStatus.COMPLETED, progressPercent: 100 },
+            metadata: { deliverableId, reviewNote: reviewNote || null },
+          });
+        } else {
+          await logAuditEvent(tx, {
+            actorId: user.id,
+            action: AuditAction.DELIVERABLE_REVIEWED,
+            entityType: AuditEntityType.TASK,
+            entityId: taskId,
+            requestId,
+            beforeData: { reviewStatus: deliverable.reviewStatus },
+            afterData: { reviewStatus: validStatus, reviewNote: reviewNote || null },
+            metadata: { deliverableId },
+          });
         }
       } else if (validStatus === DeliverableReviewStatus.REVISION_REQUIRED) {
         // Bị yêu cầu chỉnh sửa, đưa nhiệm vụ về lại IN_PROGRESS
@@ -820,6 +1025,17 @@ export class TaskCommandService {
           data: {
             status: TaskStatus.IN_PROGRESS,
           },
+        });
+
+        await logAuditEvent(tx, {
+          actorId: user.id,
+          action: AuditAction.TASK_REJECTED,
+          entityType: AuditEntityType.TASK,
+          entityId: taskId,
+          requestId,
+          beforeData: { status: deliverable.task.status },
+          afterData: { status: TaskStatus.IN_PROGRESS },
+          metadata: { deliverableId, reviewNote: reviewNote || null },
         });
       }
 
@@ -836,10 +1052,15 @@ export class TaskCommandService {
     ctx: ApiRequestContext | { user: AuthenticatedUser | null },
     taskId: string
   ) {
-    return this.updateTask(ctx, taskId, {
-      status: TaskStatus.COMPLETED,
-      progressPercent: 100,
-    });
+    return this.updateTask(
+      ctx,
+      taskId,
+      {
+        status: TaskStatus.COMPLETED,
+        progressPercent: 100,
+      },
+      { auditAction: AuditAction.TASK_APPROVED }
+    );
   }
 
   /**
@@ -849,9 +1070,14 @@ export class TaskCommandService {
     ctx: ApiRequestContext | { user: AuthenticatedUser | null },
     taskId: string
   ) {
-    return this.updateTask(ctx, taskId, {
-      status: TaskStatus.IN_PROGRESS,
-    });
+    return this.updateTask(
+      ctx,
+      taskId,
+      {
+        status: TaskStatus.IN_PROGRESS,
+      },
+      { auditAction: AuditAction.TASK_REJECTED }
+    );
   }
 }
 

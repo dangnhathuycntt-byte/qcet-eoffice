@@ -26,6 +26,7 @@ interface DocumentDetailDialogProps {
   document: OfficialDocument | null;
   isOpen: boolean;
   onClose: () => void;
+  onViewPdf?: (doc: OfficialDocument) => void;
 }
 
 export function getUrgencyBadgeConfig(urgency: DocumentUrgency): {
@@ -101,6 +102,7 @@ export function DocumentDetailDialog({
   document: doc,
   isOpen,
   onClose,
+  onViewPdf,
 }: DocumentDetailDialogProps) {
   // ESC key handler
   React.useEffect(() => {
@@ -134,11 +136,11 @@ export function DocumentDetailDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="doc-detail-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl bg-card border border-border/70 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl bg-card border-0 sm:border border-border/70 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
@@ -168,7 +170,7 @@ export function DocumentDetailDialog({
               </div>
               <h2
                 id="doc-detail-title"
-                className="text-base sm:text-lg font-bold font-mono text-foreground tracking-tight"
+                className="text-base sm:text-lg font-bold font-mono text-foreground tracking-tight tabular-nums"
               >
                 {doc.documentNumber}
               </h2>
@@ -179,9 +181,9 @@ export function DocumentDetailDialog({
             type="button"
             onClick={onClose}
             aria-label="Đóng"
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors shrink-0 cursor-pointer"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors shrink-0 cursor-pointer"
           >
-            <X className="size-4.5" strokeWidth={1.5} />
+            <X className="size-5" strokeWidth={1.5} />
           </button>
         </div>
 
@@ -306,17 +308,34 @@ export function DocumentDetailDialog({
                   </p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs rounded-lg shrink-0"
-                onClick={() => {
-                  alert(`Đang mở tải tệp đính kèm: ${doc.fileAttachment?.name}`);
-                }}
-              >
-                <Download className="size-3.5" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Tải về</span>
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                {onViewPdf && (
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    className="min-h-[44px] px-3 gap-1.5 text-xs rounded-xl font-semibold cursor-pointer"
+                    onClick={() => {
+                      onClose();
+                      onViewPdf(doc);
+                    }}
+                  >
+                    <FileText className="size-4" strokeWidth={1.5} />
+                    <span>Xem PDF</span>
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-h-[44px] px-3 gap-1.5 text-xs rounded-xl font-medium cursor-pointer"
+                  onClick={() => {
+                    alert(`Đang mở tải tệp đính kèm: ${doc.fileAttachment?.name}`);
+                  }}
+                >
+                  <Download className="size-4" strokeWidth={1.5} />
+                  <span className="hidden sm:inline">Tải về</span>
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -327,9 +346,9 @@ export function DocumentDetailDialog({
             variant="ghost"
             size="sm"
             onClick={() => window.print()}
-            className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            className="min-h-[44px] px-3 gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
           >
-            <Printer className="size-3.5" strokeWidth={1.5} />
+            <Printer className="size-4" strokeWidth={1.5} />
             <span>In phiếu văn bản</span>
           </Button>
 
@@ -338,7 +357,7 @@ export function DocumentDetailDialog({
               variant="outline"
               size="sm"
               onClick={onClose}
-              className="text-xs rounded-xl"
+              className="min-h-[44px] px-5 text-xs font-semibold rounded-xl cursor-pointer"
             >
               Đóng
             </Button>

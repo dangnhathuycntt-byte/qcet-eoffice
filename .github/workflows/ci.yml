@@ -39,13 +39,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Run Linting / Code Quality Check
-        run: |
-          if npm run lint --if-present; then
-            echo "Linting check passed."
-          else
-            echo "Linting fallback: executing typecheck quality gate."
-            npm run typecheck
-          fi
+        run: npm run lint
 
   typecheck-and-test:
     name: TypeScript & Unit Test Suite

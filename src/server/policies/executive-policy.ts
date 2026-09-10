@@ -1,6 +1,6 @@
 import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-context';
 
-export function isAdmin(user: AuthenticatedUser): boolean {
+function isAdmin(user: AuthenticatedUser): boolean {
   if (!user || !user.role) return false;
   return normalizeRole(user.role) === 'ADMIN';
 }

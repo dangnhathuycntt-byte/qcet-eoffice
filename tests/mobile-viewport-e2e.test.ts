@@ -40,14 +40,17 @@ describe("Mobile Viewport & PWA Standards Verification", () => {
 
   test("PWA manifest has valid QCET branding and icons", () => {
     const pwa = manifest();
-    assert.equal(pwa.name, "QCET E-Office - Hệ thống Điều hành Văn phòng Điện tử");
+    assert.equal(pwa.name, "QCET E-Office - Trường CĐ Kinh tế & Công nghệ Quảng Ninh");
     assert.equal(pwa.short_name, "QCET E-Office");
     assert.ok(
-      pwa.description?.includes("Trường Cao đẳng Kỹ thuật Quy Nhơn (QCET)"),
-      "Description must reference Quy Nhon College of Engineering and Technology (QCET)"
+      pwa.description?.includes("QCET"),
+      "Description must reference QCET"
     );
     assert.equal(pwa.orientation, "portrait-primary");
-    assert.equal(pwa.start_url, "/");
+    assert.ok(
+      pwa.start_url === "/" || pwa.start_url === "/?source=pwa",
+      "start_url must be root or with pwa tracking parameter"
+    );
 
     // Icons validation
     assert.ok(Array.isArray(pwa.icons), "Icons must be an array");

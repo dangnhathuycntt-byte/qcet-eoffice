@@ -68,7 +68,9 @@ export function matchesUser(assigneeName?: string, user?: AuthUser | null): bool
   if (uName.includes(a) || a.includes(uName)) return true;
   if (user.roleLabel) {
     const rLabel = user.roleLabel.trim().toLowerCase();
-    if (rLabel.includes(a) || a.includes(rLabel)) return true;
+    if (rLabel === a) return true;
+    const genericRoles = ["trưởng phòng", "chuyên viên", "giảng viên", "phó phòng", "hiệu trưởng", "phó hiệu trưởng"];
+    if (rLabel.includes(a) && a.length > 3 && !genericRoles.includes(a)) return true;
   }
   if (user.aliases && Array.isArray(user.aliases)) {
     for (const alias of user.aliases) {

@@ -8,6 +8,7 @@ export type RateLimitTier =
   | 'MUTATIONS_SENSITIVE'
   | 'MUTATION'
   | 'PUSH_TEST'
+  | 'FILE_DOWNLOAD'
   | 'DEFAULT_API';
 
 export interface RateLimitConfig {
@@ -23,6 +24,7 @@ export const RATE_LIMIT_PRESETS: Record<RateLimitTier, RateLimitConfig> = {
   MUTATIONS_SENSITIVE: { limit: 30, windowMs: 60 * 1000 },     // 30 reqs per 1 min
   MUTATION: { limit: 60, windowMs: 60 * 1000 },                // 60 reqs per 1 min
   PUSH_TEST: { limit: 3, windowMs: 5 * 60 * 1000 },            // 3 reqs per 5 min
+  FILE_DOWNLOAD: { limit: 60, windowMs: 60 * 1000 },           // 60 reqs per 1 min
   DEFAULT_API: { limit: 100, windowMs: 60 * 1000 },            // 100 reqs per 1 min
 };
 

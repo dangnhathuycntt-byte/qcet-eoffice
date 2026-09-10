@@ -1,56 +1,45 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { UserRole as PrismaUserRole } from "@prisma/client";
+import { getApiContext } from "@/server/api/request-context";
+import { parseAndValidateJson, MAX_AUTH_BODY_SIZE } from "@/server/api/validation";
+import { RegisterInputSchema } from "@/contracts/auth";
+import { assertRateLimit } from "@/server/security/rate-limit";
+import { ConflictError, ValidationError } from "@/server/api/errors";
+import { toUserPublicDTO } from "@/server/dto";
+import { apiError, apiSuccess } from "@/server/api/response";
 
 export async function POST(req: Request) {
+  let requestId = crypto.randomUUID();
   try {
-    const body = await req.json();
-    const { email, password, name, departmentId, title } = body;
+    const context = await getApiContext(req);
+    requestId = context.requestId;
 
-    if (!email || !password || !name) {
-      return NextResponse.json(
-        { error: "Vui lòng cung cấp đầy đủ email, mật khẩu và họ tên" },
-        { status: 400 }
-      );
-    }
+    // Rate limiting: Key by `${context.ip || 'ip'}:register` using `RATE_LIMIT_PRESETS.AUTH_REGISTER`
+    assertRateLimit(`${context.ip || 'ip'}:register`, 'AUTH_REGISTER');
 
-    if (typeof password !== "string" || password.length < 6 || password.length > 72) {
-      return NextResponse.json(
-        { error: "Mật khẩu phải từ 6 đến 72 ký tự" },
-        { status: 400 }
-      );
-    }
+    const body = await parseAndValidateJson(req, RegisterInputSchema, {
+      maxBytes: MAX_AUTH_BODY_SIZE,
+    });
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = body.email.trim().toLowerCase();
     const existingUser = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Email này đã được đăng ký trong hệ thống" },
-        { status: 409 }
-      );
+      throw new ConflictError("Email này đã được đăng ký trong hệ thống");
     }
 
     let assignedDepartmentId: string | null = null;
-    if (departmentId !== undefined && departmentId !== null && typeof departmentId === "string" && departmentId.trim() !== "") {
+    if (body.departmentId && body.departmentId.trim() !== "") {
       const dept = await prisma.department.findUnique({
-        where: { id: departmentId.trim() },
+        where: { id: body.departmentId.trim() },
       });
       if (!dept) {
-        return NextResponse.json(
-          { error: "Phòng ban không tồn tại trong hệ thống" },
-          { status: 400 }
-        );
+        throw new ValidationError("Phòng ban không tồn tại trong hệ thống");
       }
       assignedDepartmentId = dept.id;
-    } else if (departmentId !== undefined && departmentId !== null && departmentId !== "") {
-      return NextResponse.json(
-        { error: "Mã phòng ban không hợp lệ" },
-        { status: 400 }
-      );
     } else {
       const defaultDept = await prisma.department.findUnique({
         where: { id: "CNTT" },
@@ -60,17 +49,17 @@ export async function POST(req: Request) {
       }
     }
 
-    const hashedPassword = await hashPassword(password);
+    const hashedPassword = await hashPassword(body.password);
 
     // Public registration strictly enforces CHUYEN_VIEN role unconditionally
     const newUser = await prisma.user.create({
       data: {
         email: normalizedEmail,
-        name: name.trim(),
+        name: body.name.trim(),
         passwordHash: hashedPassword,
         role: PrismaUserRole.CHUYEN_VIEN,
         departmentId: assignedDepartmentId,
-        title: title?.trim() || "Chuyên viên",
+        title: body.title?.trim() || "Chuyên viên",
         onboardedAt: null,
         onboardingData: {
           hasSeenWelcome: false,
@@ -80,33 +69,26 @@ export async function POST(req: Request) {
           snoozedUntil: null,
         },
       },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        departmentId: true,
-        title: true,
-        onboardedAt: true,
-        onboardingData: true,
+      include: {
+        department: {
+          select: { id: true, name: true, shortName: true },
+        },
       },
     });
 
-    return NextResponse.json({ success: true, user: newUser }, { status: 201 });
-  } catch (error) {
-    console.error("Register error:", error);
-    return NextResponse.json(
+    return apiSuccess(
       {
-        type: "https://tools.ietf.org/html/rfc7807",
-        title: "Internal Server Error",
-        status: 500,
-        detail: "Đã xảy ra lỗi khi tạo tài khoản",
-        error: "Đã xảy ra lỗi khi tạo tài khoản",
+        success: true,
+        user: toUserPublicDTO(newUser),
       },
       {
-        status: 500,
-        headers: { "Content-Type": "application/problem+json" },
+        status: 201,
+        headers: { "Cache-Control": "private, no-store" },
+        requestId: context.requestId,
       }
     );
+  } catch (error) {
+    // Canonical error handling adheres to RFC 7807 problem details (status: 500 on unexpected errors)
+    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
   }
 }

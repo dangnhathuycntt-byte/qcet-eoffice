@@ -245,10 +245,10 @@ export function sanitizeString(
  * Recursively sanitizes any log context, payload, or error object.
  * Guarantee: never mutates input structures and protects against circular references.
  */
-export function sanitizeLogContext<T = unknown>(
+export function sanitizeLogContext<T = any>(
   context: T,
   options: SanitizeOptions = {}
-): unknown {
+): any {
   const maxDepth = options.maxDepth ?? 10;
   const seen = new WeakSet<object>();
 
@@ -353,5 +353,5 @@ export function sanitizeLogContext<T = unknown>(
     return sanitizedObj;
   }
 
-  return traverse(context, 0);
+  return traverse(context, 0) as T;
 }

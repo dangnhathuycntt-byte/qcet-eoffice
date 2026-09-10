@@ -1,83 +1,178 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifySessionToken, SESSION_COOKIE_NAME, SessionPayload } from '@/lib/jwt-session';
+import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
+import { apiError, apiSuccess } from '@/server/api/response';
+import {
+  assertQueryStringLength,
+  parseAndValidateJson,
+  assertRequestBodySize,
+  MAX_PAYLOAD_SIZE,
+  assertJsonContentType,
+} from '@/server/api/validation';
+import { assertRateLimit } from '@/server/security/rate-limit';
+import { assertCsrf } from '@/server/security/csrf';
+import { ForbiddenError } from '@/server/api/errors';
+import { TaskQuerySchema, CreateTaskSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
-import { ApiError } from '@/server/api/errors';
+import { canCreateTask } from '@/server/policies/task-policy';
+import { toTaskListDTOArray, toTaskDetailDTO } from '@/server/dto/task-dto';
 
-function getSessionPayload(request: NextRequest): SessionPayload | null {
-  const authHeader = request.headers.get('authorization');
-  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value || bearerToken;
-  if (!token) return null;
-  return verifySessionToken(token);
-}
-
-export async function GET(request: NextRequest) {
+export async function GET(req: Request) {
+  let requestId = crypto.randomUUID();
   try {
-    const session = getSessionPayload(request);
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    const context = await getApiContext(req);
+    requestId = context.requestId;
+
+    const authUser = requireAuthenticated(context);
+
+    assertQueryStringLength(req);
+    const url = new URL(req.url);
+    const rawParams = Object.fromEntries(url.searchParams.entries());
+
+    // Clamp pagination limit parameters to max 100 before schema validation
+    if (rawParams.pageSize !== undefined) {
+      const parsed = Number(rawParams.pageSize);
+      if (!Number.isNaN(parsed)) {
+        rawParams.pageSize = String(Math.min(Math.max(1, parsed), 100));
+      }
+    }
+    if (rawParams.limit !== undefined && rawParams.limit !== 'all') {
+      const parsed = Number(rawParams.limit);
+      if (!Number.isNaN(parsed)) {
+        rawParams.limit = String(Math.min(Math.max(1, parsed), 100));
+      }
+    }
+    if (rawParams.take !== undefined && rawParams.take !== 'all') {
+      const parsed = Number(rawParams.take);
+      if (!Number.isNaN(parsed)) {
+        rawParams.take = String(Math.min(Math.max(1, parsed), 100));
+      }
     }
 
-    const searchParams = request.nextUrl.searchParams;
-    const isAll = searchParams.get('all') === 'true' || searchParams.get('limit') === 'all';
-    const pageParam = searchParams.get('page') || undefined;
-    const limitParam = searchParams.get('limit') || undefined;
+    const validatedQuery = TaskQuerySchema.parse(rawParams);
 
-    const result = await taskQueryService.queryTasks(
-      { user: session },
+    const searchQuery = validatedQuery.q || validatedQuery.search;
+    if (searchQuery && searchQuery.trim().length > 0) {
+      assertRateLimit(authUser.id, 'SEARCH');
+    }
+
+    // Clamp pagination limit to max 100
+    let effectiveLimit = 20;
+    if (validatedQuery.pageSize !== undefined && typeof validatedQuery.pageSize === 'number') {
+      effectiveLimit = Math.min(Math.max(1, validatedQuery.pageSize), 100);
+    } else if (typeof validatedQuery.limit === 'number') {
+      effectiveLimit = Math.min(Math.max(1, validatedQuery.limit), 100);
+    } else if (typeof validatedQuery.take === 'number') {
+      effectiveLimit = Math.min(Math.max(1, validatedQuery.take), 100);
+    }
+
+    const isAll =
+      validatedQuery.all === true ||
+      rawParams.all === 'true' ||
+      validatedQuery.limit === 'all' ||
+      rawParams.limit === 'all';
+
+    const result = await taskQueryService.queryTasks(context, {
+      all: isAll,
+      page: validatedQuery.page,
+      limit: isAll ? undefined : effectiveLimit,
+      cursor: validatedQuery.cursor,
+      q: validatedQuery.q,
+      search: validatedQuery.search,
+      scope: validatedQuery.scope,
+      status: validatedQuery.status,
+      dept: validatedQuery.dept || validatedQuery.departmentId,
+      departmentId: validatedQuery.departmentId || validatedQuery.dept,
+      month: validatedQuery.month || validatedQuery.academicMonth,
+      academicMonth: validatedQuery.academicMonth || validatedQuery.month,
+      year: validatedQuery.year || validatedQuery.academicYear,
+      academicYear: validatedQuery.academicYear || validatedQuery.year,
+      assignedTo: validatedQuery.assignedTo || validatedQuery.assigneeId,
+      parentTaskId: validatedQuery.parentTaskId,
+    });
+
+    const taskList = toTaskListDTOArray(result.tasks || result.data);
+
+    const pagination = {
+      ...result.pagination,
+      pageSize: result.limit,
+    };
+
+    return apiSuccess(
       {
-        all: isAll,
-        page: pageParam,
-        limit: limitParam,
-        academicMonth: searchParams.get('academicMonth') || searchParams.get('month') || undefined,
-        departmentId: searchParams.get('departmentId') || searchParams.get('dept') || undefined,
-        scope: searchParams.get('scope') || undefined,
-        academicYear: searchParams.get('academicYear') || searchParams.get('year') || undefined,
-        status: searchParams.get('status') || undefined,
-        assignedTo: searchParams.get('assignedTo') || undefined,
-        parentTaskId: searchParams.get('parentTaskId') || undefined,
-        search: searchParams.get('search') || searchParams.get('q') || undefined,
+        success: true,
+        data: taskList,
+        tasks: taskList,
+        pagination,
+        meta: result.meta,
+        total: result.total,
+        totalCount: result.totalCount,
+        page: result.page,
+        limit: result.limit,
+        hasMore: result.hasMore,
+        nextCursor: result.nextCursor,
+      },
+      {
+        headers: { 'Cache-Control': 'private, no-store' },
+        requestId: context.requestId,
       }
     );
-
-    return NextResponse.json({
-      success: true,
-      data: result.data,
-      pagination: result.pagination,
-      tasks: result.tasks, // backward compatibility
-      total: result.total, // backward compatibility
-      totalCount: result.totalCount, // backward compatibility
-      page: result.page,
-      limit: result.limit,
-      hasMore: result.hasMore,
-    });
-  } catch (error: any) {
-    console.error('Error fetching tasks:', error);
-    const status = error instanceof ApiError ? error.statusCode : 500;
-    return NextResponse.json(
-      { success: false, error: error.message, code: error.code },
-      { status }
-    );
+  } catch (error) {
+    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
+  let requestId = crypto.randomUUID();
   try {
-    const session = getSessionPayload(request);
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    assertCsrf(req);
+    assertJsonContentType(req);
+    assertRequestBodySize(req, MAX_PAYLOAD_SIZE);
+
+    const context = await getApiContext(req);
+    requestId = context.requestId;
+
+    const authUser = requireAuthenticated(context);
+
+    assertRateLimit(authUser.id, 'MUTATIONS_SENSITIVE');
+
+    const validatedBody = await parseAndValidateJson(req, CreateTaskSchema);
+
+    // Object authorization: Check whether user can create a task for the specified department
+    if (!canCreateTask(authUser, validatedBody.departmentId)) {
+      throw new ForbiddenError('Bạn không có quyền tạo nhiệm vụ cho đơn vị này');
     }
 
-    const body = await request.json();
-    const newTask = await taskCommandService.createTask({ user: session }, body);
+    // Explicit command mapping (No Mass-Assignment)
+    const newTask = await taskCommandService.createTask(context, {
+      title: validatedBody.title,
+      description: validatedBody.description,
+      departmentId: validatedBody.departmentId,
+      dueDate: validatedBody.dueDate ?? new Date().toISOString(),
+      priority: validatedBody.priority,
+      scope: validatedBody.scope,
+      academicMonth: validatedBody.academicMonth ?? validatedBody.month,
+      academicYear: validatedBody.academicYear ?? validatedBody.year,
+      creatorId: validatedBody.creatorId,
+      assigneeId: validatedBody.assigneeId,
+      collaboratorIds: validatedBody.collaboratorIds,
+      parentTaskId: validatedBody.parentTaskId,
+      code: validatedBody.code,
+    });
 
-    return NextResponse.json({ success: true, task: newTask, data: newTask }, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating task:', error);
-    const status = error instanceof ApiError ? error.statusCode : 500;
-    return NextResponse.json(
-      { success: false, error: error.message, code: error.code },
-      { status }
+    const taskDetail = toTaskDetailDTO(newTask);
+
+    return apiSuccess(
+      {
+        success: true,
+        task: taskDetail,
+        data: taskDetail,
+      },
+      {
+        status: 201,
+        headers: { 'Cache-Control': 'private, no-store' },
+        requestId: context.requestId,
+      }
     );
+  } catch (error) {
+    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
   }
 }

@@ -177,6 +177,13 @@ export async function resolveUserContext(
     ) {
       activePositionCode = "VAN_THU";
     } else if (
+      roleUpper === "LUU_TRU" ||
+      roleUpper === "ARCHIVIST" ||
+      titleUpper.includes("LƯU TRỮ") ||
+      titleUpper.includes("LUU TRU")
+    ) {
+      activePositionCode = "LUU_TRU";
+    } else if (
       roleUpper === "BAN_GIAM_HIEU" ||
       roleUpper === "RECTOR" ||
       titleUpper.includes("HIỆU TRƯỞNG") ||

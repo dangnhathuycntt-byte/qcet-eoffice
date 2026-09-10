@@ -9,14 +9,21 @@ import {
 } from "@/components/layout/sidebar-context";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
-import { CommandSearchModal } from "@/components/layout/command-search-modal";
 import { MobileBottomNav } from "@/components/navigation/mobile-bottom-nav";
 import { MobileMenuDrawer } from "@/components/layout/mobile-menu-drawer";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { useOnboarding } from "@/hooks/use-onboarding";
-import { pwaOnboardingCoordinator } from "@/lib/pwa/onboarding-coordinator";
+import {
+  pwaOnboardingCoordinator,
+  usePWAOnboardingCoordinator,
+} from "@/lib/pwa/onboarding-coordinator";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
+
+const CommandSearchModal = dynamic(
+  () => import("@/components/layout/command-search-modal").then((mod) => mod.CommandSearchModal),
+  { ssr: false }
+);
 
 const PWAInstallPrompt = dynamic(
   () => import("@/components/pwa/pwa-install-prompt").then((m) => m.PWAInstallPrompt),
@@ -49,13 +56,20 @@ const OnboardingChecklistWidget = dynamic(
 );
 
 export function OnboardingHub() {
+  const { user } = useAuth();
   const onboarding = useOnboarding();
+  const {
+    canShowWelcome,
+    completeWelcome,
+    recordInterruptionShown,
+    recordAction,
+  } = usePWAOnboardingCoordinator(user?.id);
 
   React.useEffect(() => {
     if (onboarding.state.hasSeenWelcome) {
-      pwaOnboardingCoordinator.completeWelcome();
+      completeWelcome();
     }
-  }, [onboarding.state.hasSeenWelcome]);
+  }, [onboarding.state.hasSeenWelcome, completeWelcome]);
 
   React.useEffect(() => {
     const handleRestart = () => {
@@ -69,19 +83,30 @@ export function OnboardingHub() {
     };
   }, [onboarding.restartOnboarding, onboarding.setIsChecklistExpanded]);
 
+  const shouldShowWelcome =
+    onboarding.isMounted &&
+    !onboarding.state.hasSeenWelcome &&
+    !onboarding.state.isDismissed &&
+    !onboarding.isSnoozed &&
+    canShowWelcome;
+
+  React.useEffect(() => {
+    if (shouldShowWelcome) {
+      recordInterruptionShown("WELCOME");
+    }
+  }, [shouldShowWelcome, recordInterruptionShown]);
+
   return (
     <>
       <WelcomeModal
-        isOpen={
-          onboarding.isMounted &&
-          !onboarding.state.hasSeenWelcome &&
-          !onboarding.state.isDismissed &&
-          !onboarding.isSnoozed
-        }
-        onStartTour={onboarding.startTour}
+        isOpen={shouldShowWelcome}
+        onStartTour={() => {
+          completeWelcome();
+          onboarding.startTour({ force: true });
+        }}
         onDismiss={() => {
           onboarding.dismissOnboarding();
-          pwaOnboardingCoordinator.completeWelcome();
+          completeWelcome();
         }}
       />
       <SpotlightTour
@@ -93,13 +118,13 @@ export function OnboardingHub() {
             onboarding.setCurrentTourIndex((i) => i + 1);
           } else {
             onboarding.endTour();
-            pwaOnboardingCoordinator.recordAction("tour_completed");
+            recordAction("tour_completed");
           }
         }}
         onPrev={() => onboarding.setCurrentTourIndex((i) => Math.max(0, i - 1))}
         onClose={() => {
           onboarding.endTour();
-          pwaOnboardingCoordinator.recordAction("tour_closed");
+          recordAction("tour_closed");
         }}
       />
       {onboarding.isMounted && (
@@ -107,7 +132,7 @@ export function OnboardingHub() {
           tasks={onboarding.checklistTasks}
           completedSteps={onboarding.state.completedSteps}
           percentage={onboarding.progress.percentage}
-          isExpanded={onboarding.isChecklistExpanded}
+          isExpanded={onboarding.isChecklistExpanded && !shouldShowWelcome}
           isDismissed={onboarding.state.isDismissed || onboarding.isSnoozed}
           snoozedUntil={onboarding.state.snoozedUntil}
           onToggleExpand={() => onboarding.setIsChecklistExpanded((v) => !v)}
@@ -115,7 +140,7 @@ export function OnboardingHub() {
           onSnooze={() => onboarding.snoozeOnboarding(24)}
           onCompleteStep={(stepId) => {
             onboarding.completeStep(stepId);
-            pwaOnboardingCoordinator.recordAction(`step_${stepId}`);
+            recordAction(`step_${stepId}`);
           }}
           onStartTour={onboarding.startTour}
         />

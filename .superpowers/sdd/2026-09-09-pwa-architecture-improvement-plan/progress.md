@@ -78,10 +78,12 @@ Status: Pre-flight scan clean. No conflicts.
 - Status: Completed.
 
 ### Task 9: Progressive Enhancements, Badging & Verification Test Suite
-- Commit: Pending
+- Commits: `0e49614`, `75f4f6e`, `cd9fe26`
 - Implementer report: `task-9-report.md`
-- Review verdict: Completed (Badging API, Background Sync tag alignment, privacy-preserving operational telemetry, Serwist decision record, comprehensive 187-test matrix passing, zero typecheck errors).
+- Review package: `review-6a71d5b..75f4f6e.diff`
+- Review verdict: Approved (Spec compliant: Badging API with finite count validation & actionable-only scope, Background Sync tag alignment & postMessage drain, privacy-preserving operational telemetry with user ID masking & sensitive key scrubbing, comprehensive 10-matrix e2e test suite, Serwist ADR evaluation, 191/191 tests pass, 0 TS errors).
 - Status: Completed.
+
 
 
 

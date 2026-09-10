@@ -176,11 +176,11 @@ describe('Standard Error Contract & Error Abstraction', () => {
 
       assert.strictEqual(res.status, 404);
       assert.deepStrictEqual(res.body, {
-        error: {
-          code: 'TASK_NOT_FOUND',
-          message: 'Task 999 not found',
-          requestId: testRequestId,
-        },
+        success: false,
+        error: 'Task 999 not found',
+        code: 'TASK_NOT_FOUND',
+        message: 'Task 999 not found',
+        requestId: testRequestId,
       });
     });
 
@@ -191,12 +191,12 @@ describe('Standard Error Contract & Error Abstraction', () => {
 
       assert.strictEqual(res.status, 400);
       assert.deepStrictEqual(res.body, {
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid payload',
-          fieldErrors,
-          requestId: testRequestId,
-        },
+        success: false,
+        error: 'Invalid payload',
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid payload',
+        fieldErrors,
+        requestId: testRequestId,
       });
     });
 
@@ -218,12 +218,13 @@ describe('Standard Error Contract & Error Abstraction', () => {
         const res = toApiErrorResponse(parseResult.error, testRequestId);
 
         assert.strictEqual(res.status, 400);
-        assert.strictEqual(res.body.error.code, 'VALIDATION_ERROR');
-        assert.strictEqual(res.body.error.message, 'Validation failed');
-        assert.strictEqual(res.body.error.requestId, testRequestId);
-        assert.ok(res.body.error.fieldErrors);
-        assert.deepStrictEqual(res.body.error.fieldErrors['email'], ['Invalid email address']);
-        assert.deepStrictEqual(res.body.error.fieldErrors['details.age'], ['Must be at least 18']);
+        assert.strictEqual(res.body.error, 'Validation failed');
+        assert.strictEqual(res.body.code, 'VALIDATION_ERROR');
+        assert.strictEqual(res.body.message, 'Validation failed');
+        assert.strictEqual(res.body.requestId, testRequestId);
+        assert.ok(res.body.fieldErrors);
+        assert.deepStrictEqual(res.body.fieldErrors['email'], ['Invalid email address']);
+        assert.deepStrictEqual(res.body.fieldErrors['details.age'], ['Must be at least 18']);
       }
     });
 
@@ -232,10 +233,11 @@ describe('Standard Error Contract & Error Abstraction', () => {
       const res = toApiErrorResponse(sensitiveError, testRequestId);
 
       assert.strictEqual(res.status, 500);
-      assert.strictEqual(res.body.error.code, 'INTERNAL_ERROR');
-      assert.strictEqual(res.body.error.message, 'Internal server error');
-      assert.strictEqual(res.body.error.requestId, testRequestId);
-      assert.strictEqual(res.body.error.fieldErrors, undefined);
+      assert.strictEqual(res.body.error, 'Internal server error');
+      assert.strictEqual(res.body.code, 'INTERNAL_ERROR');
+      assert.strictEqual(res.body.message, 'Internal server error');
+      assert.strictEqual(res.body.requestId, testRequestId);
+      assert.strictEqual(res.body.fieldErrors, undefined);
 
       // Verify no sensitive leak
       const stringified = JSON.stringify(res.body);
@@ -246,13 +248,15 @@ describe('Standard Error Contract & Error Abstraction', () => {
     it('maps non-Error thrown objects/primitives to 500 INTERNAL_ERROR', () => {
       const primitiveRes = toApiErrorResponse('unexpected string thrown', testRequestId);
       assert.strictEqual(primitiveRes.status, 500);
-      assert.strictEqual(primitiveRes.body.error.code, 'INTERNAL_ERROR');
-      assert.strictEqual(primitiveRes.body.error.message, 'Internal server error');
-      assert.strictEqual(primitiveRes.body.error.requestId, testRequestId);
+      assert.strictEqual(primitiveRes.body.error, 'Internal server error');
+      assert.strictEqual(primitiveRes.body.code, 'INTERNAL_ERROR');
+      assert.strictEqual(primitiveRes.body.message, 'Internal server error');
+      assert.strictEqual(primitiveRes.body.requestId, testRequestId);
 
       const nullRes = toApiErrorResponse(null, testRequestId);
       assert.strictEqual(nullRes.status, 500);
-      assert.strictEqual(nullRes.body.error.code, 'INTERNAL_ERROR');
+      assert.strictEqual(nullRes.body.error, 'Internal server error');
+      assert.strictEqual(nullRes.body.code, 'INTERNAL_ERROR');
     });
   });
 
@@ -269,11 +273,11 @@ describe('Standard Error Contract & Error Abstraction', () => {
 
       const body = (await response.json()) as ApiErrorResponse;
       assert.deepStrictEqual(body, {
-        error: {
-          code: 'FORBIDDEN',
-          message: 'Insufficient permissions',
-          requestId: testRequestId,
-        },
+        success: false,
+        error: 'Insufficient permissions',
+        code: 'FORBIDDEN',
+        message: 'Insufficient permissions',
+        requestId: testRequestId,
       });
     });
 

@@ -190,3 +190,35 @@ export async function generateTaskCodeRawSql(
   return generateTaskCodeAtomic(client, { ...options, useRawSql: true });
 }
 
+/**
+ * Convenience helper to atomically generate the next numeric task sequence value.
+ * Guarantees race-free, consecutive sequence numbers under concurrent requests.
+ */
+export async function getNextTaskSequence(
+  client?: any,
+  options?: TaskCodeOptions
+): Promise<number> {
+  let db: any;
+  let opts: TaskCodeOptions | undefined;
+
+  if (
+    client &&
+    (client.year !== undefined ||
+      client.scope !== undefined ||
+      client.useRawSql !== undefined ||
+      client.departmentCode !== undefined)
+  ) {
+    opts = client;
+    db = undefined;
+  } else {
+    db = client;
+    opts = options;
+  }
+
+  const code = await generateTaskCodeAtomic(db, opts);
+  const parts = code.split("-");
+  const seqStr = parts[parts.length - 1];
+  return parseInt(seqStr, 10);
+}
+
+

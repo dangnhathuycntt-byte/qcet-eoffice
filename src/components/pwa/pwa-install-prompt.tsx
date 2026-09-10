@@ -31,10 +31,17 @@ export function PWAInstallPrompt({
     isIOS,
     promptInstall,
     snoozeInstall,
+    recordInterruptionShown,
   } = usePWAOnboardingCoordinator(userId);
 
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [justInstalled, setJustInstalled] = React.useState(false);
+
+  React.useEffect(() => {
+    if (canShowInstallPrompt) {
+      recordInterruptionShown("PWA_INSTALL");
+    }
+  }, [canShowInstallPrompt, recordInterruptionShown]);
 
   if (!canShowInstallPrompt && !justInstalled) {
     return null;

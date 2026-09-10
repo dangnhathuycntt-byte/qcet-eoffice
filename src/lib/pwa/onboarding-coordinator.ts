@@ -298,6 +298,9 @@ export class PWAOnboardingCoordinator {
    * Suppresses all other proactive interruptions for the remainder of this session.
    */
   public recordInterruptionShown(type: InterruptionType): void {
+    if (this.sessionInterruptionShown && this.activeInterruptionType === type) {
+      return;
+    }
     this.sessionInterruptionShown = true;
     this.activeInterruptionType = type;
     this.persist();
@@ -309,6 +312,9 @@ export class PWAOnboardingCoordinator {
    * Maintains sessionInterruptionShown = true to prevent subsequent interruptions in the same session.
    */
   public clearActiveInterruption(): void {
+    if (this.activeInterruptionType === null) {
+      return;
+    }
     this.activeInterruptionType = null;
     this.persist();
     this.notify();
@@ -907,72 +913,106 @@ export function usePWAOnboardingCoordinator(userId?: string | null) {
     };
   }, [userId]);
 
-  return {
-    stage: state.stage,
-    state,
-    isInstallable: state.isInstallable,
-    isInstalled: state.isInstalled,
-    isStandalone: state.isStandalone,
-    isIOS: state.isIOS,
-    isIOSSafari: state.isIOSSafari,
-    installSnoozed: state.installSnoozed,
-    pushSnoozed: state.pushSnoozed,
-    canShowWelcome: state.canShowWelcome,
-    canShowInstallPrompt: state.canShowInstallPrompt,
-    canShowPushPrompt: state.canShowPushPrompt,
-    recordAction: React.useCallback(
-      (actionName?: string) => pwaOnboardingCoordinator.recordAction(actionName),
-      []
-    ),
-    recordPageView: React.useCallback(
-      (path?: string) => pwaOnboardingCoordinator.recordPageView(path),
-      []
-    ),
-    recordStepCompleted: React.useCallback(
-      (stepId: string) => pwaOnboardingCoordinator.recordStepCompleted(stepId),
-      []
-    ),
-    setWelcomeDone: React.useCallback(
-      () => pwaOnboardingCoordinator.setWelcomeDone(),
-      []
-    ),
-    completeWelcome: React.useCallback(
-      () => pwaOnboardingCoordinator.completeWelcome(),
-      []
-    ),
-    promptInstall: React.useCallback(
-      () => pwaOnboardingCoordinator.promptInstall(),
-      []
-    ),
-    snoozeInstall: React.useCallback(
-      (days?: number) => pwaOnboardingCoordinator.snoozeInstall(days),
-      []
-    ),
-    snoozePush: React.useCallback(
-      (days?: number) => pwaOnboardingCoordinator.snoozePush(days),
-      []
-    ),
-    markInstalled: React.useCallback(
-      () => pwaOnboardingCoordinator.markInstalled(),
-      []
-    ),
-    advanceNonInstallableDesktop: React.useCallback(
-      () => pwaOnboardingCoordinator.advanceNonInstallableDesktop(),
-      []
-    ),
-    advanceToPushEligible: React.useCallback(
-      () => pwaOnboardingCoordinator.advanceToPushEligible(),
-      []
-    ),
-    recordInterruptionShown: React.useCallback(
-      (type: InterruptionType) => pwaOnboardingCoordinator.recordInterruptionShown(type),
-      []
-    ),
-    clearActiveInterruption: React.useCallback(
-      () => pwaOnboardingCoordinator.clearActiveInterruption(),
-      []
-    ),
-    reset: React.useCallback(() => pwaOnboardingCoordinator.reset(), []),
-  };
+  const recordAction = React.useCallback(
+    (actionName?: string) => pwaOnboardingCoordinator.recordAction(actionName),
+    []
+  );
+  const recordPageView = React.useCallback(
+    (path?: string) => pwaOnboardingCoordinator.recordPageView(path),
+    []
+  );
+  const recordStepCompleted = React.useCallback(
+    (stepId: string) => pwaOnboardingCoordinator.recordStepCompleted(stepId),
+    []
+  );
+  const setWelcomeDone = React.useCallback(
+    () => pwaOnboardingCoordinator.setWelcomeDone(),
+    []
+  );
+  const completeWelcome = React.useCallback(
+    () => pwaOnboardingCoordinator.completeWelcome(),
+    []
+  );
+  const promptInstall = React.useCallback(
+    () => pwaOnboardingCoordinator.promptInstall(),
+    []
+  );
+  const snoozeInstall = React.useCallback(
+    (days?: number) => pwaOnboardingCoordinator.snoozeInstall(days),
+    []
+  );
+  const snoozePush = React.useCallback(
+    (days?: number) => pwaOnboardingCoordinator.snoozePush(days),
+    []
+  );
+  const markInstalled = React.useCallback(
+    () => pwaOnboardingCoordinator.markInstalled(),
+    []
+  );
+  const advanceNonInstallableDesktop = React.useCallback(
+    () => pwaOnboardingCoordinator.advanceNonInstallableDesktop(),
+    []
+  );
+  const advanceToPushEligible = React.useCallback(
+    () => pwaOnboardingCoordinator.advanceToPushEligible(),
+    []
+  );
+  const recordInterruptionShown = React.useCallback(
+    (type: InterruptionType) => pwaOnboardingCoordinator.recordInterruptionShown(type),
+    []
+  );
+  const clearActiveInterruption = React.useCallback(
+    () => pwaOnboardingCoordinator.clearActiveInterruption(),
+    []
+  );
+  const reset = React.useCallback(() => pwaOnboardingCoordinator.reset(), []);
+
+  return React.useMemo(
+    () => ({
+      stage: state.stage,
+      state,
+      isInstallable: state.isInstallable,
+      isInstalled: state.isInstalled,
+      isStandalone: state.isStandalone,
+      isIOS: state.isIOS,
+      isIOSSafari: state.isIOSSafari,
+      installSnoozed: state.installSnoozed,
+      pushSnoozed: state.pushSnoozed,
+      canShowWelcome: state.canShowWelcome,
+      canShowInstallPrompt: state.canShowInstallPrompt,
+      canShowPushPrompt: state.canShowPushPrompt,
+      recordAction,
+      recordPageView,
+      recordStepCompleted,
+      setWelcomeDone,
+      completeWelcome,
+      promptInstall,
+      snoozeInstall,
+      snoozePush,
+      markInstalled,
+      advanceNonInstallableDesktop,
+      advanceToPushEligible,
+      recordInterruptionShown,
+      clearActiveInterruption,
+      reset,
+    }),
+    [
+      state,
+      recordAction,
+      recordPageView,
+      recordStepCompleted,
+      setWelcomeDone,
+      completeWelcome,
+      promptInstall,
+      snoozeInstall,
+      snoozePush,
+      markInstalled,
+      advanceNonInstallableDesktop,
+      advanceToPushEligible,
+      recordInterruptionShown,
+      clearActiveInterruption,
+      reset,
+    ]
+  );
 }
 

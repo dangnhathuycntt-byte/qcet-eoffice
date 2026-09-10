@@ -3,21 +3,25 @@ import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-cont
 export interface DocumentEntity {
   id: string;
   departmentId?: string | null;
+  leadDepartmentId?: string | null;
+  draftingDeptId?: string | null;
   creatorId?: string | null;
+  registeredById?: string | null;
+  leadUserId?: string | null;
   scope?: string | null;
   isPublic?: boolean | null;
   [key: string]: any;
 }
 
-function isAdmin(user: AuthenticatedUser): boolean {
+export function isAdmin(user: AuthenticatedUser): boolean {
   return normalizeRole(user.role) === 'ADMIN';
 }
 
-function isManager(user: AuthenticatedUser): boolean {
+export function isManager(user: AuthenticatedUser): boolean {
   return normalizeRole(user.role) === 'MANAGER';
 }
 
-function isClerk(user: AuthenticatedUser): boolean {
+export function isClerk(user: AuthenticatedUser): boolean {
   return normalizeRole(user.role) === 'VAN_THU';
 }
 
@@ -45,16 +49,16 @@ export function canReadDocument(
   // Clerical / Văn thư staff have registry read authority across documents
   if (isClerk(user)) return true;
 
-  // Creator can read
+  // Creator or registered user or lead user can read
   if (doc.creatorId && doc.creatorId === user.id) return true;
+  if (doc.registeredById && doc.registeredById === user.id) return true;
+  if (doc.leadUserId && doc.leadUserId === user.id) return true;
 
   // Members of the document's department
-  if (
-    doc.departmentId &&
-    user.departmentId &&
-    doc.departmentId === user.departmentId
-  ) {
-    return true;
+  if (user.departmentId) {
+    if (doc.departmentId && doc.departmentId === user.departmentId) return true;
+    if (doc.leadDepartmentId && doc.leadDepartmentId === user.departmentId) return true;
+    if (doc.draftingDeptId && doc.draftingDeptId === user.departmentId) return true;
   }
 
   return false;
@@ -79,17 +83,15 @@ export function canUpdateDocument(
   if (isAdmin(user)) return true;
   if (isClerk(user)) return true;
 
-  // Creator can update
+  // Creator or registered user can update
   if (doc.creatorId && doc.creatorId === user.id) return true;
+  if (doc.registeredById && doc.registeredById === user.id) return true;
 
   // Department manager of the document's department
-  if (
-    isManager(user) &&
-    user.departmentId &&
-    doc.departmentId &&
-    user.departmentId === doc.departmentId
-  ) {
-    return true;
+  if (isManager(user) && user.departmentId) {
+    if (doc.departmentId && user.departmentId === doc.departmentId) return true;
+    if (doc.leadDepartmentId && user.departmentId === doc.leadDepartmentId) return true;
+    if (doc.draftingDeptId && user.departmentId === doc.draftingDeptId) return true;
   }
 
   return false;
@@ -97,7 +99,7 @@ export function canUpdateDocument(
 
 /**
  * Checks if user has authority to give executive direction / bút phê on the document.
- * Restriced strictly to BAN_GIAM_HIEU / ADMIN and TRUONG_PHONG of the relevant department.
+ * Restricted strictly to BAN_GIAM_HIEU / ADMIN and TRUONG_PHONG of the relevant department.
  */
 export function canDirectDocument(
   user: AuthenticatedUser,
@@ -107,13 +109,10 @@ export function canDirectDocument(
 
   if (isAdmin(user)) return true;
 
-  if (
-    isManager(user) &&
-    user.departmentId &&
-    doc.departmentId &&
-    user.departmentId === doc.departmentId
-  ) {
-    return true;
+  if (isManager(user) && user.departmentId) {
+    if (doc.departmentId && user.departmentId === doc.departmentId) return true;
+    if (doc.leadDepartmentId && user.departmentId === doc.leadDepartmentId) return true;
+    if (doc.draftingDeptId && user.departmentId === doc.draftingDeptId) return true;
   }
 
   return false;
@@ -131,14 +130,12 @@ export function canDeleteDocument(
   if (isAdmin(user)) return true;
 
   if (doc.creatorId && doc.creatorId === user.id) return true;
+  if (doc.registeredById && doc.registeredById === user.id) return true;
 
-  if (
-    isManager(user) &&
-    user.departmentId &&
-    doc.departmentId &&
-    user.departmentId === doc.departmentId
-  ) {
-    return true;
+  if (isManager(user) && user.departmentId) {
+    if (doc.departmentId && user.departmentId === doc.departmentId) return true;
+    if (doc.leadDepartmentId && user.departmentId === doc.leadDepartmentId) return true;
+    if (doc.draftingDeptId && user.departmentId === doc.draftingDeptId) return true;
   }
 
   return false;

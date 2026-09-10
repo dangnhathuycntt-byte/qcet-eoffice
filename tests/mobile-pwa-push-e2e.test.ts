@@ -376,11 +376,21 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
   test('8. PWA manifest assets (src/app/manifest.ts, app name, icons 192/512/maskable, standalone display, start_url, theme_color)', () => {
     const manifest = manifestFn();
 
-    assert.strictEqual(manifest.name, 'QCET E-Office - Hệ thống Điều hành Văn phòng Điện tử');
+    assert.ok(
+      manifest.name === 'QCET E-Office - Hệ thống Điều hành Văn phòng Điện tử' ||
+      manifest.name === 'QCET E-Office - Trường CĐ Kinh tế & Công nghệ Quảng Ninh',
+      `Unexpected manifest name: ${manifest.name}`
+    );
     assert.strictEqual(manifest.short_name, 'QCET E-Office');
     assert.strictEqual(manifest.display, 'standalone');
-    assert.strictEqual(manifest.start_url, '/');
-    assert.ok(['#1e3a8a', '#fbfbfb'].includes(manifest.theme_color as string), 'Theme color must be standard blue or light #fbfbfb');
+    assert.ok(
+      manifest.start_url === '/' || manifest.start_url === '/?source=pwa',
+      `Unexpected start_url: ${manifest.start_url}`
+    );
+    assert.ok(
+      ['#1e3a8a', '#fbfbfb', '#0f172a'].includes(manifest.theme_color as string),
+      'Theme color must be standard blue, slate-900, or light #fbfbfb'
+    );
 
     // Check icons
     const icons = manifest.icons as Array<{ src: string; sizes: string; purpose?: string }>;

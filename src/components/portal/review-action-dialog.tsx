@@ -23,6 +23,7 @@ import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 
 // ============================================================================
 // 1. Constants & Validation Helpers
@@ -226,6 +227,8 @@ export function ReviewActionDialog({
     return null;
   }
 
+  const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
+
   const activeDecisionConfig =
     DECISION_OPTIONS.find((opt) => opt.id === decision) || DECISION_OPTIONS[0];
 
@@ -304,20 +307,27 @@ export function ReviewActionDialog({
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
       onClick={handleBackdropClick}
     >
-      <div className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-card border border-border/80 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden">
+      <div
+        style={
+          isKeyboardOpen && keyboardHeight > 0
+            ? { maxHeight: `calc(90dvh - ${keyboardHeight}px)` }
+            : undefined
+        }
+        className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-card border border-border/80 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden"
+      >
         {/* Mobile Drag Handle */}
         <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto my-2 sm:hidden shrink-0" />
 
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-border/80 px-6 py-4 bg-muted/30">
+        <div className="flex items-start justify-between border-b border-border/80 px-4 sm:px-6 py-3.5 sm:py-4 bg-muted/30 gap-2">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
               <h2
                 id="review-dialog-title"
-                className="text-lg font-semibold tracking-tight text-foreground"
+                className="text-base sm:text-lg font-semibold tracking-tight text-foreground"
               >
                 Thẩm định & Phê duyệt Nhiệm vụ
               </h2>
@@ -333,7 +343,7 @@ export function ReviewActionDialog({
             onClick={onClose}
             disabled={isProcessing}
             aria-label="Đóng cửa sổ"
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50"
+            className="size-11 sm:size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl sm:rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50 cursor-pointer shrink-0 active:scale-95"
           >
             <X className="h-5 w-5" />
           </button>
@@ -412,7 +422,7 @@ export function ReviewActionDialog({
                     onClick={() => handleDecisionChange(opt.id)}
                     disabled={isProcessing}
                     className={cn(
-                      "relative flex flex-col items-start p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer select-none",
+                      "relative flex flex-col items-start p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer select-none min-h-[56px] active:scale-[0.99]",
                       "hover:border-primary/50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
                       isSelected
                         ? opt.accentColor === "emerald"
@@ -499,6 +509,7 @@ export function ReviewActionDialog({
               rows={4}
               value={comment}
               onChange={handleCommentChange}
+              onFocus={() => scrollActiveInputIntoView()}
               disabled={isProcessing}
               placeholder={
                 decision === "approved"
@@ -508,8 +519,8 @@ export function ReviewActionDialog({
                   : "Nêu rõ lý do không nghiệm thu, căn cứ từ chối hồ sơ này..."
               }
               className={cn(
-                "w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm transition-colors",
-                "placeholder:text-muted-foreground/60 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40",
+                "w-full min-h-[96px] rounded-xl border bg-background px-3.5 py-2.5 text-base sm:text-sm transition-colors",
+                "placeholder:text-muted-foreground/60 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40 leading-relaxed",
                 validationError
                   ? "border-rose-500 focus:border-rose-500"
                   : isCommentRequired && commentCharCount === 0
@@ -542,7 +553,7 @@ export function ReviewActionDialog({
                     type="button"
                     disabled={isProcessing}
                     onClick={() => handleQuickTemplateSelect(tmpl)}
-                    className="inline-flex items-center gap-1 rounded-md border border-border/80 bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border/80 bg-muted/40 px-2.5 py-1.5 sm:py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors text-left min-h-[36px] sm:min-h-0 cursor-pointer active:scale-95"
                   >
                     <span>{tmpl}</span>
                   </button>
@@ -553,15 +564,15 @@ export function ReviewActionDialog({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between border-t border-border/80 px-4 py-3 sm:px-6 sm:py-4 bg-muted/30 gap-2 pb-safe">
+        <div className="sticky bottom-0 shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between border-t border-border/80 px-4 py-3 sm:px-6 sm:py-4 bg-card/95 backdrop-blur-md gap-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pb-safe">
           <Button
             type="button"
             variant="ghost"
             onClick={onClose}
             disabled={isProcessing}
-            className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] text-muted-foreground hover:text-foreground"
+            className="w-full sm:w-auto min-h-[44px] text-muted-foreground hover:text-foreground cursor-pointer rounded-xl font-medium text-xs sm:text-sm"
           >
-            Hủy bỏ
+            Đóng
           </Button>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -570,7 +581,7 @@ export function ReviewActionDialog({
               onClick={handleSubmit}
               disabled={isProcessing}
               className={cn(
-                "w-full sm:w-auto min-h-[44px] sm:min-h-[38px] min-w-36 font-medium text-white shadow-xs transition-all",
+                "w-full sm:w-auto min-h-[44px] min-w-36 font-semibold text-white shadow-xs transition-all cursor-pointer rounded-xl text-xs sm:text-sm",
                 activeDecisionConfig.accentColor === "emerald" &&
                   "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800",
                 activeDecisionConfig.accentColor === "amber" &&

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, LayoutGrid, TableProperties, BarChart3, ArrowUpDown, ChevronRight, X, ExternalLink } from "lucide-react";
 import type { DepartmentHealthSummary } from "@/lib/executive-matrix-aggregator";
+export type { DepartmentHealthSummary };
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 

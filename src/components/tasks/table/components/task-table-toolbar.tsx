@@ -236,18 +236,28 @@ export function TaskTableToolbar({
     return () => clearTimeout(timer);
   }, [localQuery, searchQuery, onSearchChange, debounceMs]);
 
-  // Lắng nghe phím tắt toàn cục: '/' và 'Cmd+K' / 'Ctrl+K'
+  // Lắng nghe phím tắt toàn cục: '/' và sự kiện focus tìm kiếm từ bàn phím
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isSearchShortcut(e)) {
+      // '/' focuses table search when not already inside an input/textarea
+      if (e.key === "/" && !isInputElement(e.target) && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         searchInputRef.current?.focus();
         searchInputRef.current?.select();
       }
     };
 
+    const handleFocusSearch = () => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("qcet:focus-task-search", handleFocusSearch);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("qcet:focus-task-search", handleFocusSearch);
+    };
   }, []);
 
   const activeMonth =
@@ -722,6 +732,16 @@ export function TaskTableToolbar({
               type="text"
               value={localQuery}
               onChange={(e) => setLocalQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  if (localQuery) {
+                    setLocalQuery("");
+                    onSearchChange("");
+                  }
+                  searchInputRef.current?.blur();
+                }
+              }}
               placeholder={searchPlaceholder}
               disabled={loading}
               aria-label="Tìm kiếm nhiệm vụ"

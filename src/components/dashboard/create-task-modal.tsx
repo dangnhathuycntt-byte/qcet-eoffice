@@ -25,6 +25,7 @@ import {
 import type { TaskCategory, SchoolTask } from "@/types/dashboard";
 import type { UserRole, AuthUser } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
+import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 import { canAssignStaffTask, validateDueDate } from "@/lib/dacum-workflow-engine";
 import {
   type DepartmentPersonnelGroup,
@@ -306,6 +307,7 @@ export function CreateTaskModal({
   initialLeadAssigneeName,
 }: CreateTaskModalProps) {
   const { user } = useAuth();
+  const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
   const allowedLevels = getAllowedTaskLevelsForRole(user?.role ?? "ADMIN");
   const isStaff = user?.role === "STAFF";
   const isManager = user?.role === "MANAGER";
@@ -724,7 +726,7 @@ export function CreateTaskModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-200 !m-0"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 overflow-hidden animate-in fade-in duration-200 !m-0"
     >
       {/* Full-screen Backdrop */}
       <div
@@ -733,15 +735,20 @@ export function CreateTaskModal({
         aria-hidden="true"
       />
 
-      {/* Centered Modal Card Container: Crisp single canvas without inner box nesting */}
+      {/* Modal Card Container: Full-screen on mobile (duoi 640px) or high-coverage modal on tablet/desktop */}
       <div
-        className="relative z-10 w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl border border-border/70 bg-card backdrop-blur-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 my-auto"
+        style={
+          isKeyboardOpen && (keyboardHeight > 0)
+            ? { height: `calc(100dvh - ${keyboardHeight}px)`, maxHeight: `calc(100dvh - ${keyboardHeight}px)` }
+            : undefined
+        }
+        className="relative z-10 w-full h-[100dvh] sm:h-auto max-w-none sm:max-w-3xl max-h-[100dvh] sm:max-h-[94dvh] flex flex-col rounded-none sm:rounded-2xl border-0 sm:border border-border/70 bg-card backdrop-blur-xl shadow-2xl overflow-hidden animate-in sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header Bar */}
-        <div className="sticky top-0 z-20 flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-border/60 bg-card/95 backdrop-blur-md gap-3 shrink-0">
+        <div className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 border-b border-border/60 bg-card/95 backdrop-blur-md gap-3 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+            <span className="flex size-9 sm:size-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
               <Sparkles className="size-4" strokeWidth={1.5} />
             </span>
             <div>
@@ -770,7 +777,7 @@ export function CreateTaskModal({
                 <span>Nhiệm vụ con (Cấp Đơn vị)</span>
               </div>
             ) : !isManager && !isStaff ? (
-              <div className="inline-flex rounded-xl bg-muted/80 p-1 border border-border/60 text-xs">
+              <div className="hidden sm:inline-flex rounded-xl bg-muted/80 p-1 border border-border/60 text-xs">
                 <button
                   type="button"
                   onClick={() => setFormData((p) => ({ ...p, level: "TRUONG", parentTaskId: undefined }))}
@@ -804,9 +811,9 @@ export function CreateTaskModal({
               type="button"
               onClick={onClose}
               aria-label="Đóng"
-              className="size-9 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95"
+              className="size-11 sm:size-9 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95"
             >
-              <X className="size-4" strokeWidth={1.5} />
+              <X className="size-5 sm:size-4" strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -867,8 +874,9 @@ export function CreateTaskModal({
                   setFormData((prev) => ({ ...prev, title: e.target.value }));
                   if (errors.title) clearError("title");
                 }}
+                onFocus={() => scrollActiveInputIntoView()}
                 className={cn(
-                  "w-full bg-transparent text-lg sm:text-xl font-bold text-foreground placeholder:text-muted-foreground/60 placeholder:font-normal focus:outline-none transition-all py-1 border-b border-transparent focus:border-border/60",
+                  "w-full min-h-[44px] bg-transparent text-base sm:text-xl font-bold text-foreground placeholder:text-muted-foreground/60 placeholder:font-normal focus:outline-none transition-all py-1 border-b border-transparent focus:border-border/60",
                   errors.title && "text-destructive border-destructive"
                 )}
               />
@@ -891,7 +899,8 @@ export function CreateTaskModal({
                 placeholder="Yêu cầu chi tiết, kết quả mong đợi, hoặc ghi chú thực hiện (tùy chọn)..."
                 value={formData.description}
                 onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                className="w-full bg-transparent text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none resize-none leading-relaxed py-1"
+                onFocus={() => scrollActiveInputIntoView()}
+                className="w-full min-h-[64px] bg-transparent text-base sm:text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none resize-none leading-relaxed py-1"
               />
             </div>
 
@@ -913,7 +922,7 @@ export function CreateTaskModal({
                   </div>
 
                   {isStaff ? (
-                    <div className="h-10 px-3 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-between text-xs font-semibold text-primary">
+                    <div className="min-h-[44px] h-11 sm:h-10 px-3 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-between text-xs font-semibold text-primary">
                       <span>{user?.name || "Bạn"} (Chính bạn — {user?.roleLabel || "Giảng viên"})</span>
                       <span className="text-xs text-muted-foreground font-normal">Tự thực hiện</span>
                     </div>
@@ -927,7 +936,7 @@ export function CreateTaskModal({
                           setTimeout(() => searchInputRef.current?.focus(), 60);
                         }}
                         className={cn(
-                          "w-full min-h-[44px] px-3 rounded-xl border bg-card text-left text-xs font-medium text-foreground flex items-center justify-between gap-2 shadow-2xs hover:border-border transition-all cursor-pointer active:scale-[0.99]",
+                          "w-full min-h-[44px] h-11 sm:h-10 px-3 rounded-xl border bg-card text-left text-base sm:text-xs font-medium text-foreground flex items-center justify-between gap-2 shadow-2xs hover:border-border transition-all cursor-pointer active:scale-[0.99]",
                           errors.leadAssigneeName || isExternalDeptBlocked
                             ? "border-destructive ring-1 ring-destructive/30"
                             : "border-border/70"
@@ -970,7 +979,8 @@ export function CreateTaskModal({
                                 placeholder="Tìm theo họ tên, chức danh hoặc đơn vị..."
                                 value={assigneeSearchQuery}
                                 onChange={(e) => setAssigneeSearchQuery(e.target.value)}
-                                className="w-full h-8.5 pl-8 pr-3 rounded-lg border border-border/60 bg-background text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary"
+                                onFocus={() => scrollActiveInputIntoView()}
+                                className="w-full min-h-[44px] sm:min-h-0 h-11 sm:h-8.5 pl-8 pr-3 rounded-lg border border-border/60 bg-background text-base sm:text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary"
                               />
                             </div>
 
@@ -980,7 +990,7 @@ export function CreateTaskModal({
                                 type="button"
                                 onClick={() => setDeptFilter("ALL")}
                                 className={cn(
-                                  "rounded-lg px-2 py-0.5 text-xs font-medium shrink-0 transition-colors cursor-pointer",
+                                  "min-h-[36px] sm:min-h-0 rounded-lg px-2.5 sm:px-2 py-1.5 sm:py-0.5 text-xs font-medium shrink-0 transition-colors cursor-pointer",
                                   deptFilter === "ALL"
                                     ? "bg-primary text-primary-foreground font-semibold"
                                     : "bg-background text-muted-foreground hover:text-foreground border border-border/60"
@@ -994,7 +1004,7 @@ export function CreateTaskModal({
                                   type="button"
                                   onClick={() => setDeptFilter(g.code)}
                                   className={cn(
-                                    "rounded-lg px-2 py-0.5 text-xs font-medium shrink-0 transition-colors cursor-pointer",
+                                    "min-h-[36px] sm:min-h-0 rounded-lg px-2.5 sm:px-2 py-1.5 sm:py-0.5 text-xs font-medium shrink-0 transition-colors cursor-pointer",
                                     deptFilter === g.code
                                       ? "bg-primary text-primary-foreground font-semibold"
                                       : "bg-background text-muted-foreground hover:text-foreground border border-border/60"
@@ -1025,14 +1035,14 @@ export function CreateTaskModal({
                                           type="button"
                                           onClick={() => handleAssigneeSelect(member.name)}
                                           className={cn(
-                                            "w-full px-2.5 py-1.5 rounded-xl text-left flex items-center justify-between gap-2 transition-colors cursor-pointer",
+                                            "w-full min-h-[44px] px-2.5 py-2 rounded-xl text-left flex items-center justify-between gap-2 transition-colors cursor-pointer",
                                             isSelected
                                               ? "bg-primary/10 text-primary font-semibold"
                                               : "hover:bg-secondary text-foreground"
                                           )}
                                         >
                                           <div className="flex items-center gap-2.5 min-w-0">
-                                            <span className="size-6 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground shrink-0">
+                                            <span className="size-7 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground shrink-0">
                                               {getAssigneeInitials(member.name)}
                                             </span>
                                             <div className="min-w-0">
@@ -1068,7 +1078,7 @@ export function CreateTaskModal({
                                   setIsComboboxOpen(false);
                                   handleAssigneeSelect("");
                                 }}
-                                className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                className="w-full min-h-[44px] px-2.5 py-2 rounded-xl text-left text-xs font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer flex items-center"
                               >
                                 + Nhập cán bộ khác ngoài danh mục...
                               </button>
@@ -1085,7 +1095,8 @@ export function CreateTaskModal({
                         placeholder="Họ và tên cán bộ (VD: Nguyễn Văn Tuấn)..."
                         value={formData.leadAssigneeName}
                         onChange={(e) => handleAssigneeSelect(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border border-border/70 bg-card text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary"
+                        onFocus={() => scrollActiveInputIntoView()}
+                        className="w-full min-h-[44px] h-11 sm:h-10 px-3 rounded-xl border border-border/70 bg-card text-base sm:text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary font-medium"
                       />
                       <button
                         type="button"
@@ -1093,7 +1104,7 @@ export function CreateTaskModal({
                           setIsCustomAssignee(false);
                           handleAssigneeSelect("");
                         }}
-                        className="text-xs font-semibold text-primary hover:underline shrink-0 cursor-pointer"
+                        className="min-h-[44px] sm:min-h-0 text-xs font-semibold text-primary hover:underline shrink-0 cursor-pointer inline-flex items-center"
                       >
                         Chọn danh mục
                       </button>
@@ -1161,7 +1172,8 @@ export function CreateTaskModal({
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, vtvlRole: e.target.value }))
                     }
-                    className="w-full h-10 px-3 rounded-xl border border-border/70 bg-card text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
+                    onFocus={() => scrollActiveInputIntoView()}
+                    className="w-full min-h-[44px] h-11 sm:h-10 px-3 rounded-xl border border-border/70 bg-card text-base sm:text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
                   />
                 </div>
 
@@ -1178,7 +1190,7 @@ export function CreateTaskModal({
                     <select
                       value={formData.category}
                       onChange={(e) => setFormData((p) => ({ ...p, category: e.target.value as TaskCategory }))}
-                      className="w-full h-10 pl-3 pr-8 rounded-xl border border-border/70 bg-card text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate shadow-2xs"
+                      className="w-full min-h-[44px] h-11 sm:h-10 pl-3 pr-8 rounded-xl border border-border/70 bg-card text-base sm:text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate shadow-2xs"
                     >
                       {CATEGORY_OPTIONS.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -1186,7 +1198,7 @@ export function CreateTaskModal({
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="size-4 text-muted-foreground pointer-events-none absolute right-3 top-3" strokeWidth={1.5} />
+                    <ChevronDown className="size-4 text-muted-foreground pointer-events-none absolute right-3 top-3.5" strokeWidth={1.5} />
                   </div>
                 </div>
               </div>
@@ -1216,8 +1228,9 @@ export function CreateTaskModal({
                       setFormData((p) => ({ ...p, dueDate: e.target.value }));
                       if (errors.dueDate) clearError("dueDate");
                     }}
+                    onFocus={() => scrollActiveInputIntoView()}
                     className={cn(
-                      "w-full h-10 px-3 rounded-xl border bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono tabular-nums shadow-2xs",
+                      "w-full min-h-[44px] h-11 sm:h-10 px-3 rounded-xl border bg-card text-base sm:text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono tabular-nums shadow-2xs",
                       errors.dueDate ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
                     )}
                   />
@@ -1227,28 +1240,28 @@ export function CreateTaskModal({
                     <button
                       type="button"
                       onClick={() => handleDatePreset(0)}
-                      className="rounded-lg border border-border/60 bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-2xs"
+                      className="min-h-[36px] sm:min-h-0 rounded-lg border border-border/60 bg-card px-2.5 py-1.5 sm:py-1 text-xs font-medium text-foreground hover:bg-secondary cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-2xs"
                     >
                       Hôm nay
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDatePreset(3)}
-                      className="rounded-lg border border-border/60 bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-2xs"
+                      className="min-h-[36px] sm:min-h-0 rounded-lg border border-border/60 bg-card px-2.5 py-1.5 sm:py-1 text-xs font-medium text-foreground hover:bg-secondary cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-2xs"
                     >
                       +3 ngày
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDatePreset(7)}
-                      className="rounded-lg border border-border/60 bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-2xs"
+                      className="min-h-[36px] sm:min-h-0 rounded-lg border border-border/60 bg-card px-2.5 py-1.5 sm:py-1 text-xs font-medium text-foreground hover:bg-secondary cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-2xs"
                     >
                       +1 tuần
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDatePreset(-1)}
-                      className="rounded-lg border border-border/60 bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-2xs"
+                      className="min-h-[36px] sm:min-h-0 rounded-lg border border-border/60 bg-card px-2.5 py-1.5 sm:py-1 text-xs font-medium text-foreground hover:bg-secondary cursor-pointer transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-2xs"
                     >
                       Cuối tháng
                     </button>
@@ -1279,8 +1292,9 @@ export function CreateTaskModal({
                       setFormData((p) => ({ ...p, internalDueDate: e.target.value }));
                       if (errors.internalDueDate) clearError("internalDueDate");
                     }}
+                    onFocus={() => scrollActiveInputIntoView()}
                     className={cn(
-                      "w-full h-10 px-3 rounded-xl border bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono tabular-nums shadow-2xs",
+                      "w-full min-h-[44px] h-11 sm:h-10 px-3 rounded-xl border bg-card text-base sm:text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono tabular-nums shadow-2xs",
                       errors.internalDueDate ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
                     )}
                   />
@@ -1310,7 +1324,7 @@ export function CreateTaskModal({
                         onChange={(e) =>
                           setFormData((p) => ({ ...p, parentTaskId: e.target.value || undefined }))
                         }
-                        className="w-full h-10 pl-3 pr-8 rounded-xl border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate shadow-2xs"
+                        className="w-full min-h-[44px] h-11 sm:h-10 pl-3 pr-8 rounded-xl border border-border/70 bg-card text-base sm:text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate shadow-2xs"
                       >
                         <option value="">— Độc lập (Không liên kết) —</option>
                         {schoolTasks.map((t) => (
@@ -1319,7 +1333,7 @@ export function CreateTaskModal({
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="size-4 text-muted-foreground pointer-events-none absolute right-3 top-3" strokeWidth={1.5} />
+                      <ChevronDown className="size-4 text-muted-foreground pointer-events-none absolute right-3 top-3.5" strokeWidth={1.5} />
                     </div>
                   </div>
                 )}
@@ -1386,7 +1400,7 @@ export function CreateTaskModal({
                         if (errors.coAssignees) clearError("coAssignees");
                       }
                     }}
-                    className="w-full h-10 pl-3 pr-8 rounded-xl border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate shadow-2xs"
+                    className="w-full min-h-[44px] h-11 sm:h-10 pl-3 pr-8 rounded-xl border border-border/70 bg-card text-base sm:text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate shadow-2xs"
                     aria-label="Thêm cán bộ phối hợp"
                   >
                     <option value="">+ Thêm cán bộ phối hợp thực hiện...</option>
@@ -1408,7 +1422,7 @@ export function CreateTaskModal({
                       );
                     })}
                   </select>
-                  <ChevronDown className="size-4 text-muted-foreground pointer-events-none absolute right-3 top-3" strokeWidth={1.5} />
+                  <ChevronDown className="size-4 text-muted-foreground pointer-events-none absolute right-3 top-3.5" strokeWidth={1.5} />
                 </div>
                 {errors.coAssignees && (
                   <p className="text-xs font-medium text-destructive flex items-center gap-1">
@@ -1430,7 +1444,7 @@ export function CreateTaskModal({
                     </span>
                     {formData.requiresReview && <span className="text-destructive font-bold">*</span>}
                   </div>
-                  <label className="inline-flex items-center gap-2 cursor-pointer select-none shrink-0">
+                  <label className="inline-flex items-center gap-2 cursor-pointer select-none shrink-0 min-h-[44px]">
                     <input
                       type="checkbox"
                       checked={formData.requiresReview || false}
@@ -1472,8 +1486,9 @@ export function CreateTaskModal({
                       setFormData((p) => ({ ...p, requiredDeliverables: e.target.value }));
                       if (errors.requiredDeliverables) clearError("requiredDeliverables");
                     }}
+                    onFocus={() => scrollActiveInputIntoView()}
                     className={cn(
-                      "w-full rounded-xl border bg-card p-3 text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed shadow-2xs",
+                      "w-full min-h-[88px] rounded-xl border bg-card p-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed shadow-2xs",
                       errors.requiredDeliverables ? "border-destructive ring-1 ring-destructive/30" : "border-border/70"
                     )}
                   />
@@ -1500,7 +1515,7 @@ export function CreateTaskModal({
           </div>
 
           {/* Sticky Bottom Actions Dock */}
-          <div className="sticky bottom-0 z-20 flex items-center justify-between px-5 sm:px-6 py-3.5 border-t border-border/60 bg-card/95 backdrop-blur-md shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
+          <div className="sticky bottom-0 z-20 flex items-center justify-between px-4 sm:px-6 py-3.5 border-t border-border/60 bg-card/95 backdrop-blur-md shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {/* Keyboard shortcut indicator */}
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
               <kbd className="rounded-md border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold">
@@ -1514,13 +1529,13 @@ export function CreateTaskModal({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2.5 ml-auto">
+            <div className="flex items-center gap-2.5 ml-auto w-full sm:w-auto justify-end">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={onClose}
-                className="h-10 rounded-xl px-4 text-xs font-semibold cursor-pointer active:scale-95 transition-all"
+                className="h-11 sm:h-10 min-h-[44px] rounded-xl px-4 text-xs font-semibold cursor-pointer active:scale-95 transition-all w-1/2 sm:w-auto"
               >
                 Hủy
               </Button>
@@ -1529,7 +1544,7 @@ export function CreateTaskModal({
                 size="sm"
                 disabled={allowedLevels.length === 0 || isExternalDeptBlocked}
                 className={cn(
-                  "h-10 rounded-xl px-5 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs active:scale-[0.98] transition-all cursor-pointer inline-flex items-center gap-2",
+                  "h-11 sm:h-10 min-h-[44px] rounded-xl px-5 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs active:scale-[0.98] transition-all cursor-pointer inline-flex items-center justify-center gap-2 w-1/2 sm:w-auto",
                   (allowedLevels.length === 0 || isExternalDeptBlocked) && "opacity-50 cursor-not-allowed"
                 )}
               >

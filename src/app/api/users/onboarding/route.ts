@@ -1,26 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
-import { verifySessionToken, SESSION_COOKIE_NAME, getSessionFromRequest } from "@/lib/jwt-session";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { updateOnboardingSchema } from "@/lib/onboarding-schema";
+import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
+import { parseAndValidateJson } from "@/server/api/validation";
+import { UpdateOnboardingSchema } from "@/contracts/users";
+import { assertRateLimit } from "@/server/security/rate-limit";
+import { assertCsrf } from "@/server/security/csrf";
+import { apiError, apiSuccess } from "@/server/api/response";
 
-export async function PATCH(req: NextRequest) {
+export async function PATCH(req: Request) {
+  let requestId = crypto.randomUUID();
   try {
-    const payload = getSessionFromRequest(req) || (() => {
-      const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-      return token ? verifySessionToken(token) : null;
-    })();
+    // Assert CSRF via assertCsrf(req)
+    assertCsrf(req);
 
-    if (!payload?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const context = await getApiContext(req);
+    requestId = context.requestId;
 
-    const body = await req.json();
-    const parsed = updateOnboardingSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid payload", details: parsed.error.issues }, { status: 400 });
-    }
+    // Require authentication
+    const authUser = requireAuthenticated(context);
+
+    // Rate limiting: MUTATIONS_SENSITIVE
+    assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
+
+    // Parse and validate body using UpdateOnboardingSchema
+    const parsed = await parseAndValidateJson(req, UpdateOnboardingSchema);
 
     const current = await prisma.user.findUnique({
-      where: { id: payload.id },
+      where: { id: authUser.id },
       select: { onboardingData: true, onboardedAt: true },
     });
 
@@ -34,14 +40,14 @@ export async function PATCH(req: NextRequest) {
     const currentSteps = Array.isArray(existingData.completedSteps)
       ? (existingData.completedSteps as string[])
       : [];
-    const incomingSteps = Array.isArray(parsed.data.completedSteps)
-      ? parsed.data.completedSteps
+    const incomingSteps = Array.isArray(parsed.completedSteps)
+      ? parsed.completedSteps
       : [];
     const mergedSteps = Array.from(new Set([...currentSteps, ...incomingSteps]));
 
     const mergedData = {
       ...existingData,
-      ...parsed.data,
+      ...parsed,
       completedSteps: mergedSteps,
     };
 
@@ -49,7 +55,7 @@ export async function PATCH(req: NextRequest) {
     const isFinished = REQUIRED_STEPS.every((step) => mergedSteps.includes(step));
 
     const updated = await prisma.user.update({
-      where: { id: payload.id },
+      where: { id: authUser.id },
       data: {
         onboardingData: mergedData,
         onboardedAt: isFinished ? (current?.onboardedAt || new Date()) : undefined,
@@ -61,24 +67,36 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, user: updated });
+    return apiSuccess(
+      { success: true, user: updated },
+      {
+        status: 200,
+        headers: { "Cache-Control": "private, no-store" },
+        requestId: context.requestId,
+      }
+    );
   } catch (error) {
-    console.error("Onboarding sync error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(req: Request) {
+  let requestId = crypto.randomUUID();
   try {
-    const payload = getSessionFromRequest(req) || (() => {
-      const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-      return token ? verifySessionToken(token) : null;
-    })();
+    // Assert CSRF via assertCsrf(req)
+    assertCsrf(req);
 
-    if (!payload?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const context = await getApiContext(req);
+    requestId = context.requestId;
+
+    // Require authentication
+    const authUser = requireAuthenticated(context);
+
+    // Rate limiting: MUTATIONS_SENSITIVE
+    assertRateLimit(authUser.id, "MUTATIONS_SENSITIVE");
 
     const updated = await prisma.user.update({
-      where: { id: payload.id },
+      where: { id: authUser.id },
       data: {
         onboardedAt: null,
         onboardingData: Prisma.DbNull,
@@ -90,10 +108,19 @@ export async function DELETE(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, user: updated, message: "Đã xoá trạng thái onboarding thành công" });
+    return apiSuccess(
+      {
+        success: true,
+        user: updated,
+        message: "Đã xoá trạng thái onboarding thành công",
+      },
+      {
+        status: 200,
+        headers: { "Cache-Control": "private, no-store" },
+        requestId: context.requestId,
+      }
+    );
   } catch (error) {
-    console.error("Onboarding delete error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return apiError(error, requestId, { "Cache-Control": "private, no-store" });
   }
 }
-

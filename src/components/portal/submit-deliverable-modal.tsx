@@ -22,6 +22,7 @@ import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 
 // ============================================================================
 // 1. Constants & Helper Utilities
@@ -394,6 +395,7 @@ export function SubmitDeliverableModal({
 
   if (!isOpen || !mounted) return null;
 
+  const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
   const submittingNow = isSubmitting || localSubmitting;
 
   const modalContent = (
@@ -410,12 +412,19 @@ export function SubmitDeliverableModal({
       />
 
       {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-xl rounded-t-2xl sm:rounded-2xl bg-card border border-border/80 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden my-0 sm:my-auto animate-in zoom-in-95 duration-200">
+      <div
+        style={
+          isKeyboardOpen && keyboardHeight > 0
+            ? { maxHeight: `calc(90dvh - ${keyboardHeight}px)` }
+            : undefined
+        }
+        className="relative w-full max-w-xl rounded-t-2xl sm:rounded-2xl bg-card border border-border/80 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden my-0 sm:my-auto animate-in zoom-in-95 duration-200"
+      >
         {/* Mobile Drag Handle */}
         <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto my-2 sm:hidden shrink-0" />
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/60 px-5 py-4 sm:px-6 bg-muted/20">
+        <div className="flex items-center justify-between border-b border-border/60 px-4 sm:px-6 py-3.5 sm:py-4 bg-muted/20 gap-2">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
               <UploadCloud className="size-5" strokeWidth={1.5} />
@@ -427,7 +436,7 @@ export function SubmitDeliverableModal({
               >
                 Nộp Minh Chứng Hoàn Thành
               </h2>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5 line-clamp-1 max-w-sm sm:max-w-md">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5 line-clamp-1 max-w-xs sm:max-w-md">
                 <span>Nhiệm vụ:</span>
                 <span className="font-semibold text-foreground truncate">
                   {effectiveTaskTitle}
@@ -441,9 +450,9 @@ export function SubmitDeliverableModal({
             onClick={onClose}
             disabled={submittingNow}
             aria-label="Đóng cửa sổ"
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+            className="size-11 sm:size-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl sm:rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
           >
-            <X className="size-4" strokeWidth={1.5} />
+            <X className="size-5 sm:size-4" strokeWidth={1.5} />
           </button>
         </div>
 
@@ -566,9 +575,10 @@ export function SubmitDeliverableModal({
                 type="text"
                 value={deliverableName}
                 onChange={handleNameChange}
+                onFocus={() => scrollActiveInputIntoView()}
                 placeholder="Ví dụ: Báo cáo tổng kết đề tài khoa học K48.pdf"
                 className={cn(
-                  "w-full rounded-xl border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-ring focus:ring-1 focus:ring-ring",
+                  "w-full min-h-[44px] h-11 sm:h-10 rounded-xl border bg-background px-3 py-2 text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-ring focus:ring-1 focus:ring-ring",
                   errorMessage && !deliverableName.trim()
                     ? "border-destructive focus:border-destructive focus:ring-destructive/30"
                     : "border-border/70"
@@ -596,7 +606,7 @@ export function SubmitDeliverableModal({
                   id="file-type-select"
                   value={fileType}
                   onChange={(e) => handleFileTypeChange(e.target.value)}
-                  className="w-full rounded-xl border border-border/70 bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring cursor-pointer"
+                  className="w-full min-h-[44px] h-11 sm:h-10 rounded-xl border border-border/70 bg-background px-3 py-2 text-base sm:text-xs text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring cursor-pointer"
                 >
                   {SUPPORTED_FILE_TYPES.map((type) => (
                     <option key={type.id} value={type.id}>
@@ -623,8 +633,9 @@ export function SubmitDeliverableModal({
                   type="text"
                   value={url}
                   onChange={handleUrlChange}
+                  onFocus={() => scrollActiveInputIntoView()}
                   placeholder="https://drive.google.com/..."
-                  className="w-full rounded-xl border border-border/70 bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring font-mono"
+                  className="w-full min-h-[44px] h-11 sm:h-10 rounded-xl border border-border/70 bg-background px-3 py-2 text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring font-mono"
                 />
               </div>
             </div>
@@ -643,21 +654,22 @@ export function SubmitDeliverableModal({
                 rows={3}
                 value={note}
                 onChange={handleNoteChange}
+                onFocus={() => scrollActiveInputIntoView()}
                 placeholder="Tóm tắt nội dung hoàn thành, giải trình các điểm nổi bật hoặc lưu ý khi thẩm định..."
-                className="w-full rounded-xl border border-border/70 bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring resize-none"
+                className="w-full min-h-[88px] rounded-xl border border-border/70 bg-background p-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring resize-none leading-relaxed"
               />
             </div>
           </div>
 
           {/* Footer Actions */}
-          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-border/60 px-5 py-3.5 sm:px-6 bg-muted/20 mt-auto pb-safe">
+          <div className="sticky bottom-0 shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-border/60 px-4 py-3 sm:px-6 sm:py-3.5 bg-card/95 backdrop-blur-md mt-auto pb-[max(0.75rem,env(safe-area-inset-bottom))] pb-safe">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={onClose}
               disabled={submittingNow}
-              className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] text-xs rounded-xl"
+              className="w-full sm:w-auto min-h-[44px] h-11 sm:h-10 text-xs sm:text-sm font-medium rounded-xl cursor-pointer"
             >
               Hủy bỏ
             </Button>
@@ -665,7 +677,7 @@ export function SubmitDeliverableModal({
               type="submit"
               size="sm"
               disabled={submittingNow}
-              className="w-full sm:w-auto min-h-[44px] sm:min-h-[38px] text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto min-h-[44px] h-11 sm:h-10 text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 active:scale-[0.99]"
             >
               {submittingNow ? (
                 <>

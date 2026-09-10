@@ -143,6 +143,7 @@ export const TaskQueryParamsSchema = PaginationQuerySchema.extend({
   search: z.string().trim().max(200, 'Search query cannot exceed 200 characters').optional(),
   parentTaskId: z.string().trim().max(128).optional().nullable(),
   limit: z.union([z.coerce.number().int().min(1).max(200), z.literal('all')]).optional(),
+  take: z.union([z.coerce.number().int().min(1).max(200), z.literal('all')]).optional(),
   all: z.union([z.boolean(), z.enum(['true', 'false'])]).optional(),
 });
 
@@ -259,10 +260,32 @@ export const UpdateTaskInputSchema = z
     academicMonth: z.coerce.number().int().min(1).max(12).optional(),
     academicYear: z.string().trim().max(20).optional(),
     notes: z.string().max(2000).optional().nullable(),
+    expectedVersion: z
+      .number()
+      .int()
+      .min(0, 'Expected version must be non-negative')
+      .optional(),
+    expectedUpdatedAt: z.string().optional(),
+    ifMatch: z.string().optional(),
+    comment: z.string().trim().max(1000).optional().nullable(),
+    note: z.string().trim().max(1000).optional().nullable(),
+    resolution: z
+      .enum([
+        'APPROVED',
+        'REJECTED',
+        'REVISION_REQUIRED',
+        'approved',
+        'rejected',
+        'revision_required',
+      ])
+      .optional(),
+    approved: z.boolean().optional(),
   })
   .strict();
 
+export const UpdateTaskSchema = UpdateTaskInputSchema;
 export type UpdateTaskInput = z.infer<typeof UpdateTaskInputSchema>;
+export type UpdateTask = UpdateTaskInput;
 
 /**
  * Update task metadata command contract.

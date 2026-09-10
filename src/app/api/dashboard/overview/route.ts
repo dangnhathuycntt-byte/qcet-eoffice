@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getLiveDashboardData, LiveDashboardOptions } from '@/lib/server/dashboard-service';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
-import { isAdmin } from '@/server/policies/executive-policy';
+import { isAdmin } from '@/server/policies/document-policy';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

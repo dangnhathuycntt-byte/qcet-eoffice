@@ -1,52 +1,145 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "node:path";
 import fs from "node:fs";
-import { resolveSafeFilePath, openByteRangeStream } from "@/lib/storage";
+import {
+  resolveSafeFilePath,
+  openByteRangeStream,
+  isAllowedFileExtension,
+  sanitizeDownloadFilename,
+} from "@/lib/storage";
+import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
+import { apiError } from "@/server/api/response";
+import { assertRateLimit } from "@/server/security/rate-limit";
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from "@/server/api/errors";
+import { prisma } from "@/lib/prisma";
+import { canReadDocument, isAdmin } from "@/server/policies/document-policy";
+import { canReadTask } from "@/server/policies/task-policy";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
 ) {
+  let requestId = crypto.randomUUID();
   try {
-    const { path: pathSegments } = await params;
+    const context = await getApiContext(req);
+    requestId = context.requestId;
+
+    const authUser = requireAuthenticated(context);
+    assertRateLimit(authUser.id, "FILE_DOWNLOAD");
+
+    const resolvedParams = await Promise.resolve(params);
+    const pathSegments = resolvedParams?.path;
 
     if (!pathSegments || pathSegments.length === 0) {
-      return new NextResponse("Tệp không tồn tại", { status: 404 });
+      throw new NotFoundError("Tệp không tồn tại");
     }
 
     const relativePath = path.join(...pathSegments);
-    let safeResolvedPath: string;
-    try {
-      safeResolvedPath = resolveSafeFilePath(relativePath);
-    } catch {
-      return new NextResponse("Yêu cầu không hợp lệ (Forbidden Access)", { status: 403 });
+    const fileName = path.basename(relativePath);
+
+    if (!isAllowedFileExtension(fileName)) {
+      throw new ForbiddenError("Loại tệp không được phép truy c���p");
+    }
+
+    // Resolves against UPLOADS_DIR and guards against traversal
+    const safeResolvedPath = resolveSafeFilePath(relativePath);
+
+    // Object-level authorization check: DocumentAttachment
+    const attachment = await prisma.documentAttachment.findFirst({
+      where: {
+        OR: [
+          { fileUrl: { contains: relativePath } },
+          { fileUrl: { contains: fileName } },
+          { fileName: fileName },
+        ],
+      },
+      include: {
+        document: true,
+      },
+    });
+
+    if (attachment?.document) {
+      if (!canReadDocument(authUser, attachment.document)) {
+        throw new ForbiddenError(
+          "Bạn không có quyền truy cập tệp đính kèm của văn bản này"
+        );
+      }
+    }
+
+    // Object-level authorization check: TaskDeliverable
+    const deliverable = await prisma.taskDeliverable.findFirst({
+      where: {
+        OR: [
+          { fileUrl: { contains: relativePath } },
+          { fileUrl: { contains: fileName } },
+        ],
+      },
+      include: {
+        task: {
+          include: {
+            assignees: true,
+          },
+        },
+      },
+    });
+
+    if (deliverable?.task) {
+      if (!canReadTask(authUser, deliverable.task)) {
+        throw new ForbiddenError(
+          "Bạn không có quyền truy cập tệp đính kèm của nhiệm vụ này"
+        );
+      }
+    }
+
+    // Unregistered file in uploads directory: check for sensitive patterns
+    if (!attachment && !deliverable) {
+      const lowerName = fileName.toLowerCase();
+      if (
+        (lowerName.includes("secret") ||
+          lowerName.includes("mat") ||
+          lowerName.startsWith(".")) &&
+        !isAdmin(authUser)
+      ) {
+        throw new ForbiddenError(
+          "Tệp nhạy cảm yêu cầu quyền Quản trị viên (Admin)"
+        );
+      }
     }
 
     if (!fs.existsSync(safeResolvedPath)) {
-      return new NextResponse("Không tìm thấy tệp yêu cầu", { status: 404 });
+      throw new NotFoundError("Không tìm thấy tệp yêu cầu");
     }
 
     const stat = await fs.promises.stat(safeResolvedPath);
     if (!stat.isFile()) {
-      return new NextResponse("Đường dẫn không phải là tệp hợp lệ", { status: 400 });
+      throw new ValidationError("Đường dẫn không phải là tệp hợp lệ");
     }
 
     const rangeHeader = req.headers.get("range");
     const streamResult = await openByteRangeStream(safeResolvedPath, rangeHeader);
 
     const headers = new Headers(streamResult.headers);
-    headers.set("Cache-Control", "private, max-age=3600, must-revalidate");
+    headers.set("x-request-id", requestId);
+    headers.set("X-Content-Type-Options", "nosniff");
+    headers.set("X-Frame-Options", "DENY");
+
     if (streamResult.status === 200) {
-      headers.set("Content-Disposition", `inline; filename="${path.basename(safeResolvedPath)}"`);
+      const safeDownloadName = sanitizeDownloadFilename(fileName);
+      headers.set("Content-Disposition", `inline; filename="${safeDownloadName}"`);
     }
 
-    return new NextResponse(streamResult.stream as unknown as BodyInit, {
-      status: streamResult.status,
-      headers,
-    });
+    return new NextResponse(
+      (streamResult.stream as unknown as BodyInit) ?? null,
+      {
+        status: streamResult.status,
+        headers,
+      }
+    );
   } catch (error) {
-    console.error("[File Service Error]", error);
-    return new NextResponse("Lỗi máy chủ nội bộ khi nạp tệp", { status: 500 });
+    return apiError(error, requestId);
   }
 }
-

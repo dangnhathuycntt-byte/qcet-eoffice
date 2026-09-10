@@ -226,7 +226,7 @@ export function MobileAppInstallModal({
           <button
             type="button"
             onClick={handleClose}
-            className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+            className="min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
             aria-label="Đóng"
           >
             <X size={18} />
@@ -262,7 +262,7 @@ export function MobileAppInstallModal({
                       await installApp();
                       handleClose();
                     }}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-md hover:bg-primary/90 active:scale-95 transition-all cursor-pointer shrink-0"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-md hover:bg-primary/90 active:scale-95 transition-all cursor-pointer shrink-0"
                   >
                     <Download size={14} />
                     <span>Cài đặt ứng dụng</span>
@@ -282,7 +282,7 @@ export function MobileAppInstallModal({
                   type="button"
                   onClick={handleCopyLink}
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0",
+                    "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0",
                     copied
                       ? "bg-emerald-600 text-white"
                       : "bg-card hover:bg-muted border border-border text-foreground"
@@ -470,12 +470,12 @@ export function MobileAppInstallModal({
 
           {/* Platform Installation Guide Tabs */}
           <div>
-            <div className="flex items-center gap-1 border-b border-border/60 pb-2">
+            <div className="flex items-center gap-1.5 border-b border-border/60 pb-2 overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab("ios")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
+                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0",
                   activeTab === "ios"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -487,7 +487,7 @@ export function MobileAppInstallModal({
                 type="button"
                 onClick={() => setActiveTab("android")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
+                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0",
                   activeTab === "android"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -499,7 +499,7 @@ export function MobileAppInstallModal({
                 type="button"
                 onClick={() => setActiveTab("desktop")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
+                  "flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0",
                   activeTab === "desktop"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -518,7 +518,7 @@ export function MobileAppInstallModal({
                       1
                     </span>
                     <p className="text-foreground leading-relaxed">
-                      Mở <strong>Safari</strong> trên iPhone/iPad và truy cập vào địa chỉ Tailscale (hoặc mở Camera quét mã QR ở trên).
+                      Mở <strong>Safari</strong> trên iPhone/iPad và truy cập vào địa chỉ hệ thống (hoặc quét mã QR ở trên).
                     </p>
                   </div>
                   <div className="flex items-start gap-2.5">
@@ -526,7 +526,7 @@ export function MobileAppInstallModal({
                       2
                     </span>
                     <div className="text-foreground leading-relaxed flex items-center gap-1 flex-wrap">
-                      <span>Bấm nút</span>
+                      <span>Nhấn biểu tượng</span>
                       <strong className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground border border-border/60">
                         <Share size={12} className="text-primary" /> Chia sẻ (Share)
                       </strong>
@@ -538,12 +538,15 @@ export function MobileAppInstallModal({
                       3
                     </span>
                     <div className="text-foreground leading-relaxed flex items-center gap-1 flex-wrap">
-                      <span>Cuộn xuống và chọn</span>
+                      <span>Chọn</span>
                       <strong className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-foreground border border-border/60">
                         <PlusSquare size={12} className="text-primary" /> Thêm vào MH chính (Add to Home Screen)
                       </strong>
-                      <span>rồi bấm <strong>Thêm (Add)</strong>.</span>
+                      <span>rồi nhấn <strong>Thêm (Add)</strong>.</span>
                     </div>
+                  </div>
+                  <div className="mt-1 pt-1.5 border-t border-border/40 text-[11px] text-muted-foreground">
+                    Thao tác nhanh: <strong>Nhấn biểu tượng Chia sẻ &rarr; Thêm vào Màn hình chính</strong>.
                   </div>
                 </div>
                 <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 text-xs flex items-center gap-2">
@@ -644,7 +647,7 @@ export function MobileAppInstallModal({
           <button
             type="button"
             onClick={handleClose}
-            className="px-3.5 py-1.5 rounded-lg border border-border/60 bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors cursor-pointer"
+            className="px-4 py-2 min-h-[44px] rounded-lg border border-border/60 bg-secondary hover:bg-secondary/80 text-foreground font-medium transition-colors cursor-pointer flex items-center justify-center"
           >
             Đóng
           </button>
