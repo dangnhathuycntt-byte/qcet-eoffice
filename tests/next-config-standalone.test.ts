@@ -11,6 +11,6 @@ describe("Next.js Standalone Configuration", () => {
     assert.ok(typeof nextConfig.redirects === "function");
     const redirects = await nextConfig.redirects!();
     assert.ok(Array.isArray(redirects));
-    assert.ok(redirects.some((r) => r.source === "/tasks"));
+    assert.ok(redirects.some((r) => r.source === "/unit-tasks"));
   });
 });

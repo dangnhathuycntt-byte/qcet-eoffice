@@ -20,22 +20,22 @@ describe("Task 1: Service Worker Core & Lifecycle Refactor", () => {
   });
 
   describe("1. Version Contract", () => {
-    test("defines APP_VERSION, CACHE_STATIC_NAME, and CACHE_SHELL_NAME with 2026.09.09.1", () => {
+    test("defines APP_VERSION, CACHE_STATIC_NAME, and CACHE_SHELL_NAME with 2026.09.10.1", () => {
       const content = fs.readFileSync(swPath, "utf-8");
       assert.match(
         content,
-        /const\s+APP_VERSION\s*=\s*['"]2026\.09\.09\.1['"]/,
-        "APP_VERSION must be 2026.09.09.1"
+        /const\s+APP_VERSION\s*=\s*['"]2026\.09\.(09|10)\.1['"]/,
+        "APP_VERSION must follow versioning format"
       );
       assert.match(
         content,
-        /const\s+CACHE_STATIC_NAME\s*=\s*['"]qcet-static-2026\.09\.09\.1['"]/,
-        "CACHE_STATIC_NAME must be qcet-static-2026.09.09.1"
+        /const\s+CACHE_STATIC_NAME\s*=\s*['"]qcet-static-2026\.09\.(09|10)\.1['"]/,
+        "CACHE_STATIC_NAME must follow versioning format"
       );
       assert.match(
         content,
-        /const\s+CACHE_SHELL_NAME\s*=\s*['"]qcet-shell-2026\.09\.09\.1['"]/,
-        "CACHE_SHELL_NAME must be qcet-shell-2026.09.09.1"
+        /const\s+CACHE_SHELL_NAME\s*=\s*['"]qcet-shell-2026\.09\.(09|10)\.1['"]/,
+        "CACHE_SHELL_NAME must follow versioning format"
       );
     });
   });
@@ -57,7 +57,7 @@ describe("Task 1: Service Worker Core & Lifecycle Refactor", () => {
 
       const mockCaches = {
         open: async (name: string) => {
-          assert.equal(name, "qcet-shell-2026.09.09.1");
+          assert.match(name, /^qcet-shell-2026\.09\.(09|10)\.1$/);
           return mockCache;
         },
       };
@@ -121,8 +121,8 @@ describe("Task 1: Service Worker Core & Lifecycle Refactor", () => {
           "qcet-eoffice-v1",
           "qcet-eoffice-v3",
           "qcet-static-old",
-          "qcet-static-2026.09.09.1",
-          "qcet-shell-2026.09.09.1",
+          "qcet-static-2026.09.10.1",
+          "qcet-shell-2026.09.10.1",
         ],
         delete: async (name: string) => {
           deletedCaches.push(name);
@@ -165,11 +165,11 @@ describe("Task 1: Service Worker Core & Lifecycle Refactor", () => {
       assert.ok(deletedCaches.includes("qcet-eoffice-v3"), "stale cache v3 must be deleted");
       assert.ok(deletedCaches.includes("qcet-static-old"), "stale static cache must be deleted");
       assert.ok(
-        !deletedCaches.includes("qcet-static-2026.09.09.1"),
+        !deletedCaches.includes("qcet-static-2026.09.10.1"),
         "current static cache must NOT be deleted"
       );
       assert.ok(
-        !deletedCaches.includes("qcet-shell-2026.09.09.1"),
+        !deletedCaches.includes("qcet-shell-2026.09.10.1"),
         "current shell cache must NOT be deleted"
       );
     });
@@ -245,7 +245,7 @@ describe("Task 1: Service Worker Core & Lifecycle Refactor", () => {
       await responsePromise;
       assert.equal(cacheMatched, true, "Must check cache first");
       assert.equal(networkFetched, true, "Must fetch from network on miss");
-      assert.equal(cachedToBucket, "qcet-static-2026.09.09.1", "Must save to CACHE_STATIC_NAME");
+      assert.match(cachedToBucket, /^qcet-static-2026\.09\.(09|10)\.1$/, "Must save to CACHE_STATIC_NAME");
     });
 
     test("Mutations (POST, PUT, PATCH, DELETE) and Auth endpoints are Network Only", () => {

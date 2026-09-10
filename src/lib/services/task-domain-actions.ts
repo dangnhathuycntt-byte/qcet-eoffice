@@ -163,7 +163,7 @@ async function buildUserContext(session: SessionPayload): Promise<AuthenticatedU
   return userContext;
 }
 
-async function loadTaskAndBuildResource(
+export async function loadTaskAndBuildResource(
   taskId: string,
   extra?: { deliverableId?: string; resultId?: string; stepId?: string }
 ) {
@@ -242,9 +242,12 @@ async function loadTaskAndBuildResource(
     : undefined;
   if (!targetDeliverable && extra?.deliverableId) {
     targetDeliverable =
-      (await prisma.taskDeliverable.findUnique({
-        where: { id: extra.deliverableId },
+      (await prisma.taskDeliverable.findFirst({
+        where: { id: extra.deliverableId, taskId },
       })) ?? undefined;
+    if (!targetDeliverable) {
+      throw new NotFoundError("Không tìm thấy tệp bàn giao thuộc nhiệm vụ này");
+    }
   }
 
   let targetResult = extra?.resultId
@@ -252,9 +255,29 @@ async function loadTaskAndBuildResource(
     : undefined;
   if (!targetResult && extra?.resultId) {
     targetResult =
-      (await prisma.taskResult.findUnique({
-        where: { id: extra.resultId },
+      (await prisma.taskResult.findFirst({
+        where: { id: extra.resultId, taskId },
       })) ?? undefined;
+    if (!targetResult) {
+      throw new NotFoundError("Không tìm thấy kết quả thuộc nhiệm vụ này");
+    }
+  }
+
+  if (extra?.stepId) {
+    const stepInTask = task.approvalProcesses.some((proc) =>
+      proc.steps.some((s) => s.id === extra.stepId)
+    );
+    if (!stepInTask) {
+      const stepWithProcess = await prisma.taskApprovalStep.findFirst({
+        where: {
+          id: extra.stepId,
+          process: { taskId },
+        },
+      });
+      if (!stepWithProcess) {
+        throw new NotFoundError("Không tìm thấy bước phê duyệt thuộc nhiệm vụ này");
+      }
+    }
   }
 
   const submittedByUserId =
@@ -366,6 +389,12 @@ export class TaskDomainActionService {
       let deliverable = null;
       if (validated.title || validated.fileUrl || validated.deliverableId) {
         if (validated.deliverableId) {
+          const belongsToTask = await tx.taskDeliverable.findFirst({
+            where: { id: validated.deliverableId, taskId },
+          });
+          if (!belongsToTask) {
+            throw new NotFoundError("Không tìm thấy tệp bàn giao thuộc nhiệm vụ này");
+          }
           deliverable = await tx.taskDeliverable.update({
             where: { id: validated.deliverableId },
             data: {
@@ -488,6 +517,12 @@ export class TaskDomainActionService {
       let verifiedResult = null;
       if (validated.resultId || targetResult) {
         const rId = validated.resultId || targetResult!.id;
+        const resultBelongsToTask = await tx.taskResult.findFirst({
+          where: { id: rId, taskId },
+        });
+        if (!resultBelongsToTask) {
+          throw new NotFoundError("Không tìm thấy kết quả thuộc nhiệm vụ này");
+        }
         verifiedResult = await tx.taskResult.update({
           where: { id: rId },
           data: {
@@ -500,6 +535,12 @@ export class TaskDomainActionService {
       let reviewedDeliverable = null;
       if (validated.deliverableId || targetDeliverable) {
         const dId = validated.deliverableId || targetDeliverable!.id;
+        const belongsToTask = await tx.taskDeliverable.findFirst({
+          where: { id: dId, taskId },
+        });
+        if (!belongsToTask) {
+          throw new NotFoundError("Không tìm thấy tệp bàn giao thuộc nhiệm vụ này");
+        }
         const mappedStatus =
           effectiveReviewStatus === "APPROVED"
             ? DeliverableReviewStatus.APPROVED
@@ -518,6 +559,15 @@ export class TaskDomainActionService {
 
       let stepResult = null;
       if (validated.stepId) {
+        const stepBelongsToTask = await tx.taskApprovalStep.findFirst({
+          where: {
+            id: validated.stepId,
+            process: { taskId },
+          },
+        });
+        if (!stepBelongsToTask) {
+          throw new NotFoundError("Không tìm thấy bước phê duyệt thuộc nhiệm vụ này");
+        }
         stepResult = await executeApprovalStep(
           validated.stepId,
           session.id,
@@ -616,6 +666,12 @@ export class TaskDomainActionService {
       let updatedDeliverable = null;
       if (validated.deliverableId || targetDeliverable) {
         const dId = validated.deliverableId || targetDeliverable!.id;
+        const belongsToTask = await tx.taskDeliverable.findFirst({
+          where: { id: dId, taskId },
+        });
+        if (!belongsToTask) {
+          throw new NotFoundError("Không tìm thấy tệp bàn giao thuộc nhiệm vụ này");
+        }
         updatedDeliverable = await tx.taskDeliverable.update({
           where: { id: dId },
           data: {
@@ -627,8 +683,27 @@ export class TaskDomainActionService {
         });
       }
 
+      if (validated.resultId) {
+        const resultBelongsToTask = await tx.taskResult.findFirst({
+          where: { id: validated.resultId, taskId },
+        });
+        if (!resultBelongsToTask) {
+          throw new NotFoundError("Không tìm thấy kết quả thuộc nhiệm vụ này");
+        }
+      }
+
       let rejectedStep = null;
       if (validated.stepId) {
+        const stepBelongsToTask = await tx.taskApprovalStep.findFirst({
+          where: {
+            id: validated.stepId,
+            process: { taskId },
+          },
+        });
+        if (!stepBelongsToTask) {
+          throw new NotFoundError("Không tìm thấy bước phê duyệt thuộc nhiệm vụ này");
+        }
+
         rejectedStep = await tx.taskApprovalStep.update({
           where: { id: validated.stepId },
           data: {
@@ -733,6 +808,16 @@ export class TaskDomainActionService {
     return await prisma.$transaction(async (tx) => {
       let stepResult = null;
       if (validated.stepId) {
+        const stepBelongsToTask = await tx.taskApprovalStep.findFirst({
+          where: {
+            id: validated.stepId,
+            process: { taskId },
+          },
+        });
+        if (!stepBelongsToTask) {
+          throw new NotFoundError("Không tìm thấy bước phê duyệt thuộc nhiệm vụ này");
+        }
+
         stepResult = await executeApprovalStep(
           validated.stepId,
           session.id,

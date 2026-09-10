@@ -6,31 +6,33 @@
  * - Handles 'nodejs' and 'edge' runtimes cleanly without throwing.
  */
 
-import { logger } from '@/server/observability/logger';
-
 /**
  * Registers instrumentation hooks at application startup.
  * Guaranteed to never throw errors during server initialization.
  */
 export async function register(): Promise<void> {
-  try {
-    const runtime = process.env.NEXT_RUNTIME || 'nodejs';
-    const environment = process.env.NODE_ENV || 'development';
-
-    logger.info('app.boot', {
-      metadata: {
-        runtime,
-        environment,
-        service: 'qcet-eoffice',
-        nodeVersion: typeof process !== 'undefined' ? process.version : undefined,
-      },
-    });
-  } catch (error) {
-    // Fail-safe: runtime boot must proceed even if telemetry environment encounters issues
+  if (!process.env.NEXT_RUNTIME || process.env.NEXT_RUNTIME === 'nodejs') {
     try {
-      logger.error('app.boot.error', undefined, error);
-    } catch {
-      console.error('[Instrumentation Boot Error]', error);
+      const { logger } = await import('@/server/observability/logger');
+      const runtime = process.env.NEXT_RUNTIME || 'nodejs';
+      const environment = process.env.NODE_ENV || 'development';
+
+      logger.info('app.boot', {
+        metadata: {
+          runtime,
+          environment,
+          service: 'qcet-eoffice',
+          nodeVersion: typeof process !== 'undefined' ? process.version : undefined,
+        },
+      });
+    } catch (error) {
+      // Fail-safe: runtime boot must proceed even if telemetry environment encounters issues
+      try {
+        const { logger } = await import('@/server/observability/logger');
+        logger.error('app.boot.error', undefined, error);
+      } catch {
+        console.error('[Instrumentation Boot Error]', error);
+      }
     }
   }
 }
@@ -58,21 +60,24 @@ export async function onRequestError(
   }
 ): Promise<void> {
   try {
-    logger.error(
-      'app.request.error',
-      {
-        errorCode: err.digest || 'REQUEST_ERROR',
-        metadata: {
-          path: request.path,
-          method: request.method,
-          routerKind: context.routerKind,
-          routePath: context.routePath,
-          routeType: context.routeType,
-          digest: err.digest,
+    if (!process.env.NEXT_RUNTIME || process.env.NEXT_RUNTIME === 'nodejs') {
+      const { logger } = await import('@/server/observability/logger');
+      logger.error(
+        'app.request.error',
+        {
+          errorCode: err.digest || 'REQUEST_ERROR',
+          metadata: {
+            path: request.path,
+            method: request.method,
+            routerKind: context.routerKind,
+            routePath: context.routePath,
+            routeType: context.routeType,
+            digest: err.digest,
+          },
         },
-      },
-      err
-    );
+        err
+      );
+    }
   } catch {
     // Fail-safe: never throw from error listener
   }

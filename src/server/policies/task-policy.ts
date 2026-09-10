@@ -7,7 +7,7 @@ export interface TaskEntity {
   createdById?: string | null;
   assigneeId?: string | null;
   collaboratorIds?: string[] | string | null;
-  assignees?: Array<{ userId: string; roleInTask?: string }> | null;
+  assignees?: Array<{ userId?: string; id?: string; roleInTask?: string; [key: string]: any }> | null;
   status?: string | null;
   scope?: string | null;
   [key: string]: any;
@@ -26,14 +26,15 @@ function isStaff(user: AuthenticatedUser): boolean {
 }
 
 function getCreatorId(task: TaskEntity): string | null {
-  return task.creatorId || task.createdById || null;
+  return task.creatorId || task.createdById || task.createdBy?.id || null;
 }
 
 function getAssigneeId(task: TaskEntity): string | null {
   if (task.assigneeId) return task.assigneeId;
+  if (task.leadAssignee?.id) return task.leadAssignee.id;
   if (Array.isArray(task.assignees)) {
-    const primary = task.assignees.find((a: any) => a.roleInTask === 'PRIMARY_OWNER');
-    if (primary) return primary.userId;
+    const primary = task.assignees.find((a) => a.roleInTask === 'PRIMARY_OWNER');
+    if (primary) return primary.userId || primary.id || null;
   }
   return null;
 }
@@ -73,7 +74,10 @@ function isUserCollaborator(user: AuthenticatedUser, task: TaskEntity): boolean 
   if (isCollaborator(user, task.collaboratorIds)) return true;
   if (Array.isArray(task.assignees)) {
     return task.assignees.some(
-      (a: any) => a.roleInTask === 'COLLABORATOR' && a.userId === user.id
+      (a: any) =>
+        (a.roleInTask === 'COLLABORATOR' && (a.userId === user.id || a.id === user.id)) ||
+        a.userId === user.id ||
+        a.id === user.id
     );
   }
   return false;
@@ -97,7 +101,8 @@ export function canReadTask(user: AuthenticatedUser, task: TaskEntity): boolean 
   if (isUserCollaborator(user, task)) return true;
 
   // 3. Department boundary: Members of the same department can view department tasks
-  if (task.departmentId && user.departmentId && task.departmentId === user.departmentId) {
+  const deptId = task.departmentId || (task as any).department?.id;
+  if (deptId && user.departmentId && deptId === user.departmentId) {
     return true;
   }
 
@@ -143,11 +148,12 @@ export function canUpdateTask(user: AuthenticatedUser, task: TaskEntity): boolea
   if (assigneeId && assigneeId === user.id) return true;
 
   // Department manager of the task's department can update
+  const deptId = task.departmentId || (task as any).department?.id;
   if (
     isManager(user) &&
     user.departmentId &&
-    task.departmentId &&
-    user.departmentId === task.departmentId
+    deptId &&
+    user.departmentId === deptId
   ) {
     return true;
   }
@@ -180,11 +186,12 @@ export function canApproveTask(user: AuthenticatedUser, task: TaskEntity): boole
   }
 
   // Department manager can approve tasks within their own department
+  const deptId = task.departmentId || (task as any).department?.id;
   if (
     isManager(user) &&
     user.departmentId &&
-    task.departmentId &&
-    user.departmentId === task.departmentId
+    deptId &&
+    user.departmentId === deptId
   ) {
     return true;
   }
@@ -214,6 +221,7 @@ export function canChangeTaskStatus(
   }
 
   const creatorId = getCreatorId(task);
+  const deptId = task.departmentId || (task as any).department?.id;
 
   // Cancellation requires Admin, Dept Manager, or Creator
   if (statusUpper === 'CANCELLED' || statusUpper === 'HUY') {
@@ -222,8 +230,8 @@ export function canChangeTaskStatus(
     if (
       isManager(user) &&
       user.departmentId &&
-      task.departmentId &&
-      user.departmentId === task.departmentId
+      deptId &&
+      user.departmentId === deptId
     ) {
       return true;
     }
@@ -239,8 +247,8 @@ export function canChangeTaskStatus(
   if (
     isManager(user) &&
     user.departmentId &&
-    task.departmentId &&
-    user.departmentId === task.departmentId
+    deptId &&
+    user.departmentId === deptId
   ) {
     return true;
   }
@@ -268,11 +276,12 @@ export function canSubmitDeliverable(
   if (assigneeId && assigneeId === user.id) return true;
   if (isUserCollaborator(user, task)) return true;
 
+  const deptId = task.departmentId || (task as any).department?.id;
   if (
     isManager(user) &&
     user.departmentId &&
-    task.departmentId &&
-    user.departmentId === task.departmentId
+    deptId &&
+    user.departmentId === deptId
   ) {
     return true;
   }
@@ -291,11 +300,12 @@ export function canDeleteTask(user: AuthenticatedUser, task: TaskEntity): boolea
   const creatorId = getCreatorId(task);
   if (creatorId && creatorId === user.id) return true;
 
+  const deptId = task.departmentId || (task as any).department?.id;
   if (
     isManager(user) &&
     user.departmentId &&
-    task.departmentId &&
-    user.departmentId === task.departmentId
+    deptId &&
+    user.departmentId === deptId
   ) {
     return true;
   }

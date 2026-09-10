@@ -6,6 +6,7 @@ import { getSystemReferenceDate, isTaskPastDue } from '@/lib/academic-calendar';
 import { calculateTaskMetrics } from '@/lib/task-metrics';
 import { toTaskDomainModel, toTaskDTO } from '@/domain/tasks';
 import { TaskQueryParamsSchema } from '@/contracts/tasks';
+import { toTaskDetailDTO, type TaskDetailDTO } from '@/server/dto/task-dto';
 
 export interface TaskQueryFilters {
   academicMonth?: number | string;
@@ -204,12 +205,47 @@ export class TaskQueryService {
       }
     }
 
-    const searchTerm = (filters.search ?? filters.q)?.trim();
+    const rawSearch = filters.search ?? filters.q;
+    const searchTerm = typeof rawSearch === 'string' ? rawSearch.trim() : rawSearch ? String(rawSearch).trim() : '';
     if (searchTerm) {
-      where.OR = [
-        { title: { contains: searchTerm, mode: 'insensitive' } },
-        { code: { contains: searchTerm, mode: 'insensitive' } },
-        { description: { contains: searchTerm, mode: 'insensitive' } },
+      const searchWhere: Prisma.TaskWhereInput = {
+        OR: [
+          { title: { contains: searchTerm, mode: 'insensitive' } },
+          { code: { contains: searchTerm, mode: 'insensitive' } },
+          { description: { contains: searchTerm, mode: 'insensitive' } },
+        ],
+      };
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        searchWhere,
+      ];
+    }
+
+    // Task list authorization at database level (F02)
+    const isSystemAdmin =
+      (user as any)?.role === 'ADMIN' ||
+      (user as any)?.systemRole === 'SYSTEM_ADMIN';
+    const isLeadership =
+      user?.positionCode === "HIEU_TRUONG" ||
+      user?.positionCode === "PHO_HIEU_TRUONG" ||
+      user?.title?.toLowerCase()?.includes("hiệu trưởng") ||
+      user?.role === "BAN_GIAM_HIEU" ||
+      (user as any)?.role === "BGH";
+
+    if (!isSystemAdmin && !isLeadership && user) {
+      const authConditions: Prisma.TaskWhereInput[] = [
+        { assignees: { some: { userId: user.id } } },
+        { actors: { some: { userId: user.id } } },
+      ];
+      if (user.departmentId) {
+        authConditions.push({ departmentId: user.departmentId });
+      }
+      const authWhere: Prisma.TaskWhereInput = {
+        OR: authConditions,
+      };
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        authWhere,
       ];
     }
 
@@ -223,16 +259,16 @@ export class TaskQueryService {
     let formattedTasks: SchoolTask[] = [];
     let total = 0;
     let page = 1;
-    let limit = 50;
+    let limit = 20;
     let totalPages = 1;
     let hasMore = false;
     let nextCursor: string | null = null;
 
     if (hasCursor) {
       const cursor = String(filters.cursor).trim();
-      const takeRaw = filters.take ?? filters.limit ?? 50;
+      const takeRaw = filters.take ?? filters.limit ?? 20;
       const takeNum = parseInt(String(takeRaw), 10);
-      limit = isNaN(takeNum) || takeNum < 1 ? 50 : Math.min(200, takeNum);
+      limit = Math.min(Math.max(isNaN(takeNum) ? 20 : takeNum, 1), 100);
       const pageRaw = filters.page ? parseInt(String(filters.page), 10) : 1;
       page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw;
 
@@ -260,28 +296,30 @@ export class TaskQueryService {
       formattedTasks = rawTasks.map(mapPrismaTaskToSchoolTask);
       totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
     } else if (isAll) {
+      const take = 100;
+      limit = 100;
       const [totalCount, rawTasks] = await Promise.all([
         prisma.task.count({ where }),
         prisma.task.findMany({
           where,
           include: TASK_INCLUDE,
           orderBy: filters.orderBy || { dueDate: 'asc' },
+          take,
         }),
       ]);
       total = totalCount;
       page = 1;
-      limit = total > 0 ? total : 50;
-      totalPages = total > 0 ? 1 : 0;
-      hasMore = false;
-      nextCursor = null;
+      totalPages = Math.ceil(total / limit) || 1;
+      hasMore = rawTasks.length < total;
+      nextCursor = hasMore && rawTasks.length > 0 ? rawTasks[rawTasks.length - 1].id : null;
       formattedTasks = rawTasks.map(mapPrismaTaskToSchoolTask);
     } else {
       const pageRaw = filters.page ? parseInt(String(filters.page), 10) : 1;
       page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw;
 
-      const limitRaw = filters.limit ?? filters.take ?? 50;
+      const limitRaw = filters.limit ?? filters.take ?? 20;
       const limitNum = parseInt(String(limitRaw), 10);
-      limit = isNaN(limitNum) || limitNum < 1 ? 50 : Math.min(200, limitNum);
+      limit = Math.min(Math.max(isNaN(limitNum) ? 20 : limitNum, 1), 100);
       const skip = (page - 1) * limit;
 
       const [totalCount, rawTasks] = await Promise.all([
@@ -339,18 +377,35 @@ export class TaskQueryService {
   }
 
   /**
-   * Lấy chi tiết một nhiệm vụ theo ID, kèm đầy đủ quan hệ cấp bậc và minh chứng.
+   * Lấy chi tiết một nhiệm vụ theo ID (DTO hợp nhất, sanitized network contract).
+   * Hoàn toàn loại bỏ raw entity và passwordHash.
    */
   async getTaskById(
     taskId: string
   ): Promise<{
-    task: SchoolTask;
-    data: SchoolTask;
-    raw: any;
-    domain?: any;
-    dto?: any;
+    success: true;
+    task: TaskDetailDTO;
+    data: TaskDetailDTO;
   } | null> {
-    const rawTask = await prisma.task.findUnique({
+    const rawTask = await this.getTaskEntityForInternalUse(taskId);
+    if (!rawTask) return null;
+
+    const dto = toTaskDetailDTO(rawTask);
+    if (!dto) return null;
+
+    return {
+      success: true,
+      task: dto,
+      data: dto,
+    };
+  }
+
+  /**
+   * Internal method for background services requiring full Prisma entity with relations.
+   * NOT for client exposure.
+   */
+  async getTaskEntityForInternalUse(taskId: string) {
+    return prisma.task.findUnique({
       where: { id: taskId },
       include: {
         department: true,
@@ -381,26 +436,15 @@ export class TaskQueryService {
         subTasks: {
           include: {
             assignees: {
-              include: { user: true },
+              include: {
+                user: { select: { id: true, name: true, avatarUrl: true } },
+              },
             },
             deliverables: true,
           },
         },
       },
     });
-
-    if (!rawTask) return null;
-
-    const mapped = mapPrismaTaskToSchoolTask(rawTask);
-    const domain = toTaskDomainModel(rawTask);
-    const dto = toTaskDTO(domain);
-    return {
-      task: mapped,
-      data: mapped,
-      raw: rawTask,
-      domain,
-      dto,
-    };
   }
 
   /**

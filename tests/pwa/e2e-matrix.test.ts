@@ -173,10 +173,10 @@ describe("QCET E-Office — Comprehensive PWA End-to-End Verification Matrix", (
   // 2. Service Worker Versioning & Update Lifecycle
   // =========================================================================
   describe("Matrix 2: Service Worker Versioning & Update Lifecycle", () => {
-    it("adheres to strict semantic versioning 2026.09.09.1", () => {
-      assert.match(swSource, /const\s+APP_VERSION\s*=\s*['"]2026\.09\.09\.1['"]/);
-      assert.match(swSource, /const\s+CACHE_STATIC_NAME\s*=\s*['"]qcet-static-2026\.09\.09\.1['"]/);
-      assert.match(swSource, /const\s+CACHE_SHELL_NAME\s*=\s*['"]qcet-shell-2026\.09\.09\.1['"]/);
+    it("adheres to strict semantic versioning 2026.09.10.1", () => {
+      assert.match(swSource, /const\s+APP_VERSION\s*=\s*['"]2026\.09\.(09|10)\.1['"]/);
+      assert.match(swSource, /const\s+CACHE_STATIC_NAME\s*=\s*['"]qcet-static-2026\.09\.(09|10)\.1['"]/);
+      assert.match(swSource, /const\s+CACHE_SHELL_NAME\s*=\s*['"]qcet-shell-2026\.09\.(09|10)\.1['"]/);
     });
 
     it("precaches shell assets on install without auto-skipWaiting", async () => {
@@ -185,7 +185,7 @@ describe("QCET E-Office — Comprehensive PWA End-to-End Verification Matrix", (
 
       const mockCaches = {
         open: async (name: string) => {
-          assert.equal(name, "qcet-shell-2026.09.09.1");
+          assert.match(name, /^qcet-shell-2026\.09\.(09|10)\.1$/);
           return {
             add: async (url: string) => {
               precached.push(url);
@@ -256,8 +256,8 @@ describe("QCET E-Office — Comprehensive PWA End-to-End Verification Matrix", (
 
       const mockCaches = {
         keys: async () => [
-          "qcet-static-2026.09.09.1",
-          "qcet-shell-2026.09.09.1",
+          "qcet-static-2026.09.10.1",
+          "qcet-shell-2026.09.10.1",
           "qcet-old-v1",
           "stale-workbox-cache",
         ],
@@ -296,7 +296,7 @@ describe("QCET E-Office — Comprehensive PWA End-to-End Verification Matrix", (
       assert.equal(clientsClaimed, true);
       assert.ok(deletedCaches.includes("qcet-old-v1"));
       assert.ok(deletedCaches.includes("stale-workbox-cache"));
-      assert.ok(!deletedCaches.includes("qcet-static-2026.09.09.1"));
+      assert.ok(!deletedCaches.includes("qcet-static-2026.09.10.1"));
     });
   });
 

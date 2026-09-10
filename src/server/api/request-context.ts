@@ -10,6 +10,7 @@ export interface AuthenticatedUser {
   role: string;
   departmentId?: string | null;
   title?: string | null;
+  positionCode?: string | null;
 }
 
 export interface ApiRequestContext {

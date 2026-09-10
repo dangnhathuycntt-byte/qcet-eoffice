@@ -129,6 +129,26 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
     testAttachmentId = attachment.id;
     fs.writeFileSync(path.join(testSandboxAbs, "dept-b-private.pdf"), samplePdfContent);
 
+    // Register sample attachments for download tests (under Default Deny)
+    await prisma.documentAttachment.create({
+      data: {
+        documentId: doc.id,
+        fileName: "sample.pdf",
+        fileUrl: `${testSandboxRel}/sample.pdf`,
+        fileSize: samplePdfContent.length,
+        mimeType: "application/pdf",
+      },
+    });
+    await prisma.documentAttachment.create({
+      data: {
+        documentId: doc.id,
+        fileName: "sample.txt",
+        fileUrl: `${testSandboxRel}/sample.txt`,
+        fileSize: sampleTxtContent.length,
+        mimeType: "text/plain",
+      },
+    });
+
     // 6. Create Task & TaskDeliverable restricted to Dept B
     const task = await prisma.task.create({
       data: {
@@ -168,10 +188,8 @@ describe("File API Hardening & Secure Download (Task 13)", () => {
       if (testTaskId) {
         await prisma.task.delete({ where: { id: testTaskId } }).catch(() => {});
       }
-      if (testAttachmentId) {
-        await prisma.documentAttachment.delete({ where: { id: testAttachmentId } }).catch(() => {});
-      }
       if (testDocId) {
+        await prisma.documentAttachment.deleteMany({ where: { documentId: testDocId } }).catch(() => {});
         await prisma.document.delete({ where: { id: testDocId } }).catch(() => {});
       }
       if (deptAUser?.id) {

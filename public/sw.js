@@ -1,13 +1,13 @@
 // QCET E-Office Service Worker
-// Version: 2026.09.09.1 - PWA Architecture Improvement
+// Version: 2026.09.10.1 - PWA Architecture & Cache Hardening
 // Contract: Versioned caches, controlled lifecycle, resource-tailored caching matrix, same-origin deep-link routing
 
-const APP_VERSION = '2026.09.09.1';
-const CACHE_STATIC_NAME = 'qcet-static-2026.09.09.1';
-const CACHE_SHELL_NAME = 'qcet-shell-2026.09.09.1';
-const CACHE_NAME = 'qcet-eoffice-v4'; // Legacy alias for backward compatibility
-const API_CACHE_NAME = 'qcet-api-v1'; // Legacy API cache constant
-const CURRENT_CACHES = [CACHE_STATIC_NAME, CACHE_SHELL_NAME, API_CACHE_NAME];
+const APP_VERSION = '2026.09.10.1';
+const CACHE_STATIC_NAME = 'qcet-static-2026.09.10.1';
+const CACHE_SHELL_NAME = 'qcet-shell-2026.09.10.1';
+const CACHE_NAME = 'qcet-eoffice-v5'; // Legacy alias for backward compatibility
+const API_CACHE_NAME = 'qcet-api-v2'; // Legacy API cache constant
+const CURRENT_CACHES = [CACHE_STATIC_NAME, CACHE_SHELL_NAME];
 
 const OFFLINE_FALLBACK_URL = '/?zone=tasks';
 const API_TIMEOUT_MS = 2500;
@@ -78,16 +78,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Auth Endpoints: Network Only. Never cache.
-  if (url.pathname.startsWith('/api/auth/')) {
+  // API Endpoints: Network Only. Never intercept or cache in SW (F08).
+  if (url.pathname.startsWith('/api/')) {
     return;
   }
 
-  // A. Static Assets: Cache First Strategy (Next.js bundles, chunks, images, fonts, icons)
-  if (
+  // A. Static Assets: Cache First Strategy (F08: strict allowlist, no generic extension match)
+  const isStaticAsset =
     url.pathname.startsWith('/_next/static/') ||
-    url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|woff2|woff|ttf|eot)$/)
-  ) {
+    url.pathname.startsWith('/icons/') ||
+    url.pathname.startsWith('/fonts/') ||
+    url.pathname === '/logo-qcet.png' ||
+    url.pathname === '/logo-qcet.webp' ||
+    url.pathname === '/favicon.ico';
+
+  if (isStaticAsset) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) {
@@ -107,121 +112,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // B. Sensitive Internal API Endpoints (/api/dashboard/*, /api/tasks/*)
-  // Network First with tight timeout (2.5s) only when client explicitly requests offline fallback; never cache without header checks.
-  if (url.pathname.startsWith('/api/dashboard/') || url.pathname.startsWith('/api/tasks')) {
-    const allowsOffline =
-      event.request.headers.get('x-qcet-offline-fallback') === 'true' ||
-      event.request.headers.get('x-offline-fallback') === 'true' ||
-      url.searchParams.get('offline_fallback') === 'true';
-
-    // Disallow unprompted / indiscriminate caching for sensitive internal API endpoints
-    if (!allowsOffline) {
-      return;
-    }
-
-    event.respondWith(
-      new Promise((resolve) => {
-        let isTimedOut = false;
-        const timer = setTimeout(() => {
-          isTimedOut = true;
-          caches.open(CACHE_SHELL_NAME).then((cache) => {
-            cache.match(event.request).then((cached) => {
-              if (cached) {
-                const headers = new Headers(cached.headers);
-                headers.set('X-QCET-Offline-Cache', 'true');
-                resolve(
-                  new Response(cached.body, {
-                    status: cached.status,
-                    statusText: cached.statusText,
-                    headers,
-                  })
-                );
-              } else {
-                resolve(
-                  new Response(
-                    JSON.stringify({
-                      error: 'Yêu cầu hết hạn thời gian (2.5s). Máy chủ đang phản hồi chậm.',
-                      offline: true,
-                    }),
-                    {
-                      status: 504,
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'X-QCET-Offline-Cache': 'true',
-                      },
-                    }
-                  )
-                );
-              }
-            });
-          });
-        }, API_TIMEOUT_MS);
-
-        fetch(event.request)
-          .then((networkResponse) => {
-            clearTimeout(timer);
-            if (!isTimedOut) {
-              const cacheControl = networkResponse.headers.get('Cache-Control') || '';
-              const canCache =
-                networkResponse.status === 200 &&
-                !cacheControl.includes('no-store') &&
-                !cacheControl.includes('no-cache');
-
-              if (canCache) {
-                const responseClone = networkResponse.clone();
-                caches.open(CACHE_SHELL_NAME).then((cache) => {
-                  cache.put(event.request, responseClone).catch(() => {});
-                });
-              }
-              resolve(networkResponse);
-            }
-          })
-          .catch(() => {
-            clearTimeout(timer);
-            if (!isTimedOut) {
-              caches.open(CACHE_SHELL_NAME).then((cache) => {
-                cache.match(event.request).then((cached) => {
-                  if (cached) {
-                    const headers = new Headers(cached.headers);
-                    headers.set('X-QCET-Offline-Cache', 'true');
-                    resolve(
-                      new Response(cached.body, {
-                        status: cached.status,
-                        statusText: cached.statusText,
-                        headers,
-                      })
-                    );
-                  } else {
-                    resolve(
-                      new Response(
-                        JSON.stringify({
-                          error: 'Mất kết nối mạng. Không có dữ liệu lưu tạm cho yêu cầu này.',
-                          offline: true,
-                        }),
-                        {
-                          status: 503,
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'X-QCET-Offline-Cache': 'true',
-                          },
-                        }
-                      )
-                    );
-                  }
-                });
-              });
-            }
-          });
-      })
-    );
-    return;
-  }
-
-  // Bypass all other API routes
-  if (url.pathname.startsWith('/api/')) return;
-
-  // C. Navigation / App Shell: Network First -> fallback to cached shell -> offline HTML response
+  // B. Navigation / App Shell: Network First -> fallback to cached shell -> offline HTML response
   if (event.request.mode === 'navigate' || event.request.destination === 'document') {
     event.respondWith(
       fetch(event.request)

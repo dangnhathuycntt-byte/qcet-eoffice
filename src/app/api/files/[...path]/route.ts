@@ -48,22 +48,28 @@ export async function GET(
     // Resolves against UPLOADS_DIR and guards against traversal
     const safeResolvedPath = resolveSafeFilePath(relativePath);
 
+    // Normalize candidate path strings
+    const normalizedRelative = relativePath.replace(/^\/+/, "");
+    const normalizedUploads = `/uploads/${normalizedRelative}`;
+    const candidateUrls = [
+      relativePath,
+      `/${normalizedRelative}`,
+      normalizedUploads,
+      `uploads/${normalizedRelative}`,
+    ];
+
     // Object-level authorization check: DocumentAttachment
     const attachment = await prisma.documentAttachment.findFirst({
       where: {
-        OR: [
-          { fileUrl: { contains: relativePath } },
-          { fileUrl: { contains: fileName } },
-          { fileName: fileName },
-        ],
+        fileUrl: { in: candidateUrls },
       },
       include: {
         document: true,
       },
     });
 
-    if (attachment?.document) {
-      if (!canReadDocument(authUser, attachment.document)) {
+    if (attachment) {
+      if (!attachment.document || !canReadDocument(authUser, attachment.document)) {
         throw new ForbiddenError(
           "Bạn không có quyền truy cập tệp đính kèm của văn bản này"
         );
@@ -73,10 +79,7 @@ export async function GET(
     // Object-level authorization check: TaskDeliverable
     const deliverable = await prisma.taskDeliverable.findFirst({
       where: {
-        OR: [
-          { fileUrl: { contains: relativePath } },
-          { fileUrl: { contains: fileName } },
-        ],
+        fileUrl: { in: candidateUrls },
       },
       include: {
         task: {
@@ -87,27 +90,19 @@ export async function GET(
       },
     });
 
-    if (deliverable?.task) {
-      if (!canReadTask(authUser, deliverable.task)) {
+    if (deliverable) {
+      if (!deliverable.task || !canReadTask(authUser, deliverable.task)) {
         throw new ForbiddenError(
           "Bạn không có quyền truy cập tệp đính kèm của nhiệm vụ này"
         );
       }
     }
 
-    // Unregistered file in uploads directory: check for sensitive patterns
+    // Default Deny: Unregistered/orphan files cannot be downloaded (F07)
     if (!attachment && !deliverable) {
-      const lowerName = fileName.toLowerCase();
-      if (
-        (lowerName.includes("secret") ||
-          lowerName.includes("mat") ||
-          lowerName.startsWith(".")) &&
-        !isAdmin(authUser)
-      ) {
-        throw new ForbiddenError(
-          "Tệp nhạy cảm yêu cầu quyền Quản trị viên (Admin)"
-        );
-      }
+      throw new NotFoundError(
+        "Không tìm thấy tệp hoặc tệp không thuộc tài nguyên được cấp quyền"
+      );
     }
 
     if (!fs.existsSync(safeResolvedPath)) {

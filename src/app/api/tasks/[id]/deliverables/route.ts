@@ -39,7 +39,7 @@ export async function POST(req: Request, routeContext: RouteContext) {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const existingTask = taskResult.raw || taskResult.task;
+    const existingTask = taskResult.task;
 
     // Object authorization check
     if (!canSubmitDeliverable(authUser, existingTask)) {

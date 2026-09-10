@@ -267,8 +267,9 @@ describe('Single DRI and Subtask Hierarchy API Tests', () => {
     assert.strictEqual(res.status, 200);
     const json = await res.json();
     assert.strictEqual(json.success, true);
-    assert.ok(json.raw.subTasks !== undefined, 'raw.subTasks must be defined');
-    assert.ok(json.raw.parentTask !== undefined, 'raw.parentTask must be defined');
+    const taskObj = json.task || json.data;
+    assert.ok(taskObj.subTasks !== undefined, 'task.subTasks must be defined');
+    assert.ok(taskObj.parentTask !== undefined, 'task.parentTask must be defined');
   });
 
   test('PATCH /api/tasks/[id]: prevents self-referencing parentTaskId and handles invalid parentTaskId', async () => {

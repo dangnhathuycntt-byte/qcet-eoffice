@@ -3,6 +3,7 @@ import { SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 
 export async function POST() {
   const response = NextResponse.json({ success: true });
+  response.headers.set("Clear-Site-Data", '"cache"');
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
     value: "",

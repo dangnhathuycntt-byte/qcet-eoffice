@@ -555,13 +555,18 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       assert.strictEqual(mismatchHasTask, false);
     });
 
-    test('getTaskById: returns mapped task and raw Prisma graph with relations', async () => {
+    test('getTaskById: returns clean TaskDetailDTO and removes raw Prisma entity', async () => {
       const detail = await taskQueryService.getTaskById(metricTaskId);
       assert.ok(detail);
+      assert.strictEqual(detail.success, true);
       assert.strictEqual(detail.task.id, metricTaskId);
       assert.strictEqual(detail.task.title, 'Nhiệm vụ kiểm thử TaskQueryService');
-      assert.ok(detail.raw.assignees);
-      assert.ok(detail.raw.department);
+      assert.strictEqual((detail as any).raw, undefined, 'raw property must be completely removed');
+
+      const entity = await taskQueryService.getTaskEntityForInternalUse(metricTaskId);
+      assert.ok(entity);
+      assert.ok(entity.assignees);
+      assert.ok(entity.department);
     });
 
     test('getTaskMetrics: aggregates task statistics with canonical reference date comparison', async () => {

@@ -39,21 +39,20 @@ export async function GET(req: Request, routeContext: RouteContext) {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
-    const taskSubject = result.raw || result.task;
+    const taskSubject = result.task;
 
     // Object authorization check (BOLA protection)
     if (!canReadTask(authUser, taskSubject)) {
       throw new ForbiddenError('Bạn không có quyền xem nhiệm vụ này');
     }
 
-    const taskDetail = toTaskDetailDTO(taskSubject);
+    const taskDetail = result.task;
 
     return apiSuccess(
       {
         success: true,
         task: taskDetail,
         data: taskDetail,
-        raw: result.raw,
       },
       {
         headers: { 'Cache-Control': 'private, no-store' },
@@ -87,7 +86,7 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
     if (!taskResult) {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
-    const existingTask = taskResult.raw || taskResult.task;
+    const existingTask = taskResult.task;
 
     // 1. Optimistic Concurrency Control (OCC)
     const expectedVersion = validatedBody.expectedVersion;
@@ -96,8 +95,10 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
 
     const currentVersion = Number((existingTask as any).version ?? 1);
     const currentUpdatedAt =
-      existingTask.updatedAt instanceof Date
-        ? existingTask.updatedAt.toISOString()
+      typeof existingTask.updatedAt === 'string'
+        ? existingTask.updatedAt
+        : (existingTask.updatedAt as unknown) instanceof Date
+        ? ((existingTask.updatedAt as unknown) as Date).toISOString()
         : String(existingTask.updatedAt);
 
     if (expectedVersion !== undefined && expectedVersion !== null) {
@@ -177,7 +178,6 @@ export async function PATCH(req: Request, routeContext: RouteContext) {
         success: true,
         task: taskDetail,
         data: taskDetail,
-        raw: updated,
       },
       {
         headers: { 'Cache-Control': 'private, no-store' },
@@ -207,7 +207,7 @@ export async function DELETE(req: Request, routeContext: RouteContext) {
     if (!taskResult) {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
-    const existingTask = taskResult.raw || taskResult.task;
+    const existingTask = taskResult.task;
 
     if (!canDeleteTask(authUser, existingTask)) {
       throw new ForbiddenError('Bạn không có quyền xóa nhiệm vụ này');

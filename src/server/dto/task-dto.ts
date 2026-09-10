@@ -73,6 +73,8 @@ export interface TaskDetailDTO extends TaskListDTO {
   startDate?: string | null;
   completedAt?: string | null;
   createdBy?: UserSummaryDTO | null;
+  createdById?: string | null;
+  departmentId?: string | null;
   parentTaskId?: string | null;
   parentTask?: TaskSummaryDTO | null;
   subTasks?: TaskSummaryDTO[];
@@ -370,6 +372,8 @@ export function toTaskDetailDTO(rawTask: unknown): TaskDetailDTO | null {
           role: 'STAFF',
         })
       : null,
+    createdById: task.createdById ? String(task.createdById) : (task.createdBy?.id ? String(task.createdBy.id) : null),
+    departmentId: task.departmentId ? String(task.departmentId) : (task.department?.id ? String(task.department.id) : null),
     parentTaskId: task.parentTaskId ? String(task.parentTaskId) : null,
     parentTask: task.parentTask ? toTaskSummaryDTO(task.parentTask) : null,
     subTasks: Array.isArray(task.subTasks)

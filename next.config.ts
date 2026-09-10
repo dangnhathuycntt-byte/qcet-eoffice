@@ -51,13 +51,13 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/tasks",
-        destination: "/?zone=tasks&scope=school",
+        source: "/dashboard",
+        destination: "/",
         permanent: false,
       },
       {
         source: "/unit-tasks",
-        destination: "/?zone=tasks&scope=unit",
+        destination: "/tasks?scope=unit",
         permanent: false,
       },
       {
