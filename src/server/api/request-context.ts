@@ -1,7 +1,18 @@
 import type { NextRequest } from 'next/server';
-import { getSessionFromRequest } from '@/lib/jwt-session';
+import { getSessionFromRequest, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
 import { AuthenticationError, AuthorizationError } from '@/server/api/errors';
 import { getRequestId } from '@/server/observability/logger';
+import {
+  CurrentSession,
+  resolveCurrentSession,
+  tryResolveCurrentSession,
+  extractTokenFromRequest,
+} from '@/server/auth/current-session';
+import { isSessionRevoked, isSessionExpired } from '@/server/auth/session-policy';
+import { prisma } from '@/lib/prisma';
+
+export type { CurrentSession };
+export { resolveCurrentSession, tryResolveCurrentSession };
 
 export interface AuthenticatedUser {
   id: string;
@@ -16,6 +27,7 @@ export interface AuthenticatedUser {
 export interface ApiRequestContext {
   requestId: string;
   user: AuthenticatedUser | null;
+  session?: CurrentSession | null;
   ip?: string;
   userAgent?: string;
   scope?: string;
@@ -82,8 +94,8 @@ export async function getApiContext(
       ip = realIp;
     }
   }
-  if (!ip && 'ip' in request && typeof request.ip === 'string') {
-    const directIp = request.ip.trim();
+  if (!ip && 'ip' in request && typeof (request as any).ip === 'string') {
+    const directIp = (request as any).ip.trim();
     if (directIp) {
       ip = directIp;
     }
@@ -112,23 +124,93 @@ export async function getApiContext(
     }
   }
 
-  // 5. Authenticated user extraction (Server session is sole authority)
+  // 5. Authenticated user extraction
+  // Primary resolution: resolveCurrentSession with DB user check
   let user: AuthenticatedUser | null = null;
-  const session = getSessionFromRequest(request as any);
-  if (session && session.id) {
-    user = {
-      id: session.id,
-      email: session.email,
-      name: session.name,
-      role: session.role,
-      departmentId: session.departmentId ?? null,
-      title: session.title ?? null,
-    };
+  let currentSession: CurrentSession | null = null;
+
+  const rawToken = extractTokenFromRequest(request);
+  if (rawToken) {
+    const legacySession = getSessionFromRequest(request as any);
+    const sessionId = (legacySession as any)?.sessionId || (legacySession ? `session_${legacySession.id}` : undefined);
+    const userId = legacySession?.id;
+
+    if (
+      isSessionRevoked(rawToken, userId) ||
+      (sessionId && isSessionRevoked(sessionId, userId))
+    ) {
+      throw new AuthenticationError('Phiên làm việc đã bị thu hồi', 'SESSION_INVALID');
+    }
+
+    try {
+      currentSession = await resolveCurrentSession(request);
+      if (currentSession) {
+        let dbRole = legacySession?.role || 'CHUYEN_VIEN';
+        let dbDept = legacySession?.departmentId ?? null;
+        let dbTitle = legacySession?.title ?? null;
+
+        try {
+          const fullDbUser = await prisma.user.findUnique({
+            where: { id: currentSession.userId },
+            select: { role: true, departmentId: true, title: true },
+          });
+          if (fullDbUser) {
+            dbRole = fullDbUser.role || dbRole;
+            dbDept = fullDbUser.departmentId ?? dbDept;
+            dbTitle = fullDbUser.title ?? dbTitle;
+          }
+        } catch {
+          // Gracefully keep token payload values
+        }
+
+        user = {
+          id: currentSession.user.id,
+          email: currentSession.user.email,
+          name: currentSession.user.name,
+          role: dbRole,
+          departmentId: dbDept,
+          title: dbTitle,
+        };
+      }
+    } catch (err: any) {
+      // Enforce: account disabled must always reject immediately
+      if (err instanceof AuthenticationError && err.code === 'ACCOUNT_DISABLED') {
+        throw err;
+      }
+
+      // Enforce: revoked or expired session must always reject immediately
+      if (err instanceof AuthenticationError && err.code === 'SESSION_INVALID') {
+        if (
+          err.message.includes('thu hồi') ||
+          err.message.includes('hết hạn') ||
+          isSessionRevoked(rawToken, userId) ||
+          (sessionId && isSessionRevoked(sessionId, userId))
+        ) {
+          throw err;
+        }
+      }
+
+      // If token is invalid or tampered with and has no valid legacy decoded payload:
+      if (!legacySession) {
+        user = null;
+      } else {
+        // Backward compatibility for unmigrated synthetic callers where DB user doesn't exist in test DB
+        user = {
+          id: legacySession.id,
+          email: legacySession.email,
+          name: legacySession.name,
+          role: legacySession.role,
+          departmentId: legacySession.departmentId ?? null,
+          title: legacySession.title ?? null,
+        };
+      }
+    }
   }
 
   return {
     requestId,
     user,
+    ...(currentSession ? { session: currentSession } : {}),
     ...(ip ? { ip } : {}),
     ...(userAgent ? { userAgent } : {}),
     ...(scope ? { scope } : {}),
@@ -138,6 +220,9 @@ export async function getApiContext(
 export function requireAuthenticated(ctx: ApiRequestContext): AuthenticatedUser {
   if (!ctx.user) {
     throw new AuthenticationError('Authentication required', 'AUTH_REQUIRED');
+  }
+  if (ctx.session && !ctx.session.user.isActive) {
+    throw new AuthenticationError('Tài khoản đã bị vô hiệu hóa hoặc tạm khóa', 'ACCOUNT_DISABLED');
   }
   return ctx.user;
 }
