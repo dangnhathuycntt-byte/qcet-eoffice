@@ -30,7 +30,8 @@ import {
   AuthorizationResource,
   isExecutivePosition,
   isUnitLeaderPosition,
-} from '@/server/authorization/authorization-engine';
+  computeAvailableActions,
+} from '@/server/authorization';
 import {
   AuthorizationError,
   NotFoundError,
@@ -673,13 +674,17 @@ export class MeetingService {
           ? await loadAuthorizationContext(contextOrUserId)
           : contextOrUserId;
 
-      const authResult = authorize(authContext, 'meeting.read', buildMeetingResource(meeting));
+      const meetingResource = buildMeetingResource(meeting);
+      const authResult = authorize(authContext, 'meeting.read', meetingResource);
       if (!authResult.allowed) {
         throw new AuthorizationError(
           authResult.reason || 'Không có quyền truy cập cuộc họp.',
           authResult.rejectionCode || 'INSUFFICIENT_RELATIONSHIP'
         );
       }
+
+      const availableActions = computeAvailableActions(authContext, meetingResource);
+      return { ...meeting, availableActions };
     }
 
     return meeting;

@@ -4,4 +4,5 @@ export * from './authorization-context-service';
 export * from './capability';
 export * from './resource';
 export * from './document-classification';
+export * from './available-actions';
 export * from './errors';

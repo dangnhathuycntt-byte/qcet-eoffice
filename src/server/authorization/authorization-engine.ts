@@ -526,7 +526,7 @@ export function authorize(
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_MEETING_CHAIR_CONFIRM';
     }
-  } else if (action === 'meeting.create_resolution') {
+  } else if (action === 'meeting.create_resolution' || action === 'meeting.publish_resolution') {
     if (isChair) {
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_MEETING_CHAIR_RESOLUTION';
@@ -746,6 +746,7 @@ export function authorize(
     // VAN_THU (Clerk)
     if (isClerkPosition(code)) {
       if (
+        action === 'document.read' ||
         action === 'document.register' ||
         action === 'document.incoming.register' ||
         action === 'document.incoming.present' ||
@@ -1147,7 +1148,7 @@ export function authorize(
 
   // Meeting minutes confirmation: meeting must be in MINUTES_DRAFT or HELD
   if (action === 'meeting.confirm_minutes') {
-    if (status !== 'MINUTES_DRAFT' && status !== 'HELD') {
+    if (status !== 'MINUTES_DRAFT' && status !== 'MINUTES_DRAFTED' && status !== 'HELD') {
       return {
         allowed: false,
         granted: false,
@@ -1166,7 +1167,12 @@ export function authorize(
 
   // Meeting draft minutes: meeting must be in HELD or MINUTES_DRAFT or IN_PROGRESS
   if (action === 'meeting.draft_minutes') {
-    if (status !== 'HELD' && status !== 'MINUTES_DRAFT' && status !== 'IN_PROGRESS') {
+    if (
+      status !== 'HELD' &&
+      status !== 'MINUTES_DRAFT' &&
+      status !== 'MINUTES_DRAFTED' &&
+      status !== 'IN_PROGRESS'
+    ) {
       return {
         allowed: false,
         granted: false,

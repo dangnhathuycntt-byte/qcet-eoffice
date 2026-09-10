@@ -27,6 +27,11 @@ import {
   AuthorizationError,
   ValidationError,
 } from "@/server/api/errors";
+import {
+  loadAuthorizationContext,
+  computeAvailableActions,
+  buildDocumentResource,
+} from "@/server/authorization";
 
 interface RouteContext {
   params: { id: string } | Promise<{ id: string }>;
@@ -57,11 +62,26 @@ export async function GET(
       );
     }
 
+    const authContext = await loadAuthorizationContext(authUser.id);
+    const availableActions = computeAvailableActions(
+      authContext,
+      buildDocumentResource(document)
+    );
+
+    const documentDTO = toDocumentDetailDTO(document);
+
     return apiSuccess(
       {
         success: true,
-        data: document,
-        document: toDocumentDetailDTO(document),
+        data: {
+          ...document,
+          availableActions,
+        },
+        document: {
+          ...documentDTO,
+          availableActions,
+        },
+        availableActions,
       },
       {
         headers: { "Cache-Control": "private, no-store" },
@@ -121,7 +141,7 @@ export async function PATCH(
     const validation = validateDocumentUpdatePayload(rawBody);
     if (!validation.isValid) {
       throw new ValidationError(
-        validation.errors[0] || "Dữ liệu c���p nhật văn bản không hợp lệ",
+        validation.errors[0] || "Dữ liệu cập nhật văn bản không hợp lệ",
         {
           general: validation.errors,
         }
