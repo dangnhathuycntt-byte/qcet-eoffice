@@ -9,195 +9,102 @@
  */
 
 // ============================================================================
-// 1. TYPED CAPABILITY CATALOG
+// 1. TYPED CAPABILITY CATALOG (CANONICAL SOURCE: src/server/authorization/capability.ts)
 // ============================================================================
 
-export type TaskCapabilityAction =
-  | "task.view"
-  | "task.create"
-  | "task.assign"
-  | "task.reassign"
-  | "task.update_execution"
-  | "task.submit_result"
-  | "task.review"
-  | "task.approve"
-  | "task.monitor"
-  | "task.remind"
-  | "task.close"
-  | "task.cancel";
+import type {
+  CapabilityAction,
+  CapabilityCategory,
+  MeetingCapabilityAction,
+  DocumentCanonicalCapabilityAction,
+  DocumentIncomingCapabilityAction,
+  DocumentOutgoingCapabilityAction,
+  DocumentCapabilityAction,
+  TaskCapabilityAction,
+  SystemCapabilityAction,
+  DossierCapabilityAction,
+  HrCapabilityAction,
+  StatutoryNonDelegableAction,
+  StatutorySigningCapabilityAction,
+  CapabilityMetadata,
+} from "@/server/authorization/capability";
 
-export type DocumentIncomingCapabilityAction =
-  | "document.incoming.register"
-  | "document.incoming.present"
-  | "document.incoming.direct"
-  | "document.incoming.assign_unit"
-  | "document.incoming.assign_person"
-  | "document.incoming.execute"
-  | "document.incoming.file"
-  | "document.file";
+export type {
+  CapabilityAction,
+  CapabilityCategory,
+  MeetingCapabilityAction,
+  DocumentCanonicalCapabilityAction,
+  DocumentIncomingCapabilityAction,
+  DocumentOutgoingCapabilityAction,
+  DocumentCapabilityAction,
+  TaskCapabilityAction,
+  SystemCapabilityAction,
+  DossierCapabilityAction,
+  HrCapabilityAction,
+  StatutoryNonDelegableAction,
+  StatutorySigningCapabilityAction,
+  CapabilityMetadata,
+};
 
-export type DocumentOutgoingCapabilityAction =
-  | "document.outgoing.draft"
-  | "document.outgoing.review_content"
-  | "document.outgoing.submit_content_review"
-  | "document.outgoing.approve_content"
-  | "document.outgoing.review_format"
-  | "document.outgoing.check_format"
-  | "document.outgoing.submit_format_check"
-  | "document.outgoing.approve_format"
-  | "document.outgoing.sign"
-  | "document.outgoing.authorized_sign"
-  | "document.outgoing.sign_kt"
-  | "document.outgoing.sign_tuq"
-  | "document.outgoing.number"
-  | "document.outgoing.assign_number"
-  | "document.outgoing.organization_sign"
-  | "document.outgoing.issue";
+import {
+  CAPABILITY_CATEGORIES,
+  MEETING_CAPABILITIES,
+  DOCUMENT_CANONICAL_CAPABILITIES,
+  DOCUMENT_INCOMING_CAPABILITIES,
+  DOCUMENT_OUTGOING_CAPABILITIES,
+  DOCUMENT_CAPABILITIES,
+  TASK_CAPABILITIES,
+  SYSTEM_CAPABILITIES,
+  DOSSIER_CAPABILITIES,
+  HR_CAPABILITIES,
+  STATUTORY_GOVERNANCE_CAPABILITIES,
+  NON_DELEGABLE_CAPABILITIES,
+  STATUTORY_SIGNING_CAPABILITIES,
+  PORTFOLIO_BOUND_ACTIONS,
+  isMeetingCapability,
+  isDocumentCapability,
+  isTaskCapability,
+  isSystemCapability,
+  isDossierCapability,
+  isHrCapability,
+  isStatutorySigningCapability,
+  isNonDelegableCapability,
+  isValidCapability,
+  isCapabilityAction,
+  getCapabilityCategory,
+  getCapabilityMetadata,
+  resolveCanonicalCapability,
+} from "@/server/authorization/capability";
 
-export type DossierCapabilityAction =
-  | "dossier.open"
-  | "dossier.add_item"
-  | "dossier.remove_item"
-  | "dossier.close"
-  | "dossier.transfer_archive"
-  | "dossier.submit_archive"
-  | "dossier.accept_archive"
-  | "document.archive";
-
-export type SystemCapabilityAction =
-  | "account.manage"
-  | "org.manage"
-  | "position.manage"
-  | "system.configure"
-  | "audit.view"
-  | "system.account.manage"
-  | "system.org.manage"
-  | "system.position.manage"
-  | "system.system.configure"
-  | "system.audit.view";
-
-export type StatutoryNonDelegableAction =
-  | "position.manage_leadership"
-  | "hr.disciplinary_action"
-  | "finance.treasury_disbursement"
-  | "regulation.institutional_amend";
-
-export type CapabilityAction =
-  | TaskCapabilityAction
-  | DocumentIncomingCapabilityAction
-  | DocumentOutgoingCapabilityAction
-  | DossierCapabilityAction
-  | SystemCapabilityAction
-  | StatutoryNonDelegableAction
-  | "hr.view"
-  | "payroll.view"
-  | "user.view_sensitive_personal_data";
-
-export const TASK_CAPABILITIES: readonly TaskCapabilityAction[] = [
-  "task.view",
-  "task.create",
-  "task.assign",
-  "task.reassign",
-  "task.update_execution",
-  "task.submit_result",
-  "task.review",
-  "task.approve",
-  "task.monitor",
-  "task.remind",
-  "task.close",
-  "task.cancel",
-] as const;
-
-export const DOCUMENT_INCOMING_CAPABILITIES: readonly DocumentIncomingCapabilityAction[] = [
-  "document.incoming.register",
-  "document.incoming.present",
-  "document.incoming.direct",
-  "document.incoming.assign_unit",
-  "document.incoming.assign_person",
-  "document.incoming.execute",
-  "document.incoming.file",
-  "document.file",
-] as const;
-
-export const DOCUMENT_OUTGOING_CAPABILITIES: readonly DocumentOutgoingCapabilityAction[] = [
-  "document.outgoing.draft",
-  "document.outgoing.review_content",
-  "document.outgoing.submit_content_review",
-  "document.outgoing.approve_content",
-  "document.outgoing.review_format",
-  "document.outgoing.check_format",
-  "document.outgoing.submit_format_check",
-  "document.outgoing.approve_format",
-  "document.outgoing.sign",
-  "document.outgoing.authorized_sign",
-  "document.outgoing.sign_kt",
-  "document.outgoing.sign_tuq",
-  "document.outgoing.number",
-  "document.outgoing.assign_number",
-  "document.outgoing.organization_sign",
-  "document.outgoing.issue",
-] as const;
-
-export const DOSSIER_CAPABILITIES: readonly DossierCapabilityAction[] = [
-  "dossier.open",
-  "dossier.add_item",
-  "dossier.remove_item",
-  "dossier.close",
-  "dossier.transfer_archive",
-  "dossier.submit_archive",
-  "dossier.accept_archive",
-  "document.archive",
-] as const;
-
-export const SYSTEM_CAPABILITIES: readonly SystemCapabilityAction[] = [
-  "account.manage",
-  "org.manage",
-  "position.manage",
-  "system.configure",
-  "audit.view",
-  "system.account.manage",
-  "system.org.manage",
-  "system.position.manage",
-  "system.system.configure",
-  "system.audit.view",
-] as const;
-
-/**
- * Statutory Non-Delegable Capabilities:
- * Powers that cannot be transferred to any delegate under Vietnamese law
- * and institutional regulation QD 283/QD-CDKTCNQN.
- */
-export const NON_DELEGABLE_CAPABILITIES: readonly CapabilityAction[] = [
-  "position.manage_leadership",
-  "hr.disciplinary_action",
-  "finance.treasury_disbursement",
-  "regulation.institutional_amend",
-  "account.manage",
-  "system.configure",
-  "org.manage",
-  "position.manage",
-  "system.account.manage",
-  "system.org.manage",
-  "system.position.manage",
-  "system.system.configure",
-] as const;
-
-/**
- * Actions that are portfolio-bound under QD 420/QD-CDKTCNQN
- */
-export const PORTFOLIO_BOUND_ACTIONS: readonly CapabilityAction[] = [
-  "task.approve",
-  "task.review",
-  "task.cancel",
-  "task.close",
-  "document.incoming.direct",
-  "document.incoming.assign_unit",
-  "document.outgoing.sign",
-  "document.outgoing.authorized_sign",
-  "document.outgoing.sign_kt",
-  "document.outgoing.review_content",
-  "document.outgoing.approve_content",
-] as const;
+export {
+  CAPABILITY_CATEGORIES,
+  MEETING_CAPABILITIES,
+  DOCUMENT_CANONICAL_CAPABILITIES,
+  DOCUMENT_INCOMING_CAPABILITIES,
+  DOCUMENT_OUTGOING_CAPABILITIES,
+  DOCUMENT_CAPABILITIES,
+  TASK_CAPABILITIES,
+  SYSTEM_CAPABILITIES,
+  DOSSIER_CAPABILITIES,
+  HR_CAPABILITIES,
+  STATUTORY_GOVERNANCE_CAPABILITIES,
+  NON_DELEGABLE_CAPABILITIES,
+  STATUTORY_SIGNING_CAPABILITIES,
+  PORTFOLIO_BOUND_ACTIONS,
+  isMeetingCapability,
+  isDocumentCapability,
+  isTaskCapability,
+  isSystemCapability,
+  isDossierCapability,
+  isHrCapability,
+  isStatutorySigningCapability,
+  isNonDelegableCapability,
+  isValidCapability,
+  isCapabilityAction,
+  getCapabilityCategory,
+  getCapabilityMetadata,
+  resolveCanonicalCapability,
+};
 
 // ============================================================================
 // 2. DOMAIN TYPES & INTERFACES
@@ -481,25 +388,6 @@ export class SingleDRIError extends HybridAuthorizationError {
 // ============================================================================
 // 4. HELPER UTILITIES & RELATIONSHIP GRAPH
 // ============================================================================
-
-/**
- * Type guard for CapabilityAction
- */
-export function isCapabilityAction(action: unknown): action is CapabilityAction {
-  if (typeof action !== "string") return false;
-  return (
-    action.startsWith("task.") ||
-    action.startsWith("document.incoming.") ||
-    action.startsWith("document.outgoing.") ||
-    action.startsWith("dossier.") ||
-    action.startsWith("system.") ||
-    SYSTEM_CAPABILITIES.includes(action as SystemCapabilityAction) ||
-    NON_DELEGABLE_CAPABILITIES.includes(action as CapabilityAction) ||
-    action === "hr.view" ||
-    action === "payroll.view" ||
-    action === "user.view_sensitive_personal_data"
-  );
-}
 
 /**
  * Check if the user is a Technical System Administrator
@@ -1193,12 +1081,13 @@ interface DelegationEvaluationResult {
 function getEffectiveAction(action: CapabilityAction): CapabilityAction {
   if (
     action === "document.outgoing.check_format" ||
-    action === "document.outgoing.approve_format"
+    action === "document.outgoing.approve_format" ||
+    action === "document.review_format"
   ) {
     return "document.outgoing.review_format";
-  } else if (action === "document.outgoing.authorized_sign") {
+  } else if (action === "document.outgoing.authorized_sign" || action === "document.sign") {
     return "document.outgoing.sign";
-  } else if (action === "document.outgoing.assign_number") {
+  } else if (action === "document.outgoing.assign_number" || action === "document.assign_number") {
     return "document.outgoing.number";
   } else if (action === "document.outgoing.approve_content") {
     return "document.outgoing.review_content";
