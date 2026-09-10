@@ -1,6 +1,11 @@
 import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-context';
+import type { AuthorizationContext } from '@/server/authorization/authorization-context';
+import {
+  canAccessClassification,
+  type DocumentClassificationTarget,
+} from '@/server/authorization/document-classification';
 
-export interface DocumentEntity {
+export interface DocumentEntity extends DocumentClassificationTarget {
   id: string;
   departmentId?: string | null;
   leadDepartmentId?: string | null;
@@ -14,54 +19,28 @@ export interface DocumentEntity {
 }
 
 export function isAdmin(user: AuthenticatedUser): boolean {
-  return normalizeRole(user.role) === 'ADMIN';
+  return normalizeRole(user?.role) === 'ADMIN';
 }
 
 export function isManager(user: AuthenticatedUser): boolean {
-  return normalizeRole(user.role) === 'MANAGER';
+  return normalizeRole(user?.role) === 'MANAGER';
 }
 
 export function isClerk(user: AuthenticatedUser): boolean {
-  return normalizeRole(user.role) === 'VAN_THU';
+  return normalizeRole(user?.role) === 'VAN_THU';
 }
 
 /**
  * Checks if user can read the specified document.
+ * Strictly enforces canonical document classification policy (F15).
+ * Removes automatic bypasses for ADMIN or CLERK on RESTRICTED or MAT/TOI_MAT/TUYET_MAT documents.
  */
 export function canReadDocument(
-  user: AuthenticatedUser,
-  doc: DocumentEntity
+  userOrContext: AuthenticatedUser | AuthorizationContext,
+  doc: DocumentEntity | DocumentClassificationTarget
 ): boolean {
-  if (!user || !doc) return false;
-
-  // Public documents are readable by any authenticated user
-  if (doc.isPublic) return true;
-
-  // Documents scoped to the entire school
-  const scopeUpper = (doc.scope || '').toString().trim().toUpperCase();
-  if (scopeUpper === 'SCHOOL' || scopeUpper === 'PUBLIC') {
-    return true;
-  }
-
-  // Institutional leadership / Admin
-  if (isAdmin(user)) return true;
-
-  // Clerical / Văn thư staff have registry read authority across documents
-  if (isClerk(user)) return true;
-
-  // Creator or registered user or lead user can read
-  if (doc.creatorId && doc.creatorId === user.id) return true;
-  if (doc.registeredById && doc.registeredById === user.id) return true;
-  if (doc.leadUserId && doc.leadUserId === user.id) return true;
-
-  // Members of the document's department
-  if (user.departmentId) {
-    if (doc.departmentId && doc.departmentId === user.departmentId) return true;
-    if (doc.leadDepartmentId && doc.leadDepartmentId === user.departmentId) return true;
-    if (doc.draftingDeptId && doc.draftingDeptId === user.departmentId) return true;
-  }
-
-  return false;
+  if (!userOrContext || !doc) return false;
+  return canAccessClassification(userOrContext as any, doc as any).allowed;
 }
 
 /**
@@ -75,23 +54,34 @@ export function canCreateDocument(user: AuthenticatedUser): boolean {
  * Checks if user can update document metadata or content.
  */
 export function canUpdateDocument(
-  user: AuthenticatedUser,
+  userOrContext: AuthenticatedUser | AuthorizationContext,
   doc: DocumentEntity
 ): boolean {
-  if (!user || !doc) return false;
+  if (!userOrContext || !doc) return false;
+  if (!canReadDocument(userOrContext, doc)) return false;
 
-  if (isAdmin(user)) return true;
-  if (isClerk(user)) return true;
+  const user =
+    'user' in (userOrContext as any) && (userOrContext as any).user
+      ? (userOrContext as any).user
+      : (userOrContext as AuthenticatedUser);
+  const userId = (userOrContext as any).userId || user?.id;
 
   // Creator or registered user can update
-  if (doc.creatorId && doc.creatorId === user.id) return true;
-  if (doc.registeredById && doc.registeredById === user.id) return true;
+  if (doc.creatorId && doc.creatorId === userId) return true;
+  if (doc.registeredById && doc.registeredById === userId) return true;
 
   // Department manager of the document's department
-  if (isManager(user) && user.departmentId) {
-    if (doc.departmentId && user.departmentId === doc.departmentId) return true;
-    if (doc.leadDepartmentId && user.departmentId === doc.leadDepartmentId) return true;
-    if (doc.draftingDeptId && user.departmentId === doc.draftingDeptId) return true;
+  const deptId =
+    (userOrContext as any).primaryUnitIds?.[0] || (user as any)?.departmentId;
+  if (isManager(user as AuthenticatedUser) && deptId) {
+    if (doc.departmentId && deptId === doc.departmentId) return true;
+    if (doc.leadDepartmentId && deptId === doc.leadDepartmentId) return true;
+    if (doc.draftingDeptId && deptId === doc.draftingDeptId) return true;
+  }
+
+  // Clerical staff (Văn thư) for internal registry handling
+  if (isClerk(user as AuthenticatedUser)) {
+    return true;
   }
 
   return false;
@@ -99,20 +89,42 @@ export function canUpdateDocument(
 
 /**
  * Checks if user has authority to give executive direction / bút phê on the document.
- * Restricted strictly to BAN_GIAM_HIEU / ADMIN and TRUONG_PHONG of the relevant department.
+ * Restricted strictly to BAN_GIAM_HIEU / HIEU_TRUONG and TRUONG_PHONG of the relevant department.
+ * Technical administrators (SYSTEM_ADMIN) cannot give executive directions.
  */
 export function canDirectDocument(
-  user: AuthenticatedUser,
+  userOrContext: AuthenticatedUser | AuthorizationContext,
   doc: DocumentEntity
 ): boolean {
-  if (!user || !doc) return false;
+  if (!userOrContext || !doc) return false;
+  if (!canReadDocument(userOrContext, doc)) return false;
 
-  if (isAdmin(user)) return true;
+  const user =
+    'user' in (userOrContext as any) && (userOrContext as any).user
+      ? (userOrContext as any).user
+      : (userOrContext as AuthenticatedUser);
+  const deptId =
+    (userOrContext as any).primaryUnitIds?.[0] || (user as any)?.departmentId;
 
-  if (isManager(user) && user.departmentId) {
-    if (doc.departmentId && user.departmentId === doc.departmentId) return true;
-    if (doc.leadDepartmentId && user.departmentId === doc.leadDepartmentId) return true;
-    if (doc.draftingDeptId && user.departmentId === doc.draftingDeptId) return true;
+  // Executive leadership check
+  const roleUpper = ((user as any)?.role || '').toUpperCase();
+  const posUpper = ((user as any)?.positionCode || '').toUpperCase();
+  const isExecutive =
+    roleUpper === 'BAN_GIAM_HIEU' ||
+    roleUpper === 'HIEU_TRUONG' ||
+    roleUpper === 'PHO_HIEU_TRUONG' ||
+    posUpper === 'HIEU_TRUONG' ||
+    posUpper === 'PHO_HIEU_TRUONG' ||
+    (typeof (userOrContext as any).hasPosition === 'function' &&
+      ((userOrContext as any).hasPosition('HIEU_TRUONG') ||
+        (userOrContext as any).hasPosition('PHO_HIEU_TRUONG')));
+
+  if (isExecutive) return true;
+
+  if (isManager(user as AuthenticatedUser) && deptId) {
+    if (doc.departmentId && deptId === doc.departmentId) return true;
+    if (doc.leadDepartmentId && deptId === doc.leadDepartmentId) return true;
+    if (doc.draftingDeptId && deptId === doc.draftingDeptId) return true;
   }
 
   return false;
@@ -122,20 +134,27 @@ export function canDirectDocument(
  * Checks if user can delete the document.
  */
 export function canDeleteDocument(
-  user: AuthenticatedUser,
+  userOrContext: AuthenticatedUser | AuthorizationContext,
   doc: DocumentEntity
 ): boolean {
-  if (!user || !doc) return false;
+  if (!userOrContext || !doc) return false;
+  if (!canReadDocument(userOrContext, doc)) return false;
 
-  if (isAdmin(user)) return true;
+  const user =
+    'user' in (userOrContext as any) && (userOrContext as any).user
+      ? (userOrContext as any).user
+      : (userOrContext as AuthenticatedUser);
+  const userId = (userOrContext as any).userId || user?.id;
 
-  if (doc.creatorId && doc.creatorId === user.id) return true;
-  if (doc.registeredById && doc.registeredById === user.id) return true;
+  if (doc.creatorId && doc.creatorId === userId) return true;
+  if (doc.registeredById && doc.registeredById === userId) return true;
 
-  if (isManager(user) && user.departmentId) {
-    if (doc.departmentId && user.departmentId === doc.departmentId) return true;
-    if (doc.leadDepartmentId && user.departmentId === doc.leadDepartmentId) return true;
-    if (doc.draftingDeptId && user.departmentId === doc.draftingDeptId) return true;
+  const deptId =
+    (userOrContext as any).primaryUnitIds?.[0] || (user as any)?.departmentId;
+  if (isManager(user as AuthenticatedUser) && deptId) {
+    if (doc.departmentId && deptId === doc.departmentId) return true;
+    if (doc.leadDepartmentId && deptId === doc.leadDepartmentId) return true;
+    if (doc.draftingDeptId && deptId === doc.draftingDeptId) return true;
   }
 
   return false;

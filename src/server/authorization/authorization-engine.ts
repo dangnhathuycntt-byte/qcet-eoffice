@@ -67,6 +67,7 @@ import {
   AccountNotFoundError,
   AuthorizationError,
 } from './errors';
+import { canAccessClassification } from './document-classification';
 
 // ============================================================================
 // HELPERS
@@ -179,6 +180,53 @@ export function authorize(
   const classification =
     resource?.classification ||
     (resource?.securityLevel as DataClassification | undefined);
+
+  // Canonical document classification evaluation (F15)
+  const hasClassification = Boolean(resource?.classification || resource?.securityLevel);
+  const isDocumentTarget =
+    resource &&
+    hasClassification &&
+    (resource.type === 'document' ||
+      resource.type === 'document_incoming' ||
+      resource.type === 'document_outgoing' ||
+      action.startsWith('document.'));
+
+  if (isDocumentTarget && resource) {
+    const docCheck = canAccessClassification(context, resource as any, now);
+    if (!docCheck.allowed) {
+      const isStateSecret =
+        classification === 'STATE_SECRET' ||
+        classification === 'TUYET_MAT' ||
+        classification === 'TOI_MAT' ||
+        classification === 'MAT' ||
+        resource.securityLevel === 'MAT' ||
+        resource.securityLevel === 'TOI_MAT' ||
+        resource.securityLevel === 'TUYET_MAT';
+
+      const isPersonal =
+        classification === 'PERSONAL' || classification === 'PERSONAL_DATA';
+
+      const code: RejectionCode = isStateSecret
+        ? 'STATE_SECRET_STRICT_PROHIBITION'
+        : isPersonal
+        ? 'PERSONAL_DATA_PRIVACY_BREACH'
+        : 'CLASSIFICATION_DENIED';
+
+      return {
+        allowed: false,
+        granted: false,
+        rejectionCode: code,
+        statusCode: code,
+        reason: docCheck.reason,
+        auditRecord: {
+          ...baseAuditRecord,
+          decision: 'DENY',
+          rejectionCode: code,
+          policyMatched: 'STEP_2_CANONICAL_DOCUMENT_CLASSIFICATION',
+        },
+      };
+    }
+  }
 
   if (
     classification === 'STATE_SECRET' ||

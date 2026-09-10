@@ -64,7 +64,16 @@ export async function GET(
         fileUrl: { in: candidateUrls },
       },
       include: {
-        document: true,
+        document: {
+          include: {
+            directives: true,
+            incomingWorkflow: {
+              include: {
+                unitAssignments: true,
+              },
+            },
+          },
+        },
       },
     });
 

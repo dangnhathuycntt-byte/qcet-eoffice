@@ -15,6 +15,7 @@ import { listDocuments } from "@/lib/documents/document-service";
 import { generateAppendixIVCsv } from "@/lib/documents/excel-export";
 import { isFeatureEnabled } from "@/features/flags";
 import { ValidationError } from "@/server/api/errors";
+import { canReadDocument } from "@/server/policies/document-policy";
 import type { DocumentType } from "@/types/document";
 
 export async function GET(request: NextRequest) {
@@ -63,10 +64,13 @@ export async function GET(request: NextRequest) {
       type,
       documentYear: year,
       limit: 5000,
+      userContext: authUser,
     });
 
+    const readableDocs = documents.filter((doc) => canReadDocument(authUser, doc));
+
     // Sort ascending by registrationNumber for chronological registry book ordering
-    const sortedDocs = [...documents].sort(
+    const sortedDocs = [...readableDocs].sort(
       (a, b) => a.registrationNumber - b.registrationNumber
     );
 
@@ -139,9 +143,12 @@ export async function POST(request: NextRequest) {
       type,
       documentYear: year,
       limit: 5000,
+      userContext: authUser,
     });
 
-    const sortedDocs = [...documents].sort(
+    const readableDocs = documents.filter((doc) => canReadDocument(authUser, doc));
+
+    const sortedDocs = [...readableDocs].sort(
       (a, b) => a.registrationNumber - b.registrationNumber
     );
 

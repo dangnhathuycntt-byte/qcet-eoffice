@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
       search: searchQuery,
       limit,
       offset,
+      userContext: authUser,
     };
 
     const documents = await listDocuments(filter);

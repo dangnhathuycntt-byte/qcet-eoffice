@@ -9,6 +9,9 @@ import type {
   DocumentDirectiveItem,
 } from "@/types/document";
 import { getNextRegistrationNumber } from "./numbering-engine";
+import type { AuthenticatedUser } from "@/server/api/request-context";
+import type { AuthorizationContext } from "@/server/authorization/authorization-context";
+import { canReadDocument } from "@/server/policies/document-policy";
 
 export interface CreateDocumentPayload {
   type: DocumentType;
@@ -72,6 +75,7 @@ export interface ListDocumentsFilter {
   search?: string;
   limit?: number;
   offset?: number;
+  userContext?: AuthenticatedUser | AuthorizationContext;
 }
 
 const defaultInclude = {
@@ -335,7 +339,12 @@ export async function listDocuments(
     include: defaultInclude,
   });
 
-  return records.map(mapPrismaDocumentToItem);
+  const items = records.map(mapPrismaDocumentToItem);
+  if (filter.userContext) {
+    return items.filter((item: DocumentItem) => canReadDocument(filter.userContext!, item));
+  }
+
+  return items;
 }
 
 /**
