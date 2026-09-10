@@ -136,13 +136,23 @@ export function buildAdaptiveContextPacket(shard, options = {}) {
   let compressedBytes = 0;
 
   for (const relFile of files) {
-    const fullPath = path.join(repoRoot, relFile);
-    if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
-      continue;
+    let content = null;
+    if (options.fileContents && options.fileContents[relFile]) {
+      content = options.fileContents[relFile];
+    } else {
+      const fullPath = path.join(repoRoot, relFile);
+      if (fs.existsSync(fullPath) && !fs.statSync(fullPath).isDirectory()) {
+        try {
+          content = fs.readFileSync(fullPath, 'utf8');
+        } catch {
+          // Ignore read errors
+        }
+      }
     }
 
+    if (!content) continue;
+
     try {
-      const content = fs.readFileSync(fullPath, 'utf8');
       originalBytes += Buffer.byteLength(content, 'utf8');
 
       // Extract exports, types, interfaces, and function signatures
@@ -195,3 +205,62 @@ export function buildAdaptiveContextPacket(shard, options = {}) {
     tokenSavingsPercent,
   };
 }
+
+/**
+ * Creates a canonical, compact EvidencePacket containing only the factual evidence
+ * required by downstream agents, avoiding full uncompressed dump propagation.
+ *
+ * @param {Object} shard
+ * @param {Object} [state]
+ * @returns {Object} Canonical EvidencePacket
+ */
+export function createEvidencePacket(shard, state = {}) {
+  const reqDetails = Array.isArray(shard.requirementDetails)
+    ? shard.requirementDetails
+    : (shard.requirements || []).map((id) => ({ id, text: `Requirement ${id}` }));
+
+  const impl = state.implementation || {};
+  const verif = state.lastVerification || {};
+  const recon = state.recon || {};
+  const research = state.research || {};
+
+  return {
+    shardId: shard.id,
+    requirements: shard.requirements || [],
+    requirementDetails: reqDetails,
+    acceptanceCriteria: shard.acceptanceCriteria || [],
+    changedFiles: Array.isArray(impl.changedFiles) ? impl.changedFiles : [],
+    contractDelta: Array.isArray(impl.contractDelta)
+      ? impl.contractDelta
+      : (Array.isArray(recon.contracts) ? recon.contracts : []),
+    testEvidence: Array.isArray(impl.testsRun) ? impl.testsRun : [],
+    confirmedFindings: Array.isArray(verif.issues) ? verif.issues : [],
+    unresolvedRisks: Array.isArray(verif.risks)
+      ? verif.risks
+      : (Array.isArray(recon.risks) ? recon.risks : []),
+    relevantResearchClaims: Array.isArray(research.claims)
+      ? research.claims.map((c) => ({
+          claim: c.claim || '',
+          sourceUrl: c.sourceUrl || c.canonicalUrl || '',
+        }))
+      : [],
+    verificationVerdict: verif.verdict || 'pending',
+  };
+}
+
+/**
+ * Compresses an array of dependency execution results into compact EvidencePackets.
+ *
+ * @param {Array<Object>} dependencyResults
+ * @returns {Array<Object>} Array of compact EvidencePackets
+ */
+export function compressDependencyContext(dependencyResults = []) {
+  if (!Array.isArray(dependencyResults)) return [];
+  return dependencyResults
+    .filter(Boolean)
+    .map((res) => {
+      const shard = res.shard || { id: res.shardId || 'unknown' };
+      return createEvidencePacket(shard, res);
+    });
+}
+

@@ -225,11 +225,10 @@ export function evaluateReleaseReadiness(input = {}) {
       const status = String(finding.status || 'open').toLowerCase();
 
       if (status !== 'resolved' && status !== 'fixed' && status !== 'waived') {
-        if (severity === 'critical' || severity === 'blocker') {
-          blockingIssues.push(`Critical review finding: ${finding.summary || finding.title || 'Critical defect'} (${finding.file || 'global'})`);
+        if (severity === 'critical' || severity === 'blocker' || severity === 'high') {
+          const prefix = severity === 'high' ? 'High review finding' : 'Critical review finding';
+          blockingIssues.push(`${prefix}: ${finding.summary || finding.title || 'Defect'} (${finding.file || 'global'})`);
           reviewCheckPassed = false;
-        } else if (severity === 'high') {
-          residualRisks.push(`High review finding: ${finding.summary || finding.title} (${finding.file || 'global'})`);
         } else {
           residualRisks.push(`Minor/Medium review finding: ${finding.summary || finding.title} (${finding.file || 'global'})`);
         }

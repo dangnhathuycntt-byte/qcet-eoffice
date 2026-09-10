@@ -37,6 +37,59 @@ const READ_ONLY_AGENTS = new Set([
   'auditor'
 ]);
 
+/**
+ * Checks whether a Bash command contains mutating file or git operations.
+ * Allows read-only verification commands (git diff, git status, npm test, npx tsc, etc.)
+ * but blocks modifications from read-only agents.
+ *
+ * @param {string} command
+ * @returns {boolean} True if command is mutating
+ */
+function isMutatingBashCommand(command) {
+  if (!command || typeof command !== 'string') return false;
+  const cmd = command.trim();
+
+  // 1. File deletion / movement / attribute changes
+  if (/(?:^|[;&|]|\s)(rm|rmdir|mv|cp|touch|truncate|chmod|chown)\b/i.test(cmd)) {
+    return true;
+  }
+
+  // 2. In-place stream editing
+  if (/(?:^|[;&|]|\s)sed\s+.*-(?:[a-zA-Z]*i)/i.test(cmd)) {
+    return true;
+  }
+
+  // 3. Git mutation operations
+  if (
+    /(?:^|[;&|]|\s)git\s+(commit|push|checkout|reset|clean|revert|merge|rebase|apply|stash|branch\s+-(?:[dDmM]|delete))\b/i.test(
+      cmd
+    )
+  ) {
+    return true;
+  }
+
+  // 4. Package management mutations
+  if (/(?:^|[;&|]|\s)(npm|pnpm|yarn)\s+(install|i|add|remove|uninstall|update|prune)\b/i.test(cmd)) {
+    return true;
+  }
+
+  // 5. Output redirection to a file (allowing redirect to /dev/null or stderr 2>&1)
+  const tokens = cmd.split(/\s+/);
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t === '>' || t === '>>' || t === '1>' || t === '1>>') {
+      const target = tokens[i + 1] || '';
+      if (target !== '/dev/null' && target !== '&2') {
+        return true;
+      }
+    } else if (/(?:^|[^2&])>>?(?!\/dev\/null|&1|&2)\S+/.test(t)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // -----------------------------------------------------------------------------
 // DETERMINISTIC PATH & GLOB UTILITIES
 // -----------------------------------------------------------------------------
@@ -282,12 +335,30 @@ function main() {
   }
 
   const toolName = data.tool_name || data.toolName || '';
+  const toolInput = data.tool_input || data.toolInput || {};
+  const agentId = data.agent_id || data.agentId || process.env.QCET_AGENT_ID || '';
+  const agentType = data.agent_type || data.agentType || process.env.QCET_AGENT_TYPE || '';
+  const agentRole = data.agent_role || data.agentRole || process.env.QCET_AGENT_ROLE || '';
+  const subagentLabel = data.subagent_label || data.subagentLabel || data.label || '';
+
+  // Intercept Bash tool for read-only agents
+  if (toolName === 'Bash') {
+    if (isReadOnlyAgent(agentType, agentId, agentRole, subagentLabel)) {
+      const command = toolInput.command || '';
+      if (isMutatingBashCommand(command)) {
+        block(
+          `Read-only agent '${agentType || agentId || subagentLabel}' is prohibited from executing mutating Bash command: '${command}'. Only non-mutating inspection/verification commands are permitted.`
+        );
+      }
+    }
+    process.exit(EXIT_ALLOW);
+  }
+
   // PreToolUse ownership guard specifically enforces Write and Edit invocations
   if (toolName !== 'Write' && toolName !== 'Edit') {
     process.exit(EXIT_ALLOW);
   }
 
-  const toolInput = data.tool_input || data.toolInput || {};
   const rawPath =
     toolInput.file_path ||
     toolInput.filePath ||
@@ -298,11 +369,6 @@ function main() {
   if (!rawPath) {
     process.exit(EXIT_ALLOW);
   }
-
-  const agentId = data.agent_id || data.agentId || process.env.QCET_AGENT_ID || '';
-  const agentType = data.agent_type || data.agentType || process.env.QCET_AGENT_TYPE || '';
-  const agentRole = data.agent_role || data.agentRole || process.env.QCET_AGENT_ROLE || '';
-  const subagentLabel = data.subagent_label || data.subagentLabel || data.label || '';
 
   // 1. Prohibit read-only agents from writing or editing
   if (isReadOnlyAgent(agentType, agentId, agentRole, subagentLabel)) {

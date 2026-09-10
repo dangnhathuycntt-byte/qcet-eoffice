@@ -284,6 +284,111 @@ export const ACTIVE_SHARDS_SCHEMA = {
   },
 };
 
+/**
+ * Selects targeted integration review dimensions based on actual blast radius,
+ * modified files, and risk levels of the plan and execution results.
+ *
+ * @param {Object} manifest
+ * @param {Array<Object>} [allShardResults=[]]
+ * @returns {Array<{id: string, charter: string}>}
+ */
+export function selectIntegrationReviewDimensions(manifest, allShardResults = []) {
+  const allFiles = new Set();
+  if (Array.isArray(allShardResults)) {
+    for (const r of allShardResults) {
+      const files = r?.implementation?.changedFiles || r?.shard?.owns || [];
+      for (const f of files) allFiles.add(String(f).toLowerCase());
+    }
+  }
+  if (Array.isArray(manifest?.shards)) {
+    for (const s of manifest.shards) {
+      for (const f of s.owns || []) allFiles.add(String(f).toLowerCase());
+    }
+  }
+
+  const fileList = Array.from(allFiles);
+  const shards = Array.isArray(manifest?.shards) ? manifest.shards : [];
+  const maxRisk = shards.reduce((acc, s) => {
+    const r = String(s.risk || 'medium').toLowerCase();
+    if (r === 'critical') return 'critical';
+    if (r === 'high' && acc !== 'critical') return 'high';
+    return acc;
+  }, 'low');
+
+  const isUiOnly =
+    fileList.length > 0 &&
+    fileList.every(
+      (f) =>
+        (f.includes('component') ||
+          f.includes('src/app/') ||
+          f.includes('ui') ||
+          f.endsWith('.tsx') ||
+          f.endsWith('.css')) &&
+        !f.includes('/api/') &&
+        !f.includes('prisma') &&
+        !f.includes('/auth/')
+    );
+
+  const hasAuthOrApi = fileList.some((f) => f.includes('/auth/') || f.includes('/api/') || f.includes('/server/'));
+  const hasPrismaOrMigration = fileList.some(
+    (f) => f.includes('prisma') || f.includes('migration') || f.includes('/db/')
+  );
+
+  const ALL_DIMENSIONS = {
+    contracts: {
+      id: 'contracts',
+      charter:
+        'Cross-module API/type/schema/contracts consistency, stale adapters, import drift, caller/consumer mismatch.',
+    },
+    authorization: {
+      id: 'authorization',
+      charter:
+        'Authorization, permission boundaries, server-side enforcement, trust boundaries, data exposure.',
+    },
+    semantics: {
+      id: 'semantics',
+      charter:
+        'Duplicated business semantics, competing sources of truth, duplicated UI meaning, inconsistent status/count logic.',
+    },
+    regression: {
+      id: 'regression',
+      charter:
+        'Regression risk, missing tests, integration behavior, accessibility/performance regressions where relevant.',
+    },
+    'data-integrity': {
+      id: 'data-integrity',
+      charter:
+        'Database schema consistency, transaction atomicity, migration safety, foreign key and constraint integrity.',
+    },
+    'ux-accessibility': {
+      id: 'ux-accessibility',
+      charter:
+        'UI ergonomics, light-only design compliance, accessibility, touch target sizing, empty/loading states.',
+    },
+  };
+
+  if (isUiOnly && maxRisk !== 'critical') {
+    return [ALL_DIMENSIONS.semantics, ALL_DIMENSIONS.regression, ALL_DIMENSIONS['ux-accessibility']];
+  }
+
+  if (hasPrismaOrMigration && !hasAuthOrApi && maxRisk !== 'critical') {
+    return [ALL_DIMENSIONS.contracts, ALL_DIMENSIONS['data-integrity'], ALL_DIMENSIONS.regression];
+  }
+
+  if (hasAuthOrApi && !hasPrismaOrMigration && maxRisk !== 'critical') {
+    return [ALL_DIMENSIONS.contracts, ALL_DIMENSIONS.authorization, ALL_DIMENSIONS.regression];
+  }
+
+  // Cross-cutting, high-risk, or comprehensive blast radius: full review panel
+  return [
+    ALL_DIMENSIONS.contracts,
+    ALL_DIMENSIONS.authorization,
+    ALL_DIMENSIONS.semantics,
+    ALL_DIMENSIONS.regression,
+    ...(hasPrismaOrMigration ? [ALL_DIMENSIONS['data-integrity']] : []),
+  ];
+}
+
 // -----------------------------------------------------------------------------
 // PURE CONTRACT DECISION FUNCTIONS
 // -----------------------------------------------------------------------------
@@ -440,13 +545,30 @@ export function computeShardPriorities(manifest) {
   }
 
   for (const s of shards) {
-    if (Array.isArray(s.dependencies)) {
-      for (const depId of s.dependencies) {
-        if (dependentsMap.has(depId)) {
-          dependentsMap.get(depId).add(s.id);
-        }
+    const deps = Array.isArray(s.dependencies) ? s.dependencies : (Array.isArray(s.dependsOn) ? s.dependsOn : []);
+    for (const depId of deps) {
+      if (dependentsMap.has(depId)) {
+        dependentsMap.get(depId).add(s.id);
       }
     }
+  }
+
+  // Memoized critical path length calculator
+  const memoPath = new Map();
+  function getCriticalPathLength(shardId) {
+    if (memoPath.has(shardId)) return memoPath.get(shardId);
+    const children = dependentsMap.get(shardId);
+    if (!children || children.size === 0) {
+      memoPath.set(shardId, 1);
+      return 1;
+    }
+    let maxChild = 0;
+    for (const childId of children) {
+      maxChild = Math.max(maxChild, getCriticalPathLength(childId));
+    }
+    const len = 1 + maxChild;
+    memoPath.set(shardId, len);
+    return len;
   }
 
   for (const s of shards) {
@@ -468,6 +590,8 @@ export function computeShardPriorities(manifest) {
       }
     }
     const transitiveDownstream = visited.size;
+    const downstreamUnblockValue = (dependentsMap.get(s.id) || new Set()).size;
+    const criticalPathLength = getCriticalPathLength(s.id);
 
     const risk = String(s.risk || 'medium').toLowerCase();
     let riskWeight = 2;
@@ -480,11 +604,18 @@ export function computeShardPriorities(manifest) {
     const acCount = Array.isArray(s.acceptanceCriteria) ? s.acceptanceCriteria.length : 0;
     const workCount = reqCount + ownsCount + acCount;
 
-    const priority = (transitiveDownstream * 10) + (riskWeight * 3) + workCount;
+    const priority =
+      criticalPathLength * 20 +
+      transitiveDownstream * 10 +
+      downstreamUnblockValue * 5 +
+      riskWeight * 3 +
+      workCount;
 
     priorityMap.set(s.id, {
       priority,
+      criticalPathLength,
       transitiveDownstream,
+      downstreamUnblockValue,
       riskWeight,
       workCount,
     });
@@ -493,7 +624,13 @@ export function computeShardPriorities(manifest) {
   return priorityMap;
 }
 
-export function shouldIsolateShard(shard, manifest) {
+export function shouldIsolateShard(shard, manifest, isolationConfig = 'auto') {
+  if (isolationConfig === 'always' || isolationConfig === true) {
+    return true;
+  }
+  if (isolationConfig === 'never' || isolationConfig === false) {
+    return false;
+  }
   if (!shard) return false;
   if (shard.isolation === 'none' || shard.isolated === false) {
     return false;
@@ -660,6 +797,304 @@ export function buildShardPacket(shard, manifest) {
   };
 }
 
+export function evaluateDeterministicReleaseGate({
+  manifest,
+  allShardResults = [],
+  integrationSynthesis = { findings: [] },
+  integrationRepair = null,
+  validation = null,
+  finalVerdict = null,
+}) {
+  const deterministicBlockers = [];
+
+  // 1. Shard execution checks
+  if (!Array.isArray(allShardResults) || allShardResults.length === 0) {
+    deterministicBlockers.push('No shard execution results available.');
+  } else {
+    for (const res of allShardResults) {
+      if (!res) {
+        deterministicBlockers.push('One or more shards produced null execution results.');
+        continue;
+      }
+      const shardId = res.shard?.id || 'unknown-shard';
+      const verdict = res.lastVerification?.verdict;
+      if (verdict === 'blocked' || verdict === 'BLOCKED' || verdict === 'fail' || verdict === 'FAIL') {
+        deterministicBlockers.push(`Shard '${shardId}' verification failed (${verdict}).`);
+      }
+      if (res.repaired && res.repairResult && res.repairResult.success === false) {
+        deterministicBlockers.push(`Shard '${shardId}' repair failed to resolve defects.`);
+      }
+    }
+  }
+
+  // 2. Integration review defects
+  const synthFindings = Array.isArray(integrationSynthesis?.findings) ? integrationSynthesis.findings : [];
+  const criticalIntegrationDefects = synthFindings.filter((d) => {
+    const s = String(d?.severity || '').toUpperCase();
+    return s === 'CRITICAL' || s === 'HIGH';
+  });
+  if (criticalIntegrationDefects.length > 0) {
+    const isRepairVerified =
+      Boolean(integrationRepair) &&
+      integrationRepair.status === 'completed' &&
+      integrationRepair.verified === true &&
+      (!Array.isArray(integrationRepair.remainingDefects) ||
+        integrationRepair.remainingDefects.filter((def) => {
+          const s = String(def?.severity || (typeof def === 'string' ? def : '')).toUpperCase();
+          return s === 'CRITICAL' || s === 'HIGH' || typeof def === 'string';
+        }).length === 0);
+
+    if (!isRepairVerified) {
+      deterministicBlockers.push(
+        `${criticalIntegrationDefects.length} critical/high integration defect(s) remain unresolved or unverified after repair.`
+      );
+    }
+  }
+
+  // 3. Global validation checks (typecheck, tests, build)
+  if (!validation) {
+    deterministicBlockers.push('Global validation evidence is missing.');
+  } else {
+    if (validation.status === 'fail' || validation.status === 'failed' || validation.overallStatus === 'failed') {
+      deterministicBlockers.push('Global validation status is failed.');
+    }
+    if (Array.isArray(validation.blockers) && validation.blockers.length > 0) {
+      for (const b of validation.blockers) {
+        deterministicBlockers.push(`Global validation blocker: ${typeof b === 'string' ? b : JSON.stringify(b)}`);
+      }
+    }
+    if (Array.isArray(validation.checks)) {
+      for (const check of validation.checks) {
+        if (check.status === 'failed' && !check.preExisting) {
+          deterministicBlockers.push(`Validation check '${check.name || check.command}' failed.`);
+        }
+      }
+    }
+  }
+
+  // 4. Requirement coverage check
+  if (manifest?.requirements?.length > 0) {
+    const totalReqs = manifest.requirements.length;
+    const coveredReqs = new Set();
+    for (const res of allShardResults) {
+      const v = res?.lastVerification?.verdict || res?.lastVerification?.status;
+      if (res && (v === 'pass' || v === 'passed')) {
+        for (const req of (res.shard?.requirements || res.requirementsCovered || [])) {
+          coveredReqs.add(req);
+        }
+      }
+    }
+    const missingReqs = manifest.requirements.filter((r) => !coveredReqs.has(r.id));
+    if (missingReqs.length > 0) {
+      deterministicBlockers.push(
+        `${missingReqs.length}/${totalReqs} requirements missing successful shard implementation: ${missingReqs.map((r) => r.id).join(', ')}`
+      );
+    }
+  }
+
+  // Deterministic decision:
+  if (deterministicBlockers.length > 0) {
+    return {
+      status: 'BLOCKED',
+      ready: false,
+      deterministicOverride: true,
+      blockers: deterministicBlockers,
+      rationale: `Deterministic code evaluation blocked release: ${deterministicBlockers.length} failure(s) detected.`,
+      agentVerdict: finalVerdict?.status || finalVerdict?.verdict || 'UNKNOWN',
+    };
+  }
+
+  // If code passes, check agent verdict
+  const agentStatus = finalVerdict?.status || finalVerdict?.verdict || 'READY';
+  if (agentStatus === 'BLOCKED') {
+    return {
+      status: 'BLOCKED',
+      ready: false,
+      deterministicOverride: false,
+      blockers: Array.isArray(finalVerdict?.blockers) && finalVerdict.blockers.length > 0
+        ? finalVerdict.blockers
+        : [finalVerdict?.rationale || 'Agent skeptic refuted readiness.'],
+      rationale: finalVerdict?.rationale || 'Agent skeptic refuted readiness.',
+      agentVerdict: agentStatus,
+    };
+  }
+
+  if (agentStatus === 'READY_WITH_KNOWN_ISSUES' || agentStatus === 'READY WITH KNOWN ISSUES') {
+    return {
+      status: 'READY_WITH_KNOWN_ISSUES',
+      ready: true,
+      deterministicOverride: false,
+      blockers: [],
+      rationale: finalVerdict?.rationale || 'Ready with documented non-blocking residual issues.',
+      agentVerdict: agentStatus,
+    };
+  }
+
+  return {
+    status: 'READY',
+    ready: true,
+    deterministicOverride: false,
+    blockers: [],
+    rationale: finalVerdict?.rationale || 'All deterministic checks passed and independent release skeptic confirmed readiness.',
+    agentVerdict: agentStatus,
+  };
+}
+
+export function buildRunTelemetry({
+  manifest,
+  allShardResults = [],
+  integrationSynthesis = { findings: [] },
+  integrationRepair = null,
+  validation = null,
+  finalVerdict = null,
+  wallClockMs = 0,
+  calibrationDurationMs = 0,
+  agentsCount = 0,
+  totalAgents = 0,
+  peakConcurrent = 1,
+  tokensTotal = null,
+  planPath = '',
+  timestamp = '2026-09-10T00:00:00.000Z',
+  runId = '',
+}) {
+  const requirementsTotal = Array.isArray(manifest?.requirements)
+    ? manifest.requirements.length
+    : 0;
+
+  const coveredReqSet = new Set();
+  let ownershipViolations = 0;
+  let verificationFindings = 0;
+  let repairRounds = 0;
+  let blockedShards = 0;
+
+  const shardsSummary = [];
+
+  for (const res of allShardResults) {
+    const shard = res?.shard || {};
+    const shardReqs = Array.isArray(shard.requirements) ? shard.requirements : [];
+    const isPass = res?.lastVerification?.verdict === 'pass';
+    const isBlocked = res?.lastVerification?.verdict === 'blocked' || res?.lastVerification?.verdict === 'fail';
+
+    if (isPass) {
+      for (const r of shardReqs) coveredReqSet.add(r);
+    }
+    if (isBlocked && !isPass) {
+      blockedShards++;
+    }
+
+    const initialIssues = Array.isArray(res?.initialVerification?.issues)
+      ? res.initialVerification.issues
+      : (Array.isArray(res?.lastVerification?.issues) ? res.lastVerification.issues : []);
+    const lastIssues = Array.isArray(res?.lastVerification?.issues) ? res.lastVerification.issues : [];
+
+    const shardDefectCount = Math.max(initialIssues.length, lastIssues.length);
+    verificationFindings += shardDefectCount;
+
+    const seenViolationKeys = new Set();
+    for (const iss of [...initialIssues, ...lastIssues]) {
+      if (iss?.category === 'ownership-violation') {
+        const key = `${iss.file || ''}-${iss.id || ''}`;
+        if (!seenViolationKeys.has(key)) {
+          seenViolationKeys.add(key);
+          ownershipViolations++;
+        }
+      }
+    }
+
+    const shardRepairs = typeof res?.repairRound === 'number' ? res.repairRound : 0;
+    repairRounds += shardRepairs;
+
+    shardsSummary.push({
+      id: shard.id || 'unknown',
+      requirements: shardReqs.length,
+      risk: shard.risk || 'medium',
+      repairRounds: shardRepairs,
+      verdict: res?.lastVerification?.verdict || 'unknown',
+    });
+  }
+
+  const synthFindings = Array.isArray(integrationSynthesis?.findings)
+    ? integrationSynthesis.findings
+    : [];
+  const findingsConfirmed = verificationFindings + synthFindings.length;
+  if (integrationRepair) {
+    repairRounds += 1;
+  }
+
+  const requirementsCovered = coveredReqSet.size;
+  const hasFailStatus = validation?.status === 'fail' || validation?.status === 'failed' || validation?.verdict === 'fail' || validation?.verdict === 'failed' || validation?.overallStatus === 'failed';
+  const hasExplicitPassStatus = validation?.status === 'pass' || validation?.status === 'passed' || validation?.verdict === 'pass' || validation?.verdict === 'passed' || validation?.overallStatus === 'passed';
+  const hasBlockers = Array.isArray(validation?.blockers) && validation.blockers.length > 0;
+  const hasFailedChecks = Array.isArray(validation?.checks) && validation.checks.some((c) => c.status === 'failed' && !c.preExisting);
+
+  const globalPass = hasExplicitPassStatus && !hasFailStatus && !hasBlockers && !hasFailedChecks;
+  const globalValidation = globalPass ? 'pass' : 'fail';
+  const buildCheck = Array.isArray(validation?.checks)
+    ? validation.checks.find((c) => c.name?.toLowerCase()?.includes('build') || c.command?.toLowerCase()?.includes('build'))
+    : null;
+  let rawBuildStatus = buildCheck ? buildCheck.status : (validation?.buildStatus || (globalPass ? 'passed' : 'failed'));
+  if (rawBuildStatus === 'not-applicable') {
+    rawBuildStatus = 'skipped';
+  }
+  const buildStatus = rawBuildStatus;
+  let finalStatus = finalVerdict?.status || finalVerdict?.verdict || (globalPass && blockedShards === 0 ? 'READY' : 'BLOCKED');
+  if (finalStatus === 'READY WITH KNOWN ISSUES') {
+    finalStatus = 'READY_WITH_KNOWN_ISSUES';
+  }
+
+  const resolvedAgentsCount = Math.max(1, totalAgents || agentsCount || 1);
+  const tokens = typeof tokensTotal === 'number' && tokensTotal > 0 ? tokensTotal : null;
+
+  const wallClock = typeof wallClockMs === 'number' && wallClockMs > 0 ? Math.round(wallClockMs) : null;
+  const calibrationDuration = typeof calibrationDurationMs === 'number' && calibrationDurationMs > 0 ? Math.round(calibrationDurationMs) : null;
+  const timeToFirstBuilder = null;
+  const criticalPathDuration = null;
+  const avgDependencyWait = null;
+
+  const requirementCoveragePct = requirementsTotal > 0
+    ? Number(((requirementsCovered / requirementsTotal) * 100).toFixed(1))
+    : 100.0;
+
+  const resolvedRunId = runId || `run-eval-v1.4-${manifest?.shards?.[0]?.id?.split('-')?.[0] || 'core'}-exec`;
+
+  const unresolvedShardFindings = allShardResults.reduce((acc, res) => {
+    return acc + (Array.isArray(res?.lastVerification?.issues) ? res.lastVerification.issues.length : 0);
+  }, 0);
+  const unresolvedIntegration = (integrationRepair && integrationRepair.status === 'completed')
+    ? 0
+    : synthFindings.length;
+  const unresolvedFindings = unresolvedShardFindings + unresolvedIntegration + (finalStatus === 'BLOCKED' ? 1 : 0);
+
+  return {
+    runId: resolvedRunId,
+    timestamp,
+    planPath,
+    version: '1.4.0',
+    metrics: {
+      wallClockMs: wallClock,
+      calibrationDurationMs: calibrationDuration,
+      timeToFirstBuilderMs: timeToFirstBuilder,
+      criticalPathDurationMs: criticalPathDuration,
+      avgDependencyWaitMs: avgDependencyWait,
+      tokensTotal: tokens,
+      agentsCount: resolvedAgentsCount,
+      peakConcurrentAgents: peakConcurrent,
+      shardsTotal: shardsSummary.length,
+      requirementsTotal,
+      requirementsCovered,
+      requirementCoveragePct,
+      findingsConfirmed,
+      unresolvedFindings,
+      ownershipViolations,
+      repairRounds,
+      globalValidation,
+      buildStatus,
+      finalStatus,
+    },
+    shards: shardsSummary,
+  };
+}
+
 export {
   scanInvariants,
   evaluateReleaseReadiness,
@@ -704,6 +1139,7 @@ export {
   detectCycles,
   topologicalSort,
   DagScheduler,
+  computeEligibleReconShards,
 } from './dag-scheduler.mjs';
 
 

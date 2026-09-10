@@ -28,10 +28,48 @@ function runHook(hookPath: string, stdinJson: Record<string, any>, env: Record<s
   };
 }
 
-test('pre-tool-use-ownership-guard: non-Write/Edit tools are immediately allowed (exit 0)', () => {
+test('pre-tool-use-ownership-guard: non-Write/Edit tools are immediately allowed for normal agents (exit 0)', () => {
   const res = runHook(ownershipGuard, {
     tool_name: 'Read',
     tool_input: { file_path: 'src/secret.ts' },
+  });
+  assert.equal(res.status, 0);
+});
+
+test('pre-tool-use-ownership-guard: read-only agent can run read-only Bash commands (exit 0 allowed)', () => {
+  const res = runHook(ownershipGuard, {
+    tool_name: 'Bash',
+    agent_type: 'qcet-recon',
+    tool_input: { command: 'npm test -- tests/auth.test.ts' },
+  });
+  assert.equal(res.status, 0);
+});
+
+test('pre-tool-use-ownership-guard: read-only agent cannot run mutating Bash commands (exit 2 blocked)', () => {
+  const res = runHook(ownershipGuard, {
+    tool_name: 'Bash',
+    agent_type: 'qcet-recon',
+    tool_input: { command: 'rm -rf src/critical.ts' },
+  });
+  assert.equal(res.status, 2);
+  assert.ok(res.stderr.includes('prohibited from executing mutating Bash command'));
+});
+
+test('pre-tool-use-ownership-guard: skeptic agent blocked from git checkout via Bash (exit 2 blocked)', () => {
+  const res = runHook(ownershipGuard, {
+    tool_name: 'Bash',
+    agent_type: 'qcet-skeptic',
+    tool_input: { command: 'git checkout HEAD -- src/app.ts' },
+  });
+  assert.equal(res.status, 2);
+  assert.ok(res.stderr.includes('prohibited from executing mutating Bash command'));
+});
+
+test('pre-tool-use-ownership-guard: builder agent can run git checkout via Bash (exit 0 allowed)', () => {
+  const res = runHook(ownershipGuard, {
+    tool_name: 'Bash',
+    agent_type: 'qcet-builder',
+    tool_input: { command: 'git checkout HEAD -- src/app.ts' },
   });
   assert.equal(res.status, 0);
 });

@@ -6,7 +6,10 @@ import {
   ResearchCache,
   resolveAdaptivePolicy,
   buildAdaptiveContextPacket,
+  createEvidencePacket,
+  compressDependencyContext,
 } from '../../scripts/lib/adaptive-context.mjs';
+import { selectIntegrationReviewDimensions } from '../../scripts/lib/executor-contracts.mjs';
 
 test('adaptive-context: ResearchCache stores, retrieves, and isolates namespaces', () => {
   const cacheA = new ResearchCache('run-A');
@@ -88,4 +91,87 @@ export function calculateAccess(ctx: UserContext): boolean {
 
   // Cleanup
   fs.rmSync(tmpFile, { force: true });
+});
+
+test('adaptive-context: createEvidencePacket formats compact canonical evidence', () => {
+  const shard = {
+    id: 'shard-user-auth',
+    requirements: ['REQ-01', 'REQ-02'],
+    acceptanceCriteria: ['Valid JWT passes', 'Invalid token returns 401'],
+  };
+
+  const state = {
+    implementation: {
+      changedFiles: ['src/server/auth.ts'],
+      contractDelta: [{ symbol: 'validateToken', change: 'added' }],
+      testsRun: ['tests/auth.test.ts'],
+    },
+    lastVerification: {
+      verdict: 'PASSED',
+      issues: [],
+      risks: ['Token replay risk mitigated by nonce'],
+    },
+    research: {
+      claims: [{ claim: 'JWT expires in 15m', sourceUrl: 'https://jwt.io' }],
+    },
+  };
+
+  const packet = createEvidencePacket(shard, state);
+  assert.equal(packet.shardId, 'shard-user-auth');
+  assert.deepEqual(packet.requirements, ['REQ-01', 'REQ-02']);
+  assert.deepEqual(packet.changedFiles, ['src/server/auth.ts']);
+  assert.equal(packet.verificationVerdict, 'PASSED');
+  assert.equal(packet.relevantResearchClaims.length, 1);
+  assert.equal(packet.relevantResearchClaims[0].sourceUrl, 'https://jwt.io');
+
+  // Verify compression across dependencies
+  const compressedDeps = compressDependencyContext([state]);
+  assert.equal(compressedDeps.length, 1);
+  assert.equal(compressedDeps[0].verificationVerdict, 'PASSED');
+});
+
+test('adaptive-context: selectIntegrationReviewDimensions adapts review lenses to blast radius', () => {
+  // UI-only case
+  const uiManifest = {
+    shards: [
+      { id: 'shard-ui', owns: ['src/components/button.tsx', 'src/components/card.tsx'], risk: 'low' },
+    ],
+  };
+  const uiDims = selectIntegrationReviewDimensions(uiManifest).map((d) => d.id);
+  assert.ok(uiDims.includes('semantics'));
+  assert.ok(uiDims.includes('regression'));
+  assert.equal(uiDims.includes('authorization'), false, 'UI-only should not run auth review');
+  assert.equal(uiDims.includes('migration-safety'), false, 'UI-only should not run migration review');
+
+  // Auth/API case
+  const authManifest = {
+    shards: [
+      { id: 'shard-api', owns: ['src/app/api/auth/route.ts', 'src/server/auth/session.ts'], risk: 'high' },
+    ],
+  };
+  const authDims = selectIntegrationReviewDimensions(authManifest).map((d) => d.id);
+  assert.ok(authDims.includes('contracts'));
+  assert.ok(authDims.includes('authorization'));
+  assert.ok(authDims.includes('regression'));
+
+  // Prisma migration case
+  const prismaManifest = {
+    shards: [
+      { id: 'shard-db', owns: ['prisma/schema.prisma', 'prisma/migrations/01_init/migration.sql'], risk: 'medium' },
+    ],
+  };
+  const prismaDims = selectIntegrationReviewDimensions(prismaManifest).map((d) => d.id);
+  assert.ok(prismaDims.includes('contracts'));
+  assert.ok(prismaDims.includes('data-integrity'));
+  assert.ok(prismaDims.includes('regression'));
+  assert.equal(prismaDims.includes('authorization'), false);
+
+  // Critical cross-cutting case
+  const criticalManifest = {
+    shards: [
+      { id: 'shard-core', owns: ['src/lib/core.ts', 'prisma/schema.prisma'], risk: 'critical' },
+    ],
+  };
+  const criticalDims = selectIntegrationReviewDimensions(criticalManifest).map((d) => d.id);
+  assert.equal(criticalDims.length, 5, 'Critical risk requires all 5 core integration review dimensions');
 });

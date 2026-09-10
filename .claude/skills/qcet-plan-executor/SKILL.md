@@ -19,11 +19,21 @@ Or call the workflow via the Workflow tool:
   "name": "qcet-plan-executor",
   "args": {
     "planPath": "/path/to/plan.md",
-    "budget": "high",
-    "worktreeIsolation": true
+    "worktreeIsolation": "auto",
+    "maxRepairRounds": 2,
+    "concurrency": 6,
+    "lookaheadDepth": 1
   }
 }
 ```
+
+### Supported Arguments
+
+- `planPath` (string, required): Absolute or repo-relative path to the plan markdown file.
+- `worktreeIsolation` (`"auto"` | `"always"` | `"never"` | boolean, optional): Controls git worktree isolation. Defaults to `"auto"` (isolates only shards with potential cross-shard file overlap).
+- `maxRepairRounds` (number, optional): Maximum defect repair rounds per shard (0, 1, or 2). Defaults to `2`.
+- `concurrency` (number, optional): Maximum concurrent subagents. Defaults to `6`.
+- `lookaheadDepth` (number, optional): Bounded pre-recon lookahead depth in the dependency DAG. Defaults to `1`.
 
 ## Workflow Phases
 

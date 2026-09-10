@@ -2,8 +2,83 @@
  * QCET Plan Executor - Dynamic Dependency DAG & Resource Pool Scheduler (T09)
  */
 
-import os from 'node:os';
 import { computeShardPriorities } from './executor-contracts.mjs';
+export { computeShardPriorities };
+
+/**
+ * Computes which shards are eligible for pre-reconnaissance based on bounded lookahead.
+ * Prevents unbounded speculative fan-out on deep-future shards.
+ *
+ * @param {Object} manifest
+ * @param {Set<string>|Array<string>} activeShardIds
+ * @param {Set<string>|Array<string>} completedShardIds
+ * @param {number} [lookaheadDepth=1]
+ * @returns {Set<string>} Set of eligible shard IDs
+ */
+export function computeEligibleReconShards(
+  manifest,
+  activeShardIds = new Set(),
+  completedShardIds = new Set(),
+  lookaheadDepth = 1
+) {
+  const shards = Array.isArray(manifest?.shards) ? manifest.shards : [];
+  const activeSet = activeShardIds instanceof Set ? activeShardIds : new Set(activeShardIds);
+  const completedSet = completedShardIds instanceof Set ? completedShardIds : new Set(completedShardIds);
+
+  const eligible = new Set();
+  const dependentsMap = new Map();
+  const dependenciesMap = new Map();
+
+  for (const s of shards) {
+    dependentsMap.set(s.id, []);
+    const deps = Array.isArray(s.dependencies)
+      ? s.dependencies
+      : Array.isArray(s.dependsOn)
+      ? s.dependsOn
+      : [];
+    dependenciesMap.set(s.id, deps);
+  }
+
+  for (const [id, deps] of dependenciesMap.entries()) {
+    for (const d of deps) {
+      if (dependentsMap.has(d)) {
+        dependentsMap.get(d).push(id);
+      }
+    }
+  }
+
+  // Level 0: Ready shards (all dependencies completed or none)
+  const readyShards = [];
+  for (const s of shards) {
+    if (completedSet.has(s.id)) continue;
+    const deps = dependenciesMap.get(s.id) || [];
+    const allMet = deps.every((d) => completedSet.has(d));
+    if (allMet) {
+      eligible.add(s.id);
+      readyShards.push(s.id);
+    }
+  }
+
+  // Bounded lookahead: Traverse up to lookaheadDepth levels downstream from ready or currently active shards
+  let currentFrontier = [...readyShards, ...Array.from(activeSet)];
+  let currentDepth = 0;
+
+  while (currentDepth < lookaheadDepth && currentFrontier.length > 0) {
+    const nextFrontier = [];
+    for (const parentId of currentFrontier) {
+      for (const childId of dependentsMap.get(parentId) || []) {
+        if (!eligible.has(childId) && !completedSet.has(childId)) {
+          eligible.add(childId);
+          nextFrontier.push(childId);
+        }
+      }
+    }
+    currentFrontier = nextFrontier;
+    currentDepth++;
+  }
+
+  return eligible;
+}
 
 /**
  * Detects cycles in shard dependencies.
@@ -103,12 +178,21 @@ export function topologicalSort(shards) {
 
 /**
  * Dynamic DAG Scheduler with concurrency throttling and priority queue.
+ * Operates on resource pools (builders, verifiers, recon, researchers) and optimizes makespan.
  */
 export class DagScheduler {
   constructor(manifest, options = {}) {
     this.manifest = manifest;
     this.shards = Array.isArray(manifest.shards) ? manifest.shards : [];
-    this.concurrency = options.concurrency || Math.min(16, Math.max(2, (os.cpus()?.length || 4) - 2));
+    // Concurrency is an explicit LLM agent concurrency limit, never derived from CPU cores
+    this.concurrency = typeof options.concurrency === 'number' ? options.concurrency : 6;
+    this.poolCaps = {
+      builders: options.poolCaps?.builders ?? 4,
+      verifiers: options.poolCaps?.verifiers ?? 4,
+      recon: options.poolCaps?.recon ?? 2,
+      researchers: options.poolCaps?.researchers ?? 1,
+    };
+    this.lookaheadDepth = typeof options.lookaheadDepth === 'number' ? options.lookaheadDepth : 1;
     this.runShard = options.runShard || (async (s) => ({ status: 'completed', shardId: s.id }));
     this.priorities = computeShardPriorities(manifest);
   }
@@ -146,20 +230,25 @@ export class DagScheduler {
     this._sortQueueByPriority(readyQueue);
 
     let activeCount = 0;
+    let peakConcurrent = 0;
     const completedResults = new Map();
     const timeline = [];
     const executionErrors = [];
+    const executionStartTime = Date.now();
 
     return new Promise((resolve, reject) => {
       const checkAndPump = () => {
         // If all shards finished
         if (completedResults.size === this.shards.length) {
+          const makespanMs = Date.now() - executionStartTime;
           return resolve({
             status: executionErrors.length === 0 ? 'completed' : 'failed',
             completedCount: completedResults.size,
             results: Object.fromEntries(completedResults),
             timeline,
             errors: executionErrors,
+            makespanMs,
+            peakConcurrent,
           });
         }
 
@@ -172,6 +261,9 @@ export class DagScheduler {
         while (activeCount < this.concurrency && readyQueue.length > 0) {
           const shard = readyQueue.shift();
           activeCount++;
+          if (activeCount > peakConcurrent) {
+            peakConcurrent = activeCount;
+          }
           const startTime = Date.now();
 
           Promise.resolve(this.runShard(shard))
@@ -186,12 +278,15 @@ export class DagScheduler {
               });
               completedResults.set(shard.id, res);
 
-              // Unblock dependents
-              for (const depId of dependentsMap.get(shard.id) || []) {
-                const currentDeg = inDegree.get(depId) - 1;
-                inDegree.set(depId, currentDeg);
-                if (currentDeg === 0) {
-                  readyQueue.push(shardMap.get(depId));
+              // Shard unblocks dependents ONLY if it succeeded/passed verification
+              const passed = res?.status === 'completed' || res?.status === 'passed' || !res?.status;
+              if (passed) {
+                for (const depId of dependentsMap.get(shard.id) || []) {
+                  const currentDeg = inDegree.get(depId) - 1;
+                  inDegree.set(depId, currentDeg);
+                  if (currentDeg === 0) {
+                    readyQueue.push(shardMap.get(depId));
+                  }
                 }
               }
               this._sortQueueByPriority(readyQueue);
@@ -228,3 +323,4 @@ export class DagScheduler {
     });
   }
 }
+

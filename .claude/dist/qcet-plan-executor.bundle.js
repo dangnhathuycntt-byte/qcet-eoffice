@@ -58,7 +58,12 @@ export const MANIFEST_SCHEMA = {
 
           kind: {
             type: 'string',
-            enum: ['feature', 'infrastructure', 'validation'],
+            enum: ['feature', 'infrastructure', 'validation', 'support', 'exploratory', 'migration'],
+          },
+
+          isolation: {
+            type: 'string',
+            enum: ['none', 'worktree'],
           },
 
           owns: {
@@ -495,7 +500,23 @@ const INTEGRATION_VERDICT_SCHEMA = {
 
     remainingIssues: {
       type: 'array',
-      items: { type: 'string' },
+      items: {
+        anyOf: [
+          { type: 'string' },
+          {
+            type: 'object',
+            required: ['severity', 'description'],
+            properties: {
+              severity: {
+                type: 'string',
+                enum: ['critical', 'high', 'medium', 'low', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+              },
+              file: { type: 'string' },
+              description: { type: 'string' },
+            },
+          },
+        ],
+      },
     },
 
     summary: { type: 'string' },
@@ -762,7 +783,7 @@ export function getActiveShardsFilePaths() {
   return [...new Set(paths)];
 }
 
-export function syncActiveShardBoundaries(shardsPayload, phaseName = 'Calibrate') {
+export function syncActiveShardBoundaries(shardsPayload, _phaseName = 'Calibrate') {
   // If running in Node.js environment (e.g. tests), synchronize synchronously to disk
   if (typeof process !== 'undefined' && process.versions && process.versions.node) {
     try {
@@ -983,6 +1004,23 @@ export function computeShardPriorities(manifest) {
     }
     const transitiveDownstream = visited.size;
 
+    const pathMemo = new Map();
+    function getLongestPath(nodeId) {
+      if (pathMemo.has(nodeId)) return pathMemo.get(nodeId);
+      const nextNodes = dependentsMap.get(nodeId);
+      if (!nextNodes || nextNodes.size === 0) {
+        pathMemo.set(nodeId, 0);
+        return 0;
+      }
+      let maxChild = 0;
+      for (const childId of nextNodes) {
+        maxChild = Math.max(maxChild, 1 + getLongestPath(childId));
+      }
+      pathMemo.set(nodeId, maxChild);
+      return maxChild;
+    }
+    const criticalPathLength = getLongestPath(s.id);
+
     const risk = String(s.risk || 'medium').toLowerCase();
     let riskWeight = 2;
     if (risk === 'critical') riskWeight = 4;
@@ -994,10 +1032,12 @@ export function computeShardPriorities(manifest) {
     const acCount = Array.isArray(s.acceptanceCriteria) ? s.acceptanceCriteria.length : 0;
     const workCount = reqCount + ownsCount + acCount;
 
-    const priority = (transitiveDownstream * 10) + (riskWeight * 3) + workCount;
+    // Critical-path priority: weight longest DAG chain highest to minimize overall makespan
+    const priority = (criticalPathLength * 20) + (transitiveDownstream * 10) + (riskWeight * 3) + workCount;
 
     priorityMap.set(s.id, {
       priority,
+      criticalPathLength,
       transitiveDownstream,
       riskWeight,
       workCount,
@@ -1005,6 +1045,149 @@ export function computeShardPriorities(manifest) {
   }
 
   return priorityMap;
+}
+
+/**
+ * Computes the set of shard IDs eligible for pre-reconnaissance lookahead.
+ * Shards are eligible if:
+ * 1. They are currently ready (0 unfinished dependencies), OR
+ * 2. They are within lookaheadDepth levels of the ready/active frontier.
+ *
+ * Deep future shards are excluded to prevent unbounded agent fan-out and resource exhaustion.
+ */
+export function computeEligibleReconShards(
+  manifest,
+  activeIds = new Set(),
+  completedIds = new Set(),
+  lookaheadDepth = 1
+) {
+  const activeSet = activeIds instanceof Set ? activeIds : new Set(activeIds);
+  const completedSet = completedIds instanceof Set ? completedIds : new Set(completedIds);
+  const shards = Array.isArray(manifest?.shards) ? manifest.shards : [];
+  const eligible = new Set();
+
+  for (const shard of shards) {
+    if (completedSet.has(shard.id)) continue;
+
+    const deps = shard.dependencies || [];
+    const uncompletedDeps = deps.filter((d) => !completedSet.has(d));
+
+    // Case 1: All dependencies completed -> ready now
+    if (uncompletedDeps.length === 0) {
+      eligible.add(shard.id);
+      continue;
+    }
+
+    // Case 2: Within lookahead depth
+    if (lookaheadDepth >= 1) {
+      const remainingUnstarted = uncompletedDeps.filter((d) => !activeSet.has(d));
+      if (remainingUnstarted.length === 0 || uncompletedDeps.length <= lookaheadDepth) {
+        eligible.add(shard.id);
+      }
+    }
+  }
+
+  return eligible;
+}
+
+/**
+ * Selects targeted integration review dimensions based on actual blast radius,
+ * modified files, and risk levels of the plan and execution results.
+ */
+export function selectIntegrationReviewDimensions(manifest, allShardResults = []) {
+  const allFiles = new Set();
+  if (Array.isArray(allShardResults)) {
+    for (const r of allShardResults) {
+      const files = r?.implementation?.changedFiles || r?.shard?.owns || [];
+      for (const f of files) allFiles.add(String(f).toLowerCase());
+    }
+  }
+  if (Array.isArray(manifest?.shards)) {
+    for (const s of manifest.shards) {
+      for (const f of s.owns || []) allFiles.add(String(f).toLowerCase());
+    }
+  }
+
+  const fileList = Array.from(allFiles);
+  const shards = Array.isArray(manifest?.shards) ? manifest.shards : [];
+  const maxRisk = shards.reduce((acc, s) => {
+    const r = String(s.risk || 'medium').toLowerCase();
+    if (r === 'critical') return 'critical';
+    if (r === 'high' && acc !== 'critical') return 'high';
+    return acc;
+  }, 'low');
+
+  const isUiOnly =
+    fileList.length > 0 &&
+    fileList.every(
+      (f) =>
+        (f.includes('component') ||
+          f.includes('src/app/') ||
+          f.includes('ui') ||
+          f.endsWith('.tsx') ||
+          f.endsWith('.css')) &&
+        !f.includes('/api/') &&
+        !f.includes('prisma') &&
+        !f.includes('/auth/')
+    );
+
+  const hasAuthOrApi = fileList.some((f) => f.includes('/auth/') || f.includes('/api/') || f.includes('/server/'));
+  const hasPrismaOrMigration = fileList.some(
+    (f) => f.includes('prisma') || f.includes('migration') || f.includes('/db/')
+  );
+
+  const ALL_DIMENSIONS = {
+    contracts: {
+      id: 'contracts',
+      charter:
+        'Cross-module API/type/schema/contracts consistency, stale adapters, import drift, caller/consumer mismatch.',
+    },
+    authorization: {
+      id: 'authorization',
+      charter:
+        'Authorization, permission boundaries, server-side enforcement, trust boundaries, data exposure.',
+    },
+    semantics: {
+      id: 'semantics',
+      charter:
+        'Duplicated business semantics, competing sources of truth, duplicated UI meaning, inconsistent status/count logic.',
+    },
+    regression: {
+      id: 'regression',
+      charter:
+        'Regression risk, missing tests, integration behavior, accessibility/performance regressions where relevant.',
+    },
+    'data-integrity': {
+      id: 'data-integrity',
+      charter:
+        'Database schema consistency, transaction atomicity, migration safety, foreign key and constraint integrity.',
+    },
+    'ux-accessibility': {
+      id: 'ux-accessibility',
+      charter:
+        'UI ergonomics, light-only design compliance, accessibility, touch target sizing, empty/loading states.',
+    },
+  };
+
+  if (isUiOnly && maxRisk !== 'critical') {
+    return [ALL_DIMENSIONS.semantics, ALL_DIMENSIONS.regression, ALL_DIMENSIONS['ux-accessibility']];
+  }
+
+  if (hasPrismaOrMigration && !hasAuthOrApi && maxRisk !== 'critical') {
+    return [ALL_DIMENSIONS.contracts, ALL_DIMENSIONS['data-integrity'], ALL_DIMENSIONS.regression];
+  }
+
+  if (hasAuthOrApi && !hasPrismaOrMigration && maxRisk !== 'critical') {
+    return [ALL_DIMENSIONS.contracts, ALL_DIMENSIONS.authorization, ALL_DIMENSIONS.regression];
+  }
+
+  return [
+    ALL_DIMENSIONS.contracts,
+    ALL_DIMENSIONS.authorization,
+    ALL_DIMENSIONS.semantics,
+    ALL_DIMENSIONS.regression,
+    ...(hasPrismaOrMigration ? [ALL_DIMENSIONS['data-integrity']] : []),
+  ];
 }
 
 export function shouldIsolateShard(shard, manifest, isolationConfig = 'auto') {
@@ -1153,13 +1336,24 @@ export function evaluateDeterministicReleaseGate({
 
   // 2. Integration review defects
   const synthFindings = Array.isArray(integrationSynthesis?.findings) ? integrationSynthesis.findings : [];
-  const criticalIntegrationDefects = synthFindings.filter(
-    (d) => d?.severity === 'CRITICAL' || d?.severity === 'HIGH'
-  );
+  const criticalIntegrationDefects = synthFindings.filter((d) => {
+    const s = String(d?.severity || '').toUpperCase();
+    return s === 'CRITICAL' || s === 'HIGH';
+  });
   if (criticalIntegrationDefects.length > 0) {
-    if (!integrationRepair || integrationRepair.status !== 'completed') {
+    const isRepairVerified =
+      Boolean(integrationRepair) &&
+      integrationRepair.status === 'completed' &&
+      integrationRepair.verified === true &&
+      (!Array.isArray(integrationRepair.remainingDefects) ||
+        integrationRepair.remainingDefects.filter((def) => {
+          const s = String(def?.severity || (typeof def === 'string' ? def : '')).toUpperCase();
+          return s === 'CRITICAL' || s === 'HIGH' || typeof def === 'string';
+        }).length === 0);
+
+    if (!isRepairVerified) {
       deterministicBlockers.push(
-        `${criticalIntegrationDefects.length} critical/high integration defect(s) remain unresolved.`
+        `${criticalIntegrationDefects.length} critical/high integration defect(s) remain unresolved or unverified after repair.`
       );
     }
   }
@@ -1814,10 +2008,9 @@ Return structured reconciliation evidence adhering strictly to schema.`;
 const rawArgs = typeof args !== 'undefined' ? args : {};
 let planPath = null;
 let planContent = null;
-let budgetConfig = null;
 let worktreeIsolation = 'auto';
-let domainConfig = 'general';
 let maxRepairRounds = 2;
+let lookaheadDepth = 1;
 
 if (typeof rawArgs === 'string') {
   const trimmed = rawArgs.trim().replace(/^['"]|['"]$/g, '');
@@ -1831,10 +2024,9 @@ if (typeof rawArgs === 'string') {
       } else if (parsed.plan) {
         planContent = parsed.plan;
       }
-      budgetConfig = parsed.budget || null;
       worktreeIsolation = parsed.worktreeIsolation !== undefined ? parsed.worktreeIsolation : 'auto';
-      domainConfig = parsed.domain || 'general';
       maxRepairRounds = typeof parsed.maxRepairRounds === 'number' ? parsed.maxRepairRounds : 2;
+      lookaheadDepth = typeof parsed.lookaheadDepth === 'number' ? parsed.lookaheadDepth : 1;
     } catch (_) {
       planPath = trimmed;
     }
@@ -1849,10 +2041,9 @@ if (typeof rawArgs === 'string') {
   } else if (rawArgs.plan) {
     planContent = rawArgs.plan;
   }
-  budgetConfig = rawArgs.budget || null;
   worktreeIsolation = rawArgs.worktreeIsolation !== undefined ? rawArgs.worktreeIsolation : 'auto';
-  domainConfig = rawArgs.domain || 'general';
   maxRepairRounds = typeof rawArgs.maxRepairRounds === 'number' ? rawArgs.maxRepairRounds : 2;
+  lookaheadDepth = typeof rawArgs.lookaheadDepth === 'number' ? rawArgs.lookaheadDepth : 1;
 }
 
 if (!planPath && !planContent) {
@@ -2220,6 +2411,7 @@ ${ambiguityFallback}`,
               agentType: 'qcet-skeptic',
               phase: 'Verify',
               label: `${shardPacket.id}:verify-${round}-spec`,
+              effort: risk === 'critical' ? 'xhigh' : 'high',
               schema: VERIFY_SCHEMA,
             }
           ),
@@ -2255,6 +2447,7 @@ ${ambiguityFallback}`,
               agentType: 'qcet-skeptic',
               phase: 'Verify',
               label: `${shardPacket.id}:verify-${round}-security`,
+              effort: risk === 'critical' ? 'xhigh' : 'high',
               schema: VERIFY_SCHEMA,
             }
           ),
@@ -2262,7 +2455,30 @@ ${ambiguityFallback}`,
 
       const [specVerifier, securityVerifier] = panelResults;
 
-      const arbiterPrompt = `${SKEPTIC_STATIC_PREFIX}
+      // Adaptive verification: If risk is 'high' (not 'critical') and BOTH skeptics independently pass with 0 issues,
+      // avoid unnecessary arbitration and synthesize the clean verdict directly.
+      const specPassed =
+        specVerifier?.verdict === 'pass' && (!specVerifier.issues || specVerifier.issues.length === 0);
+      const securityPassed =
+        securityVerifier?.verdict === 'pass' && (!securityVerifier.issues || securityVerifier.issues.length === 0);
+
+      if (risk === 'high' && specPassed && securityPassed) {
+        log(
+          `Shard ${shardPacket.id} (HIGH risk): Both independent skeptics passed with 0 defects. Skipping arbitration.`
+        );
+        verification = {
+          verdict: 'pass',
+          requirementsChecked: Array.from(
+            new Set([
+              ...(specVerifier.requirementsChecked || []),
+              ...(securityVerifier.requirementsChecked || []),
+            ])
+          ),
+          issues: [],
+          summary: `Both independent skeptics verified implementation with zero defects. Spec: ${specVerifier.summary || 'pass'}; Security: ${securityVerifier.summary || 'pass'}.`,
+        };
+      } else {
+        const arbiterPrompt = `${SKEPTIC_STATIC_PREFIX}
 
 You are the QCET ADVERSARIAL VERIFICATION ARBITER for shard ${shardPacket.id}.
 Two independent skeptics audited this ${risk.toUpperCase()} risk implementation:
@@ -2291,13 +2507,15 @@ CRITICAL INVARIANTS:
 4. If both skeptics passed with zero defects and repository evidence confirms correctness, verdict is 'pass'.
 ${ambiguityFallback}`;
 
-      verification = await callAgent(arbiterPrompt, {
-        agent: 'qcet-skeptic',
-        agentType: 'qcet-skeptic',
-        phase: 'Verify',
-        label: `${shardPacket.id}:verify-${round}-arbiter`,
-        schema: VERIFY_SCHEMA,
-      });
+        verification = await callAgent(arbiterPrompt, {
+          agent: 'qcet-skeptic',
+          agentType: 'qcet-skeptic',
+          phase: 'Verify',
+          label: `${shardPacket.id}:verify-${round}-arbiter`,
+          effort: risk === 'critical' ? 'xhigh' : 'high',
+          schema: VERIFY_SCHEMA,
+        });
+      }
 
     } else if (risk === 'medium') {
       verification = await callAgent(
@@ -2325,6 +2543,7 @@ ${ambiguityFallback}`,
           agentType: 'qcet-skeptic',
           phase: 'Verify',
           label: `${shardPacket.id}:verify-${round}`,
+          effort: 'medium',
           schema: VERIFY_SCHEMA,
         }
       );
@@ -2354,6 +2573,7 @@ ${ambiguityFallback}`,
           agentType: 'qcet-skeptic',
           phase: 'Verify',
           label: `${shardPacket.id}:verify-${round}`,
+          effort: 'low',
           schema: VERIFY_SCHEMA,
         }
       );
@@ -2718,6 +2938,7 @@ ${ambiguityFallback}`;
         agentType: 'qcet-recon',
         phase: 'Recon',
         label: `${shardPacket.id}:pre-recon`,
+        effort: shardPacket?.risk === 'critical' ? 'high' : 'medium',
         schema: RECON_SCHEMA,
       });
 
@@ -2933,12 +3154,14 @@ DEPENDENCY EVIDENCE:
 ${JSON.stringify(dependencyEvidence, null, 2)}
 ${ambiguityFallback}`;
 
+    const builderRisk = String(shardPacket?.risk || shard?.risk || 'medium').toLowerCase();
     const builderOptions = {
       agent: 'qcet-builder',
       agentType: 'qcet-builder',
       agentId: `${shardPacket.id}:implement`,
       phase: 'Implement',
       label: `${shardPacket.id}:implement`,
+      effort: builderRisk === 'critical' ? 'xhigh' : builderRisk === 'high' ? 'high' : builderRisk === 'medium' ? 'medium' : 'low',
       schema: IMPLEMENT_SCHEMA,
     };
 
@@ -3217,9 +3440,16 @@ ${ambiguityFallback}`;
     `in priority order: ${prioritizedShards.map((s) => `${s.id} (P${shardPriorities.get(s.id)?.priority ?? 0})`).join(', ')}`
   );
 
-  // Decoupled Read Gate: launch pre-recon for all shards immediately
+  // Bounded Read Gate: launch pre-recon for ready and lookahead frontier shards
+  const initialEligibleRecon = computeEligibleReconShards(manifest, new Set(), new Set(), lookaheadDepth);
+  log(
+    `Bounded pre-recon lookahead (depth=${lookaheadDepth}): launching pre-recon for ` +
+    `${initialEligibleRecon.size}/${manifest.shards.length} shards: [${Array.from(initialEligibleRecon).join(', ')}]`
+  );
   for (const shard of prioritizedShards) {
-    schedulePreRecon(shard);
+    if (initialEligibleRecon.has(shard.id)) {
+      schedulePreRecon(shard);
+    }
   }
 
   // Strict Write Gate: schedule builder execution awaiting dependencies
@@ -3276,29 +3506,12 @@ ${ambiguityFallback}`;
   }));
 
 
-  const reviewDimensions = [
-    {
-      id: 'contracts',
-      charter:
-        'Cross-module API/type/schema/contracts consistency, stale adapters, import drift, caller/consumer mismatch.',
-    },
-    {
-      id: 'authorization',
-      charter:
-        'Authorization, permission boundaries, server-side enforcement, trust boundaries, data exposure.',
-    },
-    {
-      id: 'semantics',
-      charter:
-        'Duplicated business semantics, competing sources of truth, duplicated UI meaning, inconsistent status/count logic.',
-    },
-    {
-      id: 'regression',
-      charter:
-        'Regression risk, missing tests, integration behavior, accessibility/performance regressions where relevant.',
-    },
-  ];
+  const reviewDimensions = selectIntegrationReviewDimensions(manifest, allShardResults);
 
+  log(
+    `Selected ${reviewDimensions.length} targeted integration review dimension(s) based on blast radius: ` +
+      reviewDimensions.map((d) => d.id).join(', ')
+  );
 
   const integrationReviews = await parallel(
     reviewDimensions.map((dimension) => () =>
@@ -3615,6 +3828,61 @@ Return structured implementation evidence.
       risks: allRisks,
       blocker: validRepairs.find((r) => r.blocker)?.blocker,
     };
+
+    // =========================================================================
+    // INDEPENDENT INTEGRATION REVERIFICATION (P0 CORRECTNESS GATE)
+    // =========================================================================
+    if (integrationRepair.status === 'completed') {
+      phase('Integration Reverification');
+      log('Running independent integration reverification on repaired defects.');
+
+      const reverification = await callAgent(
+        `
+You are the QCET independent integration reverification skeptic.
+
+You did NOT perform the integration repairs.
+
+CONFIRMED INTEGRATION FINDINGS TARGETED:
+${JSON.stringify(integrationSynthesis.findings, null, 2)}
+
+INTEGRATION REPAIR ACTIONS TAKEN:
+${JSON.stringify(integrationRepair, null, 2)}
+
+Inspect the ACTUAL integrated repository state, git diff, and run targeted tests.
+
+Do NOT modify files.
+
+Verify whether each targeted integration defect is genuinely resolved.
+Check whether the repair introduced any new contract or regression defects.
+
+Return exactly the structured integration verdict.
+`,
+        {
+          agent: 'qcet-skeptic',
+          agentType: 'qcet-skeptic',
+          phase: 'Integration Reverification',
+          label: 'integration:reverification',
+          schema: INTEGRATION_VERDICT_SCHEMA,
+        }
+      );
+
+      const passed =
+        reverification?.passed === true &&
+        (!Array.isArray(reverification.remainingIssues) || reverification.remainingIssues.length === 0);
+
+      integrationRepair.verified = passed;
+      integrationRepair.reverification = reverification;
+      integrationRepair.remainingDefects = reverification?.remainingIssues || [];
+
+      if (!passed) {
+        log(
+          `[CRITICAL] Independent integration reverification FAILED: ` +
+          `${reverification?.summary || 'Defects remain unresolved after repair.'}`
+        );
+      } else {
+        log('Independent integration reverification PASSED: all cross-shard defects verified resolved.');
+      }
+    }
   }
 
 
@@ -3684,8 +3952,7 @@ Return structured proof.
 
   phase('Release Gate');
 
-
-  const finalVerdict = await callAgent(
+  const agentFinalVerdict = await callAgent(
     `
 You are the final independent QCET release gate.
 
@@ -3735,9 +4002,10 @@ Return exactly the structured release verdict.
     integrationSynthesis,
     integrationRepair,
     validation,
-    finalVerdict,
+    finalVerdict: agentFinalVerdict,
   });
 
+  let finalVerdict;
   if (deterministicGate.status === 'BLOCKED') {
     log(
       `DETERMINISTIC RELEASE GATE BLOCKED: ${deterministicGate.rationale} ` +
@@ -3773,7 +4041,11 @@ Return exactly the structured release verdict.
   // CAPTURE & PERSIST EVALUATION RUN TELEMETRY
   // ===========================================================================
 
-  const wallClockMs = typeof args?.wallClockMs === 'number' ? args.wallClockMs : (calibrationDurationMs + 10000);
+  const wallClockMs = typeof args?.wallClockMs === 'number'
+    ? args.wallClockMs
+    : (typeof args?.endTime === 'number' && startTime > 0
+        ? args.endTime - startTime
+        : (calibrationDurationMs > 0 ? calibrationDurationMs : null));
   const runTelemetry = buildRunTelemetry({
     planPath,
     manifest,
