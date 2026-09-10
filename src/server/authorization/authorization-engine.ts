@@ -1116,9 +1116,9 @@ export function authorize(
     }
   }
 
-  // Meeting draft minutes: meeting must be in HELD or MINUTES_DRAFT
+  // Meeting draft minutes: meeting must be in HELD or MINUTES_DRAFT or IN_PROGRESS
   if (action === 'meeting.draft_minutes') {
-    if (status !== 'HELD' && status !== 'MINUTES_DRAFT') {
+    if (status !== 'HELD' && status !== 'MINUTES_DRAFT' && status !== 'IN_PROGRESS') {
       return {
         allowed: false,
         granted: false,
