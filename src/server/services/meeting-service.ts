@@ -31,6 +31,8 @@ import {
   isExecutivePosition,
   isUnitLeaderPosition,
   computeAvailableActions,
+  recordAuthorizationDecision,
+  extractAuditFromDecision,
 } from '@/server/authorization';
 import {
   AuthorizationError,
@@ -459,6 +461,16 @@ export class MeetingService {
 
     const authResult = authorize(authContext, 'meeting.confirm_minutes', buildMeetingResource(meeting));
     if (!authResult.allowed) {
+      await recordAuthorizationDecision(
+        extractAuditFromDecision(
+          authResult,
+          authContext,
+          'meeting.confirm_minutes',
+          'Meeting',
+          meetingId,
+          requestId
+        )
+      );
       if (authResult.rejectionCode === 'INVALID_WORKFLOW_STATE') {
         throw new ValidationError(
           authResult.reason || 'Trạng thái cuộc họp không hợp lệ để xác nhận biên bản.'
@@ -479,6 +491,18 @@ export class MeetingService {
           minutesConfirmedById: authContext.userId,
         },
       });
+
+      await recordAuthorizationDecision(
+        tx,
+        extractAuditFromDecision(
+          authResult,
+          authContext,
+          'meeting.confirm_minutes',
+          'Meeting',
+          meetingId,
+          requestId
+        )
+      );
 
       await logAuditEvent(tx, {
         actorId: authContext.userId,
@@ -537,6 +561,16 @@ export class MeetingService {
 
     const authResult = authorize(authContext, 'meeting.create_resolution', buildMeetingResource(meeting));
     if (!authResult.allowed) {
+      await recordAuthorizationDecision(
+        extractAuditFromDecision(
+          authResult,
+          authContext,
+          'meeting.create_resolution',
+          'MeetingResolution',
+          meetingId,
+          requestId
+        )
+      );
       if (authResult.rejectionCode === 'INVALID_WORKFLOW_STATE') {
         throw new ValidationError(
           authResult.reason || 'Trạng thái cuộc họp không hợp lệ để ban hành quyết nghị.'
@@ -591,6 +625,18 @@ export class MeetingService {
           resultingTask: true,
         },
       });
+
+      await recordAuthorizationDecision(
+        tx,
+        extractAuditFromDecision(
+          authResult,
+          authContext,
+          'meeting.create_resolution',
+          'MeetingResolution',
+          resolution.id,
+          requestId
+        )
+      );
 
       await logAuditEvent(tx, {
         actorId: authContext.userId,
