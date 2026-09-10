@@ -1,3 +1,15 @@
+/**
+ * LEGACY TASK POLICY (Transitional / Sprint 2 Bridge)
+ *
+ * ARCHITECTURAL NOTICE:
+ * This file contains legacy task validation helpers.
+ * In accordance with Phase 0 Domain Freeze & Sprint 2 Architecture:
+ * - `isPrivilegedUser` checks legacy ADMIN role string, but does NOT grant statutory
+ *   institutional governance authority (HIEU_TRUONG / PHO_HIEU_TRUONG).
+ * - Canonical business authorization is evaluated by `src/server/authorization/authorization-engine.ts`.
+ * - Do not import role equivalence into new business logic.
+ */
+
 import { TaskScope, TaskStatus } from '@prisma/client';
 import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-context';
 

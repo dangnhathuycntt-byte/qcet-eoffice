@@ -1,3 +1,12 @@
+/**
+ * LEGACY EXECUTIVE POLICY ADAPTER (Transitional)
+ *
+ * ARCHITECTURAL DEPRECATION NOTICE:
+ * This module is a legacy adapter. Statutory executive leadership authority is governed
+ * by canonical `authorize(context, action, resource)` and active PositionAssignment.
+ * Do not import role equivalence into new business logic.
+ */
+
 import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-context';
 
 function isAdmin(user: AuthenticatedUser): boolean {

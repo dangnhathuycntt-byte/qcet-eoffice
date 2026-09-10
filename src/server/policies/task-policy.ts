@@ -1,3 +1,22 @@
+/**
+ * LEGACY TASK POLICY ADAPTER (Phase 0 / Sprint 2 Bridge)
+ *
+ * ARCHITECTURAL INVARIANTS & AUDIT COMPLIANCE:
+ * 1. Statutory Separation:
+ *    - Technical administration ('ADMIN') does NOT confer statutory institutional authority
+ *      (e.g., Hiệu trưởng, Phó Hiệu trưởng). Technical administrators cannot act as institutional
+ *      executives or perform statutory governance actions.
+ *    - 'ADMIN' is NOT equivalent to 'HIEU_TRUONG' or 'PHO_HIEU_TRUONG'.
+ * 2. Canonical Authorization Cutover:
+ *    - Canonical task business authorization (task.read, task.create, task.review, task.approve,
+ *      task.reassign, task.monitor) is defined in `src/server/authorization/authorization-engine.ts`
+ *      via `authorize(context, action, resource)`.
+ *    - This module remains strictly as an adapter for legacy task routes during Sprint 2 cutover.
+ * 3. Role Equivalence Quarantine:
+ *    - `normalizeRole` is quarantined here only for legacy adapter compatibility.
+ *    - New business authorization must never import or rely on role equivalence.
+ */
+
 import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-context';
 
 export interface TaskEntity {

@@ -1,3 +1,23 @@
+/**
+ * LEGACY DOCUMENT POLICY ADAPTER (Phase 0 / Sprint 2 Bridge)
+ *
+ * ARCHITECTURAL INVARIANTS & AUDIT COMPLIANCE:
+ * 1. Statutory Separation:
+ *    - Technical administration ('ADMIN') is strictly separated from statutory institutional
+ *      leadership ('HIEU_TRUONG', 'PHO_HIEU_TRUONG').
+ *    - 'ADMIN' is NOT treated as 'HIEU_TRUONG' / 'PHO_HIEU_TRUONG' for executive direction
+ *      or statutory business authority (see canDirectDocument).
+ * 2. Canonical Delegation:
+ *    - `canReadDocument` delegates directly to `canAccessClassification()` from the canonical
+ *      document classification authorization module (`src/server/authorization/document-classification.ts`).
+ *    - Statutory document workflows (review, sign, issue, direct) in canonical services
+ *      delegate to `authorize(context, action, resource)` in `src/server/authorization/authorization-engine.ts`.
+ * 3. Role Equivalence Quarantine:
+ *    - `normalizeRole` is quarantined here only for legacy query filtering and backwards-compatible
+ *      API responses. It is NEVER exported or imported for new business authorization.
+ */
+
+import type { Prisma } from '@prisma/client';
 import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-context';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 import {
@@ -160,10 +180,98 @@ export function canDeleteDocument(
   return false;
 }
 
+/**
+ * Builds the database-level Prisma WHERE clause for document access control (ACL)
+ * enforcing Decree 30/2020 and institutional governance rules before pagination.
+ *
+ * Translates access predicates into Prisma.DocumentWhereInput:
+ * - Public documents: school-level task linkage (scope: SCHOOL)
+ * - Admin / Clerical / Leadership: (VAN_THU / ADMIN / BAN_GIAM_HIEU) can read all non-confidential documents
+ * - Creator / Registered by: registeredById = user.id, or linkedTask createdById = user.id
+ * - Lead user: leadUserId = user.id
+ * - Department match: departmentId = user.departmentId (leadDepartmentId, draftingDeptId, directives, linkedTask)
+ * - Handling confidential / restricted documents: securityLevel != TUYET_MAT
+ */
+export function buildDocumentReadWhere(
+  userOrContext?: AuthenticatedUser | AuthorizationContext | null
+): Prisma.DocumentWhereInput {
+  if (!userOrContext) {
+    return { id: '__DENY_ANONYMOUS__' };
+  }
+
+  const user =
+    'user' in (userOrContext as any) && (userOrContext as any).user
+      ? (userOrContext as any).user
+      : (userOrContext as AuthenticatedUser);
+
+  const userId = (userOrContext as any)?.userId || user?.id;
+  if (!userId) {
+    return { id: '__DENY_ANONYMOUS__' };
+  }
+
+  const role = normalizeRole(user?.role);
+  const positionCode = ((user as any)?.positionCode || '').toUpperCase();
+  const departmentId =
+    (userOrContext as any)?.primaryUnitIds?.[0] || (user as any)?.departmentId || null;
+
+  // 1. Handling confidential / restricted documents (classification != TUYET_MAT):
+  // State secrets (TUYET_MAT) are strictly forbidden from regular document queries
+  const nonConfidentialCondition: Prisma.DocumentWhereInput = {
+    securityLevel: { not: 'TUYET_MAT' },
+  };
+
+  // 2. Admin / Clerical / Institutional Leadership:
+  // (VAN_THU / ADMIN / BAN_GIAM_HIEU / HIEU_TRUONG / PHO_HIEU_TRUONG) can read all non-confidential documents
+  const isPrivileged =
+    role === 'ADMIN' ||
+    role === 'VAN_THU' ||
+    role === 'BAN_GIAM_HIEU' ||
+    role === 'HIEU_TRUONG' ||
+    role === 'PHO_HIEU_TRUONG' ||
+    positionCode === 'HIEU_TRUONG' ||
+    positionCode === 'PHO_HIEU_TRUONG';
+
+  if (isPrivileged) {
+    return nonConfidentialCondition;
+  }
+
+  // 3. Regular users: can access public, created/registered, lead officer, or unit-scoped documents
+  const orConditions: Prisma.DocumentWhereInput[] = [
+    // Registered by user (creator/registrar in Decree 30)
+    { registeredById: userId },
+    // Lead user assigned to the document
+    { leadUserId: userId },
+    // Linked school-level task (public / school-wide)
+    { linkedTask: { is: { scope: 'SCHOOL' } } },
+    // Linked task created by user
+    { linkedTask: { is: { createdById: userId } } },
+    // Directives issued by user
+    { directives: { some: { leaderId: userId } } },
+  ];
+
+  if (departmentId) {
+    orConditions.push(
+      { leadDepartmentId: departmentId },
+      { draftingDeptId: departmentId },
+      { directives: { some: { assignedDeptId: departmentId } } },
+      { linkedTask: { is: { departmentId: departmentId } } },
+      { linkedTask: { is: { leadUnitId: departmentId } } }
+    );
+  }
+
+  return {
+    AND: [
+      nonConfidentialCondition,
+      { OR: orConditions },
+    ],
+  };
+}
+
 export const documentPolicy = {
   canReadDocument,
   canCreateDocument,
   canUpdateDocument,
   canDirectDocument,
   canDeleteDocument,
+  buildDocumentReadWhere,
 };

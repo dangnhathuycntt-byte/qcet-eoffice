@@ -44,6 +44,25 @@ export interface RequestLike {
   ip?: string;
 }
 
+/**
+ * ARCHITECTURAL DEPRECATION NOTICE (Sprint 2 - Identity & Authority):
+ *
+ * `ROLE_EQUIVALENCE_MAP` is strictly retained for backward compatibility with legacy
+ * authentication token extraction and UI display mapping.
+ *
+ * DO NOT USE THIS MAP FOR BUSINESS AUTHORIZATION OR INSTITUTIONAL AUTHORITY CHECKS.
+ *
+ * In accordance with Vietnamese public higher-education governance (Law on Vocational
+ * Education, Decree 30/2020/ND-CP, Decision 283/QD-CDKTCNQN, Decision 420/QD-CDKTCNQN):
+ * - Technical administration (SYSTEM_ADMIN / ADMIN) is strictly separated from statutory
+ *   institutional leadership (HIEU_TRUONG, PHO_HIEU_TRUONG).
+ * - Statutory governance authorities are based on active PositionAssignment and portfolio
+ *   responsibility, NEVER on generic SaaS role strings (ADMIN / MANAGER / STAFF).
+ * - All business authorization MUST be evaluated through the canonical authorization
+ *   engine (`src/server/authorization/authorization-engine.ts` -> `authorize()`).
+ *
+ * @deprecated Retained only for legacy auth token compatibility and UI display. Do not import in business authorization.
+ */
 export const ROLE_EQUIVALENCE_MAP: Record<string, string> = {
   // Admin / Executive Leadership
   ADMIN: 'ADMIN',
@@ -68,6 +87,19 @@ export const ROLE_EQUIVALENCE_MAP: Record<string, string> = {
   CLERK: 'VAN_THU',
 };
 
+/**
+ * ARCHITECTURAL DEPRECATION NOTICE (Sprint 2 - Identity & Authority):
+ *
+ * `normalizeRole` normalizes role strings for legacy authentication compatibility and UI display.
+ *
+ * STRICT INVARIANTS:
+ * 1. normalizeRole('ADMIN') === 'ADMIN' (never returns 'HIEU_TRUONG' or 'BAN_GIAM_HIEU').
+ * 2. It must NEVER be used to evaluate statutory institutional authority, signing rights,
+ *    or executive direction.
+ * 3. All business authorization must use canonical `authorize()` in `src/server/authorization/`.
+ *
+ * @deprecated Retained for legacy auth compatibility and UI display only.
+ */
 export function normalizeRole(role: string): string {
   const trimmed = (role || '').trim().toUpperCase();
   return ROLE_EQUIVALENCE_MAP[trimmed] || trimmed;
@@ -227,6 +259,33 @@ export function requireAuthenticated(ctx: ApiRequestContext): AuthenticatedUser 
   return ctx.user;
 }
 
+/**
+ * Statutory institutional leadership roles that CANNOT be checked or granted via requireRole.
+ * In accordance with Vietnamese higher-education governance, statutory leadership authority
+ * requires active PositionAssignment evaluated via the canonical authorize() engine.
+ */
+const STATUTORY_INSTITUTIONAL_ROLES = new Set([
+  'HIEU_TRUONG',
+  'PHO_HIEU_TRUONG',
+  'PHO_HIEU_TRUONG_DT',
+  'PHO_HIEU_TRUONG_HC',
+]);
+
+/**
+ * ARCHITECTURAL DEPRECATION NOTICE (Sprint 2 - Identity & Authority):
+ *
+ * `requireRole` is a legacy route middleware helper for coarse-grained technical role gating.
+ *
+ * STRICT INVARIANTS & SECURITY GUARDS:
+ * 1. It must NEVER be used to evaluate, grant, or assert statutory institutional authority
+ *    (e.g., Hiệu trưởng, Phó Hiệu trưởng, Bút phê, Phê duyệt văn bản, Ký số).
+ * 2. Attempting to check statutory institutional positions (e.g., 'HIEU_TRUONG', 'PHO_HIEU_TRUONG')
+ *    via requireRole is strictly rejected. Statutory actions must be evaluated via canonical
+ *    `authorize(context, action, resource)`.
+ * 3. A technical 'ADMIN' role does NOT satisfy or grant statutory institutional authority.
+ *
+ * @deprecated Use canonical `authorize(context, action, resource)` with AuthorizationContext.
+ */
 export function requireRole(
   ctx: ApiRequestContext,
   allowedRoles: string | string[]
@@ -236,6 +295,17 @@ export function requireRole(
 
   if (rolesArray.length === 0) {
     throw new AuthorizationError('Insufficient role permissions', 'FORBIDDEN');
+  }
+
+  // Guard against evaluating statutory institutional authority via legacy requireRole
+  const hasStatutoryRole = rolesArray.some((r) =>
+    STATUTORY_INSTITUTIONAL_ROLES.has(r.trim().toUpperCase())
+  );
+  if (hasStatutoryRole) {
+    throw new AuthorizationError(
+      'Statutory institutional authority (Hiệu trưởng, Phó Hiệu trưởng) cannot be evaluated or granted via requireRole. Use canonical authorize() with PositionAssignment.',
+      'STATUTORY_AUTHORITY_PROHIBITED'
+    );
   }
 
   const userNorm = normalizeRole(user.role);

@@ -1,3 +1,12 @@
+/**
+ * LEGACY USER POLICY ADAPTER (Transitional)
+ *
+ * ARCHITECTURAL DEPRECATION NOTICE:
+ * This module is a legacy adapter. Canonical account and identity authorization is governed
+ * by canonical `authorize(context, action, resource)`.
+ * Do not import role equivalence into new business logic.
+ */
+
 import { type AuthenticatedUser, normalizeRole } from '@/server/api/request-context';
 
 function isAdmin(user: AuthenticatedUser): boolean {
