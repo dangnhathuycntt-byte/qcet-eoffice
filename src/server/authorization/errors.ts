@@ -24,7 +24,7 @@ export class SeparationOfPowersError extends AuthorizationError {
 
 export class SeparationOfDutiesError extends AuthorizationError {
   constructor(message = 'Vi phạm nguyên tắc phân định quyền hạn (Separation of Duties)') {
-    super(message, 'SEPARATION_OF_DUTIES_VIOLATION');
+    super(message, 'SOD_VIOLATION');
   }
 }
 
@@ -40,6 +40,12 @@ export class DelegationRevokedError extends AuthorizationError {
   }
 }
 
+export class NonDelegablePowerError extends AuthorizationError {
+  constructor(message = 'Thẩm quyền là quyền luật định tối cao, tuyệt đối không được chuyển giao qua ủy quyền tác nghiệp.') {
+    super(message, 'NON_DELEGABLE_POWER_VIOLATION');
+  }
+}
+
 export class PortfolioMismatchError extends AuthorizationError {
   constructor(message = 'Hành động không thuộc mảng phụ trách / lĩnh vực công tác được giao') {
     super(message, 'PORTFOLIO_MISMATCH');
@@ -49,6 +55,30 @@ export class PortfolioMismatchError extends AuthorizationError {
 export class UnitScopeDeniedError extends AuthorizationError {
   constructor(message = 'Hành động vượt ngoài phạm vi thẩm quyền của đơn vị') {
     super(message, 'UNIT_SCOPE_DENIED');
+  }
+}
+
+export class SingleDRIError extends AuthorizationError {
+  constructor(message = 'Vi phạm quy tắc người chịu trách nhiệm chính duy nhất (Single DRI)') {
+    super(message, 'COLLABORATOR_CANNOT_REASSIGN_DRI');
+  }
+}
+
+export class InvalidWorkflowStateError extends AuthorizationError {
+  constructor(message = 'Trạng thái quy trình không hợp lệ để thực hiện hành động này') {
+    super(message, 'INVALID_WORKFLOW_STATE');
+  }
+}
+
+export class StateSecretProhibitionError extends AuthorizationError {
+  constructor(message = 'Tài liệu thuộc phạm vi Bí mật nhà nước; tuyệt đối cấm xử lý trên môi trường mạng thông thường.') {
+    super(message, 'STATE_SECRET_STRICT_PROHIBITION');
+  }
+}
+
+export class PersonalDataPrivacyBreachError extends AuthorizationError {
+  constructor(message = 'Dữ liệu cá nhân được bảo vệ theo Nghị định 13/2023/NĐ-CP; người dùng không có căn cứ pháp lý.') {
+    super(message, 'PERSONAL_DATA_PRIVACY_BREACH');
   }
 }
 

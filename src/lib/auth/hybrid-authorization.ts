@@ -46,6 +46,11 @@ export type {
   CapabilityMetadata,
 };
 
+export {
+  authorize as canonicalAuthorize,
+  assertAuthorized as canonicalAssertAuthorized,
+} from "@/server/authorization/authorization-engine";
+
 import {
   CAPABILITY_CATEGORIES,
   MEETING_CAPABILITIES,
