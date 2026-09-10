@@ -1,12 +1,12 @@
 import type { MetadataRoute } from "next";
+import { INSTITUTION_CONFIG } from "@/config/institution";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "QCET E-Office - Trường CĐ Kinh tế & Công nghệ Quảng Ninh",
-    short_name: "QCET E-Office",
-    description:
-      "Hệ thống quản lý điều hành tác nghiệp và hành chính điện tử QCET",
+    name: `${INSTITUTION_CONFIG.shortName} E-Office - ${INSTITUTION_CONFIG.abbreviatedName}`,
+    short_name: `${INSTITUTION_CONFIG.shortName} E-Office`,
+    description: `Hệ thống quản lý điều hành tác nghiệp và hành chính điện tử ${INSTITUTION_CONFIG.shortName}`,
     start_url: "/?source=pwa",
     scope: "/",
     display: "standalone",

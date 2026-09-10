@@ -211,6 +211,14 @@ describe('Security Audit: Role Equivalence Elimination from Business Authority (
         classification: 'LEGACY_ADAPTER',
         description: 'Legacy document policy adapter (read query fallback only)',
       },
+      'src/server/policies/meeting-policy.ts': {
+        classification: 'LEGACY_ADAPTER',
+        description: 'Legacy meeting policy adapter',
+      },
+      'src/server/policies/dossier-policy.ts': {
+        classification: 'LEGACY_ADAPTER',
+        description: 'Legacy dossier policy adapter',
+      },
       'src/server/policies/task-policy.ts': {
         classification: 'LEGACY_ADAPTER',
         description: 'Legacy task policy adapter',

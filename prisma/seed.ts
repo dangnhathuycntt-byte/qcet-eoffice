@@ -2481,10 +2481,17 @@ async function main() {
 
   for (const t of sampleTasks) {
     const { assigneeId, collaboratorIds, ...taskData } = t;
+    const computedStartDate = taskData.dueDate
+      ? new Date((taskData.dueDate as Date).getTime() - 7 * 24 * 60 * 60 * 1000)
+      : new Date('2026-08-01T00:00:00Z');
+    const finalTaskData = {
+      ...taskData,
+      startDate: computedStartDate,
+    };
     const task = await prisma.task.upsert({
       where: { code: t.code },
-      update: taskData,
-      create: taskData,
+      update: finalTaskData,
+      create: finalTaskData,
     });
 
     if (assigneeId) {

@@ -10,7 +10,7 @@ import {
   countScopeTasks,
 } from "./hooks/use-adaptive-workspace-data";
 import { AdaptiveScopeHeader } from "./components/adaptive-scope-header";
-import { UnifiedTaskToolbar, type TableDensity } from "@/components/tasks/unified-task-toolbar";
+import { UnifiedTaskToolbar, type TableDensity } from "@/components/dashboard/unified-task-toolbar";
 import {
   type SavedTaskView,
   type TaskViewCriteria,
@@ -25,6 +25,7 @@ import {
 } from "@/lib/academic-calendar";
 import { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 import { UniversalActionQueue } from "./components/universal-action-queue";
+import { ActionQueueShell } from "./action-queue-shell";
 import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
 import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
@@ -59,86 +60,21 @@ import { cn } from "@/lib/utils";
 
 export { type WorkspaceScope, type ViewMode, matchesUser };
 
-/**
- * Helper to check waiting approval status across parent and subtasks
- */
-export function isTaskWaitingApproval(status?: TaskStatus | string | null): boolean {
-  if (!status) return false;
-  return (
-    status === "WAITING_APPROVAL" ||
-    (status as string) === "PENDING_EXECUTIVE_APPROVAL" ||
-    (status as string) === "NEEDS_REVIEW" ||
-    (status as string) === "PENDING" ||
-    (status as string) === "IN_REVIEW"
-  );
-}
+import {
+  isTaskWaitingApproval,
+  isActiveTaskStatus,
+  isTaskOverdueOrHasOverdueSubtask,
+  isTaskAssignedToUser,
+  isTaskAssignedToUserOrUnit,
+  computeWorkspaceTabCounts,
+} from "@/lib/workspace-metrics-aggregator";
 
-/**
- * Checks whether a task is active (IN_PROGRESS, TODO, NOT_STARTED)
- */
-export function isActiveTaskStatus(status?: TaskStatus | string | null): boolean {
-  if (!status) return false;
-  return status === "IN_PROGRESS" || status === "TODO" || status === "NOT_STARTED";
-}
-
-/**
- * Checks whether a task or its subtasks is overdue relative to canonical system reference date.
- * Excludes completed parent tasks. Accounts for uncompleted subtasks being overdue if parent is not completed.
- */
-export function isTaskOverdueOrHasOverdueSubtask(
-  t: SchoolTask,
-  refDate: string = getSystemReferenceDate()
-): boolean {
-  if (t.status === "COMPLETED") return false;
-  const parentOverdue = Boolean(t.dueDate && isTaskPastDue(t.dueDate, refDate));
-  const subtaskOverdue = Boolean(
-    t.subTasks?.some(
-      (st) => st.status !== "COMPLETED" && Boolean(st.dueDate && isTaskPastDue(st.dueDate, refDate))
-    )
-  );
-  return parentOverdue || subtaskOverdue;
-}
-
-/**
- * Helper to check if a task or any of its subtasks is assigned to user or user's unit.
- */
-export function isTaskAssignedToUserOrUnit(
-  t: SchoolTask,
-  user?: AuthUser | null
-): boolean {
-  if (!user) return true;
-  const userDept = user.departmentCode || user.department || "";
-  const matchUser = Boolean(
-    t.assignedTo === user.name ||
-    (t as any).assignedToId === user.id ||
-    t.leadAssigneeName === user.name ||
-    (t as any).leadAssigneeId === user.id ||
-    matchesUser(t.leadAssigneeName, user) ||
-    matchesUser(t.assignedTo, user) ||
-    t.subTasks?.some(
-      (st) =>
-        st.assignedTo === user.name ||
-        (st as any).assignedToId === user.id ||
-        st.assigneeName === user.name ||
-        st.assigneeId === user.id ||
-        matchesUser(st.assignedTo, user) ||
-        matchesUser(st.assigneeName, user)
-    )
-  );
-  const matchUnit = Boolean(
-    userDept &&
-      (t.departmentCode?.toUpperCase() === userDept.toUpperCase() ||
-        t.department?.toLowerCase() === userDept.toLowerCase() ||
-        t.leadDepartmentCode?.toUpperCase() === userDept.toUpperCase() ||
-        t.leadDepartment?.toLowerCase() === userDept.toLowerCase() ||
-        t.subTasks?.some(
-          (st) =>
-            st.departmentCode?.toUpperCase() === userDept.toUpperCase() ||
-            st.department?.toLowerCase() === userDept.toLowerCase()
-        ))
-  );
-  return matchUser || matchUnit;
-}
+export {
+  isTaskWaitingApproval,
+  isActiveTaskStatus,
+  isTaskOverdueOrHasOverdueSubtask,
+  isTaskAssignedToUserOrUnit,
+};
 
 /**
  * Options for filtering displayed tasks in UnifiedAdaptiveWorkspace
@@ -194,20 +130,7 @@ export function filterDisplayedTasks({
     const refDate = getSystemReferenceDate();
     if (status === "my" || status === "my_tasks") {
       if (user) {
-        result = result.filter(
-          (t) =>
-            t.leadAssigneeName === user.name ||
-            matchesUser(t.leadAssigneeName, user) ||
-            t.assignedTo === user.name ||
-            matchesUser(t.assignedTo, user) ||
-            t.subTasks?.some(
-              (s) =>
-                s.assigneeName === user.name ||
-                matchesUser(s.assigneeName, user) ||
-                (s as any).assignedTo === user.name ||
-                matchesUser((s as any).assignedTo, user)
-            )
-        );
+        result = result.filter((t) => isTaskAssignedToUser(t, user));
       }
     } else if (status === "waiting_approval" || status === "review") {
       result = result.filter(
@@ -268,23 +191,7 @@ export function filterDisplayedTasks({
     ) {
       result = result.filter((t) => {
         if (!user) return true;
-        return Boolean(
-          t.assignedTo === user.name ||
-          (t as any).assignedToId === user.id ||
-          t.leadAssigneeName === user.name ||
-          (t as any).leadAssigneeId === user.id ||
-          matchesUser(t.leadAssigneeName, user) ||
-          matchesUser(t.assignedTo, user) ||
-          t.subTasks?.some(
-            (st) =>
-              st.assignedTo === user.name ||
-              (st as any).assignedToId === user.id ||
-              st.assigneeName === user.name ||
-              st.assigneeId === user.id ||
-              matchesUser(st.assignedTo, user) ||
-              matchesUser(st.assigneeName, user)
-          )
-        );
+        return isTaskAssignedToUser(t, user);
       });
     } else if (wb === "overdue" || wb === "urgent_overdue") {
       result = result.filter((t) => isTaskOverdueOrHasOverdueSubtask(t));
@@ -813,57 +720,13 @@ export function UnifiedAdaptiveWorkspace({
 
   // Compute counts for smart filter pills (Tất cả, Của tôi, Chờ duyệt, Quá hạn, Hôm nay)
   const tabCounts = React.useMemo(() => {
-    const refDate = getSystemReferenceDate();
-    let myCount = 0;
-    let waitingApprovalCount = 0;
-    let overdueCount = 0;
-    let todayCount = 0;
-
-    for (const t of scopedTasks) {
-      if (
-        user &&
-        (t.leadAssigneeName === user.name ||
-          matchesUser(t.leadAssigneeName, user) ||
-          t.assignedTo === user.name ||
-          matchesUser(t.assignedTo, user) ||
-          t.subTasks?.some(
-            (s) =>
-              s.assigneeName === user.name ||
-              matchesUser(s.assigneeName, user) ||
-              (s as any).assignedTo === user.name ||
-              matchesUser((s as any).assignedTo, user)
-          ))
-      ) {
-        myCount++;
-      }
-      if (
-        isTaskWaitingApproval(t.status) ||
-        t.subTasks?.some((s) => isTaskWaitingApproval(s.status))
-      ) {
-        waitingApprovalCount++;
-      }
-      if (isTaskOverdueOrHasOverdueSubtask(t, refDate)) {
-        overdueCount++;
-      }
-      if (t.dueDate && t.dueDate.startsWith(refDate)) {
-        todayCount++;
-      }
-    }
-
-    const pendingSubmissionsCount = actionQueue.myPendingSubmissions.length;
-    const effectiveWaitingApprovalCount =
-      actionQueue.pendingApprovals.length > 0
-        ? actionQueue.pendingApprovals.length
-        : waitingApprovalCount;
-
-    return {
-      all: scopedTasks.length,
-      my: myCount,
-      waiting_approval: effectiveWaitingApprovalCount,
-      pending_submission: pendingSubmissionsCount,
-      overdue: overdueCount,
-      today: todayCount,
-    };
+    return computeWorkspaceTabCounts({
+      scopedTasks,
+      user,
+      referenceDate: getSystemReferenceDate(),
+      pendingApprovalsCount: actionQueue.pendingApprovals.length,
+      pendingSubmissionsCount: actionQueue.myPendingSubmissions.length,
+    });
   }, [
     scopedTasks,
     user,
@@ -885,8 +748,8 @@ export function UnifiedAdaptiveWorkspace({
     ) {
       return "pending_submission";
     }
-    if (currentWorkbox === "my_tasks" || currentWorkbox === "my") {
-      return "my";
+    if (currentWorkbox === "my_tasks" || currentWorkbox === "my" || currentStatus === "my") {
+      return "all";
     }
     if (
       currentWorkbox === "overdue" ||
@@ -1201,11 +1064,28 @@ export function UnifiedAdaptiveWorkspace({
       const previousData = internalTasks;
       setInternalTasks((prev) => applyOptimisticStatusChange(prev, taskId, newStatus));
 
+      let actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
+      let actionBody: any = { note };
+
+      if (newStatus === "IN_PROGRESS") {
+        actionUrl = `/api/tasks/${taskId}/actions/start`;
+        actionBody = { note };
+      } else if (newStatus === "COMPLETED") {
+        actionUrl = `/api/tasks/${taskId}/actions/approve`;
+        actionBody = { note: note || "Phê duyệt hoàn thành nhiệm vụ" };
+      } else if (newStatus === "CANCELLED") {
+        actionUrl = `/api/tasks/${taskId}/actions/cancel`;
+        actionBody = { reason: note || "Hủy nhiệm vụ" };
+      } else if (newStatus === "NEEDS_REVIEW" || newStatus === "WAITING_APPROVAL") {
+        actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
+        actionBody = { note: note || "Nộp kết quả chờ phê duyệt", completionRate: 100 };
+      }
+
       try {
-        const res = await fetch(`/api/tasks/${taskId}`, {
-          method: "PATCH",
+        const res = await fetch(actionUrl, {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus, note }),
+          body: JSON.stringify(actionBody),
         });
         if (!res.ok) {
           throw new Error("Lỗi cập nhật trạng thái");
@@ -1313,7 +1193,7 @@ export function UnifiedAdaptiveWorkspace({
             variant="outline"
             onClick={handleRefresh}
             disabled={effectiveIsRefreshing}
-            className="text-xs h-8 px-3 shrink-0 bg-background hover:bg-muted"
+            className="text-xs min-h-[44px] sm:min-h-8 sm:h-8 px-3 shrink-0 bg-background hover:bg-muted"
           >
             Thử lại
           </Button>
@@ -1338,6 +1218,7 @@ export function UnifiedAdaptiveWorkspace({
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
           canCreateTask={true}
+          createButtonLabel="+ Giao việc"
           activeTab={effectiveActiveTab}
           onTabChange={(tab) => {
             if (tab === "all") {
@@ -1362,11 +1243,13 @@ export function UnifiedAdaptiveWorkspace({
               onWorkboxChange?.("my_pending_submission");
               onOverdueFilterChange?.(false);
             } else if (tab === "my") {
-              setInternalStatus(tab);
-              setInternalWorkbox("my_tasks");
+              // 'Của tôi' is strictly a scope dimension; switch active scope to 'my'
+              handleScopeChange("my");
+              setInternalStatus(undefined);
+              setInternalWorkbox("ALL");
               setInternalOverdue(false);
-              onStatusFilterChange?.(tab);
-              onWorkboxChange?.("my_tasks");
+              onStatusFilterChange?.(undefined);
+              onWorkboxChange?.("ALL");
               onOverdueFilterChange?.(false);
             } else if (tab === "overdue") {
               setInternalStatus(tab);
@@ -1470,7 +1353,7 @@ export function UnifiedAdaptiveWorkspace({
                   <Button
                     size="sm"
                     onClick={handleCreateTaskClick}
-                    className="text-xs h-8 px-3 cursor-pointer"
+                    className="text-xs min-h-[44px] sm:min-h-8 sm:h-8 px-3 cursor-pointer"
                   >
                     Tạo nhiệm vụ mới
                   </Button>
@@ -1479,7 +1362,7 @@ export function UnifiedAdaptiveWorkspace({
                     variant="outline"
                     onClick={handleRefresh}
                     disabled={effectiveIsRefreshing}
-                    className="text-xs h-8 px-3 cursor-pointer"
+                    className="text-xs min-h-[44px] sm:min-h-8 sm:h-8 px-3 cursor-pointer"
                   >
                     Làm mới dữ liệu
                   </Button>
@@ -1535,28 +1418,43 @@ export function UnifiedAdaptiveWorkspace({
             <AdaptiveMetricStrip metrics={metrics} scope={activeScope} />
 
             {/* Universal Action Queue (Approvals & Deliverables) */}
-            <UniversalActionQueue
-              actionQueue={actionQueue}
-              onSelectTask={handleSelectTask}
-              scope={activeScope}
-              onReview={onReview}
-              onSubmitDeliverable={onSubmitDeliverable}
-              onOpenReview={onReview ? (task) => setReviewingTask(task) : undefined}
-              onOpenSubmit={onSubmitDeliverable ? (task) => setSubmittingTask(task) : undefined}
-              onCreateSubtask={
-                onCreateSubtask
-                  ? onCreateSubtask
-                  : onCreateTask
-                  ? (parentId) => onCreateTask(activeScope === "unit" ? "DON_VI" : activeScope, parentId)
-                  : (parentId) => openCreateModal("DON_VI", parentId)
+            <ActionQueueShell
+              title="Hàng đợi hành động"
+              subtitle={
+                activeScope === "school"
+                  ? "Hồ sơ chờ BGH phê duyệt và nhiệm vụ trọng tâm"
+                  : activeScope === "unit"
+                  ? "Nhiệm vụ cần thẩm định L1 và phân công đơn vị"
+                  : "Nhiệm vụ cần hoàn thành và nộp minh chứng"
               }
-              onRemindDRI={
-                onSendReminder
-                  ? (taskId, target) => onSendReminder(target, `Đôn đốc tiến độ thực hiện nhiệm vụ ${taskId}`)
-                  : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
-              }
-              onFilterCanvas={handleFilterCanvasFromWorkbox}
-            />
+              totalCount={actionQueue.pendingApprovals.length + actionQueue.myPendingSubmissions.length}
+              collapsible={true}
+              defaultCollapsed={false}
+              className="border-border/70"
+            >
+              <UniversalActionQueue
+                actionQueue={actionQueue}
+                onSelectTask={handleSelectTask}
+                scope={activeScope}
+                onReview={onReview}
+                onSubmitDeliverable={onSubmitDeliverable}
+                onOpenReview={onReview ? (task) => setReviewingTask(task) : undefined}
+                onOpenSubmit={onSubmitDeliverable ? (task) => setSubmittingTask(task) : undefined}
+                onCreateSubtask={
+                  onCreateSubtask
+                    ? onCreateSubtask
+                    : onCreateTask
+                    ? (parentId) => onCreateTask(activeScope === "unit" ? "DON_VI" : activeScope, parentId)
+                    : (parentId) => openCreateModal("DON_VI", parentId)
+                }
+                onRemindDRI={
+                  onSendReminder
+                    ? (taskId, target) => onSendReminder(target, `Đôn đốc tiến độ thực hiện nhiệm vụ ${taskId}`)
+                    : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
+                }
+                onFilterCanvas={handleFilterCanvasFromWorkbox}
+              />
+            </ActionQueueShell>
           </div>
         </div>
       ) : (
@@ -1627,7 +1525,7 @@ export function UnifiedAdaptiveWorkspace({
                 <Button
                   size="sm"
                   onClick={handleCreateTaskClick}
-                  className="text-xs h-8 px-3 cursor-pointer"
+                  className="text-xs min-h-[44px] sm:min-h-8 sm:h-8 px-3 cursor-pointer"
                 >
                   Tạo nhiệm vụ mới
                 </Button>
@@ -1636,7 +1534,7 @@ export function UnifiedAdaptiveWorkspace({
                   variant="outline"
                   onClick={handleRefresh}
                   disabled={effectiveIsRefreshing}
-                  className="text-xs h-8 px-3 cursor-pointer"
+                  className="text-xs min-h-[44px] sm:min-h-8 sm:h-8 px-3 cursor-pointer"
                 >
                   Làm mới dữ liệu
                 </Button>
@@ -1723,27 +1621,34 @@ export function UnifiedAdaptiveWorkspace({
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-4 thin-scrollbar">
               <AdaptiveMetricStrip metrics={metrics} scope={activeScope} />
-              <UniversalActionQueue
-                actionQueue={actionQueue}
-                onSelectTask={handleSelectTask}
-                scope={activeScope}
-                onReview={onReview}
-                onSubmitDeliverable={onSubmitDeliverable}
-                onOpenReview={onReview ? (task) => setReviewingTask(task) : undefined}
-                onOpenSubmit={onSubmitDeliverable ? (task) => setSubmittingTask(task) : undefined}
-                onCreateSubtask={
-                  onCreateSubtask
-                    ? onCreateSubtask
-                    : onCreateTask
-                    ? (parentId) => onCreateTask(activeScope === "unit" ? "DON_VI" : activeScope, parentId)
-                    : (parentId) => openCreateModal("DON_VI", parentId)
-                }
-                onRemindDRI={
-                  onSendReminder
-                    ? (taskId, target) => onSendReminder(target, `Đôn đốc tiến độ thực hiện nhiệm vụ ${taskId}`)
-                    : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
-                }
-              />
+              <ActionQueueShell
+                title="Hàng đợi hành động"
+                totalCount={actionQueue.pendingApprovals.length + actionQueue.myPendingSubmissions.length}
+                collapsible={false}
+                className="border-border/70"
+              >
+                <UniversalActionQueue
+                  actionQueue={actionQueue}
+                  onSelectTask={handleSelectTask}
+                  scope={activeScope}
+                  onReview={onReview}
+                  onSubmitDeliverable={onSubmitDeliverable}
+                  onOpenReview={onReview ? (task) => setReviewingTask(task) : undefined}
+                  onOpenSubmit={onSubmitDeliverable ? (task) => setSubmittingTask(task) : undefined}
+                  onCreateSubtask={
+                    onCreateSubtask
+                      ? onCreateSubtask
+                      : onCreateTask
+                      ? (parentId) => onCreateTask(activeScope === "unit" ? "DON_VI" : activeScope, parentId)
+                      : (parentId) => openCreateModal("DON_VI", parentId)
+                  }
+                  onRemindDRI={
+                    onSendReminder
+                      ? (taskId, target) => onSendReminder(target, `Đôn đốc tiến độ thực hiện nhiệm vụ ${taskId}`)
+                      : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
+                  }
+                />
+              </ActionQueueShell>
             </div>
           </aside>
         </>

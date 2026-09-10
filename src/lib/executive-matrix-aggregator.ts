@@ -58,6 +58,19 @@ export interface DepartmentHealthSummary {
   healthScore?: number;
   healthStatus?: "HEALTHY" | "AT_RISK" | "CRITICAL" | string;
   status?: "critical" | "warning" | "good";
+
+  // Distinct parent and subtask counters (Denominator Integrity per Rule 40 & docs/product/metrics.md)
+  parentTasksCount?: number;
+  completedParentTasksCount?: number;
+  inProgressParentTasksCount?: number;
+  blockedParentTasksCount?: number;
+  overdueParentTasksCount?: number;
+
+  subTasksCount?: number;
+  completedSubTasksCount?: number;
+  inProgressSubTasksCount?: number;
+  blockedSubTasksCount?: number;
+  overdueSubTasksCount?: number;
 }
 
 export interface DepartmentDefinition {
@@ -410,23 +423,37 @@ export function computeDepartmentHealthMatrix(
   const deptMap = new Map<
     string,
     {
-      totalTasksCount: number;
-      completedTasksCount: number;
-      inProgressTasksCount: number;
-      blockedTasksCount: number;
-      overdueTasksCount: number;
-      totalProgress: number;
+      parentTasksCount: number;
+      completedParentTasksCount: number;
+      inProgressParentTasksCount: number;
+      blockedParentTasksCount: number;
+      overdueParentTasksCount: number;
+      parentProgressSum: number;
+
+      subTasksCount: number;
+      completedSubTasksCount: number;
+      inProgressSubTasksCount: number;
+      blockedSubTasksCount: number;
+      overdueSubTasksCount: number;
+      subProgressSum: number;
     }
   >();
 
   for (const def of QCET_DEPARTMENT_DEFINITIONS) {
     deptMap.set(def.id, {
-      totalTasksCount: 0,
-      completedTasksCount: 0,
-      inProgressTasksCount: 0,
-      blockedTasksCount: 0,
-      overdueTasksCount: 0,
-      totalProgress: 0,
+      parentTasksCount: 0,
+      completedParentTasksCount: 0,
+      inProgressParentTasksCount: 0,
+      blockedParentTasksCount: 0,
+      overdueParentTasksCount: 0,
+      parentProgressSum: 0,
+
+      subTasksCount: 0,
+      completedSubTasksCount: 0,
+      inProgressSubTasksCount: 0,
+      blockedSubTasksCount: 0,
+      overdueSubTasksCount: 0,
+      subProgressSum: 0,
     });
   }
 
@@ -445,26 +472,26 @@ export function computeDepartmentHealthMatrix(
 
     const parentStats = deptMap.get(parentDeptId);
     if (parentStats) {
-      parentStats.totalTasksCount++;
+      parentStats.parentTasksCount++;
 
       const isCompleted = task.status === "COMPLETED";
       const isBlocked = (task.status as string) === "BLOCKED";
 
       if (isCompleted) {
-        parentStats.completedTasksCount++;
-        parentStats.totalProgress += 100;
+        parentStats.completedParentTasksCount++;
+        parentStats.parentProgressSum += 100;
       } else if (isBlocked) {
-        parentStats.blockedTasksCount++;
-        parentStats.totalProgress +=
+        parentStats.blockedParentTasksCount++;
+        parentStats.parentProgressSum +=
           typeof task.progressPercent === "number" ? task.progressPercent : 0;
       } else {
-        parentStats.inProgressTasksCount++;
-        parentStats.totalProgress +=
+        parentStats.inProgressParentTasksCount++;
+        parentStats.parentProgressSum +=
           typeof task.progressPercent === "number" ? task.progressPercent : 0;
       }
 
       if (!isCompleted && isTaskPastDue(task.dueDate, referenceDate)) {
-        parentStats.overdueTasksCount++;
+        parentStats.overdueParentTasksCount++;
       }
     }
 
@@ -481,33 +508,33 @@ export function computeDepartmentHealthMatrix(
 
       const subStats = deptMap.get(subDeptId);
       if (subStats) {
-        subStats.totalTasksCount++;
+        subStats.subTasksCount++;
 
         const isSubCompleted = sub.status === "COMPLETED";
         const isSubBlocked = sub.status === "BLOCKED";
 
         if (isSubCompleted) {
-          subStats.completedTasksCount++;
-          subStats.totalProgress +=
+          subStats.completedSubTasksCount++;
+          subStats.subProgressSum +=
             typeof (sub as any).progressPercent === "number"
               ? (sub as any).progressPercent
               : 100;
         } else if (isSubBlocked) {
-          subStats.blockedTasksCount++;
-          subStats.totalProgress +=
+          subStats.blockedSubTasksCount++;
+          subStats.subProgressSum +=
             typeof (sub as any).progressPercent === "number"
               ? (sub as any).progressPercent
               : 0;
         } else {
-          subStats.inProgressTasksCount++;
-          subStats.totalProgress +=
+          subStats.inProgressSubTasksCount++;
+          subStats.subProgressSum +=
             typeof (sub as any).progressPercent === "number"
               ? (sub as any).progressPercent
               : 0;
         }
 
         if (!isSubCompleted && isTaskPastDue(sub.dueDate, referenceDate)) {
-          subStats.overdueTasksCount++;
+          subStats.overdueSubTasksCount++;
         }
       }
     }
@@ -515,14 +542,23 @@ export function computeDepartmentHealthMatrix(
 
   return QCET_DEPARTMENT_DEFINITIONS.map((def) => {
     const stats = deptMap.get(def.id)!;
+    const totalItems = stats.parentTasksCount + stats.subTasksCount;
+    const totalProgress = stats.parentProgressSum + stats.subProgressSum;
     const averageProgressPercent =
-      stats.totalTasksCount > 0
-        ? Math.round(stats.totalProgress / stats.totalTasksCount)
-        : 0;
+      totalItems > 0 ? Math.round(totalProgress / totalItems) : 0;
+
+    // Strict Denominator Integrity: Calculate completionRate strictly from valid parent tasks (milestones)
+    // per docs/product/metrics.md Section 3.1 & 4.1. Never mix parent milestones and subtasks into a shared denominator.
     const completionRate =
-      stats.totalTasksCount > 0
-        ? Math.round((stats.completedTasksCount / stats.totalTasksCount) * 100)
+      stats.parentTasksCount > 0
+        ? Math.round((stats.completedParentTasksCount / stats.parentTasksCount) * 100)
         : 0;
+
+    const totalTasksCount = stats.parentTasksCount + stats.subTasksCount;
+    const completedTasksCount = stats.completedParentTasksCount + stats.completedSubTasksCount;
+    const inProgressTasksCount = stats.inProgressParentTasksCount + stats.inProgressSubTasksCount;
+    const blockedTasksCount = stats.blockedParentTasksCount + stats.blockedSubTasksCount;
+    const overdueTasksCount = stats.overdueParentTasksCount + stats.overdueSubTasksCount;
 
     return {
       departmentId: def.id,
@@ -530,17 +566,30 @@ export function computeDepartmentHealthMatrix(
       departmentCode: def.code || def.id,
       departmentName: def.name,
       leadName: def.leadName,
-      totalTasksCount: stats.totalTasksCount,
-      completedTasksCount: stats.completedTasksCount,
-      inProgressTasksCount: stats.inProgressTasksCount,
-      blockedTasksCount: stats.blockedTasksCount,
-      overdueTasksCount: stats.overdueTasksCount,
+      totalTasksCount,
+      completedTasksCount,
+      inProgressTasksCount,
+      blockedTasksCount,
+      overdueTasksCount,
       averageProgressPercent,
-      totalTasks: stats.totalTasksCount,
-      completedTasks: stats.completedTasksCount,
-      inProgressTasks: stats.inProgressTasksCount,
-      overdueTasks: stats.overdueTasksCount,
+      totalTasks: totalTasksCount,
+      completedTasks: completedTasksCount,
+      inProgressTasks: inProgressTasksCount,
+      overdueTasks: overdueTasksCount,
       completionRate,
+
+      // Distinct parent and subtask separation counters (Rule 40.2 Denominator Integrity)
+      parentTasksCount: stats.parentTasksCount,
+      completedParentTasksCount: stats.completedParentTasksCount,
+      inProgressParentTasksCount: stats.inProgressParentTasksCount,
+      blockedParentTasksCount: stats.blockedParentTasksCount,
+      overdueParentTasksCount: stats.overdueParentTasksCount,
+
+      subTasksCount: stats.subTasksCount,
+      completedSubTasksCount: stats.completedSubTasksCount,
+      inProgressSubTasksCount: stats.inProgressSubTasksCount,
+      blockedSubTasksCount: stats.blockedSubTasksCount,
+      overdueSubTasksCount: stats.overdueSubTasksCount,
     };
   });
 }

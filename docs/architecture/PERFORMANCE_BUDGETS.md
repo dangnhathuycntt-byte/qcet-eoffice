@@ -1,7 +1,7 @@
 # QCET E-Office - Performance Budgets & Web Vitals Specification
 
 ## Mission
-QCET E-Office operates across varied client hardware and network environments across the campuses of Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh. Performance is a foundational quality invariant, not an afterthought.
+QCET E-Office operates across varied client hardware and network environments across the campuses of Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn . Performance is a foundational quality invariant, not an afterthought.
 
 ---
 

@@ -287,7 +287,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
                       const ok = await sendTestNotification({
                         title: "BGH giao việc mới",
                         body: "Thử nghiệm kết nối chuông đẩy QCET E-Office thành công.",
-                        linkHref: "/?zone=tasks",
+                        linkHref: "/tasks",
                       });
                       setTestPushResult(ok ? "success" : "failed");
                       setTimeout(() => setTestPushResult(null), 3000);

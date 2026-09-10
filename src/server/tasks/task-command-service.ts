@@ -15,6 +15,7 @@ import {
   AuthorizationError,
   NotFoundError,
   ValidationError,
+  PreconditionFailedError,
 } from '@/server/api/errors';
 import {
   logAuditEvent,
@@ -42,6 +43,7 @@ import {
   checkActiveDelegation,
   isPrivilegedUser,
 } from './task-policy';
+import { taskStateMachine } from '@/domain/tasks/state-machine';
 
 export interface CreateFromMeetingResolutionInput {
   meetingId: string;
@@ -93,6 +95,7 @@ export interface UpdateTaskInput {
   resolution?: string;
   comment?: string | null;
   note?: string | null;
+  expectedVersion?: number;
 }
 
 export interface SubmitDeliverableInput {
@@ -104,12 +107,14 @@ export interface SubmitDeliverableInput {
   uploadedById?: string | null;
   notes?: string | null;
   note?: string | null;
+  expectedVersion?: number;
 }
 
 export interface ReviewDeliverableInput {
   deliverableId: string;
   reviewStatus: 'APPROVED' | 'REJECTED' | 'REVISION_REQUIRED' | string;
   reviewNote?: string | null;
+  expectedVersion?: number;
 }
 
 function resolveUser(
@@ -437,6 +442,45 @@ export class TaskCommandService {
         },
       });
 
+      // Synchronize TaskActors enforcing Single Primary DRI invariant
+      const matchedOrgUnit = await tx.organizationalUnit.findFirst({
+        where: {
+          OR: [
+            { id: effectiveDepartmentId },
+            { code: effectiveDepartmentId },
+          ],
+        },
+        select: { id: true },
+      });
+      const resolvedUnitId = matchedOrgUnit?.id || null;
+
+      if (validAssigneeId) {
+        await tx.taskActor.create({
+          data: {
+            taskId: task.id,
+            userId: validAssigneeId,
+            unitId: resolvedUnitId,
+            role: TaskActorRole.DRI,
+            isPrimaryDRI: true,
+            assignedById: effectiveCreatorId,
+          },
+        });
+      }
+      for (const cId of validCollaboratorIds) {
+        if (cId !== validAssigneeId) {
+          await tx.taskActor.create({
+            data: {
+              taskId: task.id,
+              userId: cId,
+              unitId: resolvedUnitId,
+              role: TaskActorRole.COLLABORATOR,
+              isPrimaryDRI: false,
+              assignedById: effectiveCreatorId,
+            },
+          });
+        }
+      }
+
       const requestId =
         ctx && 'requestId' in ctx && typeof ctx.requestId === 'string'
           ? ctx.requestId
@@ -530,7 +574,7 @@ export class TaskCommandService {
     const existing = await prisma.task.findUnique({
       where: { id: taskId },
       include: {
-        assignees: { select: { userId: true } },
+        assignees: { select: { userId: true, roleInTask: true } },
       },
     });
 
@@ -561,11 +605,21 @@ export class TaskCommandService {
       academicYear,
     } = input;
 
-    const updateData: Prisma.TaskUpdateInput = {};
+    const expectedVersion =
+      input.expectedVersion !== undefined && input.expectedVersion !== null
+        ? Number(input.expectedVersion)
+        : undefined;
 
+    if (expectedVersion !== undefined && existing.version !== expectedVersion) {
+      throw new PreconditionFailedError(
+        `Xung đột phiên bản (Optimistic Concurrency Control): Phiên bản hiện tại là ${existing.version}, nhưng yêu cầu cung cấp phiên bản ${expectedVersion}. Vui lòng tải lại dữ liệu mới nhất.`
+      );
+    }
+
+    let resolvedParentTaskId: string | null | undefined = undefined;
     if (parentTaskId !== undefined) {
       if (parentTaskId === null || parentTaskId === '' || parentTaskId === 'none') {
-        updateData.parentTask = { disconnect: true };
+        resolvedParentTaskId = null;
       } else if (typeof parentTaskId === 'string') {
         const trimmedParentId = parentTaskId.trim();
         if (trimmedParentId === taskId) {
@@ -578,33 +632,40 @@ export class TaskCommandService {
         if (!parentTask) {
           throw new NotFoundError('Không tìm thấy nhiệm vụ cha');
         }
-        updateData.parentTask = { connect: { id: trimmedParentId } };
+        resolvedParentTaskId = trimmedParentId;
       }
     }
 
-    if (typeof title === 'string' && title.trim()) {
-      updateData.title = title.trim();
+    const scalarUpdateData: Prisma.TaskUncheckedUpdateManyInput = {
+      version: { increment: 1 },
+    };
+
+    if (resolvedParentTaskId !== undefined) {
+      scalarUpdateData.parentTaskId = resolvedParentTaskId;
     }
-    updateData.version = { increment: 1 };
+    if (departmentId !== undefined) {
+      scalarUpdateData.departmentId =
+        typeof departmentId === 'string' && departmentId.trim() ? departmentId.trim() : null;
+    }
+    if (typeof title === 'string' && title.trim()) {
+      scalarUpdateData.title = title.trim();
+    }
     if (description !== undefined) {
-      updateData.description = description || null;
+      scalarUpdateData.description = description || null;
     }
     if (typeof progressPercent === 'number') {
-      updateData.progressPercent = Math.min(100, Math.max(0, progressPercent));
+      scalarUpdateData.progressPercent = Math.min(100, Math.max(0, progressPercent));
     } else if (typeof progress === 'number') {
-      updateData.progressPercent = Math.min(100, Math.max(0, progress));
+      scalarUpdateData.progressPercent = Math.min(100, Math.max(0, progress));
     }
     if (dueDate) {
-      updateData.dueDate = new Date(dueDate);
-    }
-    if (departmentId) {
-      updateData.department = { connect: { id: departmentId } };
+      scalarUpdateData.dueDate = new Date(dueDate);
     }
     if (academicMonth !== undefined) {
-      updateData.academicMonth = Number(academicMonth);
+      scalarUpdateData.academicMonth = Number(academicMonth);
     }
     if (academicYear !== undefined) {
-      updateData.academicYear = academicYear;
+      scalarUpdateData.academicYear = academicYear;
     }
 
     if (status) {
@@ -632,6 +693,41 @@ export class TaskCommandService {
           existing.departmentId
         );
 
+        // Canonical State Machine Validation
+        const fsmResult = taskStateMachine.canTransition(
+          {
+            id: user.id,
+            role: user.role,
+            departmentId: user.departmentId,
+            isDelegated: hasDelegation,
+          },
+          {
+            id: existing.id,
+            scope: existing.scope,
+            createdById: existing.createdById,
+            departmentId: existing.departmentId,
+            assignees: existing.assignees,
+            assigneeIds: existing.assignees?.map((a) => a.userId),
+          },
+          existing.status,
+          mappedStatus
+        );
+
+        if (!fsmResult.allowed) {
+          if (
+            fsmResult.code === 'INVALID_TRANSITION' ||
+            fsmResult.code === 'TERMINAL_STATE_LOCKED' ||
+            fsmResult.code === 'INVALID_STATUS'
+          ) {
+            throw new ValidationError(
+              fsmResult.reason || 'Chuyển đổi trạng thái không hợp lệ'
+            );
+          }
+          throw new AuthorizationError(
+            fsmResult.reason || 'Bạn không có quyền thực hiện chuyển đổi trạng thái này'
+          );
+        }
+
         const transitionCheck = canUserTransitionStatus(
           user,
           existing,
@@ -648,14 +744,14 @@ export class TaskCommandService {
           );
         }
 
-        updateData.status = mappedStatus;
+        scalarUpdateData.status = mappedStatus;
         if (mappedStatus === TaskStatus.COMPLETED) {
-          updateData.completedAt = new Date();
-          if (updateData.progressPercent === undefined) {
-            updateData.progressPercent = 100;
+          scalarUpdateData.completedAt = new Date();
+          if (scalarUpdateData.progressPercent === undefined) {
+            scalarUpdateData.progressPercent = 100;
           }
         } else if (existing.status === TaskStatus.COMPLETED) {
-          updateData.completedAt = null;
+          scalarUpdateData.completedAt = null;
         }
       }
     }
@@ -674,11 +770,30 @@ export class TaskCommandService {
       };
       const mappedPriority = priorityMap[priority];
       if (mappedPriority) {
-        updateData.priority = mappedPriority;
+        scalarUpdateData.priority = mappedPriority;
       }
     }
 
     const updated = await prisma.$transaction(async (tx) => {
+      // 1. OCC check and version increment directly on Task
+      if (expectedVersion !== undefined) {
+        const updateResult = await tx.task.updateMany({
+          where: { id: taskId, version: expectedVersion },
+          data: scalarUpdateData,
+        });
+
+        if (updateResult.count === 0) {
+          throw new PreconditionFailedError(
+            `Task aggregate version conflict: expected version ${expectedVersion}`
+          );
+        }
+      } else {
+        await tx.task.updateMany({
+          where: { id: taskId },
+          data: scalarUpdateData,
+        });
+      }
+
       let effectivePrimaryOwnerId: string | null = null;
       let previousAssigneeId: string | null = null;
       let assigneeChanged = false;
@@ -698,6 +813,24 @@ export class TaskCommandService {
 
         if (validAssigneeId) {
           effectivePrimaryOwnerId = validAssigneeId;
+          // Synchronize canonical TaskActor
+          await tx.taskActor.deleteMany({
+            where: { taskId, role: TaskActorRole.DRI },
+          });
+          await tx.taskActor.deleteMany({
+            where: { taskId, userId: validAssigneeId },
+          });
+          await tx.taskActor.create({
+            data: {
+              taskId,
+              userId: validAssigneeId,
+              role: TaskActorRole.DRI,
+              isPrimaryDRI: true,
+              assignedById: user.id,
+            },
+          });
+
+          // Legacy TaskAssignee compatibility
           await tx.taskAssignee.deleteMany({
             where: { taskId, roleInTask: AssigneeRole.PRIMARY_OWNER },
           });
@@ -712,12 +845,18 @@ export class TaskCommandService {
             },
           });
         } else if (assigneeId === null) {
+          await tx.taskActor.deleteMany({
+            where: { taskId, role: TaskActorRole.DRI },
+          });
           await tx.taskAssignee.deleteMany({
             where: { taskId, roleInTask: AssigneeRole.PRIMARY_OWNER },
           });
         }
       } else {
-        const existingOwner = await tx.taskAssignee.findFirst({
+        const existingOwner = await tx.taskActor.findFirst({
+          where: { taskId, isPrimaryDRI: true },
+          select: { userId: true },
+        }) || await tx.taskAssignee.findFirst({
           where: { taskId, roleInTask: AssigneeRole.PRIMARY_OWNER },
           select: { userId: true },
         });
@@ -734,6 +873,24 @@ export class TaskCommandService {
             )
           : [];
 
+        // Synchronize canonical TaskActor
+        await tx.taskActor.deleteMany({
+          where: { taskId, role: TaskActorRole.COLLABORATOR },
+        });
+        if (validCollabIds.length > 0) {
+          await tx.taskActor.createMany({
+            data: validCollabIds.map((cId) => ({
+              taskId,
+              userId: cId,
+              role: TaskActorRole.COLLABORATOR,
+              isPrimaryDRI: false,
+              assignedById: user.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
+        // Legacy TaskAssignee compatibility
         await tx.taskAssignee.deleteMany({
           where: { taskId, roleInTask: AssigneeRole.COLLABORATOR },
         });
@@ -750,9 +907,8 @@ export class TaskCommandService {
         }
       }
 
-      const updatedTask = await tx.task.update({
+      const updatedTask = await tx.task.findUniqueOrThrow({
         where: { id: taskId },
-        data: updateData,
         include: {
           department: true,
           assignees: {
@@ -785,8 +941,11 @@ export class TaskCommandService {
           ? ctx.requestId
           : undefined;
 
+      let auditLogged = false;
+
       // 1. Audit trail: TASK_ASSIGNED if primary assignee changed
       if (assigneeChanged) {
+        auditLogged = true;
         await logAuditEvent(tx, {
           actorId: user.id,
           action: AuditAction.TASK_ASSIGNED,
@@ -799,10 +958,11 @@ export class TaskCommandService {
       }
 
       // 2. Audit trail: TASK_DEADLINE_CHANGED if due date changed
-      if (updateData.dueDate) {
+      if (scalarUpdateData.dueDate) {
         const oldDueTime = existing.dueDate ? new Date(existing.dueDate).getTime() : null;
-        const newDueDate = new Date(updateData.dueDate as Date);
+        const newDueDate = new Date(scalarUpdateData.dueDate as Date);
         if (oldDueTime !== newDueDate.getTime()) {
+          auditLogged = true;
           await logAuditEvent(tx, {
             actorId: user.id,
             action: AuditAction.TASK_DEADLINE_CHANGED,
@@ -816,10 +976,11 @@ export class TaskCommandService {
       }
 
       // 3. Audit trail: TASK_STATUS_CHANGED, TASK_APPROVED, or TASK_REJECTED if status changed
-      if (updateData.status && updateData.status !== existing.status) {
+      if (scalarUpdateData.status && scalarUpdateData.status !== existing.status) {
+        auditLogged = true;
         const statusAction =
           effectiveAuditAction ||
-          (updateData.status === TaskStatus.COMPLETED && existing.status === TaskStatus.WAITING_APPROVAL
+          (scalarUpdateData.status === TaskStatus.COMPLETED && existing.status === TaskStatus.WAITING_APPROVAL
             ? AuditAction.TASK_APPROVED
             : AuditAction.TASK_STATUS_CHANGED);
 
@@ -834,8 +995,31 @@ export class TaskCommandService {
             progressPercent: existing.progressPercent,
           },
           afterData: {
-            status: updateData.status,
-            progressPercent: updateData.progressPercent ?? existing.progressPercent,
+            status: scalarUpdateData.status,
+            progressPercent: (scalarUpdateData.progressPercent as number) ?? existing.progressPercent,
+          },
+        });
+      }
+
+      // 4. Audit trail: TASK_UPDATED (or effectiveAuditAction) for general mutations
+      if (!auditLogged) {
+        await logAuditEvent(tx, {
+          actorId: user.id,
+          action: effectiveAuditAction || AuditAction.TASK_UPDATED,
+          entityType: AuditEntityType.TASK,
+          entityId: taskId,
+          requestId,
+          beforeData: {
+            title: existing.title,
+            description: existing.description,
+            priority: existing.priority,
+            progressPercent: existing.progressPercent,
+          },
+          afterData: {
+            title: updatedTask.title,
+            description: updatedTask.description,
+            priority: updatedTask.priority,
+            progressPercent: updatedTask.progressPercent,
           },
         });
       }
@@ -892,6 +1076,7 @@ export class TaskCommandService {
           data: { linkedTaskId: null },
         });
 
+        await tx.taskActor.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
         await tx.taskAssignee.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
         await tx.taskDeliverable.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
         await tx.dacumDelegation.deleteMany({ where: { taskId: { in: allSubtaskIds } } });
@@ -907,6 +1092,7 @@ export class TaskCommandService {
       });
 
       // 3. Dọn dẹp quan hệ
+      await tx.taskActor.deleteMany({ where: { taskId } });
       await tx.taskAssignee.deleteMany({ where: { taskId } });
       await tx.taskDeliverable.deleteMany({ where: { taskId } });
       await tx.dacumDelegation.deleteMany({ where: { taskId } });
@@ -969,10 +1155,39 @@ export class TaskCommandService {
     }
 
     const { title, fileUrl, fileType, fileSize } = input;
+    const expectedVersion =
+      input.expectedVersion !== undefined && input.expectedVersion !== null
+        ? Number(input.expectedVersion)
+        : undefined;
 
     const uploadedById = user.id;
 
     const result = await prisma.$transaction(async (tx) => {
+      // Atomic OCC check and aggregate version increment
+      const taskUpdateData: Prisma.TaskUncheckedUpdateManyInput = {
+        version: { increment: 1 },
+      };
+      if (task.status !== TaskStatus.CANCELLED) {
+        taskUpdateData.status = TaskStatus.WAITING_APPROVAL;
+      }
+
+      if (expectedVersion !== undefined) {
+        const updateResult = await tx.task.updateMany({
+          where: { id: taskId, version: expectedVersion },
+          data: taskUpdateData,
+        });
+        if (updateResult.count === 0) {
+          throw new PreconditionFailedError(
+            `Task aggregate version conflict: expected version ${expectedVersion}`
+          );
+        }
+      } else {
+        await tx.task.updateMany({
+          where: { id: taskId },
+          data: taskUpdateData,
+        });
+      }
+
       const deliverable = await tx.taskDeliverable.create({
         data: {
           taskId,
@@ -1011,26 +1226,16 @@ export class TaskCommandService {
       });
 
       // Chuyển trạng thái sang WAITING_APPROVAL khi nộp minh chứng nếu task chưa bị hủy
-      if (task.status !== TaskStatus.CANCELLED) {
-        await tx.task.update({
-          where: { id: taskId },
-          data: {
-            status: TaskStatus.WAITING_APPROVAL,
-            version: { increment: 1 },
-          },
+      if (task.status !== TaskStatus.CANCELLED && task.status !== TaskStatus.WAITING_APPROVAL) {
+        await logAuditEvent(tx, {
+          actorId: user.id,
+          action: AuditAction.TASK_STATUS_CHANGED,
+          entityType: AuditEntityType.TASK,
+          entityId: taskId,
+          requestId,
+          beforeData: { status: task.status },
+          afterData: { status: TaskStatus.WAITING_APPROVAL },
         });
-
-        if (task.status !== TaskStatus.WAITING_APPROVAL) {
-          await logAuditEvent(tx, {
-            actorId: user.id,
-            action: AuditAction.TASK_STATUS_CHANGED,
-            entityType: AuditEntityType.TASK,
-            entityId: taskId,
-            requestId,
-            beforeData: { status: task.status },
-            afterData: { status: TaskStatus.WAITING_APPROVAL },
-          });
-        }
       }
 
       return deliverable;
@@ -1107,7 +1312,53 @@ export class TaskCommandService {
         ? DeliverableReviewStatus.REVISION_REQUIRED
         : DeliverableReviewStatus.PENDING;
 
+    const expectedVersion =
+      input.expectedVersion !== undefined && input.expectedVersion !== null
+        ? Number(input.expectedVersion)
+        : undefined;
+
     const result = await prisma.$transaction(async (tx) => {
+      // 1. Determine task update & atomic OCC check
+      const taskUpdateData: Prisma.TaskUncheckedUpdateManyInput = {
+        version: { increment: 1 },
+      };
+
+      if (validStatus === DeliverableReviewStatus.APPROVED) {
+        // Kiểm tra xem tất cả minh chứng của nhiệm vụ này đã được duyệt hay chưa
+        const allDeliverables = await tx.taskDeliverable.findMany({
+          where: { taskId },
+        });
+        const allApproved = allDeliverables.every(
+          (d) => d.id === deliverableId || d.reviewStatus === DeliverableReviewStatus.APPROVED
+        );
+
+        if (allApproved) {
+          taskUpdateData.status = TaskStatus.COMPLETED;
+          taskUpdateData.progressPercent = 100;
+          taskUpdateData.completedAt = new Date();
+        }
+      } else if (validStatus === DeliverableReviewStatus.REVISION_REQUIRED) {
+        // Bị yêu cầu chỉnh sửa, đưa nhiệm vụ về lại IN_PROGRESS
+        taskUpdateData.status = TaskStatus.IN_PROGRESS;
+      }
+
+      if (expectedVersion !== undefined) {
+        const updateResult = await tx.task.updateMany({
+          where: { id: taskId, version: expectedVersion },
+          data: taskUpdateData,
+        });
+        if (updateResult.count === 0) {
+          throw new PreconditionFailedError(
+            `Task aggregate version conflict: expected version ${expectedVersion}`
+          );
+        }
+      } else {
+        await tx.task.updateMany({
+          where: { id: taskId },
+          data: taskUpdateData,
+        });
+      }
+
       const updatedDeliverable = await tx.taskDeliverable.update({
         where: { id: deliverableId },
         data: {
@@ -1128,24 +1379,7 @@ export class TaskCommandService {
           : undefined;
 
       if (validStatus === DeliverableReviewStatus.APPROVED) {
-        // Kiểm tra xem tất cả minh chứng của nhiệm vụ này đã được duyệt hay chưa
-        const allDeliverables = await tx.taskDeliverable.findMany({
-          where: { taskId },
-        });
-        const allApproved = allDeliverables.every(
-          (d) => d.id === deliverableId || d.reviewStatus === DeliverableReviewStatus.APPROVED
-        );
-
-        if (allApproved) {
-          await tx.task.update({
-            where: { id: taskId },
-            data: {
-              status: TaskStatus.COMPLETED,
-              progressPercent: 100,
-              completedAt: new Date(),
-            },
-          });
-
+        if (taskUpdateData.status === TaskStatus.COMPLETED) {
           await logAuditEvent(tx, {
             actorId: user.id,
             action: AuditAction.TASK_APPROVED,
@@ -1169,14 +1403,6 @@ export class TaskCommandService {
           });
         }
       } else if (validStatus === DeliverableReviewStatus.REVISION_REQUIRED) {
-        // Bị yêu cầu chỉnh sửa, đưa nhiệm vụ về lại IN_PROGRESS
-        await tx.task.update({
-          where: { id: taskId },
-          data: {
-            status: TaskStatus.IN_PROGRESS,
-          },
-        });
-
         await logAuditEvent(tx, {
           actorId: user.id,
           action: AuditAction.TASK_REJECTED,
@@ -1200,7 +1426,8 @@ export class TaskCommandService {
    */
   async approveTask(
     ctx: ApiRequestContext | { user: AuthenticatedUser | null },
-    taskId: string
+    taskId: string,
+    options?: { expectedVersion?: number; note?: string; comment?: string; resolution?: string }
   ) {
     return this.updateTask(
       ctx,
@@ -1208,6 +1435,10 @@ export class TaskCommandService {
       {
         status: TaskStatus.COMPLETED,
         progressPercent: 100,
+        expectedVersion: options?.expectedVersion,
+        note: options?.note,
+        comment: options?.comment,
+        resolution: options?.resolution,
       },
       { auditAction: AuditAction.TASK_APPROVED }
     );
@@ -1218,13 +1449,18 @@ export class TaskCommandService {
    */
   async rejectTask(
     ctx: ApiRequestContext | { user: AuthenticatedUser | null },
-    taskId: string
+    taskId: string,
+    options?: { expectedVersion?: number; note?: string; comment?: string; resolution?: string }
   ) {
     return this.updateTask(
       ctx,
       taskId,
       {
         status: TaskStatus.IN_PROGRESS,
+        expectedVersion: options?.expectedVersion,
+        note: options?.note,
+        comment: options?.comment,
+        resolution: options?.resolution,
       },
       { auditAction: AuditAction.TASK_REJECTED }
     );

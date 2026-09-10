@@ -57,7 +57,6 @@ export function ExecutiveAttentionHub({
         user={user}
         tasks={tasks}
         initialScope="school"
-        forcedRole="ADMIN"
         contextTitle="Khoang điều hành Ban Giám hiệu"
         contextBadge="BGH"
         onSelectTask={onSelectTask}
@@ -95,7 +94,6 @@ export function DepartmentAttentionHub({
         user={user}
         tasks={tasks}
         initialScope="unit"
-        forcedRole="MANAGER"
         contextTitle="Không gian làm việc Trưởng đơn vị - Khoa / Phòng"
         contextBadge="Trưởng đơn vị"
         onSelectTask={onSelectTask}
@@ -131,7 +129,6 @@ export function StaffAttentionHub({
         user={user}
         tasks={tasks}
         initialScope="my"
-        forcedRole="STAFF"
         contextTitle="Không gian công việc Giảng viên / Chuyên viên"
         contextBadge="Giảng viên"
         onSelectTask={onSelectTask}

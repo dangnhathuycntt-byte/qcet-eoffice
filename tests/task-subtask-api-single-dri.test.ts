@@ -85,6 +85,7 @@ describe('Single DRI and Subtask Hierarchy API Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'origin': 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${adminToken}`,
       },
       body: JSON.stringify({
@@ -107,6 +108,7 @@ describe('Single DRI and Subtask Hierarchy API Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'origin': 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${adminToken}`,
       },
       body: JSON.stringify({
@@ -147,6 +149,7 @@ describe('Single DRI and Subtask Hierarchy API Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'origin': 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${adminToken}`,
       },
       body: JSON.stringify({
@@ -170,6 +173,7 @@ describe('Single DRI and Subtask Hierarchy API Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'origin': 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${adminToken}`,
       },
       body: JSON.stringify({
@@ -281,6 +285,7 @@ describe('Single DRI and Subtask Hierarchy API Tests', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'origin': 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${adminToken}`,
       },
       body: JSON.stringify({
@@ -297,6 +302,7 @@ describe('Single DRI and Subtask Hierarchy API Tests', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'origin': 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${adminToken}`,
       },
       body: JSON.stringify({
@@ -316,6 +322,7 @@ describe('Single DRI and Subtask Hierarchy API Tests', () => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'origin': 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${adminToken}`,
       },
       body: JSON.stringify({

@@ -125,11 +125,15 @@
   body {
     @apply bg-background text-foreground tracking-normal selection:bg-primary/20 selection:text-primary relative min-h-[100dvh] font-sans;
     overscroll-behavior-y: none;
+    scroll-padding-top: calc(56px + env(safe-area-inset-top, 0px));
+    scroll-padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
   }
 
   html {
     @apply font-sans scroll-smooth;
     overscroll-behavior-y: none;
+    scroll-padding-top: calc(56px + env(safe-area-inset-top, 0px));
+    scroll-padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
   }
 
   h1, h2, h3, h4, h5, h6 {

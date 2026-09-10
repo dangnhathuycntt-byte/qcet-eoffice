@@ -100,7 +100,7 @@ function DashboardZoneComponent() {
 
         {/* Role-Aware Personal Workbench (What Needs My Attention Hub) */}
         <PersonalWorkbench
-          tasks={reactiveTasks}
+          tasks={baseTasks}
           filteredTasks={reactiveTasks}
           user={user}
           role={isExecutive ? "EXECUTIVE" : isManager ? "MANAGER" : "STAFF"}

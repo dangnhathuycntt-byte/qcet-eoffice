@@ -1,7 +1,7 @@
 # QCET E-Office - Testing Pyramid & Quality Architecture
 
 ## Mission
-QCET E-Office serves as the institutional management operating system for Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh. System integrity, authorization boundaries, and state transitions directly impact administrative compliance and operational auditability. The testing strategy enforces a strict 4-layer testing pyramid with automated verification gates.
+QCET E-Office serves as the institutional management operating system for Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn . System integrity, authorization boundaries, and state transitions directly impact administrative compliance and operational auditability. The testing strategy enforces a strict 4-layer testing pyramid with automated verification gates.
 
 ---
 

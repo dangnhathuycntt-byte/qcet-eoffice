@@ -359,7 +359,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           type: 'VAN_BAN_DEN',
           originalNumber: 'INTERNAL-DEPT-771',
           issuedDate: new Date(),
-          issuingAuthority: 'UBND Tỉnh Quảng Ninh',
+          issuingAuthority: 'UBND Tỉnh ',
           category: 'Công văn',
           summary: 'Văn bản nội bộ Phòng 1',
           status: 'CHO_PHAN_CONG',

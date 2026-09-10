@@ -19,8 +19,18 @@ import type {
   DomainAssigneeRole,
   DomainDeliverableStatus,
 } from './types';
-import { formatLocalDate } from '@/lib/adapters/task-db-adapter';
-import { getSystemReferenceDate, isTaskPastDue, getAcademicYear } from '@/lib/academic-calendar';
+import { formatLocalDate } from '../../lib/adapters/task-db-adapter';
+import {
+  getSystemReferenceDate,
+  getSystemReferenceDateStr,
+  isTaskPastDue,
+  isTaskOverdue,
+  getAcademicYear,
+} from '../../lib/academic-calendar';
+
+export { getSystemReferenceDate, getSystemReferenceDateStr, isTaskPastDue, isTaskOverdue };
+export * from './canonical-semantics';
+export * from './attention-resolver';
 
 export function toTaskAssigneeDomain(raw: any): TaskAssigneeDomain {
   const roleInTask: DomainAssigneeRole =
@@ -70,7 +80,7 @@ export function toTaskDeliverableDomain(raw: any, taskIdFallback?: string): Task
   };
 }
 
-export function toTaskDomainModel(raw: any): TaskDomainModel {
+export function toTaskDomainModel(raw: any, referenceDate?: string): TaskDomainModel {
   if (!raw) {
     throw new Error('Cannot map null or undefined raw task to domain model');
   }
@@ -94,7 +104,7 @@ export function toTaskDomainModel(raw: any): TaskDomainModel {
   // Map Subtasks recursively if present
   let subTasks: TaskDomainModel[] | undefined;
   if (Array.isArray(raw.subTasks) && raw.subTasks.length > 0) {
-    subTasks = raw.subTasks.map(toTaskDomainModel);
+    subTasks = raw.subTasks.map((st: any) => toTaskDomainModel(st, referenceDate));
   }
 
   const totalSubTasks =
@@ -115,16 +125,8 @@ export function toTaskDomainModel(raw: any): TaskDomainModel {
 
   // Overdue status check
   const dueDateStr = formatLocalDate(raw.dueDate);
-  const refDate = getSystemReferenceDate();
-  const isCompletedOrCancelled =
-    raw.status === 'COMPLETED' ||
-    raw.status === 'completed' ||
-    raw.status === 'CANCELLED' ||
-    raw.status === 'cancelled';
-
-  const isOverdue =
-    !isCompletedOrCancelled &&
-    (raw.status === 'OVERDUE' || raw.status === 'overdue' || isTaskPastDue(raw.dueDate, refDate));
+  const refDate = referenceDate || getSystemReferenceDateStr();
+  const isOverdue = isTaskOverdue(raw.status, raw.dueDate, refDate);
 
   const scope: DomainTaskScope =
     raw.scope === 'SCHOOL' || raw.scope === 'school'
@@ -136,7 +138,10 @@ export function toTaskDomainModel(raw: any): TaskDomainModel {
   const status: DomainTaskStatus =
     raw.status === 'COMPLETED' || raw.status === 'completed'
       ? 'COMPLETED'
-      : raw.status === 'WAITING_APPROVAL' || raw.status === 'waiting_approval'
+      : raw.status === 'WAITING_APPROVAL' ||
+        raw.status === 'waiting_approval' ||
+        raw.status === 'PENDING_EXECUTIVE_APPROVAL' ||
+        raw.status === 'pending_executive_approval'
       ? 'WAITING_APPROVAL'
       : raw.status === 'CANCELLED' || raw.status === 'cancelled'
       ? 'CANCELLED'
@@ -275,12 +280,14 @@ export function toTaskViewModel(task: TaskDomainModel | TaskDTO | any): TaskView
     NOT_STARTED: 'not_started',
     IN_PROGRESS: 'in_progress',
     WAITING_APPROVAL: 'waiting_approval',
+    PENDING_EXECUTIVE_APPROVAL: 'pending_executive_approval',
     COMPLETED: 'completed',
     OVERDUE: 'overdue',
     CANCELLED: 'cancelled',
     not_started: 'not_started',
     in_progress: 'in_progress',
     waiting_approval: 'waiting_approval',
+    pending_executive_approval: 'pending_executive_approval',
     completed: 'completed',
     overdue: 'overdue',
     cancelled: 'cancelled',

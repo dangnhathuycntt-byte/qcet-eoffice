@@ -283,4 +283,55 @@ describe("Calendar Route Integration & Interactive Task Operations", () => {
     assert.doesNotMatch(pageContent, /\bdark:/, "page.tsx must have NO dark: classes");
     assert.doesNotMatch(workspaceContent, /\bdark:/, "executive-calendar-workspace.tsx must have NO dark: classes");
   });
+
+  test("Calendar controls consolidated into exactly 2 unified rows (Row 1 & Row 2)", () => {
+    const pageFile = path.resolve(process.cwd(), "src/app/calendar/page.tsx");
+    const pageContent = fs.readFileSync(pageFile, "utf8");
+
+    // Row 1: Scope, Period/Month Navigation, View Switcher
+    assert.match(pageContent, /data-slot="calendar-controls-row-1"/, "Must contain Row 1 controls container");
+    assert.match(pageContent, /data-slot="calendar-scope-switcher"/, "Row 1 must contain scope switcher");
+    assert.match(pageContent, /data-slot="calendar-period-navigation"/, "Row 1 must contain period navigation");
+    assert.match(pageContent, /data-slot="calendar-view-switcher"/, "Row 1 must contain view switcher");
+
+    // Canonical Scope: "Của tôi"
+    assert.match(pageContent, />\s*Của tôi\s*<\/button>/, "Scope tab must use canonical 'Của tôi'");
+
+    // Row 2: Search, Filters, single global + Tạo CTA
+    assert.match(pageContent, /data-slot="calendar-controls-row-2"/, "Must contain Row 2 controls container");
+    assert.match(pageContent, /Bộ lọc/, "Row 2 must contain 'Bộ lọc' button");
+    assert.match(pageContent, /Tìm việc, sự kiện\.\.\./, "Row 2 must contain search input");
+    assert.match(pageContent, /Tạo công việc/, "Dropdown must offer 'Tạo công việc'");
+    assert.match(pageContent, /Tạo sự kiện/, "Dropdown must offer 'Tạo sự kiện'");
+
+    // No duplicate + Tạo in page header
+    const headerSection = pageContent.split('data-slot="calendar-controls-container"')[0];
+    assert.ok(headerSection, "Header section should exist before controls container");
+    assert.doesNotMatch(headerSection, /Tạo công việc/, "Header must not contain duplicate + Tạo dropdown");
+  });
+
+  test("Calendar month cells render at most 3 task previews with +N nhiệm vụ overflow badge", () => {
+    const gridFile = path.resolve(process.cwd(), "src/components/calendar/calendar-month-grid.tsx");
+    const gridContent = fs.readFileSync(gridFile, "utf8");
+
+    // Max 3 preview items per cell
+    assert.match(gridContent, /MAX_PREVIEW\s*=\s*3/, "Cell must define MAX_PREVIEW = 3");
+    assert.match(gridContent, /slice\(0,\s*(?:MAX_PREVIEW|3)\)/, "Cell must slice items to max 3 items");
+
+    // Exact "+N nhiệm vụ" overflow badge
+    assert.match(gridContent, /\+\{remainingCount\}\s*nhiệm vụ/, "Must render +{remainingCount} nhiệm vụ");
+    assert.doesNotMatch(gridContent, /\+\{remainingCount\}\s*việc khác/, "Must NOT render việc khác");
+  });
+
+  test("Calendar day sheet handles polite empty state and compliant touch targets", () => {
+    const sheetFile = path.resolve(process.cwd(), "src/components/calendar/calendar-day-sheet.tsx");
+    const sheetContent = fs.readFileSync(sheetFile, "utf8");
+
+    // Polite empty state
+    assert.match(sheetContent, /Không có nhiệm vụ trong ngày/, "Sheet must display polite empty state header");
+    assert.match(sheetContent, /\+ Thêm việc ngày này/, "Sheet must display contextual '+ Thêm việc ngày này'");
+
+    // Touch targets >= 44px on mobile
+    assert.match(sheetContent, /min-h-\[44px\]/, "Must contain min-h-[44px] touch target for mobile actions");
+  });
 });

@@ -17,6 +17,7 @@ import type {
 } from "@/lib/executive-matrix-aggregator";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ActionQueueShell } from "@/components/workspace/action-queue-shell";
 
 export type { ExecutiveFilter, ExecutiveActionItem };
 
@@ -110,7 +111,7 @@ export function ExecutiveActionCenter({
   onFilterChange,
   items,
   onAction,
-  hideCards = false,
+  hideCards = true,
 }: ExecutiveActionCenterProps) {
   const cards = getActionCardData(stats);
   const [isExpanded, setIsExpanded] = React.useState(false);
@@ -197,93 +198,115 @@ export function ExecutiveActionCenter({
 
       {/* Action Items List Queue or Verified Clear Horizon Empty State */}
       {displayItems.length > 0 ? (
-        <div className="space-y-2.5 pt-1" data-slot="action-items-queue">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs sm:text-[13px] font-semibold text-muted-foreground">
-              {activeFilter === "ALL"
-                ? "Nhiệm vụ trọng tâm cần chỉ đạo trực tiếp"
-                : `Hàng đợi: ${
-                    activeFilter === "PENDING_APPROVAL"
-                      ? "Hồ sơ chờ phê duyệt"
-                      : activeFilter === "BLOCKED_OVERDUE"
-                        ? "Vướng mắc & Quá hạn cần đôn đốc"
-                        : "Nhiệm vụ chiến lược năm học"
-                  }`}
-            </span>
-            <span className="text-xs font-mono text-muted-foreground tabular-nums">
-              {displayItems.length} nhiệm vụ
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
-            {visibleItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3.5 min-h-[64px] transition-all hover:bg-muted/20"
-                data-slot="action-item-card"
-              >
-                <div className="space-y-1 min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-sm font-semibold text-foreground leading-snug truncate">
-                      {item.title}
-                    </h4>
-                  </div>
-                  <p className="text-xs sm:text-[13px] text-muted-foreground flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-foreground/80">
-                      {item.departmentName || item.department}
-                    </span>
-                    <span>·</span>
-                    <span>Chủ trì: {item.leadName || item.assignee}</span>
-                    <span>·</span>
-                    <span className="font-mono tabular-nums">Hạn: {item.dueDate}</span>
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    size="sm"
-                    variant={item.filterType === "BLOCKED_OVERDUE" ? "destructive" : "default"}
-                    className="min-h-[44px] sm:min-h-[36px] h-9 px-3 text-xs font-semibold rounded-lg shadow-2xs gap-1.5"
-                    aria-label={`${item.actionLabel || "Xử lý ngay"}: ${item.title}`}
-                    onClick={() => onAction?.(item.actionType || item.filterType, item)}
-                  >
-                    <span>{item.actionLabel || "Xử lý ngay"}</span>
-                    <ArrowRight className="size-3.5" strokeWidth={1.5} />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {displayItems.length > INITIAL_LIMIT && (
-            <div className="pt-1 flex justify-center">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 min-h-[44px] sm:min-h-[36px] py-2 gap-1.5"
-                onClick={() => setIsExpanded((prev) => !prev)}
-                aria-expanded={isExpanded}
-                aria-label={
-                  isExpanded
-                    ? "Thu gọn danh sách"
-                    : `Xem thêm ${displayItems.length - INITIAL_LIMIT} nhiệm vụ trong hàng đợi`
-                }
-              >
-                <span>
-                  {isExpanded
-                    ? "Thu gọn danh sách"
-                    : `Xem thêm ${displayItems.length - INITIAL_LIMIT} nhiệm vụ trong hàng đợi`}
-                </span>
-                {isExpanded ? (
-                  <ChevronUp className="size-3.5" strokeWidth={1.5} />
-                ) : (
-                  <ChevronDown className="size-3.5" strokeWidth={1.5} />
-                )}
-              </Button>
+        <ActionQueueShell
+          title={
+            activeFilter === "ALL"
+              ? "Hàng đợi điều hành"
+              : `Hàng đợi: ${
+                  activeFilter === "PENDING_APPROVAL"
+                    ? "Hồ sơ chờ phê duyệt"
+                    : activeFilter === "BLOCKED_OVERDUE"
+                      ? "Vướng mắc & Quá hạn cần đôn đốc"
+                      : "Nhiệm vụ chiến lược năm học"
+                }`
+          }
+          subtitle={
+            activeFilter === "ALL"
+              ? "Nhiệm vụ trọng tâm cần chỉ đạo trực tiếp"
+              : undefined
+          }
+          totalCount={displayItems.length}
+          collapsible={false}
+          className="border-border/70"
+        >
+          <div className="space-y-2.5 pt-1" data-slot="action-items-queue">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs sm:text-[13px] font-semibold text-muted-foreground">
+                {activeFilter === "ALL"
+                  ? "Nhiệm vụ trọng tâm cần chỉ đạo trực tiếp"
+                  : `Hàng đợi: ${
+                      activeFilter === "PENDING_APPROVAL"
+                        ? "Hồ sơ chờ phê duyệt"
+                        : activeFilter === "BLOCKED_OVERDUE"
+                          ? "Vướng mắc & Quá hạn cần đôn đốc"
+                          : "Nhiệm vụ chiến lược năm học"
+                    }`}
+              </span>
+              <span className="text-xs font-mono text-muted-foreground tabular-nums">
+                {displayItems.length} nhiệm vụ
+              </span>
             </div>
-          )}
-        </div>
+
+            <div className="grid grid-cols-1 gap-2.5 max-h-[460px] overflow-y-auto pr-1">
+              {visibleItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3.5 min-h-[64px] transition-all hover:bg-muted/20"
+                  data-slot="action-item-card"
+                >
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-semibold text-foreground leading-snug truncate">
+                        {item.title}
+                      </h4>
+                    </div>
+                    <p className="text-xs sm:text-[13px] text-muted-foreground flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-foreground/80">
+                        {item.departmentName || item.department}
+                      </span>
+                      <span>·</span>
+                      <span>Chủ trì: {item.leadName || item.assignee}</span>
+                      <span>·</span>
+                      <span className="font-mono tabular-nums">Hạn: {item.dueDate}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant={item.filterType === "BLOCKED_OVERDUE" ? "destructive" : "default"}
+                      className="min-h-[44px] sm:min-h-[36px] h-9 px-3 text-xs font-semibold rounded-lg shadow-2xs gap-1.5"
+                      aria-label={`${item.actionLabel || "Xử lý ngay"}: ${item.title}`}
+                      onClick={() => onAction?.(item.actionType || item.filterType, item)}
+                    >
+                      <span>{item.actionLabel || "Xử lý ngay"}</span>
+                      <ArrowRight className="size-3.5" strokeWidth={1.5} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {displayItems.length > INITIAL_LIMIT && (
+              <div className="pt-1 flex justify-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 min-h-[44px] sm:min-h-[36px] py-2 gap-1.5"
+                  onClick={() => setIsExpanded((prev) => !prev)}
+                  aria-expanded={isExpanded}
+                  aria-label={
+                    isExpanded
+                      ? "Thu gọn danh sách"
+                      : `Xem thêm ${displayItems.length - INITIAL_LIMIT} nhiệm vụ trong hàng đợi`
+                  }
+                >
+                  <span>
+                    {isExpanded
+                      ? "Thu gọn danh sách"
+                      : `Xem thêm ${displayItems.length - INITIAL_LIMIT} nhiệm vụ trong hàng đợi`}
+                  </span>
+                  {isExpanded ? (
+                    <ChevronUp className="size-3.5" strokeWidth={1.5} />
+                  ) : (
+                    <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        </ActionQueueShell>
       ) : (
         <div
           className="flex flex-col sm:flex-row sm:items-center gap-3.5 rounded-xl border border-border/70 bg-card/60 p-3.5 min-h-[64px] transition-all"

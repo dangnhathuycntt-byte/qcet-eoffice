@@ -2,14 +2,14 @@
 
 **Document Status**: Canonical Governance Reference  
 **Scope**: Institutional Data Assets, Classification Tiers, Handling Controls, Security Matrices  
-**Authority**: Quản trị mạng / Ban Giám hiệu, Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh  
+**Authority**: Quản trị mạng / Ban Giám hiệu, Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn   
 **Last Updated**: 2026-09-09  
 
 ---
 
 ## 1. Executive Summary & Purpose
 
-The QCET E-Office platform manages administrative, operational, academic, and executive records for the **Quang Ninh College of Economic and Technology** (Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh).
+The QCET E-Office platform manages administrative, operational, academic, and executive records for the **Quang Ninh College of Economic and Technology** (Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn ).
 
 This document establishes the official **Data Classification Framework** and **Handling Policies**. All subsystems, backend APIs, client interfaces, database schemas, backup pipelines, and caching layers must adhere strictly to the rules defined herein.
 

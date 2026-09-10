@@ -12,6 +12,7 @@ import {
   type UserSummaryDTO,
   type UserDepartmentDTO,
 } from './user-dto';
+import { isTaskOverdue } from '@/lib/academic-calendar';
 
 export interface TaskSummaryDTO {
   id: string;
@@ -22,6 +23,7 @@ export interface TaskSummaryDTO {
   dueDate: string;
   progress: number;
   version: number;
+  isOverdue?: boolean;
 }
 
 export interface TaskListDTO {
@@ -36,6 +38,7 @@ export interface TaskListDTO {
   leadAssignee?: UserSummaryDTO | null;
   assignees?: UserSummaryDTO[];
   version: number;
+  isOverdue?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -136,6 +139,13 @@ function extractProgress(raw: Record<string, any>): number {
 }
 
 function extractDepartment(raw: Record<string, any>): UserDepartmentDTO | null {
+  if (raw.leadUnit && typeof raw.leadUnit === 'object') {
+    return {
+      id: String(raw.leadUnit.id ?? raw.leadUnitId ?? ''),
+      code: raw.leadUnit.code ?? null,
+      name: String(raw.leadUnit.name ?? ''),
+    };
+  }
   if (raw.department && typeof raw.department === 'object') {
     return {
       id: String(raw.department.id ?? raw.departmentId ?? ''),
@@ -148,6 +158,13 @@ function extractDepartment(raw: Record<string, any>): UserDepartmentDTO | null {
       id: String(raw.departmentId ?? ''),
       code: raw.departmentCode ?? null,
       name: raw.department,
+    };
+  }
+  if (raw.leadUnitId) {
+    return {
+      id: String(raw.leadUnitId),
+      code: raw.leadUnitCode ?? null,
+      name: raw.leadUnitName ?? String(raw.leadUnitId),
     };
   }
   if (raw.departmentId) {
@@ -194,6 +211,25 @@ function extractUserFromAssignee(item: any): UserSummaryDTO | null {
 }
 
 function extractAssignees(raw: Record<string, any>): UserSummaryDTO[] {
+  // Check V2 actors first
+  if (Array.isArray(raw.actors) && raw.actors.length > 0) {
+    const actorUsers = raw.actors
+      .filter((a: any) => a && (a.user || a.userId))
+      .map((a: any) => {
+        if (a.user) return toUserSummaryDTO(a.user);
+        return toUserSummaryDTO({
+          id: a.userId,
+          name: a.userName ?? '',
+          email: a.userEmail ?? '',
+          role: a.role ?? 'CHUYEN_VIEN',
+        });
+      })
+      .filter((u): u is UserSummaryDTO => u !== null);
+    if (actorUsers.length > 0) {
+      return actorUsers;
+    }
+  }
+
   if (!Array.isArray(raw.assignees)) return [];
   return raw.assignees
     .map(extractUserFromAssignee)
@@ -201,6 +237,22 @@ function extractAssignees(raw: Record<string, any>): UserSummaryDTO[] {
 }
 
 function extractLeadAssignee(raw: Record<string, any>): UserSummaryDTO | null {
+  // Check V2 actors first (DRI or isPrimaryDRI)
+  if (Array.isArray(raw.actors)) {
+    const driActor = raw.actors.find(
+      (a: any) => a && (a.role === 'DRI' || a.isPrimaryDRI) && (a.user || a.userId)
+    );
+    if (driActor) {
+      if (driActor.user) return toUserSummaryDTO(driActor.user);
+      return toUserSummaryDTO({
+        id: driActor.userId,
+        name: driActor.userName ?? '',
+        email: driActor.userEmail ?? '',
+        role: 'CHUYEN_VIEN',
+      });
+    }
+  }
+
   // Direct leadAssignee property
   if (raw.leadAssignee && typeof raw.leadAssignee === 'object') {
     return extractUserFromAssignee(raw.leadAssignee);
@@ -317,6 +369,7 @@ export function toTaskSummaryDTO(rawTask: unknown): TaskSummaryDTO | null {
     dueDate: extractDateString(task.dueDate),
     progress: extractProgress(task),
     version: extractVersion(task),
+    isOverdue: isTaskOverdue(task.status, task.dueDate),
   };
 }
 
@@ -340,6 +393,7 @@ export function toTaskListDTO(rawTask: unknown): TaskListDTO | null {
     leadAssignee: extractLeadAssignee(task),
     assignees: extractAssignees(task),
     version: extractVersion(task),
+    isOverdue: isTaskOverdue(task.status, task.dueDate),
     createdAt: toISOStringSafe(task.createdAt),
     updatedAt: toISOStringSafe(task.updatedAt),
   };

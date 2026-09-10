@@ -20,6 +20,10 @@ export interface StructuredLogEntry {
   event: string;
   requestId?: string | null;
   durationMs?: number;
+  route?: string;
+  action?: string;
+  resourceId?: string;
+  userId?: string | null;
   errorCode?: string;
   metadata?: Record<string, any>;
 }
@@ -27,6 +31,10 @@ export interface StructuredLogEntry {
 export interface LogData {
   requestId?: string | null;
   durationMs?: number;
+  route?: string;
+  action?: string;
+  resourceId?: string;
+  userId?: string | null;
   errorCode?: string;
   metadata?: Record<string, any>;
   [key: string]: any;
@@ -52,6 +60,12 @@ const SENSITIVE_KEY_PATTERNS = [
   /credential/i,
   /api[_-]?key/i,
   /private[_-]?key/i,
+  /database[_-]?url/i,
+  /db[_-]?url/i,
+  /mat[_-]?khau/i,
+  /van[_-]?ban[_-]?mat/i,
+  /noi[_-]?dung[_-]?mat/i,
+  /raw[_-]?payload/i,
 ];
 
 /**
@@ -73,7 +87,18 @@ export function isSensitiveKey(key: string): boolean {
  */
 export function redactSensitiveData<T = unknown>(data: T): unknown {
   return sanitizeLogContext(data, {
-    customSensitiveKeys: ['credential', 'credentials', 'sessionToken', 'sessionSecret'],
+    customSensitiveKeys: [
+      'credential',
+      'credentials',
+      'sessionToken',
+      'sessionSecret',
+      'database_url',
+      'db_url',
+      'mat_khau',
+      'van_ban_mat',
+      'noi_dung_mat',
+      'raw_payload',
+    ],
   });
 }
 
@@ -159,6 +184,10 @@ export class StructuredLogger {
 
     const requestId = resolvedData.requestId !== undefined ? resolvedData.requestId : undefined;
     const durationMs = typeof resolvedData.durationMs === 'number' ? resolvedData.durationMs : undefined;
+    const route = typeof resolvedData.route === 'string' ? resolvedData.route : undefined;
+    const action = typeof resolvedData.action === 'string' ? resolvedData.action : undefined;
+    const resourceId = typeof resolvedData.resourceId === 'string' ? resolvedData.resourceId : undefined;
+    const userId = resolvedData.userId !== undefined ? resolvedData.userId : undefined;
 
     let errorCode = resolvedData.errorCode;
     if (!errorCode && resolvedError && typeof resolvedError === 'object') {
@@ -172,6 +201,10 @@ export class StructuredLogger {
     const {
       requestId: _r,
       durationMs: _d,
+      route: _route,
+      action: _act,
+      resourceId: _resId,
+      userId: _uId,
       errorCode: _e,
       metadata: explicitMetadata,
       ...extraFields
@@ -207,6 +240,10 @@ export class StructuredLogger {
       event,
       ...(requestId !== undefined ? { requestId } : {}),
       ...(durationMs !== undefined ? { durationMs } : {}),
+      ...(route !== undefined ? { route } : {}),
+      ...(action !== undefined ? { action } : {}),
+      ...(resourceId !== undefined ? { resourceId } : {}),
+      ...(userId !== undefined ? { userId } : {}),
       ...(errorCode !== undefined ? { errorCode } : {}),
       ...(metadata !== undefined ? { metadata } : {}),
     };
@@ -259,6 +296,141 @@ export class StructuredLogger {
 
   public debug(event: string, data?: LogData): StructuredLogEntry {
     return this.emit('debug', event, data);
+  }
+
+  /**
+   * Structured Domain Action logger helper.
+   * Records operational domain actions with standard attributes (route, action, resourceId, durationMs, requestId).
+   */
+  public action(
+    actionName: string,
+    data?: {
+      route?: string;
+      resourceId?: string;
+      userId?: string | null;
+      durationMs?: number;
+      requestId?: string | null;
+      metadata?: Record<string, any>;
+      [key: string]: any;
+    }
+  ): StructuredLogEntry {
+    return this.emit('info', `action.${actionName}`, {
+      action: actionName,
+      route: data?.route,
+      resourceId: data?.resourceId,
+      userId: data?.userId,
+      durationMs: data?.durationMs,
+      requestId: data?.requestId,
+      metadata: data?.metadata,
+      ...data,
+    });
+  }
+
+  /**
+   * Structured Security Event: Denied Authorization
+   */
+  public authorizationDenied(data: {
+    requestId?: string | null;
+    userId?: string | null;
+    action?: string;
+    resourceId?: string;
+    reason?: string;
+    route?: string;
+    metadata?: Record<string, any>;
+    [key: string]: any;
+  }): StructuredLogEntry {
+    return this.emit('warn', 'security.authorization_denied', {
+      errorCode: 'FORBIDDEN',
+      ...data,
+      metadata: {
+        ...(data.metadata || {}),
+        reason: data.reason,
+      },
+    });
+  }
+
+  /**
+   * Structured Security & Workflow Event: Invalid State Transition
+   */
+  public invalidTransition(data: {
+    requestId?: string | null;
+    userId?: string | null;
+    entity?: string;
+    entityId?: string;
+    fromState?: string;
+    toState?: string;
+    reason?: string;
+    route?: string;
+    metadata?: Record<string, any>;
+    [key: string]: any;
+  }): StructuredLogEntry {
+    return this.emit('warn', 'workflow.invalid_transition', {
+      errorCode: 'INVALID_TRANSITION',
+      resourceId: data.entityId,
+      ...data,
+      metadata: {
+        ...(data.metadata || {}),
+        entity: data.entity,
+        fromState: data.fromState,
+        toState: data.toState,
+        reason: data.reason,
+      },
+    });
+  }
+
+  /**
+   * Structured Database Event: Optimistic Concurrency Conflict
+   */
+  public concurrencyConflict(data: {
+    requestId?: string | null;
+    userId?: string | null;
+    entity?: string;
+    entityId?: string;
+    expectedVersion?: number;
+    actualVersion?: number | null;
+    route?: string;
+    metadata?: Record<string, any>;
+    [key: string]: any;
+  }): StructuredLogEntry {
+    return this.emit('warn', 'database.concurrency_conflict', {
+      errorCode: 'CONCURRENCY_CONFLICT',
+      resourceId: data.entityId,
+      ...data,
+      metadata: {
+        ...(data.metadata || {}),
+        entity: data.entity,
+        expectedVersion: data.expectedVersion,
+        actualVersion: data.actualVersion,
+      },
+    });
+  }
+
+  /**
+   * Structured Security Event: File Streaming / Access Denied
+   */
+  public fileAccessDenied(data: {
+    requestId?: string | null;
+    userId?: string | null;
+    filePath?: string;
+    fileName?: string;
+    reason?: string;
+    resourceType?: string;
+    resourceId?: string;
+    route?: string;
+    metadata?: Record<string, any>;
+    [key: string]: any;
+  }): StructuredLogEntry {
+    return this.emit('warn', 'security.file_access_denied', {
+      errorCode: 'FORBIDDEN',
+      ...data,
+      metadata: {
+        ...(data.metadata || {}),
+        filePath: data.filePath,
+        fileName: data.fileName,
+        resourceType: data.resourceType,
+        reason: data.reason,
+      },
+    });
   }
 
   /**

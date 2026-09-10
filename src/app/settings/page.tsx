@@ -2,11 +2,11 @@ import * as React from "react";
 import type { Metadata } from "next";
 import { MaintenanceView } from "@/components/common/maintenance-view";
 import { PWAHealthSettings } from "@/components/pwa/pwa-health-settings";
+import { INSTITUTION_CONFIG } from "@/config/institution";
 
 export const metadata: Metadata = {
-  title: "Cài đặt Hệ thống - QCET E-Office",
-  description:
-    "Cài đặt hệ thống chuyển đổi số Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh",
+  title: `Cài đặt Hệ thống - ${INSTITUTION_CONFIG.shortName} E-Office`,
+  description: `Cài đặt hệ thống chuyển đổi số ${INSTITUTION_CONFIG.officialName}`,
 };
 
 export default function SettingsPage() {

@@ -1,0 +1,97 @@
+{
+  "contractVersion": "1.0.0",
+  "freezeDate": "2026-09-10",
+  "status": "frozen",
+  "gate": "G0",
+  "frozenContracts": [
+    "src/contracts/workspace-semantic.ts",
+    "docs/agent-work/UI_SEMANTIC_CONTRACT.md",
+    "docs/agent-work/OWNERSHIP.md",
+    "docs/agent-work/WORKSTREAMS.json"
+  ],
+  "workstreams": [
+    {
+      "id": "F1",
+      "name": "Canonical Task Semantics & Attention Resolver",
+      "owner": "F1",
+      "files": [
+        "src/domain/tasks/canonical-semantics.ts",
+        "src/domain/tasks/attention-resolver.ts",
+        "src/domain/tasks/mappers.ts",
+        "tests/domain-task-semantics.test.ts"
+      ]
+    },
+    {
+      "id": "F2",
+      "name": "Workspace URL/State & Query Engine",
+      "owner": "F2",
+      "files": [
+        "src/lib/workspace-query.ts",
+        "src/hooks/use-workspace-query.ts",
+        "tests/workspace-query.test.ts"
+      ]
+    },
+    {
+      "id": "F3",
+      "name": "Shared Workspace UI Primitives",
+      "owner": "F3",
+      "files": [
+        "src/components/workspace/scope-switcher.tsx",
+        "src/components/workspace/period-selector.tsx",
+        "src/components/workspace/workspace-toolbar.tsx",
+        "src/components/workspace/status-filter.tsx",
+        "src/components/workspace/view-switcher.tsx",
+        "src/components/workspace/metric-strip.tsx",
+        "src/components/workspace/attention-badge.tsx",
+        "src/components/workspace/action-queue-shell.tsx",
+        "tests/workspace-primitives.test.ts"
+      ]
+    },
+    {
+      "id": "F4",
+      "name": "Invariant & Cross-Domain Test Harness",
+      "owner": "F4",
+      "files": [
+        "tests/workspace-semantic-invariants.test.ts",
+        "tests/workspace-count-invariants.test.ts",
+        "tests/workspace-ui-invariants.test.ts"
+      ]
+    },
+    {
+      "id": "P1",
+      "name": "Tasks Page Migration",
+      "owner": "P1",
+      "files": [
+        "src/app/tasks/page.tsx",
+        "src/app/tasks/tasks-page-client.tsx",
+        "src/components/tasks/task-kanban-board.tsx",
+        "src/components/dashboard/unified-task-toolbar.tsx",
+        "src/components/workspace/unified-adaptive-workspace.tsx"
+      ]
+    },
+    {
+      "id": "P2",
+      "name": "Calendar Migration",
+      "owner": "P2",
+      "files": [
+        "src/app/calendar/page.tsx",
+        "src/components/calendar/calendar-month-grid.tsx",
+        "src/components/calendar/calendar-day-sheet.tsx",
+        "src/lib/academic-calendar.ts"
+      ]
+    },
+    {
+      "id": "P3",
+      "name": "Dashboard Migration",
+      "owner": "P3",
+      "files": [
+        "src/app/dashboard/page.tsx",
+        "src/components/dashboard/executive-action-center.tsx",
+        "src/components/dashboard/executive-stat-strip.tsx",
+        "src/components/dashboard/workbench-mobile-feed.tsx",
+        "src/components/dashboard/smart-workbox.tsx",
+        "src/lib/executive-matrix-aggregator.ts"
+      ]
+    }
+  ]
+}

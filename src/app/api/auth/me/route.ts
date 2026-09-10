@@ -3,6 +3,7 @@ import { getSessionFromRequest } from "@/lib/jwt-session";
 import { getApiContext } from "@/server/api/request-context";
 import { toUserPublicDTO } from "@/server/dto";
 import { apiError, apiSuccess } from "@/server/api/response";
+import { AuthenticationError } from "@/server/api/errors";
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();
@@ -64,6 +65,15 @@ export async function GET(req: Request) {
       }
     );
   } catch (error) {
+    if (error instanceof AuthenticationError || (error as any)?.code === 'ACCOUNT_DISABLED' || (error as any)?.code === 'AUTH_REQUIRED') {
+      return apiSuccess(
+        { authenticated: false, user: null },
+        {
+          headers: { "Cache-Control": "private, no-store" },
+          requestId,
+        }
+      );
+    }
     return apiError(error, requestId, { "Cache-Control": "private, no-store" });
   }
 }

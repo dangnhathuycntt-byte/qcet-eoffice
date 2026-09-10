@@ -9,6 +9,7 @@ import { GET as dashboardOverviewRoute } from "../src/app/api/dashboard/overview
 import { getLiveDashboardData } from "../src/lib/server/dashboard-service";
 import { validateLoginForm } from "../src/lib/login-helpers";
 import { prisma } from "../src/lib/prisma";
+import { signSessionToken } from "../src/lib/jwt-session";
 
 describe("Zero-Mock Backend Contract & Elimination of Demo Shims", () => {
   test("1. Endpoint /api/auth/demo-session/route.ts is permanently deleted from filesystem", () => {
@@ -119,8 +120,21 @@ describe("Zero-Mock Backend Contract & Elimination of Demo Shims", () => {
     });
 
     test("/api/dashboard/overview route returns live database payload and ignores ?source=mock", async () => {
-      const req = new NextRequest("http://localhost:3000/api/dashboard/overview?source=mock");
-      const res = await dashboardOverviewRoute();
+      let token = "";
+      const user = await prisma.user.findFirst();
+      if (user) {
+        token = signSessionToken({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          departmentId: user.departmentId ?? undefined,
+        });
+      }
+      const req = new NextRequest("http://localhost:3000/api/dashboard/overview?source=mock", {
+        headers: token ? { authorization: `Bearer ${token}` } : {},
+      });
+      const res = await dashboardOverviewRoute(req);
       assert.equal(res.status, 200);
       const json = await res.json();
       assert.equal(json.source, "database");

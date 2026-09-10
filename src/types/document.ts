@@ -98,6 +98,9 @@ export interface DocumentItem {
 
   attachments?: DocumentAttachmentItem[];
   directives?: DocumentDirectiveItem[];
+  incomingWorkflow?: any;
+  outgoingWorkflow?: any;
+  signatures?: any[];
   linkedTaskId?: string | null;
 
   createdAt?: string;

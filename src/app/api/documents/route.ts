@@ -64,20 +64,17 @@ export async function GET(request: NextRequest) {
       search: searchQuery,
       limit,
       offset,
-      userContext: authUser,
+      authUser,
     };
 
-    const documents = await listDocuments(filter);
-
-    // Object-level authorization filtering (BOLA prevention)
-    const readableDocs = documents.filter((doc) => canReadDocument(authUser, doc));
+    const { documents, total } = await listDocuments(filter);
 
     return apiSuccess(
       {
         success: true,
-        data: readableDocs,
-        documents: toDocumentListDTOArray(readableDocs),
-        total: readableDocs.length,
+        data: documents,
+        documents: toDocumentListDTOArray(documents),
+        total,
         page,
         limit,
       },

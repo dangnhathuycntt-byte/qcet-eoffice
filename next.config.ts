@@ -53,22 +53,12 @@ const nextConfig: NextConfig = {
       {
         source: "/dashboard",
         destination: "/",
-        permanent: false,
+        permanent: true,
       },
       {
         source: "/unit-tasks",
         destination: "/tasks?scope=unit",
-        permanent: false,
-      },
-      {
-        source: "/calendar",
-        destination: "/?zone=calendar",
-        permanent: false,
-      },
-      {
-        source: "/org",
-        destination: "/?zone=org",
-        permanent: false,
+        permanent: true,
       },
     ];
   },

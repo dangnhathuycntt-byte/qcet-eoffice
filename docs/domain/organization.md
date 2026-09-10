@@ -1,7 +1,7 @@
 # QCET E-Office — Domain Specification: Organization & Institutional Structure
 **Document Code:** `SPEC-DOMAIN-ORG-2026-01`  
 **Domain:** Core Organizational Hierarchy, Institutional Bodies, and Temporal Validity  
-**Institution:** Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh (QCET)  
+**Institution:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
 **Status:** Canonical Domain Specification  
 **Version:** 1.0.0  
 **Effective Date:** 2026-09-09  
@@ -10,7 +10,7 @@
 
 ## 1. Executive Domain Summary
 
-The Organization domain models the administrative, academic, and structural reality of Quang Ninh College of Economic and Technology (Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh - QCET). The institutional structure is not a static tree; it is a **temporally versioned, regulatory-bound network** of organizational units and cross-functional collective bodies.
+The Organization domain models the administrative, academic, and structural reality of Quang Ninh College of Economic and Technology (Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  - QCET). The institutional structure is not a static tree; it is a **temporally versioned, regulatory-bound network** of organizational units and cross-functional collective bodies.
 
 ### 1.1. Core Regulatory Foundations
 1. **Quyết định số 282/QĐ-CĐKTCNQN (19/08/2026)**: Sửa đổi, bổ sung Quy chế tổ chức và hoạt động của Nhà trường; chuẩn hóa hệ thống 05 Phòng chức năng, 02 Trung tâm trực thuộc và 09 Khoa đào tạo chuyên môn (tổng cộng 16 đơn vị cấu thành, gồm 07 đơn vị tham mưu/dịch vụ số và 09 đơn vị đào tạo chuyên môn).

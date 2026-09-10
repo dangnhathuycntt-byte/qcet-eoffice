@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { toApiErrorResponse, type ApiErrorResponse } from './errors';
+import { logger } from '@/server/observability/logger';
 
 export interface ApiErrorOptions {
   headers?: HeadersInit;
@@ -30,6 +31,65 @@ export function apiError(
   }
 
   const { status, body } = toApiErrorResponse(error, requestId);
+
+  // Structured logging for security-critical events (denied authorization, invalid transitions, concurrency conflicts)
+  const errObj = (error && typeof error === 'object' ? error : {}) as Record<string, any>;
+  const errorDetails = body.error || errObj.message;
+
+  if (
+    body.code === 'INVALID_TRANSITION' ||
+    body.code === 'INVALID_WORKFLOW_STATE' ||
+    body.code === 'INVALID_STATE' ||
+    errObj.code === 'INVALID_TRANSITION' ||
+    errObj.code === 'INVALID_WORKFLOW_STATE' ||
+    errObj.name === 'InvalidTransitionError' ||
+    errObj.name === 'InvalidWorkflowStateError'
+  ) {
+    logger.invalidTransition({
+      requestId,
+      userId: errObj.userId || null,
+      entity: errObj.entity || undefined,
+      entityId: errObj.entityId || errObj.id || undefined,
+      fromState: errObj.fromState || undefined,
+      toState: errObj.toState || undefined,
+      reason: body.message,
+      metadata: { errorDetails, code: body.code },
+    });
+  } else if (
+    body.code === 'CONCURRENCY_CONFLICT' ||
+    body.code === 'IDEMPOTENCY_CONFLICT' ||
+    errObj.code === 'CONCURRENCY_CONFLICT' ||
+    errObj.code === 'IDEMPOTENCY_CONFLICT' ||
+    errObj.name === 'ConcurrencyConflictError' ||
+    errObj.name === 'IdempotencyConflictError' ||
+    status === 409
+  ) {
+    logger.concurrencyConflict({
+      requestId,
+      userId: errObj.userId || null,
+      entity: errObj.entity || undefined,
+      entityId: errObj.entityId || errObj.id || undefined,
+      expectedVersion: errObj.expectedVersion,
+      actualVersion: errObj.actualVersion,
+      metadata: { message: body.message, errorDetails },
+    });
+  } else if (
+    status === 403 ||
+    body.code === 'FORBIDDEN' ||
+    Boolean(errObj.rejectionCode) ||
+    errObj.name === 'HybridAuthorizationError' ||
+    errObj.name === 'AuthorizationError'
+  ) {
+    logger.authorizationDenied({
+      requestId,
+      userId: errObj.userId || null,
+      action: errObj.action || undefined,
+      resourceId: errObj.resourceId || errObj.id || undefined,
+      reason: body.message,
+      metadata: { errorDetails, rejectionCode: errObj.rejectionCode || body.code },
+    });
+  }
+
   const responseHeaders = new Headers(headers);
   if (!responseHeaders.has('x-request-id')) {
     responseHeaders.set('x-request-id', requestId);

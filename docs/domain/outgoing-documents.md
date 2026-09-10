@@ -1,5 +1,5 @@
 # CANONICAL DOMAIN WORKFLOW: VĂN BẢN ĐI (OUTGOING DOCUMENTS)
-## HỆ THỐNG ĐIỀU HÀNH & TÁC NGHIỆP ĐIỆN TỬ TRƯỜNG CAO ĐẲNG KINH TẾ VÀ CÔNG NGHỆ QUẢNG NINH (QCET E-OFFICE)
+## HỆ THỐNG ĐIỀU HÀNH & TÁC NGHIỆP ĐIỆN TỬ Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET E-OFFICE)
 
 **Tình trạng tài liệu:** Đặc tả chuẩn tắc nghiệp vụ miền (Canonical Domain Specification)  
 **Căn cứ pháp lý cốt lõi:**
@@ -135,7 +135,7 @@ Quy trình văn bản đi bao gồm 10 trạng thái chuẩn tắc trải qua 4 
 
 ### 3.4. Cấp số & Đóng dấu số Cơ quan (`NUMBERED` & `ORGANIZATION_DIGITAL_SIGN`)
 - **Tác nhân:** Bộ phận Văn thư (được Hiệu trưởng giao quyền giữ và sử dụng con dấu điện tử).
-- **Bản chất:** Xác thực văn bản chính thức thuộc thẩm quyền ban hành của Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh, có giá trị giao dịch pháp lý công vụ (Điều 15, Điều 18 NĐ 30/2020/NĐ-CP và NĐ 68/2024/NĐ-CP).
+- **Bản chất:** Xác thực văn bản chính thức thuộc thẩm quyền ban hành của Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn , có giá trị giao dịch pháp lý công vụ (Điều 15, Điều 18 NĐ 30/2020/NĐ-CP và NĐ 68/2024/NĐ-CP).
 - **Thứ tự thực hiện bắt buộc:**
   1. *Kiểm tra tính toàn vẹn của chữ ký Lãnh đạo*: Xác nhận chữ ký số của BGH còn nguyên vẹn, chứng thư số còn hạn.
   2. *Cấp Số đi*: Nhận số tự động từ hệ thống tăng dần cho năm công tác (ví dụ: 156/QĐ-CĐKTCNQN hoặc 89/CĐKTCNQN-HCQT).
@@ -290,7 +290,7 @@ Theo Phụ lục IV ban hành kèm theo Nghị định số 30/2020/NĐ-CP, Sổ
 ## 6. PHÂN PHỐI, PHÁT HÀNH VÀ CHUYỂN GIAO VĂN BẢN ĐI (`ISSUED` -> `DELIVERED`)
 
 ### 6.1. Các Kênh Phát hành Chuẩn tắc
-1. **Trục Liên thông Văn bản Quốc gia (VDXP / LGSP Quảng Ninh)**: Tự động đóng gói gói tin chuẩn EdXML 2.0 (kèm tệp PDF đã ký 2 chữ ký số: Lãnh đạo và Con dấu QCET) gửi sang Hệ thống Quản lý Văn bản của UBND Tỉnh Quảng Ninh, Tổng cục Giáo dục Nghề nghiệp, Sở LĐ-TB&XH.
+1. **Trục Liên thông Văn bản Quốc gia (VDXP / LGSP )**: Tự động đóng gói gói tin chuẩn EdXML 2.0 (kèm tệp PDF đã ký 2 chữ ký số: Lãnh đạo và Con dấu QCET) gửi sang Hệ thống Quản lý Văn bản của UBND Tỉnh , Tổng cục Giáo dục Nghề nghiệp, Sở LĐ-TB&XH.
 2. **Kênh Nội bộ Nhà trường (QCET E-Office Internal Feed)**: Ngay khi phát hành, văn bản tự động xuất hiện trên bàn làm việc của các Khoa, Phòng có tên trong danh sách "Nơi nhận: Như trên" hoặc gửi toàn thể cán bộ giảng viên nếu là văn bản phổ biến chung.
 3. **Thư điện tử công vụ (`@cdktcnqn.edu.vn`)**: Gửi tệp văn bản chính thức có ký số đến email của các đơn vị đối tác, doanh nghiệp liên kết đào tạo.
 4. **Bưu chính công ích**: Đối với các đơn vị chưa kết nối trục điện tử, Văn thư in văn bản ra giấy từ tệp điện tử, đóng dấu ướt (con dấu tươi) của Nhà trường và làm thủ tục chuyển phát qua Bưu điện theo quy định tại Điều 19 NĐ 30.

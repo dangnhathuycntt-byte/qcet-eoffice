@@ -237,7 +237,7 @@ export class TaskStateMachine {
       if (to === 'WAITING_APPROVAL') {
         return {
           allowed: false,
-          reason: 'Nhiệm vụ cần bắt đầu thực hiện trước khi gửi yêu cầu phê duyệt.',
+          reason: 'Nhiệm vụ mới không thể gửi duyệt trực tiếp mà chưa qua thực hiện.',
           code: 'INVALID_TRANSITION',
         };
       }

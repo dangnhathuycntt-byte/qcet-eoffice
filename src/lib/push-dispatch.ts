@@ -82,21 +82,21 @@ export async function dispatchTaskAssignedPush(
       }
     }
 
-    // Defensively query any assignees from database
+    // Query actors from canonical TaskActor model
     if (task.id) {
       try {
-        const dbAssignees = await prisma.taskAssignee.findMany({
-          where: { taskId: task.id },
+        const dbActors = await prisma.taskActor.findMany({
+          where: { taskId: task.id, userId: { not: null } },
           select: { userId: true },
         });
-        for (const a of dbAssignees) {
+        for (const a of dbActors) {
           if (a.userId) {
             targetUserIdSet.add(a.userId);
           }
         }
       } catch (dbErr) {
         // Continue with memory assignees if DB query encounters an issue
-        console.warn('[dispatchTaskAssignedPush] DB assignee lookup warning:', dbErr);
+        console.warn('[dispatchTaskAssignedPush] DB actor lookup warning:', dbErr);
       }
     }
 
@@ -202,17 +202,17 @@ export async function dispatchExecutiveDirectivePush(
   try {
     const stakeholderUserIds = new Set<string>();
 
-    // 1. Task assignees
+    // 1. Task actors
     try {
-      const assignees = await prisma.taskAssignee.findMany({
-        where: { taskId },
+      const actors = await prisma.taskActor.findMany({
+        where: { taskId, userId: { not: null } },
         select: { userId: true },
       });
-      for (const a of assignees) {
+      for (const a of actors) {
         if (a.userId) stakeholderUserIds.add(a.userId);
       }
     } catch (e) {
-      console.warn('[dispatchExecutiveDirectivePush] Assignee lookup error:', e);
+      console.warn('[dispatchExecutiveDirectivePush] Actor lookup error:', e);
     }
 
     // 2. Department head(s) of task

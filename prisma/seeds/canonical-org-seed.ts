@@ -22,12 +22,12 @@ export interface CanonicalUnitSeedData {
  */
 export const CANONICAL_SCHOOL_ROOT: CanonicalUnitSeedData = {
   code: 'QCET',
-  name: 'Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh',
+  name: 'Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn ',
   shortName: 'QCET',
   type: UnitType.SCHOOL,
   level: 0,
   displayOrder: 0,
-  description: 'Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh - Cấp chỉ đạo toàn trường',
+  description: 'Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  - Cấp chỉ đạo toàn trường',
 };
 
 export const CANONICAL_FUNCTIONAL_DEPARTMENTS: CanonicalUnitSeedData[] = [

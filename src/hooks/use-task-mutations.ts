@@ -13,7 +13,7 @@ import {
 } from "@/lib/dashboard-aggregator";
 import type { DeliverableSubmissionPayload, ApprovalActionPayload } from "@/types/workspace";
 import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
-import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
+import { CATEGORY_TABS } from "@/components/tasks/cascading-task-table";
 import type { DelegationRule } from "@/types/delegation";
 import type { AuthUser } from "@/types/auth";
 import { isOnline, enqueueOfflineMutation } from "@/lib/offline-sync";
@@ -179,23 +179,42 @@ export function useTaskMutations(
         };
       });
 
+      // Determine canonical domain action endpoint and payload
+      let actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
+      let actionBody: any = { note };
+      const actionDesc = `Cập nhật nhiệm vụ ${taskId} (${newStatus})`;
+
+      if (newStatus === "IN_PROGRESS") {
+        actionUrl = `/api/tasks/${taskId}/actions/start`;
+        actionBody = { note };
+      } else if (newStatus === "COMPLETED") {
+        actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
+        actionBody = { note: note || "Hoàn thành nhiệm vụ", completionRate: 100 };
+      } else if (newStatus === "CANCELLED") {
+        actionUrl = `/api/tasks/${taskId}/actions/cancel`;
+        actionBody = { reason: note || "Hủy nhiệm vụ" };
+      } else if (newStatus === "NEEDS_REVIEW" || newStatus === "WAITING_APPROVAL") {
+        actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
+        actionBody = { note: note || "Nộp kết quả chờ phê duyệt" };
+      }
+
       // API call or offline enqueue
       if (!isOnline()) {
         enqueueOfflineMutation({
-          url: `/api/tasks/${taskId}`,
-          method: "PATCH",
-          body: { status: newStatus, note },
-          description: `Cập nhật trạng thái nhiệm vụ ${taskId} sang ${newStatus}`,
+          url: actionUrl,
+          method: "POST",
+          body: actionBody,
+          description: actionDesc,
         });
         setErrorMessage("Đang ngoại tuyến. Thay đổi đã được lưu tạm và sẽ tự động gửi khi có mạng.");
         return;
       }
 
       try {
-        const res = await fetch(`/api/tasks/${taskId}`, {
-          method: "PATCH",
+        const res = await fetch(actionUrl, {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus, note }),
+          body: JSON.stringify(actionBody),
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => null);
@@ -205,10 +224,10 @@ export function useTaskMutations(
       } catch (err: any) {
         // Network drop during request: enqueue mutation and preserve optimistic state
         enqueueOfflineMutation({
-          url: `/api/tasks/${taskId}`,
-          method: "PATCH",
-          body: { status: newStatus, note },
-          description: `Cập nhật trạng thái nhiệm vụ ${taskId} sang ${newStatus}`,
+          url: actionUrl,
+          method: "POST",
+          body: actionBody,
+          description: actionDesc,
         });
         setErrorMessage("Mất kết nối mạng. Thao tác đã được lưu tạm và sẽ tự động gửi khi có kết nối.");
       }
@@ -371,35 +390,41 @@ export function useTaskMutations(
         };
       });
 
+      let actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
+      let actionBody: any = { note: payload.comment };
+      let actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
+
+      if (payload.decision === "approved") {
+        actionUrl = `/api/tasks/${payload.taskId}/actions/approve`;
+        actionBody = { note: payload.comment };
+        actionDesc = `Phê duyệt nhiệm vụ ${payload.taskId}`;
+      } else if (payload.decision === "revision_requested") {
+        actionUrl = `/api/tasks/${payload.taskId}/actions/request-revision`;
+        actionBody = { feedback: payload.comment || "Yêu cầu chỉnh sửa", revisionRequired: true };
+        actionDesc = `Yêu cầu chỉnh sửa nhiệm vụ ${payload.taskId}`;
+      } else if (payload.decision === "rejected") {
+        actionUrl = `/api/tasks/${payload.taskId}/actions/review`;
+        actionBody = { reviewStatus: "REJECTED", reviewNote: payload.comment };
+        actionDesc = `Từ chối nhiệm vụ ${payload.taskId}`;
+      }
+
       // API call or offline enqueue
       if (!isOnline()) {
         enqueueOfflineMutation({
-          url: `/api/tasks/${payload.taskId}`,
-          method: "PATCH",
-          body: {
-            status: statusToSet,
-            note: payload.comment,
-            decision: payload.decision,
-            reviewedByRole: payload.reviewedByRole,
-            reviewedByName: payload.reviewedByName,
-          },
-          description: `Phê duyệt nhiệm vụ ${payload.taskId} (${payload.decision})`,
+          url: actionUrl,
+          method: "POST",
+          body: actionBody,
+          description: actionDesc,
         });
         setErrorMessage("Đang ngoại tuyến. Quyết định phê duyệt đã được lưu tạm và sẽ tự động gửi khi có mạng.");
         return;
       }
 
       try {
-        const res = await fetch(`/api/tasks/${payload.taskId}`, {
-          method: "PATCH",
+        const res = await fetch(actionUrl, {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            status: statusToSet,
-            note: payload.comment,
-            decision: payload.decision,
-            reviewedByRole: payload.reviewedByRole,
-            reviewedByName: payload.reviewedByName,
-          }),
+          body: JSON.stringify(actionBody),
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => null);
@@ -409,16 +434,10 @@ export function useTaskMutations(
       } catch (err: any) {
         // Network drop: enqueue mutation and preserve optimistic state
         enqueueOfflineMutation({
-          url: `/api/tasks/${payload.taskId}`,
-          method: "PATCH",
-          body: {
-            status: statusToSet,
-            note: payload.comment,
-            decision: payload.decision,
-            reviewedByRole: payload.reviewedByRole,
-            reviewedByName: payload.reviewedByName,
-          },
-          description: `Phê duyệt nhiệm vụ ${payload.taskId} (${payload.decision})`,
+          url: actionUrl,
+          method: "POST",
+          body: actionBody,
+          description: actionDesc,
         });
         setErrorMessage("Mất kết nối mạng. Quyết định phê duyệt đã được lưu tạm và sẽ tự động gửi khi có kết nối.");
       }

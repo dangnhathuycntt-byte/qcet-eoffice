@@ -20,10 +20,11 @@ import type { WorkspaceScope } from "@/types/workspace";
 import { getSystemReferenceDateStr, isTaskPastDue } from "@/lib/unified-task-hub";
 import {
   isActiveTaskStatus,
+  isTaskAssignedToUser,
   isTaskAssignedToUserOrUnit,
   isTaskOverdueOrHasOverdueSubtask,
   isTaskWaitingApproval,
-} from "@/components/workspace/unified-adaptive-workspace";
+} from "@/lib/workspace-metrics-aggregator";
 import { matchesUser } from "@/lib/role-task-filter";
 import { SmartWorkbox } from "@/components/workspace/smart-workbox";
 import { ScopeSwitcher } from "@/components/layout/scope-switcher";
@@ -164,18 +165,7 @@ export function buildRoleAttentionQueue({
     const userTasks = tasks.filter((t) => {
       if (t.status === "COMPLETED") return false;
       if (!user) return true;
-      return (
-        t.leadAssigneeName === user.name ||
-        t.assignedTo === user.name ||
-        matchesUser(t.leadAssigneeName, user) ||
-        matchesUser(t.assignedTo, user) ||
-        t.subTasks?.some(
-          (s) =>
-            s.assigneeName === user.name ||
-            (s as any).assignedTo === user.name ||
-            matchesUser(s.assigneeName, user)
-        )
-      );
+      return isTaskAssignedToUser(t, user);
     });
 
     // 1. Overdue

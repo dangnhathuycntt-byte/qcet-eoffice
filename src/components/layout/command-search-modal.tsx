@@ -184,7 +184,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       handleClose();
 
       if (inNewTab) {
-        window.open(`/?zone=tasks&taskId=${task.id}`, "_blank");
+        window.open(`/tasks?taskId=${task.id}`, "_blank");
         return;
       }
 
@@ -196,8 +196,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
 
       const params = new URLSearchParams(window.location.search);
       params.set("taskId", task.id);
-      params.set("zone", "tasks");
-      router.push(`/?${params.toString()}`);
+      params.delete("zone");
+      router.push(`/tasks?${params.toString()}`);
     },
     [handleClose, router, saveRecentItem]
   );
@@ -275,8 +275,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           window.dispatchEvent(
             new CustomEvent("qcet:set-smart-tab", { detail: { tab: "review" } })
           );
-          if (newTab) window.open("/?zone=tasks&tab=review", "_blank");
-          else router.push("/?zone=tasks&tab=review");
+          if (newTab) window.open("/tasks?tab=review", "_blank");
+          else router.push("/tasks?tab=review");
         },
       },
       {
@@ -295,8 +295,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           window.dispatchEvent(
             new CustomEvent("qcet:set-smart-tab", { detail: { tab: "my_tasks" } })
           );
-          if (newTab) window.open("/?zone=tasks&scope=my", "_blank");
-          else router.push("/?zone=tasks&scope=my");
+          if (newTab) window.open("/tasks?scope=my", "_blank");
+          else router.push("/tasks?scope=my");
         },
       },
       {
@@ -323,8 +323,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         keywords: ["di toi lich", "lich", "calendar", "ke hoach tuan", "lich cong tac"],
         action: (newTab) => {
           handleClose();
-          if (newTab) window.open("/?zone=calendar", "_blank");
-          else router.push("/?zone=calendar");
+          if (newTab) window.open("/calendar", "_blank");
+          else router.push("/calendar");
         },
       },
       {
@@ -337,8 +337,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         keywords: ["ban lam viec", "tong quan", "dashboard", "kpi", "tien do"],
         action: (newTab) => {
           handleClose();
-          if (newTab) window.open("/?zone=dashboard", "_blank");
-          else router.push("/?zone=dashboard");
+          if (newTab) window.open("/", "_blank");
+          else router.push("/");
         },
       },
       {
@@ -351,8 +351,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         keywords: ["danh sach cong viec", "nhiem vu", "tasks", "dacum"],
         action: (newTab) => {
           handleClose();
-          if (newTab) window.open("/?zone=tasks", "_blank");
-          else router.push("/?zone=tasks");
+          if (newTab) window.open("/tasks", "_blank");
+          else router.push("/tasks");
         },
       },
       {
@@ -364,8 +364,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         keywords: ["cong chi dao", "ban giam hieu", "portal", "diem nghen"],
         action: (newTab) => {
           handleClose();
-          if (newTab) window.open("/?zone=portal", "_blank");
-          else router.push("/?zone=portal");
+          if (newTab) window.open("/", "_blank");
+          else router.push("/");
         },
       },
       {
@@ -377,8 +377,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         keywords: ["co cau to chuc", "nhan su", "phong ban", "khoa", "to chuc"],
         action: (newTab) => {
           handleClose();
-          if (newTab) window.open("/?zone=org", "_blank");
-          else router.push("/?zone=org");
+          if (newTab) window.open("/org", "_blank");
+          else router.push("/org");
         },
       },
       {

@@ -50,6 +50,12 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
         dueDate: new Date('2026-10-30T17:00:00.000Z'),
         departmentId: testDeptId,
         createdById: testUserId,
+        assignees: {
+          create: {
+            userId: testUserId,
+            roleInTask: 'PRIMARY_OWNER',
+          },
+        },
       },
     });
     testTaskId = task.id;
@@ -102,37 +108,49 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
     assert.strictEqual(res.status, 401);
     const json = await res.json();
     assert.strictEqual(json.success, false);
-    assert.match(json.error, /Unauthorized/i);
+    assert.match(json.error, /Unauthorized|Authentication required/i);
   });
 
   test('PATCH /api/tasks/[id] returns 401 Unauthorized when unauthenticated', async () => {
     const req = new NextRequest(`http://localhost:3000/api/tasks/${testTaskId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
+        referer: 'http://localhost:3000',
+      },
       body: JSON.stringify({ progressPercent: 60 }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: testTaskId }) });
     assert.strictEqual(res.status, 401);
     const json = await res.json();
     assert.strictEqual(json.success, false);
-    assert.match(json.error, /Unauthorized/i);
+    assert.match(json.error, /Unauthorized|Authentication required/i);
   });
 
   test('DELETE /api/tasks/[id] returns 401 Unauthorized when unauthenticated', async () => {
     const req = new NextRequest(`http://localhost:3000/api/tasks/${testTaskId}`, {
       method: 'DELETE',
+      headers: {
+        origin: 'http://localhost:3000',
+        referer: 'http://localhost:3000',
+      },
     });
     const res = await DELETE(req, { params: Promise.resolve({ id: testTaskId }) });
     assert.strictEqual(res.status, 401);
     const json = await res.json();
     assert.strictEqual(json.success, false);
-    assert.match(json.error, /Unauthorized/i);
+    assert.match(json.error, /Unauthorized|Authentication required/i);
   });
 
   test('POST /api/tasks/[id]/deliverables returns 401 Unauthorized when unauthenticated', async () => {
     const req = new NextRequest(`http://localhost:3000/api/tasks/${testTaskId}/deliverables`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
+        referer: 'http://localhost:3000',
+      },
       body: JSON.stringify({
         title: 'Báo cáo nghiệm thu',
         fileUrl: 'https://qcet.edu.vn/report.pdf',
@@ -142,7 +160,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
     assert.strictEqual(res.status, 401);
     const json = await res.json();
     assert.strictEqual(json.success, false);
-    assert.match(json.error, /Unauthorized/i);
+    assert.match(json.error, /Unauthorized|Authentication required/i);
   });
 
   test('GET /api/tasks/[id] returns 404 for non-existent task', async () => {
@@ -170,16 +188,17 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
     assert.strictEqual(returnedTask.title, 'Nhiệm vụ kiểm thử chi tiết và nộp minh chứng');
   });
 
-  test('PATCH /api/tasks/[id] updates progress and status', async () => {
+  test('PATCH /api/tasks/[id] updates safe metadata', async () => {
     const req = new NextRequest(`http://localhost:3000/api/tasks/${testTaskId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        origin: 'http://localhost:3000',
       },
       body: JSON.stringify({
-        progressPercent: 85,
-        status: 'waiting_approval',
+        title: 'Nhiệm vụ kiểm thử chi tiết đã cập nhật',
+        priority: 'HIGH',
       }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: testTaskId }) });
@@ -187,8 +206,8 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
     const json = await res.json();
     assert.strictEqual(json.success, true);
     const updated = json.task || json.data;
-    assert.strictEqual(updated.progress, 85);
-    assert.strictEqual(updated.status, 'waiting_approval');
+    assert.strictEqual(updated.title, 'Nhiệm vụ kiểm thử chi tiết đã cập nhật');
+    assert.strictEqual(updated.priority, 'HIGH');
   });
 
   test('POST /api/tasks/[id]/deliverables rejects missing title or fileUrl with 400', async () => {
@@ -197,6 +216,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
       headers: {
         'Content-Type': 'application/json',
         cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        origin: 'http://localhost:3000',
       },
       body: JSON.stringify({
         fileType: 'PDF',
@@ -206,7 +226,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
     assert.strictEqual(res.status, 400);
     const json = await res.json();
     assert.strictEqual(json.success, false);
-    assert.match(json.error, /Tiêu đề và đường dẫn file minh chứng là bắt buộc/);
+    assert.match(json.error, /Tiêu đề và đường dẫn file minh chứng là bắt buộc|Validation failed/);
   });
 
   test('POST /api/tasks/[id]/deliverables records deliverable and sets task status to WAITING_APPROVAL', async () => {
@@ -215,6 +235,7 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
       headers: {
         'Content-Type': 'application/json',
         cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        origin: 'http://localhost:3000',
       },
       body: JSON.stringify({
         title: 'Báo cáo nghiệm thu hoàn thành đợt 1',
@@ -265,7 +286,11 @@ describe('Task Detail & Deliverable Workflow Tests', () => {
 
     const req = new NextRequest(`http://localhost:3000/api/tasks/${taskToDelete.id}`, {
       method: 'DELETE',
-      headers: { cookie: `${SESSION_COOKIE_NAME}=${validToken}` },
+      headers: {
+        cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        origin: 'http://localhost:3000',
+        referer: 'http://localhost:3000',
+      },
     });
     const res = await DELETE(req, { params: Promise.resolve({ id: taskToDelete.id }) });
     assert.strictEqual(res.status, 200);

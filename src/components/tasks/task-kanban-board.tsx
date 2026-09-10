@@ -21,10 +21,14 @@ import type {
   TaskCategory,
   TaskStatus,
 } from "@/types/dashboard";
+import type {
+  KanbanColumnId,
+  DetailedKanbanProjection,
+} from "@/contracts/workspace-semantic";
 import {
   getCategoryBadgeConfig,
   CATEGORY_TABS,
-} from "@/components/dashboard/cascading-task-table";
+} from "@/components/tasks/cascading-task-table";
 import { cn } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 
@@ -137,14 +141,49 @@ const STATUS_ORDER: TaskStatus[] = [
   "COMPLETED",
 ];
 
+/**
+ * Canonical mapping from database/operational status to one of the 4 Kanban columns.
+ * Conforms to src/contracts/workspace-semantic.ts:
+ * - NOT_STARTED, NEW -> NEW
+ * - IN_PROGRESS, OVERDUE, BLOCKED -> IN_PROGRESS
+ * - WAITING_APPROVAL, PENDING_EXECUTIVE_APPROVAL, NEEDS_REVIEW -> NEEDS_REVIEW
+ * - COMPLETED -> COMPLETED
+ */
+export function mapTaskStatusToKanbanColumn(status?: string): TaskStatus {
+  if (!status) return "NEW";
+  const s = status.toUpperCase();
+  switch (s) {
+    case "NEW":
+    case "NOT_STARTED":
+      return "NEW";
+    case "IN_PROGRESS":
+    case "OVERDUE":
+    case "BLOCKED":
+      return "IN_PROGRESS";
+    case "NEEDS_REVIEW":
+    case "WAITING_APPROVAL":
+    case "PENDING_EXECUTIVE_APPROVAL":
+      return "NEEDS_REVIEW";
+    case "COMPLETED":
+    case "CANCELLED":
+    case "CANCELED":
+    case "ARCHIVED":
+      return "COMPLETED";
+    default:
+      return "IN_PROGRESS";
+  }
+}
+
 export function getNextStatus(status: TaskStatus): TaskStatus | null {
-  const index = STATUS_ORDER.indexOf(status);
+  const colId = mapTaskStatusToKanbanColumn(status);
+  const index = STATUS_ORDER.indexOf(colId);
   if (index === -1 || index >= STATUS_ORDER.length - 1) return null;
   return STATUS_ORDER[index + 1];
 }
 
 export function getPrevStatus(status: TaskStatus): TaskStatus | null {
-  const index = STATUS_ORDER.indexOf(status);
+  const colId = mapTaskStatusToKanbanColumn(status);
+  const index = STATUS_ORDER.indexOf(colId);
   if (index <= 0) return null;
   return STATUS_ORDER[index - 1];
 }
@@ -262,11 +301,25 @@ export function groupTasksByStatus(
   };
 
   for (const item of filtered) {
-    if (grouped[item.status]) {
-      grouped[item.status].push(item);
-    } else {
-      // Fallback if status is unknown
-      grouped.IN_PROGRESS.push(item);
+    const rawStatus = item.status;
+    const upperStatus = (rawStatus || "").toUpperCase() as TaskStatus;
+
+    // 1. Maintain raw status bucket for backward compatibility if consumer relies on raw status keys
+    if (grouped[upperStatus]) {
+      grouped[upperStatus].push(item);
+    }
+
+    // 2. Map to canonical Kanban column (NEW, IN_PROGRESS, NEEDS_REVIEW, COMPLETED)
+    const colId = mapTaskStatusToKanbanColumn(rawStatus);
+
+    // Cancelled and archived tasks are intentionally excluded from active board columns
+    if (upperStatus === "CANCELLED" || (upperStatus as string) === "CANCELED" || (upperStatus as string) === "ARCHIVED") {
+      continue;
+    }
+
+    // Avoid duplicate push if upperStatus already matched the column ID
+    if (upperStatus !== colId) {
+      grouped[colId].push(item);
     }
   }
 
@@ -372,11 +425,52 @@ export function TaskKanbanBoard({
     );
   }, [tasks, levelFilter, categoryFilter, deferredSearchQuery]);
 
+  const allFilteredItems = React.useMemo(() => {
+    return filterKanbanItems(
+      tasks,
+      levelFilter,
+      categoryFilter,
+      deferredSearchQuery
+    );
+  }, [tasks, levelFilter, categoryFilter, deferredSearchQuery]);
+
+  const totalExtractedCount = allFilteredItems.length;
+  const totalVisibleCount =
+    (groupedTasks.NEW?.length || 0) +
+    (groupedTasks.IN_PROGRESS?.length || 0) +
+    (groupedTasks.NEEDS_REVIEW?.length || 0) +
+    (groupedTasks.COMPLETED?.length || 0);
+  const excludedCount = Math.max(0, totalExtractedCount - totalVisibleCount);
+
   return (
     <div
       className={cn("w-full overflow-x-auto pb-4", className)}
       data-slot="task-kanban-board"
     >
+      {/* Explicit Count Notice Header (Zero Silent Loss Guarantee) */}
+      <div
+        data-slot="kanban-count-notice"
+        className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 mb-3 rounded-xl border border-border/60 bg-muted/30 text-xs text-muted-foreground"
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-foreground">
+            Bảng Kanban:
+          </span>
+          <span className="font-mono tabular-nums font-semibold text-foreground">
+            {totalVisibleCount} / {totalExtractedCount} công việc
+          </span>
+          {excludedCount > 0 ? (
+            <span className="text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 font-medium">
+              ({excludedCount} công việc bị huỷ / lưu trữ không hiển thị trên bảng)
+            </span>
+          ) : (
+            <span className="text-emerald-700 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 font-medium">
+              Đầy đủ 100% công việc
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Mobile Stage Tab Bar */}
       <div className="flex md:hidden items-center gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none">
         {KANBAN_COLUMNS.map((col, idx) => (
@@ -464,7 +558,8 @@ export function TaskKanbanBoard({
                       const categoryConfig = getCategoryBadgeConfig(
                         item.category
                       );
-                      const overdue = isOverdue(item.dueDate, item.status);
+                      const effectiveColId = mapTaskStatusToKanbanColumn(item.status);
+                      const overdue = isOverdue(item.dueDate, item.status) || item.status === "OVERDUE";
                       const prevStatus = getPrevStatus(item.status);
                       const nextStatus = getNextStatus(item.status);
 
@@ -483,7 +578,7 @@ export function TaskKanbanBoard({
                           <div className="space-y-2">
                             {/* Top Row: Level Indicator & Category Badge */}
                             <div className="flex items-center justify-between gap-1.5 flex-wrap">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 {item.level === "TRUONG" ? (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20">
                                     <Building2
@@ -510,6 +605,12 @@ export function TaskKanbanBoard({
                                 >
                                   {categoryConfig.label}
                                 </span>
+
+                                {overdue && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-red-500/10 text-destructive border border-red-500/20">
+                                    Quá hạn
+                                  </span>
+                                )}
                               </div>
                             </div>
 
@@ -595,8 +696,54 @@ export function TaskKanbanBoard({
                                 </div>
                               </div>
 
-                              {/* Quick Move Buttons */}
-                              <div className="flex items-center gap-1 shrink-0">
+                              {/* Quick Move and Status Selection Controls */}
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {/* Accessible Status Transition Menu (Chuyển trạng thái) */}
+                                <div className="relative inline-flex items-center">
+                                  <label
+                                    htmlFor={`status-select-${item.id}`}
+                                    className="sr-only"
+                                  >
+                                    Chuyển trạng thái
+                                  </label>
+                                  <select
+                                    id={`status-select-${item.id}`}
+                                    aria-label="Chuyển trạng thái"
+                                    title="Chuyển trạng thái"
+                                    value={effectiveColId}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      const newStatus = e.target.value as TaskStatus;
+                                      if (newStatus && onStatusChange) {
+                                        triggerHaptic("selection");
+                                        onStatusChange(item.id, newStatus);
+                                      }
+                                    }}
+                                    className="h-8 min-h-[44px] sm:min-h-[28px] sm:h-7 pl-2 pr-6 text-xs font-medium rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground cursor-pointer transition-colors focus:outline-hidden focus:ring-1 focus:ring-primary/40 appearance-none touch-manipulation"
+                                  >
+                                    <option value="" disabled>
+                                      Chuyển trạng thái
+                                    </option>
+                                    {KANBAN_COLUMNS.map((col) => (
+                                      <option
+                                        key={col.id}
+                                        value={col.id}
+                                        disabled={col.id === effectiveColId}
+                                      >
+                                        {col.id === effectiveColId
+                                          ? `[Hiện tại] ${col.title}`
+                                          : `→ ${col.title}`}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronRight
+                                    className="pointer-events-none absolute right-1.5 size-3 text-muted-foreground rotate-90"
+                                    strokeWidth={1.5}
+                                  />
+                                </div>
+
+                                {/* Step-by-step Chevrons */}
                                 <button
                                   type="button"
                                   disabled={!prevStatus}
@@ -607,13 +754,18 @@ export function TaskKanbanBoard({
                                       onStatusChange(item.id, prevStatus);
                                     }
                                   }}
+                                  aria-label={
+                                    prevStatus
+                                      ? `Lùi về ${prevStatus}`
+                                      : "Không thể lùi"
+                                  }
                                   title={
                                     prevStatus
                                       ? `Chuyển về ${prevStatus}`
                                       : "Không thể lùi"
                                   }
                                   className={cn(
-                                    "size-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95",
+                                    "size-8 sm:size-7 min-w-[32px] min-h-[44px] sm:min-w-[28px] sm:min-h-[28px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95 touch-manipulation",
                                     !prevStatus &&
                                       "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
                                   )}
@@ -634,13 +786,18 @@ export function TaskKanbanBoard({
                                       onStatusChange(item.id, nextStatus);
                                     }
                                   }}
+                                  aria-label={
+                                    nextStatus
+                                      ? `Tiến sang ${nextStatus}`
+                                      : "Không thể tiến"
+                                  }
                                   title={
                                     nextStatus
                                       ? `Chuyển sang ${nextStatus}`
                                       : "Không thể tiến"
                                   }
                                   className={cn(
-                                    "size-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95",
+                                    "size-8 sm:size-7 min-w-[32px] min-h-[44px] sm:min-w-[28px] sm:min-h-[28px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95 touch-manipulation",
                                     !nextStatus &&
                                       "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
                                   )}

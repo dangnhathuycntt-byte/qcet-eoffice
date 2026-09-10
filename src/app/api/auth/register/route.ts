@@ -31,21 +31,60 @@ export async function POST(req: Request) {
       throw new ConflictError("Email này đã được đăng ký trong hệ thống");
     }
 
+    let assignedUnitId: string | null = null;
     let assignedDepartmentId: string | null = null;
     if (body.departmentId && body.departmentId.trim() !== "") {
-      const dept = await prisma.department.findUnique({
-        where: { id: body.departmentId.trim() },
+      const target = body.departmentId.trim();
+      let unit = await prisma.organizationalUnit.findFirst({
+        where: {
+          OR: [{ id: target }, { code: target }],
+        },
       });
-      if (!dept) {
+      const dept = await prisma.department.findUnique({
+        where: { id: target },
+      });
+      if (!unit && dept) {
+        unit = await prisma.organizationalUnit.findFirst({
+          where: {
+            OR: [
+              { id: dept.id },
+              { code: dept.id },
+              { code: dept.shortName || dept.id },
+              { code: `K_${dept.id}` },
+              { code: `P_${dept.id}` },
+            ],
+          },
+        });
+      }
+      if (!unit && !dept) {
         throw new ValidationError("Phòng ban không tồn tại trong hệ thống");
       }
-      assignedDepartmentId = dept.id;
+      assignedUnitId = unit ? unit.id : null;
+      assignedDepartmentId = dept ? dept.id : null;
     } else {
-      const defaultDept = await prisma.department.findUnique({
-        where: { id: "CNTT" },
+      const defaultUnit = await prisma.organizationalUnit.findFirst({
+        where: {
+          OR: [{ code: "K_CNTT" }, { code: "CNTT" }, { id: "CNTT" }],
+        },
       });
-      if (defaultDept) {
-        assignedDepartmentId = defaultDept.id;
+      if (defaultUnit) {
+        assignedUnitId = defaultUnit.id;
+        const dept = await prisma.department.findFirst({
+          where: {
+            OR: [{ id: defaultUnit.code || defaultUnit.id }, { id: "CNTT" }],
+          },
+        });
+        assignedDepartmentId = dept ? dept.id : null;
+      }
+    }
+
+    let positionDefId: string | null = null;
+    if (assignedUnitId) {
+      const posDef = await prisma.positionDefinition.findFirst({
+        where: { code: "CHUYEN_VIEN" },
+      });
+      if (posDef) {
+        positionDefId = posDef.id;
       }
     }
 
@@ -68,10 +107,27 @@ export async function POST(req: Request) {
           isDismissed: false,
           snoozedUntil: null,
         },
+        ...(assignedUnitId && positionDefId
+          ? {
+              positionAssignments: {
+                create: {
+                  unitId: assignedUnitId,
+                  positionDefinitionId: positionDefId,
+                  type: "PRIMARY",
+                  status: "ACTIVE",
+                },
+              },
+            }
+          : {}),
       },
       include: {
         department: {
           select: { id: true, name: true, shortName: true },
+        },
+        positionAssignments: {
+          include: {
+            unit: true,
+          },
         },
       },
     });

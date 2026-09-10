@@ -11,7 +11,7 @@ created: 2026-09-09
 
 Effective immediately, this document issues an unconditional architectural freeze on all business-role modifications, role-based UI adaptations, and ad-hoc authorization patching across the QCET E-Office codebase.
 
-The current authorization and role model is fundamentally misaligned with the institutional reality of Quang Ninh College of Economic and Technology (Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh - QCET). Continuing to layer client-side viewpoint patches, synthetic role enums, or ad-hoc permission overrides upon flawed assumptions introduces compounding technical debt and architectural incoherence.
+The current authorization and role model is fundamentally misaligned with the institutional reality of Quang Ninh College of Economic and Technology (Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  - QCET). Continuing to layer client-side viewpoint patches, synthetic role enums, or ad-hoc permission overrides upon flawed assumptions introduces compounding technical debt and architectural incoherence.
 
 Phase 0 locks the domain boundary. Engineering effort is strictly restricted to non-semantic maintenance and bugfixes while the system undergoes a phased re-architecture (Phases 0 through 10) to establish a legally grounded, enterprise-grade institutional domain model.
 
@@ -58,7 +58,7 @@ The system attempts to force a Vietnamese public vocational college into a gener
 Public higher-education and vocational institutions in Vietnam are governed by:
 - **Luật Giáo dục nghề nghiệp số 74/2014/QH13**
 - **Thông tư số 15/2021/TT-BLĐTBXH** ban hành Điều lệ Trường cao đẳng
-- **Quy chế tổ chức và hoạt động** của Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh
+- **Quy chế tổ chức và hoạt động** của Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn 
 - Quyết định phân công nhiệm vụ trong Ban Giám hiệu và chức năng nhiệm vụ của 12 phòng, khoa, trung tâm.
 
 In this legal structure:

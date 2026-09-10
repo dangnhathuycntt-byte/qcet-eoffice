@@ -437,6 +437,11 @@ export const SubmitDeliverableInputSchema = z
       .optional()
       .nullable(),
     uploadedById: z.string().trim().max(128).optional().nullable(),
+    expectedVersion: z
+      .number()
+      .int()
+      .min(0, 'Expected version must be non-negative')
+      .optional(),
   })
   .strict();
 
@@ -475,6 +480,11 @@ export const ReviewDeliverableInputSchema = z
       .max(1000, 'Comment cannot exceed 1000 characters')
       .optional()
       .nullable(),
+    expectedVersion: z
+      .number()
+      .int()
+      .min(0, 'Expected version must be non-negative')
+      .optional(),
   })
   .strict();
 

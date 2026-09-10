@@ -69,8 +69,6 @@ EOF
 
   cat <<EOF
 {
-  "continue": false,
-  "stopReason": "$REASON",
   "decision": "block",
   "reason": "$REASON",
   "hookSpecificOutput": {

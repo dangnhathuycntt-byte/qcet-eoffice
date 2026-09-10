@@ -1,0 +1,505 @@
+#!/usr/bin/env node
+
+/**
+ * QCET SubagentStop Evidence Gate Hook
+ *
+ * Enforces architectural lifecycle invariants:
+ * 1. Verifies mandatory structured execution evidence for builder subagents:
+ *    - status (string)
+ *    - changedFiles (array)
+ *    - testsRun (array)
+ *    - requirementIds or requirementsSatisfied (array)
+ * 2. Rejects incomplete stops with actionable remediation guidance (bounce-back).
+ * 3. Enforces a single bounce-back limit per agent ID to prevent infinite loops.
+ * 4. Fail-safes to exit 0 outside executor workflows (non-builder subagents, empty input, unmapped agents).
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+// -----------------------------------------------------------------------------
+// PROTOCOL CONSTANTS & EXIT CODES
+// -----------------------------------------------------------------------------
+const EXIT_ALLOW = 0;
+const EXIT_BLOCK = 2;
+
+const sessionScope = process.env.QCET_SESSION_ID || process.env.CLAUDE_CONVERSATION_ID || '';
+const BOUNCEBACK_STATE_FILE =
+  process.env.QCET_BOUNCEBACK_STATE_FILE ||
+  (sessionScope
+    ? path.join('/tmp', `qcet-subagent-bounceback-${sessionScope}.json`)
+    : path.join('/tmp', 'qcet-subagent-bounceback.json'));
+const GATE_TELEMETRY_FILE =
+  process.env.QCET_GATE_TELEMETRY_FILE ||
+  (sessionScope
+    ? path.join('/tmp', `qcet-gate-telemetry-${sessionScope}.json`)
+    : path.join('/tmp', 'qcet-gate-telemetry.json'));
+
+// -----------------------------------------------------------------------------
+// STATE & TELEMETRY MANAGEMENT (Single Bounce-Back Limit & Cutoff Tracking)
+// -----------------------------------------------------------------------------
+function readBounceState() {
+  try {
+    if (fs.existsSync(BOUNCEBACK_STATE_FILE)) {
+      const raw = fs.readFileSync(BOUNCEBACK_STATE_FILE, 'utf8');
+      const data = JSON.parse(raw);
+      if (data && typeof data === 'object') {
+        if (data.attempts && typeof data.attempts === 'object') {
+          return { ...data, ...data.attempts };
+        }
+        return data;
+      }
+    }
+  } catch (_) {}
+  return {};
+}
+
+function writeBounceState(state) {
+  try {
+    const dir = path.dirname(BOUNCEBACK_STATE_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(BOUNCEBACK_STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+  } catch (_) {}
+}
+
+function clearBounceCount(agentKey) {
+  const state = readBounceState();
+  if (state[agentKey] !== undefined) {
+    delete state[agentKey];
+    writeBounceState(state);
+  }
+}
+
+function readGateTelemetry() {
+  try {
+    if (fs.existsSync(GATE_TELEMETRY_FILE)) {
+      const raw = fs.readFileSync(GATE_TELEMETRY_FILE, 'utf8');
+      const data = JSON.parse(raw);
+      if (data && typeof data === 'object') return data;
+    }
+  } catch (_) {}
+  return {
+    totalInvocations: 0,
+    bounceBackCount: 0,
+    cutoffBypassCount: 0,
+    bypassedAgents: [],
+    bouncedAgents: [],
+  };
+}
+
+function recordGateEvent({ type, agentKey }) {
+  try {
+    const data = readGateTelemetry();
+    data.totalInvocations = (data.totalInvocations || 0) + 1;
+    if (type === 'bounce') {
+      data.bounceBackCount = (data.bounceBackCount || 0) + 1;
+      if (agentKey && !data.bouncedAgents.includes(agentKey)) {
+        data.bouncedAgents.push(agentKey);
+      }
+    } else if (type === 'cutoff_bypass') {
+      data.cutoffBypassCount = (data.cutoffBypassCount || 0) + 1;
+      if (agentKey && !data.bypassedAgents.includes(agentKey)) {
+        data.bypassedAgents.push(agentKey);
+      }
+    }
+    const dir = path.dirname(GATE_TELEMETRY_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(GATE_TELEMETRY_FILE, JSON.stringify(data, null, 2), 'utf8');
+    if (GATE_TELEMETRY_FILE !== '/tmp/qcet-gate-telemetry.json') {
+      try {
+        fs.writeFileSync('/tmp/qcet-gate-telemetry.json', JSON.stringify(data, null, 2), 'utf8');
+      } catch (_) {}
+    }
+  } catch (_) {}
+}
+
+// -----------------------------------------------------------------------------
+// BUILDER AGENT IDENTIFICATION
+// -----------------------------------------------------------------------------
+function isBuilderAgent(agentType, agentId, agentRole, label, phase) {
+  // Utility agents (such as telemetry recorder or state synchronizer) are strictly exempted
+  const labelStr = String(label || '').toLowerCase();
+  const phaseStr = String(phase || '').toLowerCase();
+  if (
+    labelStr.includes('telemetry') ||
+    labelStr.includes('recorder') ||
+    labelStr.includes('synchronizer') ||
+    (phaseStr === 'release gate' && labelStr.includes('telemetry'))
+  ) {
+    return false;
+  }
+
+  // Read-only agents are strictly exempted from builder evidence gate
+  if (
+    /(?:^|[-_:])(recon|skeptic|researcher|verifier|verify|reviewer|review|audit)(?:[-_:]|$)/i.test(labelStr) ||
+    /(?:^|[-_:])(recon|skeptic|researcher|verifier|verify|reviewer|review|audit)(?:[-_:]|$)/i.test(phaseStr)
+  ) {
+    return false;
+  }
+
+  const candidates = [agentType, agentId, agentRole]
+    .filter(Boolean)
+    .map((s) => String(s).toLowerCase().trim());
+
+  for (const c of candidates) {
+    if (c === 'qcet-telemetry-recorder' || c.includes('telemetry') || c.includes('recorder')) {
+      return false;
+    }
+    if (/(?:^|[-_:])(recon|skeptic|researcher|verifier|verify|reviewer|review|audit)(?:[-_:]|$)/i.test(c)) {
+      return false;
+    }
+    if (c === 'qcet-builder' || c === 'builder' || c.includes('builder')) {
+      return true;
+    }
+    if (c.includes(':implement') || c.includes(':repair')) {
+      return true;
+    }
+  }
+
+  // Check phase or label indicators
+  if (
+    labelStr.includes(':implement') ||
+    labelStr.includes(':repair') ||
+    phaseStr === 'implement' ||
+    phaseStr === 'repair' ||
+    phaseStr === 'integration repair'
+  ) {
+    return true;
+  }
+
+  // Also check active shard state file or env var if agent is mapped as builder
+  const activeShardsFile =
+    process.env.QCET_ACTIVE_SHARDS_FILE ||
+    path.join('/tmp', 'qcet-active-shards.json');
+
+  try {
+    if (fs.existsSync(activeShardsFile)) {
+      const raw = fs.readFileSync(activeShardsFile, 'utf8');
+      const data = JSON.parse(raw);
+      if (data) {
+        if (Array.isArray(data)) {
+          const found = data.find((s) => s.agentId === agentId || s.agent_id === agentId);
+          if (found && (found.role === 'builder' || found.agentType === 'qcet-builder')) {
+            return true;
+          }
+        } else if (typeof data === 'object' && agentId && data[agentId]) {
+          const entry = data[agentId];
+          if (entry.role === 'builder' || entry.agentType === 'qcet-builder') {
+            return true;
+          }
+        }
+      }
+    }
+  } catch (_) {}
+
+  return false;
+}
+
+// -----------------------------------------------------------------------------
+// EVIDENCE EXTRACTION & VALIDATION
+// -----------------------------------------------------------------------------
+function extractJsonCandidate(text) {
+  if (!text || typeof text !== 'string') return null;
+
+  // 1. Try markdown ```json ... ``` blocks
+  const jsonBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/g;
+  let match;
+  while ((match = jsonBlockRegex.exec(text)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch (_) {}
+  }
+
+  // 2. Try whole text parse
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch (_) {}
+
+  // 3. Try finding substring containing StructuredOutput or execution evidence pattern
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = text.substring(firstBrace, lastBrace + 1);
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch (_) {}
+  }
+
+  return null;
+}
+
+function parseEvidence(lastAssistantMessage, toolCalls, rawInput) {
+  // If lastAssistantMessage is already an object
+  if (lastAssistantMessage && typeof lastAssistantMessage === 'object') {
+    if (lastAssistantMessage.structuredOutput) {
+      return lastAssistantMessage.structuredOutput;
+    }
+    if (Array.isArray(lastAssistantMessage.content)) {
+      for (const block of lastAssistantMessage.content) {
+        if (block?.type === 'tool_use' && (block.name === 'StructuredOutput' || block.name === 'structured_output')) {
+          if (typeof block.input === 'object' && block.input !== null) {
+            return block.input;
+          }
+          if (typeof block.input === 'string') {
+            try {
+              return JSON.parse(block.input);
+            } catch (_) {}
+          }
+        }
+        if (block?.type === 'text' && typeof block.text === 'string') {
+          const extracted = extractJsonCandidate(block.text);
+          if (extracted && (extracted.status || extracted.changedFiles || extracted.testsRun)) {
+            return extracted;
+          }
+        }
+      }
+    }
+    return lastAssistantMessage;
+  }
+
+  // Check tool calls (e.g. StructuredOutput tool invocation)
+  const calls = toolCalls || rawInput?.tool_calls || rawInput?.toolCalls;
+  if (Array.isArray(calls)) {
+    for (const call of calls) {
+      const name = call?.function?.name || call?.name || call?.tool_name;
+      if (name === 'StructuredOutput' || name === 'structured_output') {
+        const args = call?.function?.arguments || call?.args || call?.input;
+        if (typeof args === 'object' && args !== null) return args;
+        if (typeof args === 'string') {
+          try {
+            return JSON.parse(args);
+          } catch (_) {}
+        }
+      }
+    }
+  }
+
+  // Check structured output in rawInput
+  if (rawInput?.structured_output && typeof rawInput.structured_output === 'object') {
+    return rawInput.structured_output;
+  }
+  if (rawInput?.subagentResult && typeof rawInput.subagentResult === 'object') {
+    return rawInput.subagentResult;
+  }
+  if (rawInput?.subagent_result && typeof rawInput.subagent_result === 'object') {
+    return rawInput.subagent_result;
+  }
+
+  // Parse string message
+  if (typeof lastAssistantMessage === 'string') {
+    try {
+      const parsedObj = JSON.parse(lastAssistantMessage);
+      if (parsedObj && typeof parsedObj === 'object') {
+        if (Array.isArray(parsedObj.content)) {
+          for (const block of parsedObj.content) {
+            if (block?.type === 'tool_use' && (block.name === 'StructuredOutput' || block.name === 'structured_output')) {
+              if (block.input) return typeof block.input === 'string' ? JSON.parse(block.input) : block.input;
+            }
+            if (block?.type === 'text' && typeof block.text === 'string') {
+              const ext = extractJsonCandidate(block.text);
+              if (ext && (ext.status || ext.changedFiles || ext.testsRun)) return ext;
+            }
+          }
+        }
+        if (parsedObj.structuredOutput) return parsedObj.structuredOutput;
+        if (parsedObj.status || parsedObj.changedFiles || parsedObj.testsRun) return parsedObj;
+      }
+    } catch (_) {}
+
+    const candidate = extractJsonCandidate(lastAssistantMessage);
+    if (candidate) return candidate;
+  }
+
+  return null;
+}
+
+function validateEvidenceSchema(evidence) {
+  const missing = [];
+  if (!evidence || typeof evidence !== 'object') {
+    return [
+      'status (string)',
+      'changedFiles (array)',
+      'testsRun (array)',
+      'requirementIds / requirementsSatisfied (array)'
+    ];
+  }
+
+  // 1. status (mandatory string)
+  if (typeof evidence.status !== 'string' || !evidence.status.trim()) {
+    missing.push('status (string)');
+  }
+
+  // 2. changedFiles (mandatory array)
+  if (!Array.isArray(evidence.changedFiles)) {
+    missing.push('changedFiles (array)');
+  }
+
+  // 3. testsRun (mandatory array)
+  if (!Array.isArray(evidence.testsRun)) {
+    missing.push('testsRun (array)');
+  }
+
+  // 4. requirementIds, requirementsSatisfied, requirements, or resolvedIssueIds (mandatory array)
+  const hasReqIds = Array.isArray(evidence.requirementIds);
+  const hasReqSatisfied = Array.isArray(evidence.requirementsSatisfied);
+  const hasRequirements = Array.isArray(evidence.requirements);
+  const hasResolvedIssueIds = Array.isArray(evidence.resolvedIssueIds);
+  if (!hasReqIds && !hasReqSatisfied && !hasRequirements && !hasResolvedIssueIds) {
+    missing.push('requirementIds, requirementsSatisfied, or resolvedIssueIds (array)');
+  }
+
+  return missing;
+}
+
+// -----------------------------------------------------------------------------
+// MAIN EXECUTION
+// -----------------------------------------------------------------------------
+function main() {
+  let stdinBuffer = '';
+
+  try {
+    stdinBuffer = fs.readFileSync(0, 'utf8');
+  } catch (_) {
+    process.exit(EXIT_ALLOW);
+  }
+
+  if (!stdinBuffer || !stdinBuffer.trim()) {
+    process.exit(EXIT_ALLOW);
+  }
+
+  let data = null;
+  try {
+    data = JSON.parse(stdinBuffer);
+  } catch (_) {
+    process.exit(EXIT_ALLOW);
+  }
+
+  if (!data || typeof data !== 'object') {
+    process.exit(EXIT_ALLOW);
+  }
+
+  const hookEventName = data.hook_event_name || data.hookEventName || 'SubagentStop';
+  if (hookEventName !== 'SubagentStop') {
+    process.exit(EXIT_ALLOW);
+  }
+
+  const agentId = data.agent_id || data.agentId || process.env.QCET_AGENT_ID || '';
+  const agentType = data.agent_type || data.agentType || process.env.QCET_AGENT_TYPE || '';
+  const agentRole = data.agent_role || data.agentRole || process.env.QCET_AGENT_ROLE || '';
+  const subagentLabel = data.subagent_label || data.subagentLabel || data.label || '';
+  const phase = data.phase || '';
+  const shardId = data.shard_id || data.shardId || '';
+
+  // Fail-Safe: non-builder agents and utility/telemetry agents immediately exit 0
+  if (!isBuilderAgent(agentType, agentId, agentRole, subagentLabel, phase)) {
+    process.exit(EXIT_ALLOW);
+  }
+
+  const lastAssistantMessage =
+    data.last_assistant_message ||
+    data.lastAssistantMessage ||
+    data.message ||
+    '';
+
+  const toolCalls = data.tool_calls || data.toolCalls || null;
+  const evidence = parseEvidence(lastAssistantMessage, toolCalls, data);
+  const missingFields = validateEvidenceSchema(evidence);
+
+  // Scope bounce-back tracking state by unique agent identity (agentId, shardId, label)
+  // rather than the shared generic agentType 'qcet-builder' (DEFECT-04 fix)
+  const agentKey =
+    agentId ||
+    (shardId && subagentLabel ? `${shardId}:${subagentLabel}` : '') ||
+    subagentLabel ||
+    (shardId ? `shard-${shardId}` : '') ||
+    (agentType && agentType !== 'qcet-builder' && agentType !== 'builder' ? agentType : '') ||
+    `builder-${data.parent_tool_use_id || data.tool_call_id || sessionScope || 'default-session'}`;
+
+  // If evidence is valid and complete, allow stop and clear any bounce count
+  if (missingFields.length === 0) {
+    clearBounceCount(agentKey);
+    recordGateEvent({ type: 'success', agentKey });
+    process.stdout.write(
+      JSON.stringify(
+        {
+          decision: 'allow'
+        },
+        null,
+        2
+      ) + '\n'
+    );
+    process.exit(EXIT_ALLOW);
+  }
+
+  // Evidence is incomplete! Check bounce-back state to enforce single bounce-back limit
+  const bounceState = readBounceState();
+  const currentAttempts = bounceState[agentKey] || 0;
+
+  if (currentAttempts >= 1) {
+    // Single bounce-back limit reached! Enforce anti-infinite-loop cutoff
+    recordGateEvent({ type: 'cutoff_bypass', agentKey });
+    process.stderr.write(
+      `[QCET Evidence Gate] Anti-infinite-loop cutoff: Agent '${agentKey}' reached bounce-back limit (${currentAttempts}). Allowing stop despite incomplete evidence.\n`
+    );
+    process.stdout.write(
+      JSON.stringify(
+        {
+          decision: 'allow',
+          reason: 'Anti-infinite-loop cutoff reached. Allowing subagent stop.'
+        },
+        null,
+        2
+      ) + '\n'
+    );
+    process.exit(EXIT_ALLOW);
+  }
+
+  // Record first bounce-back attempt
+  bounceState[agentKey] = currentAttempts + 1;
+  writeBounceState(bounceState);
+  recordGateEvent({ type: 'bounce', agentKey });
+
+  const rejectionReason = `Subagent completion rejected: missing mandatory execution evidence (${missingFields.join(', ')}).`;
+  const remediationGuidance = [
+    'EXECUTION EVIDENCE GATE BOUNCE-BACK (Attempt 1/1):',
+    `Your stop attempt was rejected because your final response lacks mandatory structured execution evidence.`,
+    `Missing fields: ${missingFields.join(', ')}.`,
+    '',
+    'MANDATORY EXECUTION EVIDENCE SCHEMA:',
+    'Provide a structured JSON output (e.g. via StructuredOutput tool or json block) with:',
+    '- status: "completed" | "blocked"',
+    '- changedFiles: string[] (all repo-relative paths created or modified)',
+    '- testsRun: Array<{ command: string, status: "passed" | "failed" | "not-run", evidence: string }>',
+    '- requirementIds: string[] (or requirementsSatisfied: string[], or resolvedIssueIds: string[])',
+    '- summary: string',
+    '- risks: string[]',
+    '',
+    'Remediation: Return your final response with this complete evidence structure now.'
+  ].join('\n');
+
+  process.stderr.write(
+    `[QCET Evidence Gate] BLOCKED: Incomplete execution evidence for agent '${agentKey}'. Missing: ${missingFields.join(', ')}. Bounce-back 1/1 triggered.\n`
+  );
+
+  const blockResponse = {
+    continue: true,
+    decision: 'block',
+    reason: rejectionReason,
+    hookSpecificOutput: {
+      hookEventName: 'SubagentStop',
+      additionalContext: remediationGuidance
+    }
+  };
+
+  process.stdout.write(JSON.stringify(blockResponse, null, 2) + '\n');
+  process.exit(EXIT_BLOCK);
+}
+
+main();

@@ -171,6 +171,85 @@ describe('Phase 10 & 11: Observability, Structured Logging & Business Audit Even
       assert.equal(logs[1].level, 'error');
       assert.equal(logs[1].errorCode, 'HTTP_500');
     });
+
+    test('logger emits structured security events: authorizationDenied, invalidTransition, concurrencyConflict, fileAccessDenied', () => {
+      const logs: StructuredLogEntry[] = [];
+      const testLogger = new StructuredLogger();
+      testLogger.setWriter((entry) => logs.push(entry));
+
+      // 1. authorizationDenied
+      testLogger.authorizationDenied({
+        userId: 'usr-1',
+        action: 'task.approve',
+        resourceId: 'tsk-1',
+        reason: 'SoD violation',
+        metadata: { rejectionCode: 'SOD_VIOLATION' },
+      });
+
+      // 2. invalidTransition
+      testLogger.invalidTransition({
+        userId: 'usr-2',
+        entity: 'Task',
+        entityId: 'tsk-2',
+        fromState: 'PENDING',
+        toState: 'COMPLETED',
+        reason: 'Direct jump forbidden',
+      });
+
+      // 3. concurrencyConflict
+      testLogger.concurrencyConflict({
+        userId: 'usr-3',
+        entity: 'Task',
+        entityId: 'tsk-3',
+        expectedVersion: 1,
+        actualVersion: 2,
+      });
+
+      // 4. fileAccessDenied
+      testLogger.fileAccessDenied({
+        userId: 'usr-4',
+        filePath: 'dossiers/item-123/secret.pdf',
+        fileName: 'secret.pdf',
+        reason: 'Dossier item unauthorized',
+      });
+
+      assert.equal(logs.length, 4);
+
+      // Verify authorizationDenied
+      assert.equal(logs[0].event, 'security.authorization_denied');
+      assert.equal(logs[0].level, 'warn');
+      assert.equal(logs[0].userId, 'usr-1');
+      assert.equal(logs[0].action, 'task.approve');
+      assert.equal(logs[0].resourceId, 'tsk-1');
+      assert.equal(logs[0].metadata?.reason, 'SoD violation');
+      assert.equal(logs[0].metadata?.rejectionCode, 'SOD_VIOLATION');
+
+      // Verify invalidTransition
+      assert.equal(logs[1].event, 'workflow.invalid_transition');
+      assert.equal(logs[1].level, 'warn');
+      assert.equal(logs[1].userId, 'usr-2');
+      assert.equal(logs[1].resourceId, 'tsk-2');
+      assert.equal(logs[1].errorCode, 'INVALID_TRANSITION');
+      assert.equal(logs[1].metadata?.entity, 'Task');
+      assert.equal(logs[1].metadata?.fromState, 'PENDING');
+      assert.equal(logs[1].metadata?.toState, 'COMPLETED');
+
+      // Verify concurrencyConflict
+      assert.equal(logs[2].event, 'database.concurrency_conflict');
+      assert.equal(logs[2].level, 'warn');
+      assert.equal(logs[2].userId, 'usr-3');
+      assert.equal(logs[2].resourceId, 'tsk-3');
+      assert.equal(logs[2].errorCode, 'CONCURRENCY_CONFLICT');
+      assert.equal(logs[2].metadata?.expectedVersion, 1);
+      assert.equal(logs[2].metadata?.actualVersion, 2);
+
+      // Verify fileAccessDenied
+      assert.equal(logs[3].event, 'security.file_access_denied');
+      assert.equal(logs[3].level, 'warn');
+      assert.equal(logs[3].userId, 'usr-4');
+      assert.equal(logs[3].errorCode, 'FORBIDDEN');
+      assert.equal(logs[3].metadata?.filePath, 'dossiers/item-123/secret.pdf');
+    });
   });
 
   // ==========================================================================

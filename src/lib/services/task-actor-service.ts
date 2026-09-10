@@ -165,43 +165,30 @@ export async function setTaskDRI(
   await verifyDRIReassignmentAuthority(taskId, actorContext.requestedById, txClient);
 
   const executeOperation = async (tx: Prisma.TransactionClient) => {
-    // 1. Fetch current DRIs
-    const existingDRIs = await tx.taskActor.findMany({
+    // 0. Atomic row-lock and aggregate version increment
+    await tx.task.update({
+      where: { id: taskId },
+      data: { version: { increment: 1 } },
+    });
+
+    // 1. Demote any other DRI or primary actor on this task to COLLABORATOR
+    await tx.taskActor.updateMany({
       where: {
         taskId,
-        role: TaskActorRole.DRI,
+        userId: { not: userId },
+        OR: [
+          { role: TaskActorRole.DRI },
+          { isPrimaryDRI: true },
+        ],
+      },
+      data: {
+        role: TaskActorRole.COLLABORATOR,
+        isPrimaryDRI: false,
+        notes: `Chuyển giao vai trò DRI sang cộng tác viên ngày ${new Date().toISOString()}`,
       },
     });
 
-    // 2. If target user is already the only DRI, keep or update unit/appointed
-    const currentSameDRI = existingDRIs.find((d) => d.userId === userId);
-    if (currentSameDRI && existingDRIs.length === 1) {
-      return await tx.taskActor.update({
-        where: { id: currentSameDRI.id },
-        data: {
-          isPrimaryDRI: true,
-          unitId: unitId !== undefined ? unitId : currentSameDRI.unitId,
-          assignedById: actorContext.requestedById,
-          appointedAt: new Date(),
-        },
-      });
-    }
-
-    // 3. Transition all existing DRIs to COLLABORATOR
-    for (const dri of existingDRIs) {
-      if (dri.userId !== userId) {
-        await tx.taskActor.update({
-          where: { id: dri.id },
-          data: {
-            role: TaskActorRole.COLLABORATOR,
-            isPrimaryDRI: false,
-            notes: `Chuyển giao vai trò DRI sang cộng tác viên ngày ${new Date().toISOString()}`,
-          },
-        });
-      }
-    }
-
-    // 4. Upsert target user as primary DRI
+    // 2. Fetch or create target user actor
     const existingUserActor = await tx.taskActor.findFirst({
       where: {
         taskId,
@@ -236,7 +223,20 @@ export async function setTaskDRI(
       });
     }
 
-    // 5. Keep legacy TaskAssignee synchronized for backward compatibility
+    // 3. Post-condition invariant: enforce strictly only 1 primary DRI
+    await tx.taskActor.updateMany({
+      where: {
+        taskId,
+        id: { not: primaryDRI.id },
+        isPrimaryDRI: true,
+      },
+      data: {
+        isPrimaryDRI: false,
+        role: TaskActorRole.COLLABORATOR,
+      },
+    });
+
+    // 4. Keep legacy TaskAssignee synchronized for backward compatibility
     await tx.taskAssignee.deleteMany({
       where: {
         taskId,

@@ -26,7 +26,7 @@ import {
   getCategoryBadgeConfig,
   getStatusBadgeConfig,
   CATEGORY_TABS,
-} from "@/components/dashboard/cascading-task-table";
+} from "@/components/tasks/cascading-task-table";
 import {
   type AcademicMonthPeriod,
   getAcademicMonthInfo,
@@ -777,7 +777,7 @@ export function CalendarMonthView({
             <span className="font-heading text-sm font-bold text-foreground font-mono tabular-nums tracking-tight">
               Tháng {period.monthNumber}/{calendarYear}
             </span>
-            <span className="text-[11px] text-muted-foreground font-mono tabular-nums">
+            <span className="text-xs text-muted-foreground font-mono tabular-nums">
               {period.shortDateSpan}
             </span>
           </div>
@@ -1018,12 +1018,12 @@ export function CalendarMonthView({
                     {group.dayHeaderVi}
                   </h3>
                   {group.isToday && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary text-primary-foreground font-mono tabular-nums uppercase">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-primary text-primary-foreground font-mono tabular-nums uppercase">
                       Hôm nay
                     </span>
                   )}
                 </div>
-                <span className="text-[11px] font-medium text-muted-foreground font-mono tabular-nums">
+                <span className="text-xs font-medium text-muted-foreground font-mono tabular-nums">
                   {group.items.length} sự kiện
                 </span>
               </div>
@@ -1065,7 +1065,7 @@ export function CalendarMonthView({
                           </span>
                           <span
                             className={cn(
-                              "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold border",
+                              "inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold border",
                               item.level === "Trường"
                                 ? "bg-blue-50 text-blue-700 border-blue-200"
                                 : "bg-indigo-50 text-indigo-700 border-indigo-200"
@@ -1075,7 +1075,7 @@ export function CalendarMonthView({
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                        <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
                           <span className={cn("size-2 rounded-full", dotClass)} />
                           <span>{getStatusLabel(item.status, item.dueDate)}</span>
                         </div>
@@ -1087,7 +1087,7 @@ export function CalendarMonthView({
                       </h4>
 
                       {/* Row 3: Location/Room & Host/Participants */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-muted-foreground pt-0.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-muted-foreground pt-0.5">
                         <div className="flex items-center gap-1 truncate text-foreground/80">
                           <Building2 strokeWidth={1.5} className="size-3 shrink-0 text-muted-foreground" />
                           <span className="truncate">{location}</span>
@@ -1470,12 +1470,12 @@ export function CalendarMonthView({
                         {group.dayHeaderVi}
                       </h3>
                       {group.isToday && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary text-primary-foreground font-mono tabular-nums uppercase">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-primary text-primary-foreground font-mono tabular-nums uppercase">
                           Hôm nay
                         </span>
                       )}
                     </div>
-                    <span className="text-[11px] font-medium text-muted-foreground font-mono tabular-nums">
+                    <span className="text-xs font-medium text-muted-foreground font-mono tabular-nums">
                       {group.items.length} sự kiện
                     </span>
                   </div>
@@ -1508,7 +1508,7 @@ export function CalendarMonthView({
                               </span>
                               <span
                                 className={cn(
-                                  "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold border",
+                                  "inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold border",
                                   item.level === "Trường"
                                     ? "bg-blue-50 text-blue-700 border-blue-200"
                                     : "bg-indigo-50 text-indigo-700 border-indigo-200"
@@ -1518,7 +1518,7 @@ export function CalendarMonthView({
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                            <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
                               <span className={cn("size-2 rounded-full", dotClass)} />
                               <span>{getStatusLabel(item.status, item.dueDate)}</span>
                             </div>
@@ -1528,7 +1528,7 @@ export function CalendarMonthView({
                             {item.title}
                           </h4>
 
-                          <div className="flex items-center justify-between gap-1 text-[11px] text-muted-foreground pt-0.5">
+                          <div className="flex items-center justify-between gap-1 text-xs text-muted-foreground pt-0.5">
                             <div className="flex items-center gap-1 truncate text-foreground/80">
                               <Building2 strokeWidth={1.5} className="size-3 shrink-0 text-muted-foreground" />
                               <span className="truncate">{location}</span>

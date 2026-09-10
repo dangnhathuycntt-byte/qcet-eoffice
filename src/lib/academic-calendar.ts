@@ -74,8 +74,11 @@ export function getSystemReferenceDate(): string {
   return "2026-09-09";
 }
 
+export const getSystemReferenceDateStr = getSystemReferenceDate;
+
 /**
  * Kiểm tra quá hạn an toàn theo phép so sánh chuỗi ISO YYYY-MM-DD.
+ * Sử dụng múi giờ Việt Nam (Asia/Ho_Chi_Minh) khi trích xuất ngày từ đối tượng Date.
  * Loại trừ hoàn toàn lỗi parse UTC nửa đêm làm quá hạn sớm trong ngày làm việc.
  */
 export function isTaskPastDue(
@@ -88,11 +91,37 @@ export function isTaskPastDue(
     clean = dateStr.length > 10 ? dateStr.slice(0, 10) : dateStr;
   } else if (dateStr instanceof Date) {
     if (isNaN(dateStr.getTime())) return false;
-    clean = dateStr.toISOString().split("T")[0];
+    clean = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(dateStr);
   } else {
     return false;
   }
-  return clean < referenceDate;
+  const cleanRef =
+    typeof referenceDate === "string" && referenceDate.length > 10
+      ? referenceDate.slice(0, 10)
+      : String(referenceDate);
+  return clean < cleanRef;
+}
+
+/**
+ * Hàm kiểm tra trạng thái quá hạn quy chuẩn toàn hệ thống (Single Source of Truth).
+ * Một nhiệm vụ bị xem là quá hạn nếu:
+ * 1. Không ở trạng thái kết thúc (COMPLETED, CANCELLED).
+ * 2. Trạng thái bản ghi là OVERDUE HOẶC hạn chót (dueDate) trước ngày tham chiếu hệ thống.
+ */
+export function isTaskOverdue(
+  status: string,
+  dueDate?: string | Date | null,
+  referenceDate: string = getSystemReferenceDate()
+): boolean {
+  const s = (status || "").toUpperCase();
+  const isCompletedOrCancelled = s === "COMPLETED" || s === "CANCELLED";
+  if (isCompletedOrCancelled) return false;
+  return s === "OVERDUE" || isTaskPastDue(dueDate, referenceDate);
 }
 
 
@@ -188,6 +217,111 @@ export function getAcademicYear(dateInput: unknown): string {
     return `${year}-${year + 1}`;
   }
   return `${year - 1}-${year}`;
+}
+
+/**
+ * Trả về danh sách các năm học khả dụng (ví dụ: ["2025-2026", "2026-2027", "2027-2028"]).
+ * Tự động suy biến xung quanh năm học hiện tại theo quy tắc không hardcode.
+ */
+export function getAvailableAcademicYears(referenceDateInput?: unknown): string[] {
+  const ref = referenceDateInput ?? getSystemReferenceDate();
+  const currentYearStr = getAcademicYear(ref);
+  const startYear = parseInt(currentYearStr.split("-")[0], 10);
+  return [
+    `${startYear - 1}-${startYear}`,
+    `${startYear}-${startYear + 1}`,
+    `${startYear + 1}-${startYear + 2}`,
+  ];
+}
+
+export interface CalendarDayCell {
+  date: Date;
+  dateString: string; // YYYY-MM-DD
+  dayNumber: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  isWeekend: boolean;
+  dayOfWeek: number; // 0 (Sun) to 6 (Sat)
+}
+
+/**
+ * Tạo danh sách các ô ngày lịch theo chu kỳ vận hành học vụ (25 tháng trước đến 24 tháng này).
+ * Lưới bắt đầu từ Thứ Hai (T2) và kết thúc ở Chủ Nhật (CN).
+ * Đảm bảo số ô là bội số của 7 (35 hoặc 42 ô).
+ */
+export function generateAcademicMonthGrid(period: AcademicMonthPeriod): CalendarDayCell[] {
+  const sysDate = getSystemReferenceDate();
+  const [startYear, startMonth, startDay] = period.startDate
+    .split("-")
+    .map((s) => parseInt(s, 10));
+  const [endYear, endMonth, endDay] = period.endDate
+    .split("-")
+    .map((s) => parseInt(s, 10));
+
+  const startDateObj = new Date(startYear, startMonth - 1, startDay, 12, 0, 0);
+  const startDayOfWeek = startDateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  const mondayOffset = (startDayOfWeek + 6) % 7; // Monday-start offset
+
+  const grid: CalendarDayCell[] = [];
+
+  // 1. Preceding days before startDate (starting from Monday of that week)
+  for (let i = mondayOffset; i >= 1; i--) {
+    const prevDate = new Date(startYear, startMonth - 1, startDay - i, 12, 0, 0);
+    const dateString = `${prevDate.getFullYear()}-${pad(prevDate.getMonth() + 1)}-${pad(prevDate.getDate())}`;
+    const dayOfWeek = prevDate.getDay();
+
+    grid.push({
+      date: prevDate,
+      dateString,
+      dayNumber: prevDate.getDate(),
+      isCurrentMonth: false,
+      isToday: dateString === sysDate,
+      isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+      dayOfWeek,
+    });
+  }
+
+  // 2. Active operational period days (from 25th of prev month to 24th of current month)
+  const endDateObj = new Date(endYear, endMonth - 1, endDay, 12, 0, 0);
+  let curr = new Date(startYear, startMonth - 1, startDay, 12, 0, 0);
+  while (curr <= endDateObj) {
+    const dateString = `${curr.getFullYear()}-${pad(curr.getMonth() + 1)}-${pad(curr.getDate())}`;
+    const dayOfWeek = curr.getDay();
+
+    grid.push({
+      date: curr,
+      dateString,
+      dayNumber: curr.getDate(),
+      isCurrentMonth: true,
+      isToday: dateString === sysDate,
+      isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+      dayOfWeek,
+    });
+
+    curr = new Date(curr.getFullYear(), curr.getMonth(), curr.getDate() + 1, 12, 0, 0);
+  }
+
+  // 3. Trailing days to complete 7-day rows (at least 35 cells, up to 42 cells)
+  const totalCells = Math.max(35, Math.ceil(grid.length / 7) * 7);
+  const trailingDaysNeeded = totalCells - grid.length;
+
+  for (let d = 1; d <= trailingDaysNeeded; d++) {
+    const nextDate = new Date(endYear, endMonth - 1, endDay + d, 12, 0, 0);
+    const dateString = `${nextDate.getFullYear()}-${pad(nextDate.getMonth() + 1)}-${pad(nextDate.getDate())}`;
+    const dayOfWeek = nextDate.getDay();
+
+    grid.push({
+      date: nextDate,
+      dateString,
+      dayNumber: nextDate.getDate(),
+      isCurrentMonth: false,
+      isToday: dateString === sysDate,
+      isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+      dayOfWeek,
+    });
+  }
+
+  return grid;
 }
 
 /**

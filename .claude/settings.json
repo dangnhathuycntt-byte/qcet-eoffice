@@ -49,6 +49,16 @@
         ]
       },
       {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/pre-tool-use-ownership-guard",
+            "statusMessage": "Enforcing shard ownership invariants..."
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
@@ -72,6 +82,17 @@
             "type": "command",
             "command": "./.claude/hooks/fast-changed-file-check",
             "statusMessage": "Linting changed files for QCET architectural invariants..."
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/subagent-stop-evidence-gate",
+            "statusMessage": "Verifying subagent execution evidence..."
           }
         ]
       }

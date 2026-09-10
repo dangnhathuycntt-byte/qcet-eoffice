@@ -2,7 +2,7 @@
 
 **Document Status**: Canonical Operational Reference  
 **Scope**: Production Rollback Procedures, Schema Migration Invariants, Disaster Recovery  
-**Authority**: Quản trị mạng / Ban Giám hiệu, Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh  
+**Authority**: Quản trị mạng / Ban Giám hiệu, Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn   
 **Last Updated**: 2026-09-09  
 
 ---

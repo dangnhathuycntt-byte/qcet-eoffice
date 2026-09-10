@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { Prisma, type PrismaClient, type IdempotencyRecord } from "@prisma/client";
 import { prisma as defaultPrisma } from "../prisma";
 
@@ -70,23 +71,99 @@ export interface IdempotencyOptions {
   userId: string;
   operation: string;
   key: string;
+  payload?: any;
+  payloadHash?: string;
   ttlMinutes?: number;
   lockTimeoutMs?: number;
   pollIntervalMs?: number;
 }
 
 /**
+ * Deterministically stringifies any JavaScript value with sorted object keys,
+ * ensuring equivalent payloads produce identical SHA-256 hashes.
+ */
+export function stableStringify(obj: any): string {
+  if (obj === null || obj === undefined) {
+    return "";
+  }
+  if (obj instanceof Date) {
+    return JSON.stringify(obj.toISOString());
+  }
+  if (typeof obj !== "object") {
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    return "[" + obj.map((item) => (item === undefined ? "null" : stableStringify(item))).join(",") + "]";
+  }
+  const keys = Object.keys(obj).sort();
+  const entries: string[] = [];
+  for (const key of keys) {
+    const val = obj[key];
+    if (val !== undefined) {
+      entries.push(JSON.stringify(key) + ":" + stableStringify(val));
+    }
+  }
+  return "{" + entries.join(",") + "}";
+}
+
+/**
+ * Computes a SHA-256 hex digest for a request payload.
+ */
+export function computePayloadHash(payload: any): string {
+  if (payload === null || payload === undefined) {
+    return "";
+  }
+  const str = typeof payload === "string" ? payload : stableStringify(payload);
+  return crypto.createHash("sha256").update(str).digest("hex");
+}
+
+/**
  * Serializes arbitrary response values into JSON-compatible format for Prisma JSON storage.
  */
-function serializeResponse<T>(result: T): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput {
+function serializeResponse<T>(result: T): any {
   if (result === undefined || result === null) {
-    return Prisma.DbNull;
+    return null;
   }
   try {
     return JSON.parse(JSON.stringify(result));
   } catch {
     return result as any;
   }
+}
+
+/**
+ * Resolves a COMPLETED idempotency record's cached response, verifying payload hash if requested.
+ */
+function resolveCompletedRecord<T>(
+  record: { response: any },
+  expectedPayloadHash: string | undefined,
+  userId: string,
+  operation: string,
+  key: string
+): T {
+  const resp = record.response;
+  const isEnveloped =
+    resp !== null &&
+    typeof resp === "object" &&
+    !Array.isArray(resp) &&
+    "payloadHash" in resp &&
+    "data" in resp;
+
+  const cachedData = (isEnveloped ? resp.data : resp) as T;
+  const recordedHash: string | null = isEnveloped ? resp.payloadHash : null;
+
+  if (expectedPayloadHash !== undefined) {
+    if (!recordedHash || recordedHash !== expectedPayloadHash) {
+      throw new IdempotencyConflictError(
+        userId,
+        operation,
+        key,
+        "Idempotency key was previously used with a different request payload"
+      );
+    }
+  }
+
+  return cachedData;
 }
 
 /**
@@ -137,6 +214,13 @@ export async function withIdempotency<T>(
     throw new Error("userId, operation, and key are required for withIdempotency");
   }
 
+  const payloadHash =
+    options.payloadHash !== undefined
+      ? options.payloadHash
+      : options.payload !== undefined
+        ? computePayloadHash(options.payload)
+        : undefined;
+
   const ttlMinutes = options.ttlMinutes ?? 60;
   const lockTimeoutMs = options.lockTimeoutMs ?? 0;
   const pollIntervalMs = options.pollIntervalMs ?? 50;
@@ -158,7 +242,7 @@ export async function withIdempotency<T>(
   // Step 2: Handle existing unexpired records
   if (existing && existing.expiresAt > now) {
     if (existing.status === "COMPLETED") {
-      return existing.response as T;
+      return resolveCompletedRecord<T>(existing, payloadHash, userId, operation, key);
     }
 
     if (existing.status === "PENDING") {
@@ -183,7 +267,7 @@ export async function withIdempotency<T>(
           }
 
           if (polled.status === "COMPLETED") {
-            return polled.response as T;
+            return resolveCompletedRecord<T>(polled, payloadHash, userId, operation, key);
           }
 
           if (polled.status === "FAILED") {
@@ -238,7 +322,7 @@ export async function withIdempotency<T>(
 
         if (concurrent) {
           if (concurrent.status === "COMPLETED" && concurrent.expiresAt > new Date()) {
-            return concurrent.response as T;
+            return resolveCompletedRecord<T>(concurrent, payloadHash, userId, operation, key);
           }
 
           if (concurrent.status === "PENDING" && concurrent.expiresAt > new Date()) {
@@ -252,7 +336,7 @@ export async function withIdempotency<T>(
 
                 if (!polled) break;
                 if (polled.status === "COMPLETED" && polled.expiresAt > new Date()) {
-                  return polled.response as T;
+                  return resolveCompletedRecord<T>(polled, payloadHash, userId, operation, key);
                 }
                 if (polled.status === "FAILED") break;
               }
@@ -288,11 +372,16 @@ export async function withIdempotency<T>(
   // Step 5: Mark as COMPLETED and cache response
   try {
     const serialized = serializeResponse(result);
+    const responsePayload =
+      payloadHash !== undefined
+        ? { payloadHash, data: serialized }
+        : (serialized === null ? Prisma.DbNull : serialized);
+
     await client.idempotencyRecord.update({
       where: { id: recordId },
       data: {
         status: "COMPLETED",
-        response: serialized,
+        response: responsePayload as Prisma.InputJsonValue,
       },
     });
   } catch (updateErr) {

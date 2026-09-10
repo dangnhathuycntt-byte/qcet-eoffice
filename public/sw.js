@@ -5,16 +5,17 @@
 const APP_VERSION = '2026.09.10.1';
 const CACHE_STATIC_NAME = 'qcet-static-2026.09.10.1';
 const CACHE_SHELL_NAME = 'qcet-shell-2026.09.10.1';
-const CACHE_NAME = 'qcet-eoffice-v5'; // Legacy alias for backward compatibility
+const CACHE_NAME = 'qcet-eoffice-v4'; // Legacy alias for backward compatibility
 const API_CACHE_NAME = 'qcet-api-v2'; // Legacy API cache constant
-const CURRENT_CACHES = [CACHE_STATIC_NAME, CACHE_SHELL_NAME];
+const CURRENT_CACHES = [CACHE_STATIC_NAME, CACHE_SHELL_NAME, CACHE_NAME, API_CACHE_NAME];
 
-const OFFLINE_FALLBACK_URL = '/?zone=tasks';
+const OFFLINE_FALLBACK_URL = '/tasks';
 const API_TIMEOUT_MS = 2500;
 
 const PRECACHE_ASSETS = [
   '/',
-  '/?zone=tasks',
+  '/tasks',
+  '/?zone=tasks', // Legacy alias supported for backwards compatibility
   '/manifest.webmanifest',
   '/icon-192.png',
   '/icon-512.png',
@@ -54,7 +55,7 @@ self.addEventListener('activate', (event) => {
         .then((cacheNames) =>
           Promise.all(
             cacheNames
-              .filter((name) => !CURRENT_CACHES.includes(name))
+              .filter((name) => !CURRENT_CACHES.includes(name) && !name.startsWith('qcet-api'))
               .map((name) => caches.delete(name))
           )
         )

@@ -24,6 +24,7 @@ import {
   canAccessClassification,
   type DocumentClassificationTarget,
 } from '@/server/authorization/document-classification';
+import { isDocumentImmutable } from '@/lib/documents/state-machine';
 
 export interface DocumentEntity extends DocumentClassificationTarget {
   id: string;
@@ -158,6 +159,8 @@ export function canDeleteDocument(
   doc: DocumentEntity
 ): boolean {
   if (!userOrContext || !doc) return false;
+  // Immutable documents (signed, issued, completed, or archived) cannot be deleted
+  if (isDocumentImmutable(doc as any)) return false;
   if (!canReadDocument(userOrContext, doc)) return false;
 
   const user =

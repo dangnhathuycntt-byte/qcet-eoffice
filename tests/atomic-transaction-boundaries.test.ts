@@ -499,7 +499,7 @@ describe('Task 7: Atomic Transaction Boundaries for Core Workflows', () => {
           documentYear: 2026,
           originalNumber: `CV-${Date.now()}-${docSequence}`,
           issuedDate: new Date(),
-          issuingAuthority: 'Sở LĐ-TB&XH Quảng Ninh',
+          issuingAuthority: 'Sở LĐ-TB&XH ',
           category: 'Công văn',
           summary: customSummary,
           urgency: DocumentUrgency.THUONG,

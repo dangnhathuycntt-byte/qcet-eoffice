@@ -211,6 +211,13 @@ describe("Full System Regression Suite - Dashboard Data Consistency & Aggregatio
     assert.ok(cnttSummary, "K_CNTT must exist in matrix");
     assert.ok(cnttSummary.averageProgressPercent > 0, "Average progress must be greater than 0%");
     assert.equal(cnttSummary.averageProgressPercent, 65); // (60 + 70) / 2 = 65%
+
+    // Denominator integrity assertions (Rule 40.2 & docs/product/metrics.md Section 3.1)
+    assert.equal(cnttSummary.completionRate, 0, "Completion rate must be derived strictly from parent tasks (0/1 completed = 0%)");
+    assert.equal(cnttSummary.parentTasksCount, 1);
+    assert.equal(cnttSummary.completedParentTasksCount, 0);
+    assert.equal(cnttSummary.subTasksCount, 1);
+    assert.equal(cnttSummary.completedSubTasksCount, 0);
   });
 
   // TC-07: Preservation of manual progress in School Task Rollup when subTasks is empty
@@ -292,13 +299,23 @@ describe("Full System Regression Suite - Dashboard Data Consistency & Aggregatio
       }
     }
 
-    const tasksRoutePath = path.resolve(__dirname, "../src/app/api/tasks/[id]/route.ts");
-    const tasksRouteCode = fs.readFileSync(tasksRoutePath, "utf8");
+    const policyPaths = [
+      path.resolve(__dirname, "../src/server/policies/task-policy.ts"),
+      path.resolve(__dirname, "../src/domain/tasks/state-machine.ts"),
+    ];
+    const foundSod = policyPaths.some((p) => {
+      if (!fs.existsSync(p)) return false;
+      const content = fs.readFileSync(p, "utf8");
+      return (
+        content.includes("CANNOT_SELF_APPROVE") ||
+        content.includes("Segregation of Duties") ||
+        content.includes("Maker-Checker") ||
+        content.includes("người thực hiện không được tự nghiệm thu")
+      );
+    });
     assert.ok(
-      tasksRouteCode.includes("CANNOT_SELF_APPROVE") ||
-        tasksRouteCode.includes("Segregation of Duties") ||
-        tasksRouteCode.includes("người thực hiện không được tự nghiệm thu"),
-      "Tasks route must enforce Segregation of Duties (SoD)"
+      foundSod,
+      "Canonical task policies must enforce Segregation of Duties (SoD)"
     );
   });
 });

@@ -10,9 +10,16 @@
     "lint": "node scripts/lint.mjs",
     "test": "node scripts/run-tests.mjs",
     "test:gate0": "node scripts/run-gate0.mjs",
+    "test:sprint2": "node scripts/run-sprint2.mjs",
+    "test:sprint3": "node scripts/run-sprint3.mjs",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run lint && npm test",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:migrate:status": "prisma migrate status",
+    "db:drift:check": "node scripts/db-drift-check.mjs",
+    "db:migrate:test-fresh": "node scripts/db-migrate-test-fresh.mjs",
+    "db:migrate:test-upgrade": "node scripts/db-migrate-test-upgrade.mjs",
+    "db:backup:drill": "node scripts/backup-restore-drill.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

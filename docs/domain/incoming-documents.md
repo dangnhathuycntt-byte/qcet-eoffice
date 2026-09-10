@@ -1,5 +1,5 @@
 # CANONICAL DOMAIN WORKFLOW: VĂN BẢN ĐẾN (INCOMING DOCUMENTS)
-## HỆ THỐNG ĐIỀU HÀNH & TÁC NGHIỆP ĐIỆN TỬ TRƯỜNG CAO ĐẲNG KINH TẾ VÀ CÔNG NGHỆ QUẢNG NINH (QCET E-OFFICE)
+## HỆ THỐNG ĐIỀU HÀNH & TÁC NGHIỆP ĐIỆN TỬ Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET E-OFFICE)
 
 **Tình trạng tài liệu:** Đặc tả chuẩn tắc nghiệp vụ miền (Canonical Domain Specification)  
 **Căn cứ pháp lý cốt lõi:**
@@ -15,7 +15,7 @@
 ## 1. NGUYÊN TẮC VẬN HÀNH BẮT BUỘC (CORE INVARIANTS)
 
 1. **Nguyên tắc Tập trung Văn thư (Clerical Centralization Invariant)**:
-   Mọi văn bản, tài liệu gửi đến Nhà trường qua bất kỳ kênh nào (bưu chính, trực tiếp, fax, thư điện tử công vụ, hoặc Trục liên thông văn bản quốc gia VDXP / LGSP Quảng Ninh) đều phải được tiếp nhận, xử lý sơ bộ và đăng ký vào Sổ văn bản đến điện tử tại Bộ phận Văn thư thuộc Phòng Hành chính - Quản trị trước khi chuyển giao. Cá nhân, đơn vị không được tự ý tiếp nhận và xử lý văn bản đến ngoài luồng hệ thống.
+   Mọi văn bản, tài liệu gửi đến Nhà trường qua bất kỳ kênh nào (bưu chính, trực tiếp, fax, thư điện tử công vụ, hoặc Trục liên thông văn bản quốc gia VDXP / LGSP ) đều phải được tiếp nhận, xử lý sơ bộ và đăng ký vào Sổ văn bản đến điện tử tại Bộ phận Văn thư thuộc Phòng Hành chính - Quản trị trước khi chuyển giao. Cá nhân, đơn vị không được tự ý tiếp nhận và xử lý văn bản đến ngoài luồng hệ thống.
 
 2. **Nguyên tắc Cấp số Liên tục Bất biến (Continuous Numbering Invariant)**:
    Số văn bản đến được cấp tự động, tăng dần bắt đầu từ số 01 vào 00:00:00 ngày 01 tháng 01 và kết thúc vào 23:59:59 ngày 31 tháng 12 hàng năm. Tuyệt đối không nhảy số, lùi số, trùng số hoặc sửa số đã cấp. Cấp số thực hiện qua cơ chế giao dịch khóa hàng (Atomic Database Locking) trên thực thể `DocumentNumberSequence`.

@@ -18,10 +18,17 @@
 .DS_Store
 *.pem
 
-# debug
+# debug & logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+*.diff
+*.old
+
+# superpowers execution artifacts
+/.superpowers/
+/Work/
 
 # local env files
 .env*.local
@@ -41,6 +48,10 @@ qcet-backend-api/
 
 # runtime file storage & sandboxes
 /storage/temp/
+/storage/private/*
+!/storage/private/documents/
+!/storage/private/documents/2026/
+!/storage/private/documents/2026/KeHoach_CongTac_Thang9_2026.doc
 /uploads/
 /test_storage_*/
 /test_uploads_*/

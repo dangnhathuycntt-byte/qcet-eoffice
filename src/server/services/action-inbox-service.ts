@@ -61,6 +61,7 @@ export class ActionInboxService {
         dueDate: true,
         createdAt: true,
       },
+      orderBy: { createdAt: 'desc' },
       take: 20,
     });
 
@@ -106,6 +107,7 @@ export class ActionInboxService {
         dueDate: true,
         createdAt: true,
       },
+      orderBy: { createdAt: 'desc' },
       take: 20,
     });
 
@@ -133,6 +135,7 @@ export class ActionInboxService {
           status: IncomingDocumentStatus.PRESENTED,
         },
         include: { document: true },
+        orderBy: { createdAt: 'desc' },
         take: 15,
       });
 
@@ -162,6 +165,7 @@ export class ActionInboxService {
           leadUnitId: { in: unitHeadUnitIds },
         },
         include: { document: true },
+        orderBy: { createdAt: 'desc' },
         take: 15,
       });
 
@@ -194,6 +198,7 @@ export class ActionInboxService {
           include: { document: true },
         },
       },
+      orderBy: { createdAt: 'desc' },
       take: 15,
     });
 
@@ -223,6 +228,7 @@ export class ActionInboxService {
         contentReviewerId: userId,
       },
       include: { document: true },
+      orderBy: { createdAt: 'desc' },
       take: 15,
     });
 
@@ -255,6 +261,7 @@ export class ActionInboxService {
           },
         },
         include: { document: true },
+        orderBy: { createdAt: 'desc' },
         take: 15,
       });
 
@@ -283,6 +290,7 @@ export class ActionInboxService {
           status: OutgoingDocumentStatus.AUTHORIZED_SIGN,
         },
         include: { document: true },
+        orderBy: { createdAt: 'desc' },
         take: 15,
       });
 
@@ -309,6 +317,7 @@ export class ActionInboxService {
         where: {
           status: DossierStatus.SUBMITTED_TO_ARCHIVE,
         },
+        orderBy: { createdAt: 'desc' },
         take: 10,
       });
 
@@ -341,6 +350,7 @@ export class ActionInboxService {
         status: DelegationStatus.ACTIVE,
         validUntil: { lte: sevenDaysLater, gte: now },
       },
+      orderBy: { validUntil: 'asc' },
       take: 10,
     });
 

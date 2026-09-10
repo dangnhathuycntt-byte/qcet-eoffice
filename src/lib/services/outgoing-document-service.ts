@@ -45,6 +45,12 @@ import {
   ForbiddenError,
 } from "@/server/api/errors";
 import type { SessionPayload } from "@/lib/jwt-session";
+import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@/config/institution";
+import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
+import {
+  OutgoingDocumentStateMachine,
+  isDocumentImmutable,
+} from "@/lib/documents/state-machine";
 
 // ============================================================================
 // Types & Input Interfaces
@@ -193,13 +199,18 @@ export class OutgoingDocumentService {
     const documentYear = now.getFullYear();
 
     return prisma.$transaction(async (tx) => {
-      // Draft registration numbers use negative numbers so they never collide with official sequential numbers
-      const minDraft = await tx.document.findFirst({
-        where: { documentYear, type: DocumentType.VAN_BAN_DI, registrationNumber: { lt: 0 } },
-        orderBy: { registrationNumber: "asc" },
-        select: { registrationNumber: true },
-      });
-      const regNumber = (minDraft?.registrationNumber ?? 0) - 1;
+      // Advisory lock during draft creation to prevent negative registration number collisions
+      if (typeof (tx as any).$executeRaw === "function") {
+        try {
+          await (tx as any).$executeRaw`SELECT pg_advisory_xact_lock(hashtext('draft_numbering_' || ${documentYear}::text));`;
+        } catch {
+          // fallback if non-postgres or test harness
+        }
+      }
+
+      // Draft registration numbers use atomic sequence with negative year to guarantee race-free unique negative numbers
+      const draftSeq = await getNextRegistrationNumber(DocumentType.VAN_BAN_DI, -documentYear, tx);
+      const regNumber = -draftSeq;
 
       // 1. Create canonical Document record
       const document = await tx.document.create({
@@ -210,7 +221,7 @@ export class OutgoingDocumentService {
           registeredDate: now,
           originalNumber: `DRAFT-${documentYear}-${Math.abs(regNumber)}`,
           issuedDate: now,
-          issuingAuthority: "Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh",
+          issuingAuthority: INSTITUTION_CONFIG.issuingAuthority,
           category: input.category || "Quyết định",
           summary,
           urgency: input.urgency || DocumentUrgency.THUONG,
@@ -393,11 +404,10 @@ export class OutgoingDocumentService {
     }
 
     // Separation of Duties check: Drafter cannot approve content!
-    if (existing.document.registeredById === user.id) {
-      throw new ForbiddenError(
-        "Người soạn thảo không được tự phê duyệt nội dung văn bản đi (Drafter != Content Reviewer)."
-      );
-    }
+    OutgoingDocumentStateMachine.assertDrafterNotContentReviewer(
+      existing.document.registeredById,
+      user.id
+    );
 
     const resource: AuthorizationResource = {
       id: input.documentId,
@@ -770,10 +780,8 @@ export class OutgoingDocumentService {
     }
 
     // Separation of Duties check: Signer cannot assign number!
-    if (
-      existing.authorizedSignerId === user.id ||
-      existing.document.signerName === user.name
-    ) {
+    OutgoingDocumentStateMachine.assertSignerNotNumberer(existing.authorizedSignerId, user.id);
+    if (existing.document.signerName === user.name) {
       throw new ForbiddenError(
         "Người ký văn bản không được tự cấp số hoặc đóng dấu số cơ quan (Signer != Numberer)."
       );
@@ -795,31 +803,8 @@ export class OutgoingDocumentService {
     const documentYear = now.getFullYear();
 
     return prisma.$transaction(async (tx) => {
-      // Find current maximum positive registration number in document table to prevent collisions
-      const maxDoc = await tx.document.findFirst({
-        where: { documentYear, type: DocumentType.VAN_BAN_DI, registrationNumber: { gt: 0 } },
-        orderBy: { registrationNumber: "desc" },
-        select: { registrationNumber: true },
-      });
-      const currentMax = maxDoc?.registrationNumber ?? 0;
-
-      // Atomic sequential counter for VAN_BAN_DI in current year
-      const seq = await tx.documentNumberSequence.upsert({
-        where: { type_year: { type: DocumentType.VAN_BAN_DI, year: documentYear } },
-        create: { type: DocumentType.VAN_BAN_DI, year: documentYear, lastNumber: Math.max(currentMax, 0) + 1 },
-        update: { lastNumber: { increment: 1 } },
-      });
-
-      let allocatedNumber: number;
-      if (seq.lastNumber <= currentMax) {
-        allocatedNumber = currentMax + 1;
-        await tx.documentNumberSequence.update({
-          where: { id: seq.id },
-          data: { lastNumber: allocatedNumber },
-        });
-      } else {
-        allocatedNumber = seq.lastNumber;
-      }
+      // Atomic sequential counter for VAN_BAN_DI in current year (race-free)
+      const allocatedNumber = await getNextRegistrationNumber(DocumentType.VAN_BAN_DI, documentYear, tx);
 
       const notation = input.codeNotation || "QĐ-CĐKTCNQN";
       const outgoingNumberStr = input.outgoingNumberStr || `${allocatedNumber}/${notation}`;
@@ -909,10 +894,11 @@ export class OutgoingDocumentService {
     }
 
     // Separation of Duties check: Signer cannot organization-sign!
-    if (
-      existing.authorizedSignerId === user.id ||
-      existing.document.signerName === user.name
-    ) {
+    OutgoingDocumentStateMachine.assertSignerNotOrganizationSigner(
+      existing.authorizedSignerId,
+      user.id
+    );
+    if (existing.document.signerName === user.name) {
       throw new ForbiddenError(
         "Người ký văn bản không được tự đóng dấu số cơ quan (Signer != Org Signer)."
       );
@@ -940,10 +926,10 @@ export class OutgoingDocumentService {
           version: existing.currentVersion,
           signerUserId: user.id,
           signerAssignmentId: (user as any).activeAssignmentId || null,
-          signingCapacity: "VĂN PHÒNG / TRƯỜNG CAO ĐẲNG KINH TẾ VÀ CÔNG NGHỆ QUẢNG NINH",
+          signingCapacity: getOfficialSigningCapacity("VĂN PHÒNG"),
           signatureType: SignatureType.ORGANIZATION_DIGITAL,
           certificateMetadata: (input.certificateMetadata as Prisma.InputJsonValue) || {
-            organization: "TRƯỜNG CAO ĐẲNG KINH TẾ VÀ CÔNG NGHỆ QUẢNG NINH",
+            organization: INSTITUTION_CONFIG.officialName.toUpperCase(),
             ca: "Ban Cơ yếu Chính phủ - Cục Chứng thực số và Bảo mật thông tin",
             signedAt: now.toISOString(),
             status: "VALID",
@@ -1117,7 +1103,7 @@ export class OutgoingDocumentService {
     });
 
     if (!existing) {
-      throw new NotFoundError("Hồ sơ văn b���n đi không tồn tại.");
+      throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
     }
 
     const resource: AuthorizationResource = {

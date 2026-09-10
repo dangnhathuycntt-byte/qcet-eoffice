@@ -6,11 +6,21 @@ import { TasksFocusLanding } from "./tasks-focus-landing";
 import { TasksExpandedViews } from "./tasks-expanded-views";
 
 function TasksZoneComponent() {
-  const { isStaffExpanded } = useDashboardNav();
+  const { isStaffExpanded, viewMode } = useDashboardNav();
+
+  // If a specialized expanded view mode is active (calendar, department breakdown, or executive command center),
+  // render TasksExpandedViews.
+  // Otherwise, always render the canonical UnifiedAdaptiveWorkspace (via TasksFocusLanding)
+  // so that Staff, Manager, and Admin/Executive all share the same canonical workspace engine.
+  const isSpecializedExpandedView =
+    isStaffExpanded &&
+    (viewMode === "calendar" ||
+      viewMode === "department" ||
+      viewMode === "executive");
 
   return (
     <div className="space-y-6" data-slot="zone-tasks">
-      {!isStaffExpanded ? <TasksFocusLanding /> : <TasksExpandedViews />}
+      {isSpecializedExpandedView ? <TasksExpandedViews /> : <TasksFocusLanding />}
     </div>
   );
 }

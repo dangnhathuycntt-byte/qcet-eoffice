@@ -45,6 +45,8 @@ import {
   ValidationError,
 } from "@/server/api/errors";
 import type { SessionPayload } from "@/lib/jwt-session";
+import { getNextRegistrationNumber } from "@/lib/documents/numbering-engine";
+import { IncomingDocumentStateMachine } from "@/lib/documents/state-machine";
 
 // ============================================================================
 // Types & Input Interfaces
@@ -222,13 +224,26 @@ export async function resolveUserContext(
       pa.portfolios.map((p) => p.responsibilityArea.code as any)
     ) || [];
 
-  const delegations = await prisma.dacumDelegation.findMany({
+  const now = new Date();
+  const v2Grants = await prisma.delegationGrant.findMany({
     where: {
-      delegateId: session.id,
-      isActive: true,
-      expiresAt: { gte: new Date() },
+      granteeAssignment: { userId: session.id },
+      status: "ACTIVE",
+      validUntil: { gte: now },
+    },
+    include: {
+      granteeAssignment: true,
     },
   });
+
+  const formattedGrants = v2Grants.map((g) => ({
+    id: g.id,
+    granteeUserId: g.granteeAssignment.userId,
+    capability: g.action || "*",
+    validFrom: g.validFrom,
+    validUntil: g.validUntil,
+    status: g.status,
+  }));
 
   return {
     id: session.id,
@@ -241,14 +256,7 @@ export async function resolveUserContext(
     departmentCode: dbUser?.department?.shortName || undefined,
     portfolios,
     isActive: true,
-    delegationGrants: delegations.map((d) => ({
-      id: d.id,
-      granteeUserId: d.delegateId,
-      capability: d.authorityScope || "*",
-      validFrom: d.startDate || d.createdAt,
-      validUntil: d.expiresAt,
-      status: d.isActive ? "ACTIVE" : "REVOKED",
-    })),
+    delegationGrants: formattedGrants,
   };
 }
 
@@ -296,12 +304,8 @@ export async function registerIncomingDocument(
     } else if (input.documentNumber && !Number.isNaN(Number(input.documentNumber))) {
       regNumber = Number(input.documentNumber);
     } else {
-      const latestDoc = await tx.document.findFirst({
-        where: { documentYear, type: DocumentType.VAN_BAN_DEN },
-        orderBy: { registrationNumber: "desc" },
-        select: { registrationNumber: true },
-      });
-      regNumber = (latestDoc?.registrationNumber ?? 0) + 1;
+      // Atomic sequential registration numbering (race-free, non-repeating)
+      regNumber = await getNextRegistrationNumber(DocumentType.VAN_BAN_DEN, documentYear, tx);
     }
 
     // 1. Create canonical Document record
@@ -415,14 +419,11 @@ export async function presentDocument(
   await assertAuthorized(user, "document.incoming.present", resource);
 
   const currentStatus = doc.incomingWorkflow.status;
-  if (
-    currentStatus !== IncomingDocumentStatus.REGISTERED &&
-    currentStatus !== IncomingDocumentStatus.RECEIVED
-  ) {
-    throw new InvalidTransitionError(
-      `Không thể trình lãnh đạo văn bản đang ở trạng thái [${currentStatus}]. Chỉ áp dụng cho văn bản đã tiếp nhận hoặc đã vào sổ.`
-    );
-  }
+  IncomingDocumentStateMachine.assertTransition(
+    currentStatus,
+    IncomingDocumentStatus.PRESENTED,
+    input.documentId
+  );
 
   return prisma.$transaction(async (tx) => {
     const updatedWorkflow = await tx.documentIncomingWorkflow.update({
@@ -518,15 +519,14 @@ export async function directDocument(
   await assertAuthorized(user, "document.incoming.direct", resource);
 
   const currentStatus = doc.incomingWorkflow.status;
-  if (
-    currentStatus !== IncomingDocumentStatus.PRESENTED &&
-    currentStatus !== IncomingDocumentStatus.REGISTERED &&
-    currentStatus !== IncomingDocumentStatus.RECEIVED
-  ) {
-    throw new InvalidTransitionError(
-      `Không thể cho ý kiến chỉ đạo khi văn bản ở trạng thái [${currentStatus}].`
-    );
-  }
+  const targetStatus = input.leadUnitId
+    ? IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT
+    : IncomingDocumentStatus.DIRECTED;
+  IncomingDocumentStateMachine.assertTransition(
+    currentStatus,
+    targetStatus,
+    input.documentId
+  );
 
   if (!input.leadUnitId) {
     throw new ValidationError("Đơn vị chủ trì (leadUnitId) là bắt buộc.");
@@ -689,16 +689,14 @@ export async function assignUnitWork(
   }
 
   const currentStatus = doc.incomingWorkflow.status;
-  if (
-    currentStatus !== IncomingDocumentStatus.DIRECTED &&
-    currentStatus !== IncomingDocumentStatus.ASSIGNED_TO_LEAD_UNIT &&
-    currentStatus !== IncomingDocumentStatus.UNIT_ASSIGNED_PERSON &&
-    currentStatus !== IncomingDocumentStatus.IN_PROGRESS
-  ) {
-    throw new InvalidTransitionError(
-      `Chỉ có thể phân công tác nghiệp khi văn bản đã được Lãnh đạo chỉ đạo về đơn vị. Trạng thái hiện tại: [${currentStatus}].`
-    );
-  }
+  const targetStatus = input.createTask
+    ? IncomingDocumentStatus.IN_PROGRESS
+    : IncomingDocumentStatus.UNIT_ASSIGNED_PERSON;
+  IncomingDocumentStateMachine.assertTransition(
+    currentStatus,
+    targetStatus,
+    input.documentId
+  );
 
   if (!input.driUserId) {
     throw new ValidationError("Người chịu trách nhiệm chính (driUserId) là bắt buộc.");
@@ -908,15 +906,11 @@ export async function resolveDocument(
   await assertAuthorized(user, "document.incoming.execute", resource);
 
   const currentStatus = doc.incomingWorkflow.status;
-  if (
-    currentStatus !== IncomingDocumentStatus.UNIT_ASSIGNED_PERSON &&
-    currentStatus !== IncomingDocumentStatus.IN_PROGRESS &&
-    currentStatus !== IncomingDocumentStatus.DIRECTED
-  ) {
-    throw new InvalidTransitionError(
-      `Không thể xác nhận hoàn thành khi văn bản ở trạng thái [${currentStatus}].`
-    );
-  }
+  IncomingDocumentStateMachine.assertTransition(
+    currentStatus,
+    IncomingDocumentStatus.RESOLVED,
+    input.documentId
+  );
 
   if (!input.resolutionSummary || input.resolutionSummary.trim() === "") {
     throw new ValidationError("Báo cáo / Tóm tắt kết quả giải quyết không được để trống.");
@@ -1030,16 +1024,16 @@ export async function fileDocument(
   await assertAuthorized(user, "document.incoming.file", resource);
 
   const currentStatus = doc.incomingWorkflow.status;
-  if (currentStatus !== IncomingDocumentStatus.RESOLVED) {
-    throw new InvalidTransitionError(
-      `Chỉ có thể lập hồ sơ lưu trữ khi văn bản đã được giải quyết xong (RESOLVED). Trạng thái hiện tại: [${currentStatus}].`
-    );
-  }
-
   const archiveNow = Boolean(input.archiveNow);
   const targetStatus = archiveNow
     ? IncomingDocumentStatus.ARCHIVED
     : IncomingDocumentStatus.FILED;
+
+  IncomingDocumentStateMachine.assertTransition(
+    currentStatus,
+    targetStatus,
+    input.documentId
+  );
   const dossierId = input.dossierId || `HS-${doc.documentYear || new Date().getFullYear()}-${doc.registrationNumber}`;
 
   return prisma.$transaction(async (tx) => {

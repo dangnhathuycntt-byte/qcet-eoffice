@@ -18,6 +18,9 @@ import {
 import { prisma } from "@/lib/prisma";
 import { canReadDocument, isAdmin } from "@/server/policies/document-policy";
 import { canReadTask } from "@/server/policies/task-policy";
+import { canReadDossier } from "@/server/policies/dossier-policy";
+import { canViewMeeting } from "@/server/policies/meeting-policy";
+import { logger } from "@/server/observability/logger";
 
 export async function GET(
   req: NextRequest,
@@ -42,7 +45,14 @@ export async function GET(
     const fileName = path.basename(relativePath);
 
     if (!isAllowedFileExtension(fileName)) {
-      throw new ForbiddenError("Loại tệp không được phép truy c���p");
+      logger.fileAccessDenied({
+        requestId,
+        userId: authUser.id,
+        filePath: relativePath,
+        fileName,
+        reason: "Disallowed file extension",
+      });
+      throw new ForbiddenError("Loại tệp không được phép truy cập");
     }
 
     // Resolves against UPLOADS_DIR and guards against traversal
@@ -56,6 +66,8 @@ export async function GET(
       `/${normalizedRelative}`,
       normalizedUploads,
       `uploads/${normalizedRelative}`,
+      `/api/files/${normalizedRelative}`,
+      `api/files/${normalizedRelative}`,
     ];
 
     // Object-level authorization check: DocumentAttachment
@@ -79,6 +91,15 @@ export async function GET(
 
     if (attachment) {
       if (!attachment.document || !canReadDocument(authUser, attachment.document)) {
+        logger.fileAccessDenied({
+          requestId,
+          userId: authUser.id,
+          filePath: relativePath,
+          fileName,
+          resourceType: "DocumentAttachment",
+          resourceId: attachment.documentId,
+          reason: "User lacks permission to read associated document",
+        });
         throw new ForbiddenError(
           "Bạn không có quyền truy cập tệp đính kèm của văn bản này"
         );
@@ -101,14 +122,105 @@ export async function GET(
 
     if (deliverable) {
       if (!deliverable.task || !canReadTask(authUser, deliverable.task)) {
+        logger.fileAccessDenied({
+          requestId,
+          userId: authUser.id,
+          filePath: relativePath,
+          fileName,
+          resourceType: "TaskDeliverable",
+          resourceId: deliverable.taskId,
+          reason: "User lacks permission to read associated task",
+        });
         throw new ForbiddenError(
           "Bạn không có quyền truy cập tệp đính kèm của nhiệm vụ này"
         );
       }
     }
 
+    // Object-level authorization check: WorkDossierItem
+    const dossierItem = await prisma.dossierItem.findFirst({
+      where: {
+        OR: [
+          { itemId: { in: candidateUrls } },
+          { notes: { in: candidateUrls } },
+          { itemId: { contains: normalizedRelative } },
+          { notes: { contains: normalizedRelative } },
+        ],
+      },
+      include: {
+        dossier: {
+          include: {
+            items: true,
+          },
+        },
+      },
+    });
+
+    if (dossierItem) {
+      if (!dossierItem.dossier || !canReadDossier(authUser, dossierItem.dossier)) {
+        logger.fileAccessDenied({
+          requestId,
+          userId: authUser.id,
+          filePath: relativePath,
+          fileName,
+          resourceType: "DossierItem",
+          resourceId: dossierItem.dossierId,
+          reason: "User lacks permission to read associated work dossier",
+        });
+        throw new ForbiddenError(
+          "Bạn không có quyền truy cập tệp đính kèm của hồ sơ công việc này"
+        );
+      }
+    }
+
+    // Object-level authorization check: Meeting
+    const meeting = await prisma.meeting.findFirst({
+      where: {
+        OR: [
+          { materialsUrl: { in: candidateUrls } },
+          { materialsUrl: { contains: normalizedRelative } },
+        ],
+      },
+      include: {
+        participants: {
+          include: {
+            user: true,
+          },
+        },
+        body: {
+          include: {
+            memberships: true,
+          },
+        },
+      },
+    });
+
+    if (meeting) {
+      if (!canViewMeeting(authUser, meeting)) {
+        logger.fileAccessDenied({
+          requestId,
+          userId: authUser.id,
+          filePath: relativePath,
+          fileName,
+          resourceType: "Meeting",
+          resourceId: meeting.id,
+          reason: "User lacks permission to view associated meeting",
+        });
+        throw new ForbiddenError(
+          "Bạn không có quyền truy cập tài liệu của cuộc họp này"
+        );
+      }
+    }
+
     // Default Deny: Unregistered/orphan files cannot be downloaded (F07)
-    if (!attachment && !deliverable) {
+    if (!attachment && !deliverable && !dossierItem && !meeting) {
+      logger.fileAccessDenied({
+        requestId,
+        userId: authUser.id,
+        filePath: relativePath,
+        fileName,
+        reason: "Unregistered or orphan file not associated with any authorized resource",
+      });
       throw new NotFoundError(
         "Không tìm thấy tệp hoặc tệp không thuộc tài nguyên được cấp quyền"
       );

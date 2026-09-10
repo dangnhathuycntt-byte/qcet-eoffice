@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma as defaultPrisma } from "@/lib/prisma";
 import type {
   DocumentItem,
@@ -11,7 +12,11 @@ import type {
 import { getNextRegistrationNumber } from "./numbering-engine";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import type { AuthorizationContext } from "@/server/authorization/authorization-context";
-import { canReadDocument } from "@/server/policies/document-policy";
+import { canReadDocument, buildDocumentReadWhere } from "@/server/policies/document-policy";
+import { isDocumentImmutable } from "./state-machine";
+import { NotFoundError, ValidationError } from "@/server/api/errors";
+
+export { buildDocumentReadWhere };
 
 export interface CreateDocumentPayload {
   type: DocumentType;
@@ -76,7 +81,14 @@ export interface ListDocumentsFilter {
   limit?: number;
   offset?: number;
   userContext?: AuthenticatedUser | AuthorizationContext;
+  authUser?: AuthenticatedUser | AuthorizationContext;
+  aclWhere?: Prisma.DocumentWhereInput;
 }
+
+export type ListDocumentsResult = DocumentItem[] & {
+  documents: DocumentItem[];
+  total: number;
+};
 
 const defaultInclude = {
   draftingDept: {
@@ -124,6 +136,9 @@ const defaultInclude = {
       },
     },
   },
+  incomingWorkflow: true,
+  outgoingWorkflow: true,
+  signatures: true,
 };
 
 export function mapPrismaDocumentToItem(record: any): DocumentItem {
@@ -201,6 +216,9 @@ export function mapPrismaDocumentToItem(record: any): DocumentItem {
         dir.createdAt instanceof Date ? dir.createdAt.toISOString() : dir.createdAt ? String(dir.createdAt) : undefined,
     })),
 
+    incomingWorkflow: record.incomingWorkflow || null,
+    outgoingWorkflow: record.outgoingWorkflow || null,
+    signatures: record.signatures || [],
     linkedTaskId: record.linkedTaskId || null,
     createdAt:
       record.createdAt instanceof Date ? record.createdAt.toISOString() : record.createdAt ? String(record.createdAt) : undefined,
@@ -289,62 +307,89 @@ export async function createDocument(
 }
 
 /**
- * Lists documents based on provided filters.
+ * Lists documents based on provided filters and ACL access control.
+ * Applies database-level WHERE predicates before pagination to prevent
+ * post-query filtering defects (F13 Document ACL-Before-Pagination).
  */
 export async function listDocuments(
   filter: ListDocumentsFilter = {},
   client?: any
-): Promise<DocumentItem[]> {
+): Promise<ListDocumentsResult> {
   const db = client || defaultPrisma;
-  const where: any = {};
+  const queryConditions: Prisma.DocumentWhereInput[] = [];
 
   if (filter.type) {
-    where.type = filter.type;
+    queryConditions.push({ type: filter.type as any });
   }
   if (filter.documentYear) {
-    where.documentYear = Number(filter.documentYear);
+    queryConditions.push({ documentYear: Number(filter.documentYear) });
   }
   if (filter.status) {
-    where.status = filter.status;
+    queryConditions.push({ status: filter.status as any });
   }
   if (filter.urgency) {
-    where.urgency = filter.urgency;
+    queryConditions.push({ urgency: filter.urgency as any });
   }
   if (filter.securityLevel) {
-    where.securityLevel = filter.securityLevel;
+    queryConditions.push({ securityLevel: filter.securityLevel as any });
   }
   if (filter.leadDepartmentId) {
-    where.leadDepartmentId = filter.leadDepartmentId;
+    queryConditions.push({ leadDepartmentId: filter.leadDepartmentId });
   }
   if (filter.draftingDeptId) {
-    where.draftingDeptId = filter.draftingDeptId;
+    queryConditions.push({ draftingDeptId: filter.draftingDeptId });
   }
   if (filter.search && filter.search.trim()) {
     const q = filter.search.trim();
-    where.OR = [
-      { summary: { contains: q, mode: "insensitive" } },
-      { originalNumber: { contains: q, mode: "insensitive" } },
-      { issuingAuthority: { contains: q, mode: "insensitive" } },
-    ];
+    queryConditions.push({
+      OR: [
+        { summary: { contains: q, mode: "insensitive" } },
+        { originalNumber: { contains: q, mode: "insensitive" } },
+        { issuingAuthority: { contains: q, mode: "insensitive" } },
+      ],
+    });
   }
 
-  const records = await db.document.findMany({
-    where,
-    orderBy: [
-      { documentYear: "desc" },
-      { registrationNumber: "desc" },
-    ],
-    take: filter.limit ?? 100,
-    skip: filter.offset ?? 0,
-    include: defaultInclude,
-  });
+  const effectiveUser = filter.authUser || filter.userContext;
+  const aclCondition =
+    filter.aclWhere || (effectiveUser ? buildDocumentReadWhere(effectiveUser) : undefined);
+
+  const andClauses: Prisma.DocumentWhereInput[] = [...queryConditions];
+  if (aclCondition) {
+    andClauses.push(aclCondition);
+  }
+
+  const where: Prisma.DocumentWhereInput =
+    andClauses.length === 0
+      ? {}
+      : andClauses.length === 1
+      ? andClauses[0]
+      : { AND: andClauses };
+
+  const [total, records] = await Promise.all([
+    typeof db.document?.count === "function"
+      ? db.document.count({ where })
+      : Promise.resolve(0),
+    db.document.findMany({
+      where,
+      orderBy: [
+        { documentYear: "desc" },
+        { registrationNumber: "desc" },
+      ],
+      take: filter.limit ?? 100,
+      skip: filter.offset ?? 0,
+      include: defaultInclude,
+    }),
+  ]);
 
   const items = records.map(mapPrismaDocumentToItem);
-  if (filter.userContext) {
-    return items.filter((item: DocumentItem) => canReadDocument(filter.userContext!, item));
-  }
+  const effectiveTotal =
+    typeof db.document?.count === "function" ? total : items.length;
 
-  return items;
+  return Object.assign([...items], {
+    documents: items,
+    total: effectiveTotal,
+  }) as ListDocumentsResult;
 }
 
 /**
@@ -373,6 +418,36 @@ export async function updateDocument(
   client?: any
 ): Promise<DocumentItem> {
   const db = client || defaultPrisma;
+
+  const existing = await db.document.findUnique({
+    where: { id },
+    include: defaultInclude,
+  });
+
+  if (!existing) {
+    throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
+  }
+
+  if (isDocumentImmutable(existing)) {
+    throw new ValidationError(
+      "Văn bản đã được ký hoặc đã ban hành/hoàn thành/lưu trữ là bất biến, không thể chỉnh sửa metadata.",
+      undefined,
+      "IMMUTABLE_DOCUMENT"
+    );
+  }
+
+  if (
+    payload.status !== undefined ||
+    payload.signerName !== undefined ||
+    payload.signerTitle !== undefined
+  ) {
+    throw new ValidationError(
+      "Trạng thái và người ký văn bản phải được cập nhật qua canonical workflow command tương ứng.",
+      undefined,
+      "CANONICAL_COMMAND_REQUIRED"
+    );
+  }
+
   const data: any = {};
 
   if (payload.summary !== undefined) data.summary = payload.summary;

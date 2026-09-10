@@ -9,7 +9,7 @@ import {
 export type { TaskScope, TaskViewMode };
 import type { WorkboxFilter } from "@/components/dashboard/executive-stat-strip";
 import { matchesUser } from "@/lib/role-task-filter";
-import { filterTasksForTable } from "@/components/dashboard/cascading-task-table";
+import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
 import { isDateInAcademicMonth } from "@/lib/academic-calendar";
 
 export const TODAY_ISO = "2026-09-06";

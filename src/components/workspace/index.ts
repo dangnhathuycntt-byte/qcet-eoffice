@@ -13,6 +13,11 @@ export type {
 export { AdaptiveScopeHeader } from "./components/adaptive-scope-header";
 export { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 export { UniversalActionQueue } from "./components/universal-action-queue";
+export { ActionQueueShell } from "./action-queue-shell";
+export type {
+  ActionQueueShellProps,
+  ActionQueueTabItem,
+} from "./action-queue-shell";
 export {
   useAdaptiveWorkspaceData,
   deriveAdaptiveWorkspaceData,

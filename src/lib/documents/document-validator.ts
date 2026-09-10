@@ -186,6 +186,44 @@ export function validateDirectivePayload(payload: any): ValidationResult {
   };
 }
 
+export const FORBIDDEN_PATCH_FIELDS = [
+  "status",
+  "signedAt",
+  "signer",
+  "signerName",
+  "signerTitle",
+  "authorizedSignerId",
+  "authorizedSignedAt",
+  "documentNumber",
+  "registrationNumber",
+  "originalNumber",
+  "outgoingNumber",
+  "numbererId",
+  "numberedAt",
+  "issuedAt",
+  "issuedDate",
+  "registeredDate",
+  "type",
+  "version",
+] as const;
+
+export const ALLOWED_DOCUMENT_UPDATE_FIELDS = [
+  "summary",
+  "notes",
+  "category",
+  "urgency",
+  "securityLevel",
+  "recipientList",
+  "distributedCopies",
+  "dueDate",
+  "leadDepartmentId",
+  "leadUserId",
+] as const;
+
+export function isWorkflowControlledField(fieldName: string): boolean {
+  return (FORBIDDEN_PATCH_FIELDS as readonly string[]).includes(fieldName);
+}
+
 /**
  * Validates partial updates to an existing document.
  */
@@ -194,6 +232,14 @@ export function validateDocumentUpdatePayload(payload: any): ValidationResult {
 
   if (!payload || typeof payload !== "object") {
     return { isValid: false, errors: ["Payload phải là một đối tượng hợp lệ"] };
+  }
+
+  // Check for workflow-controlled fields
+  const forbidden = Object.keys(payload).filter((field) => isWorkflowControlledField(field));
+  if (forbidden.length > 0) {
+    errors.push(
+      `Các trường [${forbidden.join(", ")}] được kiểm soát bởi workflow, không thể cập nhật trực tiếp qua generic PATCH.`
+    );
   }
 
   if (payload.status !== undefined && !VALID_STATUSES.includes(payload.status)) {

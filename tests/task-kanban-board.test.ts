@@ -2,12 +2,16 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import {
   groupTasksByStatus,
   KANBAN_COLUMNS,
   getNextStatus,
   getPrevStatus,
   filterKanbanItems,
+  mapTaskStatusToKanbanColumn,
+  TaskKanbanBoard,
   type KanbanItem,
 } from "../src/components/tasks/task-kanban-board";
 import type { SchoolTask } from "../src/types/dashboard";
@@ -207,6 +211,228 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
     assert.ok(
       content.includes("strokeWidth={1.5}"),
       "Lucide icons must be standardized to strokeWidth={1.5}"
+    );
+  });
+
+  test("mapTaskStatusToKanbanColumn strictly maps operational statuses to 4 columns", () => {
+    assert.equal(mapTaskStatusToKanbanColumn("NOT_STARTED"), "NEW");
+    assert.equal(mapTaskStatusToKanbanColumn("NEW"), "NEW");
+    assert.equal(mapTaskStatusToKanbanColumn("IN_PROGRESS"), "IN_PROGRESS");
+    assert.equal(mapTaskStatusToKanbanColumn("OVERDUE"), "IN_PROGRESS");
+    assert.equal(mapTaskStatusToKanbanColumn("BLOCKED"), "IN_PROGRESS");
+    assert.equal(mapTaskStatusToKanbanColumn("WAITING_APPROVAL"), "NEEDS_REVIEW");
+    assert.equal(mapTaskStatusToKanbanColumn("PENDING_EXECUTIVE_APPROVAL"), "NEEDS_REVIEW");
+    assert.equal(mapTaskStatusToKanbanColumn("NEEDS_REVIEW"), "NEEDS_REVIEW");
+    assert.equal(mapTaskStatusToKanbanColumn("COMPLETED"), "COMPLETED");
+  });
+
+  test("Kanban board accounts for all 395 tasks across 4 columns with zero silent loss", () => {
+    // Generate 395 mock tasks covering NOT_STARTED (75), WAITING_APPROVAL (9), OVERDUE (1), etc.
+    const mock395Tasks: SchoolTask[] = [];
+
+    // 75 NOT_STARTED
+    for (let i = 0; i < 75; i++) {
+      mock395Tasks.push({
+        id: `task-not-started-${i}`,
+        title: `Nhiệm vụ chưa bắt đầu ${i}`,
+        category: "CNTT",
+        categoryLabel: "Công nghệ thông tin",
+        leadAssigneeName: "Nguyễn Văn A",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "NOT_STARTED" as unknown as SchoolTask["status"],
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 0,
+      });
+    }
+
+    // 100 NEW
+    for (let i = 0; i < 100; i++) {
+      mock395Tasks.push({
+        id: `task-new-${i}`,
+        title: `Nhiệm vụ mới ${i}`,
+        category: "CHUYEN_DOI_SO",
+        categoryLabel: "Chuyển đổi số",
+        leadAssigneeName: "Trần Thị B",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "NEW",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 0,
+      });
+    }
+
+    // 100 IN_PROGRESS
+    for (let i = 0; i < 100; i++) {
+      mock395Tasks.push({
+        id: `task-in-progress-${i}`,
+        title: `Nhiệm vụ đang làm ${i}`,
+        category: "TRUYEN_THONG",
+        categoryLabel: "Truyền thông",
+        leadAssigneeName: "Lê Văn C",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "IN_PROGRESS",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 50,
+      });
+    }
+
+    // 9 WAITING_APPROVAL
+    for (let i = 0; i < 9; i++) {
+      mock395Tasks.push({
+        id: `task-waiting-approval-${i}`,
+        title: `Nhiệm vụ chờ duyệt ${i}`,
+        category: "BAO_CAO",
+        categoryLabel: "Báo cáo",
+        leadAssigneeName: "Phạm Văn D",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "WAITING_APPROVAL" as unknown as SchoolTask["status"],
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 90,
+      });
+    }
+
+    // 1 OVERDUE
+    mock395Tasks.push({
+      id: "task-overdue-1",
+      title: "Nhiệm vụ quá hạn 1",
+      category: "THU_VIEN",
+      categoryLabel: "Thư viện",
+      leadAssigneeName: "Hoàng Thị E",
+      coAssignees: [],
+      assignedDate: "2026-08-01",
+      dueDate: "2026-08-15",
+      status: "OVERDUE" as unknown as SchoolTask["status"],
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 30,
+    });
+
+    // 10 NEEDS_REVIEW
+    for (let i = 0; i < 10; i++) {
+      mock395Tasks.push({
+        id: `task-needs-review-${i}`,
+        title: `Nhiệm vụ cần rà soát ${i}`,
+        category: "ATTT",
+        categoryLabel: "An toàn thông tin",
+        leadAssigneeName: "Vũ Văn F",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "NEEDS_REVIEW",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 85,
+      });
+    }
+
+    // 100 COMPLETED
+    for (let i = 0; i < 100; i++) {
+      mock395Tasks.push({
+        id: `task-completed-${i}`,
+        title: `Nhiệm vụ hoàn thành ${i}`,
+        category: "KHAC",
+        categoryLabel: "Khác",
+        leadAssigneeName: "Đặng Thị G",
+        coAssignees: [],
+        assignedDate: "2026-08-01",
+        dueDate: "2026-08-25",
+        status: "COMPLETED",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 100,
+      });
+    }
+
+    assert.equal(mock395Tasks.length, 395, "Total mock tasks must equal 395");
+
+    const grouped = groupTasksByStatus(mock395Tasks);
+
+    // Assert partition across the 4 Kanban columns
+    assert.equal(grouped.NEW.length, 175, "NEW column must have 100 NEW + 75 NOT_STARTED = 175");
+    assert.equal(grouped.IN_PROGRESS.length, 101, "IN_PROGRESS column must have 100 IN_PROGRESS + 1 OVERDUE = 101");
+    assert.equal(grouped.NEEDS_REVIEW.length, 19, "NEEDS_REVIEW column must have 10 NEEDS_REVIEW + 9 WAITING_APPROVAL = 19");
+    assert.equal(grouped.COMPLETED.length, 100, "COMPLETED column must have 100 COMPLETED = 100");
+
+    const sumVisible =
+      grouped.NEW.length +
+      grouped.IN_PROGRESS.length +
+      grouped.NEEDS_REVIEW.length +
+      grouped.COMPLETED.length;
+
+    assert.equal(sumVisible, 395, "All 395 tasks must be visible on the Kanban board with zero silent loss");
+
+    // Render component and verify count notice header
+    const html = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, { tasks: mock395Tasks })
+    );
+
+    assert.ok(
+      html.includes('data-slot="kanban-count-notice"'),
+      "Kanban count notice container must be rendered"
+    );
+    assert.ok(
+      html.includes("395 / 395 công việc"),
+      "Notice must explicitly state '395 / 395 công việc'"
+    );
+    assert.ok(
+      html.includes("Đầy đủ 100% công việc"),
+      "Notice must indicate full 100% accounting"
+    );
+  });
+
+  test("Kanban exposes accessible keyboard/dropdown menu alternative to dragging ('Chuyển trạng thái')", () => {
+    const mockTasks: SchoolTask[] = [
+      {
+        id: "task-test-a11y",
+        title: "Nhiệm vụ kiểm thử A11Y",
+        category: "CNTT",
+        categoryLabel: "Công nghệ thông tin",
+        leadAssigneeName: "Trần Kiểm Thử",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-20",
+        status: "NEW",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 0,
+      },
+    ];
+
+    const html = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, { tasks: mockTasks })
+    );
+
+    // Verify accessible dropdown alternative to drag and drop
+    assert.ok(
+      html.includes('aria-label="Chuyển trạng thái"'),
+      "Card must render select with aria-label='Chuyển trạng thái'"
+    );
+    assert.ok(
+      html.includes("Chuyển trạng thái"),
+      "Dropdown options must mention 'Chuyển trạng thái'"
+    );
+    assert.ok(
+      html.includes("min-h-[44px]"),
+      "Touch target for mobile status transition must be >= 44px (min-h-[44px])"
     );
   });
 });

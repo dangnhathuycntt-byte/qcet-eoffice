@@ -1,6 +1,6 @@
 # QCET E-Office — Đặc Tả Nghiệp Vụ Quản Lý Nhiệm Vụ (Task Management Specification)
 
-**Cơ quan ban hành:** Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh (QCET)  
+**Cơ quan ban hành:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
 **Tình trạng tài liệu:** Văn bản Chuẩn tắc Miền Nghiệp vụ (Canonical Domain Specification)  
 **Phạm vi áp dụng:** Mô hình dữ liệu Prisma, Bộ máy Phân quyền ReBAC (Relationship-Based Access Control), Động cơ Luồng duyệt (Approval Engine), và Kiến trúc Giao tác vụ Liên thông.  
 **Căn cứ pháp lý:** 
@@ -64,7 +64,7 @@ Khác với `Scope` (bộ lọc góc nhìn giao diện người dùng), `TaskOri
   1. Ban Giám hiệu trực tiếp chỉ đạo, giao việc qua Lịch công tác tuần hoặc Thông báo kết luận cuộc họp giao ban;
   2. Bút phê của Hiệu trưởng hoặc các Phó Hiệu trưởng trên Văn bản đến (`DocumentDirective` $\rightarrow$ `Task`);
   3. Quyết định của Hội đồng trường hoặc Ban Giám hiệu về các chương trình, đề án, tuần lễ tuyển sinh, kiểm định chất lượng đào tạo;
-  4. Các nhiệm vụ đột xuất do Tỉnh ủy, UBND Tỉnh Quảng Ninh, Bộ GD&ĐT hoặc Sở LĐ-TB&XH giao trực tiếp cho QCET.
+  4. Các nhiệm vụ đột xuất do Tỉnh ủy, UBND Tỉnh , Bộ GD&ĐT hoặc Sở LĐ-TB&XH giao trực tiếp cho QCET.
 - **Tính chất pháp trị**:
   - Có mã định danh văn bản hoặc số quyết định kèm theo;
   - Đơn vị chủ trì (`LEAD_UNIT`) bắt buộc phải là một Phòng, Khoa hoặc Trung tâm trực thuộc;

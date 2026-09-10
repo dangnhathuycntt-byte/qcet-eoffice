@@ -2,6 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import nextEnv from "@next/env";
+
+const { loadEnvConfig } = nextEnv;
+loadEnvConfig(process.cwd());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,10 +44,19 @@ const tsxBin = path.join(
 );
 const bin = fs.existsSync(tsxBin) ? tsxBin : "tsx";
 
-const result = spawnSync(bin, ["--test", ...testFiles], {
+const testDbUrl = (process.env.DATABASE_URL || "").replace(/\/qcet_eoffice(\?.*)?$/, "/qcet_test$1");
+
+const env = {
+  ...process.env,
+  NODE_ENV: "test",
+  QCET_ALLOW_DB_TESTS: "1",
+  DATABASE_URL: testDbUrl,
+};
+
+const result = spawnSync(bin, ["--test", "--test-concurrency=1", ...testFiles], {
   cwd: rootDir,
   stdio: "inherit",
-  env: process.env,
+  env,
 });
 
 if (result.error) {

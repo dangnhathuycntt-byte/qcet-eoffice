@@ -11,6 +11,8 @@ import { apiSuccess, apiError } from '@/server/api/response';
 import { AddBodyMembershipSchema } from '@/contracts/meeting';
 import { logAuditEvent, AuditAction } from '@/lib/db/audit';
 import { NotFoundError } from '@/server/api/errors';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { assertCanManageOrganizationalBodies, assertCanAppointBodyMember } from '@/server/policies';
 
 export async function GET(
   request: NextRequest,
@@ -67,8 +69,21 @@ export async function POST(
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
 
+    const authContext = await loadAuthorizationContext(authUser.id);
+    assertCanManageOrganizationalBodies(authContext);
+
+    const existingBody = await prisma.organizationalBody.findUnique({
+      where: { id: params.id },
+      select: { id: true },
+    });
+    if (!existingBody) {
+      throw new NotFoundError('Hội đồng / Ban chỉ đạo không tồn tại');
+    }
+
     const reqBody = await request.json();
     const input = AddBodyMembershipSchema.parse(reqBody);
+
+    assertCanAppointBodyMember(authContext, input.userId, input.role);
 
     const membership = await prisma.bodyMembership.create({
       data: {

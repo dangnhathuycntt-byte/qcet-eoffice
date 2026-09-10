@@ -269,6 +269,12 @@ describe("Executive Matrix Aggregator", () => {
     assert.strictEqual(cntt.blockedTasksCount, 0);
     assert.strictEqual(cntt.overdueTasksCount, 0);
     assert.strictEqual(cntt.averageProgressPercent, 75);
+    // Denominator integrity assertions (Rule 40.2 & docs/product/metrics.md Section 3.1)
+    assert.strictEqual(cntt.parentTasksCount, 1);
+    assert.strictEqual(cntt.completedParentTasksCount, 0);
+    assert.strictEqual(cntt.subTasksCount, 1);
+    assert.strictEqual(cntt.completedSubTasksCount, 1);
+    assert.strictEqual(cntt.completionRate, 0); // 0 completed parent tasks out of 1 valid parent task
 
     const hanhChinh = matrix.find((d) => d.departmentId === "HANH_CHINH");
     assert.ok(hanhChinh);
@@ -276,6 +282,10 @@ describe("Executive Matrix Aggregator", () => {
     assert.strictEqual(hanhChinh.blockedTasksCount, 1);
     assert.strictEqual(hanhChinh.overdueTasksCount, 1);
     assert.strictEqual(hanhChinh.completedTasksCount, 0);
+    assert.strictEqual(hanhChinh.parentTasksCount, 0);
+    assert.strictEqual(hanhChinh.completedParentTasksCount, 0);
+    assert.strictEqual(hanhChinh.subTasksCount, 1);
+    assert.strictEqual(hanhChinh.completionRate, 0);
 
     const daoTao = matrix.find((d) => d.departmentId === "DAO_TAO");
     assert.ok(daoTao);
@@ -284,6 +294,11 @@ describe("Executive Matrix Aggregator", () => {
     assert.strictEqual(daoTao.inProgressTasksCount, 0);
     assert.strictEqual(daoTao.overdueTasksCount, 0);
     assert.strictEqual(daoTao.averageProgressPercent, 100);
+    assert.strictEqual(daoTao.parentTasksCount, 1);
+    assert.strictEqual(daoTao.completedParentTasksCount, 1);
+    assert.strictEqual(daoTao.subTasksCount, 1);
+    assert.strictEqual(daoTao.completedSubTasksCount, 1);
+    assert.strictEqual(daoTao.completionRate, 100);
 
     const bgh = matrix.find((d) => d.departmentId === "BGH");
     assert.ok(bgh);

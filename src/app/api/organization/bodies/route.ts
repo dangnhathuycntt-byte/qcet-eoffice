@@ -10,6 +10,8 @@ import { getApiContext, requireAuthenticated } from '@/server/api/request-contex
 import { apiSuccess, apiError } from '@/server/api/response';
 import { CreateOrganizationalBodySchema } from '@/contracts/meeting';
 import { logAuditEvent, AuditAction } from '@/lib/db/audit';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import { assertCanManageOrganizationalBodies } from '@/server/policies';
 
 export async function GET(request: NextRequest) {
   let requestId = crypto.randomUUID();
@@ -61,6 +63,9 @@ export async function POST(request: NextRequest) {
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
     const authUser = requireAuthenticated(ctx);
+
+    const authContext = await loadAuthorizationContext(authUser.id);
+    assertCanManageOrganizationalBodies(authContext);
 
     const body = await request.json();
     const input = CreateOrganizationalBodySchema.parse(body);

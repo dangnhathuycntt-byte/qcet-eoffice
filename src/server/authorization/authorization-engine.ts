@@ -68,6 +68,7 @@ import {
   AuthorizationError,
 } from './errors';
 import { canAccessClassification } from './document-classification';
+import { logger } from '../observability/logger';
 
 // ============================================================================
 // HELPERS
@@ -1470,6 +1471,18 @@ export function assertAuthorized(
   if (!result.allowed) {
     const code = result.rejectionCode || 'INSUFFICIENT_CAPABILITY';
     const reason = result.reason || 'Truy cập bị từ chối';
+
+    logger.authorizationDenied({
+      userId: context.user?.id || null,
+      action,
+      resourceId: resource?.id,
+      reason,
+      metadata: {
+        rejectionCode: code,
+        resourceType: resource?.type,
+        policyMatched: result.auditRecord?.policyMatched,
+      },
+    });
 
     switch (code) {
       case 'SEPARATION_OF_POWERS_VIOLATION':

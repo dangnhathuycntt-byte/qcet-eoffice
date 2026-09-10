@@ -269,7 +269,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
       const docInput = {
         title: `Công văn hướng dẫn tuyển sinh năm 2026 - ${testRunId}`,
         documentNumber: `CV-${testRunId.slice(-6)}/SGDĐT`,
-        issuingAuthority: "Sở Giáo dục và Đào tạo Quảng Ninh",
+        issuingAuthority: "Sở Giáo dục và Đào tạo ",
         documentType: DocumentType.CONG_VAN,
         urgency: DocumentUrgency.KHAN,
         securityLevel: DocumentSecurityLevel.NORMAL,
@@ -348,7 +348,7 @@ describe("Phase 5: Incoming Documents V2 Domain & Workflow (Nghị định 30/20
         {
           title: `Tờ trình xem xét kinh phí dự án - ${testRunId}`,
           documentNumber: `TT-${testRunId.slice(-6)}`,
-          issuingAuthority: "UBND Tỉnh Quảng Ninh",
+          issuingAuthority: "UBND Tỉnh ",
           documentType: DocumentType.TO_TRINH,
         },
         clerkUser,

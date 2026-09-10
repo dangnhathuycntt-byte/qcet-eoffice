@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { isUserExecutive, isUserUnitHead } from "@/domain/tasks/attention-resolver";
+import { useWorkspaceQuery } from "@/hooks/use-workspace-query";
 import {
   TaskManagementWorkspace,
   type ViewMode,
@@ -18,26 +19,32 @@ export interface TasksPageClientProps {
 }
 
 export function TasksPageClient({ initialTasks, initialScope }: TasksPageClientProps) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const { user } = useAuth();
-  const raw = searchParams.get("scope");
-  const fallback: WorkspaceScope =
-    user?.role === "ADMIN" ? "school" : user?.role === "MANAGER" ? "unit" : "my";
-  const scope: WorkspaceScope =
-    raw === "school" || raw === "unit" || raw === "my"
-      ? raw
-      : initialScope || fallback;
+  const { queryState, setScope } = useWorkspaceQuery();
+
+  const isExec = user ? isUserExecutive(user as any) : false;
+  const isHead = user ? isUserUnitHead(user as any) : false;
+
+  const fallback: WorkspaceScope = isExec ? "school" : isHead ? "unit" : "my";
+  const rawScope = queryState.scope || initialScope || fallback;
+
+  // AUTH-03: Enforce scope authorization
+  let authorizedScope: WorkspaceScope = rawScope;
+  if (authorizedScope === "school" && !isExec) {
+    authorizedScope = isHead ? "unit" : "my";
+  }
 
   const onScopeChange = (s: WorkspaceScope) => {
-    const p = new URLSearchParams(searchParams.toString());
-    p.set("scope", s);
-    router.replace(`/tasks?${p.toString()}`);
+    let target = s;
+    if (target === "school" && !isExec) {
+      target = isHead ? "unit" : "my";
+    }
+    setScope(target);
   };
 
   return (
     <TaskManagementWorkspace
-      scope={scope}
+      scope={authorizedScope}
       onScopeChange={onScopeChange}
       initialTasks={initialTasks}
     />

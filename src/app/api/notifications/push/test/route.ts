@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
     const body = parseResult.data;
 
-    let safeLinkHref = '/?zone=tasks';
+    let safeLinkHref = '/tasks';
     if (body.linkHref) {
       const raw = body.linkHref.trim();
       if (raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\') && !raw.includes('://')) {

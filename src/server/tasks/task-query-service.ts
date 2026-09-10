@@ -7,9 +7,15 @@ import {
   type ActivePositionAssignment,
   SystemRole,
 } from '@/server/authorization/authorization-context';
-import { getSystemReferenceDate, isTaskPastDue } from '@/lib/academic-calendar';
+import {
+  toTaskDomainModel,
+  toTaskDTO,
+  getSystemReferenceDate,
+  getSystemReferenceDateStr,
+  isTaskPastDue,
+  getIctReferenceDateStart,
+} from '@/domain/tasks';
 import { calculateTaskMetrics } from '@/lib/task-metrics';
-import { toTaskDomainModel, toTaskDTO } from '@/domain/tasks';
 import { TaskQueryParamsSchema } from '@/contracts/tasks';
 import { toTaskDetailDTO, type TaskDetailDTO } from '@/server/dto/task-dto';
 
@@ -365,14 +371,22 @@ export class TaskQueryService {
     if (status && status !== 'all') {
       const st = status.toLowerCase();
       if (st === 'overdue') {
-        const refDateVal = filters.referenceDate ?? getSystemReferenceDate();
-        const refDate = typeof refDateVal === 'string' ? new Date(refDateVal) : refDateVal;
-        where.status = {
-          notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED],
-        };
-        where.dueDate = {
-          lt: refDate,
-        };
+        const refDateVal = filters.referenceDate ?? getSystemReferenceDateStr();
+        const refDate = getIctReferenceDateStart(refDateVal);
+        where.AND = [
+          ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+          {
+            status: {
+              notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED],
+            },
+          },
+          {
+            OR: [
+              { status: TaskStatus.OVERDUE },
+              { dueDate: { lt: refDate } },
+            ],
+          },
+        ];
       } else {
         const statusMap: Record<string, TaskStatus> = {
           not_started: TaskStatus.NOT_STARTED,
@@ -434,6 +448,10 @@ export class TaskQueryService {
       filters.limit === 'all';
 
     const hasCursor = Boolean(filters.cursor && String(filters.cursor).trim() !== '');
+    const canonicalRefDateStr =
+      typeof filters.referenceDate === 'string'
+        ? filters.referenceDate
+        : filters.referenceDate?.toISOString() ?? getSystemReferenceDateStr();
 
     let formattedTasks: SchoolTask[] = [];
     let total = 0;
@@ -472,7 +490,7 @@ export class TaskQueryService {
         hasMore = false;
         nextCursor = null;
       }
-      formattedTasks = rawTasks.map(mapPrismaTaskToSchoolTask);
+      formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t, canonicalRefDateStr));
       totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
     } else if (isAll) {
       const take = 100;
@@ -491,7 +509,7 @@ export class TaskQueryService {
       totalPages = Math.ceil(total / limit) || 1;
       hasMore = rawTasks.length < total;
       nextCursor = hasMore && rawTasks.length > 0 ? rawTasks[rawTasks.length - 1].id : null;
-      formattedTasks = rawTasks.map(mapPrismaTaskToSchoolTask);
+      formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t, canonicalRefDateStr));
     } else {
       const pageRaw = filters.page ? parseInt(String(filters.page), 10) : 1;
       page = isNaN(pageRaw) || pageRaw < 1 ? 1 : pageRaw;
@@ -516,7 +534,7 @@ export class TaskQueryService {
       totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
       hasMore = skip + rawTasks.length < total;
       nextCursor = hasMore && rawTasks.length > 0 ? rawTasks[rawTasks.length - 1].id : null;
-      formattedTasks = rawTasks.map(mapPrismaTaskToSchoolTask);
+      formattedTasks = rawTasks.map((t) => mapPrismaTaskToSchoolTask(t, canonicalRefDateStr));
     }
 
     const pagination: TaskPaginationMeta = {
@@ -535,10 +553,7 @@ export class TaskQueryService {
       totalPages,
       hasMore,
       nextCursor,
-      referenceDate:
-        typeof filters.referenceDate === 'string'
-          ? filters.referenceDate
-          : filters.referenceDate?.toISOString() ?? getSystemReferenceDate(),
+      referenceDate: canonicalRefDateStr,
     };
 
     return {

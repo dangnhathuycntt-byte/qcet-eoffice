@@ -533,9 +533,14 @@ export function UnifiedTaskToolbar({
 
   // Primary action callback
   const handlePrimaryAction = onNewTaskClick || onCreateTask || onAddTask;
-  const primaryActionLabel =
-    createButtonLabel ||
-    (isExecutive || isManager ? "+ Giao việc" : "+ Tạo nhiệm vụ");
+  const primaryActionLabel = createButtonLabel || "+ Giao việc";
+
+  // Scope badge counts fallback to tabCounts for scopes if badgeCounts is omitted
+  const effectiveScopeBadgeCounts = badgeCounts || {
+    school: tabCounts?.all ?? totalTasksCount,
+    unit: tabCounts?.unit,
+    my: tabCounts?.my ?? tabCounts?.my_tasks,
+  };
 
   // Count active advanced filters
   const activeAdvancedFilterCount = React.useMemo(() => {
@@ -547,17 +552,12 @@ export function UnifiedTaskToolbar({
     return count;
   }, [selectedDepartment, selectedCategory, selectedPriority, effectiveMonth]);
 
-  // 4. Smart Filter Pills configuration
+  // 4. Smart Filter Pills configuration ('Của tôi' strictly purged; exists exclusively in ScopeSwitcher)
   const smartFilterPills: SmartFilterPill[] = [
     {
       id: "all",
       label: "Tất cả",
       count: tabCounts?.all ?? totalTasksCount,
-    },
-    {
-      id: "my",
-      label: "Của tôi",
-      count: tabCounts?.my ?? tabCounts?.my_tasks,
     },
     {
       id: "waiting_approval",
@@ -625,6 +625,7 @@ export function UnifiedTaskToolbar({
         {/* Left: Scope Switcher (Only Authorized Scopes) */}
         <div
           data-slot="adaptive-scope-header"
+          data-scope-switcher="true"
           className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs shrink-0"
           role="tablist"
           aria-label="Phạm vi công việc"
@@ -632,7 +633,7 @@ export function UnifiedTaskToolbar({
           {authorizedScopes.map((opt) => {
             const Icon = opt.icon;
             const isActive = normalizedScope === opt.id;
-            const count = badgeCounts?.[opt.id];
+            const count = effectiveScopeBadgeCounts?.[opt.id];
 
             return (
               <button
@@ -824,7 +825,8 @@ export function UnifiedTaskToolbar({
           {smartFilterPills.map((pill) => {
             const isActive =
               activeTab === pill.id ||
-              (pill.id === "my" && (activeTab === "my_tasks" || activeTab === "my")) ||
+              (pill.id === "all" &&
+                (!activeTab || activeTab === "all" || activeTab === "my" || activeTab === "my_tasks")) ||
               (pill.id === "waiting_approval" &&
                 (activeTab === "review" ||
                   activeTab === "waiting_approval" ||

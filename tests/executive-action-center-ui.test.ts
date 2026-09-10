@@ -147,4 +147,16 @@ describe("ExecutiveActionCenter UI & Empty State Suite", () => {
       "Metric cards must use <button type=\"button\">"
     );
   });
+
+  test("ExecutiveActionCenter defaults hideCards=true to purge redundant secondary action cards", () => {
+    const content = fs.readFileSync(actionCenterPath, "utf8");
+    assert.ok(
+      content.includes("hideCards = true"),
+      "ExecutiveActionCenter must set hideCards = true as default parameter"
+    );
+    assert.ok(
+      content.includes("Nhiệm vụ trọng tâm cần chỉ đạo trực tiếp"),
+      "Action queue must be clearly labeled for executive leadership"
+    );
+  });
 });

@@ -67,6 +67,8 @@ export const CreateExecutiveResolutionSchema = z
       .enum(['URGENT', 'HIGH', 'NORMAL', 'MEDIUM', 'LOW'])
       .optional()
       .nullable(),
+    version: z.coerce.number().int().nonnegative().optional(),
+    expectedVersion: z.coerce.number().int().nonnegative().optional(),
   })
   .refine(
     (data) => Boolean(data.resolutionType || data.actionType || data.type),

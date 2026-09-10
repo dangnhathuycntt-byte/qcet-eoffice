@@ -40,10 +40,10 @@ describe("Task 5: Web App Manifest Audit, Stable Identity, Maskable Icons & Shor
   });
 
   describe("2. Institutional Naming & Real QCET Brand Alignment", () => {
-    it("specifies correct QCET Quảng Ninh administrative name and short name", () => {
+    it("specifies correct QCET  administrative name and short name", () => {
       assert.strictEqual(
         manifestData.name,
-        "QCET E-Office - Trường CĐ Kinh tế & Công nghệ Quảng Ninh"
+        "QCET E-Office - Trường CĐ Kinh tế & Công nghệ "
       );
       assert.strictEqual(manifestData.short_name, "QCET E-Office");
       assert.strictEqual(

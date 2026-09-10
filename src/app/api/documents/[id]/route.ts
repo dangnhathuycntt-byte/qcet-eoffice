@@ -21,6 +21,7 @@ import {
   getDocumentById,
   updateDocument,
 } from "@/lib/documents/document-service";
+import { isDocumentImmutable } from "@/lib/documents/state-machine";
 import { validateDocumentUpdatePayload } from "@/lib/documents/document-validator";
 import {
   NotFoundError,
@@ -123,7 +124,16 @@ export async function PATCH(
       throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
     }
 
-    // 4. Object-level authorization check (BOLA prevention)
+    // 4. Enforce Immutability (signed / issued / resolved / filed)
+    if (isDocumentImmutable(existing)) {
+      throw new ValidationError(
+        "Văn bản đã được ký hoặc đã ban hành/hoàn thành/lưu trữ là bất biến, không thể chỉnh sửa metadata.",
+        undefined,
+        "IMMUTABLE_DOCUMENT"
+      );
+    }
+
+    // 5. Object-level authorization check (BOLA prevention)
     if (!canUpdateDocument(authUser, existing)) {
       throw new AuthorizationError(
         "Bạn không có quyền cập nhật văn bản này (Forbidden)",
@@ -131,8 +141,44 @@ export async function PATCH(
       );
     }
 
-    // 5. Input validation
+    // 6. Input validation
     const rawBody = await request.json();
+
+    // 5b. Enforce Generic PATCH Restrictions (F10)
+    const FORBIDDEN_PATCH_FIELDS = [
+      "status",
+      "signedAt",
+      "signer",
+      "signerName",
+      "signerTitle",
+      "authorizedSignerId",
+      "authorizedSignedAt",
+      "documentNumber",
+      "registrationNumber",
+      "originalNumber",
+      "outgoingNumber",
+      "numbererId",
+      "numberedAt",
+      "issuedAt",
+      "issuedDate",
+      "registeredDate",
+      "type",
+      "version",
+    ];
+
+    const attemptedForbidden = FORBIDDEN_PATCH_FIELDS.filter(
+      (field) => rawBody[field] !== undefined
+    );
+
+    if (attemptedForbidden.length > 0) {
+      throw new ValidationError(
+        `Các trường [${attemptedForbidden.join(
+          ", "
+        )}] không được phép cập nhật qua generic PATCH. Vui lòng sử dụng canonical workflow command tương ứng.`,
+        undefined,
+        "CANONICAL_COMMAND_REQUIRED"
+      );
+    }
 
     // Contract validation
     const validated = UpdateDocumentSchema.parse(rawBody);
@@ -190,6 +236,15 @@ export async function DELETE(
     const existing = await getDocumentById(id);
     if (!existing) {
       throw new NotFoundError("Văn bản không tồn tại", "DOCUMENT_NOT_FOUND");
+    }
+
+    // 2b. Enforce Immutability (signed / issued / resolved / filed)
+    if (isDocumentImmutable(existing)) {
+      throw new ValidationError(
+        "Văn bản đã được ký hoặc đã ban hành/hoàn thành là bất biến, không thể xóa.",
+        undefined,
+        "IMMUTABLE_DOCUMENT"
+      );
     }
 
     // 3. Object-level authorization check (BOLA prevention)

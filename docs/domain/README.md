@@ -1,7 +1,7 @@
 # QCET E-OFFICE: CẨM NANG KIẾN TRÚC MIỀN NGHIỆP VỤ & CHỈ MỤC CHUẨN TẮC
 ## (CANONICAL DOMAIN ARCHITECTURE MASTER GUIDE & SPECIFICATION INDEX)
 
-**Cơ quan chủ quản:** Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh (QCET)  
+**Cơ quan chủ quản:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
 **Vị trí tài liệu:** `/docs/domain/README.md`  
 **Cấp độ hiệu lực:** Tài liệu Kiến trúc Chuẩn tắc Tối cao (Supreme Canonical Architecture Guide)  
 **Ngày ban hành:** 09/09/2026  
@@ -27,7 +27,7 @@ Trong giai đoạn đầu phát triển, hệ thống QCET E-Office bị chi ph�
 $$\text{UserRole} = \{\text{ADMIN}, \text{MANAGER}, \text{STAFF}\}$$
 Cách tiếp cận này đã gây ra những khiếm khuyết thể chế nghiêm trọng:
 1. **San bằng thẩm quyền pháp định (Semantic Loss)**:
-   - Hiệu trư���ng (người đại diện pháp luật, chịu trách nhiệm toàn diện trước Bộ LĐ-TB&XH/Tổng cục GDNN và UBND tỉnh Quảng Ninh) bị xếp chung hàng với Phó Hiệu trưởng thành `ADMIN` hoặc `BAN_GIAM_HIEU`.
+   - Hiệu trư���ng (người đại diện pháp luật, chịu trách nhiệm toàn diện trước Bộ LĐ-TB&XH/Tổng cục GDNN và UBND tỉnh ) bị xếp chung hàng với Phó Hiệu trưởng thành `ADMIN` hoặc `BAN_GIAM_HIEU`.
    - Trưởng phòng chức năng (tham mưu tổng hợp) và Trưởng khoa đào tạo (chuyên môn sư phạm) bị cào bằng thành `MANAGER`.
    - Giảng viên trực tiếp giảng dạy và Chuyên viên văn phòng bị gộp chung thành `STAFF`.
 2. **Xung đột thể chế và vi phạm An toàn thông tin**:
@@ -140,7 +140,7 @@ Bộ đặc tả nghiệp vụ miền của QCET E-Office gồm 10 tập tài li
 - **Cơ chế Kỹ thuật**: 
   - Hệ thống ghi nhận một bản ghi `DelegationGrant` với khoảng thời gian hiệu lực chính xác `[validFrom, validUntil]`.
   - Các quyền được chuyển giao (ví dụ: `document.incoming.direct`, `task.approve` thuộc thẩm quyền chung).
-  - **Vùng cấm bất khả chuyển giao (`NON_DELEGABLE_CAPABILITIES`)**: Bổ nhiệm/miễn nhiệm/kỷ luật cán bộ lãnh đạo đơn vị, ký rút dự toán ngân sách Nhà nước tại Kho bạc Nhà nước tỉnh Quảng Ninh, và ký sửa đổi Quy chế tổ chức hoạt động của Nhà trường.
+  - **Vùng cấm bất khả chuyển giao (`NON_DELEGABLE_CAPABILITIES`)**: Bổ nhiệm/miễn nhiệm/kỷ luật cán bộ lãnh đạo đơn vị, ký rút dự toán ngân sách Nhà nước tại Kho bạc Nhà nước tỉnh , và ký sửa đổi Quy chế tổ chức hoạt động của Nhà trường.
   - **Cưỡng chế bất biến**: Cấm tuyệt đối tái ủy quyền (`noSubDelegation: true`) và cấm tự phê duyệt công việc do chính mình làm chủ trì hoặc nộp minh chứng (`Maker-Checker / Anti-Self-Approval`).
 
 #### Câu 3: System Admin có đọc được hồ sơ nhân sự, bảng lương và tài liệu mật không?
@@ -389,7 +389,7 @@ model DelegationGrant {
 
 ## 6. KẾT LUẬN & THÔNG ĐIỆP KIẾN TRÚC TỐI CAO
 
-QCET E-Office không phải là một ứng dụng quản lý công việc văn phòng thông thường (Generic To-Do App) và càng không phải là một giải pháp sao chép nguyên mẫu từ mô hình doanh nghiệp tư nhân. Hệ thống này là **Hệ điều hành Điều hành Số & Quản trị Công vụ** của một cơ sở giáo dục nghề nghiệp công lập trực thuộc tỉnh Quảng Ninh.
+QCET E-Office không phải là một ứng dụng quản lý công việc văn phòng thông thường (Generic To-Do App) và càng không phải là một giải pháp sao chép nguyên mẫu từ mô hình doanh nghiệp tư nhân. Hệ thống này là **Hệ điều hành Điều hành Số & Quản trị Công vụ** của một cơ sở giáo dục nghề nghiệp công lập trực thuộc tỉnh .
 
 Mọi dòng mã nguồn được viết ra, mọi bảng cơ sở dữ liệu được thiết kế, và mọi giao diện người dùng được hiển thị bắt buộc phải phản ánh trung thực:
 1. **Tính Tối thượng của Thể chế & Pháp luật**: Luật pháp Nhà nước và Quy chế Nhà trường là luật kiểm soát truy cập cao nhất.

@@ -31,18 +31,19 @@ const fontMono = JetBrains_Mono({
   display: "swap",
 });
 
+import { INSTITUTION_CONFIG } from "@/config/institution";
+
 export const metadata: Metadata = {
-  applicationName: "QCET E-Office",
+  applicationName: `${INSTITUTION_CONFIG.shortName} E-Office`,
   title: {
-    default: "QCET E-Office",
-    template: "%s | QCET E-Office",
+    default: `${INSTITUTION_CONFIG.shortName} E-Office`,
+    template: `%s | ${INSTITUTION_CONFIG.shortName} E-Office`,
   },
-  description:
-    "Hệ thống Quản lý và Điều hành Tác nghiệp Điện tử - Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh (QCET)",
+  description: `Hệ thống Quản lý và Điều hành Tác nghiệp Điện tử - ${INSTITUTION_CONFIG.officialName} (${INSTITUTION_CONFIG.shortName})`,
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "QCET E-Office",
+    title: `${INSTITUTION_CONFIG.shortName} E-Office`,
   },
   icons: {
     icon: "/icons/icon-192x192.png",

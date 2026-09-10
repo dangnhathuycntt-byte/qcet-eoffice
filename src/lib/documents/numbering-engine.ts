@@ -107,16 +107,73 @@ export async function getNextRegistrationNumber(
 
   const executeUpsert = async (tx: any): Promise<number> => {
     if (tx?.documentNumberSequence?.upsert) {
-      const sequence = await tx.documentNumberSequence.upsert({
+      let existingSeq: any = null;
+      if (typeof tx.documentNumberSequence.findUnique === "function") {
+        existingSeq = await tx.documentNumberSequence.findUnique({
+          where: { type_year: { type: normalizedType, year } },
+          select: { id: true },
+        });
+      }
+
+      if (!existingSeq) {
+        // First-time initialization for (type, year):
+        // Reconcile with existing documents if any to prevent collision with legacy records
+        let initialNumber = 1;
+        if (tx.document?.findFirst) {
+          if (year < 0) {
+            const minDraft = await tx.document.findFirst({
+              where: {
+                type: normalizedType,
+                documentYear: Math.abs(year),
+                registrationNumber: { lt: 0 },
+              },
+              orderBy: { registrationNumber: "asc" },
+              select: { registrationNumber: true },
+            });
+            if (minDraft && minDraft.registrationNumber < 0) {
+              initialNumber = Math.abs(minDraft.registrationNumber) + 1;
+            }
+          } else {
+            const maxDoc = await tx.document.findFirst({
+              where: {
+                type: normalizedType,
+                documentYear: year,
+                registrationNumber: { gt: 0 },
+              },
+              orderBy: { registrationNumber: "desc" },
+              select: { registrationNumber: true },
+            });
+            if (maxDoc && maxDoc.registrationNumber >= 1) {
+              initialNumber = maxDoc.registrationNumber + 1;
+            }
+          }
+        }
+
+        const sequence = await tx.documentNumberSequence.upsert({
+          where: {
+            type_year: { type: normalizedType, year },
+          },
+          create: {
+            type: normalizedType,
+            year,
+            lastNumber: initialNumber,
+          },
+          update: {
+            lastNumber: { increment: 1 },
+          },
+          select: {
+            lastNumber: true,
+          },
+        });
+        return sequence.lastNumber;
+      }
+
+      // Fast-path: Sequence already exists, atomic row increment in database
+      const sequence = await tx.documentNumberSequence.update({
         where: {
           type_year: { type: normalizedType, year },
         },
-        create: {
-          type: normalizedType,
-          year,
-          lastNumber: 1,
-        },
-        update: {
+        data: {
           lastNumber: { increment: 1 },
         },
         select: {

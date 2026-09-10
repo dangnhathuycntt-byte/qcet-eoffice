@@ -1214,7 +1214,7 @@ Cùng pattern với Task.
 Source hiện vẫn có:
 
 ```text
-Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh
+Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn 
 ```
 
 trong:

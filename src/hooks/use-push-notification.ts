@@ -149,7 +149,7 @@ export function usePushNotification(): UsePushNotificationReturn {
             badge: '/icons/badge-72x72.png',
             tag: 'qcet-welcome-notification',
             vibrate: [200, 100, 200],
-            data: { linkHref: '/?zone=tasks' },
+            data: { linkHref: '/tasks' },
           } as any);
         } catch {
           // ignore notification display error
@@ -206,7 +206,7 @@ export function usePushNotification(): UsePushNotificationReturn {
       const body =
         options?.body ||
         'Đây là thông báo đẩy thử nghiệm kiểm tra tính năng chuông trên thiết bị.';
-      const linkHref = options?.linkHref || '/?zone=tasks';
+      const linkHref = options?.linkHref || '/tasks';
 
       // If notification permission is granted, immediately trigger a local notification
       // via the active service worker registration for instant tactile feedback

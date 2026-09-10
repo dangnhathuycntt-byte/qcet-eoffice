@@ -6,15 +6,14 @@ import { ArrowUpRight, CheckCircle2, Clock, FileCheck, AlertCircle } from "lucid
 import type { SchoolTask } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import type { WorkspaceScope } from "@/types/workspace";
-import { getSystemReferenceDateStr, isTaskPastDue } from "@/lib/unified-task-hub";
+import { getSystemReferenceDateStr } from "@/lib/unified-task-hub";
 import {
-  isActiveTaskStatus,
-  isTaskAssignedToUserOrUnit,
-  isTaskOverdueOrHasOverdueSubtask,
-  isTaskWaitingApproval,
-} from "@/components/workspace/unified-adaptive-workspace";
-import { matchesUser } from "@/lib/role-task-filter";
+  computeSmartWorkboxCounts,
+  type SmartWorkboxCounts,
+} from "@/lib/workspace-metrics-aggregator";
 import { cn } from "@/lib/utils";
+
+export { computeSmartWorkboxCounts, type SmartWorkboxCounts };
 
 // ============================================================================
 // Types & Contracts
@@ -25,13 +24,6 @@ export type SmartWorkboxFilterKey =
   | "waiting_approval"
   | "pending_submission"
   | "overdue";
-
-export interface SmartWorkboxCounts {
-  myCount: number;
-  waitingApprovalCount: number;
-  pendingSubmissionCount: number;
-  overdueCount: number;
-}
 
 export interface SmartWorkboxItemConfig {
   key: SmartWorkboxFilterKey;
@@ -56,189 +48,6 @@ export interface SmartWorkboxProps {
 // ============================================================================
 // Pure Calculation Helpers
 // ============================================================================
-
-/**
- * Pure function computing canonical counts for the 4 Smart Workbox filters.
- * Adheres strictly to Rule 40 (Data Integrity) and Rule 50 (Testing Invariants).
- */
-export function computeSmartWorkboxCounts({
-  tasks = [],
-  user,
-  roleScope = "my",
-  referenceDate = getSystemReferenceDateStr(),
-}: {
-  tasks?: SchoolTask[];
-  user?: AuthUser | null;
-  roleScope?: WorkspaceScope;
-  referenceDate?: string;
-}): SmartWorkboxCounts {
-  const userDept = user?.departmentCode || user?.department || "";
-
-  // 1. My tasks (or Unit active tasks if roleScope === 'unit', School if 'school')
-  let myCount = 0;
-  for (const t of tasks) {
-    if (t.status === "COMPLETED") continue;
-    if (roleScope === "my") {
-      if (!user) {
-        myCount++;
-      } else {
-        const isAssigned =
-          t.leadAssigneeName === user.name ||
-          t.assignedTo === user.name ||
-          matchesUser(t.leadAssigneeName, user) ||
-          matchesUser(t.assignedTo, user) ||
-          t.subTasks?.some(
-            (s) =>
-              s.assigneeName === user.name ||
-              (s as any).assignedTo === user.name ||
-              matchesUser(s.assigneeName, user)
-          );
-        if (isAssigned) myCount++;
-      }
-    } else if (roleScope === "unit") {
-      if (
-        !userDept ||
-        t.departmentCode === userDept ||
-        t.department === userDept ||
-        isTaskAssignedToUserOrUnit(t, user)
-      ) {
-        myCount++;
-      }
-    } else {
-      // School scope
-      myCount++;
-    }
-  }
-
-  // 2. Waiting approval count
-  let waitingApprovalCount = 0;
-  for (const t of tasks) {
-    if (t.status === "COMPLETED") continue;
-    const taskWaiting =
-      isTaskWaitingApproval(t.status) ||
-      Boolean(t.subTasks?.some((s) => isTaskWaitingApproval(s.status)));
-
-    if (!taskWaiting) continue;
-
-    if (roleScope === "school") {
-      // All institutional approvals
-      waitingApprovalCount++;
-    } else if (roleScope === "unit") {
-      // Unit-level approvals (L1)
-      if (
-        !userDept ||
-        t.departmentCode === userDept ||
-        t.department === userDept ||
-        isTaskAssignedToUserOrUnit(t, user)
-      ) {
-        waitingApprovalCount++;
-      }
-    } else {
-      // My submissions awaiting review or tasks assigned to me requiring review
-      if (!user) {
-        waitingApprovalCount++;
-      } else {
-        const isAssigned =
-          t.leadAssigneeName === user.name ||
-          t.assignedTo === user.name ||
-          matchesUser(t.leadAssigneeName, user) ||
-          matchesUser(t.assignedTo, user) ||
-          t.subTasks?.some(
-            (s) =>
-              (s.assigneeName === user.name || matchesUser(s.assigneeName, user)) &&
-              isTaskWaitingApproval(s.status)
-          );
-        if (isAssigned) waitingApprovalCount++;
-      }
-    }
-  }
-
-  // 3. Pending submission count (active tasks in progress waiting for deliverable)
-  let pendingSubmissionCount = 0;
-  for (const t of tasks) {
-    if (t.status === "COMPLETED" || isTaskWaitingApproval(t.status)) continue;
-    const isActive =
-      isActiveTaskStatus(t.status) ||
-      Boolean(t.subTasks?.some((st) => isActiveTaskStatus(st.status)));
-
-    if (!isActive) continue;
-
-    if (roleScope === "my") {
-      if (!user) {
-        pendingSubmissionCount++;
-      } else {
-        const isAssigned =
-          t.leadAssigneeName === user.name ||
-          t.assignedTo === user.name ||
-          matchesUser(t.leadAssigneeName, user) ||
-          matchesUser(t.assignedTo, user) ||
-          t.subTasks?.some(
-            (s) =>
-              s.assigneeName === user.name ||
-              (s as any).assignedTo === user.name ||
-              matchesUser(s.assigneeName, user)
-          );
-        if (isAssigned) pendingSubmissionCount++;
-      }
-    } else if (roleScope === "unit") {
-      if (
-        !userDept ||
-        t.departmentCode === userDept ||
-        t.department === userDept ||
-        isTaskAssignedToUserOrUnit(t, user)
-      ) {
-        pendingSubmissionCount++;
-      }
-    } else {
-      pendingSubmissionCount++;
-    }
-  }
-
-  // 4. Overdue count
-  let overdueCount = 0;
-  for (const t of tasks) {
-    if (t.status === "COMPLETED") continue;
-    const isOverdue = isTaskOverdueOrHasOverdueSubtask(t, referenceDate);
-    if (!isOverdue) continue;
-
-    if (roleScope === "my") {
-      if (!user) {
-        overdueCount++;
-      } else {
-        const isAssigned =
-          t.leadAssigneeName === user.name ||
-          t.assignedTo === user.name ||
-          matchesUser(t.leadAssigneeName, user) ||
-          matchesUser(t.assignedTo, user) ||
-          t.subTasks?.some(
-            (s) =>
-              s.assigneeName === user.name ||
-              (s as any).assignedTo === user.name ||
-              matchesUser(s.assigneeName, user)
-          );
-        if (isAssigned) overdueCount++;
-      }
-    } else if (roleScope === "unit") {
-      if (
-        !userDept ||
-        t.departmentCode === userDept ||
-        t.department === userDept ||
-        isTaskAssignedToUserOrUnit(t, user)
-      ) {
-        overdueCount++;
-      }
-    } else {
-      overdueCount++;
-    }
-  }
-
-  return {
-    myCount,
-    waitingApprovalCount,
-    pendingSubmissionCount,
-    overdueCount,
-  };
-}
 
 /**
  * Pure helper creating direct pre-filtered navigation URLs into /tasks.

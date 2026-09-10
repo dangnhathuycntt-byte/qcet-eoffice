@@ -1,7 +1,7 @@
 # BÁO CÁO KIỂM TOÁN ĐỘC LẬP & PHẢN BIỆN CHẤT LƯỢNG (QA AUDIT & ADVERSARIAL CRITIQUE)
 ## ĐÁNH GIÁ BỘ ĐẶC TẢ NGHIỆP VỤ MIỀN (DOMAIN SPECS) THEO 10 TIÊU CHÍ DEFINITION OF DONE (DoD)
 
-**Dự án:** Hệ thống Điều hành & Tác nghiệp Điện tử Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh (QCET E-Office)  
+**Dự án:** Hệ thống Điều hành & Tác nghiệp Điện tử Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET E-Office)  
 **Phân hệ kiểm toán:** Toàn bộ 10 tài liệu đặc tả miền nghiệp vụ tại thư mục `docs/domain/`  
 **Vai trò kiểm toán:** Chuyên viên Kiểm toán Độc lập & Phản biện QA Đối kháng (Independent Lead Auditor & Adversarial QA Critic)  
 **Tình trạng tài liệu:** Báo cáo Xác minh Chuẩn tắc (Official DoD Verification Audit)  

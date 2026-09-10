@@ -378,7 +378,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
 
     assert.ok(
       manifest.name === 'QCET E-Office - Hệ thống Điều hành Văn phòng Điện tử' ||
-      manifest.name === 'QCET E-Office - Trường CĐ Kinh tế & Công nghệ Quảng Ninh',
+      manifest.name === 'QCET E-Office - Trường CĐ Kinh tế & Công nghệ ',
       `Unexpected manifest name: ${manifest.name}`
     );
     assert.strictEqual(manifest.short_name, 'QCET E-Office');

@@ -164,45 +164,6 @@ export function formatShortDueDate(
   return { text: `Hạn ${d}/${m}`, isOverdue: false, isToday: false };
 }
 
-const DEFAULT_SCHEDULE_ITEMS: WorkbenchMobileScheduleItem[] = [
-  {
-    id: "sched-1",
-    time: "08:30 - 10:00",
-    title: "Họp giao ban công tác Ban Giám hiệu và Trưởng đơn vị",
-    location: "Phòng họp A1 (Nhà điều hành)",
-  },
-  {
-    id: "sched-2",
-    time: "14:00 - 16:30",
-    title: "Thẩm định hồ sơ chương trình đào tạo theo chuẩn DACUM",
-    location: "Phòng họp B2 (Khoa CNTT)",
-  },
-];
-
-const DEFAULT_NOTICES: WorkbenchMobileNoticeItem[] = [
-  {
-    id: "notice-1",
-    title: "Ban Giám hiệu ban hành kế hoạch triển khai nhiệm vụ năm học mới 2026-2027",
-    timeAgo: "15 phút trước",
-    sender: "Văn phòng BGH",
-    href: "/documents",
-  },
-  {
-    id: "notice-2",
-    title: "Đôn đốc nộp báo cáo tự đánh giá chất lượng và chuẩn đầu ra nghề DACUM",
-    timeAgo: "1 giờ trước",
-    sender: "Phòng Đào tạo & QLKH",
-    href: "/tasks",
-  },
-  {
-    id: "notice-3",
-    title: "Thông báo lịch kiểm tra tiến độ giải ngân kinh phí đào tạo đợt 1",
-    timeAgo: "3 giờ trước",
-    sender: "Phòng Kế hoạch - Tài chính",
-    href: "/tasks",
-  },
-];
-
 export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
   const contextData = useOptionalDashboardData();
   let modalContext: ReturnType<typeof useDashboardModal> | null = null;
@@ -302,7 +263,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
   }, [props.keyTasks, tasks]);
 
   // 3. Lịch công tác hôm nay
-  const scheduleItems = props.scheduleItems ?? DEFAULT_SCHEDULE_ITEMS;
+  const scheduleItems = props.scheduleItems ?? [];
 
   // 4. Thông báo điều hành mới
   const noticeItems = React.useMemo(() => {
@@ -321,7 +282,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
         href: "/tasks",
       }));
     }
-    return DEFAULT_NOTICES;
+    return [];
   }, [props.notices, contextData?.activities]);
 
   const greeting = getAcademicGreeting(user?.name);
@@ -517,7 +478,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
                 <CheckCircle2 size={18} strokeWidth={1.5} />
               </div>
               <p className="text-xs font-semibold text-emerald-800">
-                Tiến đ�� thông suốt, không có việc tồn đọng khẩn cấp
+                Tiến độ thông suốt, không có việc tồn đọng khẩn cấp
               </p>
               <p className="text-xs text-emerald-700/80">
                 Mọi hồ sơ và nhiệm vụ hiện đều đảm bảo đúng kế hoạch.
@@ -651,26 +612,34 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
         </div>
 
         <div className="space-y-2">
-          {scheduleItems.map((item) => (
-            <div
-              key={item.id}
-              className="p-3.5 rounded-xl border border-border bg-card shadow-2xs space-y-1.5 min-h-[48px]"
-            >
-              <div className="flex items-center gap-2">
-                <Clock size={14} strokeWidth={1.5} className="text-indigo-600 shrink-0" />
-                <span className="font-mono tabular-nums text-xs font-bold text-indigo-700 bg-indigo-500/10 px-2 py-0.5 rounded">
-                  {item.time}
-                </span>
+          {scheduleItems.length > 0 ? (
+            scheduleItems.map((item) => (
+              <div
+                key={item.id}
+                className="p-3.5 rounded-xl border border-border bg-card shadow-2xs space-y-1.5 min-h-[48px]"
+              >
+                <div className="flex items-center gap-2">
+                  <Clock size={14} strokeWidth={1.5} className="text-indigo-600 shrink-0" />
+                  <span className="font-mono tabular-nums text-xs font-bold text-indigo-700 bg-indigo-500/10 px-2 py-0.5 rounded">
+                    {item.time}
+                  </span>
+                </div>
+                <h3 className="text-sm font-semibold text-foreground leading-snug">
+                  {item.title}
+                </h3>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-0.5">
+                  <MapPin size={13} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
+                  <span className="truncate">{item.location}</span>
+                </div>
               </div>
-              <h3 className="text-sm font-semibold text-foreground leading-snug">
-                {item.title}
-              </h3>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-0.5">
-                <MapPin size={13} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
-                <span className="truncate">{item.location}</span>
-              </div>
+            ))
+          ) : (
+            <div className="p-4 rounded-xl border border-dashed border-border/80 bg-muted/10 text-center space-y-1 min-h-[48px] flex flex-col items-center justify-center">
+              <p className="text-xs text-muted-foreground font-medium">
+                Không có lịch công tác nào trong ngày
+              </p>
             </div>
-          ))}
+          )}
         </div>
 
         <Link
@@ -703,30 +672,38 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
         </div>
 
         <div className="space-y-2">
-          {noticeItems.map((notice) => (
-            <Link
-              key={notice.id}
-              href={notice.href || "/documents"}
-              className="block p-3.5 rounded-xl border border-border bg-card hover:bg-muted/40 active:bg-muted/60 transition-colors shadow-2xs space-y-1.5 touch-manipulation min-h-[48px]"
-            >
-              <div className="flex items-start gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
-                  <Bell size={14} strokeWidth={1.5} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-relaxed">
-                    {notice.title}
-                  </h3>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
-                    <span className="truncate">{notice.sender || "Hệ thống"}</span>
-                    <span className="font-mono tabular-nums shrink-0 ml-2">
-                      {notice.timeAgo}
-                    </span>
+          {noticeItems.length > 0 ? (
+            noticeItems.map((notice) => (
+              <Link
+                key={notice.id}
+                href={notice.href || "/documents"}
+                className="block p-3.5 rounded-xl border border-border bg-card hover:bg-muted/40 active:bg-muted/60 transition-colors shadow-2xs space-y-1.5 touch-manipulation min-h-[48px]"
+              >
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <Bell size={14} strokeWidth={1.5} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xs font-semibold text-foreground line-clamp-2 leading-relaxed">
+                      {notice.title}
+                    </h3>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                      <span className="truncate">{notice.sender || "Hệ thống"}</span>
+                      <span className="font-mono tabular-nums shrink-0 ml-2">
+                        {notice.timeAgo}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          ) : (
+            <div className="p-4 rounded-xl border border-dashed border-border/80 bg-muted/10 text-center space-y-1 min-h-[48px] flex flex-col items-center justify-center">
+              <p className="text-xs text-muted-foreground font-medium">
+                Không có thông báo mới
+              </p>
+            </div>
+          )}
         </div>
       </section>
     </div>

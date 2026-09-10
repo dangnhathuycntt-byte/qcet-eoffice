@@ -1,4 +1,5 @@
 import type { StaffTask, TaskStatus } from '@/types/dashboard';
+import { isTaskOverdue, getSystemReferenceDateStr } from '@/lib/academic-calendar';
 
 export interface SchoolTask {
   id: string;
@@ -38,6 +39,7 @@ export interface SchoolTask {
   subTasks?: any[];
   totalSubTasks?: number;
   completedSubTasks?: number;
+  isOverdue?: boolean;
   [key: string]: any;
 }
 
@@ -203,7 +205,7 @@ export function mapPrismaTaskToStaffTask(raw: PrismaTaskWithRelations): StaffTas
   };
 }
 
-export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations): SchoolTask {
+export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations, referenceDate?: string): SchoolTask {
   // Tìm người chủ trì chính (Single DRI)
   const primaryOwner = raw.assignees?.find(a => a.roleInTask === 'PRIMARY_OWNER');
   const collaboratorAssignees = raw.assignees?.filter(a => a.roleInTask === 'COLLABORATOR') || [];
@@ -316,7 +318,8 @@ export function mapPrismaTaskToSchoolTask(raw: PrismaTaskWithRelations): SchoolT
       requiredDeliverables: raw.dacumTaskDef.requiredDeliverables || undefined,
       standardHours: raw.dacumTaskDef.standardHours || 0,
       dutyTitle: raw.dacumTaskDef.duty?.title,
-    } : undefined
+    } : undefined,
+    isOverdue: isTaskOverdue(raw.status, raw.dueDate, referenceDate || getSystemReferenceDateStr()),
   };
 }
 

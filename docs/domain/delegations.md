@@ -1,7 +1,7 @@
 # QCET E-Office — Domain Specification: Delegations & Authority Grants
 **Document Code:** `SPEC-DOMAIN-DEL-2026-01`  
 **Domain:** First-Class Delegation Grants, Operational Lifecycles, and Multi-Level Authorization  
-**Institution:** Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh (QCET)  
+**Institution:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
 **Status:** Canonical Domain Specification  
 **Version:** 1.0.0  
 **Effective Date:** 2026-09-09  
@@ -147,7 +147,7 @@ Under Vietnamese administrative law and institutional regulations, **an individu
 - **Legal Rule**: Căn cứ Luật Giáo dục nghề nghiệp, Thông tư số 63/2026/TT-BGDĐT (Điều lệ Trường Cao đẳng), Luật Ngân sách Nhà nước và Quy chế 283/QĐ-CĐKTCNQN.
 - **System Invariant**: Dù có văn bản ủy quyền tạm thời (kể cả trường hợp Hiệu trưởng ủy quyền điều hành cho Phó Hiệu trưởng khi đi công tác theo Thông báo 619), các thẩm quyền pháp định tối cao sau đây **tuyệt đối không được chuyển giao** qua `DelegationGrant` tác nghiệp thông thường:
   1. Ký quyết định bổ nhiệm, điều động, luân chuyển, biệt phái, miễn nhiệm, kỷ luật nhân sự lãnh đạo cấp Trưởng, Phó đơn vị (`position.manage_leadership`, `hr.disciplinary_action`).
-  2. Quyền Chủ tài khoản ngân sách nhà nước đã đăng ký và cam kết mẫu dấu, chữ ký với Kho bạc Nhà nước tỉnh Quảng Ninh (thẩm quyền rút dự toán KBNN).
+  2. Quyền Chủ tài khoản ngân sách nhà nước đã đăng ký và cam kết mẫu dấu, chữ ký với Kho bạc Nhà nước tỉnh  (thẩm quyền rút dự toán KBNN).
   3. Ký văn bản sửa đổi, bổ sung Quy chế tổ chức và hoạt động, Quy chế chi tiêu nội bộ của Nhà trường.
 - **Enforcement (`NON_DELEGABLE_CAPABILITIES`)**:
   ```typescript

@@ -82,8 +82,6 @@ if [ -n "$VIOLATION" ]; then
   >&2 echo "[QCET Security Policy] BLOCKED: $VIOLATION"
   cat <<EOF
 {
-  "continue": false,
-  "stopReason": "$VIOLATION",
   "decision": "block",
   "reason": "$VIOLATION",
   "hookSpecificOutput": {

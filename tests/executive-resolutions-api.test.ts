@@ -161,6 +161,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${staffToken}`,
       },
       body: JSON.stringify({
@@ -181,6 +182,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
       },
       body: JSON.stringify({
@@ -199,6 +201,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
       },
       body: JSON.stringify({
@@ -218,6 +221,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
       },
       body: JSON.stringify({
@@ -251,6 +255,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${adminToken}`,
       },
       body: JSON.stringify({
@@ -278,6 +283,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
       },
       body: JSON.stringify({
@@ -303,6 +309,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
       },
       body: JSON.stringify({
@@ -375,6 +382,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
       },
       body: JSON.stringify({
@@ -397,6 +405,7 @@ describe('Executive Resolutions API Persistence & Authorization Tests', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
       },
       body: JSON.stringify({

@@ -1,7 +1,7 @@
 # CƠ SỞ TRI THỨC PHÁP LÝ & QUY CHẾ ĐIỀU HÀNH TỔ CHỨC
 ## QCET E-OFFICE REGULATORY & INSTITUTIONAL KNOWLEDGE BASE
 
-**Cơ quan chủ quản:** Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh (QCET)  
+**Cơ quan chủ quản:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
 **Tên giao dịch quốc tế:** Quang Ninh College of Economic and Technology  
 **Hệ thống:** Hệ điều hành Quản lý Văn bản, Tác nghiệp & Điều hành điện tử (QCET E-Office)  
 **Tình trạng tài liệu:** Văn bản chuẩn tắc (Canonical Reference Specification)  
@@ -26,8 +26,8 @@ Mọi thực thể dữ liệu (Entity), dịch vụ miền (Domain Service), đ
 
 | STT | Ký hiệu / Số hiệu văn bản | Ngày ban hành | Cơ quan ban hành | Tên gọi văn bản / Trích yếu nội dung |
 |:---:|---|:---:|---|---|
-| 01 | **Quyết định số 283/QĐ-CĐKTCNQN** | 19/08/2026 | Hiệu trưởng QCET | Quy chế làm việc của Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh. |
-| 02 | **Quyết định số 282/QĐ-CĐKTCNQN** | 19/08/2026 | Hiệu trưởng QCET | Sửa đổi, bổ sung Quy chế tổ chức và hoạt động của Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh. |
+| 01 | **Quyết định số 283/QĐ-CĐKTCNQN** | 19/08/2026 | Hiệu trưởng QCET | Quy chế làm việc của Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn . |
+| 02 | **Quyết định số 282/QĐ-CĐKTCNQN** | 19/08/2026 | Hiệu trưởng QCET | Sửa đổi, bổ sung Quy chế tổ chức và hoạt động của Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn . |
 | 03 | **Phương án số 690/ĐA-CĐKTCNQN** | 19/08/2026 | Hiệu trưởng QCET | Phương án sắp xếp, tinh gọn tổ chức bộ máy và bố trí nhân sự giai đoạn 2026-2030. |
 | 04 | **Quyết định số 420/QĐ-CĐKTCNQN** | 03/12/2025 | Hiệu trưởng QCET | Phân công nhiệm vụ cụ thể của Ban Giám hiệu (Hiệu trưởng và các Phó Hiệu trưởng theo từng lĩnh vực phụ trách). |
 | 05 | **Quyết định số 203/QĐ-CĐKTCNQN** | 15/05/2025 | Hiệu trưởng QCET | Quy chế làm việc, chức năng nhiệm vụ cụ thể cho từng Khoa, Phòng và Trung tâm trực thuộc. |
@@ -47,10 +47,10 @@ Mọi thực thể dữ liệu (Entity), dịch vụ miền (Domain Service), đ
 ### Điều 1. Quyết định số 283/QĐ-CĐKTCNQN: Quy chế làm việc của Nhà trường
 
 #### 1.1. Căn cứ và Phạm vi điều chỉnh
-Quy chế làm việc ban hành kèm theo Quyết định số 283/QĐ-CĐKTCNQN ngày 19/08/2026 quy định nguyên tắc làm việc, chế độ trách nhiệm, quan hệ công tác, quy trình giải quyết công việc, chế độ hội họp, thông tin báo cáo và kỷ luật hành chính của Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh.
+Quy chế làm việc ban hành kèm theo Quyết định số 283/QĐ-CĐKTCNQN ngày 19/08/2026 quy định nguyên tắc làm việc, chế độ trách nhiệm, quan hệ công tác, quy trình giải quyết công việc, chế độ hội họp, thông tin báo cáo và kỷ luật hành chính của Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn .
 
 #### 1.2. Các nguyên tắc hoạt động cốt lõi
-1. **Tập trung dân chủ và Đề cao trách nhiệm người đứng đầu**: Nhà trường hoạt động theo chế độ thủ trưởng kết hợp bàn bạc tập thể. Hiệu trưởng là người đứng đầu, chịu trách nhiệm toàn diện trước Bộ Giáo dục và Đào tạo, Tỉnh ủy, Ủy ban nhân dân Tỉnh Quảng Ninh và trước pháp luật về mọi mặt hoạt động của Nhà trường.
+1. **Tập trung dân chủ và Đề cao trách nhiệm người đứng đầu**: Nhà trường hoạt động theo chế độ thủ trưởng kết hợp bàn bạc tập thể. Hiệu trưởng là người đứng đầu, chịu trách nhiệm toàn diện trước Bộ Giáo dục và Đào tạo, Tỉnh ủy, Ủy ban nhân dân Tỉnh  và trước pháp luật về mọi mặt hoạt động của Nhà trường.
 2. **Phân công, phân cấp và Ủy quyền rõ ràng**: Mỗi công việc chỉ được giao cho một đơn vị hoặc một cá nhân chủ trì, chịu trách nhiệm chính. Cấp trên không làm thay công việc của cấp dưới, cấp dưới chủ động giải quyết công việc trong phạm vi thẩm quyền được phân cấp.
 3. **Giải quyết công việc theo đúng quy trình, thẩm quyền và thời hạn**: Mọi nhiệm vụ đều phải có thời hạn hoàn thành (Deadline), có tiêu chí nghiệm thu rõ ràng và được giám sát qua hồ sơ điện tử.
 4. **Kỷ luật kỷ cương hành chính và Bảo đảm chế độ thông tin báo cáo**: Chế độ giao ban định kỳ (Thứ Hai hàng tuần), báo cáo tháng (trước ngày 25 hàng tháng), báo cáo sơ kết học kỳ và tổng kết năm học.
@@ -274,7 +274,7 @@ Hệ thống quản trị văn bản của QCET E-Office tuân thủ 100% các �
   - Vị trí: Đặt chính giữa chức danh người ký và họ tên người ký.
   - Metadata: Kèm chứng thư số cá nhân, tên cơ quan chủ quản, thời gian ký (Signing Time) lấy từ máy chủ cấp dấu thời gian (TSA - Time Stamping Authority).
 - **Chữ ký số cơ quan (Con dấu điện tử Nhà trường)**:
-  - Hình thức thể hiện: Hình ảnh con dấu màu đỏ của Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh, định dạng PNG nền trong suốt.
+  - Hình thức thể hiện: Hình ảnh con dấu màu đỏ của Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn , định dạng PNG nền trong suốt.
   - Vị trí: Trùm lên 1/3 hình ảnh chữ ký của người có thẩm quyền về phía bên trái.
   - Ký sau khi văn bản đã được người có thẩm quyền ký duyệt và Văn thư đã cấp số văn bản đi.
 

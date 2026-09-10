@@ -1,4 +1,5 @@
 import { serverEnv } from "@/config/env.server";
+import { INSTITUTION_CONFIG } from "@/config/institution";
 
 export interface GoogleTokens {
   access_token: string;
@@ -18,7 +19,7 @@ export interface GoogleUserInfo {
   hd?: string;
 }
 
-export const OFFICIAL_DOMAIN = "cdktcnqn.edu.vn";
+export const OFFICIAL_DOMAIN = INSTITUTION_CONFIG.domain || "cdktcnqn.edu.vn";
 
 /**
  * Kiểm tra địa chỉ email có thuộc tên miền Google Workspace chính thức của trường hay không.

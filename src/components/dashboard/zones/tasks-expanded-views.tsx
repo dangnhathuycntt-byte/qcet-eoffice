@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DensityToggle } from "@/components/ui/density-toggle";
 import { ExecutiveStatStrip } from "@/components/dashboard/executive-stat-strip";
-import { CascadingTaskTable } from "@/components/dashboard/cascading-task-table";
+import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
 import { SimplifiedTaskFilterBar } from "@/components/dashboard/simplified-task-filter-bar";
 import { UnifiedTaskToolbar, type TaskViewMode } from "@/components/dashboard/unified-task-toolbar";
 import {
@@ -283,7 +283,7 @@ function TasksExpandedViewsComponent() {
         data-slot="work-canvas"
       >
         {viewMode === "table" && (
-          <CascadingTaskTable
+          <ModularCascadingTaskTable
             tasks={filteredTasks}
             scope={scope}
             defaultExpanded={scope === "MY_TASKS"}

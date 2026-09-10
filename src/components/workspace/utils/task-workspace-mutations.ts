@@ -3,7 +3,7 @@ import type { AuthUser } from "@/types/auth";
 import type { WorkspaceScope } from "../types";
 import { matchesUser } from "@/lib/role-task-filter";
 import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
-import { CATEGORY_TABS } from "@/components/dashboard/cascading-task-table";
+import { CATEGORY_TABS } from "@/components/tasks/cascading-task-table";
 import type { CreateTaskFormData, TaskLevel } from "@/components/dashboard/create-task-modal";
 
 export type OptimisticTaskCreationInput = Partial<CreateTaskFormData> & {

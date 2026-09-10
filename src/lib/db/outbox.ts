@@ -197,7 +197,10 @@ export interface FetchAvailableOutboxEventsOptions {
   limit?: number;
   now?: Date;
   aggregateType?: string;
+  aggregateTypes?: string[];
   eventType?: string;
+  eventTypes?: string[];
+  ids?: string[];
 }
 
 /**
@@ -217,13 +220,18 @@ export async function fetchAvailableOutboxEvents(
   const db = client ?? defaultPrisma;
   const referenceNow = options.now ?? new Date();
 
+  const where: Prisma.OutboxEventWhereInput = {
+    status: OutboxStatus.PENDING,
+    availableAt: { lte: referenceNow },
+    ...(options.ids?.length ? { id: { in: options.ids } } : {}),
+    ...(options.aggregateType ? { aggregateType: options.aggregateType } : {}),
+    ...(options.aggregateTypes?.length ? { aggregateType: { in: options.aggregateTypes } } : {}),
+    ...(options.eventType ? { eventType: options.eventType } : {}),
+    ...(options.eventTypes?.length ? { eventType: { in: options.eventTypes } } : {}),
+  };
+
   return db.outboxEvent.findMany({
-    where: {
-      status: OutboxStatus.PENDING,
-      availableAt: { lte: referenceNow },
-      ...(options.aggregateType ? { aggregateType: options.aggregateType } : {}),
-      ...(options.eventType ? { eventType: options.eventType } : {}),
-    },
+    where,
     orderBy: [{ availableAt: "asc" }, { createdAt: "asc" }],
     take: options.limit ?? 50,
   });
@@ -264,6 +272,11 @@ export interface ProcessOutboxBatchOptions {
   markProcessing?: boolean;
   now?: Date;
   stopOnError?: boolean;
+  aggregateType?: string;
+  aggregateTypes?: string[];
+  eventType?: string;
+  eventTypes?: string[];
+  ids?: string[];
   onSuccess?: (event: OutboxEvent) => Promise<void> | void;
   onError?: (
     event: OutboxEvent,
@@ -343,12 +356,15 @@ export async function processOutboxEvent(
   const maxBackoff = options.maxBackoffSeconds ?? 86400;
   const shouldMarkProcessing = options.markProcessing ?? true;
 
-  // 1. Transition status to PROCESSING if enabled
+  // 1. Transition status to PROCESSING if enabled (atomic claim to prevent duplicate worker execution)
   if (shouldMarkProcessing) {
-    await db.outboxEvent.update({
-      where: { id: event.id },
+    const claimResult = await db.outboxEvent.updateMany({
+      where: { id: event.id, status: OutboxStatus.PENDING },
       data: { status: OutboxStatus.PROCESSING },
     });
+    if (claimResult.count === 0) {
+      return { status: OutboxStatus.PROCESSING, attempts: event.attempts };
+    }
   }
 
   // 2. Resolve matching handler
@@ -467,9 +483,47 @@ export async function processOutboxBatch(
   options: ProcessOutboxBatchOptions = {}
 ): Promise<ProcessOutboxBatchResult> {
   const db = client ?? defaultPrisma;
-  const events = await fetchAvailableOutboxEvents(db, {
-    limit: options.limit ?? 50,
-    now: options.now ?? new Date(),
+  const referenceNow = options.now ?? new Date();
+
+  // If specific filters are not provided and handlers is a map without wildcards,
+  // filter to only the eventTypes / aggregateTypes known to the handler map
+  // to avoid failing events belonging to other workers.
+  let orCondition: Prisma.OutboxEventWhereInput[] | undefined = undefined;
+  if (
+    !options.eventType &&
+    !options.eventTypes?.length &&
+    !options.aggregateType &&
+    !options.aggregateTypes?.length &&
+    !options.ids?.length &&
+    typeof handlers === "object" &&
+    handlers !== null &&
+    !handlers["*"] &&
+    !handlers["default"]
+  ) {
+    const handlerKeys = Object.keys(handlers);
+    if (handlerKeys.length > 0) {
+      orCondition = [
+        { eventType: { in: handlerKeys } },
+        { aggregateType: { in: handlerKeys } },
+      ];
+    }
+  }
+
+  const where: Prisma.OutboxEventWhereInput = {
+    status: OutboxStatus.PENDING,
+    availableAt: { lte: referenceNow },
+    ...(options.ids?.length ? { id: { in: options.ids } } : {}),
+    ...(options.aggregateType ? { aggregateType: options.aggregateType } : {}),
+    ...(options.aggregateTypes?.length ? { aggregateType: { in: options.aggregateTypes } } : {}),
+    ...(options.eventType ? { eventType: options.eventType } : {}),
+    ...(options.eventTypes?.length ? { eventType: { in: options.eventTypes } } : {}),
+    ...(orCondition ? { OR: orCondition } : {}),
+  };
+
+  const events = await db.outboxEvent.findMany({
+    where,
+    orderBy: [{ availableAt: "asc" }, { createdAt: "asc" }],
+    take: options.limit ?? 50,
   });
 
   const result: ProcessOutboxBatchResult = {

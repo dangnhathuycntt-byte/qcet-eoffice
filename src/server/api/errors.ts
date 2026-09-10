@@ -3,7 +3,7 @@ import { ZodError } from 'zod';
 export interface ApiErrorResponse {
   success: false;
   error: string; // for backward compatibility with .claude/rules/30-api.md
-  code: string; // AUTH_REQUIRED | FORBIDDEN | VALIDATION_ERROR | NOT_FOUND | CONFLICT | INVALID_TRANSITION | RATE_LIMITED | INTERNAL_ERROR
+  code: string; // AUTH_REQUIRED | FORBIDDEN | VALIDATION_ERROR | NOT_FOUND | CONFLICT | PRECONDITION_FAILED | INVALID_TRANSITION | RATE_LIMITED | INTERNAL_ERROR
   message: string;
   fieldErrors?: Record<string, string[]>;
   requestId: string;
@@ -66,6 +66,12 @@ export class NotFoundError extends ApiError {
 export class ConflictError extends ApiError {
   constructor(message = 'Resource conflict', code = 'CONFLICT') {
     super(409, code, message);
+  }
+}
+
+export class PreconditionFailedError extends ApiError {
+  constructor(message = 'Precondition failed', code = 'PRECONDITION_FAILED') {
+    super(412, code, message);
   }
 }
 
@@ -167,6 +173,32 @@ export function toApiErrorResponse(
         success: false,
         error: message,
         code: authError.rejectionCode || 'FORBIDDEN',
+        message,
+        requestId,
+      },
+    };
+  }
+
+  if (
+    error &&
+    typeof error === 'object' &&
+    ('statusCode' in error || 'status' in error) &&
+    'code' in error
+  ) {
+    const customErr = error as {
+      statusCode?: number;
+      status?: number;
+      code: string;
+      message?: string;
+    };
+    const status = customErr.statusCode || customErr.status || 409;
+    const message = customErr.message || 'Conflict';
+    return {
+      status,
+      body: {
+        success: false,
+        error: message,
+        code: customErr.code,
         message,
         requestId,
       },

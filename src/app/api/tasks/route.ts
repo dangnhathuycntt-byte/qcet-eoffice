@@ -14,6 +14,7 @@ import { TaskQuerySchema, CreateTaskSchema } from '@/contracts/tasks';
 import { taskQueryService, taskCommandService } from '@/server/tasks';
 import { canCreateTask } from '@/server/policies/task-policy';
 import { toTaskListDTOArray, toTaskDetailDTO } from '@/server/dto/task-dto';
+import { withIdempotency } from '@/lib/db/idempotency';
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();
@@ -141,24 +142,42 @@ export async function POST(req: Request) {
       throw new ForbiddenError('Bạn không có quyền tạo nhiệm vụ cho đơn vị này');
     }
 
-    // Explicit command mapping (No Mass-Assignment)
-    const newTask = await taskCommandService.createTask(context, {
-      title: validatedBody.title,
-      description: validatedBody.description,
-      departmentId: validatedBody.departmentId,
-      dueDate: validatedBody.dueDate ?? new Date().toISOString(),
-      priority: validatedBody.priority,
-      scope: validatedBody.scope,
-      academicMonth: validatedBody.academicMonth ?? validatedBody.month,
-      academicYear: validatedBody.academicYear ?? validatedBody.year,
-      creatorId: validatedBody.creatorId,
-      assigneeId: validatedBody.assigneeId,
-      collaboratorIds: validatedBody.collaboratorIds,
-      parentTaskId: validatedBody.parentTaskId,
-      code: validatedBody.code,
-    });
+    const rawIdempotencyKey =
+      req.headers.get('idempotency-key') || req.headers.get('x-idempotency-key');
+    const idempotencyKey = rawIdempotencyKey?.trim() ? rawIdempotencyKey.trim() : null;
 
-    const taskDetail = toTaskDetailDTO(newTask);
+    // Explicit command mapping (No Mass-Assignment)
+    const executeCreateTask = async () => {
+      const newTask = await taskCommandService.createTask(context, {
+        title: validatedBody.title,
+        description: validatedBody.description,
+        departmentId: validatedBody.departmentId,
+        dueDate: validatedBody.dueDate ?? new Date().toISOString(),
+        priority: validatedBody.priority,
+        scope: validatedBody.scope,
+        academicMonth: validatedBody.academicMonth ?? validatedBody.month,
+        academicYear: validatedBody.academicYear ?? validatedBody.year,
+        creatorId: validatedBody.creatorId,
+        assigneeId: validatedBody.assigneeId,
+        collaboratorIds: validatedBody.collaboratorIds,
+        parentTaskId: validatedBody.parentTaskId,
+        code: validatedBody.code,
+      });
+
+      return toTaskDetailDTO(newTask);
+    };
+
+    const taskDetail = idempotencyKey
+      ? await withIdempotency(
+          {
+            userId: authUser.id,
+            operation: 'task.create',
+            key: idempotencyKey,
+            payload: validatedBody,
+          },
+          executeCreateTask
+        )
+      : await executeCreateTask();
 
     return apiSuccess(
       {

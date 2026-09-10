@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "templateVersion": "1.0.0",
+  "description": "Standard reproducible evaluation telemetry for QCET Plan Executor",
+  "run": {
+    "runId": "run-eval-v1.4-baseline-ux-20260910",
+    "plan": "docs/plans/active/2026-09-09-master-ux-consolidation-plan.md",
+    "timestamp": "2026-09-10T16:00:00.000Z",
+    "executorVersion": "v1.4",
+    "domain": "ux",
+    "description": "Execution run evaluating v1.4 executor on master UX consolidation plan with decoupled pre-recon and write-gate scheduling",
+    "wallClockMs": 412000,
+    "calibrationDurationMs": 36000,
+    "shards": 12,
+    "agents": 40,
+    "peakConcurrent": 6,
+    "tokens": 768000,
+    "requirementsTotal": 36,
+    "requirementsCovered": 36,
+    "ownershipViolations": 0,
+    "verificationFindings": 5,
+    "findingsConfirmed": 2,
+    "repairRounds": 2,
+    "blockedShards": 0,
+    "globalValidation": "pass",
+    "buildStatus": "passed",
+    "finalStatus": "READY",
+    "metrics": {
+      "correctness": {
+        "requirementCoveragePct": 100.0,
+        "unresolvedFindings": 0,
+        "outOfScopeEdits": 0,
+        "globalValidation": "pass",
+        "buildStatus": "passed"
+      },
+      "speed": {
+        "wallClockMs": 412000,
+        "calibrationDurationMs": 36000,
+        "timeToFirstBuilderMs": 44000,
+        "criticalPathDurationMs": 304880,
+        "avgDependencyWaitMs": 24720
+      },
+      "efficiency": {
+        "totalAgents": 40,
+        "tokens": 768000,
+        "tokensPerVerifiedRequirement": 21333,
+        "verifierTokenCost": 184320,
+        "researchEscalationRate": 0.0
+      },
+      "reliability": {
+        "nullAgentRate": 0.0,
+        "structuredOutputRetryRate": 0.0,
+        "workflowReruns": 0,
+        "noProgressRepairRate": 0.0
+      }
+    },
+    "shardsSummary": [
+      {
+        "id": "shard-1-canonical-routes",
+        "requirements": 3,
+        "risk": "low",
+        "repairRounds": 0,
+        "verdict": "pass"
+      },
+      {
+        "id": "shard-2-auth-guardrails",
+        "requirements": 4,
+        "risk": "critical",
+        "repairRounds": 1,
+        "verdict": "pass"
+      },
+      {
+        "id": "shard-3-navigation-shell",
+        "requirements": 3,
+        "risk": "medium",
+        "repairRounds": 0,
+        "verdict": "pass"
+      }
+    ]
+  },
+  "comparison": {
+    "baselineRunId": "run-baseline-ux-consolidation-01",
+    "deltaWallClockMs": -50000,
+    "deltaWallClockPct": -10.82,
+    "deltaTokens": -126000,
+    "deltaTokensPct": -14.09,
+    "deltaCalibrationDurationMs": -6000,
+    "deltaAgents": -6,
+    "deltaRepairRounds": -2,
+    "regressionFlags": {
+      "wallClockRegressed": false,
+      "tokensBudgetExceeded": false,
+      "uncoveredRequirements": false,
+      "scopeViolations": false,
+      "correctnessRegressed": false
+    },
+    "verdict": "IMPROVEMENT",
+    "verdictRationale": "Full requirement coverage preserved (100.0%), 0 ownership violations, 10.82% wall-clock reduction, and 14.09% token efficiency gain with 0 correctness regressions."
+  }
+}

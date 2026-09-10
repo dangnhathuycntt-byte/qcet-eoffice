@@ -1,0 +1,367 @@
+#!/usr/bin/env node
+
+/**
+ * QCET PreToolUse Ownership Guard
+ *
+ * Enforces architectural lifecycle invariants:
+ * 1. Intercepts Write and Edit tool invocations.
+ * 2. Prohibits read-only agents (recon, skeptic, researcher, verifiers, reviewers) from modifying files.
+ * 3. Resolves active shard ownership (owns, antiOwns) from state files or environment variables.
+ * 4. Blocks out-of-scope modifications and antiOwns violations with actionable remediation reasons.
+ * 5. Fail-safes to exit 0 outside executor workflows (interactive sessions, unmapped agents, non-Write tools).
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+// -----------------------------------------------------------------------------
+// PROTOCOL CONSTANTS & EXIT CODES
+// -----------------------------------------------------------------------------
+const EXIT_ALLOW = 0;
+const EXIT_BLOCK = 2;
+
+// Known read-only agent types or roles
+const READ_ONLY_AGENTS = new Set([
+  'qcet-recon',
+  'qcet-skeptic',
+  'qcet-researcher',
+  'verifier',
+  'verify',
+  'data-reviewer',
+  'security-reviewer',
+  'ux-reviewer',
+  'recon',
+  'skeptic',
+  'researcher',
+  'reviewer',
+  'auditor'
+]);
+
+// -----------------------------------------------------------------------------
+// DETERMINISTIC PATH & GLOB UTILITIES
+// -----------------------------------------------------------------------------
+const {
+  normalizePath,
+  globToRegex,
+  matchesOwnership,
+  toRepoRelativePath,
+} = require('./path-matcher.cjs');
+
+// -----------------------------------------------------------------------------
+// READ-ONLY AGENT DETECTION
+// -----------------------------------------------------------------------------
+function isReadOnlyAgent(agentType, agentId, agentRole, subagentLabel) {
+  const candidates = [agentType, agentId, agentRole, subagentLabel]
+    .filter(Boolean)
+    .map((s) => String(s).toLowerCase().trim());
+
+  for (const c of candidates) {
+    if (READ_ONLY_AGENTS.has(c)) {
+      return true;
+    }
+    // Pattern match for specialized read-only roles
+    if (
+      /(?:^|[-_:])(recon|skeptic|researcher|verifier|verify|reviewer|review|audit)(?:[-_:]|$)/i.test(c) ||
+      /\b(recon|skeptic|researcher|verifier|verify|reviewer|review|audit)\b/i.test(c)
+    ) {
+      // Exempt utility and synchronizer agents from read-only categorization
+      if (c.includes('recorder') || c.includes('synchronizer') || c.includes('telemetry')) {
+        continue;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+// -----------------------------------------------------------------------------
+// SHARD MAPPING RESOLUTION
+// -----------------------------------------------------------------------------
+function resolveActiveShard(agentId, agentType) {
+  // 1. Check explicit environment variables
+  if (process.env.QCET_CURRENT_SHARD) {
+    try {
+      const parsed = JSON.parse(process.env.QCET_CURRENT_SHARD);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch (_) {}
+  }
+
+  if (process.env.QCET_SHARD_OWNS) {
+    let owns = [];
+    try {
+      owns = JSON.parse(process.env.QCET_SHARD_OWNS);
+    } catch (_) {
+      owns = process.env.QCET_SHARD_OWNS.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+    let antiOwns = [];
+    if (process.env.QCET_SHARD_ANTI_OWNS) {
+      try {
+        antiOwns = JSON.parse(process.env.QCET_SHARD_ANTI_OWNS);
+      } catch (_) {
+        antiOwns = process.env.QCET_SHARD_ANTI_OWNS.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+    }
+    return {
+      id: process.env.QCET_SHARD_ID || 'env-configured-shard',
+      owns,
+      antiOwns
+    };
+  }
+
+  // 2. Candidate state file locations
+  const sessionScope = process.env.QCET_SESSION_ID || process.env.CLAUDE_CONVERSATION_ID || '';
+  const candidateFiles = [
+    process.env.QCET_ACTIVE_SHARDS_FILE,
+    process.env.QCET_STATE_FILE,
+    sessionScope ? path.join('/tmp', `qcet-active-shards-${sessionScope}.json`) : null,
+    path.join('/tmp', 'qcet-active-shards.json'),
+    path.join('/tmp', 'qcet-shard-ownership.json'),
+    path.join(process.cwd(), '.claude', 'state', 'active-shards.json'),
+    path.join(process.cwd(), '.claude', 'state', 'qcet-active-shards.json')
+  ].filter(Boolean);
+
+  let stateData = null;
+
+  for (const file of candidateFiles) {
+    try {
+      if (fs.existsSync(file)) {
+        const raw = fs.readFileSync(file, 'utf8');
+        stateData = JSON.parse(raw);
+        if (stateData) break;
+      }
+    } catch (_) {}
+  }
+
+  // Also check QCET_ACTIVE_SHARDS env var (can be JSON string or file path)
+  if (!stateData && process.env.QCET_ACTIVE_SHARDS) {
+    const val = process.env.QCET_ACTIVE_SHARDS.trim();
+    try {
+      if (val.startsWith('{') || val.startsWith('[')) {
+        stateData = JSON.parse(val);
+      } else if (fs.existsSync(val)) {
+        stateData = JSON.parse(fs.readFileSync(val, 'utf8'));
+      }
+    } catch (_) {}
+  }
+
+  if (!stateData) return null;
+
+  // Resolve shard from stateData structure
+  // Structure A: Array of shards
+  if (Array.isArray(stateData)) {
+    if (agentId) {
+      const baseId = agentId.replace(/:(repair(-\d+)?|implement|attempt(-\d+)?)$/i, '');
+      const shardPrefix = agentId.includes(':') ? agentId.split(':')[0] : '';
+      const match = stateData.find(
+        (s) =>
+          s.agentId === agentId ||
+          s.agent_id === agentId ||
+          s.id === agentId ||
+          s.id === baseId ||
+          s.agentId === baseId ||
+          (shardPrefix && (s.id === shardPrefix || s.agentId === shardPrefix))
+      );
+      if (match) return match;
+      return null;
+    }
+    if (stateData.length === 1) return stateData[0];
+    return null;
+  }
+
+  // Structure B: Object keyed by agent_id or shard_id
+  if (typeof stateData === 'object') {
+    if (agentId) {
+      if (stateData[agentId]) return stateData[agentId];
+      const baseId = agentId.replace(/:(repair(-\d+)?|implement|attempt(-\d+)?)$/i, '');
+      if (stateData[baseId]) return stateData[baseId];
+      const shardPrefix = agentId.includes(':') ? agentId.split(':')[0] : '';
+      if (shardPrefix && stateData[shardPrefix]) return stateData[shardPrefix];
+    }
+    // Nested activeShards property
+    if (Array.isArray(stateData.activeShards)) {
+      if (agentId) {
+        const baseId = agentId.replace(/:(repair(-\d+)?|implement|attempt(-\d+)?)$/i, '');
+        const shardPrefix = agentId.includes(':') ? agentId.split(':')[0] : '';
+        const match = stateData.activeShards.find(
+          (s) =>
+            s.agentId === agentId ||
+            s.agent_id === agentId ||
+            s.id === agentId ||
+            s.id === baseId ||
+            s.agentId === baseId ||
+            (shardPrefix && (s.id === shardPrefix || s.agentId === shardPrefix))
+        );
+        if (match) return match;
+        return null;
+      }
+      if (stateData.activeShards.length === 1) return stateData.activeShards[0];
+    }
+    // Single shard object with 'owns'
+    if (Array.isArray(stateData.owns)) {
+      if (!agentId || stateData.id === agentId || stateData.agentId === agentId) {
+        return stateData;
+      }
+      const baseId = agentId.replace(/:(repair(-\d+)?|implement|attempt(-\d+)?)$/i, '');
+      if (stateData.id === baseId || stateData.agentId === baseId) {
+        return stateData;
+      }
+    }
+  }
+
+  return null;
+}
+
+// -----------------------------------------------------------------------------
+// BLOCK EMISSION HELPER
+// -----------------------------------------------------------------------------
+function block(reason) {
+  process.stderr.write(`[QCET Ownership Guard] BLOCKED: ${reason}\n`);
+  const response = {
+    decision: 'block',
+    reason,
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'deny',
+      permissionDecisionReason: reason
+    }
+  };
+  process.stdout.write(JSON.stringify(response, null, 2) + '\n');
+  process.exit(EXIT_BLOCK);
+}
+
+function allow() {
+  const response = {
+    decision: 'allow'
+  };
+  process.stdout.write(JSON.stringify(response, null, 2) + '\n');
+  process.exit(EXIT_ALLOW);
+}
+
+// -----------------------------------------------------------------------------
+// MAIN EXECUTION
+// -----------------------------------------------------------------------------
+function main() {
+
+  
+  let stdinBuffer = '';
+
+  try {
+    stdinBuffer = fs.readFileSync(0, 'utf8');
+  } catch (_) {
+    // Fail-safe exit 0 if stdin cannot be read
+    process.exit(EXIT_ALLOW);
+  }
+
+  if (!stdinBuffer || !stdinBuffer.trim()) {
+    // Fail-safe exit 0 on empty input
+    process.exit(EXIT_ALLOW);
+  }
+
+  let data = null;
+  try {
+    data = JSON.parse(stdinBuffer);
+  } catch (_) {
+    // Fail-safe exit 0 on non-JSON input
+    process.exit(EXIT_ALLOW);
+  }
+
+  if (!data || typeof data !== 'object') {
+    process.exit(EXIT_ALLOW);
+  }
+
+  const toolName = data.tool_name || data.toolName || '';
+  // PreToolUse ownership guard specifically enforces Write and Edit invocations
+  if (toolName !== 'Write' && toolName !== 'Edit') {
+    process.exit(EXIT_ALLOW);
+  }
+
+  const toolInput = data.tool_input || data.toolInput || {};
+  const rawPath =
+    toolInput.file_path ||
+    toolInput.filePath ||
+    toolInput.path ||
+    toolInput.notebook_path ||
+    '';
+
+  if (!rawPath) {
+    process.exit(EXIT_ALLOW);
+  }
+
+  const agentId = data.agent_id || data.agentId || process.env.QCET_AGENT_ID || '';
+  const agentType = data.agent_type || data.agentType || process.env.QCET_AGENT_TYPE || '';
+  const agentRole = data.agent_role || data.agentRole || process.env.QCET_AGENT_ROLE || '';
+  const subagentLabel = data.subagent_label || data.subagentLabel || data.label || '';
+
+  // 1. Prohibit read-only agents from writing or editing
+  if (isReadOnlyAgent(agentType, agentId, agentRole, subagentLabel)) {
+    block(
+      `Agent '${agentType || agentId || subagentLabel}' has a read-only role. Write and Edit tools are prohibited.`
+    );
+  }
+
+  // 2. Resolve active shard ownership
+  const shard = resolveActiveShard(agentId, agentType);
+
+  // Fail-closed invariant: builder agents MUST have an active shard ownership context
+  if (!shard) {
+    if (
+      agentType === 'qcet-builder' ||
+      agentRole === 'qcet-builder' ||
+      String(agentType).toLowerCase().includes('builder')
+    ) {
+      block(
+        `Builder agent '${agentType || agentId}' attempted file modification without an active shard ownership context (fail-closed boundary invariant).`
+      );
+    }
+    // Fail-safe: if no active shard is mapped and not read-only or builder, allow (manual/interactive session)
+    allow();
+  }
+
+  const explicitCwd =
+    data.cwd ||
+    toolInput.cwd ||
+    (data.execution_context && data.execution_context.cwd) ||
+    process.env.QCET_WORKTREE_PATH ||
+    '';
+  const targetFile = toRepoRelativePath(rawPath, explicitCwd);
+  if (!targetFile) {
+    allow();
+  }
+
+  // 3. Check antiOwns violations
+  const antiOwns = Array.isArray(shard.antiOwns) ? shard.antiOwns : [];
+  for (const pattern of antiOwns) {
+    if (matchesOwnership(targetFile, pattern)) {
+      block(
+        `Modification of '${targetFile}' is blocked. File violates antiOwns constraint '${pattern}' for shard '${shard.id || 'current'}'.`
+      );
+    }
+  }
+
+  // 4. Check owns scope (fail-closed: empty owns prohibits file modification)
+  const owns = Array.isArray(shard.owns) ? shard.owns : [];
+  if (owns.length === 0) {
+    block(
+      `Modification of '${targetFile}' is blocked. Shard '${shard.id || 'current'}' has no owned files assigned (fail-closed boundary invariant).`
+    );
+  }
+
+  let hasOwnership = false;
+  for (const pattern of owns) {
+    if (matchesOwnership(targetFile, pattern)) {
+      hasOwnership = true;
+      break;
+    }
+  }
+
+  if (!hasOwnership) {
+    block(
+      `Modification of '${targetFile}' is blocked. File is outside assigned ownership scope for shard '${shard.id || 'current'}'. Allowed paths: [${owns.join(', ')}].`
+    );
+  }
+
+  // All ownership and lifecycle constraints satisfied
+  allow();
+}
+
+main();

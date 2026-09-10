@@ -13,6 +13,9 @@
 export async function register(): Promise<void> {
   if (!process.env.NEXT_RUNTIME || process.env.NEXT_RUNTIME === 'nodejs') {
     try {
+      const { registerGracefulShutdown } = await import('@/server/lifecycle/shutdown');
+      registerGracefulShutdown();
+
       const { logger } = await import('@/server/observability/logger');
       const runtime = process.env.NEXT_RUNTIME || 'nodejs';
       const environment = process.env.NODE_ENV || 'development';

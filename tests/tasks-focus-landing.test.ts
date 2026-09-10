@@ -157,4 +157,48 @@ describe("TasksFocusLanding Central Dispatcher Integration", () => {
     const emojiRegex = /[\u{1F300}-\u{1F9FF}]/u;
     assert.ok(!emojiRegex.test(html), "Rendered HTML must be 100% free of emojis");
   });
+
+  test("'Của tôi' only exists in ScopeSwitcher and is completely purged from status/filter pill row", () => {
+    const html = renderLandingWithContext({ user: adminUser });
+
+    // Assert ScopeSwitcher has 'Của tôi'
+    assert.ok(
+      html.includes('data-slot="adaptive-scope-header"'),
+      "ScopeSwitcher header must be rendered"
+    );
+    assert.ok(
+      html.includes('data-scope="my"'),
+      "ScopeSwitcher must contain data-scope='my' tab"
+    );
+
+    // Assert Row 2 filter pills do NOT contain 'Của tôi'
+    assert.ok(
+      html.includes('data-slot="unified-task-toolbar-row-2"'),
+      "Toolbar row 2 must be rendered"
+    );
+    const row2StartIndex = html.indexOf('data-slot="unified-task-toolbar-row-2"');
+    const row2Substring = html.substring(row2StartIndex, row2StartIndex + 2500);
+    assert.ok(
+      !row2Substring.includes("Của tôi"),
+      "'Của tôi' must be completely purged from status/filter pill row"
+    );
+  });
+
+  test("Exactly one primary page-level CTA (+ Giao việc) is rendered on the Tasks page across all roles", () => {
+    for (const testUser of [adminUser, managerUser, staffUser]) {
+      const html = renderLandingWithContext({ user: testUser });
+
+      const matches = html.match(/\+ Giao việc/g);
+      assert.ok(matches, `CTA '+ Giao việc' must be present for ${testUser.role}`);
+      assert.equal(
+        matches.length,
+        1,
+        `Exactly one primary CTA (+ Giao việc) must be rendered for ${testUser.role}, got ${matches.length}`
+      );
+      assert.ok(
+        !html.includes("+ Tạo nhiệm vụ"),
+        `Legacy '+ Tạo nhiệm vụ' must not be rendered for ${testUser.role}`
+      );
+    }
+  });
 });

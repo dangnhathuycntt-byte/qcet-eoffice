@@ -172,7 +172,7 @@ export async function recordAuthorizationDecision(
     }
   } else {
     // Structured security event for DENY
-    logger.warn('security.authorization.denied', {
+    const denyMetadata: Record<string, any> = {
       actorUserId: record.actorUserId,
       actingPositionAssignmentId: record.actingPositionAssignmentId ?? null,
       delegationGrantId: record.delegationGrantId ?? null,
@@ -183,6 +183,14 @@ export async function recordAuthorizationDecision(
       result: 'DENY',
       reason: record.reason ?? null,
       rejectionCode: record.rejectionCode ?? null,
+    };
+
+    logger.warn('security.authorization.denied', {
+      action: record.action,
+      resourceId: record.resourceId,
+      requestId: record.requestId ?? null,
+      metadata: denyMetadata,
+      ...denyMetadata,
     });
 
     if (options?.recordDenyInDb) {

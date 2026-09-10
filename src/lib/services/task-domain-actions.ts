@@ -43,6 +43,7 @@ import {
   ValidationError,
   ConflictError,
   InvalidTransitionError,
+  PreconditionFailedError,
 } from "@/server/api/errors";
 
 // ============================================================================
@@ -58,12 +59,36 @@ export const SubmitResultInputSchema = z
     fileUrl: z.string().optional(),
     fileType: z.string().optional(),
     fileSize: z.number().optional(),
+    expectedVersion: z.number().int().min(0).optional(),
   })
   .refine((data) => Boolean(data.summary?.trim() || data.title?.trim()), {
     message: "Tóm tắt kết quả (summary) hoặc tiêu đề minh chứng (title) là bắt buộc",
   });
 
 export type SubmitResultInput = z.infer<typeof SubmitResultInputSchema>;
+
+export const StartInputSchema = z.object({
+  note: z.string().trim().max(1000).optional(),
+  expectedVersion: z.number().int().min(0).optional(),
+});
+
+export type StartInput = z.infer<typeof StartInputSchema>;
+
+export const UpdateProgressInputSchema = z.object({
+  progressPercent: z.number().min(0, "Tiến độ phải từ 0% đến 100%").max(100, "Tiến độ không được vượt quá 100%"),
+  note: z.string().trim().max(1000).optional(),
+  expectedVersion: z.number().int().min(0).optional(),
+});
+
+export type UpdateProgressInput = z.infer<typeof UpdateProgressInputSchema>;
+
+export const CancelInputSchema = z.object({
+  reason: z.string().trim().min(3, "Lý do hủy nhiệm vụ tối thiểu 3 ký tự").max(1000),
+  note: z.string().trim().max(1000).optional(),
+  expectedVersion: z.number().int().min(0).optional(),
+});
+
+export type CancelInput = z.infer<typeof CancelInputSchema>;
 
 export const ReviewInputSchema = z.object({
   resultId: z.string().optional(),
@@ -73,6 +98,7 @@ export const ReviewInputSchema = z.object({
   decision: z.enum(["APPROVED", "REJECTED"]).optional(),
   reviewNote: z.string().optional(),
   note: z.string().optional(),
+  expectedVersion: z.number().int().min(0).optional(),
 });
 
 export type ReviewInput = z.infer<typeof ReviewInputSchema>;
@@ -83,6 +109,7 @@ export const RequestRevisionInputSchema = z.object({
   deliverableId: z.string().optional(),
   resultId: z.string().optional(),
   stepId: z.string().optional(),
+  expectedVersion: z.number().int().min(0).optional(),
 });
 
 export type RequestRevisionInput = z.infer<typeof RequestRevisionInputSchema>;
@@ -91,6 +118,7 @@ export const ApproveInputSchema = z.object({
   note: z.string().optional(),
   stepId: z.string().optional(),
   allowBypass: z.boolean().optional(),
+  expectedVersion: z.number().int().min(0).optional(),
 });
 
 export type ApproveInput = z.infer<typeof ApproveInputSchema>;
@@ -100,6 +128,7 @@ export const ReassignInputSchema = z.object({
   role: z.literal("DRI").optional().default("DRI"),
   isPrimaryDRI: z.boolean().optional().default(true),
   note: z.string().optional(),
+  expectedVersion: z.number().int().min(0).optional(),
 });
 
 export type ReassignInput = z.infer<typeof ReassignInputSchema>;
@@ -132,13 +161,26 @@ async function buildUserContext(session: SessionPayload): Promise<AuthenticatedU
   const activePositionCode =
     activePosition?.code || (session.title ?? undefined) || (session.role ?? undefined);
 
-  const delegations = await prisma.dacumDelegation.findMany({
+  const now = new Date();
+  const v2Grants = await prisma.delegationGrant.findMany({
     where: {
-      delegateId: session.id,
-      isActive: true,
-      expiresAt: { gte: new Date() },
+      granteeAssignment: { userId: session.id },
+      status: "ACTIVE",
+      validUntil: { gte: now },
+    },
+    include: {
+      granteeAssignment: true,
     },
   });
+
+  const formattedGrants = v2Grants.map((g) => ({
+    id: g.id,
+    granteeUserId: g.granteeAssignment.userId,
+    capability: g.action || "*",
+    validFrom: g.validFrom,
+    validUntil: g.validUntil,
+    status: g.status,
+  }));
 
   const userContext: AuthenticatedUserContext = {
     id: session.id,
@@ -150,14 +192,7 @@ async function buildUserContext(session: SessionPayload): Promise<AuthenticatedU
     departmentId: dbUser?.departmentId || session.departmentId || undefined,
     departmentCode: dbUser?.department?.shortName || undefined,
     isActive: true,
-    delegationGrants: delegations.map((d) => ({
-      id: d.id,
-      granteeUserId: d.delegateId,
-      capability: d.authorityScope || "*",
-      validFrom: d.startDate || d.createdAt,
-      validUntil: d.expiresAt,
-      status: d.isActive ? "ACTIVE" : "REVOKED",
-    })),
+    delegationGrants: formattedGrants,
   };
 
   return userContext;
@@ -343,6 +378,174 @@ function assertAuthAllowed(
 
 export class TaskDomainActionService {
   /**
+   * Action: start
+   * POST /api/tasks/[id]/actions/start
+   * Transitions task from NOT_STARTED to IN_PROGRESS.
+   */
+  async start(session: SessionPayload, taskId: string, input?: StartInput) {
+    const validated = StartInputSchema.parse(input || {});
+    const userContext = await buildUserContext(session);
+    const { task, resource } = await loadTaskAndBuildResource(taskId);
+
+    if (validated?.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
+      );
+    }
+
+    const authResult = await authorize(userContext, "task.update_execution", resource);
+    assertAuthAllowed(authResult, "task.update_execution", taskId);
+
+    if (task.status === TaskStatus.IN_PROGRESS) {
+      throw new InvalidTransitionError("Nhiệm vụ đã ở trạng thái đang thực hiện", "ALREADY_IN_PROGRESS");
+    }
+    if (task.status === TaskStatus.WAITING_APPROVAL) {
+      throw new InvalidTransitionError("Nhiệm vụ đang chờ duyệt kết quả", "TASK_WAITING_APPROVAL");
+    }
+    if (task.status === TaskStatus.COMPLETED) {
+      throw new InvalidTransitionError("Nhiệm vụ đã hoàn thành, không thể bắt đầu lại", "TASK_ALREADY_COMPLETED");
+    }
+    if (task.status === TaskStatus.CANCELLED) {
+      throw new InvalidTransitionError("Nhiệm vụ đã bị hủy, không thể bắt đầu", "TASK_CANCELLED");
+    }
+
+    const noteText = validated?.note?.trim() || null;
+
+    return await prisma.$transaction(async (tx) => {
+      const updatedTask = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          status: TaskStatus.IN_PROGRESS,
+          progressPercent: task.progressPercent ?? 0,
+          version: { increment: 1 },
+          updatedAt: new Date(),
+        },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: session.id,
+        action: AuditAction.TASK_STATUS_CHANGED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        beforeData: { status: task.status, progressPercent: task.progressPercent },
+        afterData: {
+          status: TaskStatus.IN_PROGRESS,
+          progressPercent: updatedTask.progressPercent,
+          note: noteText,
+        },
+      });
+
+      await publishOutboxEvent(tx, {
+        eventType: OutboxEventType.TASK_STATUS_NOTIFICATION,
+        aggregateType: OutboxAggregateType.TASK,
+        aggregateId: taskId,
+        payload: {
+          taskId,
+          status: TaskStatus.IN_PROGRESS,
+          actorId: session.id,
+          note: noteText,
+        },
+      });
+
+      return {
+        taskId,
+        status: TaskStatus.IN_PROGRESS,
+        progressPercent: updatedTask.progressPercent,
+        version: updatedTask.version,
+      };
+    });
+  }
+
+  /**
+   * Action: update-progress
+   * POST /api/tasks/[id]/actions/update-progress
+   * Updates task progress percentage (0-100) while in IN_PROGRESS state.
+   */
+  async updateProgress(session: SessionPayload, taskId: string, input: UpdateProgressInput) {
+    const validated = UpdateProgressInputSchema.parse(input);
+    const userContext = await buildUserContext(session);
+    const { task, resource } = await loadTaskAndBuildResource(taskId);
+
+    if (validated.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
+      );
+    }
+
+    const authResult = await authorize(userContext, "task.update_execution", resource);
+    assertAuthAllowed(authResult, "task.update_execution", taskId);
+
+    if (task.status === TaskStatus.NOT_STARTED) {
+      throw new InvalidTransitionError(
+        "Nhiệm vụ chưa bắt đầu. Vui lòng bắt đầu nhiệm vụ trước khi cập nhật tiến độ",
+        "TASK_NOT_STARTED"
+      );
+    }
+    if (task.status === TaskStatus.WAITING_APPROVAL) {
+      throw new InvalidTransitionError(
+        "Nhiệm vụ đang chờ duyệt kết quả. Không thể cập nhật tiến độ",
+        "TASK_WAITING_APPROVAL"
+      );
+    }
+    if (task.status === TaskStatus.COMPLETED) {
+      throw new InvalidTransitionError(
+        "Nhiệm vụ đã hoàn thành, không thể cập nhật tiến độ",
+        "TASK_ALREADY_COMPLETED"
+      );
+    }
+    if (task.status === TaskStatus.CANCELLED) {
+      throw new InvalidTransitionError(
+        "Nhiệm vụ đã bị hủy, không thể cập nhật tiến độ",
+        "TASK_CANCELLED"
+      );
+    }
+
+    const noteText = validated.note?.trim() || null;
+
+    return await prisma.$transaction(async (tx) => {
+      const updatedTask = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          progressPercent: validated.progressPercent,
+          version: { increment: 1 },
+          updatedAt: new Date(),
+        },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: session.id,
+        action: AuditAction.TASK_UPDATED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        beforeData: { progressPercent: task.progressPercent },
+        afterData: {
+          progressPercent: validated.progressPercent,
+          note: noteText,
+        },
+      });
+
+      await publishOutboxEvent(tx, {
+        eventType: OutboxEventType.TASK_STATUS_NOTIFICATION,
+        aggregateType: OutboxAggregateType.TASK,
+        aggregateId: taskId,
+        payload: {
+          taskId,
+          progressPercent: validated.progressPercent,
+          actorId: session.id,
+          note: noteText,
+        },
+      });
+
+      return {
+        taskId,
+        status: task.status,
+        progressPercent: validated.progressPercent,
+        version: updatedTask.version,
+      };
+    });
+  }
+
+  /**
    * Action 1: submit-result
    * POST /api/tasks/[id]/actions/submit-result
    * Submits result/deliverables, transitions state to WAITING_APPROVAL, enforces Maker-Checker.
@@ -351,6 +554,12 @@ export class TaskDomainActionService {
     const validated = SubmitResultInputSchema.parse(input);
     const userContext = await buildUserContext(session);
     const { task, resource } = await loadTaskAndBuildResource(taskId);
+
+    if (validated.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
+      );
+    }
 
     const authResult = await authorize(userContext, "task.submit_result", resource);
     assertAuthAllowed(authResult, "task.submit_result", taskId);
@@ -416,9 +625,12 @@ export class TaskDomainActionService {
         }
       }
 
-      await tx.task.update({
+      const updatedTask = await tx.task.update({
         where: { id: taskId },
-        data: { status: TaskStatus.WAITING_APPROVAL },
+        data: {
+          status: TaskStatus.WAITING_APPROVAL,
+          version: { increment: 1 },
+        },
       });
 
       await auditService.logEvent(tx, {
@@ -452,6 +664,7 @@ export class TaskDomainActionService {
         taskResult,
         deliverable,
         taskStatus: TaskStatus.WAITING_APPROVAL,
+        version: updatedTask.version,
       };
     });
   }
@@ -471,6 +684,12 @@ export class TaskDomainActionService {
         resultId: validated.resultId,
         stepId: validated.stepId,
       });
+
+    if (validated.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
+      );
+    }
 
     // Maker-Checker Invariant Enforcement:
     // Submitter cannot review/verify own submission
@@ -581,11 +800,15 @@ export class TaskDomainActionService {
       let newStatus = task.status;
       if (effectiveReviewStatus === "REVISION_REQUIRED" || effectiveReviewStatus === "REJECTED") {
         newStatus = TaskStatus.IN_PROGRESS;
-        await tx.task.update({
-          where: { id: taskId },
-          data: { status: newStatus },
-        });
       }
+
+      const updatedTask = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          status: newStatus,
+          version: { increment: 1 },
+        },
+      });
 
       await auditService.logEvent(tx, {
         actorId: session.id,
@@ -618,6 +841,7 @@ export class TaskDomainActionService {
         decision: effectiveDecision,
         reviewStatus: effectiveReviewStatus,
         taskStatus: newStatus,
+        version: updatedTask.version,
         verifiedResult,
         reviewedDeliverable,
         stepResult,
@@ -649,6 +873,12 @@ export class TaskDomainActionService {
       );
     }
 
+    if (validated.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
+      );
+    }
+
     const authResult = await authorize(userContext, "task.review", resource);
     assertAuthAllowed(authResult, "task.review", taskId);
 
@@ -660,6 +890,7 @@ export class TaskDomainActionService {
         where: { id: taskId },
         data: {
           status: TaskStatus.IN_PROGRESS,
+          version: { increment: 1 },
         },
       });
 
@@ -765,6 +996,7 @@ export class TaskDomainActionService {
         taskId,
         status: TaskStatus.IN_PROGRESS,
         reason: reasonText,
+        version: updatedTask.version,
         deliverable: updatedDeliverable,
         step: rejectedStep,
       };
@@ -797,6 +1029,12 @@ export class TaskDomainActionService {
         "Vi phạm nguyên tắc phân lập trách nhiệm (SoD): Người chịu trách nhiệm chính (DRI) không được tự phê duyệt nhiệm vụ của mình.",
         "task.approve",
         taskId
+      );
+    }
+
+    if (validated.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
       );
     }
 
@@ -848,13 +1086,22 @@ export class TaskDomainActionService {
         }
       }
 
+      let updatedTask;
       if (canComplete) {
-        await tx.task.update({
+        updatedTask = await tx.task.update({
           where: { id: taskId },
           data: {
             status: TaskStatus.COMPLETED,
             progressPercent: 100,
             completedAt: new Date(),
+            version: { increment: 1 },
+          },
+        });
+      } else {
+        updatedTask = await tx.task.update({
+          where: { id: taskId },
+          data: {
+            version: { increment: 1 },
           },
         });
       }
@@ -889,7 +1136,87 @@ export class TaskDomainActionService {
         status: canComplete ? TaskStatus.COMPLETED : task.status,
         progressPercent: canComplete ? 100 : task.progressPercent,
         completed: canComplete,
+        version: updatedTask.version,
         stepResult,
+      };
+    });
+  }
+
+  /**
+   * Action: cancel
+   * POST /api/tasks/[id]/actions/cancel
+   * Terminal transition: cancels task with reason.
+   */
+  async cancel(session: SessionPayload, taskId: string, input: CancelInput) {
+    const validated = CancelInputSchema.parse(input);
+    const userContext = await buildUserContext(session);
+    const { task, resource } = await loadTaskAndBuildResource(taskId);
+
+    if (validated.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
+      );
+    }
+
+    const authResult = await authorize(userContext, "task.cancel", resource);
+    assertAuthAllowed(authResult, "task.cancel", taskId);
+
+    if (task.status === TaskStatus.COMPLETED) {
+      throw new InvalidTransitionError(
+        "Nhiệm vụ đã hoàn thành, không thể hủy bỏ",
+        "CANNOT_CANCEL_COMPLETED"
+      );
+    }
+    if (task.status === TaskStatus.CANCELLED) {
+      throw new InvalidTransitionError(
+        "Nhiệm vụ đã bị hủy trước đó",
+        "ALREADY_CANCELLED"
+      );
+    }
+
+    const reasonText = validated.reason.trim();
+    const noteText = validated.note?.trim() || null;
+
+    return await prisma.$transaction(async (tx) => {
+      const updatedTask = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          status: TaskStatus.CANCELLED,
+          version: { increment: 1 },
+          updatedAt: new Date(),
+        },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: session.id,
+        action: AuditAction.TASK_STATUS_CHANGED,
+        entityType: AuditEntityType.TASK,
+        entityId: taskId,
+        beforeData: { status: task.status },
+        afterData: {
+          status: TaskStatus.CANCELLED,
+          reason: reasonText,
+          note: noteText,
+        },
+      });
+
+      await publishOutboxEvent(tx, {
+        eventType: OutboxEventType.TASK_STATUS_NOTIFICATION,
+        aggregateType: OutboxAggregateType.TASK,
+        aggregateId: taskId,
+        payload: {
+          taskId,
+          status: TaskStatus.CANCELLED,
+          reason: reasonText,
+          actorId: session.id,
+        },
+      });
+
+      return {
+        taskId,
+        status: TaskStatus.CANCELLED,
+        reason: reasonText,
+        version: updatedTask.version,
       };
     });
   }
@@ -904,6 +1231,12 @@ export class TaskDomainActionService {
     const validated = ReassignInputSchema.parse(input);
     const userContext = await buildUserContext(session);
     const { task, resource } = await loadTaskAndBuildResource(taskId);
+
+    if (validated.expectedVersion !== undefined && task.version !== Number(validated.expectedVersion)) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${validated.expectedVersion}, current version ${task.version}`
+      );
+    }
 
     const targetUser = await prisma.user.findUnique({
       where: { id: validated.newAssigneeId },
@@ -1033,3 +1366,5 @@ export class TaskDomainActionService {
 }
 
 export const taskDomainActionService = new TaskDomainActionService();
+export const taskDomainActions = taskDomainActionService;
+

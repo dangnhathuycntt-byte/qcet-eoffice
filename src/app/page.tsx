@@ -1,9 +1,12 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { redirect } from "next/navigation";
+import { permanentRedirect, redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getLiveDashboardData } from "@/lib/server/dashboard-service";
 import { UnifiedTaskHubClient } from "@/components/dashboard/unified-task-hub-client";
 import type { DashboardPayload } from "@/types/dashboard";
+import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
+import { isUserExecutive } from "@/domain/tasks/attention-resolver";
 
 const CalendarZone = dynamic(
   () => import("@/components/dashboard/zones/calendar-zone").then((m) => m.CalendarZone)
@@ -38,8 +41,8 @@ export default async function UnifiedTaskHubPage({
   const resolvedParams = searchParams ? await searchParams : {};
   const zoneParam = resolvedParams?.zone;
 
-  // Canonical redirect: If zone=tasks is detected, navigate to /tasks preserving remaining params
-  if (zoneParam === "tasks") {
+  // Canonical redirect: If ?zone=* is detected, redirect permanently (308) to canonical paths
+  if (typeof zoneParam === "string" && zoneParam.length > 0) {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(resolvedParams)) {
       if (key !== "zone" && typeof value === "string") {
@@ -47,15 +50,36 @@ export default async function UnifiedTaskHubPage({
       }
     }
     const qs = params.toString();
-    redirect(qs ? `/tasks?${qs}` : "/tasks");
+    const query = qs ? `?${qs}` : "";
+
+    if (zoneParam === "tasks") {
+      permanentRedirect("/tasks" + query);
+    } else if (zoneParam === "calendar") {
+      permanentRedirect(`/calendar${query}`);
+    } else if (zoneParam === "org") {
+      permanentRedirect(`/org${query}`);
+    } else if (zoneParam === "documents") {
+      permanentRedirect(`/documents${query}`);
+    } else {
+      permanentRedirect(`/${query}`);
+    }
   }
 
-  // Direct server read avoiding client waterfall round-trips
+  // Direct server read avoiding client waterfall round-trips (authenticated & scoped)
   let initialData: DashboardPayload | undefined;
-  try {
-    initialData = await getLiveDashboardData();
-  } catch (error) {
-    console.error("Direct server read failed for dashboard page:", error);
+  const cookieStore = await cookies();
+  const session = verifySessionToken(cookieStore.get(SESSION_COOKIE_NAME)?.value || "");
+  const isExec = session ? isUserExecutive(session as any) : false;
+
+  if (session) {
+    try {
+      initialData = await getLiveDashboardData({
+        userId: session.id,
+        departmentId: isExec ? undefined : session.departmentId || undefined,
+      });
+    } catch (error) {
+      console.error("Direct server read failed for dashboard page:", error);
+    }
   }
 
   return (

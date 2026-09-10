@@ -1,7 +1,7 @@
 # QCET E-Office - Agent Working Foundation
 
 ## Mission
-QCET E-Office is the institutional administration, academic operations, and task management operating system for Quang Ninh College of Economic and Technology (Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh).
+QCET E-Office is the institutional administration, academic operations, and task management operating system for Quang Ninh College of Economic and Technology (Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn ).
 
 ## Canonical Documentation
 Consult canonical references before designing or modifying architecture:

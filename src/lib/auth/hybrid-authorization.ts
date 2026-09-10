@@ -51,6 +51,8 @@ export {
   assertAuthorized as canonicalAssertAuthorized,
 } from "@/server/authorization/authorization-engine";
 
+import { logger } from "@/server/observability/logger";
+
 import {
   CAPABILITY_CATEGORIES,
   MEETING_CAPABILITIES,
@@ -1722,6 +1724,18 @@ export async function assertAuthorized(
   if (!result.allowed) {
     const code = result.rejectionCode || "INSUFFICIENT_CAPABILITY";
     const reason = result.reason || "Access denied by authorization engine.";
+
+    logger.authorizationDenied({
+      userId: user?.id || null,
+      action,
+      resourceId: resource?.id,
+      reason,
+      metadata: {
+        rejectionCode: code,
+        resourceType: resource?.type,
+        policyMatched: result.auditRecord?.policyMatched,
+      },
+    });
 
     switch (code) {
       case "SEPARATION_OF_POWERS_VIOLATION":

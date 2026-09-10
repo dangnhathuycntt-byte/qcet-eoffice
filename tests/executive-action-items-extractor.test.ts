@@ -217,8 +217,8 @@ test("computeDepartmentHealthMatrix computes completionRate independently from a
   assert.equal(cntt.totalTasksCount, 3);
   // Completed = 1 parent task (t-cntt-1)
   assert.equal(cntt.completedTasksCount, 1);
-  // Completion rate = 1 / 3 = 33%
-  assert.equal(cntt.completionRate, 33);
+  // Institutional completion rate = 1 completed parent task / 2 valid parent tasks = 50% (Rule 40.2 Denominator Integrity)
+  assert.equal(cntt.completionRate, 50);
   // Total progress = 100 (t1) + 40 (t2) + 60 (st) = 200 / 3 = 67%
   assert.equal(cntt.averageProgressPercent, 67);
 });

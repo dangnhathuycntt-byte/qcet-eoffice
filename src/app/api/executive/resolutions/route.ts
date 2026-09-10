@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { ResolutionType, TaskPriority, TaskStatus } from '@prisma/client';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
 import { apiError, apiSuccess } from '@/server/api/response';
-import { AuthorizationError, NotFoundError, ValidationError } from '@/server/api/errors';
+import { AuthorizationError, NotFoundError, PreconditionFailedError, ValidationError } from '@/server/api/errors';
 import {
   assertJsonContentType,
   assertRequestBodySize,
@@ -214,6 +214,22 @@ export async function POST(request: NextRequest) {
       throw new NotFoundError('Không tìm thấy nhiệm vụ');
     }
 
+    const ifMatch = request.headers.get('if-match');
+    let expectedVersion: number | undefined = validated.expectedVersion ?? validated.version;
+    if (ifMatch && expectedVersion === undefined) {
+      const cleanIfMatch = ifMatch.replace(/^"|"$/g, '').trim();
+      const parsed = parseInt(cleanIfMatch, 10);
+      if (!isNaN(parsed)) {
+        expectedVersion = parsed;
+      }
+    }
+
+    if (expectedVersion !== undefined && task.version !== expectedVersion) {
+      throw new PreconditionFailedError(
+        `Task aggregate version conflict: expected version ${expectedVersion}`
+      );
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       let previousDueDate: Date | null = null;
       let newDueDate: Date | null = null;
@@ -281,14 +297,31 @@ export async function POST(request: NextRequest) {
         taskUpdateData.priority = explicitPriority;
       }
 
-      let updatedTask = task;
-      if (Object.keys(taskUpdateData).length > 0) {
-        updatedTask = await tx.task.update({
-          where: { id: validated.taskId },
-          data: taskUpdateData,
-          include: { department: true },
-        });
+      // Enforce atomic OCC and aggregate version increment
+      const occWhere = expectedVersion !== undefined
+        ? { id: validated.taskId, version: expectedVersion }
+        : { id: validated.taskId, version: task.version };
+
+      const updateResult = await tx.task.updateMany({
+        where: occWhere,
+        data: {
+          ...taskUpdateData,
+          version: { increment: 1 },
+        },
+      });
+
+      if (updateResult.count === 0) {
+        throw new PreconditionFailedError(
+          expectedVersion !== undefined
+            ? `Task aggregate version conflict: expected version ${expectedVersion}`
+            : 'Task aggregate version conflict: task was concurrently modified'
+        );
       }
+
+      const updatedTask = await tx.task.findUniqueOrThrow({
+        where: { id: validated.taskId },
+        include: { department: true },
+      });
 
       const resolution = await tx.executiveResolution.create({
         data: {
@@ -379,6 +412,10 @@ export async function POST(request: NextRequest) {
       },
       {
         requestId,
+        headers: {
+          'Cache-Control': 'private, no-store',
+          ETag: `"${result.updatedTask.version}"`,
+        },
         legacyCompat: true,
       }
     );
