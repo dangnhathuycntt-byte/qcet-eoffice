@@ -17,9 +17,9 @@ export async function GET(
     const params = await props.params;
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
-    requireAuthenticated(ctx);
+    const authUser = requireAuthenticated(ctx);
 
-    const meeting = await MeetingService.getMeeting(params.id);
+    const meeting = await MeetingService.getMeeting(params.id, authUser.id);
     return apiSuccess(meeting, { requestId, status: 200 });
   } catch (error: any) {
     return apiError(error, requestId);

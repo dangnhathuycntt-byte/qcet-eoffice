@@ -140,6 +140,7 @@ export interface BaseAuthorizationResource {
   participantIds?: string[];
   chairIds?: string[];
   secretaryIds?: string[];
+  bodyMemberIds?: string[];
   creatorId?: string;
   createdById?: string;
   assignerId?: string;
@@ -177,6 +178,7 @@ export interface MeetingResource extends BaseAuthorizationResource {
   participantIds?: string[];
   chairIds?: string[];
   secretaryIds?: string[];
+  bodyMemberIds?: string[];
   status?: string;
   classification?: DataClassification;
 }

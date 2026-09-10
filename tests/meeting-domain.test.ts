@@ -92,7 +92,6 @@ describe('Phase 8: Institutional Meetings, Organizational Bodies & Resolutions D
     await prisma.taskActor.deleteMany({
       where: {
         task: {
-          code: { startsWith: 'RES-TASK-' },
           createdById: organizerUser.id,
         },
       },
@@ -100,7 +99,6 @@ describe('Phase 8: Institutional Meetings, Organizational Bodies & Resolutions D
 
     await prisma.task.deleteMany({
       where: {
-        code: { startsWith: 'RES-TASK-' },
         createdById: organizerUser.id,
       },
     });
@@ -223,6 +221,7 @@ describe('Phase 8: Institutional Meetings, Organizational Bodies & Resolutions D
         unitId: testUnit.id,
         startTime: '2026-09-10T09:00:00.000Z',
         initialParticipants: [
+          { userId: organizerUser.id, role: MeetingParticipantRole.CHAIR },
           { userId: participantUser1.id, role: MeetingParticipantRole.ATTENDEE },
         ],
       },
@@ -264,6 +263,9 @@ describe('Phase 8: Institutional Meetings, Organizational Bodies & Resolutions D
         title: 'Họp giao ban Quý III/2026',
         unitId: testUnit.id,
         startTime: '2026-09-12T08:00:00.000Z',
+        initialParticipants: [
+          { userId: organizerUser.id, role: MeetingParticipantRole.CHAIR },
+        ],
       },
       organizerUser.id
     );

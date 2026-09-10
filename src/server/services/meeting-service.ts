@@ -1,7 +1,7 @@
 /**
- * QCET E-Office — Meeting & Institutional Resolutions Domain Service (Phase 8)
+ * QCET E-Office — Meeting & Institutional Resolutions Domain Service (Phase 8 / Task 5)
  * Implements workflow: DRAFT_AGENDA -> INVITED -> HELD -> MINUTES_DRAFT -> MINUTES_CONFIRMED
- * Handles Meeting Resolutions and automated Task derivation.
+ * Handles Meeting Resolutions, automated Task derivation, and canonical authorization.
  */
 
 import { prisma } from '@/lib/prisma';
@@ -9,11 +9,7 @@ import {
   MeetingStatus,
   MeetingParticipantRole,
   AttendanceStatus,
-  TaskStatus,
-  TaskOriginLevel,
-  TaskActorRole,
-  TaskPriority,
-  TaskScope,
+  Prisma,
 } from '@prisma/client';
 import {
   CreateMeetingInput,
@@ -24,15 +20,136 @@ import {
   CreateMeetingResolutionInput,
   ListMeetingsQuery,
 } from '@/contracts/meeting';
-import { logAuditEvent, AuditAction, AuditEntityType } from '@/lib/db/audit';
+import { logAuditEvent, AuditAction } from '@/lib/db/audit';
 import { publishOutboxEvent } from '@/lib/db/outbox';
-import { getCurrentAcademicPeriod } from '@/lib/academic-calendar';
+import { TaskCommandService } from '@/server/tasks/task-command-service';
+import { loadAuthorizationContext } from '@/server/authorization/authorization-context-service';
+import type { AuthorizationContext } from '@/server/authorization/authorization-context';
+import {
+  authorize,
+  AuthorizationResource,
+  isExecutivePosition,
+  isUnitLeaderPosition,
+} from '@/server/authorization/authorization-engine';
+import {
+  AuthorizationError,
+  NotFoundError,
+  ValidationError,
+} from '@/server/api/errors';
+
+export function buildMeetingResource(meeting: {
+  id: string;
+  unitId?: string | null;
+  bodyId?: string | null;
+  status?: any;
+  organizerId?: string;
+  participants?: Array<{ userId: string; role: MeetingParticipantRole | string }>;
+  body?: { memberships?: Array<{ userId?: string | null }> } | null;
+}): AuthorizationResource {
+  const participantIds = meeting.participants?.map((p) => p.userId) || [];
+  const chairParticipant = meeting.participants?.find(
+    (p) => p.role === MeetingParticipantRole.CHAIR || p.role === 'CHAIR'
+  );
+  const secretaryParticipant = meeting.participants?.find(
+    (p) => p.role === MeetingParticipantRole.SECRETARY || p.role === 'SECRETARY'
+  );
+  const bodyMemberIds = (meeting.body?.memberships || [])
+    .map((m) => m.userId)
+    .filter((id): id is string => Boolean(id));
+
+  return {
+    type: 'meeting',
+    id: meeting.id,
+    unitId: meeting.unitId || undefined,
+    bodyId: meeting.bodyId || undefined,
+    status: meeting.status,
+    organizerId: meeting.organizerId,
+    chairId: chairParticipant?.userId,
+    chairIds: chairParticipant?.userId ? [chairParticipant.userId] : [],
+    secretaryId: secretaryParticipant?.userId,
+    secretaryIds: secretaryParticipant?.userId ? [secretaryParticipant.userId] : [],
+    participantIds,
+    bodyMemberIds,
+  };
+}
+
+export function buildMeetingReadWhere(
+  context: AuthorizationContext
+): Prisma.MeetingWhereInput {
+  // Executive leadership (HIEU_TRUONG, PHO_HIEU_TRUONG, etc.) sees all school meetings
+  const isExecutive = context.positions?.some((p) =>
+    isExecutivePosition(p.positionCode)
+  );
+  if (isExecutive) {
+    return {};
+  }
+
+  const orConditions: Prisma.MeetingWhereInput[] = [
+    { organizerId: context.userId },
+    { participants: { some: { userId: context.userId } } },
+  ];
+
+  if (context.bodyMemberships && context.bodyMemberships.length > 0) {
+    const bodyIds = context.bodyMemberships
+      .map((bm) => bm.bodyId)
+      .filter((id): id is string => Boolean(id));
+    if (bodyIds.length > 0) {
+      orConditions.push({ bodyId: { in: bodyIds } });
+    }
+  }
+
+  const unitLeaderUnitIds = (context.positions || [])
+    .filter((p) => isUnitLeaderPosition(p.positionCode) && p.unitId)
+    .map((p) => p.unitId as string);
+
+  if (unitLeaderUnitIds.length > 0) {
+    orConditions.push({ unitId: { in: unitLeaderUnitIds } });
+  }
+
+  const delegations = context.getActiveDelegationsForAction?.('meeting.read') || [];
+  for (const d of delegations) {
+    if (d.grantorPositionCode && isExecutivePosition(d.grantorPositionCode)) {
+      return {};
+    }
+    for (const rule of d.scopeRules || []) {
+      if (rule.entityType === 'unit' && rule.entityId) {
+        orConditions.push({ unitId: rule.entityId });
+      }
+    }
+  }
+
+  return { OR: orConditions };
+}
 
 export class MeetingService {
   /**
    * 1. Khởi tạo cuộc họp (DRAFT_AGENDA)
    */
-  static async createMeeting(input: CreateMeetingInput, organizerId: string, requestId?: string) {
+  static async createMeeting(
+    input: CreateMeetingInput,
+    contextOrOrganizerId: AuthorizationContext | string,
+    requestId?: string
+  ) {
+    const authContext =
+      typeof contextOrOrganizerId === 'string'
+        ? await loadAuthorizationContext(contextOrOrganizerId)
+        : contextOrOrganizerId;
+    const organizerId = authContext.userId;
+
+    const authResult = authorize(authContext, 'meeting.create', {
+      type: 'meeting',
+      id: '',
+      organizerId,
+      unitId: input.unitId,
+      bodyId: input.bodyId,
+    });
+    if (!authResult.allowed) {
+      throw new AuthorizationError(
+        authResult.reason || 'Không có quyền tạo cuộc họp.',
+        authResult.rejectionCode
+      );
+    }
+
     return prisma.$transaction(async (tx) => {
       const code = input.code || `MEET-${Date.now()}`;
 
@@ -54,12 +171,16 @@ export class MeetingService {
         },
       });
 
-      // Thêm người tổ chức làm thư ký hoặc người tham dự mặc định nếu chưa có
+      // Người tổ chức mặc định là SECRETARY trừ khi được chỉ định vai trò khác trong initialParticipants (ví dụ: CHAIR)
+      const organizerRole =
+        input.initialParticipants?.find((p) => p.userId === organizerId)?.role ||
+        MeetingParticipantRole.SECRETARY;
+
       await tx.meetingParticipant.create({
         data: {
           meetingId: meeting.id,
           userId: organizerId,
-          role: MeetingParticipantRole.SECRETARY,
+          role: organizerRole,
           attendanceStatus: AttendanceStatus.ATTENDED,
         },
       });
@@ -80,7 +201,7 @@ export class MeetingService {
         }
       }
 
-      await logAuditEvent(tx as any, {
+      await logAuditEvent(tx, {
         actorId: organizerId,
         action: AuditAction.TASK_CREATED,
         entityType: 'Meeting',
@@ -96,13 +217,38 @@ export class MeetingService {
   /**
    * 2. Mời thành viên tham gia cuộc họp
    */
-  static async addParticipant(meetingId: string, input: AddParticipantInput, actorId: string, requestId?: string) {
-    return prisma.$transaction(async (tx) => {
-      const meeting = await tx.meeting.findUnique({ where: { id: meetingId } });
-      if (!meeting) {
-        throw new Error('Cuộc họp không tồn tại');
-      }
+  static async addParticipant(
+    meetingId: string,
+    input: AddParticipantInput,
+    contextOrUserId: AuthorizationContext | string,
+    requestId?: string
+  ) {
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: {
+        body: { include: { memberships: true } },
+        unit: true,
+        participants: true,
+      },
+    });
+    if (!meeting) {
+      throw new NotFoundError('Cuộc họp không tồn tại');
+    }
 
+    const authContext =
+      typeof contextOrUserId === 'string'
+        ? await loadAuthorizationContext(contextOrUserId)
+        : contextOrUserId;
+
+    const authResult = authorize(authContext, 'meeting.manage_participants', buildMeetingResource(meeting));
+    if (!authResult.allowed) {
+      throw new AuthorizationError(
+        authResult.reason || 'Không có quyền quản lý thành phần tham dự cuộc họp.',
+        authResult.rejectionCode
+      );
+    }
+
+    return prisma.$transaction(async (tx) => {
       const participant = await tx.meetingParticipant.upsert({
         where: {
           meetingId_userId: {
@@ -123,7 +269,6 @@ export class MeetingService {
         },
       });
 
-      // Nếu cuộc họp đang ở DRAFT_AGENDA, chuyển sang INVITED
       if (meeting.status === MeetingStatus.DRAFT_AGENDA) {
         await tx.meeting.update({
           where: { id: meetingId },
@@ -168,17 +313,41 @@ export class MeetingService {
   /**
    * 4. Diễn ra cuộc họp (INVITED -> HELD)
    */
-  static async holdMeeting(meetingId: string, actorId: string, requestId?: string) {
+  static async holdMeeting(
+    meetingId: string,
+    contextOrUserId: AuthorizationContext | string,
+    requestId?: string
+  ) {
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: {
+        body: { include: { memberships: true } },
+        unit: true,
+        participants: true,
+      },
+    });
+    if (!meeting) {
+      throw new NotFoundError('Cuộc họp không tồn tại');
+    }
+
+    if (meeting.status !== MeetingStatus.INVITED && meeting.status !== MeetingStatus.DRAFT_AGENDA) {
+      throw new ValidationError(`Không thể chuyển sang HELD từ trạng thái ${meeting.status}`);
+    }
+
+    const authContext =
+      typeof contextOrUserId === 'string'
+        ? await loadAuthorizationContext(contextOrUserId)
+        : contextOrUserId;
+
+    const authResult = authorize(authContext, 'meeting.update', buildMeetingResource(meeting));
+    if (!authResult.allowed) {
+      throw new AuthorizationError(
+        authResult.reason || 'Không có quyền cập nhật trạng thái cuộc họp.',
+        authResult.rejectionCode
+      );
+    }
+
     return prisma.$transaction(async (tx) => {
-      const meeting = await tx.meeting.findUnique({ where: { id: meetingId } });
-      if (!meeting) {
-        throw new Error('Cuộc họp không tồn tại');
-      }
-
-      if (meeting.status !== MeetingStatus.INVITED && meeting.status !== MeetingStatus.DRAFT_AGENDA) {
-        throw new Error(`Không thể chuyển sang HELD từ trạng thái ${meeting.status}`);
-      }
-
       const updated = await tx.meeting.update({
         where: { id: meetingId },
         data: {
@@ -186,8 +355,8 @@ export class MeetingService {
         },
       });
 
-      await logAuditEvent(tx as any, {
-        actorId,
+      await logAuditEvent(tx, {
+        actorId: authContext.userId,
         action: AuditAction.TASK_STATUS_CHANGED,
         entityType: 'Meeting',
         entityId: meetingId,
@@ -203,17 +372,43 @@ export class MeetingService {
   /**
    * 5. Soạn biên bản cuộc họp (HELD -> MINUTES_DRAFT)
    */
-  static async draftMinutes(meetingId: string, input: DraftMinutesInput, actorId: string, requestId?: string) {
+  static async draftMinutes(
+    meetingId: string,
+    input: DraftMinutesInput,
+    contextOrUserId: AuthorizationContext | string,
+    requestId?: string
+  ) {
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: {
+        body: { include: { memberships: true } },
+        unit: true,
+        participants: true,
+      },
+    });
+    if (!meeting) {
+      throw new NotFoundError('Cuộc họp không tồn tại');
+    }
+
+    const authContext =
+      typeof contextOrUserId === 'string'
+        ? await loadAuthorizationContext(contextOrUserId)
+        : contextOrUserId;
+
+    const authResult = authorize(authContext, 'meeting.draft_minutes', buildMeetingResource(meeting));
+    if (!authResult.allowed) {
+      if (authResult.rejectionCode === 'INVALID_WORKFLOW_STATE') {
+        throw new ValidationError(
+          authResult.reason || 'Trạng thái cuộc họp không hợp lệ để soạn biên bản.'
+        );
+      }
+      throw new AuthorizationError(
+        authResult.reason || 'Không có quyền lập dự thảo biên bản cuộc họp.',
+        authResult.rejectionCode
+      );
+    }
+
     return prisma.$transaction(async (tx) => {
-      const meeting = await tx.meeting.findUnique({ where: { id: meetingId } });
-      if (!meeting) {
-        throw new Error('Cuộc họp không tồn tại');
-      }
-
-      if (meeting.status !== MeetingStatus.HELD && meeting.status !== MeetingStatus.MINUTES_DRAFT) {
-        throw new Error(`Biên bản chỉ được soạn khi cuộc họp đã diễn ra (HELD). Trạng thái hiện tại: ${meeting.status}`);
-      }
-
       const updated = await tx.meeting.update({
         where: { id: meetingId },
         data: {
@@ -222,8 +417,8 @@ export class MeetingService {
         },
       });
 
-      await logAuditEvent(tx as any, {
-        actorId,
+      await logAuditEvent(tx, {
+        actorId: authContext.userId,
         action: AuditAction.TASK_STATUS_CHANGED,
         entityType: 'Meeting',
         entityId: meetingId,
@@ -238,33 +433,62 @@ export class MeetingService {
   /**
    * 6. Phê duyệt/Xác nhận biên bản (MINUTES_DRAFT -> MINUTES_CONFIRMED)
    */
-  static async confirmMinutes(meetingId: string, input: ConfirmMinutesInput, actorId: string, requestId?: string) {
+  static async confirmMinutes(
+    meetingId: string,
+    input: ConfirmMinutesInput,
+    contextOrUserId: AuthorizationContext | string,
+    requestId?: string
+  ) {
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: {
+        body: { include: { memberships: true } },
+        unit: true,
+        participants: true,
+      },
+    });
+    if (!meeting) {
+      throw new NotFoundError('Cuộc họp không tồn tại');
+    }
+
+    const authContext =
+      typeof contextOrUserId === 'string'
+        ? await loadAuthorizationContext(contextOrUserId)
+        : contextOrUserId;
+
+    const authResult = authorize(authContext, 'meeting.confirm_minutes', buildMeetingResource(meeting));
+    if (!authResult.allowed) {
+      if (authResult.rejectionCode === 'INVALID_WORKFLOW_STATE') {
+        throw new ValidationError(
+          authResult.reason || 'Trạng thái cuộc họp không hợp lệ để xác nhận biên bản.'
+        );
+      }
+      throw new AuthorizationError(
+        authResult.reason || 'Không có thẩm quyền xác nhận biên bản cuộc họp.',
+        authResult.rejectionCode
+      );
+    }
+
     return prisma.$transaction(async (tx) => {
-      const meeting = await tx.meeting.findUnique({ where: { id: meetingId } });
-      if (!meeting) {
-        throw new Error('Cuộc họp không tồn tại');
-      }
-
-      if (meeting.status !== MeetingStatus.MINUTES_DRAFT) {
-        throw new Error(`Chỉ có thể xác nhận biên bản khi đang ở trạng thái MINUTES_DRAFT. Trạng thái hiện tại: ${meeting.status}`);
-      }
-
       const updated = await tx.meeting.update({
         where: { id: meetingId },
         data: {
           status: MeetingStatus.MINUTES_CONFIRMED,
           minutesConfirmedAt: new Date(),
-          minutesConfirmedById: actorId,
+          minutesConfirmedById: authContext.userId,
         },
       });
 
-      await logAuditEvent(tx as any, {
-        actorId,
+      await logAuditEvent(tx, {
+        actorId: authContext.userId,
         action: AuditAction.TASK_APPROVED,
         entityType: 'Meeting',
         entityId: meetingId,
         requestId,
-        metadata: { confirmedBy: actorId },
+        metadata: {
+          confirmedBy: authContext.userId,
+          notes: input.notes,
+        },
       });
 
       await publishOutboxEvent(tx, {
@@ -274,7 +498,8 @@ export class MeetingService {
         payload: {
           meetingId,
           meetingTitle: meeting.title,
-          confirmedById: actorId,
+          confirmedById: authContext.userId,
+          notes: input.notes,
         },
       });
 
@@ -284,56 +509,64 @@ export class MeetingService {
 
   /**
    * 7. Ban hành Quyết nghị / Kết luận cuộc họp (và tự động sinh Task nếu yêu cầu)
+   * Tuân thủ Invariant 5.5: Gọi TaskCommandService.createFromMeetingResolution
    */
-  static async createResolution(meetingId: string, input: CreateMeetingResolutionInput, actorId: string, requestId?: string) {
-    return prisma.$transaction(async (tx) => {
-      const meeting = await tx.meeting.findUnique({
-        where: { id: meetingId },
-        include: { unit: true, body: true },
-      });
-      if (!meeting) {
-        throw new Error('Cuộc họp không tồn tại');
-      }
+  static async createResolution(
+    meetingId: string,
+    input: CreateMeetingResolutionInput,
+    contextOrUserId: AuthorizationContext | string,
+    requestId?: string
+  ) {
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingId },
+      include: {
+        body: { include: { memberships: true } },
+        unit: true,
+        participants: true,
+      },
+    });
+    if (!meeting) {
+      throw new NotFoundError('Cuộc họp không tồn tại');
+    }
 
+    const authContext =
+      typeof contextOrUserId === 'string'
+        ? await loadAuthorizationContext(contextOrUserId)
+        : contextOrUserId;
+
+    const authResult = authorize(authContext, 'meeting.create_resolution', buildMeetingResource(meeting));
+    if (!authResult.allowed) {
+      if (authResult.rejectionCode === 'INVALID_WORKFLOW_STATE') {
+        throw new ValidationError(
+          authResult.reason || 'Trạng thái cuộc họp không hợp lệ để ban hành quyết nghị.'
+        );
+      }
+      throw new AuthorizationError(
+        authResult.reason || 'Không có quyền ban hành quyết nghị cuộc họp.',
+        authResult.rejectionCode
+      );
+    }
+
+    return prisma.$transaction(async (tx) => {
       let resultingTaskId: string | undefined = undefined;
 
-      // Nếu có yêu cầu sinh Task từ quyết nghị
+      // Invariant 5.5: Tạo Task qua TaskCommandService canonical command
       if (input.createTask) {
-        const taskTitle = input.taskTitle || `[Kết luận ${meeting.code || 'họp'}] ${input.title}`;
-        const dueDate = input.deadline ? new Date(input.deadline) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        const taskCode = `RES-TASK-${Date.now()}`;
-        const { month: academicMonth, academicYear } = getCurrentAcademicPeriod();
-
-        const task = await tx.task.create({
-          data: {
-            code: taskCode,
-            title: taskTitle,
-            description: input.content,
-            status: TaskStatus.IN_PROGRESS,
-            originLevel: meeting.bodyId ? TaskOriginLevel.SCHOOL : TaskOriginLevel.UNIT,
-            priority: TaskPriority.HIGH,
-            scope: TaskScope.SCHOOL,
-            dueDate,
-            academicMonth,
-            academicYear,
-            createdById: actorId,
-            leadUnitId: input.leadUnitId || meeting.unitId,
-          },
+        const task = await TaskCommandService.createFromMeetingResolution(tx, {
+          meetingId,
+          meetingCode: meeting.code,
+          meetingTitle: meeting.title,
+          bodyId: meeting.bodyId,
+          unitId: meeting.unitId,
+          title: input.title,
+          content: input.content,
+          taskTitle: input.taskTitle,
+          leadUnitId: input.leadUnitId || meeting.unitId,
+          leadUserId: input.leadUserId,
+          deadline: input.deadline,
+          actorId: authContext.userId,
+          requestId,
         });
-
-        // Thiết lập DRI nếu có leadUserId
-        if (input.leadUserId) {
-          await tx.taskActor.create({
-            data: {
-              taskId: task.id,
-              userId: input.leadUserId,
-              unitId: input.leadUnitId,
-              role: TaskActorRole.DRI,
-              isPrimaryDRI: true,
-              assignedById: actorId,
-            },
-          });
-        }
 
         resultingTaskId = task.id;
       }
@@ -349,30 +582,40 @@ export class MeetingService {
           deadline: input.deadline ? new Date(input.deadline) : undefined,
           resultingTaskId,
         },
+        include: {
+          leadUnit: true,
+          leadUser: {
+            select: { id: true, name: true, email: true },
+          },
+          resultingTask: true,
+        },
       });
 
-      await logAuditEvent(tx as any, {
-        actorId,
+      await logAuditEvent(tx, {
+        actorId: authContext.userId,
         action: AuditAction.TASK_CREATED,
         entityType: 'MeetingResolution',
         entityId: resolution.id,
         requestId,
         afterData: {
-          resolutionCode: resolution.code,
+          code: resolution.code,
+          title: resolution.title,
           meetingId,
           resultingTaskId,
         },
       });
 
       await publishOutboxEvent(tx, {
-        eventType: 'MEETING_RESOLUTION_ENACTED',
+        eventType: 'MEETING_RESOLUTION_CREATED',
         aggregateType: 'MeetingResolution',
         aggregateId: resolution.id,
         payload: {
           resolutionId: resolution.id,
-          resolutionCode: resolution.code,
           meetingId,
+          title: resolution.title,
           resultingTaskId,
+          leadUnitId: resolution.leadUnitId,
+          leadUserId: resolution.leadUserId,
         },
       });
 
@@ -383,11 +626,18 @@ export class MeetingService {
   /**
    * 8. Lấy chi tiết cuộc họp
    */
-  static async getMeeting(meetingId: string) {
+  static async getMeeting(
+    meetingId: string,
+    contextOrUserId?: AuthorizationContext | string
+  ) {
     const meeting = await prisma.meeting.findUnique({
       where: { id: meetingId },
       include: {
-        body: true,
+        body: {
+          include: {
+            memberships: true,
+          },
+        },
         unit: true,
         organizer: {
           select: { id: true, name: true, email: true, role: true },
@@ -414,36 +664,69 @@ export class MeetingService {
     });
 
     if (!meeting) {
-      throw new Error('Cuộc họp không tồn tại');
+      throw new NotFoundError('Cuộc họp không tồn tại');
+    }
+
+    if (contextOrUserId) {
+      const authContext =
+        typeof contextOrUserId === 'string'
+          ? await loadAuthorizationContext(contextOrUserId)
+          : contextOrUserId;
+
+      const authResult = authorize(authContext, 'meeting.read', buildMeetingResource(meeting));
+      if (!authResult.allowed) {
+        throw new AuthorizationError(
+          authResult.reason || 'Không có quyền truy cập cuộc họp.',
+          authResult.rejectionCode || 'INSUFFICIENT_RELATIONSHIP'
+        );
+      }
     }
 
     return meeting;
   }
 
   /**
-   * 9. Danh sách cuộc họp với bộ lọc
+   * 9. Danh sách cuộc họp với bộ lọc và ủy quyền
    */
-  static async listMeetings(query: ListMeetingsQuery, currentUserId?: string) {
+  static async listMeetings(
+    query: ListMeetingsQuery,
+    contextOrUserId?: AuthorizationContext | string
+  ) {
     const { bodyId, unitId, status, search, from, to, limit = 20, page = 1 } = query;
 
-    const where: any = {};
+    let authWhere: Prisma.MeetingWhereInput = {};
 
-    if (bodyId) where.bodyId = bodyId;
-    if (unitId) where.unitId = unitId;
-    if (status) where.status = status;
+    if (contextOrUserId) {
+      const authContext =
+        typeof contextOrUserId === 'string'
+          ? await loadAuthorizationContext(contextOrUserId)
+          : contextOrUserId;
+      authWhere = buildMeetingReadWhere(authContext);
+    }
+
+    const clientFilterWhere: Prisma.MeetingWhereInput = {};
+
+    if (bodyId) clientFilterWhere.bodyId = bodyId;
+    if (unitId) clientFilterWhere.unitId = unitId;
+    if (status) clientFilterWhere.status = status;
 
     if (from || to) {
-      where.startTime = {};
-      if (from) where.startTime.gte = new Date(from);
-      if (to) where.startTime.lte = new Date(to);
+      const timeFilter: Prisma.DateTimeFilter = {};
+      if (from) timeFilter.gte = new Date(from);
+      if (to) timeFilter.lte = new Date(to);
+      clientFilterWhere.startTime = timeFilter;
     }
 
     if (search) {
-      where.OR = [
+      clientFilterWhere.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { code: { contains: search, mode: 'insensitive' } },
       ];
     }
+
+    const where: Prisma.MeetingWhereInput = {
+      AND: [authWhere, clientFilterWhere],
+    };
 
     const [items, total] = await Promise.all([
       prisma.meeting.findMany({
@@ -458,7 +741,10 @@ export class MeetingService {
             select: { id: true, name: true, email: true },
           },
           _count: {
-            select: { participants: true, resolutions: true },
+            select: {
+              participants: true,
+              resolutions: true,
+            },
           },
         },
       }),
@@ -467,6 +753,10 @@ export class MeetingService {
 
     return {
       items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
       pagination: {
         total,
         page,

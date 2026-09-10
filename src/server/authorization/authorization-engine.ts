@@ -42,6 +42,14 @@ import type {
   DataClassification,
   RejectionCode,
 } from './resource';
+
+export type {
+  AuthorizationResource,
+  AuthorizationResult,
+  AuditRecord,
+  DataClassification,
+  RejectionCode,
+};
 import {
   SeparationOfPowersError,
   SeparationOfDutiesError,
@@ -64,7 +72,7 @@ import {
 // HELPERS
 // ============================================================================
 
-function isExecutivePosition(posCode?: string): boolean {
+export function isExecutivePosition(posCode?: string): boolean {
   const code = (posCode || '').toUpperCase();
   return (
     code === 'HIEU_TRUONG' ||
@@ -79,7 +87,7 @@ function isExecutivePosition(posCode?: string): boolean {
   );
 }
 
-function isUnitLeaderPosition(posCode?: string): boolean {
+export function isUnitLeaderPosition(posCode?: string): boolean {
   const code = (posCode || '').toUpperCase();
   return (
     code === 'TRUONG_DON_VI' ||
@@ -349,12 +357,33 @@ export function authorize(
   let candidateGrant: ActiveDelegationGrant | undefined;
 
   const isOrganizer = resource?.organizerId === userId;
-  const isParticipant = resource?.participantIds?.includes(userId);
-  const isChair = resource?.chairIds?.includes(userId);
-  const isSecretary = resource?.secretaryIds?.includes(userId);
+  const isParticipant =
+    resource?.participantIds?.includes(userId) ||
+    resource?.organizerId === userId;
+  const isChair =
+    resource?.chairIds?.includes(userId) ||
+    resource?.chairId === userId ||
+    Boolean(
+      resource?.bodyId &&
+        context.bodyMemberships?.some(
+          (bm) =>
+            bm.bodyId === resource.bodyId &&
+            (bm.role === 'CHAIR' || bm.role === 'VICE_CHAIR')
+        )
+    );
+  const isSecretary =
+    resource?.secretaryIds?.includes(userId) ||
+    resource?.secretaryId === userId ||
+    Boolean(
+      resource?.bodyId &&
+        context.bodyMemberships?.some(
+          (bm) => bm.bodyId === resource.bodyId && bm.role === 'SECRETARY'
+        )
+    );
   const isBodyMember = Boolean(
     resource?.bodyId &&
-      context.bodyMemberships?.some((bm) => bm.bodyId === resource.bodyId)
+      (context.bodyMemberships?.some((bm) => bm.bodyId === resource.bodyId) ||
+        resource?.bodyMemberIds?.includes(userId))
   );
   const isDRI =
     resource?.primaryOwnerId === userId ||
@@ -431,6 +460,14 @@ export function authorize(
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_MEETING_DIRECT_RELATION';
     }
+  } else if (action === 'meeting.create') {
+    if (
+      isOrganizer ||
+      (resource?.bodyId && (isChair || isSecretary))
+    ) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_MEETING_CREATION_AUTHORITY';
+    }
   } else if (action === 'meeting.draft_minutes') {
     if (isSecretary || isChair || isOrganizer) {
       candidateAllowed = true;
@@ -440,6 +477,16 @@ export function authorize(
     if (isChair) {
       candidateAllowed = true;
       candidatePolicy = 'STEP_4_MEETING_CHAIR_CONFIRM';
+    }
+  } else if (action === 'meeting.create_resolution') {
+    if (isChair) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_MEETING_CHAIR_RESOLUTION';
+    }
+  } else if (action === 'meeting.manage_participants' || action === 'meeting.update') {
+    if (isOrganizer || isChair) {
+      candidateAllowed = true;
+      candidatePolicy = 'STEP_4_MEETING_ORGANIZER_OR_CHAIR';
     }
   } else if (action === 'task.read') {
     if (isDRI || isCollaborator || isAssigner || isFollower || isObserver) {
@@ -593,7 +640,9 @@ export function authorize(
         action === 'document.outgoing.review_content' ||
         action === 'meeting.create' ||
         action === 'meeting.read' ||
-        action === 'meeting.confirm_minutes' ||
+        action === 'meeting.create_resolution' ||
+        action === 'meeting.manage_participants' ||
+        action === 'meeting.update' ||
         action === 'dossier.open' ||
         action === 'dossier.add_item' ||
         action === 'dossier.close' ||
@@ -615,7 +664,6 @@ export function authorize(
         action === 'task.remind' ||
         action === 'document.incoming.execute' ||
         action === 'document.outgoing.draft' ||
-        action === 'meeting.read' ||
         action === 'dossier.open'
       ) {
         candidateAllowed = true;
@@ -638,7 +686,6 @@ export function authorize(
         action === 'task.monitor' ||
         action === 'document.incoming.execute' ||
         action === 'document.outgoing.draft' ||
-        action === 'meeting.read' ||
         action === 'dossier.open'
       ) {
         candidateAllowed = true;
@@ -768,13 +815,22 @@ export function authorize(
     const isOwnUnit = userUnitIds.has(resourceUnitId);
     const isSchoolWide =
       resource?.scope === 'SCHOOL' || resource?.scope === 'school';
-    const isDirectParty = isAssigner || isDRI || isDrafter;
+    const isDirectParty =
+      isAssigner ||
+      isDRI ||
+      isDrafter ||
+      isChair ||
+      isOrganizer ||
+      isParticipant ||
+      isSecretary ||
+      isBodyMember;
 
     if (
       !isOwnUnit &&
       !isSchoolWide &&
       !isDirectParty &&
-      (action === 'task.assign' ||
+      (action.startsWith('meeting.') ||
+        action === 'task.assign' ||
         action === 'task.reassign' ||
         action === 'task.approve' ||
         action === 'task.review' ||
@@ -784,7 +840,7 @@ export function authorize(
       scopeDenied = true;
       scopeDeniedCode = 'DEPARTMENT_BOUNDARY_VIOLATION';
       scopeDeniedReason =
-        'Trưởng đơn vị chỉ có quyền giao việc hoặc phê duyệt trong phạm vi đơn vị mình quản lý.';
+        'Trưởng đơn vị chỉ có quyền trong phạm vi đơn vị mình quản lý.';
     }
   }
 
@@ -935,16 +991,43 @@ export function authorize(
     const isMeetingAction = action.startsWith('meeting.');
     const isTaskAction = action.startsWith('task.');
 
-    if (
-      isMeetingAction &&
-      (action === 'meeting.read' || action === 'meeting.draft_minutes')
-    ) {
+    if (isMeetingAction) {
+      if (action === 'meeting.confirm_minutes') {
+        return {
+          allowed: false,
+          granted: false,
+          rejectionCode: 'INSUFFICIENT_CAPABILITY',
+          statusCode: 'INSUFFICIENT_CAPABILITY',
+          reason: 'Chỉ chủ tọa (Chair) hoặc người có thẩm quyền/được ủy quyền mới có quyền xác nhận biên bản cuộc họp.',
+          auditRecord: {
+            ...baseAuditRecord,
+            decision: 'DENY',
+            rejectionCode: 'INSUFFICIENT_CAPABILITY',
+            policyMatched: 'STEP_4_MEETING_CHAIR_REQUIRED',
+          },
+        };
+      }
+      if (action === 'meeting.create_resolution' || action === 'meeting.publish_resolution') {
+        return {
+          allowed: false,
+          granted: false,
+          rejectionCode: 'INSUFFICIENT_CAPABILITY',
+          statusCode: 'INSUFFICIENT_CAPABILITY',
+          reason: 'Người dùng không có thẩm quyền ban hành quyết nghị/kết luận cuộc họp.',
+          auditRecord: {
+            ...baseAuditRecord,
+            decision: 'DENY',
+            rejectionCode: 'INSUFFICIENT_CAPABILITY',
+            policyMatched: 'STEP_4_MEETING_RESOLUTION_AUTHORITY_REQUIRED',
+          },
+        };
+      }
       return {
         allowed: false,
         granted: false,
         rejectionCode: 'INSUFFICIENT_RELATIONSHIP',
         statusCode: 'INSUFFICIENT_RELATIONSHIP',
-        reason: 'Người dùng không có mối quan hệ trực tiếp với cuộc họp để thực hiện thao tác này.',
+        reason: 'Người dùng không có thẩm quyền hoặc mối quan hệ hợp lệ với cuộc họp để thực hiện thao tác này.',
         auditRecord: {
           ...baseAuditRecord,
           decision: 'DENY',
@@ -1014,15 +1097,15 @@ export function authorize(
     }
   }
 
-  // Meeting minutes confirmation: meeting must be in valid state (not SCHEDULED or CANCELLED)
+  // Meeting minutes confirmation: meeting must be in MINUTES_DRAFT or HELD
   if (action === 'meeting.confirm_minutes') {
-    if (status === 'SCHEDULED' || status === 'CANCELLED' || status === 'DRAFT') {
+    if (status !== 'MINUTES_DRAFT' && status !== 'HELD') {
       return {
         allowed: false,
         granted: false,
         rejectionCode: 'INVALID_WORKFLOW_STATE',
         statusCode: 'INVALID_WORKFLOW_STATE',
-        reason: 'Cuộc họp chưa diễn ra hoặc biên bản chưa được lập dự thảo.',
+        reason: 'Chỉ có thể xác nhận biên bản khi cuộc họp đang ở trạng thái dự thảo biên bản hoặc đã tổ chức (MINUTES_DRAFT hoặc HELD).',
         auditRecord: {
           ...baseAuditRecord,
           decision: 'DENY',
@@ -1033,18 +1116,37 @@ export function authorize(
     }
   }
 
-  // Meeting resolution: cannot create resolution if meeting cancelled or still scheduled
-  if (
-    action === 'meeting.create_resolution' ||
-    action === 'meeting.publish_resolution'
-  ) {
-    if (status === 'SCHEDULED' || status === 'CANCELLED' || status === 'DRAFT') {
+  // Meeting draft minutes: meeting must be in HELD or MINUTES_DRAFT
+  if (action === 'meeting.draft_minutes') {
+    if (status !== 'HELD' && status !== 'MINUTES_DRAFT') {
       return {
         allowed: false,
         granted: false,
         rejectionCode: 'INVALID_WORKFLOW_STATE',
         statusCode: 'INVALID_WORKFLOW_STATE',
-        reason: 'Cuộc họp chưa diễn ra hoặc biên bản chưa được phê duyệt để ban hành nghị quyết.',
+        reason: 'Biên bản chỉ được soạn khi cuộc họp đã diễn ra (HELD hoặc MINUTES_DRAFT).',
+        auditRecord: {
+          ...baseAuditRecord,
+          decision: 'DENY',
+          rejectionCode: 'INVALID_WORKFLOW_STATE',
+          policyMatched: 'STEP_9_MEETING_DRAFT_MINUTES_INVALID_STATE',
+        },
+      };
+    }
+  }
+
+  // Meeting resolution: cannot create resolution before allowed state (must be MINUTES_CONFIRMED)
+  if (
+    action === 'meeting.create_resolution' ||
+    action === 'meeting.publish_resolution'
+  ) {
+    if (status !== 'MINUTES_CONFIRMED') {
+      return {
+        allowed: false,
+        granted: false,
+        rejectionCode: 'INVALID_WORKFLOW_STATE',
+        statusCode: 'INVALID_WORKFLOW_STATE',
+        reason: 'Nghị quyết hoặc kết luận cuộc họp chỉ được ban hành sau khi biên bản cuộc họp đã được xác nhận (MINUTES_CONFIRMED).',
         auditRecord: {
           ...baseAuditRecord,
           decision: 'DENY',

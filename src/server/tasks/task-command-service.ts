@@ -3,6 +3,8 @@ import {
   TaskScope,
   TaskStatus,
   TaskPriority,
+  TaskOriginLevel,
+  TaskActorRole,
   AssigneeRole,
   DeliverableReviewStatus,
   Prisma,
@@ -19,9 +21,10 @@ import {
   AuditAction,
   AuditEntityType,
 } from '@/lib/db/audit';
+import { publishOutboxEvent, OutboxAggregateType } from '@/lib/db/outbox';
 import { safeAfter, dispatchTaskAssignedPush } from '@/lib/push-dispatch';
 import { generateTaskCodeAtomic } from '@/lib/task-code-generator';
-import { getAcademicYear, getSystemReferenceDate } from '@/lib/academic-calendar';
+import { getAcademicYear, getSystemReferenceDate, getCurrentAcademicPeriod } from '@/lib/academic-calendar';
 import {
   CreateTaskInputSchema,
   UpdateTaskInputSchema,
@@ -39,6 +42,22 @@ import {
   checkActiveDelegation,
   isPrivilegedUser,
 } from './task-policy';
+
+export interface CreateFromMeetingResolutionInput {
+  meetingId: string;
+  meetingCode?: string | null;
+  meetingTitle?: string;
+  bodyId?: string | null;
+  unitId?: string | null;
+  title: string;
+  content: string;
+  taskTitle?: string;
+  leadUnitId?: string | null;
+  leadUserId?: string | null;
+  deadline?: string | Date | null;
+  actorId: string;
+  requestId?: string;
+}
 
 export interface CreateTaskInput {
   title: string;
@@ -103,6 +122,137 @@ function resolveUser(
 }
 
 export class TaskCommandService {
+  /**
+   * Canonical creation of a Task derived from a Meeting Resolution (Invariant 5.5).
+   * Atomically generates task code, binds creator & lead unit, provisions DRI TaskActor,
+   * logs audit event, and registers outbox event within the transaction.
+   */
+  static async createFromMeetingResolution(
+    tx: Prisma.TransactionClient,
+    input: CreateFromMeetingResolutionInput
+  ) {
+    const dueDate = input.deadline
+      ? new Date(input.deadline)
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const { month: academicMonth, academicYear } = getCurrentAcademicPeriod();
+    const originLevel = input.bodyId ? TaskOriginLevel.SCHOOL : TaskOriginLevel.UNIT;
+    const scope = input.bodyId ? TaskScope.SCHOOL : (input.unitId ? TaskScope.DEPARTMENT : TaskScope.SCHOOL);
+    const effectiveUnitId = input.leadUnitId || input.unitId || null;
+
+    const taskTitle =
+      input.taskTitle ||
+      (input.meetingCode
+        ? `[Kết luận ${input.meetingCode}] ${input.title}`
+        : `[Kết luận cuộc họp] ${input.title}`);
+
+    let code: string;
+    try {
+      code = await generateTaskCodeAtomic(tx, {
+        year: new Date().getFullYear(),
+        month: academicMonth,
+        scope,
+        departmentCode: effectiveUnitId || undefined,
+      });
+    } catch {
+      code = `RES-TASK-${Date.now()}`;
+    }
+
+    let validDepartmentId: string | null = null;
+    if (effectiveUnitId) {
+      const dept = await tx.department.findUnique({
+        where: { id: effectiveUnitId },
+        select: { id: true },
+      });
+      if (dept) {
+        validDepartmentId = dept.id;
+      }
+    }
+
+    const task = await tx.task.create({
+      data: {
+        code,
+        title: taskTitle,
+        description: input.content,
+        status: TaskStatus.IN_PROGRESS,
+        originLevel,
+        priority: TaskPriority.HIGH,
+        scope,
+        dueDate,
+        academicMonth,
+        academicYear,
+        createdById: input.actorId,
+        leadUnitId: effectiveUnitId,
+        departmentId: validDepartmentId,
+        ...(input.leadUserId
+          ? {
+              assignees: {
+                create: [
+                  {
+                    userId: input.leadUserId,
+                    roleInTask: AssigneeRole.PRIMARY_OWNER,
+                  },
+                ],
+              },
+            }
+          : {}),
+      },
+    });
+
+    if (input.leadUserId) {
+      await tx.taskActor.create({
+        data: {
+          taskId: task.id,
+          userId: input.leadUserId,
+          unitId: effectiveUnitId,
+          role: TaskActorRole.DRI,
+          isPrimaryDRI: true,
+          assignedById: input.actorId,
+        },
+      });
+    }
+
+    await logAuditEvent(tx, {
+      actorId: input.actorId,
+      action: AuditAction.TASK_CREATED,
+      entityType: AuditEntityType.TASK,
+      entityId: task.id,
+      requestId: input.requestId,
+      afterData: {
+        code: task.code,
+        title: task.title,
+        originLevel: task.originLevel,
+        leadUnitId: task.leadUnitId,
+        leadUserId: input.leadUserId,
+        meetingId: input.meetingId,
+      },
+    });
+
+    await publishOutboxEvent(tx, {
+      eventType: 'TASK_CREATED_FROM_RESOLUTION',
+      aggregateType: OutboxAggregateType.TASK,
+      aggregateId: task.id,
+      payload: {
+        taskId: task.id,
+        taskCode: task.code,
+        taskTitle: task.title,
+        meetingId: input.meetingId,
+        leadUnitId: effectiveUnitId,
+        leadUserId: input.leadUserId,
+        createdById: input.actorId,
+      },
+    });
+
+    return task;
+  }
+
+  async createFromMeetingResolution(
+    tx: Prisma.TransactionClient,
+    input: CreateFromMeetingResolutionInput
+  ) {
+    return TaskCommandService.createFromMeetingResolution(tx, input);
+  }
+
   /**
    * Tạo nhiệm vụ mới với sinh mã nguyên tử O(1) và kiểm tra toàn vẹn phân cấp.
    */

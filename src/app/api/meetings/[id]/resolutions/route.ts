@@ -20,7 +20,10 @@ export async function GET(
     const params = await props.params;
     const ctx = await getApiContext(request);
     requestId = ctx.requestId;
-    requireAuthenticated(ctx);
+    const authUser = requireAuthenticated(ctx);
+
+    // Enforce read authorization on parent meeting
+    await MeetingService.getMeeting(params.id, authUser.id);
 
     const resolutions = await prisma.meetingResolution.findMany({
       where: { meetingId: params.id },
