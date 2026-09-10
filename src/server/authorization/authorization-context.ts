@@ -4,10 +4,12 @@ import type {
   BodyMemberRole,
   BodyStatus,
   DelegationStatus,
+  JobCatalogGroup,
   OrganizationalBodyType,
   ResponsibilityCategory,
   UnitStatus,
   UnitType,
+  UserRole,
 } from '@prisma/client';
 
 export enum SystemRole {
@@ -22,6 +24,7 @@ export interface ActivePositionAssignment {
   positionDefinitionId: string;
   positionCode: string;
   positionTitle: string;
+  positionGroup?: JobCatalogGroup;
   positionLevel: number | null;
   isLeadership: boolean;
   unitId: string;
@@ -68,9 +71,13 @@ export interface ActiveDelegationGrant {
   grantorAssignmentId: string;
   grantorUserId: string;
   grantorPositionCode?: string;
+  grantorName?: string;
+  grantorPositionTitle?: string;
   granteeAssignmentId: string;
   granteeUserId: string;
   granteePositionCode?: string;
+  granteeName?: string;
+  granteePositionTitle?: string;
   responsibilityAreaId: string | null;
   responsibilityArea?: ActiveResponsibilityArea | null;
   action: string;
@@ -105,6 +112,12 @@ export interface AuthorizationContext {
     id: string;
     email: string;
     name: string;
+    role?: UserRole;
+    title?: string | null;
+    phone?: string | null;
+    avatarUrl?: string | null;
+    provider?: string;
+    departmentId?: string | null;
     isActive: boolean;
   };
   systemRoles: SystemRole[];
@@ -132,6 +145,12 @@ export class AuthorizationContextModel implements AuthorizationContext {
     id: string;
     email: string;
     name: string;
+    role?: UserRole;
+    title?: string | null;
+    phone?: string | null;
+    avatarUrl?: string | null;
+    provider?: string;
+    departmentId?: string | null;
     isActive: boolean;
   };
   public readonly systemRoles: SystemRole[];
@@ -149,6 +168,12 @@ export class AuthorizationContextModel implements AuthorizationContext {
       id: string;
       email: string;
       name: string;
+      role?: UserRole;
+      title?: string | null;
+      phone?: string | null;
+      avatarUrl?: string | null;
+      provider?: string;
+      departmentId?: string | null;
       isActive: boolean;
     };
     systemRoles: SystemRole[];
@@ -202,7 +227,9 @@ export class AuthorizationContextModel implements AuthorizationContext {
 
   getActiveDelegationsForAction(action: string): ActiveDelegationGrant[] {
     return this.delegations.filter(
-      (d) => d.action === action || d.action === '*'
+      (d) =>
+        (!d.granteeUserId || d.granteeUserId === this.userId) &&
+        (d.action === action || d.action === '*')
     );
   }
 }

@@ -1,18 +1,31 @@
 import { NextRequest } from 'next/server';
-import { getSessionFromRequest } from '@/lib/jwt-session';
+import { resolveCurrentSession } from '@/server/auth/current-session';
 import { apiError, apiSuccess } from '@/server/api/response';
-import { AuthenticationError, NotFoundError, ApiError } from '@/server/api/errors';
 import { UserContextService } from '@/server/services/user-context-service';
 
+/**
+ * GET /api/me/context
+ *
+ * INSTITUTIONAL INVARIANT:
+ * This endpoint returns a display context DTO strictly for client-side UI rendering
+ * (navigation visibility, layout adaptation, scope filtering).
+ *
+ * CRITICAL SECURITY INVARIANT:
+ * Server mutations MUST NEVER trust client-provided context, roles, scopes,
+ * or client.availableActions. All server-side mutations and privileged operations
+ * MUST independently invoke the canonical authorization engine (AuthorizationContextService,
+ * AuthorityResolutionService, and domain policies) with server database truth.
+ */
 export async function GET(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
   try {
-    const session = getSessionFromRequest(req as any);
-    if (!session || !session.id) {
-      return apiError(new AuthenticationError('Chưa xác thực người dùng', 'UNAUTHORIZED'), requestId);
-    }
+    // 1. Authenticate and validate session & user against live DB truth
+    // Rejects missing/expired/revoked session or deactivated accounts with 401
+    const session = await resolveCurrentSession(req);
 
-    const context = await UserContextService.getUserContext(session.id);
+    // 2. Load canonical authorization context & map to UI response DTO
+    const context = await UserContextService.getUserContext(session.userId);
+
     return apiSuccess(context, {
       requestId,
       headers: {
@@ -20,9 +33,6 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    if (error.message === 'USER_NOT_FOUND') {
-      return apiError(new NotFoundError('Không tìm thấy thông tin người dùng'), requestId);
-    }
     return apiError(error, requestId);
   }
 }

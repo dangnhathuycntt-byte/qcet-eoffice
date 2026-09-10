@@ -50,6 +50,11 @@ export async function loadAuthorizationContext(
       email: true,
       name: true,
       role: true,
+      title: true,
+      phone: true,
+      avatarUrl: true,
+      provider: true,
+      departmentId: true,
       isActive: true,
     },
   });
@@ -120,6 +125,7 @@ export async function loadAuthorizationContext(
       positionDefinitionId: pos.positionDefinitionId,
       positionCode: pos.positionDefinition.code,
       positionTitle: pos.positionDefinition.title,
+      positionGroup: pos.positionDefinition.group,
       positionLevel: pos.positionDefinition.minLevel,
       isLeadership: pos.positionDefinition.isLeadership,
       unitId: pos.unitId,
@@ -164,7 +170,10 @@ export async function loadAuthorizationContext(
   if (activePositionIds.length > 0) {
     const rawDelegations = await prisma.delegationGrant.findMany({
       where: {
-        granteeAssignmentId: { in: activePositionIds },
+        OR: [
+          { granteeAssignmentId: { in: activePositionIds } },
+          { grantorAssignmentId: { in: activePositionIds } },
+        ],
         status: DelegationStatus.ACTIVE,
         revokedAt: null,
         validFrom: { lte: now },
@@ -173,11 +182,17 @@ export async function loadAuthorizationContext(
       include: {
         grantorAssignment: {
           include: {
+            user: {
+              select: { id: true, name: true },
+            },
             positionDefinition: true,
           },
         },
         granteeAssignment: {
           include: {
+            user: {
+              select: { id: true, name: true },
+            },
             positionDefinition: true,
           },
         },
@@ -197,9 +212,13 @@ export async function loadAuthorizationContext(
         grantorAssignmentId: del.grantorAssignmentId,
         grantorUserId: del.grantorAssignment.userId,
         grantorPositionCode: del.grantorAssignment.positionDefinition?.code,
+        grantorName: del.grantorAssignment.user?.name,
+        grantorPositionTitle: del.grantorAssignment.positionDefinition?.title,
         granteeAssignmentId: del.granteeAssignmentId,
         granteeUserId: del.granteeAssignment.userId,
         granteePositionCode: del.granteeAssignment.positionDefinition?.code,
+        granteeName: del.granteeAssignment.user?.name,
+        granteePositionTitle: del.granteeAssignment.positionDefinition?.title,
         responsibilityAreaId: del.responsibilityAreaId,
         responsibilityArea: del.responsibilityArea
           ? {
@@ -281,7 +300,7 @@ export async function loadAuthorizationContext(
     responsibilityAreasMap.set(port.responsibilityArea.id, port.responsibilityArea);
   }
   for (const del of activeDelegations) {
-    if (del.responsibilityArea) {
+    if (del.granteeUserId === userId && del.responsibilityArea) {
       responsibilityAreasMap.set(del.responsibilityArea.id, del.responsibilityArea);
     }
   }
@@ -308,6 +327,12 @@ export async function loadAuthorizationContext(
       id: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
+      title: user.title,
+      phone: user.phone,
+      avatarUrl: user.avatarUrl,
+      provider: user.provider,
+      departmentId: user.departmentId,
       isActive: user.isActive,
     },
     systemRoles,
