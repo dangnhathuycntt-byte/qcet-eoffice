@@ -84,6 +84,24 @@ export function verifyTreatmentFidelity(arg1, arg2) {
   }
 
   if (arm === 'B') {
+    // Tier-1: Skill invocation proof (model-level intent). Fail-closed.
+    if (!transcriptPath) {
+      return {
+        valid: false,
+        reason: 'HARNESS_NOT_INVOKED',
+        details: 'Arm B: transcript missing — cannot verify Tier-1 Skill invocation'
+      };
+    }
+    const skillCheckB = verifySkillInvocation(transcriptPath);
+    if (!skillCheckB.invoked) {
+      return {
+        valid: false,
+        reason: 'HARNESS_NOT_INVOKED',
+        details: `Arm B Skill invocation missing: ${skillCheckB.detail}`
+      };
+    }
+
+    // Tier-2: executor artifact proof.
     const hasTelemetry = fs.existsSync(runTelemetryPath);
     const hasLedger = fs.existsSync(runLedgerPath);
     const hasRuns = fs.existsSync(executorRunsDir) && fs.readdirSync(executorRunsDir).filter(f => !f.startsWith('.')).length > 0;
@@ -114,21 +132,28 @@ export function verifyTreatmentFidelity(arg1, arg2) {
         };
       }
     }
-    // Tier-1: verify Skill tool was explicitly invoked (model-level intent proof)
-    if (transcriptPath) {
-      const skillCheck = verifySkillInvocation(transcriptPath);
-      if (!skillCheck.invoked) {
-        return {
-          valid: false,
-          reason: 'HARNESS_NOT_INVOKED',
-          details: `Arm B Skill invocation missing: ${skillCheck.detail}`
-        };
-      }
-    }
     return { valid: true };
   }
 
   if (arm === 'C') {
+    // Tier-1: Skill invocation proof (model-level intent). Fail-closed.
+    if (!transcriptPath) {
+      return {
+        valid: false,
+        reason: 'HARNESS_NOT_INVOKED',
+        details: 'Arm C: transcript missing — cannot verify Tier-1 Skill invocation'
+      };
+    }
+    const skillCheckC = verifySkillInvocation(transcriptPath);
+    if (!skillCheckC.invoked) {
+      return {
+        valid: false,
+        reason: 'HARNESS_NOT_INVOKED',
+        details: `Arm C Skill invocation missing: ${skillCheckC.detail}`
+      };
+    }
+
+    // Tier-2: executor artifact proof.
     let gateVerdictFound = false;
     let validGateVerdict = false;
     let hasFingerprint = false;
@@ -185,18 +210,6 @@ export function verifyTreatmentFidelity(arg1, arg2) {
           hasFingerprint = true;
         }
       } catch (_) {}
-    }
-
-    // Tier-1: verify Skill tool was explicitly invoked (model-level intent proof)
-    if (transcriptPath) {
-      const skillCheck = verifySkillInvocation(transcriptPath);
-      if (!skillCheck.invoked) {
-        return {
-          valid: false,
-          reason: 'HARNESS_NOT_INVOKED',
-          details: `Arm C Skill invocation missing: ${skillCheck.detail}`
-        };
-      }
     }
 
     return { valid: true, hasFingerprint };
