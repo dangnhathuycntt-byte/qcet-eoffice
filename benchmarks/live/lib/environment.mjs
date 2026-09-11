@@ -37,7 +37,11 @@ export async function captureEnvironment(options = {}) {
   const gitBranch = runCmd('git branch --show-current', 'unknown');
   const claudeCodeVersion = runCmd('claude --version', 'unknown');
 
-  const model = process.env.QCET_BENCHMARK_MODEL || options.model || (options.dryRun ? 'dry-run' : 'unknown');
+  const model = options.model || process.env.QCET_BENCHMARK_MODEL || (options.dryRun ? 'dry-run' : 'unknown');
+  const workloadBaseSha = options.workloadBaseSha || '3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c';
+  const executorBSha = options.harnessShaB || '3f5e804c5bf55c88634535971d605f40b1b8713d';
+  const executorCSha = options.harnessShaC || '02d090e8e8e23c9c7def9826b99c815af74ecf42';
+  const evalHarnessSha = options.evalHarnessSha || gitSha;
 
   return {
     timestamp: new Date().toISOString(),
@@ -50,8 +54,14 @@ export async function captureEnvironment(options = {}) {
     npmVersion,
     gitSha,
     gitBranch,
+    claudeVersion: claudeCodeVersion,
     claudeCodeVersion,
     model,
-    effort: options.effort || 'high'
+    effort: options.effort || 'high',
+    workloadBaseSha,
+    workloadBaseTag: 'benchmark/workload-base-3f0e5320',
+    executorBSha,
+    executorCSha,
+    evalHarnessSha
   };
 }

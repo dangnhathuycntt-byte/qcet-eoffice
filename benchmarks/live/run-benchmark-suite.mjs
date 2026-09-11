@@ -9,6 +9,23 @@ import { aggregateBenchmarkResults } from './aggregate.mjs';
 
 export const VALID_EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
 
+export const DEFAULT_TASK_TIMEOUTS_MS = {
+  'small-01': 20 * 60 * 1000,    // 20 min = 1,200,000 ms
+  'medium-01': 50 * 60 * 1000,   // 50 min = 3,000,000 ms
+  'critical-01': 90 * 60 * 1000, // 90 min = 5,400,000 ms
+};
+export const DEFAULT_FALLBACK_TIMEOUT_MS = 30 * 60 * 1000; // 30 min = 1,800,000 ms
+
+export function resolveTaskTimeoutMs(task, options = {}) {
+  if (options.taskTimeouts && options.taskTimeouts[task]) {
+    return options.taskTimeouts[task];
+  }
+  if (options.customTimeoutMs) {
+    return options.customTimeoutMs;
+  }
+  return DEFAULT_TASK_TIMEOUTS_MS[task] || DEFAULT_FALLBACK_TIMEOUT_MS;
+}
+
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
@@ -23,7 +40,8 @@ function parseArgs() {
     outputDir: path.join(process.cwd(), 'benchmarks', 'live', 'results'),
     model: process.env.QCET_BENCHMARK_MODEL || '',
     effort: 'high',
-    timeoutMs: 600000,
+    taskTimeouts: {},
+    customTimeoutMs: null,
     dangerouslySkipPermissions: false,
     skipPreflight: false
   };
@@ -51,7 +69,12 @@ function parseArgs() {
       }
       options.effort = eff;
     } else if (arg === '--timeout-ms' && args[i + 1]) {
-      options.timeoutMs = parseInt(args[++i], 10);
+      options.customTimeoutMs = parseInt(args[++i], 10);
+    } else if (arg === '--task-timeout' && args[i + 1]) {
+      const parts = args[++i].split(/[:=]/);
+      if (parts.length === 2) {
+        options.taskTimeouts[parts[0].trim()] = parseInt(parts[1].trim(), 10);
+      }
     } else if (arg === '--dangerously-skip-permissions') {
       options.dangerouslySkipPermissions = true;
     } else if (arg === '--skip-preflight') {
@@ -90,6 +113,13 @@ export async function verifyCliCapabilities(options = {}) {
     throw new Error(`Invalid effort level "${effort}". Allowed: ${VALID_EFFORT_LEVELS.join(', ')}`);
   }
 
+  // Enforce explicit model pinning for live mode reproducibility
+  if (!options.model || options.model === 'unknown') {
+    throw new Error(
+      'Live benchmark execution requires an explicit --model parameter (e.g. --model claude-sonnet-4-6 or QCET_BENCHMARK_MODEL env var) for reproducibility.'
+    );
+  }
+
   // Probe claude binary
   const probeVer = spawnSync('claude', ['--version'], { encoding: 'utf8', timeout: 10000 });
   if (probeVer.error || probeVer.status !== 0) {
@@ -97,7 +127,7 @@ export async function verifyCliCapabilities(options = {}) {
   }
 
   // Probe effort flag support with probe invocation
-  const probeEffort = spawnSync('claude', ['-p', 'probe', '--effort', effort, '--output-format', 'json', '--no-session-persistence'], {
+  const probeEffort = spawnSync('claude', ['-p', 'probe', '--model', options.model, '--effort', effort, '--output-format', 'json', '--no-session-persistence'], {
     encoding: 'utf8',
     timeout: 15000,
     maxBuffer: 5 * 1024 * 1024
@@ -115,6 +145,7 @@ export async function verifyCliCapabilities(options = {}) {
   return {
     verified: true,
     version: probeVer.stdout.trim(),
+    model: options.model,
     effort
   };
 }
@@ -160,6 +191,12 @@ async function executeAgentTrial({ targetDir, arm, task, trialId, benchmarkId, r
 
   // Arms B and C invoke the registered slash command /qcet-plan-executor plan.md with explicit instructions
   // Arm A executes via native generalist prompt without invoking the harness
+  if (!options.dryRun && (!options.model || options.model === 'unknown')) {
+    throw new Error(
+      'Live benchmark execution requires an explicit --model parameter (e.g. --model claude-sonnet-4-6 or QCET_BENCHMARK_MODEL env var) for reproducibility.'
+    );
+  }
+
   const prompt = arm === 'A'
     ? 'Execute the implementation plan in plan.md. Write minimal, correct code and ensure all tests pass.'
     : '/qcet-plan-executor plan.md\nExecute the implementation plan in plan.md using the QCET Plan Executor. Follow all QCET rules and generate gate-verdict.json.';
@@ -182,12 +219,13 @@ async function executeAgentTrial({ targetDir, arm, task, trialId, benchmarkId, r
     cliArgs.push('--dangerously-skip-permissions');
   }
 
+  const taskTimeoutMs = resolveTaskTimeoutMs(task, options);
   const startTime = Date.now();
   try {
     const res = spawnSync('claude', cliArgs, {
       cwd: targetDir,
       encoding: 'utf8',
-      timeout: options.timeoutMs,
+      timeout: taskTimeoutMs,
       maxBuffer: 50 * 1024 * 1024
     });
 
@@ -262,6 +300,7 @@ async function executeAgentTrial({ targetDir, arm, task, trialId, benchmarkId, r
       totalCostUsd,
       transcriptPath: path.relative(repoRoot, transcriptPath),
       durationMs,
+      timeoutMs: taskTimeoutMs,
       timedOut,
       isError: Boolean(res.status !== 0 || resultEvent?.is_error)
     };
@@ -276,6 +315,7 @@ async function executeAgentTrial({ targetDir, arm, task, trialId, benchmarkId, r
       totalCostUsd: 0,
       transcriptPath: path.relative(repoRoot, transcriptPath),
       durationMs: Date.now() - startTime,
+      timeoutMs: taskTimeoutMs,
       timedOut: false,
       isError: true
     };
@@ -309,9 +349,21 @@ export async function main() {
   console.log(`Arms         : ${options.arms.join(', ')}`);
   console.log(`Tasks        : ${options.tasks.join(', ')}`);
   console.log(`Trials/Cell  : ${options.trials}`);
-  console.log(`Timeout (ms) : ${options.timeoutMs}`);
+  console.log(`Model        : ${envInfo.model}`);
+  console.log(`Effort       : ${envInfo.effort}`);
+  console.log(`Claude Ver   : ${envInfo.claudeVersion}`);
+  console.log(`Workload SHA : ${envInfo.workloadBaseSha} (tag: ${envInfo.workloadBaseTag})`);
+  console.log(`Arm B SHA    : ${envInfo.executorBSha}`);
+  console.log(`Arm C SHA    : ${envInfo.executorCSha}`);
+  console.log(`Eval SHA     : ${envInfo.evalHarnessSha}`);
+  console.log(`Timeouts     : ${options.tasks.map(t => `${t}=${resolveTaskTimeoutMs(t, options)}ms`).join(', ')}`);
   console.log(`Output Dir   : ${options.outputDir}`);
   console.log('----------------------------------------------------');
+
+  if (!options.dryRun && (!options.model || options.model === 'unknown')) {
+    console.error('[Configuration Error] Live benchmark execution requires an explicit --model parameter (e.g. --model claude-sonnet-4-6 or QCET_BENCHMARK_MODEL env var) for reproducibility.');
+    process.exit(1);
+  }
 
   // Preflight validation: verify reference solutions and CLI capabilities
   if (!options.skipPreflight) {
@@ -456,6 +508,8 @@ export async function main() {
           cacheReadInputTokens: execution.cacheReadInputTokens,
           totalCostUsd: execution.totalCostUsd,
           transcriptPath: execution.transcriptPath,
+          durationMs: execution.durationMs,
+          timeoutMs: execution.timeoutMs,
           timedOut: execution.timedOut,
           isError: execution.isError,
           dryRun: options.dryRun,
@@ -475,7 +529,7 @@ export async function main() {
   }
 
   // Aggregate results
-  const aggregation = aggregateBenchmarkResults(results);
+  const aggregation = aggregateBenchmarkResults(results, envInfo);
   const finalReport = {
     benchmarkId,
     environment: envInfo,
@@ -499,6 +553,15 @@ export async function main() {
 **Platform**: ${envInfo.platform} (${envInfo.arch}, ${envInfo.cpuCount} CPUs)
 **Model**: ${envInfo.model} | **Claude Code**: ${envInfo.claudeCodeVersion}
 **Dry Run**: ${options.dryRun}
+
+## Benchmark Provenance & Environment
+- **workloadBaseSha**: \`${envInfo.workloadBaseSha}\` (pinned tag: \`${envInfo.workloadBaseTag}\`)
+- **executorBSha**: \`${envInfo.executorBSha}\`
+- **executorCSha**: \`${envInfo.executorCSha}\`
+- **evalHarnessSha**: \`${envInfo.evalHarnessSha}\`
+- **claudeVersion**: \`${envInfo.claudeVersion}\`
+- **model**: \`${envInfo.model}\`
+- **effort**: \`${envInfo.effort}\`
 
 ## 1. Decision & Recommendation
 **FINAL RECOMMENDATION**: \`${aggregation.recommendation}\`

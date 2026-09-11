@@ -8,17 +8,22 @@ import { prepareTrialDirectory, cleanupTrialDirectory, archiveHarnessOrThrow, ve
 import { validateReferenceSolutions } from '../../benchmarks/live/lib/validate-references.mjs';
 import { aggregateBenchmarkResults } from '../../benchmarks/live/aggregate.mjs';
 import { determineAgentVerdict, verifyTreatmentFidelity } from '../../benchmarks/live/grade.mjs';
-import { verifyCliCapabilities, normalizeEffort, VALID_EFFORT_LEVELS } from '../../benchmarks/live/run-benchmark-suite.mjs';
+import { verifyCliCapabilities, normalizeEffort, VALID_EFFORT_LEVELS, DEFAULT_TASK_TIMEOUTS_MS, resolveTaskTimeoutMs } from '../../benchmarks/live/run-benchmark-suite.mjs';
 
 const WORKLOAD_BASE_SHA = '3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c';
 const HARNESS_SHA_C = '02d090e8e8e23c9c7def9826b99c815af74ecf42';
 
-test('captureEnvironment returns system details without inventing synthetic models', async () => {
+test('captureEnvironment returns system details and full provenance without inventing synthetic models', async () => {
   const env = await captureEnvironment({ model: 'test-model' });
   assert.equal(typeof env.platform, 'string');
   assert.equal(typeof env.cpuCount, 'number');
   assert.ok(env.cpuCount > 0);
   assert.equal(env.model, 'test-model');
+  assert.equal(env.workloadBaseSha, WORKLOAD_BASE_SHA);
+  assert.equal(env.workloadBaseTag, 'benchmark/workload-base-3f0e5320');
+  assert.equal(env.executorBSha, '3f5e804c5bf55c88634535971d605f40b1b8713d');
+  assert.equal(env.executorCSha, HARNESS_SHA_C);
+  assert.ok(typeof env.claudeVersion === 'string');
 
   const envDry = await captureEnvironment({ dryRun: true });
   assert.equal(envDry.model, 'dry-run');
@@ -277,6 +282,33 @@ test('CLI capability preflight checks allowed effort levels and rejects ultracod
   }, /Invalid effort level/);
 });
 
+test('CLI capability preflight requires explicit model pinning in live mode', async () => {
+  await assert.rejects(async () => {
+    await verifyCliCapabilities({ dryRun: false, effort: 'high', model: '' });
+  }, /Live benchmark execution requires an explicit --model parameter/);
+
+  await assert.rejects(async () => {
+    await verifyCliCapabilities({ dryRun: false, effort: 'high', model: 'unknown' });
+  }, /Live benchmark execution requires an explicit --model parameter/);
+});
+
+test('task timeouts are tuned per-task (20m, 50m, 90m) and support custom overrides', () => {
+  assert.equal(DEFAULT_TASK_TIMEOUTS_MS['small-01'], 20 * 60 * 1000);
+  assert.equal(DEFAULT_TASK_TIMEOUTS_MS['medium-01'], 50 * 60 * 1000);
+  assert.equal(DEFAULT_TASK_TIMEOUTS_MS['critical-01'], 90 * 60 * 1000);
+
+  assert.equal(resolveTaskTimeoutMs('small-01'), 1200000);
+  assert.equal(resolveTaskTimeoutMs('medium-01'), 3000000);
+  assert.equal(resolveTaskTimeoutMs('critical-01'), 5400000);
+  assert.equal(resolveTaskTimeoutMs('nonexistent-task'), 1800000);
+
+  // Per-task override
+  assert.equal(resolveTaskTimeoutMs('small-01', { taskTimeouts: { 'small-01': 99999 } }), 99999);
+
+  // Global custom fallback override
+  assert.equal(resolveTaskTimeoutMs('small-01', { customTimeoutMs: 77777 }), 77777);
+});
+
 test('aggregateBenchmarkResults computes median, IQR, and detects False READY', () => {
   const mockTrials = [
     // Task 1: small-01
@@ -380,6 +412,11 @@ test('aggregateBenchmarkResults enforces 100% treatment fidelity and accounts fo
   ];
 
   const summary = aggregateBenchmarkResults(trialsWithUsage);
+  assert.ok(summary.provenance);
+  assert.equal(summary.provenance.workloadBaseSha, WORKLOAD_BASE_SHA);
+  assert.equal(summary.provenance.workloadBaseTag, 'benchmark/workload-base-3f0e5320');
+  assert.equal(summary.provenance.executorBSha, '3f5e804c5bf55c88634535971d605f40b1b8713d');
+  assert.equal(summary.provenance.executorCSha, HARNESS_SHA_C);
   assert.equal(summary.armSummaries.C.cacheCreationInputTokens.median, 7500);
   assert.equal(summary.armSummaries.C.cacheReadInputTokens.median, 7500);
   assert.equal(summary.armSummaries.B.cacheCreationInputTokens.median, 15000);
