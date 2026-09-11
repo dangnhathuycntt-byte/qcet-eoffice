@@ -31,14 +31,14 @@ import {
 } from "@/lib/notification-triage";
 import { MobileNotificationInbox } from "@/components/notifications/mobile-notification-inbox";
 
-interface TabMeta {
+interface CategoryOption {
   id: NotificationTriageTab;
   label: string;
   icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
 }
 
-const TRIAGE_TABS: TabMeta[] = [
-  { id: "all", label: "Tất cả", icon: Bell },
+const CATEGORY_OPTIONS: CategoryOption[] = [
+  { id: "all", label: "Tất cả danh mục", icon: Bell },
   { id: "action_required", label: "Việc cần làm", icon: FileText },
   { id: "approvals", label: "Chờ phê duyệt", icon: ShieldCheck },
   { id: "reminders", label: "Nhắc hạn", icon: AlertTriangle },
@@ -46,9 +46,21 @@ const TRIAGE_TABS: TabMeta[] = [
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = React.useState<QCETNotification[]>([]);
-  const [activeTab, setActiveTab] = React.useState<NotificationTriageTab>("all");
+  const [categoryFilter, setCategoryFilter] = React.useState<NotificationTriageTab>("all");
   const [unreadOnly, setUnreadOnly] = React.useState(false);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
+  const filterDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    };
+    if (isFilterOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isFilterOpen]);
 
   const fetchNotifications = React.useCallback(async () => {
     setIsLoading(true);
@@ -75,27 +87,6 @@ export default function NotificationsPage() {
     return notifications.filter((n) => !n.isRead).length;
   }, [notifications]);
 
-  // Live item counts for all 4 triage tabs
-  const tabCounts = React.useMemo(() => {
-    return {
-      all: notifications.length,
-      action_required: filterNotificationsByTab(notifications, "action_required").length,
-      approvals: filterNotificationsByTab(notifications, "approvals").length,
-      reminders: filterNotificationsByTab(notifications, "reminders").length,
-    };
-  }, [notifications]);
-
-  // Live unread counts for all 4 triage tabs
-  const tabUnreadCounts = React.useMemo(() => {
-    const unreadList = notifications.filter((n) => !n.isRead);
-    return {
-      all: unreadList.length,
-      action_required: filterNotificationsByTab(unreadList, "action_required").length,
-      approvals: filterNotificationsByTab(unreadList, "approvals").length,
-      reminders: filterNotificationsByTab(unreadList, "reminders").length,
-    };
-  }, [notifications]);
-
   // Mark a single notification as read
   const markAsRead = async (id: string) => {
     setNotifications((prev) =>
@@ -120,12 +111,12 @@ export default function NotificationsPage() {
 
   // Filter by active triage tab and optional unreadOnly flag
   const displayedNotifications = React.useMemo(() => {
-    const tabItems = filterNotificationsByTab(notifications, activeTab);
+    const tabItems = filterNotificationsByTab(notifications, categoryFilter);
     if (unreadOnly) {
       return tabItems.filter((n) => !n.isRead);
     }
     return tabItems;
-  }, [notifications, activeTab, unreadOnly]);
+  }, [notifications, categoryFilter, unreadOnly]);
 
   const newItems = React.useMemo(() => {
     return displayedNotifications.filter((n) => n.timeGroup === "new");
@@ -139,11 +130,11 @@ export default function NotificationsPage() {
   const getEmptyStateContent = () => {
     if (unreadOnly) {
       return {
-        title: "Không có thông báo chưa đọc nào trong mục này",
+        title: "Không có thông báo chưa đọc nào",
         description: "Tất cả các thông báo liên quan đã được nắm bắt và đánh dấu đã đọc.",
       };
     }
-    switch (activeTab) {
+    switch (categoryFilter) {
       case "action_required":
         return {
           title: "Không có việc cần làm",
@@ -172,31 +163,6 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-3xl mx-auto py-4 px-2 sm:px-0 space-y-4">
-      {/* Top back action */}
-      <div className="flex items-center justify-between">
-        <Link href="/">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-          >
-            <ArrowLeft size={14} strokeWidth={1.5} />
-            <span>Quay lại Bảng điều hành</span>
-          </Button>
-        </Link>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchNotifications}
-          disabled={isLoading}
-          className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8 cursor-pointer"
-        >
-          <RefreshCw size={13} strokeWidth={1.5} className={isLoading ? "animate-spin" : ""} />
-          <span>Làm mới</span>
-        </Button>
-      </div>
-
       {/* Mobile Actionable Notification Inbox (< 640px / sm:hidden) */}
       <div className="block sm:hidden">
         <MobileNotificationInbox
@@ -217,7 +183,7 @@ export default function NotificationsPage() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading">
-                Trung tâm thông báo điều hành
+                Thông báo
               </h1>
               {unreadCount > 0 ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/20 tabular-nums">
@@ -231,86 +197,119 @@ export default function NotificationsPage() {
               )}
             </div>
 
-            {/* Mark All As Read Action */}
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={markAllAsRead}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer border border-border/50 bg-card shadow-2xs"
-                title="Đánh dấu tất cả là đã đọc"
+            {/* Actions: Refresh & Mark All Read */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchNotifications}
+                disabled={isLoading}
+                className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8 cursor-pointer rounded-lg"
               >
-                <CheckCheck size={14} strokeWidth={1.5} className="text-primary" />
-                <span>Đã đọc tất cả</span>
-              </button>
-            )}
+                <RefreshCw size={13} strokeWidth={1.5} className={isLoading ? "animate-spin" : ""} />
+                <span>Làm mới</span>
+              </Button>
+
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={markAllAsRead}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors cursor-pointer border border-border/50 bg-card shadow-2xs h-8"
+                  title="Đánh dấu tất cả là đã đọc"
+                >
+                  <CheckCheck size={14} strokeWidth={1.5} className="text-primary" />
+                  <span>Đã đọc tất cả</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* 4 Triage Tabs with Live Item Counts */}
-          <div className="flex items-center gap-1.5 mt-4 pt-2 border-t border-border/40 overflow-x-auto thin-scrollbar pb-1">
-            <div className="inline-flex items-center p-0.5 rounded-xl bg-muted/70 border border-border/50 text-xs shrink-0">
-              {TRIAGE_TABS.map((tab) => {
-                const TabIcon = tab.icon;
-                const count = tabCounts[tab.id];
-                const unreadTabCount = tabUnreadCounts[tab.id];
-                const isActive = activeTab === tab.id;
-
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-                      isActive
-                        ? "bg-card text-foreground shadow-xs border border-border/60"
-                        : "text-muted-foreground hover:text-foreground hover:bg-card/40"
-                    )}
-                  >
-                    <TabIcon size={13} strokeWidth={1.5} className={isActive ? "text-primary" : "text-muted-foreground"} />
-                    <span>{tab.label}</span>
-                    <span
-                      className={cn(
-                        "px-1.5 py-0.2 rounded font-mono text-xs tabular-nums",
-                        isActive
-                          ? "bg-muted text-foreground font-bold"
-                          : "bg-muted/50 text-muted-foreground"
-                      )}
-                    >
-                      {count}
-                    </span>
-                    {unreadTabCount > 0 && !isActive && (
-                      <span className="size-1.5 rounded-full bg-primary" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Unread Toggle & Total Counter */}
-            <div className="ml-auto flex items-center gap-2 shrink-0">
+          {/* Clean Top Filters: [ Tất cả ] [ Chưa đọc ]        [ Bộ lọc ] */}
+          <div className="flex items-center justify-between gap-2 mt-4 pt-2 border-t border-border/40">
+            <div className="inline-flex items-center p-0.5 rounded-xl bg-muted/70 border border-border/50 text-xs">
               <button
                 type="button"
-                onClick={() => setUnreadOnly((prev) => !prev)}
+                onClick={() => setUnreadOnly(false)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border",
-                  unreadOnly
-                    ? "bg-primary/10 text-primary border-primary/30 font-semibold"
-                    : "bg-muted/40 text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted/70"
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                  !unreadOnly
+                    ? "bg-card text-foreground shadow-xs border border-border/60"
+                    : "text-muted-foreground hover:text-foreground hover:bg-card/40"
                 )}
-                title="Lọc thông báo chưa đọc trong mục này"
               >
-                <Filter size={11} strokeWidth={1.5} />
+                <span>Tất cả</span>
+                <span className="px-1.5 py-0.2 rounded font-mono text-xs tabular-nums bg-muted text-muted-foreground">
+                  {notifications.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setUnreadOnly(true)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                  unreadOnly
+                    ? "bg-card text-foreground shadow-xs border border-border/60"
+                    : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                )}
+              >
                 <span>Chưa đọc</span>
-                {tabUnreadCounts[activeTab] > 0 && (
-                  <span className="px-1.5 py-0.2 rounded font-mono text-xs font-bold bg-destructive/15 text-destructive border border-destructive/20 tabular-nums">
-                    {tabUnreadCounts[activeTab]}
+                {unreadCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded font-mono text-xs font-bold bg-primary/15 text-primary border border-primary/20 tabular-nums">
+                    {unreadCount}
                   </span>
                 )}
               </button>
+            </div>
 
-              <span className="text-xs font-mono tabular-nums text-muted-foreground hidden sm:inline-block">
-                {displayedNotifications.length} mục
-              </span>
+            {/* Category Filter Dropdown */}
+            <div className="relative" ref={filterDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen((prev) => !prev)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border",
+                  categoryFilter !== "all"
+                    ? "bg-primary/10 text-primary border-primary/30 font-semibold"
+                    : "bg-muted/40 text-muted-foreground border-border/40 hover:text-foreground hover:bg-muted/70"
+                )}
+              >
+                <Filter size={12} strokeWidth={1.5} />
+                <span>
+                  {categoryFilter === "all" ? "Bộ lọc" : CATEGORY_OPTIONS.find((c) => c.id === categoryFilter)?.label}
+                </span>
+                {categoryFilter !== "all" && (
+                  <span className="size-1.5 rounded-full bg-primary" />
+                )}
+              </button>
+
+              {isFilterOpen && (
+                <div className="absolute right-0 mt-1 w-48 rounded-xl border border-border/80 bg-card p-1 shadow-lg z-20 space-y-0.5 text-xs">
+                  {CATEGORY_OPTIONS.map((opt) => {
+                    const OptIcon = opt.icon;
+                    const isSelected = categoryFilter === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          setCategoryFilter(opt.id);
+                          setIsFilterOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer",
+                          isSelected
+                            ? "bg-primary/10 text-primary font-semibold"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <OptIcon size={13} strokeWidth={1.5} className={isSelected ? "text-primary" : "text-muted-foreground"} />
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

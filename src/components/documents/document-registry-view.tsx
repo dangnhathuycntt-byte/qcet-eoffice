@@ -728,7 +728,7 @@ export function DocumentRegistryView() {
               }`}
             >
               <span>Tất cả</span>
-              <span className="font-mono tabular-nums text-[11px] opacity-85">
+              <span className="font-mono tabular-nums text-xs opacity-85">
                 ({documents.length})
               </span>
             </button>
@@ -744,7 +744,7 @@ export function DocumentRegistryView() {
             >
               <Inbox className="size-4" strokeWidth={1.5} />
               <span>Văn bản đến</span>
-              <span className="font-mono tabular-nums text-[11px] opacity-85">
+              <span className="font-mono tabular-nums text-xs opacity-85">
                 ({computedStats.totalInbox})
               </span>
             </button>
@@ -760,7 +760,7 @@ export function DocumentRegistryView() {
             >
               <Send className="size-4" strokeWidth={1.5} />
               <span>Văn bản đi</span>
-              <span className="font-mono tabular-nums text-[11px] opacity-85">
+              <span className="font-mono tabular-nums text-xs opacity-85">
                 ({computedStats.totalOutbox})
               </span>
             </button>
@@ -776,7 +776,7 @@ export function DocumentRegistryView() {
             >
               <FileCheck className="size-4" strokeWidth={1.5} />
               <span>Chờ xử lý</span>
-              <span className="font-mono tabular-nums text-[11px] opacity-85">
+              <span className="font-mono tabular-nums text-xs opacity-85">
                 ({computedStats.totalSubmissions})
               </span>
             </button>
@@ -1170,7 +1170,7 @@ export function DocumentRegistryView() {
             <div className="py-10 px-4 text-center space-y-1.5 border border-dashed border-border/70 rounded-2xl bg-muted/10">
               <FileText className="size-8 mx-auto mb-2 opacity-50 text-muted-foreground" strokeWidth={1.5} />
               <p className="text-xs font-semibold text-foreground">Không tìm thấy văn bản phù hợp</p>
-              <p className="text-[11px] text-muted-foreground">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm</p>
+              <p className="text-xs text-muted-foreground">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm</p>
             </div>
           ) : (
             filteredDocuments.map((doc) => {
@@ -1205,13 +1205,13 @@ export function DocumentRegistryView() {
                     <div className="flex items-center gap-1.5 shrink-0">
                       {doc.urgency && doc.urgency !== "normal" && doc.urgency !== "THUONG" && (
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${urgencyConfig.className}`}
+                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border ${urgencyConfig.className}`}
                         >
                           {urgencyConfig.label}
                         </span>
                       )}
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${statusConfig.className}`}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border ${statusConfig.className}`}
                       >
                         <StatusIcon className="size-3" strokeWidth={1.5} />
                         <span>{statusConfig.label}</span>
@@ -1225,7 +1225,7 @@ export function DocumentRegistryView() {
                   </p>
 
                   {/* Metadata Row: Loại văn bản · Ngày ban hành */}
-                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50 text-[11px] text-muted-foreground">
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5 truncate">
                       <span className="font-medium text-foreground">{typeLabel}</span>
                       <span>·</span>
@@ -1306,7 +1306,7 @@ export function DocumentRegistryView() {
                 <p className="text-xs font-bold text-foreground font-mono tabular-nums truncate">
                   {fullscreenPdfDoc.documentNumber || fullscreenPdfDoc.id}
                 </p>
-                <p className="text-[11px] text-muted-foreground truncate">
+                <p className="text-xs text-muted-foreground truncate">
                   {fullscreenPdfDoc.fileAttachment?.name || fullscreenPdfDoc.summary}
                 </p>
               </div>

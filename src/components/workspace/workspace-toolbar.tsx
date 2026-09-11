@@ -137,7 +137,7 @@ export function WorkspaceToolbar({
               <FilterX className="size-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Đặt lại</span>
               {typeof filterCount === "number" && filterCount > 0 && (
-                <span className="font-mono bg-rose-200/60 px-1 rounded-full text-[10px]">
+                <span className="font-mono bg-rose-200/60 px-1 rounded-full text-xs">
                   {filterCount}
                 </span>
               )}

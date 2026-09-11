@@ -109,7 +109,7 @@ export function PWAInstallPrompt({
             )}
           </div>
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-blue-50 text-blue-800 border border-blue-200">
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider bg-blue-50 text-blue-800 border border-blue-200">
               Ứng dụng PWA chính thức
             </div>
             <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">

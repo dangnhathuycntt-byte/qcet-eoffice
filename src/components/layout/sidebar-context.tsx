@@ -283,8 +283,6 @@ export const QCET_CDS_MENU_ITEMS: QCETMenuItem[] = [
     href: "/documents?tab=inbox",
     icon: FileText,
     hasSubmenu: true,
-    badge: "6",
-    badgeVariant: "sky",
   },
   {
     id: "docs-outbox",
@@ -292,8 +290,6 @@ export const QCET_CDS_MENU_ITEMS: QCETMenuItem[] = [
     href: "/documents?tab=outbox",
     icon: FileText,
     hasSubmenu: true,
-    badge: "4",
-    badgeVariant: "sky",
   },
   {
     id: "docs-starred",
@@ -328,8 +324,6 @@ export const QCET_CDS_MENU_ITEMS: QCETMenuItem[] = [
     href: "/calendar",
     icon: CalendarDays,
     hasSubmenu: true,
-    badge: "1",
-    badgeVariant: "sky",
   },
   {
     id: "task-management",
@@ -389,11 +383,11 @@ export interface SidebarBadgeCounts {
 }
 
 export const DEFAULT_SIDEBAR_BADGES: SidebarBadgeCounts = {
-  calendar: 1,
+  calendar: 0,
   notifications: 0,
-  docsInbox: 6,
-  docsOutbox: 4,
-  docsPending: 2,
+  docsInbox: 0,
+  docsOutbox: 0,
+  docsPending: 0,
 };
 
 export const NAVIGATION_ITEMS: NavigationItem[] = [

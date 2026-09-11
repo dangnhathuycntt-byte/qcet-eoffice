@@ -377,6 +377,10 @@ export function UnifiedTaskToolbar({
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const popoverRef = React.useRef<HTMLDivElement>(null);
 
+  // Display / Presentation options menu state
+  const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
+  const displayMenuRef = React.useRef<HTMLDivElement>(null);
+
   // Resolve Month props (supporting compatibility aliases)
   const effectiveMonth = selectedMonth !== undefined ? selectedMonth : selectedAcademicMonth;
   const handleEffectiveMonthChange = onMonthChange || onAcademicMonthChange;
@@ -530,6 +534,30 @@ export function UnifiedTaskToolbar({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isFilterOpen]);
+
+  // Display options popover outside click and Esc listener
+  React.useEffect(() => {
+    if (!isDisplayOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (displayMenuRef.current && !displayMenuRef.current.contains(e.target as Node)) {
+        setIsDisplayOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsDisplayOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDisplayOpen]);
 
   // Primary action callback
   const handlePrimaryAction = onNewTaskClick || onCreateTask || onAddTask;
@@ -726,8 +754,8 @@ export function UnifiedTaskToolbar({
         )}
       </div>
 
-      {/* Optional Academic Month Pills (Rendered when monthlyTaskCounts provided or explicitly requested) */}
-      {(showAcademicMonthBar || Boolean(monthlyTaskCounts) || (selectedAcademicMonth !== undefined && academicYear !== undefined)) && (
+      {/* Optional Academic Month Pills (Rendered only when explicitly requested or intentionally supplied monthlyTaskCounts) */}
+      {(showAcademicMonthBar || Boolean(monthlyTaskCounts)) && (
         <div
           className="flex items-center gap-2 overflow-x-auto overscroll-x-contain pt-1 pb-0.5 border-t border-border/50 scrollbar-none"
           role="tablist"
@@ -1237,85 +1265,140 @@ export function UnifiedTaskToolbar({
             )}
           </div>
 
-          {/* 2. View Switcher [Bảng | Kanban] */}
-          {onViewModeChange && (
-            <div
-              className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-0.5 shadow-2xs"
-              role="group"
-              aria-label="Chế độ xem không gian làm việc"
-            >
+          {/* 2. Display / Presentation Options Popover (Hiển thị: Bảng/Kanban, Mật độ Gọn/Chuẩn) */}
+          {(onViewModeChange || onDensityChange) && (
+            <div className="relative" ref={displayMenuRef}>
               <button
                 type="button"
-                onClick={() => onViewModeChange("table")}
-                aria-pressed={viewMode === "table"}
+                aria-label="Tùy chọn hiển thị"
+                aria-expanded={isDisplayOpen}
+                onClick={() => setIsDisplayOpen((prev) => !prev)}
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
-                  viewMode === "table"
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
+                  "inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-1.5 rounded-xl border border-border/80 px-2.5 sm:px-2 text-xs font-medium transition-all cursor-pointer shadow-2xs touch-manipulation active:scale-95",
+                  isDisplayOpen
+                    ? "bg-secondary text-foreground border-border font-semibold"
+                    : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
-                title="Xem dạng Bảng danh sách"
               >
-                <List className="size-3.5" strokeWidth={1.5} />
-                <span className="hidden md:inline">Bảng</span>
+                <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
+                <span>Hiển thị</span>
+                <ChevronDown
+                  className={cn("size-3 text-muted-foreground transition-transform", isDisplayOpen && "rotate-180")}
+                  strokeWidth={1.5}
+                />
               </button>
 
-              <button
-                type="button"
-                onClick={() => onViewModeChange("kanban")}
-                aria-pressed={viewMode === "kanban"}
+              {/* Display Controls Dropdown Panel */}
+              <div
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
-                  viewMode === "kanban"
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
+                  "absolute right-0 top-full mt-1.5 z-50 w-56 rounded-2xl border border-border/80 bg-card p-3 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 space-y-3",
+                  !isDisplayOpen && "hidden"
                 )}
-                title="Xem dạng Kanban"
+                role="dialog"
+                aria-label="Tùy chọn hiển thị"
               >
-                <Kanban className="size-3.5" strokeWidth={1.5} />
-                <span className="hidden md:inline">Kanban</span>
-              </button>
-            </div>
-          )}
+                {onViewModeChange && (
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      Chế độ xem
+                    </span>
+                    <div
+                      className="grid grid-cols-2 gap-1 rounded-xl border border-border/80 bg-muted/40 p-1"
+                      role="group"
+                      aria-label="Chế độ xem không gian làm việc"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onViewModeChange("table");
+                          setIsDisplayOpen(false);
+                        }}
+                        aria-pressed={viewMode === "table"}
+                        className={cn(
+                          "inline-flex h-7 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
+                          viewMode === "table"
+                            ? "bg-card text-foreground shadow-xs font-semibold"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                        title="Xem dạng Bảng danh sách"
+                      >
+                        <List className="size-3.5" strokeWidth={1.5} />
+                        <span>Bảng</span>
+                      </button>
 
-          {/* 3. Density Selector [Gọn | Chuẩn] (Desktop Only) */}
-          {onDensityChange && (
-            <div
-              className="hidden sm:inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-0.5 shadow-2xs"
-              role="group"
-              aria-label="Mật độ hiển thị bảng"
-            >
-              <button
-                type="button"
-                onClick={() => onDensityChange("compact")}
-                aria-pressed={density === "compact"}
-                aria-label="Chế độ hiển thị gọn"
-                className={cn(
-                  "inline-flex h-7 items-center rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
-                  density === "compact"
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onViewModeChange("kanban");
+                          setIsDisplayOpen(false);
+                        }}
+                        aria-pressed={viewMode === "kanban"}
+                        className={cn(
+                          "inline-flex h-7 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
+                          viewMode === "kanban"
+                            ? "bg-card text-foreground shadow-xs font-semibold"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                        title="Xem dạng Kanban"
+                      >
+                        <Kanban className="size-3.5" strokeWidth={1.5} />
+                        <span>Kanban</span>
+                      </button>
+                    </div>
+                  </div>
                 )}
-                title="Hiển thị gọn (Compact)"
-              >
-                <span>Gọn</span>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => onDensityChange("comfortable")}
-                aria-pressed={density === "comfortable"}
-                aria-label="Chế độ hiển thị tiêu chuẩn"
-                className={cn(
-                  "inline-flex h-7 items-center rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
-                  density === "comfortable"
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
+                {onDensityChange && (
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      Mật độ hiển thị
+                    </span>
+                    <div
+                      className="grid grid-cols-2 gap-1 rounded-xl border border-border/80 bg-muted/40 p-1"
+                      role="group"
+                      aria-label="Mật độ hiển thị bảng"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDensityChange("compact");
+                          setIsDisplayOpen(false);
+                        }}
+                        aria-pressed={density === "compact"}
+                        aria-label="Chế độ hiển thị gọn"
+                        className={cn(
+                          "inline-flex h-7 items-center justify-center rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
+                          density === "compact"
+                            ? "bg-card text-foreground shadow-xs font-semibold"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                        title="Hiển thị gọn (Compact)"
+                      >
+                        <span>Gọn</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDensityChange("comfortable");
+                          setIsDisplayOpen(false);
+                        }}
+                        aria-pressed={density === "comfortable"}
+                        aria-label="Chế độ hiển thị tiêu chuẩn"
+                        className={cn(
+                          "inline-flex h-7 items-center justify-center rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
+                          density === "comfortable"
+                            ? "bg-card text-foreground shadow-xs font-semibold"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                        title="Hiển thị tiêu chuẩn (Comfortable)"
+                      >
+                        <span>Chuẩn</span>
+                      </button>
+                    </div>
+                  </div>
                 )}
-                title="Hiển thị tiêu chuẩn (Comfortable)"
-              >
-                <span>Chuẩn</span>
-              </button>
+              </div>
             </div>
           )}
         </div>

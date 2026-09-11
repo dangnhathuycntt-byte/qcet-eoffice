@@ -249,7 +249,7 @@ export function MetricStrip({
               {isActive && (
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-bold shrink-0 border shadow-2xs",
+                    "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-bold shrink-0 border shadow-2xs",
                     scheme.badgeBg,
                     scheme.badgeText
                   )}
@@ -295,7 +295,7 @@ export function MetricStrip({
             <div className="mt-1 flex items-center justify-between text-xs text-slate-700">
               <span className="truncate">{card.subtitle}</span>
               {card.trend?.label && (
-                <span className="text-[11px] text-slate-700 shrink-0 hidden sm:inline">
+                <span className="text-xs text-slate-700 shrink-0 hidden sm:inline">
                   {card.trend.label}
                 </span>
               )}

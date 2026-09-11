@@ -40,10 +40,20 @@ export function getInitials(name: string): string {
   return (first + last).toUpperCase();
 }
 
+const LEVEL_1_ROOTS = new Set(["/", "/dashboard", "/tasks", "/calendar", "/notifications", "/org"]);
+
 function TopbarBreadcrumbs({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams();
   const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
   const isDocuments = pathname?.startsWith("/documents");
+  const cleanPath = pathname?.split("?")[0].replace(/\/+$/, "") || "/";
+  const isLevel1 = LEVEL_1_ROOTS.has(cleanPath);
+  const hasDeeperContext = Boolean(searchParams?.get("taskId") || searchParams?.get("id") || searchParams?.get("unitId"));
+
+  // Level-1 pages do not repeat location with sidebar + breadcrumb + title; breadcrumbs remain for deeper context
+  if (isLevel1 && !hasDeeperContext && !isDocuments) {
+    return null;
+  }
 
   return (
     <div className="flex items-center min-w-0">
@@ -69,6 +79,13 @@ function TopbarBreadcrumbs({ pathname }: { pathname: string }) {
 function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
   const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/");
   const isDocuments = pathname?.startsWith("/documents");
+  const cleanPath = pathname?.split("?")[0].replace(/\/+$/, "") || "/";
+  const isLevel1 = LEVEL_1_ROOTS.has(cleanPath);
+
+  // Level-1 pages do not repeat location with sidebar + breadcrumb + title
+  if (isLevel1 && !isDocuments) {
+    return null;
+  }
 
   return (
     <div className="flex items-center min-w-0">

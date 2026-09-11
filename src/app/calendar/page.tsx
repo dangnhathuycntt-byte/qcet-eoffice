@@ -5,23 +5,19 @@ import { Suspense, useEffect, useState, useCallback, useMemo, useRef } from "rea
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  Calendar as CalendarIcon,
-  ChevronRight,
-  ChevronLeft,
-  ChevronDown,
-  RefreshCw,
-  Plus,
   AlertCircle,
-  Home,
+  Calendar as CalendarIcon,
   CheckSquare,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Home,
   List,
+  Plus,
+  RefreshCw,
   Search,
-  Building2,
-  User,
-  Clock,
-  MapPin,
-  X,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SchoolTask, StaffTask, DashboardPayload, TaskStatus, isSchoolTask } from "@/types/dashboard";
@@ -38,9 +34,7 @@ import {
   type CreateTaskFormData,
   type TaskLevel,
 } from "@/components/dashboard/create-task-modal";
-import {
-  TaskDetailSideSheet,
-} from "@/components/dashboard/task-detail-side-sheet";
+import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
 import { useAuth } from "@/lib/auth-context";
 import {
   getSystemReferenceDate,
@@ -59,9 +53,6 @@ import { cn } from "@/lib/utils";
 // ExecutiveCalendarWorkspace compatibility and canonical workspace integration
 export type { CalendarScope };
 
-// =========================================================================
-// Lightweight Create Event Modal (for "Tạo sự kiện" in global dropdown)
-// =========================================================================
 interface CreateEventFormData {
   title: string;
   date: string;
@@ -72,6 +63,56 @@ interface CreateEventFormData {
   description: string;
 }
 
+interface CalendarMeeting {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime?: string | null;
+  location?: string | null;
+  agenda?: string | null;
+  unit?: { id: string; name: string } | null;
+  organizer?: { id: string; name: string; email?: string } | null;
+}
+
+interface MeetingListResponse {
+  items: CalendarMeeting[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+const ICT_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Ho_Chi_Minh",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const ICT_TIME_FORMATTER = new Intl.DateTimeFormat("vi-VN", {
+  timeZone: "Asia/Ho_Chi_Minh",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+function getMeetingDateKey(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
+  return ICT_DATE_FORMATTER.format(date);
+}
+
+function getMeetingTime(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return ICT_TIME_FORMATTER.format(date);
+}
+
+function toMeetingIso(date: string, time: string): string {
+  return new Date(`${date}T${time}:00+07:00`).toISOString();
+}
+
 function CreateEventModal({
   isOpen,
   onClose,
@@ -80,7 +121,7 @@ function CreateEventModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateEventFormData) => void;
+  onSubmit: (data: CreateEventFormData) => Promise<void> | void;
   initialDate?: string;
 }) {
   const [title, setTitle] = useState("");
@@ -90,31 +131,43 @@ function CreateEventModal({
   const [location, setLocation] = useState("");
   const [department, setDepartment] = useState("Ban Giám hiệu");
   const [description, setDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (initialDate) {
-      setDate(initialDate);
-    }
+    if (initialDate) setDate(initialDate);
   }, [initialDate]);
+
+  useEffect(() => {
+    if (!isOpen) setSubmitError(null);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    onSubmit({
-      title: title.trim(),
-      date,
-      startTime,
-      endTime,
-      location: location.trim(),
-      department: department.trim(),
-      description: description.trim(),
-    });
-    // Reset
-    setTitle("");
-    setLocation("");
-    setDescription("");
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!title.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await onSubmit({
+        title: title.trim(),
+        date,
+        startTime,
+        endTime,
+        location: location.trim(),
+        department: department.trim(),
+        description: description.trim(),
+      });
+      setTitle("");
+      setLocation("");
+      setDescription("");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Không thể lưu sự kiện");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -126,7 +179,7 @@ function CreateEventModal({
     >
       <div
         className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
-        onClick={onClose}
+        onClick={isSubmitting ? undefined : onClose}
         aria-hidden="true"
       />
       <div className="relative w-full max-w-md rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-2xl space-y-4 text-xs text-foreground animate-in fade-in zoom-in-95 duration-150">
@@ -136,16 +189,17 @@ function CreateEventModal({
               Tạo Sự Kiện Lịch Biểu
             </h2>
             <p className="text-xs text-muted-foreground">
-              Thêm sự kiện, hội nghị hoặc lịch họp lãnh đạo vào lịch công tác
+              Sự kiện được lưu vào lịch họp chính thức của hệ thống
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+            disabled={isSubmitting}
+            className="min-h-9 min-w-9 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
             aria-label="Đóng"
           >
-            <X className="size-4" strokeWidth={1.5} />
+            <X className="mx-auto size-4" strokeWidth={1.5} />
           </button>
         </div>
 
@@ -159,7 +213,7 @@ function CreateEventModal({
               required
               placeholder="Ví dụ: Họp giao ban Ban Giám hiệu đầu tuần"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(event) => setTitle(event.target.value)}
               className="w-full h-9 px-3 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
@@ -173,18 +227,16 @@ function CreateEventModal({
                 type="date"
                 required
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(event) => setDate(event.target.value)}
                 className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">
-                Đơn vị chủ trì
-              </label>
+              <label className="block text-xs font-semibold text-foreground mb-1">Đơn vị chủ trì</label>
               <input
                 type="text"
                 value={department}
-                onChange={(e) => setDepartment(e.target.value)}
+                onChange={(event) => setDepartment(event.target.value)}
                 className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>
@@ -192,71 +244,62 @@ function CreateEventModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">
-                Giờ bắt đầu
-              </label>
+              <label className="block text-xs font-semibold text-foreground mb-1">Giờ bắt đầu</label>
               <input
                 type="time"
+                required
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={(event) => setStartTime(event.target.value)}
                 className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">
-                Giờ kết thúc
-              </label>
+              <label className="block text-xs font-semibold text-foreground mb-1">Giờ kết thúc</label>
               <input
                 type="time"
+                required
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                min={startTime}
+                onChange={(event) => setEndTime(event.target.value)}
                 className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">
-              Địa điểm / Phòng họp
-            </label>
+            <label className="block text-xs font-semibold text-foreground mb-1">Địa điểm / Phòng họp</label>
             <input
               type="text"
               placeholder="Ví dụ: Phòng họp 1 - Nhà Hiệu bộ"
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              onChange={(event) => setLocation(event.target.value)}
               className="w-full h-9 px-3 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">
-              Ghi chú nội dung
-            </label>
+            <label className="block text-xs font-semibold text-foreground mb-1">Ghi chú nội dung</label>
             <textarea
               rows={2}
               placeholder="Nội dung tóm tắt sự kiện hoặc thành phần tham dự..."
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(event) => setDescription(event.target.value)}
               className="w-full p-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
             />
           </div>
 
+          {submitError && (
+            <div role="alert" className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              {submitError}
+            </div>
+          )}
+
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              className="h-8.5 text-xs rounded-lg cursor-pointer"
-            >
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isSubmitting} className="h-9 text-xs rounded-lg">
               Hủy
             </Button>
-            <Button
-              type="submit"
-              size="sm"
-              className="h-8.5 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
-            >
-              Lưu sự kiện
+            <Button type="submit" size="sm" disabled={isSubmitting} className="h-9 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90">
+              {isSubmitting ? "Đang lưu..." : "Lưu sự kiện"}
             </Button>
           </div>
         </form>
@@ -265,9 +308,6 @@ function CreateEventModal({
   );
 }
 
-// =========================================================================
-// Loading Skeleton
-// =========================================================================
 function CalendarLoadingSkeleton() {
   return (
     <div className="space-y-6 animate-pulse" aria-label="Đang tải lịch công tác">
@@ -287,14 +327,12 @@ function CalendarLoadingSkeleton() {
           <div className="h-9 w-36 bg-muted/70 rounded-lg" />
         </div>
       </div>
-
       <div className="h-14 rounded-2xl bg-muted/40 border border-border/60" />
-
       <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
         <div className="h-10 bg-muted/40 border-b border-border/60" />
         <div className="grid grid-cols-7 divide-x divide-border/50 h-[480px]">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="p-2 space-y-2">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div key={index} className="p-2 space-y-2">
               <div className="h-4 w-12 bg-muted/50 rounded mx-auto" />
               <div className="h-16 w-full bg-muted/30 rounded-lg" />
               <div className="h-14 w-full bg-muted/20 rounded-lg" />
@@ -306,14 +344,10 @@ function CalendarLoadingSkeleton() {
   );
 }
 
-// =========================================================================
-// Main Calendar Content
-// =========================================================================
 function CalendarRouteContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
-  // URL Query Parameters support: ?date=YYYY-MM-DD, ?view=..., ?taskId=..., ?scope=..., ?month=..., ?zone=...
   const dateParam = searchParams?.get("date") || undefined;
   const viewParam = searchParams?.get("view");
   const taskIdParam = searchParams?.get("taskId") || undefined;
@@ -322,57 +356,36 @@ function CalendarRouteContent() {
   const zoneParam = searchParams?.get("zone");
 
   const [tasks, setTasks] = useState<SchoolTask[]>([]);
-  const [customEvents, setCustomEvents] = useState<Array<{
-    id: string;
-    title: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    location: string;
-    department: string;
-    description: string;
-  }>>([]);
-
+  const [meetings, setMeetings] = useState<CalendarMeeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reference Date & Academic Period Configuration
   const sysDate = useMemo(() => getSystemReferenceDate(), []);
   const initialDateStr = dateParam || sysDate;
-
-  // Derive dynamic academic year & months
   const availableAcademicYears = useMemo(() => getAvailableAcademicYears(initialDateStr), [initialDateStr]);
   const initialAcademicYear = useMemo(() => getAcademicYear(initialDateStr), [initialDateStr]);
   const initialMonthInfo = useMemo(() => getAcademicMonthInfo(initialDateStr), [initialDateStr]);
 
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>(initialAcademicYear);
-
-  // Reconcile ?month= parameter (1..12) or fallback to initialMonthInfo
   const initialMonthNumber = useMemo(() => {
     if (monthParam) {
-      const parsed = parseInt(monthParam, 10);
-      if (!isNaN(parsed) && parsed >= 1 && parsed <= 12) {
-        return parsed;
-      }
+      const parsed = Number.parseInt(monthParam, 10);
+      if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 12) return parsed;
     }
     return initialMonthInfo.monthNumber;
   }, [monthParam, initialMonthInfo.monthNumber]);
-
   const [selectedMonthNumber, setSelectedMonthNumber] = useState<number>(initialMonthNumber);
 
-  // Active academic month period (25th to 24th)
-  const currentPeriod = useMemo<AcademicMonthPeriod>(() => {
-    return getAcademicMonthPeriod(selectedMonthNumber, selectedAcademicYear);
-  }, [selectedMonthNumber, selectedAcademicYear]);
+  const currentPeriod = useMemo<AcademicMonthPeriod>(
+    () => getAcademicMonthPeriod(selectedMonthNumber, selectedAcademicYear),
+    [selectedMonthNumber, selectedAcademicYear]
+  );
+  const academicMonthsForYear = useMemo(
+    () => getAcademicMonthsForYear(selectedAcademicYear),
+    [selectedAcademicYear]
+  );
 
-  // All 12 months for current academic year
-  const academicMonthsForYear = useMemo(() => {
-    return getAcademicMonthsForYear(selectedAcademicYear);
-  }, [selectedAcademicYear]);
-
-  // Calendar View Switcher: "month" (Tháng) or "agenda" (Nghị sự)
-  // 22-calendar.md Invariant 5: on compact mobile viewports (<640px), default to Agenda view
   const [viewMode, setViewMode] = useState<"month" | "agenda">(() => {
     if (viewParam === "agenda" || viewParam === "agenda_list") return "agenda";
     if (viewParam === "month") return "month";
@@ -380,25 +393,18 @@ function CalendarRouteContent() {
     return "month";
   });
 
-  // Responsive mobile ergonomics: on initial mount on compact viewports (<640px)
-  // default to Agenda view if no explicit viewParam was supplied
   useEffect(() => {
     if (!viewParam && typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches) {
       setViewMode("agenda");
     }
   }, [viewParam]);
 
-  // Scope Tabs: "school" (Toàn trường) | "unit" (Đơn vị) | "my" (Của tôi)
   const [activeScope, setActiveScope] = useState<CalendarScope>(() => {
     if (scopeParam === "unit") return "unit";
     if (scopeParam === "my") return "my";
     return "school";
   });
-
-  // Compact Quick Search Query
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Filters State: Level & Status
   const [levelFilter, setLevelFilter] = useState<"ALL" | "TRUONG" | "DON_VI">("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -407,36 +413,11 @@ function CalendarRouteContent() {
   const hasActiveFilters = levelFilter !== "ALL" || statusFilter !== "ALL";
   const activeFilterCount = (levelFilter !== "ALL" ? 1 : 0) + (statusFilter !== "ALL" ? 1 : 0);
 
-  const handleResetFilters = useCallback(() => {
-    setLevelFilter("ALL");
-    setStatusFilter("ALL");
-  }, []);
-
-  // Close filter dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
-        setIsFilterOpen(false);
-      }
-    };
-    if (isFilterOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isFilterOpen]);
-
-  // Selected Day & Day Detail Side Sheet
   const [selectedDate, setSelectedDate] = useState<string | null>(initialDateStr);
-  const [isDaySheetOpen, setIsDaySheetOpen] = useState<boolean>(false);
-
-  // Selected Task State for TaskDetailSideSheet
+  const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<SchoolTask | StaffTask | null>(null);
-
-  // Global Primary Action (+ Tạo) Dropdown state
   const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
   const createDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Modals state
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [createInitialDueDate, setCreateInitialDueDate] = useState<string | undefined>(undefined);
@@ -446,64 +427,62 @@ function CalendarRouteContent() {
     document.title = "Lịch Công Tác Học Vụ | QCET E-Office";
   }, []);
 
-  // Close "+ Tạo" dropdown on outside click
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (createDropdownRef.current && !createDropdownRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    };
+    if (isFilterOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isFilterOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (createDropdownRef.current && !createDropdownRef.current.contains(event.target as Node)) {
         setIsCreateDropdownOpen(false);
       }
     };
-    if (isCreateDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    if (isCreateDropdownOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isCreateDropdownOpen]);
 
-  // URL synchronization helper
   const updateUrlParam = useCallback((key: string, value: string | null) => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    if (value && value.trim()) {
-      url.searchParams.set(key, value.trim());
-    } else {
-      url.searchParams.delete(key);
-    }
+    if (value?.trim()) url.searchParams.set(key, value.trim());
+    else url.searchParams.delete(key);
     window.history.replaceState(null, "", url.toString());
   }, []);
 
-  // Handle View Mode Change
   const handleViewChange = useCallback((mode: "month" | "agenda") => {
     setViewMode(mode);
     updateUrlParam("view", mode);
   }, [updateUrlParam]);
 
-  // Handle Scope Change
   const handleScopeChange = useCallback((scope: CalendarScope) => {
     setActiveScope(scope);
     updateUrlParam("scope", scope);
   }, [updateUrlParam]);
 
-  // Handle Day Selection
   const handleSelectDate = useCallback((dateStr: string) => {
     setSelectedDate(dateStr);
     updateUrlParam("date", dateStr);
   }, [updateUrlParam]);
 
-  // Handle Open Day Detail Side Sheet
   const handleOpenDaySheet = useCallback((dateStr: string) => {
     setSelectedDate(dateStr);
     updateUrlParam("date", dateStr);
     setIsDaySheetOpen(true);
   }, [updateUrlParam]);
 
-  // Handle Month Navigation
   const handlePrevMonth = useCallback(() => {
-    const prev = getAdjacentAcademicMonth(currentPeriod, -1);
-    setSelectedAcademicYear(prev.academicYear);
-    setSelectedMonthNumber(prev.monthNumber);
-    setSelectedDate(prev.startDate);
-    updateUrlParam("date", prev.startDate);
-    updateUrlParam("month", String(prev.monthNumber));
+    const previous = getAdjacentAcademicMonth(currentPeriod, -1);
+    setSelectedAcademicYear(previous.academicYear);
+    setSelectedMonthNumber(previous.monthNumber);
+    setSelectedDate(previous.startDate);
+    updateUrlParam("date", previous.startDate);
+    updateUrlParam("month", String(previous.monthNumber));
   }, [currentPeriod, updateUrlParam]);
 
   const handleNextMonth = useCallback(() => {
@@ -524,59 +503,59 @@ function CalendarRouteContent() {
     updateUrlParam("month", String(info.monthNumber));
   }, [sysDate, updateUrlParam]);
 
-  // Load tasks data
-  const loadTasksData = useCallback(async (showRefreshingSpinner = false) => {
-    if (showRefreshingSpinner) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
+  const loadCalendarData = useCallback(async (showRefreshingSpinner = false) => {
+    if (showRefreshingSpinner) setIsRefreshing(true);
+    else setIsLoading(true);
     setError(null);
 
     try {
-      const res = await fetch("/api/dashboard/overview");
-      if (!res.ok) {
-        throw new Error("Không thể tải danh sách nhiệm vụ từ máy chủ");
-      }
-      const data: DashboardPayload = await res.json();
-      if (Array.isArray(data?.tasks)) {
-        setTasks(data.tasks);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Đã xảy ra lỗi khi kết nối dữ liệu lịch biểu";
-      setError(msg);
+      const meetingParams = new URLSearchParams({
+        from: new Date(`${currentPeriod.startDate}T00:00:00+07:00`).toISOString(),
+        to: new Date(`${currentPeriod.endDate}T23:59:59+07:00`).toISOString(),
+        limit: "100",
+        page: "1",
+      });
+
+      const [taskResponse, meetingResponse] = await Promise.all([
+        fetch("/api/dashboard/overview"),
+        fetch(`/api/meetings?${meetingParams.toString()}`),
+      ]);
+
+      if (!taskResponse.ok) throw new Error("Không thể tải danh sách nhiệm vụ từ máy chủ");
+      if (!meetingResponse.ok) throw new Error("Không thể tải lịch họp / sự kiện từ máy chủ");
+
+      const taskData: DashboardPayload = await taskResponse.json();
+      const meetingData: MeetingListResponse = await meetingResponse.json();
+      setTasks(Array.isArray(taskData?.tasks) ? taskData.tasks : []);
+      setMeetings(Array.isArray(meetingData?.items) ? meetingData.items : []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Đã xảy ra lỗi khi kết nối dữ liệu lịch biểu");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [currentPeriod.startDate, currentPeriod.endDate]);
 
   useEffect(() => {
-    loadTasksData();
-  }, [loadTasksData]);
+    loadCalendarData();
+  }, [loadCalendarData]);
 
-  // Synchronize task selection from URL ?taskId=...
   useEffect(() => {
     if (!taskIdParam || tasks.length === 0) return;
-
-    const matchedSchool = tasks.find((t) => t.id === taskIdParam);
+    const matchedSchool = tasks.find((task) => task.id === taskIdParam);
     if (matchedSchool) {
       setSelectedTask(matchedSchool);
       return;
     }
-
-    for (const st of tasks) {
-      if (st.subTasks) {
-        const matchedSub = st.subTasks.find((sub) => sub.id === taskIdParam);
-        if (matchedSub) {
-          setSelectedTask(matchedSub);
-          return;
-        }
+    for (const schoolTask of tasks) {
+      const matchedSubTask = schoolTask.subTasks?.find((subTask) => subTask.id === taskIdParam);
+      if (matchedSubTask) {
+        setSelectedTask(matchedSubTask);
+        return;
       }
     }
   }, [taskIdParam, tasks]);
 
-  // Handle select task
   const handleSelectTask = useCallback((task: SchoolTask | StaffTask) => {
     setSelectedTask(task);
     updateUrlParam("taskId", task.id);
@@ -587,35 +566,32 @@ function CalendarRouteContent() {
     updateUrlParam("taskId", null);
   }, [updateUrlParam]);
 
-  // Handle opening task create modal
   const handleOpenAddTask = useCallback((dateStr?: string) => {
     setCreateInitialDueDate(dateStr || selectedDate || undefined);
     setCreateInitialLevel(activeScope === "school" ? "TRUONG" : "DON_VI");
     setIsCreateTaskModalOpen(true);
   }, [activeScope, selectedDate]);
 
-  // Handle opening event create modal
   const handleOpenAddEvent = useCallback((dateStr?: string) => {
     setCreateInitialDueDate(dateStr || selectedDate || undefined);
     setIsCreateEventModalOpen(true);
   }, [selectedDate]);
 
-  // Handle create task submission
   const handleCreateTaskSubmit = useCallback(async (data: CreateTaskFormData) => {
     setIsCreateTaskModalOpen(false);
 
     const tempId = `task-created-${Date.now()}`;
     const cleanDueDate = data.dueDate ? `${data.dueDate}T17:00:00.000Z` : undefined;
 
-    setTasks((prevTasks) => {
-      const updated = [...prevTasks];
-
+    setTasks((previousTasks) => {
+      const updated = [...previousTasks];
       if (data.level === "TRUONG") {
+        const code = `NV-${new Date().getFullYear()}-${String(previousTasks.length + 1).padStart(2, "0")}`;
         const newSchoolTask: SchoolTask = {
           id: tempId,
           title: data.title,
-          code: `NV-${new Date().getFullYear()}-${String(prevTasks.length + 1).padStart(2, "0")}`,
-          taskCode: `NV-${new Date().getFullYear()}-${String(prevTasks.length + 1).padStart(2, "0")}`,
+          code,
+          taskCode: code,
           category: data.category || "CNTT",
           categoryLabel: data.category || "Công nghệ thông tin",
           status: "IN_PROGRESS",
@@ -645,95 +621,91 @@ function CalendarRouteContent() {
         };
 
         if (data.parentTaskId) {
-          return updated.map((st) => {
-            if (st.id === data.parentTaskId) {
-              return {
-                ...st,
-                subTasks: [newSubTask, ...st.subTasks],
-              };
-            }
-            return st;
-          });
-        } else if (updated.length > 0) {
-          updated[0] = {
-            ...updated[0],
-            subTasks: [newSubTask, ...updated[0].subTasks],
-          };
+          return updated.map((schoolTask) =>
+            schoolTask.id === data.parentTaskId
+              ? { ...schoolTask, subTasks: [newSubTask, ...schoolTask.subTasks] }
+              : schoolTask
+          );
+        }
+        if (updated.length > 0) {
+          updated[0] = { ...updated[0], subTasks: [newSubTask, ...updated[0].subTasks] };
         }
       }
-
-      return updated.map((t) => computeSchoolTaskRollup(t));
+      return updated.map((task) => computeSchoolTaskRollup(task));
     });
 
     try {
-      const payload = {
-        title: data.title,
-        description: data.description || data.requiredDeliverables || "",
-        dueDate: data.dueDate,
-        departmentId: user?.departmentCode || user?.department || "",
-        scope: data.level === "TRUONG" ? "SCHOOL" : "DEPARTMENT",
-        parentTaskId: data.parentTaskId || undefined,
-        creatorId: user?.id,
-      };
-
-      const res = await fetch("/api/tasks", {
+      const response = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description || data.requiredDeliverables || "",
+          dueDate: data.dueDate,
+          departmentId: user?.departmentCode || user?.department || "",
+          scope: data.level === "TRUONG" ? "SCHOOL" : "DEPARTMENT",
+          parentTaskId: data.parentTaskId || undefined,
+          creatorId: user?.id,
+        }),
       });
-
-      if (!res.ok) {
-        console.warn("Không thể lưu nhiệm vụ vào máy chủ:", await res.text().catch(() => ""));
-      }
-    } catch (err) {
-      console.warn("Lỗi khi kết nối đến máy chủ để lưu nhiệm vụ:", err);
+      if (!response.ok) console.warn("Không thể lưu nhiệm vụ vào máy chủ:", await response.text().catch(() => ""));
+    } catch (taskError) {
+      console.warn("Lỗi khi kết nối đến máy chủ để lưu nhiệm vụ:", taskError);
     }
   }, [user]);
 
-  // Handle create event submission
-  const handleCreateEventSubmit = useCallback((eventData: CreateEventFormData) => {
-    setIsCreateEventModalOpen(false);
-    const newEvent = {
-      id: `evt-${Date.now()}`,
-      ...eventData,
-    };
-    setCustomEvents((prev) => [newEvent, ...prev]);
-  }, []);
+  const handleCreateEventSubmit = useCallback(async (eventData: CreateEventFormData) => {
+    if (eventData.endTime <= eventData.startTime) {
+      throw new Error("Giờ kết thúc phải sau giờ bắt đầu");
+    }
 
-  // Handle task status update
-  const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
-    setTasks((prevTasks) => {
-      const updated = prevTasks.map((st) => {
-        if (st.id === taskId) {
-          return { ...st, status: newStatus };
-        }
-        if (st.subTasks) {
-          const hasSub = st.subTasks.some((sub) => sub.id === taskId);
-          if (hasSub) {
-            const updatedSubs = st.subTasks.map((sub) =>
-              sub.id === taskId ? { ...sub, status: newStatus } : sub
-            );
-            return computeSchoolTaskRollup({ ...st, subTasks: updatedSubs });
-          }
-        }
-        return st;
-      });
-      return updated;
+    const agenda = [
+      eventData.department ? `Đơn vị chủ trì: ${eventData.department}` : "",
+      eventData.description,
+    ].filter(Boolean).join("\n");
+
+    const response = await fetch("/api/meetings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: eventData.title,
+        startTime: toMeetingIso(eventData.date, eventData.startTime),
+        endTime: toMeetingIso(eventData.date, eventData.endTime),
+        location: eventData.location || undefined,
+        agenda: agenda || undefined,
+      }),
     });
 
-    if (selectedTask && selectedTask.id === taskId) {
-      setSelectedTask((prev) => {
-        if (!prev || prev.id !== taskId) return prev;
-        return { ...prev, status: newStatus };
-      });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.message || body?.error || "Không thể lưu sự kiện vào máy chủ");
+    }
+
+    await loadCalendarData();
+    setIsCreateEventModalOpen(false);
+  }, [loadCalendarData]);
+
+  const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
+    setTasks((previousTasks) => previousTasks.map((schoolTask) => {
+      if (schoolTask.id === taskId) return { ...schoolTask, status: newStatus };
+      if (schoolTask.subTasks?.some((subTask) => subTask.id === taskId)) {
+        const subTasks = schoolTask.subTasks.map((subTask) =>
+          subTask.id === taskId ? { ...subTask, status: newStatus } : subTask
+        );
+        return computeSchoolTaskRollup({ ...schoolTask, subTasks });
+      }
+      return schoolTask;
+    }));
+
+    if (selectedTask?.id === taskId) {
+      setSelectedTask((previous) => previous?.id === taskId ? { ...previous, status: newStatus } : previous);
     }
 
     try {
       let actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
-      let actionBody: any = {};
-      if (newStatus === "IN_PROGRESS") {
-        actionUrl = `/api/tasks/${taskId}/actions/start`;
-      } else if (newStatus === "COMPLETED") {
+      let actionBody: Record<string, unknown> = {};
+      if (newStatus === "IN_PROGRESS") actionUrl = `/api/tasks/${taskId}/actions/start`;
+      else if (newStatus === "COMPLETED") {
         actionUrl = `/api/tasks/${taskId}/actions/approve`;
         actionBody = { note: "Phê duyệt hoàn thành nhiệm vụ" };
       } else if (newStatus === "NEEDS_REVIEW" || newStatus === "WAITING_APPROVAL") {
@@ -743,249 +715,189 @@ function CalendarRouteContent() {
         actionUrl = `/api/tasks/${taskId}/actions/cancel`;
         actionBody = { reason: "Hủy nhiệm vụ" };
       }
-
       await fetch(actionUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(actionBody),
       });
-    } catch (err) {
-      console.warn("Lỗi khi kết nối đến máy chủ để cập nhật trạng thái nhiệm vụ:", err);
+    } catch (statusError) {
+      console.warn("Lỗi khi kết nối đến máy chủ để cập nhật trạng thái nhiệm vụ:", statusError);
     }
   }, [selectedTask]);
 
-  // Tasks and Events for Selected Date (consumed by CalendarDaySheet)
+  const meetingDayItems = useMemo<DayTaskItem[]>(() => meetings.map((meeting) => {
+    const dateKey = getMeetingDateKey(meeting.startTime);
+    const startTime = getMeetingTime(meeting.startTime);
+    const endTime = getMeetingTime(meeting.endTime);
+    return {
+      id: `meeting:${meeting.id}`,
+      title: meeting.title,
+      level: meeting.unit ? "Đơn vị" : "Trường",
+      categoryLabel: "Sự kiện",
+      dueDate: `${dateKey}T${startTime || "00:00"}:00`,
+      status: "EVENT",
+      isEvent: true,
+      time: [startTime, endTime].filter(Boolean).join(" - ") || undefined,
+      location: meeting.location || undefined,
+      host: meeting.organizer?.name || meeting.unit?.name || undefined,
+      assigneeName: meeting.organizer?.name || undefined,
+    };
+  }), [meetings]);
+
   const selectedDateDayItems = useMemo<DayTaskItem[]>(() => {
     if (!selectedDate) return [];
-
     const items: DayTaskItem[] = [];
-    const currentUnitId =
-      (typeof searchParams !== "undefined" &&
-        (searchParams.get("unitId") || searchParams.get("unit"))) ||
-      user?.departmentCode ||
-      user?.department ||
-      "";
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const matchesSearch = (values: Array<string | undefined | null>) =>
+      !normalizedQuery || values.filter(Boolean).some((value) => String(value).toLowerCase().includes(normalizedQuery));
+    const matchesStatus = (status: string, dueDate?: string) =>
+      statusFilter === "ALL" ||
+      (statusFilter === "OVERDUE"
+        ? status !== "COMPLETED" && status !== "CANCELLED" && isTaskPastDue(dueDate)
+        : status === statusFilter);
 
-    // 1. School Tasks
-    const matchesSchoolLevel = levelFilter === "ALL" || levelFilter === "TRUONG";
-
-    for (const st of tasks) {
-      const isOverdueTask =
-        st.status !== "COMPLETED" && st.status !== "CANCELLED" && isTaskPastDue(st.dueDate);
-      const matchesSchoolStatus =
-        statusFilter === "ALL" ||
-        (statusFilter === "OVERDUE"
-          ? isOverdueTask
-          : st.status === statusFilter);
-
-      const matchesSchoolUnit =
-        !currentUnitId ||
-        st.leadDepartmentId === currentUnitId ||
-        st.leadDepartmentCode === currentUnitId ||
-        st.leadDepartment === currentUnitId ||
-        st.departmentId === currentUnitId ||
-        st.department === currentUnitId ||
-        (st.subTasks &&
-          st.subTasks.some(
-            (sub) =>
-              sub.departmentId === currentUnitId ||
-              sub.department === currentUnitId ||
-              sub.assignedToDepartmentId === currentUnitId
-          ));
-
-      const isScopeMatch =
+    for (const schoolTask of tasks) {
+      const schoolScopeMatch =
         activeScope === "school" ||
-        (activeScope === "unit" && matchesSchoolUnit) ||
         (activeScope === "my" &&
-          ((user?.id && st.leadAssigneeId === user.id) ||
-            (user?.name && st.leadAssigneeName === user.name)));
-
+          ((user?.id && schoolTask.leadAssigneeId === user.id) ||
+            (user?.name && schoolTask.leadAssigneeName === user.name)));
       if (
-        matchesSchoolLevel &&
-        matchesSchoolStatus &&
-        isScopeMatch &&
-        st.dueDate &&
-        st.dueDate.split("T")[0] === selectedDate
+        schoolScopeMatch &&
+        (levelFilter === "ALL" || levelFilter === "TRUONG") &&
+        schoolTask.dueDate?.split("T")[0] === selectedDate &&
+        matchesStatus(schoolTask.status, schoolTask.dueDate) &&
+        matchesSearch([schoolTask.title, schoolTask.leadAssigneeName])
       ) {
         items.push({
-          id: st.id,
-          title: st.title,
+          id: schoolTask.id,
+          title: schoolTask.title,
           level: "Trường",
-          category: st.category,
-          categoryLabel: st.categoryLabel,
-          assigneeName: st.leadAssigneeName,
-          assigneeAvatar: st.leadAssigneeAvatar,
-          dueDate: st.dueDate,
-          status: st.status,
-          progressPercent: st.progressPercent,
-          originalTask: st,
+          category: schoolTask.category,
+          categoryLabel: schoolTask.categoryLabel,
+          assigneeName: schoolTask.leadAssigneeName,
+          assigneeAvatar: schoolTask.leadAssigneeAvatar,
+          dueDate: schoolTask.dueDate,
+          status: schoolTask.status,
+          progressPercent: schoolTask.progressPercent,
+          originalTask: schoolTask,
         });
       }
 
-      // 2. Unit Subtasks
-      const matchesSubLevel = levelFilter === "ALL" || levelFilter === "DON_VI";
-
-      if (matchesSubLevel && st.subTasks && Array.isArray(st.subTasks)) {
-        for (const sub of st.subTasks) {
-          const isOverdueSub =
-            sub.status !== "COMPLETED" && sub.status !== "CANCELLED" && isTaskPastDue(sub.dueDate);
-          const matchesSubStatus =
-            statusFilter === "ALL" ||
-            (statusFilter === "OVERDUE"
-              ? isOverdueSub
-              : sub.status === statusFilter);
-
-          const matchesSubUnit =
-            !currentUnitId ||
-            sub.departmentId === currentUnitId ||
-            sub.department === currentUnitId ||
-            sub.assignedToDepartmentId === currentUnitId ||
-            st.leadDepartmentId === currentUnitId ||
-            st.leadDepartmentCode === currentUnitId;
-
-          const isSubScopeMatch =
-            activeScope === "school" ||
-            (activeScope === "unit" && matchesSubUnit) ||
-            (activeScope === "my" &&
-              ((user?.id && (sub.assigneeId === user.id || (sub as any).userId === user.id)) ||
-                (user?.name && (sub.assigneeName === user.name || (sub as any).userName === user.name))));
-
-          if (
-            matchesSubStatus &&
-            isSubScopeMatch &&
-            sub.dueDate &&
-            sub.dueDate.split("T")[0] === selectedDate
-          ) {
-            items.push({
-              id: sub.id,
-              title: sub.title,
-              level: "Đơn vị",
-              category: st.category,
-              categoryLabel: st.categoryLabel,
-              assigneeName: sub.assigneeName,
-              assigneeAvatar: sub.assigneeAvatar,
-              dueDate: sub.dueDate,
-              status: sub.status,
-              parentSchoolTaskId: st.id,
-              parentSchoolTaskTitle: st.title,
-              originalTask: sub,
-            });
-          }
+      if (!(levelFilter === "ALL" || levelFilter === "DON_VI") || !Array.isArray(schoolTask.subTasks)) continue;
+      for (const subTask of schoolTask.subTasks) {
+        const subScopeMatch =
+          activeScope === "unit" ||
+          (activeScope === "my" &&
+            ((user?.id && subTask.assigneeId === user.id) ||
+              (user?.name && subTask.assigneeName === user.name)));
+        if (
+          subScopeMatch &&
+          subTask.dueDate?.split("T")[0] === selectedDate &&
+          matchesStatus(subTask.status, subTask.dueDate) &&
+          matchesSearch([subTask.title, subTask.assigneeName])
+        ) {
+          items.push({
+            id: subTask.id,
+            title: subTask.title,
+            level: "Đơn vị",
+            category: schoolTask.category,
+            categoryLabel: schoolTask.categoryLabel,
+            assigneeName: subTask.assigneeName,
+            assigneeAvatar: subTask.assigneeAvatar,
+            dueDate: subTask.dueDate,
+            status: subTask.status,
+            parentSchoolTaskId: schoolTask.id,
+            parentSchoolTaskTitle: schoolTask.title,
+            originalTask: subTask,
+          });
         }
       }
     }
 
-    // 3. Custom Events
-    for (const evt of customEvents) {
-      if (evt.date === selectedDate) {
-        items.push({
-          id: evt.id,
-          title: evt.title,
-          level: "Trường",
-          categoryLabel: "Sự kiện",
-          dueDate: `${evt.date}T${evt.startTime}:00`,
-          status: "IN_PROGRESS",
-          isEvent: true,
-          time: `${evt.startTime} - ${evt.endTime}`,
-          location: evt.location,
-          host: evt.department,
-        });
+    if (statusFilter === "ALL") {
+      for (const meeting of meetingDayItems) {
+        const meetingScopeMatch =
+          activeScope === "my" ||
+          (activeScope === "school" && meeting.level === "Trường") ||
+          (activeScope === "unit" && meeting.level === "Đơn vị");
+        const meetingLevelMatch =
+          levelFilter === "ALL" ||
+          (levelFilter === "TRUONG" && meeting.level === "Trường") ||
+          (levelFilter === "DON_VI" && meeting.level === "Đơn vị");
+        if (
+          meetingScopeMatch &&
+          meetingLevelMatch &&
+          meeting.dueDate.split("T")[0] === selectedDate &&
+          matchesSearch([meeting.title, meeting.assigneeName, meeting.host, meeting.location])
+        ) {
+          items.push(meeting);
+        }
       }
     }
 
     return items;
-  }, [selectedDate, tasks, customEvents, activeScope, user, levelFilter, statusFilter]);
+  }, [
+    selectedDate,
+    tasks,
+    meetingDayItems,
+    activeScope,
+    user,
+    levelFilter,
+    statusFilter,
+    searchQuery,
+  ]);
+
+  const handleResetFilters = useCallback(() => {
+    setLevelFilter("ALL");
+    setStatusFilter("ALL");
+  }, []);
 
   return (
     <div className="space-y-5" data-slot="calendar-page-container">
-      {/* ========================================================================= */}
-      {/* 1. Page Header with Single Global Primary Action (+ Tạo Dropdown)         */}
-      {/* ========================================================================= */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/50 pb-5">
         <div className="space-y-1">
-          {/* Breadcrumb Navigation */}
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-            >
-              <Home className="size-3.5" strokeWidth={1.5} />
-              <span>Bàn làm việc</span>
-            </Link>
-            <ChevronRight className="size-3 text-muted-foreground/60" strokeWidth={1.5} />
-            <Link
-              href={selectedTask ? `/tasks?taskId=${selectedTask.id}` : "/tasks"}
-              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-            >
-              <CheckSquare className="size-3.5" strokeWidth={1.5} />
-              <span>Nhiệm vụ</span>
-            </Link>
-            <ChevronRight className="size-3 text-muted-foreground/60" strokeWidth={1.5} />
-            <span className="font-semibold text-foreground">Lịch công tác</span>
-          </nav>
-
-          {/* Heading & Period Tag */}
-          <div className="flex items-center gap-2.5 flex-wrap pt-0.5">
+          <div className="flex items-center gap-2.5 pt-0.5">
             <div className="size-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
               <CalendarIcon className="size-5" strokeWidth={1.5} />
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
-                  Lịch Công Tác Học Vụ
-                </h1>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 font-mono tabular-nums">
-                  {currentPeriod.label} / {currentPeriod.calendarYear} ({currentPeriod.shortDateSpan})
-                </span>
-              </div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
+                Lịch Công Tác Học Vụ
+              </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Kế hoạch thời gian đào tạo, sự kiện và hạn chót theo chu kỳ học vụ QCET (ngày 25 - 24)
+                Tổng quan công việc, sự kiện và hạn chót theo chu kỳ vận hành QCET 25 - 24
               </p>
             </div>
           </div>
         </div>
 
         {/* Global Actions: Refresh (Single Global Primary Action + Tạo is in Control Row 2) */}
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => loadTasksData(true)}
-            disabled={isRefreshing}
-            className="h-9 gap-1.5 text-xs font-medium border-border/70 text-muted-foreground hover:text-foreground cursor-pointer rounded-xl"
-            title="Làm mới dữ liệu lịch"
-          >
-            <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} strokeWidth={1.5} />
-            <span className="hidden sm:inline">{isRefreshing ? "Đang tải..." : "Làm mới"}</span>
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => loadCalendarData(true)}
+          disabled={isRefreshing}
+          className="h-9 gap-1.5 text-xs font-medium border-border/70 text-muted-foreground hover:text-foreground rounded-xl self-start md:self-auto"
+          title="Làm mới dữ liệu lịch"
+        >
+          <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} strokeWidth={1.5} />
+          <span>{isRefreshing ? "Đang tải..." : "Làm mới"}</span>
+        </Button>
       </div>
 
-      {/* ========================================================================= */}
-      {/* 2. Unified Calendar Chrome: 2 Unified Rows                                */}
-      {/* Row 1: Scope, Period & Month Navigation, View Switcher                    */}
-      {/* Row 2: Search, Filters, Single Global + Tạo CTA                           */}
-      {/* ========================================================================= */}
+      {/* Unified Calendar Chrome */}
       <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-3 sm:p-4 shadow-card" data-slot="calendar-controls-container">
-        {/* Row 1: Scope, Navigation, View switch */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3" data-slot="calendar-controls-row-1">
-          {/* Scope Tabs: Toàn trường | Đơn vị | Của tôi */}
-          <div
-            role="tablist"
-            aria-label="Phạm vi công việc"
-            className="inline-flex items-center rounded-xl border border-border/70 bg-secondary/50 p-0.5 shrink-0 self-start lg:self-auto"
-            data-slot="calendar-scope-switcher"
-          >
+          <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex items-center rounded-xl border border-border/70 bg-secondary/50 p-0.5 shrink-0 self-start" data-slot="calendar-scope-switcher">
             <button
               type="button"
               role="tab"
               aria-selected={activeScope === "school"}
               onClick={() => handleScopeChange("school")}
               className={cn(
-                "min-h-[36px] sm:min-h-0 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-                activeScope === "school"
-                  ? "bg-card text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
+                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                activeScope === "school" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
               )}
             >
               Toàn trường
@@ -996,10 +908,8 @@ function CalendarRouteContent() {
               aria-selected={activeScope === "unit"}
               onClick={() => handleScopeChange("unit")}
               className={cn(
-                "min-h-[36px] sm:min-h-0 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-                activeScope === "unit"
-                  ? "bg-card text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
+                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                activeScope === "unit" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
               )}
             >
               Đơn vị
@@ -1010,115 +920,71 @@ function CalendarRouteContent() {
               aria-selected={activeScope === "my"}
               onClick={() => handleScopeChange("my")}
               className={cn(
-                "min-h-[36px] sm:min-h-0 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-                activeScope === "my"
-                  ? "bg-card text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
+                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                activeScope === "my" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
               )}
             >
               Của tôi
             </button>
           </div>
 
-          {/* Period & Month Navigation */}
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap" data-slot="calendar-period-navigation">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              aria-label="Tháng trước"
-              className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:size-8.5 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer"
-            >
+            <button type="button" onClick={handlePrevMonth} aria-label="Tháng trước" className="inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground">
               <ChevronLeft className="size-4" strokeWidth={1.5} />
             </button>
 
-            {/* Academic Month Selector */}
-            <div className="flex items-center gap-1">
-              <label htmlFor="academic-month-select" className="sr-only">
-                Kỳ vận hành
-              </label>
-              <select
-                id="academic-month-select"
-                value={selectedMonthNumber}
-                onChange={(e) => {
-                  const mNum = Number(e.target.value);
-                  setSelectedMonthNumber(mNum);
-                  const p = getAcademicMonthPeriod(mNum, selectedAcademicYear);
-                  handleSelectDate(p.startDate);
-                  updateUrlParam("month", String(mNum));
-                }}
-                className="h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer font-mono tabular-nums"
-              >
-                {academicMonthsForYear.map((m) => (
-                  <option key={m.monthNumber} value={m.monthNumber}>
-                    {m.label} ({m.shortDateSpan})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Academic Year Selector */}
-            <div className="flex items-center gap-1">
-              <label htmlFor="academic-year-select" className="sr-only">
-                Năm học
-              </label>
-              <select
-                id="academic-year-select"
-                value={selectedAcademicYear}
-                onChange={(e) => {
-                  setSelectedAcademicYear(e.target.value);
-                  const newMonths = getAcademicMonthsForYear(e.target.value);
-                  if (newMonths.length > 0) {
-                    setSelectedMonthNumber(newMonths[0].monthNumber);
-                    handleSelectDate(newMonths[0].startDate);
-                    updateUrlParam("month", String(newMonths[0].monthNumber));
-                  }
-                }}
-                className="h-9 px-2 rounded-lg border border-border/70 bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
-              >
-                {availableAcademicYears.map((yr) => (
-                  <option key={yr} value={yr}>
-                    {yr.replace("-", " - ")}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              aria-label="Tháng sau"
-              className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:size-8.5 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground cursor-pointer"
+            <label htmlFor="academic-month-select" className="sr-only">Kỳ vận hành</label>
+            <select
+              id="academic-month-select"
+              value={selectedMonthNumber}
+              onChange={(event) => {
+                const monthNumber = Number(event.target.value);
+                setSelectedMonthNumber(monthNumber);
+                const period = getAcademicMonthPeriod(monthNumber, selectedAcademicYear);
+                handleSelectDate(period.startDate);
+                updateUrlParam("month", String(monthNumber));
+              }}
+              className="h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono tabular-nums"
             >
+              {academicMonthsForYear.map((month) => (
+                <option key={month.monthNumber} value={month.monthNumber}>{month.label} ({month.shortDateSpan})</option>
+              ))}
+            </select>
+
+            <label htmlFor="academic-year-select" className="sr-only">Năm học</label>
+            <select
+              id="academic-year-select"
+              value={selectedAcademicYear}
+              onChange={(event) => {
+                const academicYear = event.target.value;
+                setSelectedAcademicYear(academicYear);
+                const newMonths = getAcademicMonthsForYear(academicYear);
+                if (newMonths.length > 0) {
+                  setSelectedMonthNumber(newMonths[0].monthNumber);
+                  handleSelectDate(newMonths[0].startDate);
+                  updateUrlParam("month", String(newMonths[0].monthNumber));
+                }
+              }}
+              className="h-9 px-2 rounded-lg border border-border/70 bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              {availableAcademicYears.map((year) => <option key={year} value={year}>{year.replace("-", " - ")}</option>)}
+            </select>
+
+            <button type="button" onClick={handleNextMonth} aria-label="Tháng sau" className="inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground">
               <ChevronRight className="size-4" strokeWidth={1.5} />
             </button>
-
-            <button
-              type="button"
-              onClick={handleCurrentMonth}
-              className="inline-flex min-h-[44px] sm:min-h-0 h-9 items-center rounded-lg border border-border/70 bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-secondary cursor-pointer"
-            >
+            <button type="button" onClick={handleCurrentMonth} className="inline-flex min-h-11 sm:min-h-9 items-center rounded-lg border border-border/70 bg-background px-3 text-xs font-semibold text-foreground hover:bg-secondary">
               Hôm nay
             </button>
           </div>
 
-          {/* View Switcher: Tháng | Nghị sự */}
-          <div
-            role="tablist"
-            aria-label="Chế độ hiển thị lịch"
-            className="inline-flex items-center rounded-xl border border-border/70 bg-secondary/50 p-0.5 shrink-0 self-start lg:self-auto"
-            data-slot="calendar-view-switcher"
-          >
+          <div role="tablist" aria-label="Chế độ hiển thị lịch" className="inline-flex items-center rounded-xl border border-border/70 bg-secondary/50 p-0.5 shrink-0 self-start" data-slot="calendar-view-switcher">
             <button
               type="button"
               role="tab"
               aria-selected={viewMode === "month"}
               onClick={() => handleViewChange("month")}
-              className={cn(
-                "inline-flex items-center gap-1.5 min-h-[36px] sm:min-h-0 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-                viewMode === "month"
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
+              className={cn("inline-flex items-center gap-1.5 min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all", viewMode === "month" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground")}
             >
               <CalendarIcon className="size-3.5" strokeWidth={1.5} />
               <span>Tháng</span>
@@ -1128,187 +994,93 @@ function CalendarRouteContent() {
               role="tab"
               aria-selected={viewMode === "agenda"}
               onClick={() => handleViewChange("agenda")}
-              className={cn(
-                "inline-flex items-center gap-1.5 min-h-[36px] sm:min-h-0 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-                viewMode === "agenda"
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
+              className={cn("inline-flex items-center gap-1.5 min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all", viewMode === "agenda" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground")}
             >
               <List className="size-3.5" strokeWidth={1.5} />
-              <span>Nghị sự</span>
+              <span>Danh sách</span>
             </button>
           </div>
         </div>
 
-        {/* Row 2: Search, Filters, Single Global + Tạo CTA */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-2 border-t border-border/40" data-slot="calendar-controls-row-2">
-          {/* Left: Search input & Filters */}
           <div className="flex items-center gap-2 flex-1 max-w-lg">
-            {/* Quick Search */}
             <div className="relative flex-1 min-w-[160px]">
-              <Search
-                strokeWidth={1.5}
-                className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
-              />
+              <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
               <input
-                type="text"
+                type="search"
                 placeholder="Tìm việc, sự kiện..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-9 pl-8 pr-7 rounded-xl border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="w-full h-9 pl-8 pr-7 rounded-xl border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
               {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-0.5"
-                  aria-label="Xóa tìm kiếm"
-                >
-                  <X className="size-3.5" strokeWidth={1.5} />
+                <button type="button" onClick={() => setSearchQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 min-h-7 min-w-7 text-muted-foreground hover:text-foreground" aria-label="Xóa tìm kiếm">
+                  <X className="mx-auto size-3.5" strokeWidth={1.5} />
                 </button>
               )}
             </div>
 
-            {/* Filter button ("Bộ lọc") */}
             <div className="relative" ref={filterDropdownRef}>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsFilterOpen((prev) => !prev)}
+                onClick={() => setIsFilterOpen((previous) => !previous)}
                 aria-expanded={isFilterOpen}
                 aria-haspopup="dialog"
-                className={cn(
-                  "h-9 px-3 text-xs font-medium gap-1.5 border-border/70 rounded-xl cursor-pointer transition-colors",
-                  hasActiveFilters
-                    ? "border-primary/50 text-primary bg-primary/5 font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                )}
+                className={cn("h-9 px-3 text-xs font-medium gap-1.5 border-border/70 rounded-xl", hasActiveFilters ? "border-primary/50 text-primary bg-primary/5 font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary")}
               >
                 <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
-                <span>Bộ lọc</span>
-                {hasActiveFilters && (
-                  <span className="inline-flex items-center justify-center size-4 rounded-full bg-primary text-xs text-primary-foreground font-mono font-bold">
-                    {activeFilterCount}
-                  </span>
-                )}
+                Bộ lọc
+                {hasActiveFilters && <span className="inline-flex items-center justify-center size-4 rounded-full bg-primary text-xs text-primary-foreground font-mono font-bold">{activeFilterCount}</span>}
               </Button>
 
-              {/* Filter Dropdown Popover */}
               {isFilterOpen && (
-                <div
-                  role="dialog"
-                  aria-label="Tùy chọn bộ lọc"
-                  className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-border/70 bg-card p-3 shadow-lg z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150"
-                >
+                <div role="dialog" aria-label="Tùy chọn bộ lọc" className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-border/70 bg-card p-3 shadow-lg z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between border-b border-border/50 pb-2">
                     <span className="text-xs font-bold text-foreground">Bộ lọc nâng cao</span>
-                    {hasActiveFilters && (
-                      <button
-                        type="button"
-                        onClick={handleResetFilters}
-                        className="text-xs text-primary hover:underline cursor-pointer"
-                      >
-                        Đặt lại
-                      </button>
-                    )}
+                    {hasActiveFilters && <button type="button" onClick={handleResetFilters} className="text-xs text-primary hover:underline">Đặt lại</button>}
                   </div>
 
-                  {/* Level filter */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">Cấp nhiệm vụ</label>
+                    <span className="text-xs font-semibold text-muted-foreground">Cấp nhiệm vụ</span>
                     <div className="grid grid-cols-3 gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setLevelFilter("ALL")}
-                        className={cn(
-                          "px-2 py-1 rounded text-xs font-medium border text-center transition-colors cursor-pointer",
-                          levelFilter === "ALL"
-                            ? "bg-primary/10 border-primary/30 text-primary font-semibold"
-                            : "border-border/60 text-muted-foreground hover:bg-secondary"
-                        )}
-                      >
-                        Tất cả
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLevelFilter("TRUONG")}
-                        className={cn(
-                          "px-2 py-1 rounded text-xs font-medium border text-center transition-colors cursor-pointer",
-                          levelFilter === "TRUONG"
-                            ? "bg-primary/10 border-primary/30 text-primary font-semibold"
-                            : "border-border/60 text-muted-foreground hover:bg-secondary"
-                        )}
-                      >
-                        Trường
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLevelFilter("DON_VI")}
-                        className={cn(
-                          "px-2 py-1 rounded text-xs font-medium border text-center transition-colors cursor-pointer",
-                          levelFilter === "DON_VI"
-                            ? "bg-primary/10 border-primary/30 text-primary font-semibold"
-                            : "border-border/60 text-muted-foreground hover:bg-secondary"
-                        )}
-                      >
-                        Đơn vị
-                      </button>
+                      {([
+                        ["ALL", "Tất cả"],
+                        ["TRUONG", "Trường"],
+                        ["DON_VI", "Đơn vị"],
+                      ] as const).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setLevelFilter(value)}
+                          aria-pressed={levelFilter === value}
+                          className={cn("min-h-8 px-2 rounded text-xs font-medium border text-center transition-colors", levelFilter === value ? "bg-primary/10 border-primary/30 text-primary font-semibold" : "border-border/60 text-muted-foreground hover:bg-secondary")}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Status filter */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">Trạng thái</label>
+                    <span className="text-xs font-semibold text-muted-foreground">Trạng thái</span>
                     <div className="grid grid-cols-2 gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setStatusFilter("ALL")}
-                        className={cn(
-                          "px-2 py-1 rounded text-xs font-medium border text-center transition-colors cursor-pointer",
-                          statusFilter === "ALL"
-                            ? "bg-primary/10 border-primary/30 text-primary font-semibold"
-                            : "border-border/60 text-muted-foreground hover:bg-secondary"
-                        )}
-                      >
-                        Tất cả
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStatusFilter("IN_PROGRESS")}
-                        className={cn(
-                          "px-2 py-1 rounded text-xs font-medium border text-center transition-colors cursor-pointer",
-                          statusFilter === "IN_PROGRESS"
-                            ? "bg-primary/10 border-primary/30 text-primary font-semibold"
-                            : "border-border/60 text-muted-foreground hover:bg-secondary"
-                        )}
-                      >
-                        Đang làm
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStatusFilter("COMPLETED")}
-                        className={cn(
-                          "px-2 py-1 rounded text-xs font-medium border text-center transition-colors cursor-pointer",
-                          statusFilter === "COMPLETED"
-                            ? "bg-primary/10 border-primary/30 text-primary font-semibold"
-                            : "border-border/60 text-muted-foreground hover:bg-secondary"
-                        )}
-                      >
-                        Hoàn thành
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStatusFilter("OVERDUE")}
-                        className={cn(
-                          "px-2 py-1 rounded text-xs font-medium border text-center transition-colors cursor-pointer",
-                          statusFilter === "OVERDUE"
-                            ? "bg-primary/10 border-primary/30 text-primary font-semibold"
-                            : "border-border/60 text-muted-foreground hover:bg-secondary"
-                        )}
-                      >
-                        Quá hạn
-                      </button>
+                      {([
+                        ["ALL", "Tất cả"],
+                        ["IN_PROGRESS", "Đang làm"],
+                        ["COMPLETED", "Hoàn thành"],
+                        ["OVERDUE", "Quá hạn"],
+                      ] as const).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setStatusFilter(value)}
+                          aria-pressed={statusFilter === value}
+                          className={cn("min-h-8 px-2 rounded text-xs font-medium border text-center transition-colors", statusFilter === value ? "bg-primary/10 border-primary/30 text-primary font-semibold" : "border-border/60 text-muted-foreground hover:bg-secondary")}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -1318,50 +1090,20 @@ function CalendarRouteContent() {
 
           {/* Right: Single Global Primary Action (+ Tạo Dropdown) */}
           <div className="relative shrink-0 self-end sm:self-auto" ref={createDropdownRef}>
-            <Button
-              size="sm"
-              onClick={() => setIsCreateDropdownOpen((prev) => !prev)}
-              aria-expanded={isCreateDropdownOpen}
-              aria-haspopup="true"
-              className="h-9 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs cursor-pointer rounded-xl"
-            >
+            <Button size="sm" onClick={() => setIsCreateDropdownOpen((previous) => !previous)} aria-expanded={isCreateDropdownOpen} aria-haspopup="true" className="h-9 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs rounded-xl">
               <Plus className="size-4" strokeWidth={1.5} />
               <span>Tạo</span>
-              <ChevronDown
-                className={cn("size-3.5 transition-transform duration-200", isCreateDropdownOpen && "rotate-180")}
-                strokeWidth={1.5}
-              />
+              <ChevronDown className={cn("size-3.5 transition-transform duration-200", isCreateDropdownOpen && "rotate-180")} strokeWidth={1.5} />
             </Button>
-
-            {/* Dropdown Menu */}
             {isCreateDropdownOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border/70 bg-card p-1.5 shadow-lg z-30 animate-in fade-in zoom-in-95 duration-150"
-              >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setIsCreateDropdownOpen(false);
-                    handleOpenAddTask();
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground rounded-lg hover:bg-secondary cursor-pointer transition-colors text-left"
-                >
+              <div role="menu" className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border/70 bg-card p-1.5 shadow-lg z-30 animate-in fade-in zoom-in-95 duration-150">
+                <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full min-h-9 flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground rounded-lg hover:bg-secondary text-left">
                   <CheckSquare className="size-4 text-primary shrink-0" strokeWidth={1.5} />
-                  <span>Tạo công việc</span>
+                  Tạo công việc
                 </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setIsCreateDropdownOpen(false);
-                    handleOpenAddEvent();
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground rounded-lg hover:bg-secondary cursor-pointer transition-colors text-left"
-                >
+                <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full min-h-9 flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground rounded-lg hover:bg-secondary text-left">
                   <CalendarIcon className="size-4 text-sky-600 shrink-0" strokeWidth={1.5} />
-                  <span>Tạo sự kiện</span>
+                  Tạo sự kiện
                 </button>
               </div>
             )}
@@ -1369,33 +1111,26 @@ function CalendarRouteContent() {
         </div>
       </div>
 
-      {/* Error Alert */}
+      {/* Calendar Content: Month Grid or Agenda List */}
       {error && (
         <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 flex items-center justify-between gap-3 text-destructive">
           <div className="flex items-center gap-2 text-xs">
             <AlertCircle className="size-4 shrink-0" strokeWidth={1.5} />
             <span>{error}</span>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => loadTasksData()}
-            className="h-7 text-xs border-destructive/30 hover:bg-destructive/10 text-destructive cursor-pointer"
-          >
+          <Button size="sm" variant="outline" onClick={() => loadCalendarData()} className="h-8 text-xs border-destructive/30 hover:bg-destructive/10 text-destructive">
             Thử lại
           </Button>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 3. Main Calendar Month Grid (with cell density capping max 3 items)        */}
-      {/* ========================================================================= */}
-      {isLoading && tasks.length === 0 ? (
+      {isLoading && tasks.length === 0 && meetings.length === 0 ? (
         <CalendarLoadingSkeleton />
       ) : (
         <CalendarMonthGrid
           period={currentPeriod}
           tasks={tasks}
+          events={meetingDayItems}
           selectedDate={selectedDate}
           onSelectDate={handleSelectDate}
           onOpenDaySheet={handleOpenDaySheet}
@@ -1410,9 +1145,6 @@ function CalendarRouteContent() {
         />
       )}
 
-      {/* ========================================================================= */}
-      {/* 4. Day Detail Side Sheet (Polite empty state & Contextual action)          */}
-      {/* ========================================================================= */}
       <CalendarDaySheet
         isOpen={isDaySheetOpen}
         onClose={() => setIsDaySheetOpen(false)}
@@ -1425,9 +1157,6 @@ function CalendarRouteContent() {
         }}
       />
 
-      {/* ========================================================================= */}
-      {/* 5. Modals & Task Detail Side Sheet                                        */}
-      {/* ========================================================================= */}
       <CreateTaskModal
         isOpen={isCreateTaskModalOpen}
         onClose={() => setIsCreateTaskModalOpen(false)}
@@ -1450,22 +1179,22 @@ function CalendarRouteContent() {
         onClose={handleCloseSideSheet}
         onStatusChange={handleStatusChange}
         currentUser={user || undefined}
-        onSelectSubTask={(sub) => {
-          if (typeof sub === "string") {
-            for (const t of tasks) {
-              const found = t.subTasks?.find((st) => st.id === sub);
+        onSelectSubTask={(subTask) => {
+          if (typeof subTask === "string") {
+            for (const task of tasks) {
+              const found = task.subTasks?.find((candidate) => candidate.id === subTask);
               if (found) {
                 handleSelectTask(found);
                 return;
               }
             }
           } else {
-            handleSelectTask(sub);
+            handleSelectTask(subTask);
           }
         }}
         parentSchoolTaskTitle={
           selectedTask && !isSchoolTask(selectedTask) && "parentSchoolTaskId" in selectedTask && selectedTask.parentSchoolTaskId
-            ? tasks.find((t) => t.id === (selectedTask as StaffTask).parentSchoolTaskId)?.title
+            ? tasks.find((task) => task.id === (selectedTask as StaffTask).parentSchoolTaskId)?.title
             : undefined
         }
       />

@@ -3,20 +3,25 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { Inbox, AlertTriangle, Loader2, Layers, X } from "lucide-react";
-import { useRouter } from "next/navigation";
 import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope, ViewMode } from "./types";
 import {
-  useAdaptiveWorkspaceData,
+  deriveAdaptiveWorkspaceData,
   countScopeTasks,
 } from "./hooks/use-adaptive-workspace-data";
 import { AdaptiveScopeHeader } from "./components/adaptive-scope-header";
-import { UnifiedTaskToolbar, type TableDensity } from "@/components/dashboard/unified-task-toolbar";
+import {
+  UnifiedTaskToolbar,
+  filterTasksByScope,
+  type TableDensity,
+} from "@/components/dashboard/unified-task-toolbar";
 import {
   type SavedTaskView,
   type TaskViewCriteria,
   findPresetById,
 } from "@/lib/saved-views/saved-views-store";
-import { parseTaskUrlParams, syncTaskUrlParams } from "@/hooks/use-task-filters";
+import { workspaceScopeToTaskScope } from "@/lib/unified-task-hub";
+import { useWorkspaceQuery, type UseWorkspaceQueryReturn } from "@/hooks/use-workspace-query";
+import { parseWorkspaceQuery } from "@/lib/workspace-query";
 import { matchesUser } from "@/lib/role-task-filter";
 import {
   filterTasksByAcademicMonthStrict,
@@ -362,6 +367,24 @@ export function UnifiedAdaptiveWorkspace({
     return "my";
   }, [forcedScope, propScope, initialScope, forcedRole, user]);
 
+  const effectiveReviewerRole: "ADMIN" | "MANAGER" | "STAFF" = React.useMemo(() => {
+    if (forcedRole) return forcedRole;
+    if (isExecutiveUser(user)) return "ADMIN";
+    if (isManagerUser(user)) return "MANAGER";
+    return "STAFF";
+  }, [forcedRole, user]);
+
+  const isExecutive = effectiveReviewerRole === "ADMIN" || isExecutiveUser(user);
+
+  // Canonical workspace query state manager
+  let workspaceQuery: UseWorkspaceQueryReturn | null = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    workspaceQuery = useWorkspaceQuery();
+  } catch {
+    workspaceQuery = null;
+  }
+
   const [activeScope, setActiveScope] = React.useState<WorkspaceScope>(defaultScope);
 
   // Synchronize when forcedScope, propScope, or initialScope changes externally
@@ -377,10 +400,15 @@ export function UnifiedAdaptiveWorkspace({
 
   const handleScopeChange = React.useCallback(
     (newScope: WorkspaceScope) => {
-      setActiveScope(newScope);
-      onScopeChange?.(newScope);
+      let target = newScope;
+      if (target === "school" && !isExecutive) {
+        target = "my";
+      }
+      setActiveScope(target);
+      onScopeChange?.(target);
+      workspaceQuery?.setScope(target, { replace: true });
     },
-    [onScopeChange]
+    [isExecutive, onScopeChange, workspaceQuery]
   );
 
   // View mode management (Table vs Kanban)
@@ -400,8 +428,9 @@ export function UnifiedAdaptiveWorkspace({
     (mode: ViewMode) => {
       setInternalViewMode(mode);
       onViewModeChange?.(mode);
+      workspaceQuery?.setView(mode, { replace: true });
     },
-    [onViewModeChange]
+    [onViewModeChange, workspaceQuery]
   );
 
   // Interactive dialog states for task review and deliverable submission
@@ -432,35 +461,23 @@ export function UnifiedAdaptiveWorkspace({
   // Action queue drawer open state for full-width layout mode
   const [isActionQueueOpen, setIsActionQueueOpen] = React.useState(false);
 
-  let router: ReturnType<typeof useRouter> | null = null;
-  try {
-    router = useRouter();
-  } catch {
-    router = null;
-  }
-
   const handleSelectTask = React.useCallback(
     (task: SchoolTask | StaffTask) => {
       setInternalSelectedTask(task);
       setIsDetailOpen(true);
+      const taskIdOrCode =
+        (task as any).code || (task as any).taskCode || task.id;
+      workspaceQuery?.setSelectedTask(taskIdOrCode, { replace: true });
       onSelectTask?.(task);
     },
-    [onSelectTask]
+    [onSelectTask, workspaceQuery]
   );
 
   const handleCloseDetail = React.useCallback(() => {
     setIsDetailOpen(false);
     setInternalSelectedTask(null);
-  }, []);
-
-  const effectiveReviewerRole: "ADMIN" | "MANAGER" | "STAFF" = React.useMemo(() => {
-    if (forcedRole) return forcedRole;
-    if (isExecutiveUser(user)) return "ADMIN";
-    if (isManagerUser(user)) return "MANAGER";
-    return "STAFF";
-  }, [forcedRole, user]);
-
-  const isExecutive = effectiveReviewerRole === "ADMIN" || isExecutiveUser(user);
+    workspaceQuery?.setSelectedTask(null, { replace: true });
+  }, [workspaceQuery]);
 
   // Filter state synchronized with props
   const [internalDept, setInternalDept] = React.useState<string | undefined>(selectedDepartment);
@@ -500,82 +517,119 @@ export function UnifiedAdaptiveWorkspace({
   const currentOverdue = internalOverdue || Boolean(isOverdueOnly);
   const currentWorkbox = internalWorkbox ?? activeWorkbox;
 
-  // URL Synchronization: Read initial URL parameters on mount
-  const [hasInitializedUrl, setHasInitializedUrl] = React.useState(false);
+  // Synchronize state with canonical workspace query if not controlled by props
+  React.useEffect(() => {
+    if (!workspaceQuery) return;
+    const { queryState } = workspaceQuery;
+
+    if (!propScope && !forcedScope && queryState.scope) {
+      if (queryState.scope !== "school" || isExecutive) {
+        setActiveScope(queryState.scope);
+      }
+    }
+    if (!selectedDepartment && (queryState.unit || queryState.dept)) {
+      setInternalDept(queryState.unit || queryState.dept);
+    }
+    if (!activeStatus && queryState.status && queryState.status !== "ALL") {
+      setInternalStatus(queryState.status);
+    }
+    const qVal = queryState.query || queryState.q;
+    if (!searchQuery && qVal) {
+      setInternalSearch(qVal);
+    }
+    if (queryState.month !== undefined) {
+      setCurrentMonth(queryState.month);
+    }
+    if (!initialViewMode && queryState.view && (queryState.view === "table" || queryState.view === "kanban")) {
+      setInternalViewMode(queryState.view);
+    }
+  }, [
+    workspaceQuery?.queryState.scope,
+    workspaceQuery?.queryState.unit,
+    workspaceQuery?.queryState.dept,
+    workspaceQuery?.queryState.status,
+    workspaceQuery?.queryState.query,
+    workspaceQuery?.queryState.q,
+    workspaceQuery?.queryState.month,
+    workspaceQuery?.queryState.view,
+    propScope,
+    forcedScope,
+    selectedDepartment,
+    activeStatus,
+    searchQuery,
+    initialViewMode,
+    isExecutive,
+  ]);
+
+  // Deep-linked task selection from queryState or prop
+  const effectiveSelectedTaskId =
+    propSelectedTaskId || workspaceQuery?.queryState.selectedTaskId;
 
   React.useEffect(() => {
-    if (typeof window === "undefined" || hasInitializedUrl) return;
+    if (effectiveSelectedTaskId && tasks.length > 0) {
+      const isMatch = (t: SchoolTask | StaffTask) =>
+        t.id === effectiveSelectedTaskId ||
+        (t as any).code === effectiveSelectedTaskId ||
+        (t as any).taskCode === effectiveSelectedTaskId;
+
+      let found: SchoolTask | StaffTask | undefined = tasks.find(isMatch);
+      if (!found) {
+        for (const t of tasks) {
+          const sub = t.subTasks?.find(isMatch);
+          if (sub) {
+            found = sub;
+            break;
+          }
+        }
+      }
+      if (found) {
+        setInternalSelectedTask(found);
+        setIsDetailOpen(true);
+        onSelectTask?.(found);
+      }
+    } else if (!effectiveSelectedTaskId && !propSelectedTaskId && isDetailOpen) {
+      setInternalSelectedTask(null);
+      setIsDetailOpen(false);
+    }
+  }, [effectiveSelectedTaskId, tasks, onSelectTask, propSelectedTaskId, isDetailOpen]);
+
+  // Fallback initial URL parameter parsing for non-App Router environments
+  const [hasInitializedFallbackUrl, setHasInitializedFallbackUrl] = React.useState(false);
+  React.useEffect(() => {
+    if (workspaceQuery || hasInitializedFallbackUrl || typeof window === "undefined") return;
     try {
-      const urlParams = parseTaskUrlParams(window.location.search);
-      if (
-        urlParams.scope &&
-        (urlParams.scope === "school" ||
-          urlParams.scope === "unit" ||
-          urlParams.scope === "my")
-      ) {
-        if (urlParams.scope === "school" && !isExecutive) {
-          // unpermitted
-        } else {
-          setActiveScope(urlParams.scope);
-          onScopeChange?.(urlParams.scope);
+      const parsed = parseWorkspaceQuery(window.location.search);
+      if (parsed.scope && (parsed.scope === "school" || parsed.scope === "unit" || parsed.scope === "my")) {
+        if (parsed.scope !== "school" || isExecutive) {
+          setActiveScope(parsed.scope);
+          onScopeChange?.(parsed.scope);
         }
       }
-      if (urlParams.dept) {
-        setInternalDept(urlParams.dept);
-        onDepartmentChange?.(urlParams.dept);
+      if (parsed.unit) {
+        setInternalDept(parsed.unit);
+        onDepartmentChange?.(parsed.unit);
       }
-      if (urlParams.status) {
-        setInternalStatus(urlParams.status);
-        onStatusFilterChange?.(urlParams.status);
+      if (parsed.status && parsed.status !== "ALL") {
+        setInternalStatus(parsed.status);
+        onStatusFilterChange?.(parsed.status);
       }
-      if (urlParams.workbox) {
-        setInternalWorkbox(urlParams.workbox);
-        onWorkboxChange?.(urlParams.workbox);
+      const parsedQ = parsed.query || parsed.q;
+      if (parsedQ) {
+        setInternalSearch(parsedQ);
+        onSearchChange?.(parsedQ);
       }
-      if (urlParams.month !== undefined) {
-        setCurrentMonth(urlParams.month);
+      if (parsed.view && (parsed.view === "table" || parsed.view === "kanban")) {
+        setInternalViewMode(parsed.view);
+        onViewModeChange?.(parsed.view);
       }
-      if (urlParams.q !== undefined) {
-        setInternalSearch(urlParams.q);
-        onSearchChange?.(urlParams.q);
+      if (parsed.month !== undefined && parsed.month !== "ALL") {
+        setCurrentMonth(parsed.month);
       }
-      if (
-        urlParams.view &&
-        (urlParams.view === "table" || urlParams.view === "kanban")
-      ) {
-        setInternalViewMode(urlParams.view);
-        onViewModeChange?.(urlParams.view);
-      }
-      if (urlParams.viewId) {
-        setActiveViewId(urlParams.viewId);
-        const preset = findPresetById(urlParams.viewId);
-        if (preset) {
-          if (!urlParams.scope && preset.criteria.scope) {
-            if (preset.criteria.scope === "school" && !isExecutive) {
-              // unpermitted
-            } else {
-              setActiveScope(preset.criteria.scope);
-              onScopeChange?.(preset.criteria.scope);
-            }
-          }
-          if (!urlParams.status && preset.criteria.status) {
-            setInternalStatus(preset.criteria.status);
-            onStatusFilterChange?.(preset.criteria.status);
-          }
-          if (!urlParams.workbox && preset.criteria.workbox) {
-            setInternalWorkbox(preset.criteria.workbox);
-            onWorkboxChange?.(preset.criteria.workbox);
-          }
-          if (preset.criteria.priority) {
-            setCurrentPriority(preset.criteria.priority);
-          }
-        }
-      }
-      if (urlParams.taskId && tasks.length > 0) {
+      if (parsed.selectedTaskId && tasks.length > 0) {
         const isMatch = (t: SchoolTask | StaffTask) =>
-          t.id === urlParams.taskId ||
-          (t as any).code === urlParams.taskId ||
-          (t as any).taskCode === urlParams.taskId;
+          t.id === parsed.selectedTaskId ||
+          (t as any).code === parsed.selectedTaskId ||
+          (t as any).taskCode === parsed.selectedTaskId;
 
         let found: SchoolTask | StaffTask | undefined = tasks.find(isMatch);
         if (!found) {
@@ -593,12 +647,13 @@ export function UnifiedAdaptiveWorkspace({
           onSelectTask?.(found);
         }
       }
-      setHasInitializedUrl(true);
+      setHasInitializedFallbackUrl(true);
     } catch {
-      setHasInitializedUrl(true);
+      setHasInitializedFallbackUrl(true);
     }
   }, [
-    hasInitializedUrl,
+    workspaceQuery,
+    hasInitializedFallbackUrl,
     tasks,
     isExecutive,
     onScopeChange,
@@ -609,18 +664,18 @@ export function UnifiedAdaptiveWorkspace({
     onSelectTask,
   ]);
 
-  // Handle browser back/forward navigation for URL selection
+  // Fallback popstate listener for non-App Router environments
   React.useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (workspaceQuery || typeof window === "undefined") return;
 
     const handlePopState = () => {
       try {
-        const urlParams = parseTaskUrlParams(window.location.search);
-        if (urlParams.taskId) {
+        const parsed = parseWorkspaceQuery(window.location.search);
+        if (parsed.selectedTaskId) {
           const isMatch = (t: SchoolTask | StaffTask) =>
-            t.id === urlParams.taskId ||
-            (t as any).code === urlParams.taskId ||
-            (t as any).taskCode === urlParams.taskId;
+            t.id === parsed.selectedTaskId ||
+            (t as any).code === parsed.selectedTaskId ||
+            (t as any).taskCode === parsed.selectedTaskId;
 
           let found: SchoolTask | StaffTask | undefined = tasks.find(isMatch);
           if (!found) {
@@ -647,76 +702,40 @@ export function UnifiedAdaptiveWorkspace({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [tasks]);
+  }, [workspaceQuery, tasks]);
 
-  // Synchronize when propSelectedTaskId changes externally
-  React.useEffect(() => {
-    if (propSelectedTaskId) {
-      const isMatch = (t: SchoolTask | StaffTask) =>
-        t.id === propSelectedTaskId ||
-        (t as any).code === propSelectedTaskId ||
-        (t as any).taskCode === propSelectedTaskId;
-
-      let found: SchoolTask | StaffTask | undefined = tasks.find(isMatch);
-      if (!found) {
-        for (const t of tasks) {
-          const sub = t.subTasks?.find(isMatch);
-          if (sub) {
-            found = sub;
-            break;
-          }
-        }
-      }
-      if (found) {
-        setInternalSelectedTask(found);
-        setIsDetailOpen(true);
-      }
-    }
-  }, [propSelectedTaskId, tasks]);
-
-  // Sync state changes to URL query parameters
-  React.useEffect(() => {
-    if (!hasInitializedUrl) return;
-    syncTaskUrlParams(
-      {
-        scope: activeScope,
-        dept: currentDept,
-        status: currentStatus,
-        month: currentMonth,
-        q: currentSearch,
-        view: viewMode,
-        viewId: activeViewId || undefined,
-        taskId:
-          isDetailOpen && internalSelectedTask
-            ? (internalSelectedTask as any).code ||
-              (internalSelectedTask as any).taskCode ||
-              internalSelectedTask.id
-            : null,
-      },
-      router ?? undefined
+  // Canonical Scope Filtering: NEVER mutate subtasks in-memory
+  const scopedTasks = React.useMemo(() => {
+    return filterTasksByScope(
+      tasks,
+      workspaceScopeToTaskScope(activeScope),
+      user,
+      currentDept
     );
-  }, [
-    hasInitializedUrl,
-    activeScope,
-    currentDept,
-    currentStatus,
-    currentMonth,
-    currentSearch,
-    viewMode,
-    activeViewId,
-    isDetailOpen,
-    internalSelectedTask?.id,
-    (internalSelectedTask as any)?.code,
-    (internalSelectedTask as any)?.taskCode,
-    router,
-  ]);
+  }, [tasks, activeScope, user, currentDept]);
 
-  const { scopedTasks, metrics, actionQueue } = useAdaptiveWorkspaceData(
-    tasks,
-    user,
-    activeScope,
-    currentDept
-  );
+  // Derive metrics and actionQueue without subtask mutation
+  const { metrics, actionQueue } = React.useMemo(() => {
+    const data = deriveAdaptiveWorkspaceData({
+      tasks: scopedTasks,
+      user,
+      scope: "school",
+      selectedDepartment: currentDept,
+    });
+    const labelScope =
+      activeScope === "school"
+        ? "Toàn trường"
+        : activeScope === "unit"
+        ? currentDept || user?.departmentCode || user?.department || "Đơn vị"
+        : "Cá nhân";
+    return {
+      metrics: {
+        ...data.metrics,
+        labelScope,
+      },
+      actionQueue: data.actionQueue,
+    };
+  }, [scopedTasks, user, activeScope, currentDept]);
 
   // Compute counts for smart filter pills (Tất cả, Của tôi, Chờ duyệt, Quá hạn, Hôm nay)
   const tabCounts = React.useMemo(() => {
@@ -839,6 +858,7 @@ export function UnifiedAdaptiveWorkspace({
     if (onOverdueFilterChange) onOverdueFilterChange(false);
     if (onWorkboxChange) onWorkboxChange("ALL");
     if (onAction) onAction("RESET_FILTERS");
+    workspaceQuery?.resetFilters({ replace: true, preserveScope: true });
   }, [
     onResetFilters,
     onDepartmentChange,
@@ -847,32 +867,42 @@ export function UnifiedAdaptiveWorkspace({
     onOverdueFilterChange,
     onWorkboxChange,
     onAction,
+    workspaceQuery,
   ]);
 
   const handleRemoveDept = React.useCallback(() => {
     setInternalDept(undefined);
     if (onDepartmentChange) onDepartmentChange("ALL");
-  }, [onDepartmentChange]);
+    workspaceQuery?.setDept(undefined, { replace: true });
+  }, [onDepartmentChange, workspaceQuery]);
 
   const handleRemoveStatus = React.useCallback(() => {
     setInternalStatus(undefined);
     if (onStatusFilterChange) onStatusFilterChange(undefined);
-  }, [onStatusFilterChange]);
+    workspaceQuery?.setStatus("ALL", { replace: true });
+  }, [onStatusFilterChange, workspaceQuery]);
 
   const handleRemoveSearch = React.useCallback(() => {
     setInternalSearch(undefined);
     if (onSearchChange) onSearchChange("");
-  }, [onSearchChange]);
+    workspaceQuery?.setSearchQuery("", { replace: true });
+  }, [onSearchChange, workspaceQuery]);
 
   const handleRemoveOverdue = React.useCallback(() => {
     setInternalOverdue(false);
     if (onOverdueFilterChange) onOverdueFilterChange(false);
-  }, [onOverdueFilterChange]);
+    if (workspaceQuery?.queryState.attention === "overdue") {
+      workspaceQuery?.setAttention(null, { replace: true });
+    }
+  }, [onOverdueFilterChange, workspaceQuery]);
 
   const handleRemoveWorkbox = React.useCallback(() => {
     setInternalWorkbox("ALL");
     if (onWorkboxChange) onWorkboxChange("ALL");
-  }, [onWorkboxChange]);
+    if (workspaceQuery?.queryState.attention) {
+      workspaceQuery?.setAttention(null, { replace: true });
+    }
+  }, [onWorkboxChange, workspaceQuery]);
 
   // Current active filter criteria for saved views
   const currentCriteria: TaskViewCriteria = React.useMemo(() => {
@@ -956,18 +986,17 @@ export function UnifiedAdaptiveWorkspace({
         setTableDensity(criteria.density);
       }
 
-      syncTaskUrlParams(
+      workspaceQuery?.updateWorkspaceQuery(
         {
           scope: criteria.scope,
           dept: dept !== "ALL" ? dept : undefined,
-          status: status !== "all" && status !== "ALL" ? status : undefined,
-          workbox: wb !== "all" && wb !== "ALL" ? wb : undefined,
-          month: month !== "ALL" ? month : undefined,
+          unit: dept !== "ALL" ? dept : undefined,
+          status: status && status !== "ALL" && status !== "all" ? (status as any) : "ALL",
+          month: month !== "ALL" ? month : "ALL",
           q: q ? q : undefined,
-          view: criteria.viewMode !== "table" ? criteria.viewMode : undefined,
-          viewId: view.id,
+          view: criteria.viewMode !== "table" ? (criteria.viewMode as any) : "table",
         },
-        router ?? undefined
+        { replace: true }
       );
     },
     [
@@ -979,7 +1008,7 @@ export function UnifiedAdaptiveWorkspace({
       onOverdueFilterChange,
       onSearchChange,
       onViewModeChange,
-      router,
+      workspaceQuery,
     ]
   );
 
@@ -1214,6 +1243,7 @@ export function UnifiedAdaptiveWorkspace({
           onSearchChange={(q) => {
             setInternalSearch(q);
             onSearchChange?.(q);
+            workspaceQuery?.setSearchQuery(q, { replace: true });
           }}
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
@@ -1228,6 +1258,8 @@ export function UnifiedAdaptiveWorkspace({
               onStatusFilterChange?.(undefined);
               onWorkboxChange?.("ALL");
               onOverdueFilterChange?.(false);
+              workspaceQuery?.setStatus("ALL", { replace: true });
+              workspaceQuery?.setAttention(null, { replace: true });
             } else if (tab === "waiting_approval" || tab === "review") {
               setInternalStatus(tab);
               setInternalWorkbox("my_pending_approval");
@@ -1235,6 +1267,7 @@ export function UnifiedAdaptiveWorkspace({
               onStatusFilterChange?.(tab);
               onWorkboxChange?.("my_pending_approval");
               onOverdueFilterChange?.(false);
+              workspaceQuery?.setAttention("requires_my_approval", { replace: true });
             } else if (tab === "pending_submission") {
               setInternalStatus(tab);
               setInternalWorkbox("my_pending_submission");
@@ -1242,6 +1275,7 @@ export function UnifiedAdaptiveWorkspace({
               onStatusFilterChange?.(tab);
               onWorkboxChange?.("my_pending_submission");
               onOverdueFilterChange?.(false);
+              workspaceQuery?.setAttention("requires_my_action", { replace: true });
             } else if (tab === "my") {
               // 'Của tôi' is strictly a scope dimension; switch active scope to 'my'
               handleScopeChange("my");
@@ -1251,6 +1285,8 @@ export function UnifiedAdaptiveWorkspace({
               onStatusFilterChange?.(undefined);
               onWorkboxChange?.("ALL");
               onOverdueFilterChange?.(false);
+              workspaceQuery?.setStatus("ALL", { replace: true });
+              workspaceQuery?.setAttention(null, { replace: true });
             } else if (tab === "overdue") {
               setInternalStatus(tab);
               setInternalWorkbox("overdue");
@@ -1258,9 +1294,11 @@ export function UnifiedAdaptiveWorkspace({
               onStatusFilterChange?.(tab);
               onWorkboxChange?.("overdue");
               onOverdueFilterChange?.(true);
+              workspaceQuery?.setAttention("overdue", { replace: true });
             } else {
               setInternalStatus(tab);
               onStatusFilterChange?.(tab);
+              workspaceQuery?.setStatus((tab as any) || "ALL", { replace: true });
             }
           }}
           tabCounts={tabCounts}
@@ -1268,13 +1306,17 @@ export function UnifiedAdaptiveWorkspace({
           onDepartmentChange={(dept) => {
             setInternalDept(dept);
             onDepartmentChange?.(dept);
+            workspaceQuery?.setDept(dept, { replace: true });
           }}
           selectedCategory={currentCategory}
           onCategoryChange={setCurrentCategory}
           selectedPriority={currentPriority}
           onPriorityChange={setCurrentPriority}
           selectedAcademicMonth={currentMonth}
-          onAcademicMonthChange={setCurrentMonth}
+          onAcademicMonthChange={(m) => {
+            setCurrentMonth(m);
+            workspaceQuery?.setPeriod({ month: m !== "ALL" ? m : undefined }, { replace: true });
+          }}
           onResetFilters={handleResetFilters}
           activeViewId={activeViewId}
           onSelectView={handleSelectView}

@@ -55,3 +55,4 @@ qcet-backend-api/
 /uploads/
 /test_storage_*/
 /test_uploads_*/
+.gstack/

@@ -31,7 +31,7 @@ export default function OrgError({
               "Không thể xử lý sơ đồ bộ máy tổ chức và danh bạ cán bộ. Vui lòng thử lại hoặc quay về bảng điều khiển."}
           </p>
           {error?.digest && (
-            <p className="mt-2 text-[11px] font-mono text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border/40 inline-block">
+            <p className="mt-2 text-xs font-mono text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border/40 inline-block">
               Mã yêu cầu: {error.digest}
             </p>
           )}

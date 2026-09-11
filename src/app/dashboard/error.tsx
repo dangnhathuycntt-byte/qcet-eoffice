@@ -31,7 +31,7 @@ export default function DashboardError({
               "Không thể xử lý dữ liệu bảng điều hành tổng thể. Vui lòng thử lại hoặc tải lại trang."}
           </p>
           {error?.digest && (
-            <p className="mt-2 text-[11px] font-mono text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border/40 inline-block">
+            <p className="mt-2 text-xs font-mono text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border/40 inline-block">
               Mã yêu cầu: {error.digest}
             </p>
           )}
