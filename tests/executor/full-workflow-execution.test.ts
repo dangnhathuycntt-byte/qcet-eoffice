@@ -537,3 +537,176 @@ test('full-workflow-execution: null agent results are handled gracefully without
   assert.equal(result?.status, 'BLOCKED', 'Null agent outputs must result in fail-closed BLOCKED');
   assert.ok(result?.reason || (Array.isArray(result?.blockers) && result.blockers.length > 0));
 });
+
+test('full-workflow-execution: dependency pass gate - failed skeptic verification on dependency blocks downstream builder', async () => {
+  let shardBBuilderInvoked = false;
+  let shardBReconcileInvoked = false;
+
+  const runner = createWorkflowRunner({
+    args: {
+      planPath: 'test-plan.md',
+    },
+    agentMock: async (prompt: string, opts: any) => {
+      const label = opts?.label || '';
+
+      if (
+        label.includes('plan-decomposer') ||
+        label.includes('repo-boundary-mapper') ||
+        label.includes('manifest-synthesizer') ||
+        label.includes('calibrate')
+      ) {
+        return {
+          planPath: 'test-plan.md',
+          architectureNotes: 'Architecture with A -> B dependency',
+          requirements: [
+            { id: 'REQ-1', text: 'Base shard A requirement' },
+            { id: 'REQ-2', text: 'Dependent shard B requirement' },
+          ],
+          shards: [
+            {
+              id: 'shard-A',
+              title: 'Shard A',
+              objective: 'Implement base functionality',
+              type: 'feature',
+              risk: 'low',
+              priority: 1,
+              dependencies: [],
+              owns: ['src/lib/a/**'],
+              antiOwns: [],
+              requirements: ['REQ-1'],
+              acceptanceCriteria: ['A works'],
+              testHints: ['tests/a.test.ts'],
+            },
+            {
+              id: 'shard-B',
+              title: 'Shard B',
+              objective: 'Implement dependent functionality',
+              type: 'feature',
+              risk: 'low',
+              priority: 2,
+              dependencies: ['shard-A'],
+              owns: ['src/lib/b/**'],
+              antiOwns: [],
+              requirements: ['REQ-2'],
+              acceptanceCriteria: ['B works'],
+              testHints: ['tests/b.test.ts'],
+            },
+          ],
+        };
+      }
+
+      if (label.includes('pre-recon')) {
+        return {
+          status: 'ready',
+          currentState: 'Ready',
+          relevantFiles: ['src/lib/mod.ts'],
+          contracts: [],
+          implementationNotes: [],
+          risks: [],
+        };
+      }
+
+      if (label.includes('shard-B:reconcile')) {
+        shardBReconcileInvoked = true;
+        return {
+          status: 'ready',
+          currentState: 'Reconciled',
+          relevantFiles: ['src/lib/b/index.ts'],
+          contracts: [],
+          implementationNotes: [],
+          risks: [],
+        };
+      }
+
+      if (label.includes('shard-A:implement')) {
+        return {
+          status: 'completed',
+          changedFiles: ['src/lib/a/index.ts'],
+          summary: 'Implemented shard A',
+          requirementsSatisfied: ['REQ-1'],
+          testsRun: [{ command: 'npm test', status: 'passed', evidence: 'Pass' }],
+          risks: [],
+        };
+      }
+
+      if (label.includes('shard-B:implement')) {
+        shardBBuilderInvoked = true;
+        return {
+          status: 'completed',
+          changedFiles: ['src/lib/b/index.ts'],
+          summary: 'Implemented shard B',
+          requirementsSatisfied: ['REQ-2'],
+          testsRun: [],
+          risks: [],
+        };
+      }
+
+      // Shard A skeptic verification returns FAIL despite implementation being completed
+      if (label.includes('shard-A:verify')) {
+        return {
+          verdict: 'fail',
+          requirementsChecked: ['REQ-1'],
+          issues: [
+            {
+              id: 'ISSUE-A-1',
+              severity: 'high',
+              category: 'correctness',
+              evidence: 'Shard A verification failed',
+              impact: 'Unsound API contract',
+              recommendedFix: 'Fix contract',
+            },
+          ],
+          summary: 'Shard A verification failed skeptic audit',
+        };
+      }
+
+      // Shard A repair also fails
+      if (label.includes('shard-A:repair')) {
+        return {
+          status: 'failed',
+          summary: 'Repair failed',
+          changedFiles: [],
+        };
+      }
+
+      if (label.includes('integration:')) {
+        return { findings: [], summary: 'No findings' };
+      }
+
+      if (label.includes('proof') || label.includes('global') || label.includes('validation')) {
+        return {
+          status: 'fail',
+          checks: [],
+          requirementCoverage: [],
+          preExistingFailures: [],
+          summary: 'Shard A verification failed',
+        };
+      }
+
+      if (label.includes('final release skeptic')) {
+        return {
+          status: 'BLOCKED',
+          reasons: ['Shard A verification failed, Shard B dependency blocked'],
+          unresolvedRisks: [],
+        };
+      }
+
+      return {};
+    },
+  });
+
+  const { result } = await runner.run();
+  assert.equal(
+    shardBBuilderInvoked,
+    false,
+    'Shard B builder must NEVER be invoked when dependency Shard A failed skeptic verification'
+  );
+  assert.equal(
+    shardBReconcileInvoked,
+    false,
+    'Shard B reconciliation must NEVER be invoked when dependency Shard A failed skeptic verification'
+  );
+  const status = result?.final?.status || result?.status;
+  assert.equal(status, 'BLOCKED', 'Workflow must end with fail-closed BLOCKED status');
+});
+

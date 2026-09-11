@@ -123,3 +123,38 @@ test('dag-scheduler: DagScheduler dynamically unblocks and executes tasks concur
   assert.ok(executedOrder.includes('C'));
   assert.equal(result.timeline.length, 4);
 });
+
+test('dag-scheduler: dependency pass gate - failed shard prevents downstream shards from executing', async () => {
+  const manifest = {
+    shards: [
+      { id: 'A', dependencies: [] },
+      { id: 'B', dependencies: ['A'] },
+    ],
+  };
+
+  let shardBExecuted = false;
+  const scheduler = new DagScheduler(manifest, {
+    concurrency: 2,
+    runShard: async (s) => {
+      if (s.id === 'A') {
+        // Implementation may have completed, but verification status is failed
+        return { status: 'failed', shardId: 'A' };
+      }
+      if (s.id === 'B') {
+        shardBExecuted = true;
+        return { status: 'completed', shardId: 'B' };
+      }
+      return { status: 'completed', shardId: s.id };
+    },
+  });
+
+  await assert.rejects(
+    async () => {
+      await scheduler.execute();
+    },
+    /deadlock|blocked/i
+  );
+
+  assert.equal(shardBExecuted, false, 'Shard B must never execute when dependency A failed verification');
+});
+

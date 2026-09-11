@@ -191,6 +191,7 @@ export class DagScheduler {
       verifiers: options.poolCaps?.verifiers ?? 4,
       recon: options.poolCaps?.recon ?? 2,
       researchers: options.poolCaps?.researchers ?? 1,
+      ...(options.poolCaps || {}),
     };
     this.lookaheadDepth = typeof options.lookaheadDepth === 'number' ? options.lookaheadDepth : 1;
     this.runShard = options.runShard || (async (s) => ({ status: 'completed', shardId: s.id }));
@@ -231,6 +232,12 @@ export class DagScheduler {
 
     let activeCount = 0;
     let peakConcurrent = 0;
+    const activePoolCounts = {
+      builders: 0,
+      verifiers: 0,
+      recon: 0,
+      researchers: 0,
+    };
     const completedResults = new Map();
     const timeline = [];
     const executionErrors = [];
@@ -252,15 +259,38 @@ export class DagScheduler {
           });
         }
 
+        // Check if any shard in readyQueue can run given poolCaps
+        const hasRunnable = readyQueue.some((candidate) => {
+          const pool = candidate.pool;
+          return !pool || (activePoolCounts[pool] ?? 0) < (this.poolCaps[pool] ?? this.concurrency);
+        });
+
         // If deadlock or no progress possible
-        if (activeCount === 0 && readyQueue.length === 0 && completedResults.size < this.shards.length) {
-          return reject(new Error('DAG scheduler deadlock: remaining shards are blocked but no active tasks running'));
+        if (activeCount === 0 && !hasRunnable && completedResults.size < this.shards.length) {
+          return reject(new Error('DAG scheduler deadlock: remaining shards are blocked or starved by pool caps but no active tasks running'));
         }
 
-        // Launch tasks up to concurrency capacity
+        // Launch tasks up to concurrency capacity and pool limits
         while (activeCount < this.concurrency && readyQueue.length > 0) {
-          const shard = readyQueue.shift();
+          let candidateIndex = -1;
+          for (let i = 0; i < readyQueue.length; i++) {
+            const candidate = readyQueue[i];
+            const pool = candidate.pool;
+            if (!pool || (activePoolCounts[pool] ?? 0) < (this.poolCaps[pool] ?? this.concurrency)) {
+              candidateIndex = i;
+              break;
+            }
+          }
+
+          if (candidateIndex === -1) {
+            break; // All remaining ready shards are waiting on pool capacity
+          }
+
+          const shard = readyQueue.splice(candidateIndex, 1)[0];
           activeCount++;
+          if (shard.pool) {
+            activePoolCounts[shard.pool] = (activePoolCounts[shard.pool] || 0) + 1;
+          }
           if (activeCount > peakConcurrent) {
             peakConcurrent = activeCount;
           }
@@ -306,6 +336,9 @@ export class DagScheduler {
             })
             .finally(() => {
               activeCount--;
+              if (shard.pool) {
+                activePoolCounts[shard.pool] = Math.max(0, (activePoolCounts[shard.pool] || 0) - 1);
+              }
               checkAndPump();
             });
         }
@@ -323,4 +356,137 @@ export class DagScheduler {
     });
   }
 }
+
+/**
+ * Asynchronous Priority Semaphore with Speculative Recon Reservation.
+ * Guarantees that agent concurrency is bounded by capacity and speculative pre-reads
+ * are capped at speculativeReadLimit so they never starve builders or verifiers.
+ *
+ * @param {number} [capacity=6] - Maximum concurrent permits (valid 1..16, never CPU-derived)
+ * @param {Object} [options={}]
+ * @param {number} [options.speculativeReadLimit] - Maximum concurrent speculative permits
+ * @returns {Object}
+ */
+export function createSemaphore(capacity = 6, options = {}) {
+  const num = typeof capacity === 'number' ? capacity : (capacity !== undefined ? Number(capacity) : 6);
+  const rawCap = Number.isFinite(num) ? num : 6;
+  const maxCapacity = Math.max(1, Math.min(16, Math.floor(rawCap)));
+  const specNum = typeof options.speculativeReadLimit === 'number'
+    ? options.speculativeReadLimit
+    : (options.speculativeReadLimit !== undefined ? Number(options.speculativeReadLimit) : NaN);
+  const speculativeLimit = Number.isFinite(specNum)
+    ? Math.max(1, Math.min(maxCapacity, Math.floor(specNum)))
+    : Math.min(2, Math.max(1, Math.floor(maxCapacity / 2)));
+  let activeCount = 0;
+  let activeSpeculative = 0;
+  let peakConcurrent = 0;
+  const queue = [];
+
+  function tryAcquire(isSpeculative) {
+    if (activeCount >= maxCapacity) return false;
+    if (isSpeculative && activeSpeculative >= speculativeLimit) return false;
+    activeCount++;
+    if (isSpeculative) activeSpeculative++;
+    if (activeCount > peakConcurrent) peakConcurrent = activeCount;
+    return true;
+  }
+
+  function pump() {
+    if (activeCount >= maxCapacity || queue.length === 0) return;
+    for (let i = 0; i < queue.length; i++) {
+      const waiter = queue[i];
+      if (waiter.isSpeculative && activeSpeculative >= speculativeLimit) continue;
+      queue.splice(i, 1);
+      activeCount++;
+      if (waiter.isSpeculative) activeSpeculative++;
+      if (activeCount > peakConcurrent) peakConcurrent = activeCount;
+      waiter.resolve(createRelease(waiter.isSpeculative));
+      if (activeCount >= maxCapacity) break;
+    }
+  }
+
+  function createRelease(isSpeculative) {
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      activeCount--;
+      if (isSpeculative) activeSpeculative--;
+      pump();
+    };
+  }
+
+  function acquire(priority = 1, isSpeculative = false) {
+    const prio = typeof priority === 'number' ? priority : 1;
+    const spec = Boolean(isSpeculative);
+    if (queue.length === 0 && tryAcquire(spec)) {
+      return Promise.resolve(createRelease(spec));
+    }
+    return new Promise((resolve) => {
+      const waiter = { priority: prio, isSpeculative: spec, resolve };
+      let inserted = false;
+      for (let i = 0; i < queue.length; i++) {
+        if (queue[i].priority > prio) {
+          queue.splice(i, 0, waiter);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) queue.push(waiter);
+      pump();
+    });
+  }
+
+  async function withPermit(fn, priority = 1, isSpeculative = false) {
+    const release = await acquire(priority, isSpeculative);
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  }
+
+  return {
+    acquire,
+    withPermit,
+    getActiveCount: () => activeCount,
+    getActiveSpeculative: () => activeSpeculative,
+    getPeakConcurrent: () => peakConcurrent,
+    getQueueLength: () => queue.length,
+    capacity: maxCapacity,
+    speculativeLimit,
+  };
+}
+
+/**
+ * Resolves priority tier (P0..P5) for an agent invocation.
+ * Priority tiers:
+ *   P0 - Release gate & global verification (highest priority)
+ *   P1 - Builder & repair agents
+ *   P2 - Verifier, reverify & skeptic agents
+ *   P3 - Pre-implementation reconciliation & merge
+ *   P4 - Ready reconnaissance (dependencies met)
+ *   P5 - Speculative reconnaissance (dependencies in-flight)
+ *
+ * @param {Object|number} [options={}]
+ * @returns {number} Priority 0..5 (lower number = higher priority)
+ */
+export function getAgentPriority(options = {}) {
+  if (typeof options === 'number') return options;
+  if (typeof options?.priority === 'number') return options.priority;
+  const role = String(
+    options?.role || options?.type || options?.agentType || options?.agent || options?.phase || options?.label || ''
+  ).toLowerCase();
+  const isSpeculative = Boolean(options?.isSpeculative || options?.speculative);
+
+  if (role.includes('release') || role.includes('global')) return 0;
+  if (role.includes('builder') || role.includes('repair') || role.includes('implement')) return 1;
+  if (role.includes('verif') || role.includes('skeptic')) return 2;
+  if (role.includes('reconcil') || role.includes('merge')) return 3;
+  if (role.includes('recon')) {
+    return isSpeculative ? 5 : 4;
+  }
+  return 1;
+}
+
 

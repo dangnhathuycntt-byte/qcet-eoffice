@@ -1048,10 +1048,10 @@ export function computeShardPriorities(manifest) {
 }
 
 /**
- * Computes the set of shard IDs eligible for pre-reconnaissance lookahead.
+ * Computes the set of shard IDs eligible for pre-reconnaissance lookahead using canonical BFS.
  * Shards are eligible if:
  * 1. They are currently ready (0 unfinished dependencies), OR
- * 2. They are within lookaheadDepth levels of the ready/active frontier.
+ * 2. They are within lookaheadDepth levels downstream from ready or active shards.
  *
  * Deep future shards are excluded to prevent unbounded agent fan-out and resource exhaustion.
  */
@@ -1061,33 +1061,180 @@ export function computeEligibleReconShards(
   completedIds = new Set(),
   lookaheadDepth = 1
 ) {
+  const shards = Array.isArray(manifest?.shards) ? manifest.shards : [];
   const activeSet = activeIds instanceof Set ? activeIds : new Set(activeIds);
   const completedSet = completedIds instanceof Set ? completedIds : new Set(completedIds);
-  const shards = Array.isArray(manifest?.shards) ? manifest.shards : [];
+
   const eligible = new Set();
+  const dependentsMap = new Map();
+  const dependenciesMap = new Map();
 
-  for (const shard of shards) {
-    if (completedSet.has(shard.id)) continue;
+  for (const s of shards) {
+    dependentsMap.set(s.id, []);
+    const deps = Array.isArray(s.dependencies)
+      ? s.dependencies
+      : Array.isArray(s.dependsOn)
+      ? s.dependsOn
+      : [];
+    dependenciesMap.set(s.id, deps);
+  }
 
-    const deps = shard.dependencies || [];
-    const uncompletedDeps = deps.filter((d) => !completedSet.has(d));
-
-    // Case 1: All dependencies completed -> ready now
-    if (uncompletedDeps.length === 0) {
-      eligible.add(shard.id);
-      continue;
-    }
-
-    // Case 2: Within lookahead depth
-    if (lookaheadDepth >= 1) {
-      const remainingUnstarted = uncompletedDeps.filter((d) => !activeSet.has(d));
-      if (remainingUnstarted.length === 0 || uncompletedDeps.length <= lookaheadDepth) {
-        eligible.add(shard.id);
+  for (const [id, deps] of dependenciesMap.entries()) {
+    for (const d of deps) {
+      if (dependentsMap.has(d)) {
+        dependentsMap.get(d).push(id);
       }
     }
   }
 
+  // Level 0: Ready shards (all dependencies completed or none)
+  const readyShards = [];
+  for (const s of shards) {
+    if (completedSet.has(s.id)) continue;
+    const deps = dependenciesMap.get(s.id) || [];
+    const allMet = deps.every((d) => completedSet.has(d));
+    if (allMet) {
+      eligible.add(s.id);
+      readyShards.push(s.id);
+    }
+  }
+
+  // Bounded lookahead: Traverse up to lookaheadDepth levels downstream from ready or currently active shards
+  let currentFrontier = [...readyShards, ...Array.from(activeSet)];
+  let currentDepth = 0;
+
+  while (currentDepth < lookaheadDepth && currentFrontier.length > 0) {
+    const nextFrontier = [];
+    for (const parentId of currentFrontier) {
+      for (const childId of dependentsMap.get(parentId) || []) {
+        if (!eligible.has(childId) && !completedSet.has(childId)) {
+          eligible.add(childId);
+          nextFrontier.push(childId);
+        }
+      }
+    }
+    currentFrontier = nextFrontier;
+    currentDepth++;
+  }
+
   return eligible;
+}
+
+/**
+ * Asynchronous Priority Semaphore with Speculative Recon Reservation.
+ * Guarantees that agent concurrency is bounded by capacity and speculative pre-reads
+ * are capped at speculativeReadLimit so they never starve builders or verifiers.
+ */
+export function createSemaphore(capacity = 6, options = {}) {
+  const num = typeof capacity === 'number' ? capacity : (capacity !== undefined ? Number(capacity) : 6);
+  const rawCap = Number.isFinite(num) ? num : 6;
+  const maxCapacity = Math.max(1, Math.min(16, Math.floor(rawCap)));
+  const specNum = typeof options.speculativeReadLimit === 'number'
+    ? options.speculativeReadLimit
+    : (options.speculativeReadLimit !== undefined ? Number(options.speculativeReadLimit) : NaN);
+  const speculativeLimit = Number.isFinite(specNum)
+    ? Math.max(1, Math.min(maxCapacity, Math.floor(specNum)))
+    : Math.min(2, Math.max(1, Math.floor(maxCapacity / 2)));
+  let activeCount = 0;
+  let activeSpeculative = 0;
+  let peakConcurrent = 0;
+  const queue = [];
+
+  function tryAcquire(isSpeculative) {
+    if (activeCount >= maxCapacity) return false;
+    if (isSpeculative && activeSpeculative >= speculativeLimit) return false;
+    activeCount++;
+    if (isSpeculative) activeSpeculative++;
+    if (activeCount > peakConcurrent) peakConcurrent = activeCount;
+    return true;
+  }
+
+  function pump() {
+    if (activeCount >= maxCapacity || queue.length === 0) return;
+    for (let i = 0; i < queue.length; i++) {
+      const waiter = queue[i];
+      if (waiter.isSpeculative && activeSpeculative >= speculativeLimit) continue;
+      queue.splice(i, 1);
+      activeCount++;
+      if (waiter.isSpeculative) activeSpeculative++;
+      if (activeCount > peakConcurrent) peakConcurrent = activeCount;
+      waiter.resolve(createRelease(waiter.isSpeculative));
+      if (activeCount >= maxCapacity) break;
+    }
+  }
+
+  function createRelease(isSpeculative) {
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      activeCount--;
+      if (isSpeculative) activeSpeculative--;
+      pump();
+    };
+  }
+
+  function acquire(priority = 1, isSpeculative = false) {
+    const prio = typeof priority === 'number' ? priority : 1;
+    const spec = Boolean(isSpeculative);
+    if (queue.length === 0 && tryAcquire(spec)) {
+      return Promise.resolve(createRelease(spec));
+    }
+    return new Promise((resolve) => {
+      const waiter = { priority: prio, isSpeculative: spec, resolve };
+      let inserted = false;
+      for (let i = 0; i < queue.length; i++) {
+        if (queue[i].priority > prio) {
+          queue.splice(i, 0, waiter);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) queue.push(waiter);
+      pump();
+    });
+  }
+
+  async function withPermit(fn, priority = 1, isSpeculative = false) {
+    const release = await acquire(priority, isSpeculative);
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  }
+
+  return {
+    acquire,
+    withPermit,
+    getActiveCount: () => activeCount,
+    getActiveSpeculative: () => activeSpeculative,
+    getPeakConcurrent: () => peakConcurrent,
+    getQueueLength: () => queue.length,
+    capacity: maxCapacity,
+    speculativeLimit,
+  };
+}
+
+/**
+ * Resolves priority tier (P0..P5) for an agent invocation.
+ */
+export function getAgentPriority(options = {}) {
+  if (typeof options === 'number') return options;
+  if (typeof options?.priority === 'number') return options.priority;
+  const role = String(
+    options?.role || options?.type || options?.agentType || options?.agent || options?.phase || options?.label || ''
+  ).toLowerCase();
+  const isSpeculative = Boolean(options?.isSpeculative || options?.speculative);
+
+  if (role.includes('release') || role.includes('global')) return 0;
+  if (role.includes('builder') || role.includes('repair') || role.includes('implement')) return 1;
+  if (role.includes('verif') || role.includes('skeptic')) return 2;
+  if (role.includes('reconcil') || role.includes('merge')) return 3;
+  if (role.includes('recon')) {
+    return isSpeculative ? 5 : 4;
+  }
+  return 1;
 }
 
 /**
@@ -2011,6 +2158,8 @@ let planContent = null;
 let worktreeIsolation = 'auto';
 let maxRepairRounds = 2;
 let lookaheadDepth = 1;
+let concurrency = 6;
+let speculativeReadLimit = undefined;
 
 if (typeof rawArgs === 'string') {
   const trimmed = rawArgs.trim().replace(/^['"]|['"]$/g, '');
@@ -2027,6 +2176,18 @@ if (typeof rawArgs === 'string') {
       worktreeIsolation = parsed.worktreeIsolation !== undefined ? parsed.worktreeIsolation : 'auto';
       maxRepairRounds = typeof parsed.maxRepairRounds === 'number' ? parsed.maxRepairRounds : 2;
       lookaheadDepth = typeof parsed.lookaheadDepth === 'number' ? parsed.lookaheadDepth : 1;
+      if (parsed.concurrency !== undefined) {
+        const c = Number(parsed.concurrency);
+        if (!Number.isNaN(c)) {
+          concurrency = Math.max(1, Math.min(16, Math.floor(c)));
+        }
+      }
+      if (parsed.speculativeReadLimit !== undefined) {
+        const s = Number(parsed.speculativeReadLimit);
+        if (!Number.isNaN(s)) {
+          speculativeReadLimit = Math.max(1, Math.min(concurrency, Math.floor(s)));
+        }
+      }
     } catch (_) {
       planPath = trimmed;
     }
@@ -2044,6 +2205,18 @@ if (typeof rawArgs === 'string') {
   worktreeIsolation = rawArgs.worktreeIsolation !== undefined ? rawArgs.worktreeIsolation : 'auto';
   maxRepairRounds = typeof rawArgs.maxRepairRounds === 'number' ? rawArgs.maxRepairRounds : 2;
   lookaheadDepth = typeof rawArgs.lookaheadDepth === 'number' ? rawArgs.lookaheadDepth : 1;
+  if (rawArgs.concurrency !== undefined) {
+    const c = Number(rawArgs.concurrency);
+    if (!Number.isNaN(c)) {
+      concurrency = Math.max(1, Math.min(16, Math.floor(c)));
+    }
+  }
+  if (rawArgs.speculativeReadLimit !== undefined) {
+    const s = Number(rawArgs.speculativeReadLimit);
+    if (!Number.isNaN(s)) {
+      speculativeReadLimit = Math.max(1, Math.min(concurrency, Math.floor(s)));
+    }
+  }
 }
 
 if (!planPath && !planContent) {
@@ -2076,22 +2249,28 @@ let activeAgents = 0;
 let peakConcurrent = 0;
 let totalAgentsCount = 0;
 
+const agentSemaphore = createSemaphore(concurrency, { speculativeReadLimit });
+
 const rawAgent = agent;
 const callAgent = async (prompt, options) => {
   if (typeof budget !== 'undefined' && budget?.total && budget.remaining() <= 0) {
     log('WARNING: Token budget exhausted. Returning null from callAgent.');
     return null;
   }
-  activeAgents++;
-  totalAgentsCount++;
-  if (activeAgents > peakConcurrent) {
-    peakConcurrent = activeAgents;
-  }
-  try {
-    return await rawAgent(prompt, options);
-  } finally {
-    activeAgents--;
-  }
+  const priority = getAgentPriority(options);
+  const isSpeculative = Boolean(options?.isSpeculative || options?.speculative);
+  return await agentSemaphore.withPermit(async () => {
+    activeAgents++;
+    totalAgentsCount++;
+    if (activeAgents > peakConcurrent) {
+      peakConcurrent = activeAgents;
+    }
+    try {
+      return await rawAgent(prompt, options);
+    } finally {
+      activeAgents--;
+    }
+  }, priority, isSpeculative);
 };
 
 
@@ -2908,7 +3087,26 @@ ${ambiguityFallback}`;
   // DECOUPLED READ GATE: PRE-RECON & CONDITIONAL RESEARCH
   // ---------------------------------------------------------------------------
 
+  const completedShardIds = new Set();
+  const activeShardIds = new Set();
   const preReconPromises = new Map();
+
+  function refreshReconFrontier() {
+    const eligible = computeEligibleReconShards(
+      manifest,
+      activeShardIds,
+      completedShardIds,
+      lookaheadDepth
+    );
+    for (const shardId of eligible) {
+      if (!preReconPromises.has(shardId)) {
+        const shard = shardById.get(shardId);
+        if (shard) {
+          schedulePreRecon(shard);
+        }
+      }
+    }
+  }
 
   function schedulePreRecon(shard) {
     if (!shard) return Promise.resolve(null);
@@ -2918,6 +3116,7 @@ ${ambiguityFallback}`;
 
     const promise = (async () => {
       const shardPacket = buildShardPacket(shard, manifest);
+      const isSpeculative = (shard.dependencies || []).some((d) => !completedShardIds.has(d));
 
       const reconPrompt = `${RECON_STATIC_PREFIX}
 
@@ -2940,6 +3139,7 @@ ${ambiguityFallback}`;
         label: `${shardPacket.id}:pre-recon`,
         effort: shardPacket?.risk === 'critical' ? 'high' : 'medium',
         schema: RECON_SCHEMA,
+        isSpeculative,
       });
 
       if (!recon || recon.status === 'blocked') {
@@ -3001,6 +3201,7 @@ ${JSON.stringify(
           phase: 'Recon',
           label: `${shardPacket.id}:research`,
           schema: RESEARCH_SCHEMA,
+          isSpeculative,
         });
 
         researchEvidence = researcherResult || {
@@ -3322,9 +3523,6 @@ ${ambiguityFallback}`;
       return shardPromises.get(shard.id);
     }
 
-    // Ensure pre-recon is launched immediately on this shard
-    const preReconPromise = schedulePreRecon(shard);
-
     // Strict write gate: wait for all dependencies to pass independent verification
     const dependencyPromises = (shard.dependencies || []).map((dependencyId) =>
       scheduleShard(shardById.get(dependencyId))
@@ -3339,7 +3537,9 @@ ${ambiguityFallback}`;
         );
 
         if (badDependency) {
-          const preRecon = await preReconPromise;
+          const preRecon = preReconPromises.has(shard.id)
+            ? await preReconPromises.get(shard.id)
+            : null;
           return blockedByDependency(
             shard,
             badDependency?.shard?.id || 'unknown',
@@ -3347,8 +3547,17 @@ ${ambiguityFallback}`;
           );
         }
 
-        const preRecon = await preReconPromise;
+        // Shard is now ready for active execution!
+        // Mark as active and refresh recon frontier
+        activeShardIds.add(shard.id);
+        refreshReconFrontier();
+
+        // Ensure pre-recon is available (or launched if not already)
+        const preRecon = await (preReconPromises.get(shard.id) || schedulePreRecon(shard));
+
         if (!preRecon || !preRecon.recon || preRecon.recon.status === 'blocked') {
+          activeShardIds.delete(shard.id);
+          refreshReconFrontier();
           return {
             shard,
             shardPacket: preRecon?.shardPacket || buildShardPacket(shard, manifest),
@@ -3384,39 +3593,52 @@ ${ambiguityFallback}`;
           `Shard ${shard.id} write gate unblocked; proceeding to reconciliation and implementation.`
         );
 
-        return runShardWithReconciliation(
-          shard,
-          preRecon,
-          dependencyResults
-        );
+        try {
+          const result = await runShardWithReconciliation(
+            shard,
+            preRecon,
+            dependencyResults
+          );
+          if (result.lastVerification?.verdict === 'pass') {
+            completedShardIds.add(shard.id);
+          }
+          return result;
+        } finally {
+          activeShardIds.delete(shard.id);
+          refreshReconFrontier();
+        }
       })
-      .catch((error) => ({
-        shard,
-        recon: {
-          status: 'blocked',
-          currentState: '',
-          relevantFiles: [],
-          contracts: [],
-          implementationNotes: [],
-          risks: [`Workflow execution error: ${String(error)}`],
-          blocker: String(error),
-        },
-        implementation: {
-          status: 'blocked',
-          changedFiles: [],
-          summary: 'Shard pipeline failed.',
-          requirementsSatisfied: [],
-          testsRun: [],
-          risks: [String(error)],
-          blocker: String(error),
-        },
-        lastVerification: {
-          verdict: 'blocked',
-          requirementsChecked: [],
-          issues: [],
-          summary: `Shard execution failed: ${String(error)}`,
-        },
-      }));
+      .catch((error) => {
+        activeShardIds.delete(shard.id);
+        refreshReconFrontier();
+        return {
+          shard,
+          recon: {
+            status: 'blocked',
+            currentState: '',
+            relevantFiles: [],
+            contracts: [],
+            implementationNotes: [],
+            risks: [`Workflow execution error: ${String(error)}`],
+            blocker: String(error),
+          },
+          implementation: {
+            status: 'blocked',
+            changedFiles: [],
+            summary: 'Shard pipeline failed.',
+            requirementsSatisfied: [],
+            testsRun: [],
+            risks: [String(error)],
+            blocker: String(error),
+          },
+          lastVerification: {
+            verdict: 'blocked',
+            requirementsChecked: [],
+            issues: [],
+            summary: `Shard execution failed: ${String(error)}`,
+          },
+        };
+      });
 
     shardPromises.set(shard.id, promise);
     return promise;
@@ -3441,16 +3663,7 @@ ${ambiguityFallback}`;
   );
 
   // Bounded Read Gate: launch pre-recon for ready and lookahead frontier shards
-  const initialEligibleRecon = computeEligibleReconShards(manifest, new Set(), new Set(), lookaheadDepth);
-  log(
-    `Bounded pre-recon lookahead (depth=${lookaheadDepth}): launching pre-recon for ` +
-    `${initialEligibleRecon.size}/${manifest.shards.length} shards: [${Array.from(initialEligibleRecon).join(', ')}]`
-  );
-  for (const shard of prioritizedShards) {
-    if (initialEligibleRecon.has(shard.id)) {
-      schedulePreRecon(shard);
-    }
-  }
+  refreshReconFrontier();
 
   // Strict Write Gate: schedule builder execution awaiting dependencies
   for (const shard of prioritizedShards) {

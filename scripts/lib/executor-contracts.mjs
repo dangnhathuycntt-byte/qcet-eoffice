@@ -1140,6 +1140,8 @@ export {
   topologicalSort,
   DagScheduler,
   computeEligibleReconShards,
+  createSemaphore,
+  getAgentPriority,
 } from './dag-scheduler.mjs';
 
 
