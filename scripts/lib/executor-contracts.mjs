@@ -706,7 +706,12 @@ export {
   DagScheduler,
 } from './dag-scheduler.mjs';
 
-
-
-
-
+export {
+  ROLE_TURN_LIMITS,
+  DEFAULT_BUDGET_LIMITS,
+  BudgetTracker,
+  hasCriticalSecurityFinding,
+  extractRootCauseSignature,
+  hasIdenticalRootCauseFailure,
+  runRepairLoop,
+} from './budget-policy.mjs';

@@ -1900,11 +1900,149 @@ Return structured reconciliation evidence adhering strictly to schema.`;
 // BUDGET PROFILES, FAILURE REASONS & RUNTIME PROVENANCE
 // -----------------------------------------------------------------------------
 
+export const ROLE_TURN_LIMITS = Object.freeze({
+  builder: 25,
+  repair: 20,
+  skeptic: 15,
+  verifier: 15,
+  reconcile: 12,
+  recon: 10,
+  evaluator: 10,
+});
+
+export const DEFAULT_BUDGET_LIMITS = Object.freeze({
+  maxShardTokens: 80_000,
+  maxRunTokens: 400_000,
+  runBudgetThresholdPct: 0.90,
+  roleTurnLimits: ROLE_TURN_LIMITS,
+});
+
 export const BUDGET_PROFILES = {
-  low:    { maxConcurrentAgents: 4, maxAgents: 40 },
-  medium: { maxConcurrentAgents: 6, maxAgents: 72 },
-  high:   { maxConcurrentAgents: 8, maxAgents: 128 },
+  low:    { maxConcurrentAgents: 4, maxAgents: 40, maxShardTokens: 50_000, maxRunTokens: 250_000 },
+  medium: { maxConcurrentAgents: 6, maxAgents: 72, maxShardTokens: 80_000, maxRunTokens: 400_000 },
+  high:   { maxConcurrentAgents: 8, maxAgents: 128, maxShardTokens: 120_000, maxRunTokens: 600_000 },
 };
+
+export class BudgetTracker {
+  constructor(options = {}) {
+    this.maxShardTokens = Number(options.maxShardTokens ?? DEFAULT_BUDGET_LIMITS.maxShardTokens);
+    this.maxRunTokens = Number(options.maxRunTokens ?? DEFAULT_BUDGET_LIMITS.maxRunTokens);
+    this.runBudgetThresholdPct = Number(
+      options.runBudgetThresholdPct ?? DEFAULT_BUDGET_LIMITS.runBudgetThresholdPct
+    );
+    this.roleTurnLimits = { ...ROLE_TURN_LIMITS, ...(options.roleTurnLimits || {}) };
+
+    this.tokensSpentTotal = 0;
+    this.tokensSpentByShard = new Map();
+    this.tokensSpentByAgent = new Map();
+    this.turnsByAgent = new Map();
+  }
+
+  recordUsage({ shardId, agentId, role, turns = 0, tokens = 0 }) {
+    const t = Number(tokens) || 0;
+    this.tokensSpentTotal += t;
+
+    if (shardId) {
+      const currentShardTokens = this.tokensSpentByShard.get(shardId) || 0;
+      this.tokensSpentByShard.set(shardId, currentShardTokens + t);
+    }
+
+    if (agentId) {
+      const currentAgentTokens = this.tokensSpentByAgent.get(agentId) || 0;
+      this.tokensSpentByAgent.set(agentId, currentAgentTokens + t);
+
+      const currentAgentTurns = this.turnsByAgent.get(agentId) || 0;
+      this.turnsByAgent.set(agentId, currentAgentTurns + (Number(turns) || 0));
+    }
+  }
+
+  getShardTokens(shardId) {
+    return this.tokensSpentByShard.get(shardId) || 0;
+  }
+
+  getTotalTokens() {
+    return this.tokensSpentTotal;
+  }
+
+  isShardExhausted(shardId) {
+    if (!shardId) return false;
+    return this.getShardTokens(shardId) >= this.maxShardTokens;
+  }
+
+  isRunExhausted() {
+    return this.tokensSpentTotal >= this.maxRunTokens;
+  }
+
+  isRunThresholdExceeded(thresholdPct = this.runBudgetThresholdPct) {
+    return this.tokensSpentTotal >= this.maxRunTokens * thresholdPct;
+  }
+
+  canStartNewShard() {
+    return !this.isRunThresholdExceeded() && !this.isRunExhausted();
+  }
+
+  getRoleTurnLimit(role) {
+    return this.roleTurnLimits[role] ?? 25;
+  }
+
+  isTurnLimitExceeded(role, turns) {
+    const limit = this.getRoleTurnLimit(role);
+    return turns > limit;
+  }
+}
+
+export function hasCriticalSecurityFinding(verification) {
+  if (!verification || !Array.isArray(verification.issues)) return false;
+  return verification.issues.some((issue) => {
+    if (!issue) return false;
+    const severity = String(issue.severity || '').toLowerCase();
+    const category = String(issue.category || '').toLowerCase();
+    const title = String(issue.title || issue.description || issue.id || '').toLowerCase();
+
+    const isCritical = severity === 'critical' || issue.isSecurityCritical === true;
+    const isSecurityRelated =
+      category.includes('security') ||
+      category.includes('auth') ||
+      category.includes('rbac') ||
+      title.includes('unauthenticated') ||
+      title.includes('unauthorized') ||
+      title.includes('secret leak');
+
+    return isCritical && isSecurityRelated;
+  });
+}
+
+export function extractRootCauseSignature(failure) {
+  if (!failure) return '';
+  if (typeof failure === 'string') return failure.trim().toLowerCase();
+
+  if (failure.rootCause) {
+    return String(failure.rootCause).trim().toLowerCase();
+  }
+
+  if (Array.isArray(failure.issues) && failure.issues.length > 0) {
+    return failure.issues
+      .map((i) => `${i.category || ''}:${i.file || ''}:${i.title || i.id || ''}`)
+      .sort()
+      .join('|')
+      .toLowerCase();
+  }
+
+  if (failure.blocker || failure.error || failure.message) {
+    return String(failure.blocker || failure.error || failure.message).trim().toLowerCase();
+  }
+
+  return JSON.stringify(failure);
+}
+
+export function hasIdenticalRootCauseFailure(failures) {
+  if (!Array.isArray(failures) || failures.length < 2) return false;
+  const f1 = failures[failures.length - 2];
+  const f2 = failures[failures.length - 1];
+  const sig1 = extractRootCauseSignature(f1);
+  const sig2 = extractRootCauseSignature(f2);
+  return Boolean(sig1 && sig2 && sig1 === sig2);
+}
 
 export const FAILURE_REASONS = new Set([
   'DEPENDENCY_BLOCKED', 'WORKTREE_INVALID', 'OWNERSHIP_CONFLICT',
@@ -1958,10 +2096,32 @@ export function normalizeBudgetConfig(input) {
   }
   maxAgents = Math.min(1000, Math.max(1, Math.floor(maxAgents)));
 
+  let maxShardTokens = overrides.maxShardTokens ?? base.maxShardTokens ?? DEFAULT_BUDGET_LIMITS.maxShardTokens;
+  maxShardTokens = Number(maxShardTokens);
+  if (!Number.isFinite(maxShardTokens) || maxShardTokens < 1) {
+    maxShardTokens = DEFAULT_BUDGET_LIMITS.maxShardTokens;
+  }
+
+  let maxRunTokens = overrides.maxRunTokens ?? base.maxRunTokens ?? DEFAULT_BUDGET_LIMITS.maxRunTokens;
+  maxRunTokens = Number(maxRunTokens);
+  if (!Number.isFinite(maxRunTokens) || maxRunTokens < 1) {
+    maxRunTokens = DEFAULT_BUDGET_LIMITS.maxRunTokens;
+  }
+
+  let runBudgetThresholdPct = overrides.runBudgetThresholdPct ?? DEFAULT_BUDGET_LIMITS.runBudgetThresholdPct;
+  runBudgetThresholdPct = Number(runBudgetThresholdPct);
+  if (!Number.isFinite(runBudgetThresholdPct) || runBudgetThresholdPct <= 0 || runBudgetThresholdPct > 1) {
+    runBudgetThresholdPct = DEFAULT_BUDGET_LIMITS.runBudgetThresholdPct;
+  }
+
   return {
     profile,
     maxConcurrentAgents: maxConcurrent,
     maxAgents,
+    maxShardTokens,
+    maxRunTokens,
+    runBudgetThresholdPct,
+    roleTurnLimits: { ...ROLE_TURN_LIMITS, ...(overrides.roleTurnLimits || {}) },
   };
 }
 
@@ -2077,12 +2237,17 @@ const dependencyWaitDurationsMs = [];
 const normalizedBudget = normalizeBudgetConfig(budgetConfig);
 const maxConcurrentAgents = normalizedBudget.maxConcurrentAgents;
 const maxAgents = normalizedBudget.maxAgents;
+const budgetTracker = new BudgetTracker(normalizedBudget);
 const runWithAgentSlot = createConcurrencyLimiter(maxConcurrentAgents);
 
 const rawAgent = agent;
 const callAgent = async (prompt, options) => {
   if (totalAgentsCount >= maxAgents) {
     log(`WARNING: Agent budget exhausted (${maxAgents}). Returning null from callAgent.`);
+    return null;
+  }
+  if (budgetTracker.isRunExhausted()) {
+    log(`WARNING: Token budget exhausted (${budgetTracker.getTotalTokens()} >= ${budgetTracker.maxRunTokens}). Returning null from callAgent.`);
     return null;
   }
   if (typeof budget !== 'undefined' && budget?.total && budget.remaining() <= 0) {
@@ -2099,7 +2264,15 @@ const callAgent = async (prompt, options) => {
       peakConcurrent = activeAgents;
     }
     try {
-      return await rawAgent(prompt, options);
+      const res = await rawAgent(prompt, options);
+      const estTokens = res?.usage?.totalTokens || res?.tokens || 1000;
+      budgetTracker.recordUsage({
+        shardId: options?.shardId || options?.shard?.id,
+        agentId: options?.agentId || options?.label,
+        role: options?.agentType || options?.agent,
+        tokens: estTokens,
+      });
+      return res;
     } finally {
       activeAgents--;
     }
@@ -3152,6 +3325,31 @@ ${ambiguityFallback}`;
       builderOptions.isolation = 'worktree';
     }
 
+    if (budgetTracker && !budgetTracker.canStartNewShard()) {
+      log(`[budget-policy] Run budget threshold exceeded (> 90%). Shard '${shard.id}' not started; completing active shards and proceeding to release gate.`);
+      return {
+        shard,
+        shardPacket,
+        recon,
+        research: researchEvidence,
+        reconciliation,
+        implementation: {
+          status: 'blocked',
+          summary: 'Run budget exceeded 90% threshold. New shard starts prohibited.',
+          changedFiles: [],
+          blocker: 'RUN_BUDGET_THRESHOLD_EXCEEDED',
+        },
+        initialVerification: {
+          verdict: 'blocked',
+          issues: [{ id: 'budget-threshold', severity: 'HIGH', summary: 'Run budget exceeded 90% threshold.' }],
+        },
+        lastVerification: {
+          verdict: 'blocked',
+          issues: [{ id: 'budget-threshold', severity: 'HIGH', summary: 'Run budget exceeded 90% threshold.' }],
+        },
+      };
+    }
+
     const shardExecutionStartedAtMs = Date.now();
     const implementation = await callAgent(
       implementationPrompt,
@@ -3198,17 +3396,55 @@ ${ambiguityFallback}`;
     state = await verifyShard(state, 0);
 
     // =========================================================================
-    // REPAIR ROUND 1
+    // REPAIR ROUND 1 (WITH EARLY TERMINATION POLICIES)
     // =========================================================================
     if (state.lastVerification?.verdict === 'fail' && maxRepairRounds >= 1) {
+      // 1. Critical security finding halts repair immediately
+      if (hasCriticalSecurityFinding(state.lastVerification)) {
+        log(`Shard ${shard.id} critical security failure in verification. Halting repair loop immediately.`);
+        state.repairStagnated = true;
+        state.securityHalted = true;
+        state.lastVerification.verdict = 'blocked';
+        return state;
+      }
+
+      // 2. Shard token budget exhaustion check
+      if (budgetTracker && budgetTracker.isShardExhausted(shard.id)) {
+        log(`Shard ${shard.id} token budget exhausted. Halting repair loop immediately.`);
+        state.repairStagnated = true;
+        state.lastVerification.verdict = 'blocked';
+        return state;
+      }
+
+      const initialIssues = state.lastVerification;
       const initialIssuesCount = state.lastVerification?.issues?.length || 0;
       state = await repairShard(state, 1);
       state = await reverifyIfRepaired(state, 1);
+
+      // 3. Early termination on 2 consecutive identical failures
+      if (state.lastVerification?.verdict === 'fail') {
+        if (hasIdenticalRootCauseFailure([initialIssues, state.lastVerification])) {
+          log(
+            `Shard ${shard.id} repair round 1 yielded identical root cause failure as initial verification. ` +
+            `Terminating repair early to prevent repeated failure loop.`
+          );
+          state.repairStagnated = true;
+          return state;
+        }
+      }
 
       // =======================================================================
       // REPAIR ROUND 2 (EARLY TERMINATION ON NO PROGRESS)
       // =======================================================================
       if (state.lastVerification?.verdict === 'fail' && maxRepairRounds >= 2) {
+        if (budgetTracker && budgetTracker.isShardExhausted(shard.id)) {
+          log(`Shard ${shard.id} token budget exhausted before round 2. Halting repair loop.`);
+          state.repairStagnated = true;
+          state.lastVerification.verdict = 'blocked';
+          return state;
+        }
+
+        const round1Issues = state.lastVerification;
         const round1IssuesCount = state.lastVerification?.issues?.length || 0;
         if (round1IssuesCount >= initialIssuesCount) {
           log(
@@ -3227,13 +3463,21 @@ ${ambiguityFallback}`;
           state = await reverifyIfRepaired(state, 2);
 
           if (state.lastVerification?.verdict === 'fail') {
-            const round2IssuesCount = state.lastVerification?.issues?.length || 0;
-            if (round2IssuesCount >= round1IssuesCount) {
+            if (hasIdenticalRootCauseFailure([round1Issues, state.lastVerification])) {
               log(
-                `Shard ${shard.id} repair round 2 yielded no reduction in confirmed issues ` +
-                `(${round2IssuesCount} remaining >= ${round1IssuesCount} previous).`
+                `Shard ${shard.id} repair round 2 produced identical root cause failure as round 1. ` +
+                `Terminating repair early.`
               );
               state.repairStagnated = true;
+            } else {
+              const round2IssuesCount = state.lastVerification?.issues?.length || 0;
+              if (round2IssuesCount >= round1IssuesCount) {
+                log(
+                  `Shard ${shard.id} repair round 2 yielded no reduction in confirmed issues ` +
+                  `(${round2IssuesCount} remaining >= ${round1IssuesCount} previous).`
+                );
+                state.repairStagnated = true;
+              }
             }
           }
         }
