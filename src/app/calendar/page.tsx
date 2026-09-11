@@ -355,7 +355,6 @@ function CalendarRouteContent() {
   const taskIdParam = searchParams?.get("taskId") || undefined;
   const scopeParam = searchParams?.get("scope") as CalendarScope | null;
   const monthParam = searchParams?.get("month");
-  const zoneParam = searchParams?.get("zone");
 
   const [tasks, setTasks] = useState<SchoolTask[]>([]);
   const [meetings, setMeetings] = useState<CalendarMeeting[]>([]);
