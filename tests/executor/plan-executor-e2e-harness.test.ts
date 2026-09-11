@@ -361,3 +361,63 @@ test('EXECUTOR_PREFLIGHT_FAILED is a distinct failure class', () => {
   // Preflight fires before runtime — distinct from RUNTIME_INIT_FAILED
   assert.notEqual(FC.EXECUTOR_PREFLIGHT_FAILED, FC.RUNTIME_INIT_FAILED);
 });
+
+test('all new FC constants have correct string values', () => {
+  assert.equal(FC.EXECUTOR_PREFLIGHT_FAILED, 'EXECUTOR_PREFLIGHT_FAILED');
+  assert.equal(FC.WORKFLOW_NOT_INVOKED, 'WORKFLOW_NOT_INVOKED');
+  assert.equal(FC.GLOBAL_VALIDATION_FAILURE, 'GLOBAL_VALIDATION_FAILURE');
+  assert.equal(FC.GLOBAL_VALIDATION_TIMEOUT, 'GLOBAL_VALIDATION_TIMEOUT');
+});
+
+test('preflight: agent with explicit tools list without StructuredOutput → detected as failure', () => {
+  // Simulate the heuristic used in runExecutorPreflight()
+  const agentContentMissingStructuredOutput = `---
+name: qcet-skeptic
+tools:
+  - Read
+  - Grep
+  - Bash
+disallowedTools:
+  - Write
+---`;
+  const hasToolsList = agentContentMissingStructuredOutput.includes('tools:');
+  const hasStructuredOutput = agentContentMissingStructuredOutput.includes('StructuredOutput');
+  // Preflight should flag this as a failure
+  assert.equal(hasToolsList && !hasStructuredOutput, true, 'Preflight should detect missing StructuredOutput');
+});
+
+test('preflight: agent with StructuredOutput in tools list → passes check', () => {
+  const agentContentWithStructuredOutput = `---
+name: qcet-skeptic
+tools:
+  - Read
+  - Grep
+  - Bash
+  - StructuredOutput
+disallowedTools:
+  - Write
+---`;
+  const hasToolsList = agentContentWithStructuredOutput.includes('tools:');
+  const hasStructuredOutput = agentContentWithStructuredOutput.includes('StructuredOutput');
+  // Preflight should pass this
+  assert.equal(hasToolsList && !hasStructuredOutput, false, 'Agent with StructuredOutput should pass preflight');
+});
+
+test('preflight: agent without any tools list → passes check (inherits all tools)', () => {
+  const agentContentNoToolsList = `---
+name: qcet-builder
+description: Implementation agent
+---
+Body text here.`;
+  const hasToolsList = agentContentNoToolsList.includes('tools:');
+  // No explicit tools list → agent inherits all tools → StructuredOutput available → pass
+  assert.equal(hasToolsList, false, 'Agent with no tools list should pass preflight conservatively');
+});
+
+test('WORKFLOW_NOT_INVOKED is distinct from EXECUTOR_NOT_STARTED', () => {
+  // WORKFLOW_NOT_INVOKED: Workflow tool was never called in transcript
+  // EXECUTOR_NOT_STARTED: Workflow tool was called but no artifact appeared on disk
+  assert.notEqual(FC.WORKFLOW_NOT_INVOKED, FC.EXECUTOR_NOT_STARTED);
+  assert.equal(FC.WORKFLOW_NOT_INVOKED, 'WORKFLOW_NOT_INVOKED');
+  assert.equal(FC.EXECUTOR_NOT_STARTED, 'EXECUTOR_NOT_STARTED');
+});

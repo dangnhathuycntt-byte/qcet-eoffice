@@ -565,7 +565,12 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     checkExecutorArtifacts();
     if (!gateB_executorArtifact) {
       destroyTempRepo(trialDir);
-      return { pass: false, failureClass: FC.EXECUTOR_NOT_STARTED, reason: 'no executor runtime artifacts found', gates };
+      // Distinguish: Workflow tool was never invoked vs invoked but produced no artifact
+      const failureClass = gates.workflowInvoked ? FC.EXECUTOR_NOT_STARTED : FC.WORKFLOW_NOT_INVOKED;
+      const reason = gates.workflowInvoked
+        ? 'Workflow tool was invoked but no executor runtime artifacts found on disk'
+        : 'Workflow tool was never invoked in transcript';
+      return { pass: false, failureClass, reason, gates };
     }
   }
 
