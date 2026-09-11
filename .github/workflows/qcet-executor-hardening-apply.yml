@@ -9,8 +9,56 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  apply-and-verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "qcet executor hardening runner ready"
+        with:
+          ref: fix/qcet-plan-executor-v1.5-hardening
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Add regression tests
+        run: python3 scripts/apply-executor-hardening-v15.py tests
+
+      - name: RED - verify regressions fail on old implementation
+        run: |
+          set +e
+          npx tsx --test tests/executor/workflow-executor.test.ts tests/executor/hooks.test.ts
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "Expected regression tests to fail before implementation."
+            exit 1
+          fi
+          echo "RED confirmed."
+
+      - name: Apply executor hardening
+        run: python3 scripts/apply-executor-hardening-v15.py implementation
+
+      - name: GREEN - targeted executor tests
+        run: npx tsx --test tests/executor/workflow-executor.test.ts tests/executor/hooks.test.ts
+
+      - name: GREEN - full executor suite
+        run: npm run test:executor
+
+      - name: Build executor bundle
+        run: npm run build:executor
+
+      - name: Commit verified changes
+        run: |
+          rm -f .github/workflows/qcet-executor-hardening-apply.yml
+          rm -f scripts/apply-executor-hardening-v15.py
+          rm -f .claude/executor-evals/.hardening-trigger
+          git config user.name "qcet-executor-bot"
+          git config user.email "qcet-executor-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: harden QCET plan executor v1.5 [executor-hardening-applied]"
+          git push origin HEAD:fix/qcet-plan-executor-v1.5-hardening
