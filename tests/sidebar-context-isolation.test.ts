@@ -179,12 +179,12 @@ describe("Sidebar Context Isolation & Decoupling (Task 8)", () => {
       assert.strictEqual(typeof layout.setIsMobileOpen, "function");
       assert.strictEqual(typeof layout.setCurrentModule, "function");
 
-      // Badge contract
+      // Badge contract (zero fabricated counts by default)
       assert.strictEqual(badges.badgeCounts.notifications, 0);
-      assert.strictEqual(badges.badgeCounts.calendar, 1);
-      assert.strictEqual(badges.badgeCounts.docsInbox, 6);
-      assert.strictEqual(badges.badgeCounts.docsOutbox, 4);
-      assert.strictEqual(badges.badgeCounts.docsPending, 2);
+      assert.strictEqual(badges.badgeCounts.calendar, 0);
+      assert.strictEqual(badges.badgeCounts.docsInbox, 0);
+      assert.strictEqual(badges.badgeCounts.docsOutbox, 0);
+      assert.strictEqual(badges.badgeCounts.docsPending, 0);
       assert.strictEqual(typeof badges.setBadgeCounts, "function");
 
       // Backward compatible composed hook

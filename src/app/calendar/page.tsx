@@ -50,6 +50,7 @@ import {
 import { computeSchoolTaskRollup } from "@/lib/dashboard-aggregator";
 import { cn } from "@/lib/utils";
 
+// ExecutiveCalendarWorkspace compatibility and canonical workspace integration
 export type { CalendarScope };
 
 interface CreateEventFormData {
@@ -352,6 +353,7 @@ function CalendarRouteContent() {
   const taskIdParam = searchParams?.get("taskId") || undefined;
   const scopeParam = searchParams?.get("scope") as CalendarScope | null;
   const monthParam = searchParams?.get("month");
+  const zoneParam = searchParams?.get("zone");
 
   const [tasks, setTasks] = useState<SchoolTask[]>([]);
   const [meetings, setMeetings] = useState<CalendarMeeting[]>([]);
@@ -855,20 +857,6 @@ function CalendarRouteContent() {
     <div className="space-y-5" data-slot="calendar-page-container">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/50 pb-5">
         <div className="space-y-1">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Link href="/" className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
-              <Home className="size-3.5" strokeWidth={1.5} />
-              <span>Bàn làm việc</span>
-            </Link>
-            <ChevronRight className="size-3 text-muted-foreground/60" strokeWidth={1.5} />
-            <Link href={selectedTask ? `/tasks?taskId=${selectedTask.id}` : "/tasks"} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
-              <CheckSquare className="size-3.5" strokeWidth={1.5} />
-              <span>Nhiệm vụ</span>
-            </Link>
-            <ChevronRight className="size-3 text-muted-foreground/60" strokeWidth={1.5} />
-            <span className="font-semibold text-foreground">Lịch công tác</span>
-          </nav>
-
           <div className="flex items-center gap-2.5 pt-0.5">
             <div className="size-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
               <CalendarIcon className="size-5" strokeWidth={1.5} />
@@ -902,25 +890,42 @@ function CalendarRouteContent() {
       <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-3 sm:p-4 shadow-card" data-slot="calendar-controls-container">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3" data-slot="calendar-controls-row-1">
           <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex items-center rounded-xl border border-border/70 bg-secondary/50 p-0.5 shrink-0 self-start" data-slot="calendar-scope-switcher">
-            {([
-              ["school", "Toàn trường"],
-              ["unit", "Đơn vị"],
-              ["my", "Của tôi"],
-            ] as const).map(([scope, label]) => (
-              <button
-                key={scope}
-                type="button"
-                role="tab"
-                aria-selected={activeScope === scope}
-                onClick={() => handleScopeChange(scope)}
-                className={cn(
-                  "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                  activeScope === scope ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {label}
-              </button>
-            ))}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeScope === "school"}
+              onClick={() => handleScopeChange("school")}
+              className={cn(
+                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                activeScope === "school" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Toàn trường
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeScope === "unit"}
+              onClick={() => handleScopeChange("unit")}
+              className={cn(
+                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                activeScope === "unit" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Đơn vị
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeScope === "my"}
+              onClick={() => handleScopeChange("my")}
+              className={cn(
+                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                activeScope === "my" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Của tôi
+            </button>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap" data-slot="calendar-period-navigation">

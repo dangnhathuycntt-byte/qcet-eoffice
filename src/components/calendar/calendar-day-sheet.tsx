@@ -289,10 +289,22 @@ export function CalendarDaySheet({
                 </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {isDateSelected
-                    ? "Không có sự kiện, hạn chót hoặc nhiệm vụ nào trong ngày này."
+                    ? "Không có sự kiện, hạn chót hoặc nhiệm vụ nào trong ngày này. Bạn có thể thêm việc mới."
                     : "Chọn một ngày trên lịch hoặc danh sách để xem chi tiết."}
                 </p>
               </div>
+              {selectedDate && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAddTaskOnDate?.(selectedDate)}
+                  className="min-h-[44px] sm:min-h-9 h-9 px-4 text-xs font-semibold gap-1.5 rounded-xl border-dashed border-border/80 hover:border-primary/50 text-foreground hover:bg-secondary cursor-pointer"
+                >
+                  <Plus className="size-4" strokeWidth={1.5} />
+                  <span>+ Thêm việc ngày này</span>
+                </Button>
+              )}
             </div>
           ) : visibleTasks.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-6 text-center text-xs text-muted-foreground">

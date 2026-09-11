@@ -31,6 +31,21 @@ describe("Notification Integration & Actionable Hub Suite", () => {
       "Must not hardcode badge '5' danger in sidebar navigation items"
     );
     assert.equal(
+      sidebarContent.includes('badge: "6"'),
+      false,
+      "Must not hardcode badge '6' in sidebar navigation items"
+    );
+    assert.equal(
+      sidebarContent.includes('badge: "4"'),
+      false,
+      "Must not hardcode badge '4' in sidebar navigation items"
+    );
+    assert.equal(
+      sidebarContent.includes('badge: "1"'),
+      false,
+      "Must not hardcode badge '1' in sidebar navigation items"
+    );
+    assert.equal(
       sidebarContent.includes("notifications: 5"),
       false,
       "DEFAULT_SIDEBAR_BADGES must not hardcode notifications to 5"

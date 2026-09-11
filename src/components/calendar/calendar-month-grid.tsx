@@ -429,7 +429,9 @@ export function CalendarMonthGrid({
           {gridCells.map((cell) => {
             const dayTasks = tasksByDate.get(cell.dateString) || [];
             const summary = getCalendarDaySummary(dayTasks, referenceDate);
-            const displayedTasks = dayTasks.slice(0, 2);
+            const MAX_PREVIEW = 3;
+            const displayedTasks = dayTasks.slice(0, MAX_PREVIEW);
+            const remainingCount = dayTasks.length - MAX_PREVIEW;
             const isSelected = selectedDate === cell.dateString;
 
             return (
@@ -526,14 +528,15 @@ export function CalendarMonthGrid({
                   })}
                 </div>
 
-                {summary.total > 0 && (
+                {remainingCount > 0 && (
                   <button
                     type="button"
                     onClick={() => openDay(cell.dateString)}
-                    className="mt-1 min-h-6 w-full rounded-md px-1.5 text-left text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
-                    aria-label={`Xem tất cả ${summary.total} mục lịch ngày ${cell.dateString}`}
+                    className="mt-1 min-h-6 w-full rounded-md px-1.5 text-left text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary block truncate"
+                    aria-label={`Xem thêm ${remainingCount} nhiệm vụ ngày ${cell.dateString}`}
+                    title={`Xem thêm ${remainingCount} nhiệm vụ`}
                   >
-                    Xem tất cả {summary.total} →
+                    +{remainingCount} nhiệm vụ
                   </button>
                 )}
               </section>

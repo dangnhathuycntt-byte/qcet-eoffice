@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import {
   User,
   Building2,
-  Mail,
   Phone,
   Briefcase,
   ShieldCheck,
@@ -13,12 +12,10 @@ import {
   X,
   Save,
   Sparkles,
-  Award,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { UserRole } from "@/types/auth";
 import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
-import { cn } from "@/lib/utils";
 
 export function UserProfileModal() {
   const { user, updateProfile, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
@@ -28,7 +25,6 @@ export function UserProfileModal() {
   const [departmentCode, setDepartmentCode] = React.useState(user?.departmentCode || "QCET");
   const [title, setTitle] = React.useState(user?.title || "Viên chức");
   const [phone, setPhone] = React.useState(user?.phone || "");
-  const [role, setRole] = React.useState<UserRole>(user?.role || "STAFF");
   const [savedSuccess, setSavedSuccess] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
 
@@ -44,12 +40,13 @@ export function UserProfileModal() {
       setDepartmentCode(user.departmentCode || "QCET");
       setTitle(user.title || "Viên chức");
       setPhone(user.phone || "");
-      setRole(user.role || "STAFF");
       setSavedSuccess(false);
     }
   }, [isProfileModalOpen, user]);
 
   if (!isProfileModalOpen || !user) return null;
+
+  const isDepartmentAuthoritative = Boolean(user.department && user.departmentCode && user.departmentCode !== "QCET");
 
   const handleDepartmentChange = (code: string) => {
     setDepartmentCode(code);
@@ -62,21 +59,15 @@ export function UserProfileModal() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const roleLabel =
-      role === "ADMIN"
-        ? "Ban Giám hiệu"
-        : role === "MANAGER"
-        ? `Trưởng ${department || "đơn vị"}`
-        : "Viên chức / Giảng viên";
-
+    // Preserve authoritative server role and label
     updateProfile({
       name: name.trim() || user.name,
-      department: department || "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
-      departmentCode: departmentCode || "QCET",
+      department: isDepartmentAuthoritative ? user.department : department || "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
+      departmentCode: isDepartmentAuthoritative ? user.departmentCode : departmentCode || "QCET",
       title: title.trim() || "Viên chức",
       phone: phone.trim(),
-      role,
-      roleLabel,
+      role: user.role,
+      roleLabel: user.roleLabel,
     });
 
     setSavedSuccess(true);
@@ -85,6 +76,13 @@ export function UserProfileModal() {
       setSavedSuccess(false);
     }, 800);
   };
+
+  const roleDescription =
+    user.role === "ADMIN"
+      ? "Ban Giám hiệu (Chỉ đạo & Điều hành toàn trường)"
+      : user.role === "MANAGER"
+      ? `Lãnh đạo đơn vị & Phê duyệt (${user.department || "Phòng/Khoa"})`
+      : "Viên chức / Giảng viên (Thực hiện nhiệm vụ & Nộp minh chứng)";
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto !m-0">
@@ -145,7 +143,7 @@ export function UserProfileModal() {
                 Kính chào Quý Thầy/Cô đến với QCET E-Office!
               </strong>{" "}
               Tài khoản email trường của bạn đã được kích hoạt thành công. Vui lòng
-              hoàn thiện thông tin đơn vị và chức danh để thuận tiện trong điều hành công việc.
+              hoàn thiện thông tin chức danh và liên hệ để thuận tiện trong điều hành công việc.
             </div>
           </div>
         )}
@@ -190,25 +188,39 @@ export function UserProfileModal() {
               htmlFor="profileDept"
               className="block text-xs font-semibold text-foreground"
             >
-              Đơn vị / Khoa / Phòng ban <span className="text-destructive">*</span>
+              Đơn vị / Khoa / Phòng ban {isDepartmentAuthoritative ? "(Do Nhà trường quản lý)" : <span className="text-destructive">*</span>}
             </label>
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <Building2 className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                {isDepartmentAuthoritative ? (
+                  <Lock className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                ) : (
+                  <Building2 className="size-4 text-muted-foreground" strokeWidth={1.5} />
+                )}
               </div>
-              <select
-                id="profileDept"
-                value={departmentCode}
-                onChange={(e) => handleDepartmentChange(e.target.value)}
-                className="block w-full rounded-xl border border-border/80 bg-background py-2.5 pl-9 pr-3 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
-              >
-                <option value="QCET">-- Chọn đơn vị trực thuộc trường --</option>
-                {QCET_DEPARTMENT_GROUPS.map((g) => (
-                  <option key={g.code} value={g.code}>
-                    {g.name || g.department}
-                  </option>
-                ))}
-              </select>
+              {isDepartmentAuthoritative ? (
+                <div
+                  id="profileDept"
+                  className="flex items-center justify-between w-full rounded-xl border border-border/60 bg-muted/40 py-2.5 pl-9 pr-3 text-xs text-foreground font-medium select-none"
+                >
+                  <span>{user.department}</span>
+                  <span className="text-xs text-muted-foreground">Chuẩn hóa</span>
+                </div>
+              ) : (
+                <select
+                  id="profileDept"
+                  value={departmentCode}
+                  onChange={(e) => handleDepartmentChange(e.target.value)}
+                  className="block w-full rounded-xl border border-border/80 bg-background py-2.5 pl-9 pr-3 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors cursor-pointer"
+                >
+                  <option value="QCET">-- Chọn đơn vị trực thuộc trường --</option>
+                  {QCET_DEPARTMENT_GROUPS.map((g) => (
+                    <option key={g.code} value={g.code}>
+                      {g.name || g.department}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 
@@ -260,74 +272,37 @@ export function UserProfileModal() {
             </div>
           </div>
 
-          {/* Quyền hạn điều hành hệ thống (Role) */}
+          {/* Quyền hạn điều hành hệ thống (Role) - CHỈ ĐỌC do Nhà trường quản lý */}
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-foreground">
               Phân quyền điều hành (Vai trò hệ thống)
             </label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setRole("STAFF")}
-                className={cn(
-                  "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer",
-                  role === "STAFF"
-                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/30"
-                    : "border-border/80 bg-background hover:bg-secondary text-muted-foreground"
-                )}
-              >
-                <User className="size-4 mb-1" strokeWidth={1.5} />
-                <span className="text-xs font-bold">Viên chức</span>
-                <span className="text-xs opacity-80">Thực hiện nhiệm vụ & Nộp minh chứng</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setRole("MANAGER")}
-                className={cn(
-                  "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer",
-                  role === "MANAGER"
-                    ? "border-blue-500 bg-blue-500/10 text-blue-700 ring-1 ring-blue-500/30"
-                    : "border-border/80 bg-background hover:bg-secondary text-muted-foreground"
-                )}
-              >
-                <Building2 className="size-4 mb-1" strokeWidth={1.5} />
-                <span className="text-xs font-bold">Trưởng đơn vị</span>
-                <span className="text-xs opacity-80">Lãnh đạo đơn vị & Phê duyệt</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setRole("ADMIN")}
-                className={cn(
-                  "flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer",
-                  role === "ADMIN"
-                    ? "border-purple-500 bg-purple-500/10 text-purple-700 ring-1 ring-purple-500/30"
-                    : "border-border/80 bg-background hover:bg-secondary text-muted-foreground"
-                )}
-              >
-                <Award className="size-4 mb-1" strokeWidth={1.5} />
-                <span className="text-xs font-bold">Ban Giám hiệu</span>
-                <span className="text-xs opacity-80">Chỉ đạo & Điều hành toàn trường</span>
-              </button>
+            <div className="flex items-start gap-3 rounded-xl border border-border/80 bg-muted/40 p-3.5">
+              <ShieldCheck className="size-4 text-primary shrink-0 mt-0.5" strokeWidth={1.5} />
+              <div className="space-y-0.5 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-foreground">
+                    {roleDescription}
+                  </span>
+                  <span className="inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-xs font-semibold text-muted-foreground border border-border/60 shrink-0">
+                    Chỉ đọc
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Phân quyền do Quản trị viên hệ thống quản lý theo cơ cấu tổ chức Nhà trường (không thể tự thay đổi).
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="sticky bottom-0 z-10 mt-6 flex items-center justify-end gap-2.5 border-t border-border/60 bg-card/95 backdrop-blur-md pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <button
-              type="button"
-              onClick={() => setIsProfileModalOpen(false)}
-              className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
-            >
-              Đóng
-            </button>
+          {/* Action Buttons: single focused save button, no redundant close/cancel clutter */}
+          <div className="sticky bottom-0 z-10 mt-6 flex items-center justify-end border-t border-border/60 bg-card/95 backdrop-blur-md pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all active:scale-[0.99] cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all active:scale-[0.99] cursor-pointer w-full sm:w-auto"
             >
               <Save className="size-3.5" strokeWidth={1.5} />
-              <span>Lưu thông tin hồ sơ</span>
+              <span>Lưu thay đổi</span>
             </button>
           </div>
         </form>

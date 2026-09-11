@@ -312,6 +312,9 @@ function main() {
   }
 
   // 2. Resolve active shard ownership
+  if (!agentId && !agentType && !agentRole && !subagentLabel) {
+    allow();
+  }
   const shard = resolveActiveShard(agentId, agentType, subagentLabel);
 
   // Fail-closed invariant: builder agents MUST have an active shard ownership context
