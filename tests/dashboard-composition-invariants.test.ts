@@ -17,6 +17,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { deriveSituationState } from "../src/components/dashboard/dashboard-situation-strip";
 
 const DASHBOARD_ZONE_PATH = path.join(
   process.cwd(),
@@ -214,6 +215,43 @@ describe("Dashboard Composition Invariants (Phase 0)", () => {
     assert.ok(
       situationSectionContent.includes("<DashboardSituationStrip"),
       "DashboardSituationStrip must reside inside section-situation"
+    );
+  });
+
+  test("8. Executive overdue display: HAS_ISSUES when stats.overdueTasksCount=0 but executiveStats.overdueTasksCount>0 (DASH-Task5)", () => {
+    // stats has no personal overdue tasks
+    const stats = {
+      totalSchoolTasks: 10,
+      totalStaffTasks: 0,
+      overdueTasksCount: 0,
+      averageSchoolProgressPercent: 80,
+    } as import("@/types/dashboard").DashboardStats;
+
+    // executive layer has overdue tasks that must surface
+    const executiveStats = {
+      overdueTasksCount: 3,
+      blockedTasksCount: 0,
+      pendingSchoolApprovalCount: 0,
+      strategicActiveCount: 0,
+    } as import("@/lib/executive-matrix-aggregator").ExecutiveActionStats;
+
+    const state = deriveSituationState(stats, executiveStats);
+    assert.equal(
+      state,
+      "HAS_ISSUES",
+      "deriveSituationState must return HAS_ISSUES when executiveStats.overdueTasksCount>0 even if stats.overdueTasksCount===0"
+    );
+
+    // Also verify that zero executiveStats yields HEALTHY (baseline sanity)
+    const healthyState = deriveSituationState(stats, {
+      ...executiveStats,
+      overdueTasksCount: 0,
+      blockedTasksCount: 0,
+    });
+    assert.equal(
+      healthyState,
+      "HEALTHY",
+      "deriveSituationState must return HEALTHY when both overdue counts are 0"
     );
   });
 });

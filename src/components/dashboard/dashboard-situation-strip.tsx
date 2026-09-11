@@ -18,7 +18,7 @@ export interface DashboardSituationStripProps {
 
 type SituationState = "NO_DATA" | "HEALTHY" | "HAS_ISSUES";
 
-function deriveSituationState(
+export function deriveSituationState(
   stats: DashboardStats,
   executiveStats?: ExecutiveActionStats | null
 ): SituationState {
@@ -71,7 +71,10 @@ export function DashboardSituationStrip({
   const totalTasks = isExecutive
     ? (stats.totalSchoolTasks ?? 0)
     : (stats.totalSchoolTasks ?? 0) + (stats.totalStaffTasks ?? 0);
-  const overdueCount = stats.overdueTasksCount ?? 0;
+  const overdueCount = isExecutive
+    ? (stats.overdueTasksCount ?? 0) + (executiveStats?.overdueTasksCount ?? 0)
+    : (stats.overdueTasksCount ?? 0);
+  const blockedCount = isExecutive ? (executiveStats?.blockedTasksCount ?? 0) : 0;
   const unitsNeedingAttention =
     departmentHealth.length > 0 ? countUnitsNeedingAttention(departmentHealth) : null;
 
@@ -79,6 +82,7 @@ export function DashboardSituationStrip({
     `${progressPercent}% tiến độ`,
     `${totalTasks} nhiệm vụ`,
     overdueCount > 0 ? `${overdueCount} trễ` : null,
+    blockedCount > 0 ? `${blockedCount} bị chặn` : null,
     unitsNeedingAttention ? `${unitsNeedingAttention} đơn vị cần chú ý` : null,
   ]
     .filter(Boolean)
@@ -104,6 +108,14 @@ export function DashboardSituationStrip({
           <span className="mx-1.5 text-border" aria-hidden="true">·</span>
           <span className="font-mono tabular-nums text-rose-700 font-medium">
             {overdueCount} trễ
+          </span>
+        </>
+      )}
+      {blockedCount > 0 && (
+        <>
+          <span className="mx-1.5 text-border" aria-hidden="true">·</span>
+          <span className="font-mono tabular-nums text-rose-700 font-medium">
+            {blockedCount} bị chặn
           </span>
         </>
       )}
