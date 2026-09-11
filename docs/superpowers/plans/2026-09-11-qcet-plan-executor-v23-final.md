@@ -1,10 +1,10 @@
 # QCET Plan Executor V2.3 Final Implementation Plan
 
-> **Execution runtime:** Ultracode / Claude Code Dynamic Workflows. Execute this plan through the QCET Plan Executor itself. Do not introduce Superpowers, Agent Teams, or a second orchestrator into the runtime path. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Execution runtime:** Ultracode / Claude Code Dynamic Workflows. Execute this plan through the QCET Plan Executor itself. Superpowers is a planning aid only and MUST NOT become part of the harness runtime. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Upgrade the existing V1.5 QCET Plan Executor into the V2.3 freeze candidate: faster plan execution, independent mid-run review, continuous worktree/ownership safety, durable proof/recovery, and comparable live performance evidence.
+**Goal:** Upgrade the existing V1.5 executor into the V2.3 freeze candidate: faster proportional execution, independent mid-run review, continuous worktree/ownership safety, durable proof/recovery, and reproducible live evaluation.
 
-**Architecture:** Preserve `.claude/workflows/qcet-plan-executor.js` as the single standalone Dynamic Workflow orchestrator. Put filesystem durability and enforcement in Node hooks/helpers because the workflow runtime has no direct filesystem/shell access and cannot load modules. Use deterministic execution modes, logical scheduler lanes, checkpoint-triggered independent review, witness/proof artifacts, bounded recovery, and deterministic three-stage release gating.
+**Architecture:** Preserve `.claude/workflows/qcet-plan-executor.js` as the single standalone Dynamic Workflow. The workflow owns orchestration and in-memory scheduling; Node hooks own filesystem durability/enforcement because Dynamic Workflows have no direct filesystem/shell access and cannot load modules. Builder output is never self-approved; deterministic guards plus independent `qcet-skeptic` reviews produce proof consumed by three deterministic release gates.
 
 **Tech Stack:** Claude Code Dynamic Workflows, JavaScript, Node.js 20+, TypeScript tests via `tsx`, Git worktrees/refs, existing QCET hooks/agents, npm scripts.
 
@@ -12,104 +12,59 @@
 
 ## Global Constraints
 
-- Preserve the existing standalone `.claude/workflows/qcet-plan-executor.js`; do not add runtime `import()`/module loading.
-- The workflow coordinates agents only; hooks/agents perform filesystem and shell work.
-- Keep Next.js application/product code untouched. This plan changes only executor/harness/tests/docs/bundle/eval assets.
+- Do not split the workflow into runtime imports or add `import()`.
 - Do not add Agent Teams, swarm consensus, Redis, Temporal, vector memory, a second orchestrator, or LLM-controlled scheduling/concurrency.
-- Hard runtime caps: clamp executor concurrency to `<= 16` and total agent calls to `<= 1000`.
-- Builder output never self-approves. Only independent verification plus deterministic gates may prove completion.
-- Synthetic evaluation must be explicitly labeled synthetic and must never be reported as live performance evidence.
-- All code changes follow TDD: failing targeted test first, minimal implementation, passing targeted test, then commit.
-- Regenerate `.claude/dist/qcet-plan-executor.bundle.js` after every task that changes the workflow script; the final task verifies bundle parity.
+- Do not change QCET product code under `src/` or Prisma application schema for this harness upgrade.
+- Clamp concurrent agents to `<= 16` and total agent calls to `<= 1000`.
+- All correctness-sensitive policy is deterministic; empirical optimizers start in `shadow` mode.
+- Builder completion is not verification. Only independent review plus deterministic proof gates may unblock dependencies or emit READY.
+- Synthetic evaluation must be labeled synthetic and must never be presented as live speed evidence.
+- Every implementation task follows TDD: failing targeted test, confirm RED, minimal implementation, confirm GREEN, commit.
+- Regenerate `.claude/dist/qcet-plan-executor.bundle.js` after every workflow change.
 
----
-
-## Dependency Map
+## Dependency DAG
 
 ```text
 Task 0 Baseline
-  |
-  +--> Task 1 Budget + Runtime Provenance
-  |
-  +--> Task 2 Agent/Hook Capability Hardening
-  |
-  +--> Task 3 Durable Run-State Primitives
-           |
-           +--> Task 4 Continuous Worktree + Runtime Claims
-           |
-           +--> Task 5 Execution Modes + Change Surface + Spawn Gate
-                    |
-                    +--> Task 6 Lane Scheduler + Critical-Path Reservations
-                    |
-                    +--> Task 7 Shard Contract + Mid-Run Review Pipeline
-                              |
-                              +--> Task 8 Proof Bundle + Witness State + Shard Gate
-                                        |
-                                        +--> Task 9 Checkpoints + Idempotency + Recovery
-                                        |
-                                        +--> Task 10 Integration/Delivery Gates + HEAD Reproof
-
-Task 1 + Task 3 --> Task 11 Telemetry + Live/Synthetic Eval Separation
-Task 4 + Task 7 + Task 8 + Task 9 + Task 10 --> Task 12 Fault Injection + Canary Suite
-Task 6 + Task 11 --> Task 13 Shadow Performance Controllers
-Tasks 1-13 --> Task 14 Full Regression + Live Benchmark + Freeze
+  +--> Task 1 Budget/runtime provenance
+  +--> Task 2 Agent/hook capability hardening
+  +--> Task 3 Durable run-state primitives
+          +--> Task 4 Continuous worktree + file claims
+          +--> Task 5 Execution modes + change surface + spawn gate
+                   +--> Task 6 Lane scheduler + cancellation
+                   +--> Task 7 Shard contract + mid-run review
+                             +--> Task 8 Proof bundle + shard gate
+                                       +--> Task 9 Checkpoints + recovery
+                                       +--> Task 10 Integration/delivery gates
+Task 1 + Task 3 --> Task 11 Live telemetry/evaluation
+Task 4 + Task 7 + Task 8 + Task 9 + Task 10 --> Task 12 Fault injection/canary
+Task 6 + Task 11 --> Task 13 Shadow performance analysis
+Tasks 1-13 --> Task 14 Full gate/live smoke/freeze
 ```
 
-**Parallel execution rule:** Tasks 1, 2, and 3 may run in parallel because they own different primary files. After Task 3, Tasks 4 and 5 may run in parallel only if their workflow edits are staged through separate worktrees and integrated sequentially. All later workflow-heavy tasks should integrate one at a time to avoid merge churn in the standalone workflow file.
+Tasks 1, 2, and 3 may run in parallel. After that, workflow-heavy tasks integrate sequentially even when researched in parallel, because `.claude/workflows/qcet-plan-executor.js` is intentionally one standalone script.
 
 ---
 
-### Task 0: Establish a Clean V1.5 Baseline
+### Task 0: Establish the V1.5 Baseline
 
-**Files:**
-- Read only: `.claude/workflows/qcet-plan-executor.js`
-- Read only: `.claude/hooks/*`
-- Read only: `.claude/agents/*`
-- Read only: `tests/executor/*`
-- Read only: `package.json`
+**Files:** read-only `.claude/workflows/qcet-plan-executor.js`, `.claude/hooks/*`, `.claude/agents/*`, `tests/executor/*`, `package.json`.
 
-**Interfaces:**
-- Consumes: branch `fix/qcet-plan-executor-v1.5-hardening`
-- Produces: exact baseline commit SHA and passing V1.5 test/build evidence
+**Produces:** clean baseline SHA and passing regression/build evidence.
 
-- [ ] **Step 1: Verify branch and capture source SHA**
+- [ ] Run:
 
 ```bash
 git switch fix/qcet-plan-executor-v1.5-hardening
 git status --short
-git rev-parse HEAD
-```
-
-Expected: clean working tree. Record the 40-character SHA as `V15_BASE_SHA` in the execution log.
-
-- [ ] **Step 2: Install exact dependencies**
-
-```bash
+printf '%s\n' "$(git rev-parse HEAD)" > /tmp/qcet-v15-base-sha
 npm ci
-```
-
-Expected: exit 0.
-
-- [ ] **Step 3: Run the executor regression suite**
-
-```bash
 npm run test:executor
-```
-
-Expected: all executor tests pass. Any pre-existing failure blocks this plan until classified.
-
-- [ ] **Step 4: Build the current executor bundle**
-
-```bash
 npm run build:executor
 git diff --exit-code .claude/dist/qcet-plan-executor.bundle.js
 ```
 
-Expected: build succeeds and generated bundle matches the committed V1.5 workflow.
-
-- [ ] **Step 5: Do not commit**
-
-This task establishes evidence only.
+Expected: clean tree before work, all executor tests pass, bundle is reproducible. Do not commit this task.
 
 ---
 
@@ -122,116 +77,54 @@ This task establishes evidence only.
 - Regenerate: `.claude/dist/qcet-plan-executor.bundle.js`
 
 **Interfaces:**
-- Produces: `normalizeBudgetConfig(input)`, `normalizeFailureReason(value)`, `buildRuntimeFingerprint(input)`
-- `normalizeBudgetConfig(input)` returns `{ profile, maxConcurrentAgents, maxAgents, laneLimits }`
-- `buildRuntimeFingerprint(input)` returns stable serializable runtime provenance used by later telemetry/live comparison
 
-- [ ] **Step 1: Add failing tests for budget normalization**
-
-Add tests that require:
-
-```ts
-assert.deepEqual(normalizeBudgetConfig('high'), {
-  profile: 'high',
-  maxConcurrentAgents: 8,
-  maxAgents: 128,
-  laneLimits: { read: 3, write: 3, verify: 2, gitControl: 1 },
-});
-
-assert.equal(normalizeBudgetConfig({ profile: 'medium', maxConcurrentAgents: 99 }).maxConcurrentAgents, 16);
-assert.equal(normalizeBudgetConfig({ profile: 'high', maxAgents: 5000 }).maxAgents, 1000);
-assert.throws(() => normalizeBudgetConfig('turbo'), /Unknown budget profile/);
+```js
+normalizeBudgetConfig(input) -> {
+  profile,
+  maxConcurrentAgents,
+  maxAgents,
+  laneLimits: { read, write, verify, gitControl }
+}
+normalizeFailureReason(value) -> canonical string
+buildRuntimeFingerprint(input) -> serializable provenance object
 ```
 
-- [ ] **Step 2: Add failing tests for failure taxonomy**
+- [ ] Add failing tests for exact budget presets:
 
-The canonical set is:
+```js
+const BUDGET_PROFILES = {
+  low:    { maxConcurrentAgents: 4, maxAgents: 40,  laneLimits: { read: 2, write: 1, verify: 1, gitControl: 1 } },
+  medium: { maxConcurrentAgents: 6, maxAgents: 72,  laneLimits: { read: 2, write: 2, verify: 2, gitControl: 1 } },
+  high:   { maxConcurrentAgents: 8, maxAgents: 128, laneLimits: { read: 3, write: 3, verify: 2, gitControl: 1 } },
+};
+```
+
+Tests must prove `high` resolves to `8/128`, object overrides work, concurrency `99` clamps to `16`, agents `5000` clamp to `1000`, and unknown profile `turbo` throws.
+
+- [ ] Add failing tests for this exact failure taxonomy:
 
 ```js
 const FAILURE_REASONS = new Set([
-  'DEPENDENCY_BLOCKED',
-  'WORKTREE_INVALID',
-  'OWNERSHIP_CONFLICT',
-  'RUNTIME_FILE_CONFLICT',
-  'AGENT_BUDGET_EXHAUSTED',
-  'TURN_BUDGET_EXHAUSTED',
-  'TOKEN_BUDGET_EXHAUSTED',
-  'WALLCLOCK_TIMEOUT',
-  'AGENT_STALLED',
-  'NETWORK_INTERRUPTED',
-  'SCHEMA_INVALID',
-  'VERIFICATION_FAILED',
-  'REPAIR_STAGNATED',
-  'TOOL_FAILURE',
-  'RUNTIME_FAILURE',
-  'EVIDENCE_INCOMPLETE',
+  'DEPENDENCY_BLOCKED', 'WORKTREE_INVALID', 'OWNERSHIP_CONFLICT',
+  'RUNTIME_FILE_CONFLICT', 'AGENT_BUDGET_EXHAUSTED',
+  'TURN_BUDGET_EXHAUSTED', 'TOKEN_BUDGET_EXHAUSTED',
+  'WALLCLOCK_TIMEOUT', 'AGENT_STALLED', 'NETWORK_INTERRUPTED',
+  'SCHEMA_INVALID', 'VERIFICATION_FAILED', 'REPAIR_STAGNATED',
+  'TOOL_FAILURE', 'RUNTIME_FAILURE', 'EVIDENCE_INCOMPLETE',
 ]);
 ```
 
-Unknown values normalize to `RUNTIME_FAILURE`; known values remain unchanged.
+Unknown reasons normalize to `RUNTIME_FAILURE`.
 
-- [ ] **Step 3: Run targeted tests and confirm RED**
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/workflow-executor.test.ts
 ```
 
-Expected: failures because the three helpers are missing.
+- [ ] Implement `normalizeBudgetConfig`, clamping every lane to `1..maxConcurrentAgents`; replace current direct optional reads from `budgetConfig`.
 
-- [ ] **Step 4: Implement `normalizeBudgetConfig` before the `// WORKFLOW` marker**
-
-Use these presets:
-
-```js
-const BUDGET_PROFILES = {
-  low: {
-    maxConcurrentAgents: 4,
-    maxAgents: 40,
-    laneLimits: { read: 2, write: 1, verify: 1, gitControl: 1 },
-  },
-  medium: {
-    maxConcurrentAgents: 6,
-    maxAgents: 72,
-    laneLimits: { read: 2, write: 2, verify: 2, gitControl: 1 },
-  },
-  high: {
-    maxConcurrentAgents: 8,
-    maxAgents: 128,
-    laneLimits: { read: 3, write: 3, verify: 2, gitControl: 1 },
-  },
-};
-```
-
-Rules:
-
-```js
-function normalizeBudgetConfig(input) {
-  const raw = typeof input === 'string' ? { profile: input } : (input || {});
-  const profile = raw.profile || 'high';
-  const preset = BUDGET_PROFILES[profile];
-  if (!preset) throw new Error(`Unknown budget profile: ${profile}`);
-
-  const clampInt = (value, fallback, max) => {
-    const n = Number(value);
-    if (!Number.isFinite(n) || n <= 0) return fallback;
-    return Math.min(max, Math.floor(n));
-  };
-
-  return {
-    profile,
-    maxConcurrentAgents: clampInt(raw.maxConcurrentAgents ?? raw.maxConcurrent, preset.maxConcurrentAgents, 16),
-    maxAgents: clampInt(raw.maxAgents, preset.maxAgents, 1000),
-    laneLimits: {
-      ...preset.laneLimits,
-      ...(raw.laneLimits || {}),
-    },
-  };
-}
-```
-
-Clamp each lane limit to at least 1 and at most the normalized global concurrency.
-
-- [ ] **Step 5: Implement runtime fingerprint**
+- [ ] Implement `buildRuntimeFingerprint` with nullable values only; never fabricate unavailable runtime/model/version data:
 
 ```js
 function buildRuntimeFingerprint(input = {}) {
@@ -253,33 +146,17 @@ function buildRuntimeFingerprint(input = {}) {
 }
 ```
 
-Never invent values that the runtime did not supply.
-
-- [ ] **Step 6: Wire normalized budget into the workflow**
-
-Replace direct optional-property reads from `budgetConfig` with one normalized object. If normalization throws, return `BLOCKED` with `failureReason: 'SCHEMA_INVALID'`.
-
-- [ ] **Step 7: Update skill usage docs**
-
-Document both supported forms:
+- [ ] Update `SKILL.md` with both invocation forms:
 
 ```json
 {"budget":"high"}
 ```
 
-and:
-
 ```json
-{
-  "budget": {
-    "profile": "high",
-    "maxConcurrentAgents": 8,
-    "maxAgents": 128
-  }
-}
+{"budget":{"profile":"high","maxConcurrentAgents":8,"maxAgents":128}}
 ```
 
-- [ ] **Step 8: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/workflow-executor.test.ts
@@ -292,112 +169,50 @@ git commit -m "feat(executor): normalize budgets and runtime provenance"
 
 ### Task 2: Fail-Closed Agent Capabilities, Portable Hooks, and Bounded Turns
 
-**Files:**
-- Modify: `.claude/agents/qcet-recon.md`
-- Modify: `.claude/agents/qcet-researcher.md`
-- Modify: `.claude/agents/qcet-skeptic.md`
-- Modify: `.claude/agents/qcet-builder.md`
-- Modify: `.claude/agents/qcet-telemetry-recorder.md`
-- Modify: `.claude/settings.json`
-- Modify: `.claude/hooks/pre-tool-use-ownership-guard`
-- Modify: `tests/executor/hooks.test.ts`
-- Create: `tests/executor/agent-config.test.ts`
+**Files:** modify `.claude/agents/qcet-recon.md`, `qcet-researcher.md`, `qcet-skeptic.md`, `qcet-builder.md`, `qcet-telemetry-recorder.md`, `.claude/settings.json`, `.claude/hooks/pre-tool-use-ownership-guard`, `tests/executor/hooks.test.ts`; create `tests/executor/agent-config.test.ts`.
 
-**Interfaces:**
-- Produces: bounded agent turn policy and strict read-only shell policy
-- Hook commands use `${CLAUDE_PROJECT_DIR}` rather than `./`
-
-- [ ] **Step 1: Add failing agent-config tests**
-
-Require:
+**Required policy:**
 
 ```text
-qcet-recon        maxTurns 15, no Bash, includes Read/Grep/Glob/Skill
-qcet-researcher   maxTurns 12, no Bash, includes WebSearch/WebFetch/Read/Grep/Glob/Skill
-qcet-skeptic      maxTurns 20, Bash permitted only because the hook allowlist constrains it
-qcet-builder      maxTurns 30
+qcet-recon        maxTurns 15  tools Read/Grep/Glob/Skill, no Bash
+qcet-researcher   maxTurns 12  tools WebSearch/WebFetch/Read/Grep/Glob/Skill, no Bash
+qcet-skeptic      maxTurns 20  Read/Grep/Glob/Bash/Skill with strict Bash allowlist
+qcet-builder      maxTurns 30  current builder tools, WebSearch/WebFetch denied
 telemetry         maxTurns 4
 ```
 
-Also assert every hook command in `.claude/settings.json` starts with `${CLAUDE_PROJECT_DIR}/.claude/hooks/`.
+- [ ] Add failing config tests that parse agent frontmatter and assert the policy above plus `${CLAUDE_PROJECT_DIR}/.claude/hooks/` prefixes for every hook command.
 
-- [ ] **Step 2: Add failing read-only Bash allowlist tests**
-
-Allowed for skeptic/verifier roles:
+- [ ] Add failing shell-policy tests. Read-only Bash allowlist is limited to:
 
 ```text
-git status --short
-git diff -- src/app.ts
-git log -n 5 --oneline
-git show HEAD:src/app.ts
-git grep TaskStatus
-git rev-parse HEAD
-git ls-files src
+git status
+git diff
+git log
+git show
+git grep
+git rev-parse
+git ls-files
 npm run typecheck
 npm run lint
-npm test -- tests/unit/auth.test.ts
-npm run test -- tests/unit/auth.test.ts
-npx tsx --test tests/executor/hooks.test.ts
+npm test
+npm run test
+npx tsx --test
 ```
 
-Blocked:
+Block compound/redirection syntax `&&`, `||`, `;`, `|`, `>`, `<`, backticks, `$(` and risky `git diff --ext-diff`, `--no-index`, `--output`. Explicitly test blocking `git add`, `git commit`, `npm install`, `mkdir`, `chmod`, `touch`, inline `node -e`, inline `python -c`.
 
-```text
-git add .
-git commit -m x
-npm install
-mkdir tmp
-chmod +x file
-touch file
-git status && touch file
-git diff --no-index a b
-git diff --ext-diff
-node -e "require('fs').writeFileSync('x','y')"
-python -c "open('x','w').write('y')"
-echo x > file
-```
-
-- [ ] **Step 3: Run targeted tests and confirm RED**
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/hooks.test.ts tests/executor/agent-config.test.ts
 ```
 
-- [ ] **Step 4: Replace blacklist semantics for read-only Bash with an allowlist**
+- [ ] Implement `isAllowedReadOnlyShellCommand(command)` in the ownership guard and make read-only Bash deny-by-default.
 
-In `pre-tool-use-ownership-guard`, add:
+- [ ] Apply maxTurns/tool changes and portable hook paths.
 
-```js
-function isAllowedReadOnlyShellCommand(command) {
-  const text = String(command || '').trim();
-  if (!text) return false;
-  if (/[;&|><`\n]|\$\(/.test(text)) return false;
-  if (/--(?:ext-diff|no-index|output)\b/i.test(text)) return false;
-
-  return [
-    /^git status(?:\s|$)/,
-    /^git diff(?:\s|$)/,
-    /^git log(?:\s|$)/,
-    /^git show(?:\s|$)/,
-    /^git grep(?:\s|$)/,
-    /^git rev-parse(?:\s|$)/,
-    /^git ls-files(?:\s|$)/,
-    /^npm run typecheck(?:\s|$)/,
-    /^npm run lint(?:\s|$)/,
-    /^npm test(?:\s|$)/,
-    /^npm run test(?:\s|$)/,
-    /^npx tsx --test(?:\s|$)/,
-  ].some((pattern) => pattern.test(text));
-}
-```
-
-If the role is read-only and Bash is invoked, deny unless this function returns true.
-
-- [ ] **Step 5: Harden agent frontmatter and portable hooks**
-
-Use the exact maxTurns/tool policy above and replace hook commands with `${CLAUDE_PROJECT_DIR}/.claude/hooks/<hook-name>`.
-
-- [ ] **Step 6: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/hooks.test.ts tests/executor/agent-config.test.ts
@@ -410,66 +225,41 @@ git commit -m "fix(executor): harden agent capabilities and hook portability"
 
 ### Task 3: Durable Run-State Primitives and Append-Only Event Ledger
 
-**Files:**
-- Create: `.claude/hooks/qcet-run-state.cjs`
-- Create: `.claude/hooks/qcet-run-event`
-- Modify: `.claude/settings.json`
-- Create: `tests/executor/run-state.test.ts`
-- Modify: `tests/executor/hooks.test.ts`
-- Create: `.claude/executor-runs/README.md`
+**Files:** create `.claude/hooks/qcet-run-state.cjs`, `.claude/hooks/qcet-run-event`, `tests/executor/run-state.test.ts`, `.claude/executor-runs/README.md`; modify `.claude/settings.json`, `tests/executor/hooks.test.ts`.
 
 **Interfaces:**
-- `sanitizeRunId(value): string`
-- `getRunDir(projectDir, runId): string`
-- `atomicWriteJson(filePath, value): void`
-- `readJson(filePath): any | null`
-- `appendEvent(runDir, event): object`
-- `writeWitness(runDir, relativePath, value): string`
-- `claimFile(runDir, shardId, relativeFile): { ok: boolean, owner: string }`
 
-- [ ] **Step 1: Write failing helper tests**
-
-Test that `sanitizeRunId('../../evil')` produces a safe basename with no slash or `..` traversal, `atomicWriteJson` leaves valid JSON, and `appendEvent` creates monotonically increasing integer `seq` values.
-
-- [ ] **Step 2: Add failing atomic claim tests**
-
-```ts
-const first = claimFile(runDir, 'shard-a', 'src/a.ts');
-assert.equal(first.ok, true);
-const same = claimFile(runDir, 'shard-a', 'src/a.ts');
-assert.equal(same.ok, true);
-const conflict = claimFile(runDir, 'shard-b', 'src/a.ts');
-assert.equal(conflict.ok, false);
-assert.equal(conflict.owner, 'shard-a');
+```js
+sanitizeRunId(value)
+getRunDir(projectDir, runId)
+atomicWriteJson(filePath, value)
+readJson(filePath)
+appendEvent(runDir, event)
+writeWitness(runDir, relativePath, value)
+claimFile(runDir, shardId, relativeFile)
 ```
 
-- [ ] **Step 3: Run tests and confirm RED**
+- [ ] Write failing tests proving run IDs cannot escape `.claude/executor-runs/`, JSON writes are atomic/valid, event `seq` is strictly increasing, and atomic file claims allow same-owner re-entry but reject a second shard.
+
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/run-state.test.ts
 ```
 
-- [ ] **Step 4: Implement `qcet-run-state.cjs`**
-
-Use only Node built-ins `fs`, `path`, and `crypto`. Run directories must resolve below:
+- [ ] Implement helpers with Node built-ins `fs`, `path`, `crypto`. Run root is exactly:
 
 ```text
-${CLAUDE_PROJECT_DIR}/.claude/executor-runs/<sanitizedRunId>
+${CLAUDE_PROJECT_DIR}/.claude/executor-runs/<sanitized-run-id>
 ```
 
-`appendEvent` writes one JSON object per line to `events.jsonl` with `{ seq, ts, type, ...payload }`. Serialize appends by opening with append mode; sequence is derived from a small `sequence.json` updated through temp-file + rename.
+`appendEvent` writes bounded JSONL records. Claim filenames are SHA-256 hashes of normalized repository-relative paths and use exclusive create (`wx`) for first ownership.
 
-`claimFile` stores one JSON file per normalized repository-relative path hash under `claims/`; creation must be exclusive (`flag: 'wx'`) so concurrent claim attempts cannot both win.
+- [ ] Implement `qcet-run-event` to record bounded `SubagentStart`, `SubagentStop`, `PostToolUse`, and `PostToolUseFailure` events only when `QCET_RUN_ID` exists. Never store full prompts, file contents, secrets, or unbounded stdout.
 
-- [ ] **Step 5: Implement generic hook event recorder**
+- [ ] Wire the hook without removing the existing SubagentStop evidence gate.
 
-`qcet-run-event` reads hook JSON from stdin. If `QCET_RUN_ID` is absent it exits 0. When present it appends bounded events for `SubagentStart`, `SubagentStop`, `PostToolUse`, and `PostToolUseFailure`; never store entire prompts, file contents, secrets, or unbounded stdout.
-
-- [ ] **Step 6: Wire lifecycle events in settings**
-
-Add the recorder to `SubagentStart`, `SubagentStop`, `PostToolUse`, and `PostToolUseFailure`. Keep the existing evidence gate on `SubagentStop`.
-
-- [ ] **Step 7: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/run-state.test.ts tests/executor/hooks.test.ts
@@ -480,53 +270,25 @@ git commit -m "feat(executor): add durable run ledger primitives"
 
 ---
 
-### Task 4: Continuous Worktree Identity Guard and Runtime File Claims
+### Task 4: Continuous Worktree Identity and Runtime File Claims
 
-**Files:**
-- Modify: `.claude/hooks/pre-tool-use-ownership-guard`
-- Modify: `.claude/hooks/qcet-run-state.cjs`
-- Modify: `tests/executor/hooks.test.ts`
-- Create: `tests/executor/worktree-guard.test.ts`
+**Files:** modify `.claude/hooks/pre-tool-use-ownership-guard`, `.claude/hooks/qcet-run-state.cjs`, `tests/executor/hooks.test.ts`; create `tests/executor/worktree-guard.test.ts`.
 
-**Interfaces:**
-- `resolveExpectedExecutionIdentity(runDir, shardId)` reads `shards/<shardId>/worktree.json`
-- Mutating builder tools are allowed only when actual git root/worktree identity matches the witness
-- Valid Write/Edit mutations atomically claim their repository-relative path
+**Interface:** isolated shard witness lives at `shards/<shardId>/worktree.json` and records expected root, pinned base commit, and shard identity.
 
-- [ ] **Step 1: Add failing worktree mismatch tests**
+- [ ] Add failing tests using temporary git repos for: wrong cwd/root, wrong pinned base ancestry, missing required worktree witness during an executor run, and shard B attempting to mutate a file already claimed by shard A.
 
-Create a temporary git repository plus a fake expected worktree witness. Assert that a builder `Write` is blocked with `WORKTREE_INVALID` when actual cwd/root does not equal the expected root.
-
-- [ ] **Step 2: Add failing runtime file-conflict test**
-
-Shard A claims `src/shared.ts`. Shard B attempts `Edit` on the same path. Expect exit 2 and `RUNTIME_FILE_CONFLICT` in the reason.
-
-- [ ] **Step 3: Run targeted tests and confirm RED**
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/hooks.test.ts tests/executor/worktree-guard.test.ts
 ```
 
-- [ ] **Step 4: Extend the PreToolUse guard**
+- [ ] Before every builder `Write`, `Edit`, or mutating `Bash`, resolve run/shard, load expected witness, run `git rev-parse --show-toplevel` and `git rev-parse HEAD` via `spawnSync`, verify root/base, enforce owns/antiOwns, then atomically claim the target Write/Edit path.
 
-For builder `Write`, `Edit`, or mutating `Bash`:
+- [ ] Outside executor runs (`QCET_RUN_ID` absent), preserve current interactive fail-open behavior. Inside an executor run, missing required identity is fail-closed with `WORKTREE_INVALID`.
 
-1. resolve run and shard;
-2. load expected worktree witness when the shard is isolated;
-3. run `git rev-parse --show-toplevel` and `git rev-parse HEAD` from the hook process cwd using `spawnSync`;
-4. compare normalized roots;
-5. verify expected pinned base is an ancestor when a base is recorded;
-6. verify ownership/antiOwns;
-7. claim the target file for Write/Edit;
-8. block on any mismatch/conflict before the tool executes.
-
-Do not silently allow a builder when executor run state exists but its required shard/worktree identity cannot be resolved.
-
-- [ ] **Step 5: Preserve interactive fail-open behavior outside executor runs**
-
-If `QCET_RUN_ID` is absent, existing non-executor interactive behavior remains unchanged.
-
-- [ ] **Step 6: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/hooks.test.ts tests/executor/worktree-guard.test.ts
@@ -537,85 +299,47 @@ git commit -m "fix(executor): enforce continuous worktree and file claims"
 
 ---
 
-### Task 5: Execution Modes, Change-Surface Gate, Spawn Gate, and JIT Context
+### Task 5: Proportional Execution, Change-Surface Gate, Spawn Gate, and JIT Context
 
-**Files:**
-- Modify: `.claude/workflows/qcet-plan-executor.js`
-- Modify: `tests/executor/workflow-executor.test.ts`
-- Regenerate: `.claude/dist/qcet-plan-executor.bundle.js`
+**Files:** modify `.claude/workflows/qcet-plan-executor.js`, `tests/executor/workflow-executor.test.ts`; regenerate bundle.
 
 **Interfaces:**
-- `selectExecutionMode(manifest): 'MICRO'|'STANDARD'|'CRITICAL'`
-- `computeChangeSurfaceScore(shard): number`
-- `shouldSpawnAgent({ role, mode, shard, recon }): boolean`
-- `buildJitShardContext(shard, manifest, evidence): object`
-
-- [ ] **Step 1: Add failing mode-selection tests**
-
-Require `MICRO` only for a single low-risk shard without auth/security/database/migration/shared-contract signals. Any `critical` risk or paths matching `/auth|rbac|permission|prisma|migration|schema\.prisma/i` must select `CRITICAL`. All other work selects `STANDARD`.
-
-- [ ] **Step 2: Add failing change-surface tests**
-
-Use a deterministic score:
 
 ```js
-score =
-  owns.length * 2 +
-  requirements.length * 2 +
-  dependencies.length * 3 +
-  expectedContracts.length * 3 +
-  (risk === 'high' ? 5 : 0) +
-  (risk === 'critical' ? 10 : 0);
+selectExecutionMode(manifest) -> 'MICRO'|'STANDARD'|'CRITICAL'
+computeChangeSurfaceScore(shard) -> number
+shouldSpawnAgent({ role, mode, shard, recon }) -> boolean
+buildJitShardContext(shard, manifest, evidence) -> object
 ```
 
-If a shard score exceeds `24`, calibration must split it unless its ownership cannot be safely divided; unsplittable oversized shards are forced `CRITICAL`.
+- [ ] Add failing mode tests: MICRO requires exactly one low-risk shard and no auth/RBAC/security/Prisma/migration/shared-contract/dependency signal; any critical risk or sensitive path is CRITICAL; everything else is STANDARD.
 
-- [ ] **Step 3: Add failing spawn-gate tests**
+- [ ] Add failing score tests using exactly:
 
-Examples:
-
-```text
-MICRO low-risk known local files -> no external researcher
-root shard with complete recon -> no reconciliation agent
-CRITICAL auth shard -> skeptic required
-external uncertainty present -> researcher required
+```js
+score = owns.length * 2
+  + requirements.length * 2
+  + dependencies.length * 3
+  + expectedContracts.length * 3
+  + (risk === 'high' ? 5 : 0)
+  + (risk === 'critical' ? 10 : 0);
 ```
 
-- [ ] **Step 4: Run targeted test and confirm RED**
+Score `> 24` requires calibration split unless unsplittable, in which case force CRITICAL.
+
+- [ ] Add failing spawn-gate tests: MICRO with known local files skips researcher; root shard with complete recon skips reconciliation; CRITICAL always requires independent skeptic; external uncertainty requires researcher.
+
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/workflow-executor.test.ts
 ```
 
-- [ ] **Step 5: Implement the four helpers**
+- [ ] Implement helpers above `// WORKFLOW`. JIT context contains only `id`, `objective`, `requirements`, `owns`, `antiOwns`, `dependencies`, `expectedContracts`, `acceptanceCriteria`, `verificationPlan`, `relevantFiles`, `dependencyDeltas`. Full master plan is supplied only through the existing ambiguity fallback.
 
-Keep them above the `// WORKFLOW` marker so tests can load them using the existing VM strategy.
+- [ ] Wire MICRO fast path: builder -> deterministic targeted checks -> one skeptic implementation review -> proof -> delivery gate. No broad integration fan-out unless the shard itself touches a critical/shared contract.
 
-`buildJitShardContext` must include only:
-
-```js
-{
-  id,
-  objective,
-  requirements,
-  owns,
-  antiOwns,
-  dependencies,
-  expectedContracts,
-  acceptanceCriteria,
-  verificationPlan,
-  relevantFiles,
-  dependencyDeltas,
-}
-```
-
-Do not attach the full master plan unless the shard is explicitly ambiguous.
-
-- [ ] **Step 6: Wire MICRO fast path and change-surface enforcement**
-
-MICRO skips broad integration dimensions and unnecessary recon/research but still requires targeted tests, one independent skeptic verification, proof, and deterministic delivery gate.
-
-- [ ] **Step 7: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/workflow-executor.test.ts
@@ -626,64 +350,35 @@ git commit -m "feat(executor): add proportional execution and spawn gating"
 
 ---
 
-### Task 6: Lane Scheduler, Critical-Path Reservations, Speculative Read, and Cancellation
+### Task 6: Lane Scheduler, Critical-Path Reservation, Speculative Read, and Cancellation
 
-**Files:**
-- Modify: `.claude/workflows/qcet-plan-executor.js`
-- Modify: `tests/executor/workflow-executor.test.ts`
-- Regenerate: `.claude/dist/qcet-plan-executor.bundle.js`
+**Files:** modify workflow/test; regenerate bundle.
 
 **Interfaces:**
-- `createLaneScheduler({ globalLimit, laneLimits })`
-- `scheduler.run(lane, priority, fn)`
-- lanes: `read`, `write`, `verify`
-- git-control filesystem mutations are delegated to hooks/agents and serialized by the corresponding worker protocol; no direct workflow filesystem action
-- `createCancellationToken()` with `.cancel(reason)`, `.isCancelled()`, `.reason`
 
-- [ ] **Step 1: Add failing lane scheduler tests**
+```js
+createLaneScheduler({ globalLimit, laneLimits })
+scheduler.run(lane, priority, fn)
+createCancellationToken() -> { cancel(reason), isCancelled(), reason }
+```
 
-Test that:
+- [ ] Add failing tests proving global active agents never exceed limit, ready critical-path WRITE outranks lower-priority speculative READ, idle capacity can be borrowed, equal priority is FIFO, and cancelled queued work never calls its function.
 
-- global active count never exceeds 8 for the high profile;
-- write work starts before lower-priority queued speculative read when both are ready;
-- idle lane capacity can be borrowed without exceeding global limit;
-- cancelled queued work never invokes its function.
+- [ ] Add DAG test `A -> B -> C`: if A fails verification, no new B/C agent starts; descendants return `DEPENDENCY_BLOCKED`.
 
-- [ ] **Step 2: Add failing descendant-cancellation test**
-
-Given DAG `A -> B -> C`, if A verification fails, speculative B/C work may finish if already complete but no new B/C agents may start; B and C finalize with `DEPENDENCY_BLOCKED`.
-
-- [ ] **Step 3: Run targeted tests and confirm RED**
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/workflow-executor.test.ts
 ```
 
-- [ ] **Step 4: Implement lane scheduler**
+- [ ] Implement logical lanes: calibrate/recon/research/reconcile=`read`; builder/repair=`write`; skeptic/integration/global reviewer=`verify`. Priority order is critical-path WRITE, required VERIFY, required READ, speculative READ.
 
-Use deterministic FIFO inside equal priority. Priority comes from existing critical-path priority plus lane class:
+- [ ] Keep existing agent/token budget checks before queueing. Do not add adaptive concurrency in this task.
 
-```text
-ready WRITE on critical path > required VERIFY > required READ > speculative READ
-```
+- [ ] Preserve early pre-recon as speculative READ; reconciliation invalidates stale evidence when dependency deltas changed assumptions.
 
-Do not implement heuristic/adaptive concurrency here.
-
-- [ ] **Step 5: Route agent calls by lane**
-
-```text
-Calibrate/recon/research/reconcile -> read
-builder/repair -> write
-skeptic/integration/global reviewers -> verify
-```
-
-Preserve existing total-agent and token budget checks before queueing.
-
-- [ ] **Step 6: Add speculative-read invalidation**
-
-Pre-recon may start before dependencies finish. If upstream dependency deltas invalidate the evidence, reconciliation marks the speculative result stale and rebuilds the JIT context rather than trusting stale assumptions.
-
-- [ ] **Step 7: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/workflow-executor.test.ts
@@ -694,155 +389,86 @@ git commit -m "feat(executor): add lane scheduling and fail-fast cancellation"
 
 ---
 
-### Task 7: Shard Contract, Review Trigger Engine, and Mid-Run Independent Review
+### Task 7: Shard Contract and Checkpointed Independent Review
 
-**Files:**
-- Modify: `.claude/workflows/qcet-plan-executor.js`
-- Modify: `.claude/agents/qcet-skeptic.md`
-- Modify: `tests/executor/workflow-executor.test.ts`
-- Create: `tests/executor/review-policy.test.ts`
-- Regenerate: `.claude/dist/qcet-plan-executor.bundle.js`
+**Files:** modify workflow, `.claude/agents/qcet-skeptic.md`, workflow tests; create `tests/executor/review-policy.test.ts`; regenerate bundle.
 
 **Interfaces:**
-- `buildShardContract(shard, recon): object`
-- `validateShardContract(contract): { valid, errors }`
-- `shouldReviewCheckpoint(state): { required, reasons }`
-- skeptic modes: `contract`, `implementation`, `integration`
 
-- [ ] **Step 1: Add failing contract validation tests**
-
-A valid contract requires non-empty:
-
-```text
-shardId
-objective
-requirements
-owns
-acceptanceCriteria
-verificationPlan
+```js
+buildShardContract(shard, recon)
+validateShardContract(contract) -> { valid, errors }
+shouldReviewCheckpoint(state) -> { required, reasons }
 ```
 
-`CRITICAL` additionally requires `expectedContracts` and a security/domain verification item.
+Skeptic modes are exactly `contract`, `implementation`, `integration`.
 
-- [ ] **Step 2: Add failing review-trigger tests**
+- [ ] Add failing contract tests. Required non-empty fields: `shardId`, `objective`, `requirements`, `owns`, `acceptanceCriteria`, `verificationPlan`. CRITICAL additionally requires `expectedContracts` and a security/domain verification item.
 
-Require immediate checkpoint review when any is true:
+- [ ] Add failing review-trigger tests. Review is mandatory when risk high/critical, `schema.prisma`/`prisma/migrations` touched, auth/RBAC/permission surface touched, ownership boundary touched, new failing test appears, expected contract changes, or change-surface score is `>= 18`.
 
-```text
-risk high/critical
-schema.prisma or prisma/migrations touched
-auth/rbac/permission surface touched
-ownership boundary touched
-new failing tests detected
-expected contract changed
-changeSurfaceScore >= 18
-```
-
-Low-risk UI shards below threshold review only at shard completion.
-
-- [ ] **Step 3: Run targeted tests and confirm RED**
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/review-policy.test.ts tests/executor/workflow-executor.test.ts
 ```
 
-- [ ] **Step 4: Implement contract pre-review**
+- [ ] STANDARD runs pre-review when risk high or score >=18; CRITICAL always runs skeptic `contract` review before builder; MICRO skips pre-review but still runs final implementation review.
 
-For STANDARD: contract review runs when risk is high or change surface >= 18.
-For CRITICAL: always run `qcet-skeptic` with `reviewMode: 'contract'` before builder launch.
-For MICRO: skip pre-review but keep final independent implementation review.
+- [ ] After builder structured output, run deterministic checks then skeptic `implementation` review when triggered. The skeptic must inspect actual repo/diff/tests; builder prose is treated only as claims.
 
-- [ ] **Step 5: Implement checkpoint review**
+- [ ] Update skeptic instructions with all three modes and the explicit invariant: `Never approve from builder prose alone.`
 
-After a builder returns structured implementation evidence, evaluate `shouldReviewCheckpoint`. If required, run deterministic checks first, then call skeptic in `implementation` mode. Builder summary is passed only as a claim set; the skeptic prompt explicitly requires reading actual git diff/repository/test output.
-
-- [ ] **Step 6: Update skeptic instructions**
-
-Add the three modes and the invariant:
-
-```text
-Never approve from builder prose alone. Inspect actual repository state, actual diff, actual tests, and mapped requirement evidence.
-```
-
-- [ ] **Step 7: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/review-policy.test.ts tests/executor/workflow-executor.test.ts
 npm run build:executor
 git add .claude/workflows/qcet-plan-executor.js .claude/agents/qcet-skeptic.md tests/executor/review-policy.test.ts tests/executor/workflow-executor.test.ts .claude/dist/qcet-plan-executor.bundle.js
-git commit -m "feat(executor): add checkpointed independent review pipeline"
+git commit -m "feat(executor): add checkpointed independent review"
 ```
 
 ---
 
 ### Task 8: Proof Bundles, Witness-Derived State, and Deterministic Shard Gate
 
-**Files:**
-- Modify: `.claude/hooks/qcet-run-state.cjs`
-- Modify: `.claude/hooks/subagent-stop-evidence-gate`
-- Modify: `.claude/agents/qcet-telemetry-recorder.md`
-- Modify: `.claude/workflows/qcet-plan-executor.js`
-- Create: `tests/executor/proof-bundle.test.ts`
-- Modify: `tests/executor/hooks.test.ts`
-- Modify: `tests/executor/workflow-executor.test.ts`
-- Regenerate: `.claude/dist/qcet-plan-executor.bundle.js`
+**Files:** modify `.claude/hooks/qcet-run-state.cjs`, `.claude/hooks/subagent-stop-evidence-gate`, telemetry agent, workflow, hook/workflow tests; create `tests/executor/proof-bundle.test.ts`; regenerate bundle.
 
 **Interfaces:**
-- `validateShardProof(proof, contract): { valid, blockers }`
-- `deriveShardState(witnesses): 'PLANNED'|'WORKTREE_READY'|'IMPLEMENTED'|'PROVEN'|'VERIFIED'|'BLOCKED'`
-- canonical proof fields: `shardId`, `baseCommit`, `checkpointRef`, `touchedFiles`, `requirementsProven`, `checks`, `verification`, `ownership`, `worktree`, `unresolvedFindings`
 
-- [ ] **Step 1: Write failing proof-validation tests**
-
-A proof fails when:
-
-- a contract requirement is missing from `requirementsProven`;
-- any required check has non-zero exit code;
-- ownership/worktree status is not `pass`;
-- verification is not `pass`;
-- unresolved `high` or `critical` finding exists.
-
-- [ ] **Step 2: Write failing witness-state tests**
-
-```text
-contract only -> PLANNED
-+ worktree witness -> WORKTREE_READY
-+ implemented witness -> IMPLEMENTED
-+ valid proof -> PROVEN
-+ verified witness -> VERIFIED
-blocked witness at any point -> BLOCKED
+```js
+validateShardProof(proof, contract) -> { valid, blockers }
+deriveShardState(witnesses) -> 'PLANNED'|'WORKTREE_READY'|'IMPLEMENTED'|'PROVEN'|'VERIFIED'|'BLOCKED'
 ```
 
-- [ ] **Step 3: Run tests and confirm RED**
+Canonical proof fields: `shardId`, `baseCommit`, `checkpointRef`, `touchedFiles`, `requirementsProven`, `checks`, `verification`, `ownership`, `worktree`, `unresolvedFindings`.
+
+- [ ] Add failing tests: proof fails for missing requirement, non-zero required check, failed ownership/worktree status, non-pass independent verification, or unresolved high/critical finding.
+
+- [ ] Add witness-state tests: contract=`PLANNED`; +worktree=`WORKTREE_READY`; +implemented=`IMPLEMENTED`; +valid proof=`PROVEN`; +verified=`VERIFIED`; explicit blocked witness always=`BLOCKED`.
+
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/proof-bundle.test.ts tests/executor/hooks.test.ts tests/executor/workflow-executor.test.ts
 ```
 
-- [ ] **Step 4: Implement proof validator and witness writer**
-
-Use bounded command evidence:
+- [ ] Persist bounded command evidence using actual output variable `output`:
 
 ```js
 {
-  command: 'npm test -- tests/unit/auth.test.ts',
-  exitCode: 0,
-  outputDigest: 'sha256:<hex>',
-  outputTail: '<last bounded lines>',
+  command,
+  exitCode,
+  outputDigest: 'sha256:' + crypto.createHash('sha256').update(output).digest('hex'),
+  outputTail: output.split('\n').slice(-40).join('\n'),
 }
 ```
 
-Do not persist unlimited stdout.
+- [ ] Strengthen SubagentStop builder handoff: require changed files, tests run, requirements satisfied, run ID, shard ID. This gate validates handoff completeness only; it never marks VERIFIED.
 
-- [ ] **Step 5: Strengthen SubagentStop evidence gate**
+- [ ] Unblock dependent writes only after `validateShardProof` passes. A skeptic pass with incomplete proof becomes `EVIDENCE_INCOMPLETE`.
 
-For builder success, require structured evidence to contain changed files, tests run, requirements satisfied, and executor run/shard identity. The gate does not declare the shard verified; it only proves the builder returned a complete handoff.
-
-- [ ] **Step 6: Add deterministic shard gate**
-
-The workflow may unblock dependent writes only when `validateShardProof(...)` passes. A skeptic `pass` without complete proof is `EVIDENCE_INCOMPLETE`, not success.
-
-- [ ] **Step 7: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/proof-bundle.test.ts tests/executor/hooks.test.ts tests/executor/workflow-executor.test.ts
@@ -853,97 +479,41 @@ git commit -m "feat(executor): require machine-verifiable shard proof"
 
 ---
 
-### Task 9: Git Checkpoints, Idempotent Phase Keys, Resume Capsules, and Progress Circuit Breaker V2
+### Task 9: Git Checkpoints, Idempotent Phase Keys, Resume Capsules, and Progress Circuit Breaker
 
-**Files:**
-- Create: `.claude/hooks/qcet-checkpoint`
-- Modify: `.claude/hooks/qcet-run-state.cjs`
-- Modify: `.claude/workflows/qcet-plan-executor.js`
-- Create: `tests/executor/checkpoint.test.ts`
-- Create: `tests/executor/recovery.test.ts`
-- Modify: `tests/executor/workflow-executor.test.ts`
-- Regenerate: `.claude/dist/qcet-plan-executor.bundle.js`
+**Files:** create `.claude/hooks/qcet-checkpoint`, `tests/executor/checkpoint.test.ts`, `tests/executor/recovery.test.ts`; modify run-state helper, workflow/tests; regenerate bundle.
 
 **Interfaces:**
-- checkpoint command protocol input: `{ runId, shardId, stage, worktreeRoot }`
-- checkpoint output: `{ status, ref, commit, tree }`
-- `computePhaseKey({ runId, shardId, phase, inputStateHash, baseCommit }): string`
-- `buildResumeCapsule(state): object`
-- `computeProgressSignature(state): string`
 
-- [ ] **Step 1: Add failing checkpoint tests**
-
-Create a temporary git repository, modify a file, invoke `qcet-checkpoint`, and assert a ref matching:
-
-```text
-refs/qcet/<runId>/<shardId>/<stage>
+```js
+computePhaseKey({ runId, shardId, phase, inputStateHash, baseCommit })
+buildResumeCapsule(state)
+computeProgressSignature(state)
 ```
 
-points at a reachable checkpoint commit without changing the checked-out branch HEAD.
+Checkpoint protocol input `{ runId, shardId, stage, worktreeRoot }`; output `{ status, ref, commit, tree }`. Refs use `refs/qcet/<sanitized-run>/<sanitized-shard>/<sanitized-stage>`.
 
-- [ ] **Step 2: Add failing idempotency tests**
+- [ ] Add temporary-git-repo test proving checkpoint creates a reachable commit/ref without moving checked-out branch HEAD.
 
-The same phase inputs produce the same key. Changing base commit, phase, or input-state hash changes the key.
+- [ ] Add idempotency tests: identical phase inputs -> same key; any base/phase/input hash change -> different key.
 
-- [ ] **Step 3: Add failing progress-signature tests**
+- [ ] Add progress-signature test: fixing finding A while introducing C changes signature even when total count remains 2; identical diff/check/test/finding sets produce the same signature.
 
-A repair that resolves finding `A` but introduces `C` must produce a different signature even if total issue count stays 2. Identical diff/checks/finding sets produce the same signature.
-
-- [ ] **Step 4: Run tests and confirm RED**
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/checkpoint.test.ts tests/executor/recovery.test.ts tests/executor/workflow-executor.test.ts
 ```
 
-- [ ] **Step 5: Implement checkpoint hook**
+- [ ] Implement git-plumbing checkpoint hook with sanitized refs and no branch movement.
 
-Use Git plumbing to create a recoverable commit/ref from the worktree state without moving the user branch. Ref names and run/shard/stage segments must be sanitized.
+- [ ] Implement phase states: `COMPLETED` only with matching witness; `FAILED` retry under policy; `UNKNOWN` reconcile/inspect before rerun; `NOT_RUN` execute.
 
-- [ ] **Step 6: Implement phase reuse policy in the workflow**
+- [ ] Resume Capsule fields are exactly `runId`, `shardId`, `baseCommit`, `checkpointRef`, `objective`, `requirements`, `touchedFiles`, `resolvedFindings`, `remainingFindings`, `failingChecks`, `proofRefs`.
 
-Represent phase state as:
+- [ ] Replace issue-count-only stagnation: first identical/no-improvement signature -> one targeted falsifying reverify; second consecutive no-progress -> `REPAIR_STAGNATED`, rollback last accepted checkpoint, block shard.
 
-```text
-COMPLETED -> reuse only when matching witnessed artifact exists
-FAILED -> retry if budget allows
-UNKNOWN -> inspect/reconcile before rerun
-NOT_RUN -> execute
-```
-
-Do not claim exactly-once external effects when evidence is missing.
-
-- [ ] **Step 7: Implement Resume Capsule**
-
-Return only:
-
-```js
-{
-  runId,
-  shardId,
-  baseCommit,
-  checkpointRef,
-  objective,
-  requirements,
-  touchedFiles,
-  resolvedFindings,
-  remainingFindings,
-  failingChecks,
-  proofRefs,
-}
-```
-
-A replacement agent receives this capsule plus the current shard contract/JIT context.
-
-- [ ] **Step 8: Replace issue-count-only repair stagnation with progress signatures**
-
-Policy:
-
-```text
-first no-progress cycle -> run one targeted falsifying diagnostic/reverify
-second consecutive no-progress cycle -> mark REPAIR_STAGNATED, rollback to last accepted checkpoint, block shard
-```
-
-- [ ] **Step 9: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/checkpoint.test.ts tests/executor/recovery.test.ts tests/executor/workflow-executor.test.ts
@@ -954,54 +524,30 @@ git commit -m "feat(executor): add durable checkpoints and evidence-aware recove
 
 ---
 
-### Task 10: Three-Stage Release Gates and Reproducible Delivery HEAD
+### Task 10: Shard, Integration, and Delivery Release Gates
 
-**Files:**
-- Modify: `.claude/workflows/qcet-plan-executor.js`
-- Create: `.claude/hooks/qcet-delivery-proof`
-- Create: `tests/executor/release-gates.test.ts`
-- Modify: `tests/executor/workflow-executor.test.ts`
-- Regenerate: `.claude/dist/qcet-plan-executor.bundle.js`
+**Files:** modify workflow/tests; create `.claude/hooks/qcet-delivery-proof`, `tests/executor/release-gates.test.ts`; regenerate bundle.
 
 **Interfaces:**
-- `evaluateShardGate(input)`
-- `evaluateIntegrationGate(input)`
-- `evaluateDeliveryGate(input)`
-- `evaluateDeterministicReleaseGate(input)` becomes the final composition of all three gates
 
-- [ ] **Step 1: Write failing gate tests**
-
-Require:
-
-```text
-Shard Gate blocks incomplete proof.
-Integration Gate blocks unresolved high/critical integration findings.
-Delivery Gate blocks missing pinned source SHA.
-Delivery Gate blocks missing delivery commit/checkpoint.
-Delivery Gate blocks failed revalidation of exact delivery HEAD.
-Final READY requires all three gates READY.
+```js
+evaluateShardGate(input)
+evaluateIntegrationGate(input)
+evaluateDeliveryGate(input)
+evaluateDeterministicReleaseGate(input)
 ```
 
-- [ ] **Step 2: Run tests and confirm RED**
+- [ ] Add failing tests proving: Shard Gate blocks incomplete proof; Integration Gate blocks unresolved high/critical finding; Delivery Gate blocks missing pinned source SHA, missing delivery checkpoint/commit, or failed exact-delivery validation; final READY requires all three READY.
+
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/release-gates.test.ts tests/executor/workflow-executor.test.ts
 ```
 
-- [ ] **Step 3: Implement `qcet-delivery-proof`**
+- [ ] Implement `qcet-delivery-proof` to record `git status --short`, exact `git rev-parse HEAD`, and real exit codes for configured final validation commands at the delivery checkpoint/worktree.
 
-The hook/worker action receives an exact delivery worktree root and runs:
-
-```text
-git status --short
-git rev-parse HEAD
-```
-
-It records exact HEAD/checkpoint identity and executes the configured final validation command set. The proof reports real exit codes; it cannot return `pass` if any required command failed.
-
-- [ ] **Step 4: Refactor the deterministic release gate**
-
-Keep backwards-compatible blocker messages where current tests depend on them, but add explicit stage output:
+- [ ] Refactor final gate output to:
 
 ```js
 {
@@ -1014,7 +560,9 @@ Keep backwards-compatible blocker messages where current tests depend on them, b
 }
 ```
 
-- [ ] **Step 5: Verify and commit**
+Keep existing blocker wording where regression tests rely on it.
+
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/release-gates.test.ts tests/executor/workflow-executor.test.ts
@@ -1027,50 +575,36 @@ git commit -m "feat(executor): prove shard integration and delivery readiness"
 
 ### Task 11: Immutable Live Telemetry and Explicit Synthetic/Live Evaluation
 
-**Files:**
-- Modify: `.claude/workflows/qcet-plan-executor.js`
-- Modify: `.claude/agents/qcet-telemetry-recorder.md`
-- Modify: `scripts/run-eval-suite.mjs`
-- Modify: `scripts/run-benchmark.mjs`
-- Create: `scripts/lib/live-benchmark.mjs`
-- Create: `scripts/compare-live-executor-runs.mjs`
-- Create: `tests/executor/live-benchmark.test.ts`
-- Modify: `package.json`
-- Modify: `.claude/executor-evals/README.md`
-- Regenerate: `.claude/dist/qcet-plan-executor.bundle.js`
+**Files:** modify workflow, telemetry agent, `scripts/run-eval-suite.mjs`, `scripts/run-benchmark.mjs`, `package.json`, eval README; create `scripts/lib/live-benchmark.mjs`, `scripts/compare-live-executor-runs.mjs`, `tests/executor/live-benchmark.test.ts`; regenerate bundle.
 
 **Interfaces:**
-- live per-run path: `.claude/executor-evals/runs/<runId>.json`
-- `validateLiveRun(payload)`
-- `compareLiveRunSets(baselineRuns, candidateRuns)`
-- `median(values)`
 
-- [ ] **Step 1: Add failing live-benchmark tests**
-
-Require rejection when `sourceCommit`, `executorCommit`, `plan`, or `domain` is missing. Require strict compare to reject mismatched source commit/plan/domain.
-
-Performance rule for comparable runs:
-
-```text
-candidate median wall-clock <= baseline median * 1.05
-candidate measured tokens <= baseline median * 1.10
+```js
+median(values)
+validateLiveRun(payload)
+loadRunDirectory(dir)
+compareLiveRunSets(baselineRuns, candidateRuns)
 ```
 
-Token comparison returns `NOT_MEASURED` when either side lacks measured token values; never estimate tokens.
+CLI:
 
-- [ ] **Step 2: Run test and confirm RED**
+```bash
+node scripts/compare-live-executor-runs.mjs --baseline-dir .claude/executor-evals/benchmarks/v15/executor-canary --candidate-dir .claude/executor-evals/benchmarks/v23/executor-canary
+```
+
+- [ ] Add failing tests rejecting missing `sourceCommit`, `executorCommit`, `plan`, or `domain`; strict comparison rejects mismatched source commit/plan/domain/runtime fingerprint.
+
+- [ ] Comparison rule: candidate median wall clock `<= baseline * 1.05`; measured token median `<= baseline * 1.10`; missing token measurements return `NOT_MEASURED`, never an estimate.
+
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/live-benchmark.test.ts
 ```
 
-- [ ] **Step 3: Relabel synthetic scripts**
+- [ ] Mark synthetic outputs `mode: 'synthetic'` and log prefixes `[synthetic-eval]` / `[synthetic-benchmark]`.
 
-`run-eval-suite.mjs` output must contain `mode: 'synthetic'` and log prefix `[synthetic-eval]`.
-
-`run-benchmark.mjs` output must contain `mode: 'synthetic'` and log prefix `[synthetic-benchmark]`.
-
-- [ ] **Step 4: Add package scripts**
+- [ ] Package scripts become:
 
 ```json
 "eval:synthetic": "node scripts/run-eval-suite.mjs",
@@ -1080,22 +614,9 @@ npx tsx --test tests/executor/live-benchmark.test.ts
 "eval:benchmark": "npm run eval:synthetic:benchmark"
 ```
 
-- [ ] **Step 5: Extend telemetry provenance**
+- [ ] Live telemetry stores immutable `.claude/executor-evals/runs/<sanitizedRunId>.json` plus latest snapshot. Include runtime fingerprint, source/executor commits, execution mode, lane limits, wall-clock/calibration/first-builder/critical-path/dependency-wait, agents, repairs, stalls, conflicts, review costs, coverage, and final gate state. Unknown values remain null.
 
-Store runtime fingerprint, source commit, executor commit, execution mode, lane limits, agent counts, wall clock, calibration, time-to-first-builder, critical path, dependency wait, repair rounds, stalls, conflicts, review costs, requirement coverage, and final gate state. Unknown measurements remain `null`.
-
-- [ ] **Step 6: Persist immutable run telemetry plus latest snapshot**
-
-Telemetry recorder writes:
-
-```text
-.claude/executor-evals/runs/<runId>.json
-.claude/executor-evals/run-telemetry.json
-```
-
-It must reject path traversal in `runId`.
-
-- [ ] **Step 7: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/live-benchmark.test.ts
@@ -1108,146 +629,87 @@ git commit -m "feat(executor): separate live evidence from synthetic evaluation"
 
 ---
 
-### Task 12: Fault-Injection and Compatibility Canary Suite
+### Task 12: Fault Injection, Compatibility Canary, and Deterministic Live-Smoke Fixture
 
 **Files:**
 - Create: `tests/executor/fault-injection.test.ts`
 - Create: `tests/executor/canary-policy.test.ts`
 - Create: `scripts/run-executor-canary.mjs`
+- Create: `tests/executor/fixtures/canary/live-smoke-plan.md`
+- Create: `tests/executor/fixtures/canary/workspace/value.ts`
+- Create: `tests/executor/fixtures/canary/workspace/value.test.ts`
 - Modify: `package.json`
 
-**Interfaces:**
-- `npm run test:executor:faults`
-- `npm run executor:canary`
+**Live-smoke fixture content:**
 
-- [ ] **Step 1: Implement deterministic injected failure fixtures**
+`value.ts` starts as:
 
-Cover all of:
-
-```text
-builder null
-malformed builder schema
-worktree root mismatch
-wrong/stale base commit
-missing ownership
-out-of-scope ownership
-same-file runtime conflict
-targeted test exit 1
-skeptic null/crash
-agent budget exhaustion
-dependency failure with descendants
-repair no-progress twice
-witness persistence failure
-incomplete proof bundle
-unresolved high integration finding
+```ts
+export function getValue() {
+  return 1;
+}
 ```
 
-- [ ] **Step 2: Assert fail-closed invariants**
+`value.test.ts` asserts `getValue() === 1` initially. `live-smoke-plan.md` instructs the executor to change `getValue()` to return `2`, update the fixture test to expect `2`, run that targeted test, and change no file outside `tests/executor/fixtures/canary/workspace/**`. This fixture is executed only in a disposable benchmark worktree.
 
-Every fixture must assert:
+- [ ] Implement deterministic failure fixtures for builder null, malformed schema, worktree mismatch, wrong base, missing/out-of-scope ownership, same-file conflict, test exit 1, skeptic null/crash, agent budget exhaustion, dependency failure, two no-progress repairs, witness persistence failure, incomplete proof, unresolved high integration finding.
 
-```text
-final status != READY
-finite retry/agent count
-no out-of-scope mutation accepted
-machine-readable failureReason present
-```
+- [ ] Every fixture asserts `status != READY`, finite retry/agent count, no accepted out-of-scope mutation, and a machine-readable failure reason.
 
-- [ ] **Step 3: Build compatibility canary policy**
+- [ ] Compatibility canary is required when any of `executorVersion`, `claudeCodeVersion`, `model`, `effort`, agent-config digest, hook-policy digest changes.
 
-A canary run set is required when any recorded fingerprint field changes among:
-
-```text
-executorVersion
-claudeCodeVersion
-model
-effort
-agent config digest
-hook policy digest
-```
-
-Canary fixtures include MICRO, dependency STANDARD, conflict, repair, and CRITICAL/auth-like manifests.
-
-- [ ] **Step 4: Add scripts**
+- [ ] Add scripts:
 
 ```json
 "test:executor:faults": "npx tsx --test tests/executor/fault-injection.test.ts",
 "executor:canary": "node scripts/run-executor-canary.mjs"
 ```
 
-- [ ] **Step 5: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npm run test:executor:faults
 npm run executor:canary
 npm run test:executor
-git add tests/executor/fault-injection.test.ts tests/executor/canary-policy.test.ts scripts/run-executor-canary.mjs package.json
+git add tests/executor/fault-injection.test.ts tests/executor/canary-policy.test.ts tests/executor/fixtures/canary scripts/run-executor-canary.mjs package.json
 git commit -m "test(executor): add fault injection and runtime canaries"
 ```
 
 ---
 
-### Task 13: Shadow Performance Controllers and ROI Telemetry
+### Task 13: Shadow Performance Controllers and ROI Analysis
 
-**Files:**
-- Modify: `.claude/workflows/qcet-plan-executor.js`
-- Create: `scripts/lib/executor-policy-analysis.mjs`
-- Create: `scripts/analyze-executor-roi.mjs`
-- Create: `tests/executor/policy-analysis.test.ts`
-- Modify: `package.json`
-- Regenerate: `.claude/dist/qcet-plan-executor.bundle.js`
+**Files:** modify workflow/package; create `scripts/lib/executor-policy-analysis.mjs`, `scripts/analyze-executor-roi.mjs`, `tests/executor/policy-analysis.test.ts`; regenerate bundle.
 
 **Interfaces:**
-- `recommendConcurrency(metrics, currentConfig)` returns recommendation only
-- `computeVerifierRoi(records)` returns evidence summaries only
-- `recommendPhaseBudget(metrics)` returns recommendation only
-- all three remain `mode: 'shadow'` in V2.3
 
-- [ ] **Step 1: Add failing deterministic recommendation tests**
-
-Examples:
-
-```text
-high conflict/stall rate -> recommend lower concurrency
-large ready queue + low failure/conflict + dependency wait dominating -> may recommend +1 within hard cap
-insufficient samples -> recommend no change
+```js
+recommendConcurrency(metrics, currentConfig)
+computeVerifierRoi(records)
+recommendPhaseBudget(metrics)
 ```
 
-No recommendation may exceed 16 or fall below 2.
+All return recommendations only; V2.3 mode is hardcoded `shadow`.
 
-- [ ] **Step 2: Add verifier ROI tests**
+- [ ] Add failing tests: high conflict/stall recommends lower concurrency; large ready queue + low failure/conflict + dependency wait may recommend +1; insufficient samples recommends no change; recommendation stays in `2..16`.
 
-Given records with duration/token cost and confirmed findings, compute counts/rates without automatically changing production verification policy.
+- [ ] Add verifier ROI tests using actual duration/token/finding records. A verifier that caught any critical defect in the sample cannot be recommended for pruning. Insufficient sample count cannot produce a pruning recommendation.
 
-- [ ] **Step 3: Run test and confirm RED**
+- [ ] Confirm RED:
 
 ```bash
 npx tsx --test tests/executor/policy-analysis.test.ts
 ```
 
-- [ ] **Step 4: Implement shadow-only workflow telemetry**
+- [ ] Add final telemetry field `shadowRecommendations: { concurrency, verifierPolicy, phaseBudget }`; never apply it to the current run.
 
-At finalization, compute and store:
-
-```js
-shadowRecommendations: {
-  concurrency: {...},
-  verifierPolicy: {...},
-  phaseBudget: {...},
-}
-```
-
-Do not apply these recommendations to the current run.
-
-- [ ] **Step 5: Add offline ROI analyzer**
+- [ ] Add package script:
 
 ```json
 "executor:roi": "node scripts/analyze-executor-roi.mjs"
 ```
 
-It reads immutable live telemetry and prints sample counts, medians, confirmed finding yield, review cost, stalls/conflicts, and recommendation confidence. It must refuse to recommend pruning a verifier when sample size is below the configured minimum or any critical defect was caught by that verifier in the sample.
-
-- [ ] **Step 6: Verify and commit**
+- [ ] Verify/commit:
 
 ```bash
 npx tsx --test tests/executor/policy-analysis.test.ts
@@ -1258,18 +720,11 @@ git commit -m "feat(executor): add shadow performance policy analysis"
 
 ---
 
-### Task 14: Full Regression, Live Ultracode Benchmark, and Architecture Freeze
+### Task 14: Full Regression, Live Ultracode Smoke, Comparable Benchmark, and Freeze
 
-**Files:**
-- Modify after evidence only: `.claude/skills/qcet-plan-executor/SKILL.md`
-- Create after pass: `docs/architecture/QCET_PLAN_EXECUTOR_V2_FINAL.md`
-- Modify after pass: `.claude/executor-evals/README.md`
-- Verify: `.claude/dist/qcet-plan-executor.bundle.js`
+**Files:** create `docs/architecture/QCET_PLAN_EXECUTOR_V2_FINAL.md` only after gates pass; update final skill/eval docs; verify bundle.
 
-**Interfaces:**
-- Produces: final freeze decision and documented V2.3 runtime contract
-
-- [ ] **Step 1: Run complete deterministic verification**
+- [ ] Run deterministic final gate:
 
 ```bash
 npm run test:executor
@@ -1284,78 +739,70 @@ npm run eval:synthetic
 npm run eval:synthetic:benchmark
 ```
 
-Every command must exit 0.
+All commands must exit 0.
 
-- [ ] **Step 2: Verify harness-only diff**
+- [ ] Verify harness-only diff:
 
 ```bash
+V15_BASE_SHA="$(cat /tmp/qcet-v15-base-sha)"
+git diff --stat "$V15_BASE_SHA"...HEAD
 git status --short
-git diff --stat V15_BASE_SHA...HEAD
 ```
 
-Expected: only `.claude/`, `tests/executor/`, executor-specific `scripts/`, `package.json`, and executor/design docs. No QCET application feature files under `src/`, Prisma product schema, or unrelated tests may be changed.
+No QCET product feature file under `src/` and no Prisma application schema change is allowed.
 
-- [ ] **Step 3: Run live smoke plan through Ultracode**
+- [ ] Prepare a disposable live-smoke worktree from the exact current executor commit:
 
-Use structured invocation containing:
-
-```json
-{
-  "planPath": "<representative executor-safe plan>",
-  "budget": "high",
-  "worktreeIsolation": "auto",
-  "domain": "executor-canary",
-  "sourceCommit": "<exact 40-char source SHA>",
-  "executorCommit": "<exact 40-char executor SHA>",
-  "runId": "v23-smoke-<unique>"
-}
+```bash
+EXECUTOR_COMMIT="$(git rev-parse HEAD)"
+SMOKE_DIR="$(cd .. && pwd)/qcet-v23-live-smoke"
+rm -rf "$SMOKE_DIR"
+git worktree add --detach "$SMOKE_DIR" "$EXECUTOR_COMMIT"
+printf '%s\n' "$EXECUTOR_COMMIT" > /tmp/qcet-v23-smoke-source-sha
 ```
 
-Inspect `/workflows` and immutable telemetry. Required smoke properties:
+Run Claude Code from `SMOKE_DIR`, invoke `/qcet-plan-executor` with `planPath` exactly `tests/executor/fixtures/canary/live-smoke-plan.md`, `budget: "high"`, `worktreeIsolation: "auto"`, `domain: "executor-canary"`, `sourceCommit` equal to the contents of `/tmp/qcet-v23-smoke-source-sha`, `executorCommit` equal to the same exact SHA, and a run ID generated by `date -u +v23-smoke-%Y%m%dT%H%M%SZ`.
+
+Required observations in `/workflows` and telemetry: peak agents within configured limit, no permission loop, no worktree escape, independent review runs, proof persists, final gate matches actual validation.
+
+- [ ] After the smoke run, remove the disposable worktree:
+
+```bash
+git worktree remove --force "$SMOKE_DIR"
+```
+
+- [ ] For performance evidence, store comparable run JSON files in exact directories:
 
 ```text
-no runaway agent fanout
-peak agents <= configured limit
-no permission loop
-no worktree escape
-independent checkpoint review runs when triggered
-proof bundles persist
-final gate state matches actual validation
+.claude/executor-evals/benchmarks/v15/executor-canary/
+.claude/executor-evals/benchmarks/v23/executor-canary/
 ```
 
-- [ ] **Step 4: Run comparable live benchmark sets**
+A strict V1.5/V2.3 speed claim is allowed only when both sets contain at least three runs with the same plan/domain/source commit and comparable runtime fingerprint. If that strict V1.5 set cannot be recreated, write `legacy-v15-comparison: unavailable` in the freeze document and do not claim a percentage speedup versus V1.5.
 
-For each available representative domain (`ux`, `business-domain`, `data-architecture`), run at least 3 candidate V2.3 runs from the exact same source commit/plan/runtime profile. Use median wall-clock; never select the fastest run.
-
-If a reproducible V1.5 run can be executed on the same source commit/plan/runtime profile, compare strictly with:
+- [ ] When both strict directories are valid, compare with exactly:
 
 ```bash
-npm run eval:live:compare -- --baseline <baseline-run-files> --candidate <candidate-run-files>
+npm run eval:live:compare -- --baseline-dir .claude/executor-evals/benchmarks/v15/executor-canary --candidate-dir .claude/executor-evals/benchmarks/v23/executor-canary
 ```
 
-If historical V1.5 data lacks pinned source/runtime provenance, label it `legacy-unpinned` and do not claim strict A/B speed improvement from it.
+Use medians, never fastest-run selection.
 
-- [ ] **Step 5: Enforce final freeze criteria**
-
-All must hold:
+- [ ] Freeze criteria:
 
 ```text
 100% mapped requirement coverage
 0 silent READY
 0 ownership/worktree escape
 0 unresolved critical/high finding at READY
-fault injection fails closed
-recovery does not discard proven work
-candidate median wall-clock <= comparable V1.5 * 1.05
-measured candidate tokens <= comparable V1.5 * 1.10, or NOT_MEASURED
+all fault injections fail closed
+recovery preserves previously proven work
 no correctness regression
+strict comparable wall-clock median <= V1.5 median * 1.05 when a strict V1.5 baseline exists
+strict comparable measured-token median <= V1.5 median * 1.10, otherwise NOT_MEASURED
 ```
 
-Performance being faster is preferred; `<= +5%` is the maximum acceptable regression only when correctness/reliability materially improves and the comparison is strict/comparable.
-
-- [ ] **Step 6: Write the final architecture freeze document**
-
-`docs/architecture/QCET_PLAN_EXECUTOR_V2_FINAL.md` must state:
+- [ ] Create `docs/architecture/QCET_PLAN_EXECUTOR_V2_FINAL.md` containing exactly these identity lines near the top:
 
 ```text
 STATUS: ARCHITECTURE FROZEN
@@ -1364,13 +811,11 @@ RUNTIME: Ultracode / Claude Code Dynamic Workflows
 ORCHESTRATOR: .claude/workflows/qcet-plan-executor.js
 ```
 
-Document execution modes, scheduler lanes, review pipeline, proof model, recovery model, release gates, telemetry/eval policy, and the rule that future orchestration changes require a measured bottleneck, correctness/reliability failure, or material runtime change plus regression evidence.
+Document execution modes, lanes, review pipeline, proof, recovery, release gates, telemetry/eval policy, and post-freeze rule.
 
-- [ ] **Step 7: Update skill docs to final invocation contract**
+- [ ] Update `.claude/skills/qcet-plan-executor/SKILL.md` with V2.3 args, artifacts, modes, `/workflows` inspection, and live telemetry locations.
 
-Document V2.3 args, execution modes, artifacts, and how to inspect `/workflows` plus `.claude/executor-evals/runs/`.
-
-- [ ] **Step 8: Final verification and commit**
+- [ ] Final verify/commit:
 
 ```bash
 npm run test:executor
@@ -1380,7 +825,6 @@ npm run build:executor
 npm run verify
 git diff --check
 git status --short
-
 git add .claude docs/architecture tests/executor scripts package.json
 git commit -m "docs(executor): freeze QCET Plan Executor v2.3 architecture"
 ```
@@ -1389,37 +833,23 @@ git commit -m "docs(executor): freeze QCET Plan Executor v2.3 architecture"
 
 ## Definition of Done
 
-V2.3 is complete only when all statements below are true:
-
-- `budget: "high"` maps to a real bounded scheduler profile.
-- Runtime concurrency is globally clamped and split into logical READ/WRITE/VERIFY lanes.
-- Critical-path builders cannot be starved by speculative recon work.
-- MICRO/STANDARD/CRITICAL modes deterministically reduce unnecessary orchestration.
-- Recon/research/read-only roles cannot mutate through general Bash.
-- Hook paths work from worktrees through `${CLAUDE_PROJECT_DIR}`.
-- Every builder mutation is continuously checked against worktree identity and shard ownership.
-- Runtime same-file conflicts are blocked before mutation.
-- Builder completion is not equivalent to verification.
-- Required shards receive independent contract/implementation review at deterministic checkpoints.
-- Every dependency unlock is backed by a valid Shard Proof.
-- Repair stagnation uses evidence signatures, not issue count alone.
-- Accepted work has recoverable git checkpoints and structured Resume Capsules.
-- Release readiness is proven by Shard Gate + Integration Gate + Delivery Gate.
-- Exact source and delivery commits are recorded for live runs.
-- Immutable live telemetry is separate from synthetic evaluation.
-- Fault injection cannot yield silent READY or unbounded retry.
-- Adaptive concurrency/verifier pruning remain shadow-only until live evidence explicitly promotes them.
+- String `budget: "high"` has real scheduler meaning and all caps are deterministic.
+- READ/WRITE/VERIFY lanes preserve a global hard cap and prioritize the critical path.
+- MICRO/STANDARD/CRITICAL modes reduce orchestration where it is not needed.
+- Read-only agents cannot mutate via general Bash; maxTurns are bounded; hooks are worktree-portable.
+- Every builder mutation in an executor run is continuously checked against worktree identity, ownership, antiOwns, and runtime file claims.
+- Builder output never self-approves; deterministic checkpoint triggers invoke independent skeptic review.
+- Dependency writes unlock only from valid proof bundles.
+- Repair stagnation uses evidence signatures and rollback, not issue count alone.
+- Durable checkpoints and Resume Capsules permit fresh-agent recovery without discarding proven work.
+- READY requires Shard Gate + Integration Gate + Delivery Gate on exact reproducible delivery state.
+- Immutable live telemetry is distinct from synthetic evaluation.
+- Fault injection cannot yield silent READY, unbounded retry, or untracked out-of-scope mutation.
+- Adaptive concurrency/verifier pruning remain shadow-only in V2.3.
 - Full executor tests, fault tests, canary, build, typecheck, lint, application tests, and bundle parity pass.
-- Live Ultracode smoke runs complete without worktree escape, permission loops, null-agent cascades, or missing proof.
-- `docs/architecture/QCET_PLAN_EXECUTOR_V2_FINAL.md` is committed with `STATUS: ARCHITECTURE FROZEN`.
+- Live Ultracode smoke completes with correct proof/review/isolation behavior.
+- Freeze documentation is committed with `STATUS: ARCHITECTURE FROZEN`.
 
-## Post-Freeze Change Rule
+## Post-Freeze Rule
 
-Do not create V2.4 because a new orchestration idea appears interesting. Re-open the architecture only when at least one is demonstrated with evidence:
-
-1. a measured speed/token/queue bottleneck;
-2. a correctness or isolation failure;
-3. a repeated recovery/stall failure;
-4. a material Claude Code/Ultracode runtime change.
-
-Any post-freeze orchestration change must ship with a failing regression test first and comparable live evidence showing no correctness regression.
+Do not create V2.4 because a new orchestration idea is interesting. Re-open architecture only for a measured performance bottleneck, correctness/isolation failure, repeated recovery/stall failure, or material Claude Code/Ultracode runtime change. Every post-freeze orchestration change must begin with a failing regression test and ship with comparable evidence showing no correctness regression.
