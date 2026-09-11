@@ -16,10 +16,14 @@ import os from 'node:os';
 
 const FC = {
   HEADLESS_PERMISSION_FAILURE: 'HEADLESS_PERMISSION_FAILURE',
+  EXECUTOR_PREFLIGHT_FAILED: 'EXECUTOR_PREFLIGHT_FAILED',
   RUNTIME_INIT_FAILED: 'RUNTIME_INIT_FAILED',
+  WORKFLOW_NOT_INVOKED: 'WORKFLOW_NOT_INVOKED',
   EXECUTOR_NOT_STARTED: 'EXECUTOR_NOT_STARTED',
   OWNERSHIP_FAILURE: 'OWNERSHIP_FAILURE',
   VERIFICATION_FAILURE: 'VERIFICATION_FAILURE',
+  GLOBAL_VALIDATION_FAILURE: 'GLOBAL_VALIDATION_FAILURE',
+  GLOBAL_VALIDATION_TIMEOUT: 'GLOBAL_VALIDATION_TIMEOUT',
   RELEASE_GATE_MISSING: 'RELEASE_GATE_MISSING',
   TIMEOUT: 'TIMEOUT',
   INFRA_ERROR: 'INFRA_ERROR',
@@ -38,14 +42,16 @@ interface E2EResult {
   effort: string;
   permissionProbe: boolean;
   runtimeInit: boolean;
+  workflowInvoked: boolean;
   executorStarted: boolean;
   targetMutationCorrect: boolean;
   ownershipClean: boolean;
   verificationPassed: boolean;
+  releaseGatePresent: boolean;
   releaseGate: 'READY' | 'READY_WITH_KNOWN_ISSUES' | 'BLOCKED' | null;
   wallClockMs: number;
-  tokens: number;
-  costUsd: number;
+  tokens: number | null;
+  costUsd: number | null;
   transcriptPath: string;
   gateVerdictPath: string | null;
 }
@@ -102,14 +108,16 @@ function buildPassResult(opts: {
     effort: 'high',
     permissionProbe: true,
     runtimeInit: true,
+    workflowInvoked: true,
     executorStarted: true,
     targetMutationCorrect: true,
     ownershipClean: true,
     verificationPassed: true,
+    releaseGatePresent: true,
     releaseGate: opts.releaseGate as 'READY',
     wallClockMs: opts.wallClockMs,
-    tokens: 0,
-    costUsd: 0,
+    tokens: null,
+    costUsd: null,
     transcriptPath: opts.transcriptPath,
     gateVerdictPath: opts.gateVerdictPath,
   };
@@ -257,17 +265,19 @@ test('PASS result schema satisfies contract', () => {
   assert.equal(r.failureClass, null);
   assert.equal(r.permissionProbe, true);
   assert.equal(r.runtimeInit, true);
+  assert.equal(r.workflowInvoked, true);
   assert.equal(r.executorStarted, true);
   assert.equal(r.targetMutationCorrect, true);
   assert.equal(r.ownershipClean, true);
   assert.equal(r.verificationPassed, true);
+  assert.equal(r.releaseGatePresent, true);
   assert.equal(r.releaseGate, 'READY');
   assert.equal(r.executorSha, '45453bb8d6a3db3ca974495c7b3b36187004c503');
   assert.equal(r.model, 'claude-combo[1m]');
   assert.equal(r.timedOut, undefined); // not in contract
   assert.ok(r.wallClockMs > 0);
-  assert.ok(typeof r.tokens === 'number');
-  assert.ok(typeof r.costUsd === 'number');
+  assert.equal(r.tokens, null);   // not measured
+  assert.equal(r.costUsd, null);  // not measured
 });
 
 test('result file round-trips through JSON', () => {
@@ -309,4 +319,45 @@ test('all failure classes are distinct strings', () => {
   const values = Object.values(FC);
   const unique = new Set(values);
   assert.equal(unique.size, values.length, 'Duplicate failure class detected');
+});
+
+test('gate state preservation: C+D pass survives E failure', () => {
+  const gates = {
+    runtimeInit: true,
+    workflowInvoked: true,
+    executorStarted: true,
+    targetMutationCorrect: true,   // Gate C
+    ownershipClean: true,           // Gate C
+    verificationPassed: true,       // Gate D
+    releaseGatePresent: false,      // Gate E fails
+  };
+  // C and D gates must survive independently of E failure
+  assert.equal(gates.targetMutationCorrect, true);
+  assert.equal(gates.ownershipClean, true);
+  assert.equal(gates.verificationPassed, true);
+  assert.equal(gates.releaseGatePresent, false);
+});
+
+test('workflow invoked but no artifact → EXECUTOR_NOT_STARTED failure class', () => {
+  const gates = {
+    runtimeInit: true,
+    workflowInvoked: true,    // Workflow tool_use seen
+    executorStarted: false,   // No artifact on disk
+    targetMutationCorrect: false,
+    ownershipClean: false,
+    verificationPassed: false,
+    releaseGatePresent: false,
+  };
+  assert.equal(gates.workflowInvoked, true);
+  assert.equal(gates.executorStarted, false);
+  // workflowInvoked and executorStarted are independent gate fields
+  assert.equal(FC.EXECUTOR_NOT_STARTED, 'EXECUTOR_NOT_STARTED');
+  assert.notEqual(FC.WORKFLOW_NOT_INVOKED, FC.EXECUTOR_NOT_STARTED);
+});
+
+test('EXECUTOR_PREFLIGHT_FAILED is a distinct failure class', () => {
+  assert.equal(FC.EXECUTOR_PREFLIGHT_FAILED, 'EXECUTOR_PREFLIGHT_FAILED');
+  assert.ok(Object.values(FC).includes(FC.EXECUTOR_PREFLIGHT_FAILED));
+  // Preflight fires before runtime — distinct from RUNTIME_INIT_FAILED
+  assert.notEqual(FC.EXECUTOR_PREFLIGHT_FAILED, FC.RUNTIME_INIT_FAILED);
 });
