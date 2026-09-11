@@ -199,7 +199,7 @@ async function executeAgentTrial({ targetDir, arm, task, trialId, benchmarkId, r
 
   const prompt = arm === 'A'
     ? 'Execute the implementation plan in plan.md. Write minimal, correct code and ensure all tests pass.'
-    : '/qcet-plan-executor plan.md\nExecute the implementation plan in plan.md using the QCET Plan Executor. Follow all QCET rules and generate gate-verdict.json.';
+    : 'Use the Skill tool with skill name "qcet-plan-executor" and args "plan.md" to execute the implementation plan. You MUST invoke the Skill tool — do not manually read or follow the skill file yourself.';
 
   const cliArgs = [
     '-p',
