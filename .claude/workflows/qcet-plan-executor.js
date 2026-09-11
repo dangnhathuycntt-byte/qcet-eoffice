@@ -1232,6 +1232,15 @@ export function evaluateDeterministicReleaseGate({
       if (res.repaired && res.repairResult && res.repairResult.success === false) {
         deterministicBlockers.push(`Shard '${shardId}' repair failed to resolve defects.`);
       }
+      if (res.ownershipViolation) {
+        deterministicBlockers.push(`Shard '${shardId}' recorded ownership violation: ${res.ownershipViolation}`);
+      }
+      if (res.worktreeViolation) {
+        deterministicBlockers.push(`Shard '${shardId}' recorded worktree violation: ${res.worktreeViolation}`);
+      }
+      if (res.fileClaimViolation) {
+        deterministicBlockers.push(`Shard '${shardId}' recorded file claim violation: ${res.fileClaimViolation}`);
+      }
     }
   }
 
@@ -1260,10 +1269,23 @@ export function evaluateDeterministicReleaseGate({
         deterministicBlockers.push(`Global validation blocker: ${typeof b === 'string' ? b : JSON.stringify(b)}`);
       }
     }
+    if (Array.isArray(validation.violations) && validation.violations.length > 0) {
+      for (const v of validation.violations) {
+        deterministicBlockers.push(`Validation invariant violation: ${typeof v === 'string' ? v : JSON.stringify(v)}`);
+      }
+    }
     if (Array.isArray(validation.checks)) {
       for (const check of validation.checks) {
-        if (check.status === 'failed' && !check.preExisting) {
-          deterministicBlockers.push(`Validation check '${check.name || check.command}' failed.`);
+        if (check.status === 'failed') {
+          if (check.preExisting) {
+            if (!check.baselineEvidence) {
+              deterministicBlockers.push(
+                `Validation check '${check.name || check.command}' marked preExisting without required baseline evidence.`
+              );
+            }
+          } else {
+            deterministicBlockers.push(`Validation check '${check.name || check.command}' failed.`);
+          }
         }
       }
     }
@@ -1354,7 +1376,7 @@ export function buildRunTelemetry({
   criticalPathDurationMs = null,
   avgDependencyWaitMs = null,
   domain = 'general',
-  executorVersion = 'v1.5',
+  executorVersion = 'lean-v2',
   planPath = '',
   timestamp = '2026-09-10T00:00:00.000Z',
   runId = '',
@@ -4334,12 +4356,60 @@ Return exactly the structured release verdict.
     criticalPathDurationMs,
     avgDependencyWaitMs,
     domain: domainConfig,
-    executorVersion: 'v1.5',
+    executorVersion: 'lean-v2',
     timestamp: typeof args?.timestamp === 'string' ? args.timestamp : undefined,
     runId: typeof args?.runId === 'string' ? args.runId : undefined,
   });
 
   log(`Run telemetry generated: wallClockMs=${wallClockMs}, peakConcurrent=${peakConcurrent}, agents=${totalAgentsCount}`);
+
+  const resolvedRunId = typeof args?.runId === 'string' && args.runId.trim().length > 0
+    ? args.runId.trim()
+    : (runTelemetry?.runId || `run-${Date.now()}`);
+
+  const gateVerdictPath = `.claude/executor-runs/${resolvedRunId}/gate-verdict.json`;
+  const gateVerdictPayload = {
+    runId: resolvedRunId,
+    status: finalVerdict.status,
+    ready: finalVerdict.status === 'READY' || finalVerdict.status === 'READY_WITH_KNOWN_ISSUES',
+    blockers: finalVerdict.blockers || [],
+    rationale: finalVerdict.rationale,
+    deterministicOverride: finalVerdict.deterministicOverride || false,
+    agentVerdict: finalVerdict.agentVerdict,
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    log(`Persisting release gate verdict to ${gateVerdictPath}`);
+    await callAgent(
+      `You are the QCET EVALUATION TELEMETRY RECORDER.
+Write the following JSON gate verdict data directly to the file:
+${gateVerdictPath}
+
+GATE VERDICT PAYLOAD:
+${JSON.stringify(gateVerdictPayload, null, 2)}
+
+You own ${gateVerdictPath}. Write the file accurately without modifying any other files.`,
+      {
+        agent: 'qcet-telemetry-recorder',
+        agentType: 'qcet-telemetry-recorder',
+        agentId: 'gate-verdict-recorder',
+        phase: 'Release Gate',
+        label: 'gate-verdict-recorder',
+        schema: {
+          type: 'object',
+          required: ['status', 'path'],
+          properties: {
+            status: { type: 'string', enum: ['persisted', 'failed'] },
+            path: { type: 'string' },
+            message: { type: 'string' },
+          },
+        },
+      }
+    );
+  } catch (gateVerdictError) {
+    log(`Failed to persist release gate verdict: ${String(gateVerdictError)}`);
+  }
 
   try {
     log('Persisting run evaluation telemetry to .claude/executor-evals/run-telemetry.json');
