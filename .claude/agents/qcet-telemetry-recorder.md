@@ -3,6 +3,7 @@ name: qcet-telemetry-recorder
 description: Specialized utility agent for persisting evaluation run telemetry and shard state files to disk.
 model: inherit
 effort: low
+maxTurns: 4
 tools:
   - Read
   - Write

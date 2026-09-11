@@ -257,8 +257,89 @@ test('pre-tool-use-ownership-guard: builder non-mutating Bash remains allowed', 
 test('settings: ownership guard also receives Bash PreToolUse events', () => {
   const settings = JSON.parse(fs.readFileSync(path.join(rootDir, '.claude', 'settings.json'), 'utf8'));
   const entry = settings.hooks.PreToolUse.find((item: any) =>
-    item.hooks?.some((hook: any) => hook.command === './.claude/hooks/pre-tool-use-ownership-guard')
+    item.hooks?.some((hook: any) => hook.command.endsWith('/pre-tool-use-ownership-guard'))
   );
   assert.ok(entry);
   assert.ok(String(entry.matcher).split('|').includes('Bash'));
+});
+
+test('pre-tool-use-ownership-guard: read-only agent allowed shell commands', () => {
+  const allowed = [
+    'git status',
+    'git status --short',
+    'git diff',
+    'git diff HEAD~1',
+    'git log -n 5',
+    'git show HEAD',
+    'git grep "test"',
+    'git rev-parse --show-toplevel',
+    'git ls-files',
+    'npm run typecheck',
+    'npm run lint',
+    'npm test',
+    'npm test -- tests/unit/auth.test.ts',
+    'npm run test',
+    'npm run test -- tests/unit/auth.test.ts',
+    'npx tsx --test tests/executor/hooks.test.ts',
+  ];
+
+  for (const cmd of allowed) {
+    const res = runHook(ownershipGuard, {
+      tool_name: 'Bash',
+      agent_type: 'qcet-skeptic',
+      tool_input: { command: cmd },
+    });
+    assert.equal(res.status, 0, `Command should be allowed for skeptic: ${cmd}`);
+  }
+});
+
+test('pre-tool-use-ownership-guard: read-only agent denied disallowed commands', () => {
+  const disallowed = [
+    'git add .',
+    'git commit -m "fix"',
+    'npm install',
+    'mkdir newdir',
+    'chmod +x script.sh',
+    'touch newfile.ts',
+    'node -e "console.log(1)"',
+    'python -c "print(1)"',
+    'cat file.txt',
+    'rm -rf node_modules',
+  ];
+
+  for (const cmd of disallowed) {
+    const res = runHook(ownershipGuard, {
+      tool_name: 'Bash',
+      agent_type: 'qcet-skeptic',
+      tool_input: { command: cmd },
+    });
+    assert.equal(res.status, 2, `Command should be blocked for skeptic: ${cmd}`);
+    assert.ok(res.stderr.includes('disallowed shell command') || res.stderr.includes('shell file mutation'));
+  }
+});
+
+test('pre-tool-use-ownership-guard: read-only agent blocked on compound/redirection syntax and risky flags', () => {
+  const compoundOrRisky = [
+    'git status && git diff',
+    'git status || git diff',
+    'git status ; git diff',
+    'git status | grep modified',
+    'git status > status.txt',
+    'git status < input.txt',
+    'echo $(git rev-parse HEAD)',
+    'echo `git rev-parse HEAD`',
+    'git diff --ext-diff',
+    'git diff --no-index a.txt b.txt',
+    'git diff --output=diff.txt',
+    'git diff --output diff.txt',
+  ];
+
+  for (const cmd of compoundOrRisky) {
+    const res = runHook(ownershipGuard, {
+      tool_name: 'Bash',
+      agent_type: 'qcet-skeptic',
+      tool_input: { command: cmd },
+    });
+    assert.equal(res.status, 2, `Compound or risky command should be blocked: ${cmd}`);
+  }
 });

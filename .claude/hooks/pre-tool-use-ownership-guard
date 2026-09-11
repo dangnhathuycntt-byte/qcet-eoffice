@@ -249,6 +249,38 @@ function allow() {
   process.exit(EXIT_ALLOW);
 }
 
+function isAllowedReadOnlyShellCommand(command) {
+  const text = String(command || '').trim();
+  if (!text) return false;
+
+  // Block compound or redirection syntax: &&, ||, ;, |, >, <, `, $(
+  if (/[;&|<>]|`|\$\(/.test(text)) {
+    return false;
+  }
+
+  // Block risky git diff flags
+  if (/(?:^|\s)(?:--ext-diff|--no-index|--output(?:=|\s|$))/i.test(text)) {
+    return false;
+  }
+
+  const allowedPatterns = [
+    /^git\s+status(?:\s+.*)?$/,
+    /^git\s+diff(?:\s+.*)?$/,
+    /^git\s+log(?:\s+.*)?$/,
+    /^git\s+show(?:\s+.*)?$/,
+    /^git\s+grep(?:\s+.*)?$/,
+    /^git\s+rev-parse(?:\s+.*)?$/,
+    /^git\s+ls-files(?:\s+.*)?$/,
+    /^npm\s+run\s+typecheck(?:\s+.*)?$/,
+    /^npm\s+run\s+lint(?:\s+.*)?$/,
+    /^npm\s+test(?:\s+.*)?$/,
+    /^npm\s+run\s+test(?:\s+.*)?$/,
+    /^npx\s+tsx\s+--test(?:\s+.*)?$/,
+  ];
+
+  return allowedPatterns.some((pattern) => pattern.test(text));
+}
+
 function isMutatingShellCommand(command) {
   const text = String(command || '').trim();
   if (!text) return false;
@@ -309,7 +341,15 @@ function main() {
 
   if (isBashTool) {
     const command = toolInput.command || '';
-    if ((readOnly || builder) && isMutatingShellCommand(command)) {
+    if (readOnly) {
+      if (!isAllowedReadOnlyShellCommand(command)) {
+        block(
+          `Read-only agent '${agentType || agentId || subagentLabel}' attempted disallowed shell command: '${command}'. Only inspected read-only verification commands are permitted.`
+        );
+      }
+      allow();
+    }
+    if (builder && isMutatingShellCommand(command)) {
       block(
         `Agent '${agentType || agentId || subagentLabel}' attempted shell file mutation. Use Write/Edit so shard ownership can be enforced deterministically.`
       );
@@ -400,4 +440,13 @@ function main() {
   allow();
 }
 
-main();
+if (require.main === module) {
+  main();
+} else {
+  module.exports = {
+    isAllowedReadOnlyShellCommand,
+    isMutatingShellCommand,
+    isReadOnlyAgent,
+    resolveActiveShard,
+  };
+}
