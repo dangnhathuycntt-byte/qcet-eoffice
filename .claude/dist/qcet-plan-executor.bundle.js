@@ -19,7 +19,7 @@ export const meta = {
 // SCHEMAS
 // -----------------------------------------------------------------------------
 
-export const MANIFEST_SCHEMA = {
+const MANIFEST_SCHEMA = {
   type: 'object',
   required: ['summary', 'requirements', 'shards'],
   properties: {
@@ -119,7 +119,7 @@ export const MANIFEST_SCHEMA = {
 };
 
 
-export const RECON_SCHEMA = {
+const RECON_SCHEMA = {
   type: 'object',
   required: [
     'status',
@@ -179,7 +179,7 @@ export const RECON_SCHEMA = {
 };
 
 
-export const RESEARCH_SCHEMA = {
+const RESEARCH_SCHEMA = {
   type: 'object',
   required: ['claims', 'unresolved'],
   properties: {
@@ -234,7 +234,7 @@ export const RESEARCH_SCHEMA = {
 };
 
 
-export const RECONCILE_SCHEMA = {
+const RECONCILE_SCHEMA = {
   type: 'object',
   required: [
     'status',
@@ -263,7 +263,7 @@ export const RECONCILE_SCHEMA = {
 };
 
 
-export const IMPLEMENT_SCHEMA = {
+const IMPLEMENT_SCHEMA = {
   type: 'object',
   required: [
     'status',
@@ -329,7 +329,7 @@ export const IMPLEMENT_SCHEMA = {
 };
 
 
-export const REPAIR_SCHEMA = {
+const REPAIR_SCHEMA = {
   type: 'object',
   required: [
     'status',
@@ -395,7 +395,7 @@ export const REPAIR_SCHEMA = {
 };
 
 
-export const VERIFY_SCHEMA = {
+const VERIFY_SCHEMA = {
   type: 'object',
   required: [
     'verdict',
@@ -596,7 +596,7 @@ const FINAL_SCHEMA = {
 // Pure JavaScript implementation compliant with Workflow runtime sandbox
 // -----------------------------------------------------------------------------
 
-export function normalizePath(p, repoRoot = (typeof process !== 'undefined' && process.cwd ? process.cwd() : '')) {
+function normalizePath(p, repoRoot = (typeof process !== 'undefined' && process.cwd ? process.cwd() : '')) {
   if (!p || typeof p !== 'string') return '';
   let normalized = p.replace(/\\/g, '/').trim();
   while (normalized.includes('//')) {
@@ -621,7 +621,7 @@ export function normalizePath(p, repoRoot = (typeof process !== 'undefined' && p
   return normalized;
 }
 
-export function stripWildcards(pattern) {
+function stripWildcards(pattern) {
   if (!pattern) return '';
   const norm = normalizePath(pattern);
   const idx = norm.search(/[\*\?\[\{]/);
@@ -631,7 +631,7 @@ export function stripWildcards(pattern) {
   return lastSlash === -1 ? '' : prefix.slice(0, lastSlash);
 }
 
-export function globToRegex(globPattern) {
+function globToRegex(globPattern) {
   const norm = normalizePath(globPattern);
   if (!norm) return /^$/;
 
@@ -668,7 +668,7 @@ export function globToRegex(globPattern) {
   return new RegExp(regexStr);
 }
 
-export function isExternalAbsolutePath(targetPath, repoRoot) {
+function isExternalAbsolutePath(targetPath, repoRoot) {
   if (!targetPath || typeof targetPath !== 'string') return false;
   const isAbs = targetPath.startsWith('/') || /^[A-Za-z]:[\\/]/.test(targetPath);
   if (!isAbs) return false;
@@ -678,7 +678,7 @@ export function isExternalAbsolutePath(targetPath, repoRoot) {
   return !normTarget.startsWith(normRoot);
 }
 
-export function matchesOwnership(filePath, pattern) {
+function matchesOwnership(filePath, pattern) {
   const normFile = normalizePath(filePath);
   const normPattern = normalizePath(pattern);
 
@@ -694,7 +694,7 @@ export function matchesOwnership(filePath, pattern) {
   return regex.test(normFile);
 }
 
-export function pathsOverlap(patternA, patternB) {
+function pathsOverlap(patternA, patternB) {
   const normA = normalizePath(patternA);
   const normB = normalizePath(patternB);
 
@@ -733,7 +733,7 @@ export function pathsOverlap(patternA, patternB) {
   return true;
 }
 
-export function toRepoRelativePath(targetPath, repoRoot = (typeof process !== 'undefined' && process.cwd ? process.cwd() : '')) {
+function toRepoRelativePath(targetPath, repoRoot = (typeof process !== 'undefined' && process.cwd ? process.cwd() : '')) {
   if (!targetPath) return '';
   let norm = normalizePath(targetPath, repoRoot);
   if (repoRoot) {
@@ -751,7 +751,7 @@ export function toRepoRelativePath(targetPath, repoRoot = (typeof process !== 'u
   return norm.replace(/^\/+/, '');
 }
 
-export function getActiveShardsFilePaths() {
+function getActiveShardsFilePaths() {
   const sessionScope = (typeof process !== 'undefined' && (process.env?.QCET_SESSION_ID || process.env?.CLAUDE_CONVERSATION_ID)) || '';
   const customFile = (typeof process !== 'undefined' && process.env?.QCET_ACTIVE_SHARDS_FILE) || null;
   const paths = [
@@ -762,7 +762,7 @@ export function getActiveShardsFilePaths() {
   return [...new Set(paths)];
 }
 
-export function syncActiveShardBoundaries(shardsPayload, phaseName = 'Calibrate') {
+function syncActiveShardBoundaries(shardsPayload, phaseName = 'Calibrate') {
   // If running in Node.js environment (e.g. tests), synchronize synchronously to disk
   if (typeof process !== 'undefined' && process.versions && process.versions.node) {
     try {
@@ -785,7 +785,7 @@ export function syncActiveShardBoundaries(shardsPayload, phaseName = 'Calibrate'
   return true;
 }
 
-export function validateManifestCoverage(manifest) {
+function validateManifestCoverage(manifest) {
   const errors = [];
   if (!manifest) {
     return ['Manifest is empty or undefined'];
@@ -909,7 +909,7 @@ export function validateManifestCoverage(manifest) {
   return errors;
 }
 
-export function validateManifestOwnership(manifest) {
+function validateManifestOwnership(manifest) {
   const errors = [];
   if (!manifest || !Array.isArray(manifest.shards)) return errors;
 
@@ -943,7 +943,7 @@ export function validateManifestOwnership(manifest) {
   return errors;
 }
 
-export function computeShardPriorities(manifest) {
+function computeShardPriorities(manifest) {
   const priorityMap = new Map();
   if (!manifest || !Array.isArray(manifest.shards)) return priorityMap;
 
@@ -1007,7 +1007,7 @@ export function computeShardPriorities(manifest) {
   return priorityMap;
 }
 
-export function shouldIsolateShard(shard, manifest, isolationConfig = 'auto') {
+function shouldIsolateShard(shard, manifest, isolationConfig = 'auto') {
   if (isolationConfig === 'always' || isolationConfig === true) {
     return true;
   }
@@ -1042,7 +1042,7 @@ export function shouldIsolateShard(shard, manifest, isolationConfig = 'auto') {
   return false;
 }
 
-export function clusterIntegrationFindings(findings) {
+function clusterIntegrationFindings(findings) {
   if (!Array.isArray(findings) || findings.length === 0) return [];
 
   const validFindings = findings.filter(Boolean);
@@ -1121,7 +1121,7 @@ export function clusterIntegrationFindings(findings) {
   return clusters;
 }
 
-export function evaluateDeterministicReleaseGate({
+function evaluateDeterministicReleaseGate({
   manifest,
   allShardResults = [],
   integrationSynthesis = { findings: [] },
@@ -1253,7 +1253,7 @@ export function evaluateDeterministicReleaseGate({
   };
 }
 
-export function buildRunTelemetry({
+function buildRunTelemetry({
   manifest,
   allShardResults = [],
   integrationSynthesis = { findings: [] },
@@ -1556,7 +1556,7 @@ export function buildRunTelemetry({
   };
 }
 
-export function buildShardPacket(shard, manifest) {
+function buildShardPacket(shard, manifest) {
   if (!shard) return null;
 
   // Build lookup map from manifest.requirements for deterministic backfill
@@ -1641,7 +1641,7 @@ export function buildShardPacket(shard, manifest) {
   };
 }
 
-export function validateResearchEscalation(externalResearch, shardPacket) {
+function validateResearchEscalation(externalResearch, shardPacket) {
   if (!externalResearch || !externalResearch.needed) {
     return {
       allowed: false,
@@ -1725,7 +1725,7 @@ export function validateResearchEscalation(externalResearch, shardPacket) {
 // STANDARDIZED COHORT PROMPT PREFIXES (PROMPT CACHE OPTIMIZATION)
 // -----------------------------------------------------------------------------
 
-export const RECON_STATIC_PREFIX = `You are the QCET Specialized Reconnaissance Agent (qcet-recon).
+const RECON_STATIC_PREFIX = `You are the QCET Specialized Reconnaissance Agent (qcet-recon).
 Your sole responsibility is read-only repository reconnaissance, caller/contract analysis, test discovery, and uncertainty classification before implementation begins.
 
 CORE MANDATE & INVARIANTS:
@@ -1741,7 +1741,7 @@ CORE MANDATE & INVARIANTS:
    - If external research is needed, specify needed: true, reason, questions, and preferredSourceTypes in externalResearch.
 8. Rely primarily on the self-contained JIT Shard Packet.`;
 
-export const BUILDER_STATIC_PREFIX = `You are the QCET Specialized Implementation Builder Agent (qcet-builder).
+const BUILDER_STATIC_PREFIX = `You are the QCET Specialized Implementation Builder Agent (qcet-builder).
 Your sole responsibility is surgical, high-precision implementation strictly within your assigned file ownership, adhering unconditionally to QCET architectural invariants.
 
 CORE MANDATE & INVARIANTS:
@@ -1756,7 +1756,7 @@ CORE MANDATE & INVARIANTS:
 9. Add or update targeted tests for changed behavior. Run ONLY relevant targeted checks. Do NOT run the full repository test suite.
 10. Return complete structured implementation evidence with actual test outputs.`;
 
-export const REPAIR_STATIC_PREFIX = `You are the QCET Specialized Implementation Builder Agent (qcet-builder) responsible for repairing confirmed defects.
+const REPAIR_STATIC_PREFIX = `You are the QCET Specialized Implementation Builder Agent (qcet-builder) responsible for repairing confirmed defects.
 Your sole responsibility is surgical resolution of confirmed findings strictly within assigned file ownership.
 
 CORE MANDATE & INVARIANTS:
@@ -1772,7 +1772,7 @@ CORE MANDATE & INVARIANTS:
    - progressSummary: concrete progress made toward resolution.
 8. If a finding requires touching another shard's file, do NOT violate ownership. Report as blocked/cross-shard.`;
 
-export const SKEPTIC_STATIC_PREFIX = `You are the QCET Specialized Adversarial Skeptic Agent (qcet-skeptic).
+const SKEPTIC_STATIC_PREFIX = `You are the QCET Specialized Adversarial Skeptic Agent (qcet-skeptic).
 You did NOT implement this shard. Your sole responsibility is independent, read-only adversarial verification, probing boundaries, testing negative assertions, and refuting unverified claims.
 
 CORE MANDATE & INVARIANTS:
@@ -1786,7 +1786,7 @@ CORE MANDATE & INVARIANTS:
 8. Strictly enforce file ownership: any modified file outside shard.owns is an automatic failure.
 9. Report issues only with concrete repository evidence. Distinguish real regressions from pre-existing issues.`;
 
-export const RESEARCHER_STATIC_PREFIX = `You are the QCET Specialized External Research Agent (qcet-researcher).
+const RESEARCHER_STATIC_PREFIX = `You are the QCET Specialized External Research Agent (qcet-researcher).
 Your sole responsibility is gathering verified external facts from official documentation, library specifications, and upstream release notes.
 
 CORE MANDATE & INVARIANTS:
@@ -1798,7 +1798,7 @@ CORE MANDATE & INVARIANTS:
 6. Never research internal QCET code or files on the web. Local codebase truth comes from the repository.
 7. External patterns must never override QCET canonical architecture or project invariants.`;
 
-export const RECONCILE_STATIC_PREFIX = `You are the QCET Specialized Pre-Implementation Reconciliation Agent (qcet-recon).
+const RECONCILE_STATIC_PREFIX = `You are the QCET Specialized Pre-Implementation Reconciliation Agent (qcet-recon).
 Your goal is to reconcile a shard's pre-recon assumptions against completed upstream dependency deltas (git diff, exported types, API signatures, changed files) before implementation begins.
 
 Inspect the actual repository and upstream changed files.
