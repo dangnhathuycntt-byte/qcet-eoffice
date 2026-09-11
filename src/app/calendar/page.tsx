@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Suspense, useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import {
   AlertCircle,
   Calendar as CalendarIcon,
@@ -11,12 +10,10 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Home,
   List,
+  MoreHorizontal,
   Plus,
-  RefreshCw,
   Search,
-  SlidersHorizontal,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -359,7 +356,6 @@ function CalendarRouteContent() {
   const [tasks, setTasks] = useState<SchoolTask[]>([]);
   const [meetings, setMeetings] = useState<CalendarMeeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sysDate = useMemo(() => getSystemReferenceDate(), []);
@@ -410,6 +406,9 @@ function CalendarRouteContent() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
+  const [isSecondaryOpen, setIsSecondaryOpen] = useState(false);
+  const secondaryRef = useRef<HTMLDivElement>(null);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   const hasActiveFilters = levelFilter !== "ALL" || statusFilter !== "ALL";
   const activeFilterCount = (levelFilter !== "ALL" ? 1 : 0) + (statusFilter !== "ALL" ? 1 : 0);
@@ -437,6 +436,16 @@ function CalendarRouteContent() {
     if (isFilterOpen) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isFilterOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (secondaryRef.current && !secondaryRef.current.contains(event.target as Node)) {
+        setIsSecondaryOpen(false);
+      }
+    };
+    if (isSecondaryOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isSecondaryOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -505,8 +514,8 @@ function CalendarRouteContent() {
   }, [sysDate, updateUrlParam]);
 
   const loadCalendarData = useCallback(async (showRefreshingSpinner = false) => {
-    if (showRefreshingSpinner) setIsRefreshing(true);
-    else setIsLoading(true);
+    void showRefreshingSpinner;
+    setIsLoading(true);
     setError(null);
 
     try {
@@ -533,7 +542,6 @@ function CalendarRouteContent() {
       setError(loadError instanceof Error ? loadError.message : "Đã xảy ra lỗi khi kết nối dữ liệu lịch biểu");
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
   }, [currentPeriod.startDate, currentPeriod.endDate]);
 
@@ -855,260 +863,290 @@ function CalendarRouteContent() {
   }, []);
 
   return (
-    <div className="space-y-5" data-slot="calendar-page-container">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/50 pb-5">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5 pt-0.5">
-            <div className="size-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-              <CalendarIcon className="size-5" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
-                Lịch Công Tác Học Vụ
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Tổng quan công việc, sự kiện và hạn chót theo chu kỳ vận hành QCET 25 - 24
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="space-y-4" data-slot="calendar-page-container">
+      {/* Page header: title + primary action */}
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold tracking-tight text-foreground font-heading">
+          Lịch công tác
+        </h1>
 
-        {/* Global Actions: Refresh (Single Global Primary Action + Tạo is in Control Row 2) */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => loadCalendarData(true)}
-          disabled={isRefreshing}
-          className="h-9 gap-1.5 text-xs font-medium border-border/70 text-muted-foreground hover:text-foreground rounded-xl self-start md:self-auto"
-          title="Làm mới dữ liệu lịch"
-        >
-          <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} strokeWidth={1.5} />
-          <span>{isRefreshing ? "Đang tải..." : "Làm mới"}</span>
-        </Button>
+        {/* + Tạo dropdown */}
+        <div className="relative shrink-0" ref={createDropdownRef}>
+          <Button
+            size="sm"
+            onClick={() => setIsCreateDropdownOpen((previous) => !previous)}
+            aria-expanded={isCreateDropdownOpen}
+            aria-haspopup="true"
+            className="h-9 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs rounded-xl"
+          >
+            <Plus className="size-4" strokeWidth={1.5} />
+            <span>Tạo</span>
+          </Button>
+          {isCreateDropdownOpen && (
+            <div role="menu" className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border/70 bg-card p-1.5 shadow-lg z-30 animate-in fade-in zoom-in-95 duration-150">
+              <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full min-h-9 flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground rounded-lg hover:bg-secondary text-left">
+                <CheckSquare className="size-4 text-primary shrink-0" strokeWidth={1.5} />
+                Tạo công việc
+              </button>
+              <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full min-h-9 flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground rounded-lg hover:bg-secondary text-left">
+                <CalendarIcon className="size-4 text-sky-600 shrink-0" strokeWidth={1.5} />
+                Tạo sự kiện
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Unified Calendar Chrome */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-3 sm:p-4 shadow-card" data-slot="calendar-controls-container">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3" data-slot="calendar-controls-row-1">
-          <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex items-center rounded-xl border border-border/70 bg-secondary/50 p-0.5 shrink-0 self-start" data-slot="calendar-scope-switcher">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeScope === "school"}
-              onClick={() => handleScopeChange("school")}
-              className={cn(
-                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                activeScope === "school" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Toàn trường
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeScope === "unit"}
-              onClick={() => handleScopeChange("unit")}
-              className={cn(
-                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                activeScope === "unit" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Đơn vị
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeScope === "my"}
-              onClick={() => handleScopeChange("my")}
-              className={cn(
-                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                activeScope === "my" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Của tôi
-            </button>
-          </div>
+      {/* Primary calendar chrome — exactly 1 row */}
+      <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-card px-2.5 py-1.5 shadow-xs" data-slot="calendar-controls-container">
+        {/* Month navigation: ‹ Tháng 9 › */}
+        <button
+          type="button"
+          onClick={handlePrevMonth}
+          aria-label="Tháng trước"
+          className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <ChevronLeft className="size-4" strokeWidth={1.5} />
+        </button>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap" data-slot="calendar-period-navigation">
-            <button type="button" onClick={handlePrevMonth} aria-label="Tháng trước" className="inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground">
-              <ChevronLeft className="size-4" strokeWidth={1.5} />
-            </button>
+        <span className="font-mono tabular-nums text-sm font-semibold text-foreground select-none min-w-[6rem] text-center">
+          {currentPeriod.label}
+        </span>
 
-            <label htmlFor="academic-month-select" className="sr-only">Kỳ vận hành</label>
-            <select
-              id="academic-month-select"
-              value={selectedMonthNumber}
-              onChange={(event) => {
-                const monthNumber = Number(event.target.value);
-                setSelectedMonthNumber(monthNumber);
-                const period = getAcademicMonthPeriod(monthNumber, selectedAcademicYear);
-                handleSelectDate(period.startDate);
-                updateUrlParam("month", String(monthNumber));
-              }}
-              className="h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono tabular-nums"
-            >
-              {academicMonthsForYear.map((month) => (
-                <option key={month.monthNumber} value={month.monthNumber}>{month.label} ({month.shortDateSpan})</option>
-              ))}
-            </select>
+        <button
+          type="button"
+          onClick={handleNextMonth}
+          aria-label="Tháng sau"
+          className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <ChevronRight className="size-4" strokeWidth={1.5} />
+        </button>
 
-            <label htmlFor="academic-year-select" className="sr-only">Năm học</label>
-            <select
-              id="academic-year-select"
-              value={selectedAcademicYear}
-              onChange={(event) => {
-                const academicYear = event.target.value;
-                setSelectedAcademicYear(academicYear);
+        <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
+
+        {/* Hôm nay */}
+        <button
+          type="button"
+          onClick={handleCurrentMonth}
+          className="inline-flex min-h-[44px] sm:min-h-9 items-center rounded-lg px-3 text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          Hôm nay
+        </button>
+
+        <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
+
+        {/* Scope selector: Toàn trường ▾ */}
+        <div className="relative" ref={filterDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsFilterOpen((previous) => !previous)}
+            aria-expanded={isFilterOpen}
+            aria-haspopup="listbox"
+            className={cn(
+              "inline-flex min-h-[44px] sm:min-h-9 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold transition-colors",
+              (hasActiveFilters || activeScope !== "school")
+                ? "text-primary bg-primary/5"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            )}
+          >
+            {activeScope === "school" ? "Toàn trường" : activeScope === "unit" ? "Đơn vị" : "Của tôi"}
+            {hasActiveFilters && (
+              <span className="inline-flex items-center justify-center size-4 rounded-full bg-primary text-xs text-primary-foreground font-mono font-bold">{activeFilterCount}</span>
+            )}
+            <ChevronDown className={cn("size-3 transition-transform duration-150", isFilterOpen && "rotate-180")} strokeWidth={1.5} />
+          </button>
+
+          {isFilterOpen && (
+            <div role="dialog" aria-label="Phạm vi và bộ lọc" className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-border/70 bg-card p-3 shadow-lg z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+              {/* Scope */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground">Phạm vi</span>
+                <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex w-full items-center rounded-lg border border-border/70 bg-secondary/50 p-0.5 gap-0.5">
+                  {([["school", "Toàn trường"], ["unit", "Đơn vị"], ["my", "Của tôi"]] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeScope === value}
+                      onClick={() => handleScopeChange(value)}
+                      className={cn(
+                        "flex-1 min-h-8 px-2 rounded text-xs font-semibold transition-all text-center",
+                        activeScope === value ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-border/40" />
+
+              {/* Level filter */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">Cấp nhiệm vụ</span>
+                  {hasActiveFilters && (
+                    <button type="button" onClick={handleResetFilters} className="text-xs text-primary hover:underline">Đặt lại</button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {([["ALL", "Tất cả"], ["TRUONG", "Trường"], ["DON_VI", "Đơn vị"]] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setLevelFilter(value)}
+                      aria-pressed={levelFilter === value}
+                      className={cn("min-h-8 px-2 rounded text-xs font-medium border text-center transition-colors", levelFilter === value ? "bg-primary/10 border-primary/30 text-primary font-semibold" : "border-border/60 text-muted-foreground hover:bg-secondary")}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status filter */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground">Trạng thái</span>
+                <div className="grid grid-cols-2 gap-1">
+                  {([["ALL", "Tất cả"], ["IN_PROGRESS", "Đang làm"], ["COMPLETED", "Hoàn thành"], ["OVERDUE", "Quá hạn"]] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setStatusFilter(value)}
+                      aria-pressed={statusFilter === value}
+                      className={cn("min-h-8 px-2 rounded text-xs font-medium border text-center transition-colors", statusFilter === value ? "bg-primary/10 border-primary/30 text-primary font-semibold" : "border-border/60 text-muted-foreground hover:bg-secondary")}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" aria-hidden="true" />
+
+        {/* Secondary disclosure ⋯ */}
+        <div className="relative" ref={secondaryRef}>
+          <button
+            type="button"
+            onClick={() => setIsSecondaryOpen((previous) => !previous)}
+            aria-expanded={isSecondaryOpen}
+            aria-haspopup="dialog"
+            aria-label="Tùy chọn thêm"
+            className={cn(
+              "inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg transition-colors",
+              isSecondaryOpen ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            )}
+          >
+            <MoreHorizontal className="size-4" strokeWidth={1.5} />
+          </button>
+
+          {isSecondaryOpen && (
+            <div role="dialog" aria-label="Tùy chọn hiển thị" className="absolute right-0 top-full mt-1.5 w-72 rounded-xl border border-border/70 bg-card p-3 shadow-lg z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+              {/* View mode */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground">Chế độ xem</span>
+                <div role="tablist" aria-label="Chế độ hiển thị lịch" className="inline-flex w-full items-center rounded-lg border border-border/70 bg-secondary/50 p-0.5 gap-0.5">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === "month"}
+                    onClick={() => { handleViewChange("month"); }}
+                    className={cn("flex-1 inline-flex items-center justify-center gap-1.5 min-h-8 px-3 rounded text-xs font-semibold transition-all", viewMode === "month" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground")}
+                  >
+                    <CalendarIcon className="size-3.5" strokeWidth={1.5} />
+                    Tháng
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === "agenda"}
+                    onClick={() => { handleViewChange("agenda"); }}
+                    className={cn("flex-1 inline-flex items-center justify-center gap-1.5 min-h-8 px-3 rounded text-xs font-semibold transition-all", viewMode === "agenda" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground")}
+                  >
+                    <List className="size-3.5" strokeWidth={1.5} />
+                    Danh sách
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-border/40" />
+
+              {/* Academic year */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground">Năm học</span>
+                <label htmlFor="academic-year-select" className="sr-only">Năm học</label>
+                <select
+                  id="academic-year-select"
+                  value={selectedAcademicYear}
+                  onChange={(event) => {
+                    const academicYear = event.target.value;
+                    setSelectedAcademicYear(academicYear);
                 const newMonths = getAcademicMonthsForYear(academicYear);
                 if (newMonths.length > 0) {
                   setSelectedMonthNumber(newMonths[0].monthNumber);
                   handleSelectDate(newMonths[0].startDate);
                   updateUrlParam("month", String(newMonths[0].monthNumber));
                 }
+                updateUrlParam("year", academicYear);
               }}
-              className="h-9 px-2 rounded-lg border border-border/70 bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            >
-              {availableAcademicYears.map((year) => <option key={year} value={year}>{year.replace("-", " - ")}</option>)}
-            </select>
-
-            <button type="button" onClick={handleNextMonth} aria-label="Tháng sau" className="inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground">
-              <ChevronRight className="size-4" strokeWidth={1.5} />
-            </button>
-            <button type="button" onClick={handleCurrentMonth} className="inline-flex min-h-11 sm:min-h-9 items-center rounded-lg border border-border/70 bg-background px-3 text-xs font-semibold text-foreground hover:bg-secondary">
-              Hôm nay
-            </button>
-          </div>
-
-          <div role="tablist" aria-label="Chế độ hiển thị lịch" className="inline-flex items-center rounded-xl border border-border/70 bg-secondary/50 p-0.5 shrink-0 self-start" data-slot="calendar-view-switcher">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "month"}
-              onClick={() => handleViewChange("month")}
-              className={cn("inline-flex items-center gap-1.5 min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all", viewMode === "month" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground")}
-            >
-              <CalendarIcon className="size-3.5" strokeWidth={1.5} />
-              <span>Tháng</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "agenda"}
-              onClick={() => handleViewChange("agenda")}
-              className={cn("inline-flex items-center gap-1.5 min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all", viewMode === "agenda" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground")}
-            >
-              <List className="size-3.5" strokeWidth={1.5} />
-              <span>Danh sách</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-2 border-t border-border/40" data-slot="calendar-controls-row-2">
-          <div className="flex items-center gap-2 flex-1 max-w-lg">
-            <div className="relative flex-1 min-w-[160px]">
-              <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
-              <input
-                type="search"
-                placeholder="Tìm việc, sự kiện..."
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className="w-full h-9 pl-8 pr-7 rounded-xl border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              />
-              {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 min-h-7 min-w-7 text-muted-foreground hover:text-foreground" aria-label="Xóa tìm kiếm">
-                  <X className="mx-auto size-3.5" strokeWidth={1.5} />
-                </button>
-              )}
-            </div>
-
-            <div className="relative" ref={filterDropdownRef}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsFilterOpen((previous) => !previous)}
-                aria-expanded={isFilterOpen}
-                aria-haspopup="dialog"
-                className={cn("h-9 px-3 text-xs font-medium gap-1.5 border-border/70 rounded-xl", hasActiveFilters ? "border-primary/50 text-primary bg-primary/5 font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-secondary")}
-              >
-                <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
-                Bộ lọc
-                {hasActiveFilters && <span className="inline-flex items-center justify-center size-4 rounded-full bg-primary text-xs text-primary-foreground font-mono font-bold">{activeFilterCount}</span>}
-              </Button>
-
-              {isFilterOpen && (
-                <div role="dialog" aria-label="Tùy chọn bộ lọc" className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-border/70 bg-card p-3 shadow-lg z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between border-b border-border/50 pb-2">
-                    <span className="text-xs font-bold text-foreground">Bộ lọc nâng cao</span>
-                    {hasActiveFilters && <button type="button" onClick={handleResetFilters} className="text-xs text-primary hover:underline">Đặt lại</button>}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-semibold text-muted-foreground">Cấp nhiệm vụ</span>
-                    <div className="grid grid-cols-3 gap-1">
-                      {([
-                        ["ALL", "Tất cả"],
-                        ["TRUONG", "Trường"],
-                        ["DON_VI", "Đơn vị"],
-                      ] as const).map(([value, label]) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => setLevelFilter(value)}
-                          aria-pressed={levelFilter === value}
-                          className={cn("min-h-8 px-2 rounded text-xs font-medium border text-center transition-colors", levelFilter === value ? "bg-primary/10 border-primary/30 text-primary font-semibold" : "border-border/60 text-muted-foreground hover:bg-secondary")}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-semibold text-muted-foreground">Trạng thái</span>
-                    <div className="grid grid-cols-2 gap-1">
-                      {([
-                        ["ALL", "Tất cả"],
-                        ["IN_PROGRESS", "Đang làm"],
-                        ["COMPLETED", "Hoàn thành"],
-                        ["OVERDUE", "Quá hạn"],
-                      ] as const).map(([value, label]) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => setStatusFilter(value)}
-                          aria-pressed={statusFilter === value}
-                          className={cn("min-h-8 px-2 rounded text-xs font-medium border text-center transition-colors", statusFilter === value ? "bg-primary/10 border-primary/30 text-primary font-semibold" : "border-border/60 text-muted-foreground hover:bg-secondary")}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Single Global Primary Action (+ Tạo Dropdown) */}
-          <div className="relative shrink-0 self-end sm:self-auto" ref={createDropdownRef}>
-            <Button size="sm" onClick={() => setIsCreateDropdownOpen((previous) => !previous)} aria-expanded={isCreateDropdownOpen} aria-haspopup="true" className="h-9 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs rounded-xl">
-              <Plus className="size-4" strokeWidth={1.5} />
-              <span>Tạo</span>
-              <ChevronDown className={cn("size-3.5 transition-transform duration-200", isCreateDropdownOpen && "rotate-180")} strokeWidth={1.5} />
-            </Button>
-            {isCreateDropdownOpen && (
-              <div role="menu" className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border/70 bg-card p-1.5 shadow-lg z-30 animate-in fade-in zoom-in-95 duration-150">
-                <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddTask(); }} className="w-full min-h-9 flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground rounded-lg hover:bg-secondary text-left">
-                  <CheckSquare className="size-4 text-primary shrink-0" strokeWidth={1.5} />
-                  Tạo công việc
-                </button>
-                <button type="button" role="menuitem" onClick={() => { setIsCreateDropdownOpen(false); handleOpenAddEvent(); }} className="w-full min-h-9 flex items-center gap-2 px-3 py-2 text-xs font-medium text-foreground rounded-lg hover:bg-secondary text-left">
-                  <CalendarIcon className="size-4 text-sky-600 shrink-0" strokeWidth={1.5} />
-                  Tạo sự kiện
-                </button>
+                  className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono tabular-nums"
+                >
+                  {availableAcademicYears.map((year) => (
+                    <option key={year} value={year}>{year.replace("-", " - ")}</option>
+                  ))}
+                </select>
               </div>
-            )}
-          </div>
+
+              <div className="border-t border-border/40" />
+
+              {/* Search — inline expandable, not a permanent row */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground">Tìm kiếm</span>
+                {isSearchExpanded ? (
+                  <div className="relative">
+                    <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
+                    <input
+                      type="search"
+                      autoFocus
+                      placeholder="Tìm việc, sự kiện..."
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      className="w-full h-9 pl-8 pr-7 rounded-lg border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 min-h-7 min-w-7 text-muted-foreground hover:text-foreground"
+                        aria-label="Xóa tìm kiếm"
+                      >
+                        <X className="mx-auto size-3.5" strokeWidth={1.5} />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsSearchExpanded(true)}
+                    className={cn(
+                      "w-full min-h-9 flex items-center gap-2 px-2.5 rounded-lg border text-xs transition-colors text-left",
+                      searchQuery
+                        ? "border-primary/30 bg-primary/5 text-primary font-semibold"
+                        : "border-border/60 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    )}
+                  >
+                    <Search className="size-3.5 shrink-0" strokeWidth={1.5} />
+                    {searchQuery || "Tìm việc, sự kiện..."}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
