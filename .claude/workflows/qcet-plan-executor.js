@@ -19,7 +19,7 @@ export const meta = {
 // SCHEMAS
 // -----------------------------------------------------------------------------
 
-export const MANIFEST_SCHEMA = {
+const MANIFEST_SCHEMA = {
   type: 'object',
   required: ['summary', 'requirements', 'shards'],
   properties: {
@@ -119,7 +119,7 @@ export const MANIFEST_SCHEMA = {
 };
 
 
-export const RECON_SCHEMA = {
+const RECON_SCHEMA = {
   type: 'object',
   required: [
     'status',
@@ -179,7 +179,7 @@ export const RECON_SCHEMA = {
 };
 
 
-export const RESEARCH_SCHEMA = {
+const RESEARCH_SCHEMA = {
   type: 'object',
   required: ['claims', 'unresolved'],
   properties: {
@@ -234,7 +234,7 @@ export const RESEARCH_SCHEMA = {
 };
 
 
-export const RECONCILE_SCHEMA = {
+const RECONCILE_SCHEMA = {
   type: 'object',
   required: [
     'status',
@@ -263,7 +263,7 @@ export const RECONCILE_SCHEMA = {
 };
 
 
-export const IMPLEMENT_SCHEMA = {
+const IMPLEMENT_SCHEMA = {
   type: 'object',
   required: [
     'status',
@@ -329,7 +329,7 @@ export const IMPLEMENT_SCHEMA = {
 };
 
 
-export const REPAIR_SCHEMA = {
+const REPAIR_SCHEMA = {
   type: 'object',
   required: [
     'status',
@@ -395,7 +395,7 @@ export const REPAIR_SCHEMA = {
 };
 
 
-export const VERIFY_SCHEMA = {
+const VERIFY_SCHEMA = {
   type: 'object',
   required: [
     'verdict',
@@ -596,7 +596,7 @@ const FINAL_SCHEMA = {
 // Pure JavaScript implementation compliant with Workflow runtime sandbox
 // -----------------------------------------------------------------------------
 
-export function normalizePath(p, repoRoot = (typeof process !== 'undefined' && process.cwd ? process.cwd() : '')) {
+function normalizePath(p, repoRoot = (typeof process !== 'undefined' && process.cwd ? process.cwd() : '')) {
   if (!p || typeof p !== 'string') return '';
   let normalized = p.replace(/\\/g, '/').trim();
   while (normalized.includes('//')) {
@@ -621,7 +621,7 @@ export function normalizePath(p, repoRoot = (typeof process !== 'undefined' && p
   return normalized;
 }
 
-export function stripWildcards(pattern) {
+function stripWildcards(pattern) {
   if (!pattern) return '';
   const norm = normalizePath(pattern);
   const idx = norm.search(/[\*\?\[\{]/);
@@ -631,7 +631,7 @@ export function stripWildcards(pattern) {
   return lastSlash === -1 ? '' : prefix.slice(0, lastSlash);
 }
 
-export function globToRegex(globPattern) {
+function globToRegex(globPattern) {
   const norm = normalizePath(globPattern);
   if (!norm) return /^$/;
 
@@ -668,7 +668,7 @@ export function globToRegex(globPattern) {
   return new RegExp(regexStr);
 }
 
-export function isExternalAbsolutePath(targetPath, repoRoot) {
+function isExternalAbsolutePath(targetPath, repoRoot) {
   if (!targetPath || typeof targetPath !== 'string') return false;
   const isAbs = targetPath.startsWith('/') || /^[A-Za-z]:[\\/]/.test(targetPath);
   if (!isAbs) return false;
@@ -678,7 +678,7 @@ export function isExternalAbsolutePath(targetPath, repoRoot) {
   return !normTarget.startsWith(normRoot);
 }
 
-export function matchesOwnership(filePath, pattern) {
+function matchesOwnership(filePath, pattern) {
   const normFile = normalizePath(filePath);
   const normPattern = normalizePath(pattern);
 
@@ -694,7 +694,7 @@ export function matchesOwnership(filePath, pattern) {
   return regex.test(normFile);
 }
 
-export function pathsOverlap(patternA, patternB) {
+function pathsOverlap(patternA, patternB) {
   const normA = normalizePath(patternA);
   const normB = normalizePath(patternB);
 
@@ -733,7 +733,7 @@ export function pathsOverlap(patternA, patternB) {
   return true;
 }
 
-export function toRepoRelativePath(targetPath, repoRoot = (typeof process !== 'undefined' && process.cwd ? process.cwd() : '')) {
+function toRepoRelativePath(targetPath, repoRoot = (typeof process !== 'undefined' && process.cwd ? process.cwd() : '')) {
   if (!targetPath) return '';
   let norm = normalizePath(targetPath, repoRoot);
   if (repoRoot) {
@@ -751,7 +751,7 @@ export function toRepoRelativePath(targetPath, repoRoot = (typeof process !== 'u
   return norm.replace(/^\/+/, '');
 }
 
-export function getActiveShardsFilePaths() {
+function getActiveShardsFilePaths() {
   const sessionScope = (typeof process !== 'undefined' && (process.env?.QCET_SESSION_ID || process.env?.CLAUDE_CONVERSATION_ID)) || '';
   const customFile = (typeof process !== 'undefined' && process.env?.QCET_ACTIVE_SHARDS_FILE) || null;
   const paths = [
@@ -762,7 +762,7 @@ export function getActiveShardsFilePaths() {
   return [...new Set(paths)];
 }
 
-export function syncActiveShardBoundaries(shardsPayload, phaseName = 'Calibrate') {
+function syncActiveShardBoundaries(shardsPayload, phaseName = 'Calibrate') {
   // If running in Node.js environment (e.g. tests), synchronize synchronously to disk
   if (typeof process !== 'undefined' && process.versions && process.versions.node) {
     try {
@@ -785,7 +785,7 @@ export function syncActiveShardBoundaries(shardsPayload, phaseName = 'Calibrate'
   return true;
 }
 
-export function validateManifestCoverage(manifest) {
+function validateManifestCoverage(manifest) {
   const errors = [];
   if (!manifest) {
     return ['Manifest is empty or undefined'];
@@ -909,7 +909,7 @@ export function validateManifestCoverage(manifest) {
   return errors;
 }
 
-export function validateManifestOwnership(manifest) {
+function validateManifestOwnership(manifest) {
   const errors = [];
   if (!manifest || !Array.isArray(manifest.shards)) return errors;
 
@@ -943,7 +943,7 @@ export function validateManifestOwnership(manifest) {
   return errors;
 }
 
-export function computeShardPriorities(manifest) {
+function computeShardPriorities(manifest) {
   const priorityMap = new Map();
   if (!manifest || !Array.isArray(manifest.shards)) return priorityMap;
 
@@ -1007,7 +1007,7 @@ export function computeShardPriorities(manifest) {
   return priorityMap;
 }
 
-export function createConcurrencyLimiter(maxConcurrent = Infinity) {
+function createConcurrencyLimiter(maxConcurrent = Infinity) {
   const parsed = Number(maxConcurrent);
   const limit = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : Infinity;
   let active = 0;
@@ -1034,7 +1034,7 @@ export function createConcurrencyLimiter(maxConcurrent = Infinity) {
     });
 }
 
-export function selectIntegrationReviewDimensionIds(shardSummary = []) {
+function selectIntegrationReviewDimensionIds(shardSummary = []) {
   const summaries = Array.isArray(shardSummary) ? shardSummary : [];
   const risks = summaries.map((item) => String(item?.risk || 'low').toLowerCase());
   const hasHighRisk = risks.some((risk) => risk === 'high' || risk === 'critical');
@@ -1057,7 +1057,7 @@ export function selectIntegrationReviewDimensionIds(shardSummary = []) {
   return ['contracts', 'regression'];
 }
 
-export function computeCriticalPathDurationMs(manifest, shardDurations = {}) {
+function computeCriticalPathDurationMs(manifest, shardDurations = {}) {
   const shards = Array.isArray(manifest?.shards) ? manifest.shards : [];
   const byId = new Map(shards.map((shard) => [shard.id, shard]));
   const memo = new Map();
@@ -1091,7 +1091,7 @@ export function computeCriticalPathDurationMs(manifest, shardDurations = {}) {
   return critical > 0 ? Math.round(critical) : null;
 }
 
-export function shouldIsolateShard(shard, manifest, isolationConfig = 'auto') {
+function shouldIsolateShard(shard, manifest, isolationConfig = 'auto') {
   if (isolationConfig === 'always' || isolationConfig === true) {
     return true;
   }
@@ -1126,7 +1126,7 @@ export function shouldIsolateShard(shard, manifest, isolationConfig = 'auto') {
   return false;
 }
 
-export function clusterIntegrationFindings(findings) {
+function clusterIntegrationFindings(findings) {
   if (!Array.isArray(findings) || findings.length === 0) return [];
 
   const validFindings = findings.filter(Boolean);
@@ -1205,7 +1205,7 @@ export function clusterIntegrationFindings(findings) {
   return clusters;
 }
 
-export function evaluateDeterministicReleaseGate({
+function evaluateDeterministicReleaseGate({
   manifest,
   allShardResults = [],
   integrationSynthesis = { findings: [] },
@@ -1359,7 +1359,7 @@ export function evaluateDeterministicReleaseGate({
   };
 }
 
-export function buildRunTelemetry({
+function buildRunTelemetry({
   manifest,
   allShardResults = [],
   integrationSynthesis = { findings: [] },
@@ -1667,7 +1667,7 @@ export function buildRunTelemetry({
   };
 }
 
-export function buildShardPacket(shard, manifest) {
+function buildShardPacket(shard, manifest) {
   if (!shard) return null;
 
   // Build lookup map from manifest.requirements for deterministic backfill
@@ -1752,7 +1752,7 @@ export function buildShardPacket(shard, manifest) {
   };
 }
 
-export function validateResearchEscalation(externalResearch, shardPacket) {
+function validateResearchEscalation(externalResearch, shardPacket) {
   if (!externalResearch || !externalResearch.needed) {
     return {
       allowed: false,
@@ -1836,7 +1836,7 @@ export function validateResearchEscalation(externalResearch, shardPacket) {
 // STANDARDIZED COHORT PROMPT PREFIXES (PROMPT CACHE OPTIMIZATION)
 // -----------------------------------------------------------------------------
 
-export const RECON_STATIC_PREFIX = `You are the QCET Specialized Reconnaissance Agent (qcet-recon).
+const RECON_STATIC_PREFIX = `You are the QCET Specialized Reconnaissance Agent (qcet-recon).
 Your sole responsibility is read-only repository reconnaissance, caller/contract analysis, test discovery, and uncertainty classification before implementation begins.
 
 CORE MANDATE & INVARIANTS:
@@ -1852,7 +1852,7 @@ CORE MANDATE & INVARIANTS:
    - If external research is needed, specify needed: true, reason, questions, and preferredSourceTypes in externalResearch.
 8. Rely primarily on the self-contained JIT Shard Packet.`;
 
-export const BUILDER_STATIC_PREFIX = `You are the QCET Specialized Implementation Builder Agent (qcet-builder).
+const BUILDER_STATIC_PREFIX = `You are the QCET Specialized Implementation Builder Agent (qcet-builder).
 Your sole responsibility is surgical, high-precision implementation strictly within your assigned file ownership, adhering unconditionally to QCET architectural invariants.
 
 CORE MANDATE & INVARIANTS:
@@ -1867,7 +1867,7 @@ CORE MANDATE & INVARIANTS:
 9. Add or update targeted tests for changed behavior. Run ONLY relevant targeted checks. Do NOT run the full repository test suite.
 10. Return complete structured implementation evidence with actual test outputs.`;
 
-export const REPAIR_STATIC_PREFIX = `You are the QCET Specialized Implementation Builder Agent (qcet-builder) responsible for repairing confirmed defects.
+const REPAIR_STATIC_PREFIX = `You are the QCET Specialized Implementation Builder Agent (qcet-builder) responsible for repairing confirmed defects.
 Your sole responsibility is surgical resolution of confirmed findings strictly within assigned file ownership.
 
 CORE MANDATE & INVARIANTS:
@@ -1883,7 +1883,7 @@ CORE MANDATE & INVARIANTS:
    - progressSummary: concrete progress made toward resolution.
 8. If a finding requires touching another shard's file, do NOT violate ownership. Report as blocked/cross-shard.`;
 
-export const SKEPTIC_STATIC_PREFIX = `You are the QCET Specialized Adversarial Skeptic Agent (qcet-skeptic).
+const SKEPTIC_STATIC_PREFIX = `You are the QCET Specialized Adversarial Skeptic Agent (qcet-skeptic).
 You did NOT implement this shard. Your sole responsibility is independent, read-only adversarial verification, probing boundaries, testing negative assertions, and refuting unverified claims.
 
 CORE MANDATE & INVARIANTS:
@@ -1897,7 +1897,7 @@ CORE MANDATE & INVARIANTS:
 8. Strictly enforce file ownership: any modified file outside shard.owns is an automatic failure.
 9. Report issues only with concrete repository evidence. Distinguish real regressions from pre-existing issues.`;
 
-export const RESEARCHER_STATIC_PREFIX = `You are the QCET Specialized External Research Agent (qcet-researcher).
+const RESEARCHER_STATIC_PREFIX = `You are the QCET Specialized External Research Agent (qcet-researcher).
 Your sole responsibility is gathering verified external facts from official documentation, library specifications, and upstream release notes.
 
 CORE MANDATE & INVARIANTS:
@@ -1909,7 +1909,7 @@ CORE MANDATE & INVARIANTS:
 6. Never research internal QCET code or files on the web. Local codebase truth comes from the repository.
 7. External patterns must never override QCET canonical architecture or project invariants.`;
 
-export const RECONCILE_STATIC_PREFIX = `You are the QCET Specialized Pre-Implementation Reconciliation Agent (qcet-recon).
+const RECONCILE_STATIC_PREFIX = `You are the QCET Specialized Pre-Implementation Reconciliation Agent (qcet-recon).
 Your goal is to reconcile a shard's pre-recon assumptions against completed upstream dependency deltas (git diff, exported types, API signatures, changed files) before implementation begins.
 
 Inspect the actual repository and upstream changed files.
@@ -1922,7 +1922,7 @@ Return structured reconciliation evidence adhering strictly to schema.`;
 // BUDGET PROFILES, FAILURE REASONS & RUNTIME PROVENANCE
 // -----------------------------------------------------------------------------
 
-export const ROLE_TURN_LIMITS = Object.freeze({
+const ROLE_TURN_LIMITS = Object.freeze({
   builder: 25,
   repair: 20,
   skeptic: 15,
@@ -1932,20 +1932,20 @@ export const ROLE_TURN_LIMITS = Object.freeze({
   evaluator: 10,
 });
 
-export const DEFAULT_BUDGET_LIMITS = Object.freeze({
+const DEFAULT_BUDGET_LIMITS = Object.freeze({
   maxShardTokens: 80_000,
   maxRunTokens: 400_000,
   runBudgetThresholdPct: 0.90,
   roleTurnLimits: ROLE_TURN_LIMITS,
 });
 
-export const BUDGET_PROFILES = {
+const BUDGET_PROFILES = {
   low:    { maxConcurrentAgents: 4, maxAgents: 40, maxShardTokens: 50_000, maxRunTokens: 250_000 },
   medium: { maxConcurrentAgents: 6, maxAgents: 72, maxShardTokens: 80_000, maxRunTokens: 400_000 },
   high:   { maxConcurrentAgents: 8, maxAgents: 128, maxShardTokens: 120_000, maxRunTokens: 600_000 },
 };
 
-export class BudgetTracker {
+class BudgetTracker {
   constructor(options = {}) {
     this.maxShardTokens = Number(options.maxShardTokens ?? DEFAULT_BUDGET_LIMITS.maxShardTokens);
     this.maxRunTokens = Number(options.maxRunTokens ?? DEFAULT_BUDGET_LIMITS.maxRunTokens);
@@ -2013,7 +2013,7 @@ export class BudgetTracker {
   }
 }
 
-export function hasCriticalSecurityFinding(verification) {
+function hasCriticalSecurityFinding(verification) {
   if (!verification || !Array.isArray(verification.issues)) return false;
   return verification.issues.some((issue) => {
     if (!issue) return false;
@@ -2034,7 +2034,7 @@ export function hasCriticalSecurityFinding(verification) {
   });
 }
 
-export function extractRootCauseSignature(failure) {
+function extractRootCauseSignature(failure) {
   if (!failure) return '';
   if (typeof failure === 'string') return failure.trim().toLowerCase();
 
@@ -2057,7 +2057,7 @@ export function extractRootCauseSignature(failure) {
   return JSON.stringify(failure);
 }
 
-export function hasIdenticalRootCauseFailure(failures) {
+function hasIdenticalRootCauseFailure(failures) {
   if (!Array.isArray(failures) || failures.length < 2) return false;
   const f1 = failures[failures.length - 2];
   const f2 = failures[failures.length - 1];
@@ -2066,7 +2066,7 @@ export function hasIdenticalRootCauseFailure(failures) {
   return Boolean(sig1 && sig2 && sig1 === sig2);
 }
 
-export function mergeVerificationResults(res1, res2) {
+function mergeVerificationResults(res1, res2) {
   if (!res1 && !res2) {
     return {
       verdict: 'fail',
@@ -2113,7 +2113,7 @@ export function mergeVerificationResults(res1, res2) {
   };
 }
 
-export const FAILURE_REASONS = new Set([
+const FAILURE_REASONS = new Set([
   'DEPENDENCY_BLOCKED', 'WORKTREE_INVALID', 'OWNERSHIP_CONFLICT',
   'RUNTIME_FILE_CONFLICT', 'AGENT_BUDGET_EXHAUSTED',
   'TURN_BUDGET_EXHAUSTED', 'TOKEN_BUDGET_EXHAUSTED',
@@ -2127,7 +2127,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.FAILURE_REASONS = FAILURE_REASONS;
 }
 
-export function normalizeBudgetConfig(input) {
+function normalizeBudgetConfig(input) {
   let profile = 'medium';
   let overrides = {};
 
@@ -2194,14 +2194,14 @@ export function normalizeBudgetConfig(input) {
   };
 }
 
-export function normalizeFailureReason(value) {
+function normalizeFailureReason(value) {
   if (typeof value === 'string' && FAILURE_REASONS.has(value)) {
     return value;
   }
   return 'RUNTIME_FAILURE';
 }
 
-export function buildRuntimeFingerprint(input = {}) {
+function buildRuntimeFingerprint(input = {}) {
   return {
     executorVersion: input?.executorVersion || 'v2.3',
     claudeCodeVersion: input?.claudeCodeVersion || null,
@@ -2294,8 +2294,8 @@ const ambiguityFallback = planPath
 // Concurrency & wall-clock tracking for evaluation telemetry
 const workflowStartedAtMs = typeof rawArgs?.startTime === 'number' && rawArgs.startTime > 0
   ? rawArgs.startTime
-  : Date.now();
-const calibrationStartedAtMs = Date.now();
+  : (args?.startedAtMs || 0);
+const calibrationStartedAtMs = (args?.startedAtMs || 0);
 let calibrationDurationMs = typeof rawArgs?.calibrationDurationMs === 'number' ? rawArgs.calibrationDurationMs : 0;
 let activeAgents = 0;
 let peakConcurrent = 0;
@@ -2327,7 +2327,7 @@ const callAgent = async (prompt, options) => {
   return runWithAgentSlot(async () => {
     activeAgents++;
     if (options?.phase === 'Implement' && firstBuilderStartedAtMs === null) {
-      firstBuilderStartedAtMs = Date.now();
+      firstBuilderStartedAtMs = (args?.startedAtMs || 0);
     }
     if (activeAgents > peakConcurrent) {
       peakConcurrent = activeAgents;
@@ -2513,7 +2513,7 @@ Return only the final structured manifest.
 
   calibrationDurationMs = typeof rawArgs?.calibrationDurationMs === 'number' && rawArgs.calibrationDurationMs > 0
     ? rawArgs.calibrationDurationMs
-    : Math.max(0, Date.now() - calibrationStartedAtMs);
+    : Math.max(0, (args?.startedAtMs || 0) - calibrationStartedAtMs);
   log('Calibration phase completed.');
 
 
@@ -3440,7 +3440,7 @@ ${ambiguityFallback}`;
       };
     }
 
-    const shardExecutionStartedAtMs = Date.now();
+    const shardExecutionStartedAtMs = (args?.startedAtMs || 0);
     const implementation = await callAgent(
       implementationPrompt,
       builderOptions
@@ -3575,7 +3575,7 @@ ${ambiguityFallback}`;
     }
 
     state.timing = {
-      durationMs: Math.max(0, Date.now() - shardExecutionStartedAtMs),
+      durationMs: Math.max(0, (args?.startedAtMs || 0) - shardExecutionStartedAtMs),
     };
     return state;
   }
@@ -3650,11 +3650,11 @@ ${ambiguityFallback}`;
       scheduleShard(shardById.get(dependencyId))
     );
 
-    const dependencyWaitStartedAtMs = Date.now();
+    const dependencyWaitStartedAtMs = (args?.startedAtMs || 0);
     const promise = Promise.all(dependencyPromises)
       .then(async (dependencyResults) => {
         if (dependencyPromises.length > 0) {
-          dependencyWaitDurationsMs.push(Math.max(0, Date.now() - dependencyWaitStartedAtMs));
+          dependencyWaitDurationsMs.push(Math.max(0, (args?.startedAtMs || 0) - dependencyWaitStartedAtMs));
         }
         const badDependency = dependencyResults.find(
           (result) =>
@@ -4328,7 +4328,7 @@ Return exactly the structured release verdict.
 
   const wallClockMs = typeof rawArgs?.wallClockMs === 'number' && rawArgs.wallClockMs > 0
     ? rawArgs.wallClockMs
-    : Math.max(0, Date.now() - workflowStartedAtMs);
+    : Math.max(0, (args?.startedAtMs || 0) - workflowStartedAtMs);
   const timeToFirstBuilderMs = firstBuilderStartedAtMs === null
     ? null
     : Math.max(0, firstBuilderStartedAtMs - workflowStartedAtMs);
@@ -4365,7 +4365,7 @@ Return exactly the structured release verdict.
 
   const resolvedRunId = typeof args?.runId === 'string' && args.runId.trim().length > 0
     ? args.runId.trim()
-    : (runTelemetry?.runId || `run-${Date.now()}`);
+    : (runTelemetry?.runId || `run-${(args?.startedAtMs || 0)}`);
 
   const gateVerdictPath = `.claude/executor-runs/${resolvedRunId}/gate-verdict.json`;
   const gateVerdictPayload = {
@@ -4376,7 +4376,7 @@ Return exactly the structured release verdict.
     rationale: finalVerdict.rationale,
     deterministicOverride: finalVerdict.deterministicOverride || false,
     agentVerdict: finalVerdict.agentVerdict,
-    timestamp: new Date().toISOString(),
+    timestamp: (args?.timestamp || 'unknown'),
   };
 
   try {
