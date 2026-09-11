@@ -29,6 +29,7 @@ export type CalendarScope = "school" | "unit" | "my";
 export interface CalendarMonthGridProps {
   period: AcademicMonthPeriod;
   tasks: SchoolTask[];
+  events?: DayTaskItem[];
   selectedDate: string | null;
   onSelectDate: (dateStr: string) => void;
   onOpenDaySheet: (dateStr: string) => void;
@@ -88,6 +89,23 @@ function StatusIcon({ state, className }: { state: CalendarAttentionState; class
   }
 }
 
+function ItemStatus({ item, state }: { item: DayTaskItem; state: CalendarAttentionState }) {
+  if (item.isEvent) {
+    return (
+      <>
+        <CalendarIcon className="size-3 shrink-0 text-sky-600" aria-hidden="true" />
+        <span>Sự kiện</span>
+      </>
+    );
+  }
+  return (
+    <>
+      <StatusIcon state={state} />
+      <span>{getStatusLabel(state)}</span>
+    </>
+  );
+}
+
 function formatDateVi(dateStr: string): string {
   try {
     const clean = dateStr.split("T")[0];
@@ -112,6 +130,7 @@ function formatDateVi(dateStr: string): string {
 export function CalendarMonthGrid({
   period,
   tasks = [],
+  events = [],
   selectedDate,
   onSelectDate,
   onOpenDaySheet,
@@ -126,7 +145,6 @@ export function CalendarMonthGrid({
   className,
 }: CalendarMonthGridProps) {
   const referenceDate = getSystemReferenceDate();
-
   const gridCells = React.useMemo(() => generateAcademicMonthGrid(period), [period]);
   const deferredQuery = React.useDeferredValue(searchQuery.trim().toLowerCase());
 
@@ -221,6 +239,28 @@ export function CalendarMonthGrid({
       }
     }
 
+    if (statusFilter === "ALL") {
+      for (const event of events) {
+        const matchesLevel =
+          levelFilter === "ALL" ||
+          (levelFilter === "TRUONG" && event.level === "Trường") ||
+          (levelFilter === "DON_VI" && event.level === "Đơn vị");
+        const matchesScope =
+          scope === "my" ||
+          (scope === "school" && event.level === "Trường") ||
+          (scope === "unit" && event.level === "Đơn vị");
+        const matchesQuery =
+          !deferredQuery ||
+          [event.title, event.assigneeName, event.host, event.location]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(deferredQuery));
+
+        if (matchesLevel && matchesScope && matchesQuery && event.dueDate) {
+          addItem(event.dueDate.split("T")[0], event);
+        }
+      }
+    }
+
     for (const [dateKey, items] of map) {
       map.set(dateKey, sortCalendarItemsByAttention(items, referenceDate));
     }
@@ -228,6 +268,7 @@ export function CalendarMonthGrid({
     return map;
   }, [
     tasks,
+    events,
     scope,
     currentUserId,
     currentUserName,
@@ -279,7 +320,7 @@ export function CalendarMonthGrid({
                 "rounded-2xl border border-border/70 bg-card overflow-hidden shadow-2xs transition-all",
                 group.isToday && "border-primary/50 ring-1 ring-primary/20"
               )}
-              aria-label={`${group.dayHeaderVi}, ${summary.total} nhiệm vụ`}
+              aria-label={`${group.dayHeaderVi}, ${summary.total} mục lịch`}
             >
               <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-muted/30 border-b border-border/50">
                 <div className="min-w-0">
@@ -331,18 +372,17 @@ export function CalendarMonthGrid({
                     >
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold border bg-muted/30 text-foreground border-border/60">
-                          {item.level === "Trường" ? "Cấp Trường" : "Đơn vị"}
+                          {item.isEvent ? "Lịch" : item.level === "Trường" ? "Cấp Trường" : "Đơn vị"}
                         </span>
                         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                          <StatusIcon state={state} />
-                          {getStatusLabel(state)}
+                          <ItemStatus item={item} state={state} />
                         </span>
                       </div>
                       <h4 className={cn("text-xs sm:text-sm font-semibold text-foreground leading-snug", isDone && "line-through text-muted-foreground")}>{item.title}</h4>
-                      {item.assigneeName && (
+                      {(item.assigneeName || item.host) && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <User className="size-3" strokeWidth={1.5} aria-hidden="true" />
-                          <span>Phụ trách: {item.assigneeName}</span>
+                          <span>Phụ trách: {item.assigneeName || item.host}</span>
                         </div>
                       )}
                     </button>
@@ -404,7 +444,7 @@ export function CalendarMonthGrid({
                   isSelected && "ring-1.5 ring-primary ring-inset bg-primary/[0.06] z-10 shadow-xs"
                 )}
                 data-date={cell.dateString}
-                aria-label={`${cell.dateString}: ${summary.total} nhiệm vụ`}
+                aria-label={`${cell.dateString}: ${summary.total} mục lịch`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <button
@@ -458,6 +498,7 @@ export function CalendarMonthGrid({
                   {displayedTasks.map((item) => {
                     const state = getCalendarAttentionState(item, referenceDate);
                     const isDone = state === "completed";
+                    const itemLabel = item.isEvent ? "Sự kiện" : getStatusLabel(state);
                     return (
                       <button
                         key={item.id}
@@ -468,15 +509,17 @@ export function CalendarMonthGrid({
                         }}
                         className={cn(
                           "w-full min-h-6 text-left flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium transition-colors border truncate shadow-2xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
-                          item.level === "Trường"
-                            ? "bg-background/90 border-border/70 text-foreground hover:border-primary/50 hover:bg-accent"
-                            : "bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent",
+                          item.isEvent
+                            ? "bg-sky-500/5 border-sky-500/20 text-foreground hover:border-sky-500/40 hover:bg-sky-500/10"
+                            : item.level === "Trường"
+                              ? "bg-background/90 border-border/70 text-foreground hover:border-primary/50 hover:bg-accent"
+                              : "bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent",
                           isDone && "opacity-60 line-through bg-emerald-500/5 border-emerald-500/20 text-muted-foreground"
                         )}
-                        title={`${getStatusLabel(state)} · ${item.title}`}
-                        aria-label={`${getStatusLabel(state)}: ${item.title}`}
+                        title={`${itemLabel} · ${item.title}`}
+                        aria-label={`${itemLabel}: ${item.title}`}
                       >
-                        <StatusIcon state={state} />
+                        {item.isEvent ? <CalendarIcon className="size-3 shrink-0 text-sky-600" aria-hidden="true" /> : <StatusIcon state={state} />}
                         <span className="truncate font-sans text-xs leading-tight">{item.title}</span>
                       </button>
                     );
@@ -488,7 +531,7 @@ export function CalendarMonthGrid({
                     type="button"
                     onClick={() => openDay(cell.dateString)}
                     className="mt-1 min-h-6 w-full rounded-md px-1.5 text-left text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
-                    aria-label={`Xem tất cả ${summary.total} nhiệm vụ ngày ${cell.dateString}`}
+                    aria-label={`Xem tất cả ${summary.total} mục lịch ngày ${cell.dateString}`}
                   >
                     Xem tất cả {summary.total} →
                   </button>
@@ -505,6 +548,7 @@ export function CalendarMonthGrid({
             <span className="inline-flex items-center gap-1.5"><CircleDot className="size-3.5 text-blue-600" aria-hidden="true" />Đang thực hiện</span>
             <span className="inline-flex items-center gap-1.5"><Clock3 className="size-3.5 text-amber-600" aria-hidden="true" />Chờ xét duyệt</span>
             <span className="inline-flex items-center gap-1.5"><AlertTriangle className="size-3.5 text-rose-600" aria-hidden="true" />Quá hạn</span>
+            <span className="inline-flex items-center gap-1.5"><CalendarIcon className="size-3.5 text-sky-600" aria-hidden="true" />Sự kiện</span>
           </div>
           <span className="hidden md:inline font-mono tabular-nums">Chu kỳ: 25/tháng trước - 24/tháng này</span>
         </div>
