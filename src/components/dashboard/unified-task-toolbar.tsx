@@ -66,8 +66,6 @@ import {
 
 // Export Saved Views Infrastructure
 export {
-  SavedViewsSelector,
-  type SavedViewsSelectorProps,
   type SavedTaskView,
   type TaskViewCriteria,
   type SavedViewRole,
