@@ -40,6 +40,19 @@ jobs:
           fi
           echo "RED confirmed."
 
+      - name: Fix temporary patch anchor
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/apply-executor-hardening-v15.py')
+          text = p.read_text()
+          old = "  // ===========================================================================\\n  // DEPENDENCY-READY DAG SCHEDULER"
+          new = "  // ---------------------------------------------------------------------------\\n  // CREATE BLOCKED RESULT"
+          if old not in text:
+              raise SystemExit('temporary patch anchor not found')
+          p.write_text(text.replace(old, new, 1))
+          PY
+
       - name: Apply executor hardening
         run: python3 scripts/apply-executor-hardening-v15.py implementation
 
