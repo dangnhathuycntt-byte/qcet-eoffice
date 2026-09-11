@@ -5,7 +5,8 @@
       "Bash(git diff*)",
       "Bash(npm run typecheck*)",
       "Bash(npm test*)",
-      "Bash(npx tsx --test*)"
+      "Bash(npx tsx --test*)",
+      "Bash(git push*)"
     ],
     "deny": [
       "Read(.env*)",
@@ -30,11 +31,12 @@
       "Write(*.key)",
       "Write(**/*.key)",
       "Bash(git reset --hard*)",
-      "Bash(git push*)",
       "Bash(rm -rf /)",
       "Bash(rm -rf /*)"
     ],
-    "ask": []
+    "ask": [
+      "Bash(git merge*)"
+    ]
   },
   "hooks": {
     "PreToolUse": [
