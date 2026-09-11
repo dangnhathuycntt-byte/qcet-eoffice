@@ -19,6 +19,11 @@ const {
   createConcurrencyLimiter,
   selectIntegrationReviewDimensionIds,
   computeCriticalPathDurationMs,
+  BUDGET_PROFILES,
+  FAILURE_REASONS,
+  normalizeBudgetConfig,
+  normalizeFailureReason,
+  buildRuntimeFingerprint,
 } = sandbox;
 
 test('workflow-executor: shouldIsolateShard adheres to isolationConfig modes', () => {
@@ -261,4 +266,122 @@ test('workflow-executor: critical path sums the longest dependency chain', () =>
     { a: 100, b: 200, c: 500, d: 50 }
   );
   assert.equal(duration, 650);
+});
+
+test('workflow-executor: normalizeBudgetConfig resolves presets and clamps limits', () => {
+  // Preset 'high'
+  const high = normalizeBudgetConfig('high');
+  assert.equal(high.profile, 'high');
+  assert.equal(high.maxConcurrentAgents, 8);
+  assert.equal(high.maxAgents, 128);
+  assert.deepEqual({ ...high.laneLimits }, { read: 3, write: 3, verify: 2, gitControl: 1 });
+
+  // Preset 'medium'
+  const medium = normalizeBudgetConfig('medium');
+  assert.equal(medium.profile, 'medium');
+  assert.equal(medium.maxConcurrentAgents, 6);
+  assert.equal(medium.maxAgents, 72);
+
+  // Preset 'low'
+  const low = normalizeBudgetConfig('low');
+  assert.equal(low.profile, 'low');
+  assert.equal(low.maxConcurrentAgents, 4);
+  assert.equal(low.maxAgents, 40);
+
+  // Object overrides
+  const overridden = normalizeBudgetConfig({
+    profile: 'high',
+    maxConcurrentAgents: 10,
+    maxAgents: 200,
+    laneLimits: { read: 4, write: 4, verify: 3, gitControl: 1 },
+  });
+  assert.equal(overridden.profile, 'high');
+  assert.equal(overridden.maxConcurrentAgents, 10);
+  assert.equal(overridden.maxAgents, 200);
+  assert.equal(overridden.laneLimits.read, 4);
+
+  // Clamping concurrency: 99 clamps to 16
+  const clampedHigh = normalizeBudgetConfig({ maxConcurrentAgents: 99 });
+  assert.equal(clampedHigh.maxConcurrentAgents, 16);
+
+  // Clamping agents: 5000 clamps to 1000
+  const clampedAgents = normalizeBudgetConfig({ maxAgents: 5000 });
+  assert.equal(clampedAgents.maxAgents, 1000);
+
+  // Lane clamping: every lane clamped to 1..maxConcurrentAgents
+  const clampedLanes = normalizeBudgetConfig({
+    maxConcurrentAgents: 4,
+    laneLimits: { read: 10, write: 0, verify: 5, gitControl: 0 },
+  });
+  assert.equal(clampedLanes.laneLimits.read, 4);
+  assert.equal(clampedLanes.laneLimits.write, 1);
+  assert.equal(clampedLanes.laneLimits.verify, 4);
+  assert.equal(clampedLanes.laneLimits.gitControl, 1);
+
+  // Unknown profile 'turbo' throws
+  assert.throws(() => {
+    normalizeBudgetConfig('turbo');
+  }, /unknown budget profile/i);
+
+  assert.throws(() => {
+    normalizeBudgetConfig({ profile: 'turbo' });
+  }, /unknown budget profile/i);
+});
+
+test('workflow-executor: normalizeFailureReason canonicalizes failure reasons', () => {
+  const expectedReasons = [
+    'DEPENDENCY_BLOCKED', 'WORKTREE_INVALID', 'OWNERSHIP_CONFLICT',
+    'RUNTIME_FILE_CONFLICT', 'AGENT_BUDGET_EXHAUSTED',
+    'TURN_BUDGET_EXHAUSTED', 'TOKEN_BUDGET_EXHAUSTED',
+    'WALLCLOCK_TIMEOUT', 'AGENT_STALLED', 'NETWORK_INTERRUPTED',
+    'SCHEMA_INVALID', 'VERIFICATION_FAILED', 'REPAIR_STAGNATED',
+    'TOOL_FAILURE', 'RUNTIME_FAILURE', 'EVIDENCE_INCOMPLETE',
+  ];
+
+  for (const reason of expectedReasons) {
+    assert.ok(FAILURE_REASONS.has(reason), `FAILURE_REASONS must contain ${reason}`);
+    assert.equal(normalizeFailureReason(reason), reason);
+  }
+
+  // Unknown reasons normalize to RUNTIME_FAILURE
+  assert.equal(normalizeFailureReason('UNKNOWN_ERROR'), 'RUNTIME_FAILURE');
+  assert.equal(normalizeFailureReason(''), 'RUNTIME_FAILURE');
+  assert.equal(normalizeFailureReason(null), 'RUNTIME_FAILURE');
+  assert.equal(normalizeFailureReason(undefined), 'RUNTIME_FAILURE');
+});
+
+test('workflow-executor: buildRuntimeFingerprint formats serializable provenance', () => {
+  const empty = buildRuntimeFingerprint();
+  assert.equal(empty.executorVersion, 'v2.3');
+  assert.equal(empty.claudeCodeVersion, null);
+  assert.equal(empty.model, null);
+  assert.equal(empty.effort, null);
+  assert.equal(empty.nodeVersion, null);
+  assert.equal(empty.npmVersion, null);
+  assert.equal(empty.os, null);
+  assert.equal(empty.arch, null);
+  assert.equal(empty.budgetProfile, null);
+  assert.equal(empty.maxConcurrentAgents, null);
+  assert.equal(empty.maxAgents, null);
+  assert.equal(empty.sourceCommit, null);
+  assert.equal(empty.worktreeIsolation, null);
+
+  const populated = buildRuntimeFingerprint({
+    executorVersion: 'v2.3',
+    claudeCodeVersion: '1.0.0',
+    model: 'claude-3-5-sonnet',
+    effort: 'high',
+    nodeVersion: 'v20.0.0',
+    npmVersion: '10.0.0',
+    os: 'darwin',
+    arch: 'arm64',
+    budgetProfile: 'high',
+    maxConcurrentAgents: 8,
+    maxAgents: 128,
+    sourceCommit: 'abcdef123',
+    worktreeIsolation: 'auto',
+  });
+  assert.equal(populated.budgetProfile, 'high');
+  assert.equal(populated.maxConcurrentAgents, 8);
+  assert.equal(populated.sourceCommit, 'abcdef123');
 });

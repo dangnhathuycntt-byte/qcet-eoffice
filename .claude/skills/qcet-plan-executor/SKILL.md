@@ -20,7 +20,23 @@ Or call the workflow via the Workflow tool:
   "args": {
     "planPath": "/path/to/plan.md",
     "budget": "high",
-    "worktreeIsolation": true
+    "worktreeIsolation": "auto"
+  }
+}
+```
+
+Or with custom budget override:
+```json
+{
+  "name": "qcet-plan-executor",
+  "args": {
+    "planPath": "/path/to/plan.md",
+    "budget": {
+      "profile": "high",
+      "maxConcurrentAgents": 8,
+      "maxAgents": 128
+    },
+    "worktreeIsolation": "auto"
   }
 }
 ```

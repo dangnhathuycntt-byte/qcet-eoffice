@@ -1897,6 +1897,120 @@ Return structured reconciliation evidence adhering strictly to schema.`;
 
 
 // -----------------------------------------------------------------------------
+// BUDGET PROFILES, FAILURE REASONS & RUNTIME PROVENANCE
+// -----------------------------------------------------------------------------
+
+export const BUDGET_PROFILES = {
+  low:    { maxConcurrentAgents: 4, maxAgents: 40,  laneLimits: { read: 2, write: 1, verify: 1, gitControl: 1 } },
+  medium: { maxConcurrentAgents: 6, maxAgents: 72,  laneLimits: { read: 2, write: 2, verify: 2, gitControl: 1 } },
+  high:   { maxConcurrentAgents: 8, maxAgents: 128, laneLimits: { read: 3, write: 3, verify: 2, gitControl: 1 } },
+};
+
+export const FAILURE_REASONS = new Set([
+  'DEPENDENCY_BLOCKED', 'WORKTREE_INVALID', 'OWNERSHIP_CONFLICT',
+  'RUNTIME_FILE_CONFLICT', 'AGENT_BUDGET_EXHAUSTED',
+  'TURN_BUDGET_EXHAUSTED', 'TOKEN_BUDGET_EXHAUSTED',
+  'WALLCLOCK_TIMEOUT', 'AGENT_STALLED', 'NETWORK_INTERRUPTED',
+  'SCHEMA_INVALID', 'VERIFICATION_FAILED', 'REPAIR_STAGNATED',
+  'TOOL_FAILURE', 'RUNTIME_FAILURE', 'EVIDENCE_INCOMPLETE',
+]);
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.BUDGET_PROFILES = BUDGET_PROFILES;
+  globalThis.FAILURE_REASONS = FAILURE_REASONS;
+}
+
+export function normalizeBudgetConfig(input) {
+  let profile = 'medium';
+  let overrides = {};
+
+  if (typeof input === 'string') {
+    const p = input.toLowerCase();
+    if (!BUDGET_PROFILES[p]) {
+      throw new Error(`Unknown budget profile: ${input}`);
+    }
+    profile = p;
+    overrides = {};
+  } else if (input && typeof input === 'object') {
+    if (input.profile) {
+      const p = String(input.profile).toLowerCase();
+      if (!BUDGET_PROFILES[p]) {
+        throw new Error(`Unknown budget profile: ${input.profile}`);
+      }
+      profile = p;
+    }
+    overrides = input;
+  }
+
+  const base = BUDGET_PROFILES[profile] || BUDGET_PROFILES.medium;
+
+  let maxConcurrent = overrides.maxConcurrentAgents ?? overrides.maxConcurrent ?? base.maxConcurrentAgents;
+  maxConcurrent = Number(maxConcurrent);
+  if (!Number.isFinite(maxConcurrent) || maxConcurrent < 1) {
+    maxConcurrent = 1;
+  }
+  maxConcurrent = Math.min(16, Math.max(1, Math.floor(maxConcurrent)));
+
+  let maxAgents = overrides.maxAgents ?? base.maxAgents;
+  maxAgents = Number(maxAgents);
+  if (!Number.isFinite(maxAgents) || maxAgents < 1) {
+    maxAgents = 1;
+  }
+  maxAgents = Math.min(1000, Math.max(1, Math.floor(maxAgents)));
+
+  const baseLanes = base.laneLimits;
+  const inputLanes = (overrides.laneLimits && typeof overrides.laneLimits === 'object')
+    ? overrides.laneLimits
+    : {};
+
+  function clampLane(val, fallback) {
+    const n = Number(val ?? fallback);
+    if (!Number.isFinite(n) || n < 1) return 1;
+    return Math.min(maxConcurrent, Math.max(1, Math.floor(n)));
+  }
+
+  const laneLimits = {
+    read: clampLane(inputLanes.read, baseLanes.read),
+    write: clampLane(inputLanes.write, baseLanes.write),
+    verify: clampLane(inputLanes.verify, baseLanes.verify),
+    gitControl: clampLane(inputLanes.gitControl, baseLanes.gitControl),
+  };
+
+  return {
+    profile,
+    maxConcurrentAgents: maxConcurrent,
+    maxAgents,
+    laneLimits,
+  };
+}
+
+export function normalizeFailureReason(value) {
+  if (typeof value === 'string' && FAILURE_REASONS.has(value)) {
+    return value;
+  }
+  return 'RUNTIME_FAILURE';
+}
+
+export function buildRuntimeFingerprint(input = {}) {
+  return {
+    executorVersion: input?.executorVersion || 'v2.3',
+    claudeCodeVersion: input?.claudeCodeVersion || null,
+    model: input?.model || null,
+    effort: input?.effort || null,
+    nodeVersion: input?.nodeVersion || null,
+    npmVersion: input?.npmVersion || null,
+    os: input?.os || null,
+    arch: input?.arch || null,
+    budgetProfile: input?.budgetProfile || null,
+    maxConcurrentAgents: input?.maxConcurrentAgents ?? null,
+    maxAgents: input?.maxAgents ?? null,
+    sourceCommit: input?.sourceCommit || null,
+    worktreeIsolation: input?.worktreeIsolation ?? null,
+  };
+}
+
+
+// -----------------------------------------------------------------------------
 // WORKFLOW
 // -----------------------------------------------------------------------------
 
@@ -1979,14 +2093,10 @@ let totalAgentsCount = 0;
 let firstBuilderStartedAtMs = null;
 const dependencyWaitDurationsMs = [];
 
-const configuredMaxConcurrent = Number(budgetConfig?.maxConcurrentAgents ?? budgetConfig?.maxConcurrent ?? 8);
-const maxConcurrentAgents = Number.isFinite(configuredMaxConcurrent) && configuredMaxConcurrent > 0
-  ? Math.floor(configuredMaxConcurrent)
-  : 8;
-const configuredMaxAgents = Number(budgetConfig?.maxAgents);
-const maxAgents = Number.isFinite(configuredMaxAgents) && configuredMaxAgents > 0
-  ? Math.floor(configuredMaxAgents)
-  : Infinity;
+const normalizedBudget = normalizeBudgetConfig(budgetConfig);
+const maxConcurrentAgents = normalizedBudget.maxConcurrentAgents;
+const maxAgents = normalizedBudget.maxAgents;
+const laneLimits = normalizedBudget.laneLimits;
 const runWithAgentSlot = createConcurrencyLimiter(maxConcurrentAgents);
 
 const rawAgent = agent;
