@@ -231,7 +231,7 @@ export function aggregateBenchmarkResults(results, metadata = {}) {
     workloadBaseSha: metadata.workloadBaseSha || '3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c',
     workloadBaseTag: metadata.workloadBaseTag || 'benchmark/workload-base-3f0e5320',
     executorBSha: metadata.executorBSha || metadata.harnessShaB || '3f5e804c5bf55c88634535971d605f40b1b8713d',
-    executorCSha: metadata.executorCSha || metadata.harnessShaC || '02d090e8e8e23c9c7def9826b99c815af74ecf42',
+    executorCSha: metadata.executorCSha || metadata.harnessShaC || '45453bb8d6a3db3ca974495c7b3b36187004c503',
     evalHarnessSha: metadata.evalHarnessSha || metadata.gitSha || 'unknown',
     claudeVersion: metadata.claudeVersion || metadata.claudeCodeVersion || 'unknown',
     model: metadata.model || 'unknown',

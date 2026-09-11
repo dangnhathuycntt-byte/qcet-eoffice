@@ -11,7 +11,18 @@ import { determineAgentVerdict, verifyTreatmentFidelity } from '../../benchmarks
 import { verifyCliCapabilities, normalizeEffort, VALID_EFFORT_LEVELS, DEFAULT_TASK_TIMEOUTS_MS, resolveTaskTimeoutMs } from '../../benchmarks/live/run-benchmark-suite.mjs';
 
 const WORKLOAD_BASE_SHA = '3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c';
-const HARNESS_SHA_C = '02d090e8e8e23c9c7def9826b99c815af74ecf42';
+const HARNESS_SHA_C = '45453bb8d6a3db3ca974495c7b3b36187004c503';
+
+test('canonical Arm C executor SHA is pinned to Lean V2 ownership-guard candidate', async () => {
+  const CANONICAL_ARM_C_SHA = '45453bb8d6a3db3ca974495c7b3b36187004c503';
+  assert.equal(HARNESS_SHA_C, CANONICAL_ARM_C_SHA);
+
+  const env = await captureEnvironment();
+  assert.equal(env.executorCSha, CANONICAL_ARM_C_SHA);
+
+  const summary = aggregateBenchmarkResults([]);
+  assert.equal(summary.provenance.executorCSha, CANONICAL_ARM_C_SHA);
+});
 
 test('captureEnvironment returns system details and full provenance without inventing synthetic models', async () => {
   const env = await captureEnvironment({ model: 'test-model' });

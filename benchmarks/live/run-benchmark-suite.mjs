@@ -36,7 +36,7 @@ function parseArgs() {
     keepTrials: false,
     workloadBaseSha: '3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c',
     harnessShaB: '3f5e804c5bf55c88634535971d605f40b1b8713d',
-    harnessShaC: '02d090e8e8e23c9c7def9826b99c815af74ecf42',
+    harnessShaC: '45453bb8d6a3db3ca974495c7b3b36187004c503',
     outputDir: path.join(process.cwd(), 'benchmarks', 'live', 'results'),
     model: process.env.QCET_BENCHMARK_MODEL || '',
     effort: 'high',
