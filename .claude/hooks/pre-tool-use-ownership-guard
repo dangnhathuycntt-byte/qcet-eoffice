@@ -142,34 +142,10 @@ function resolveActiveShard(agentId, agentType, subagentLabel) {
     };
   }
 
-  // 2. Candidate state file locations (prioritize run-scoped files)
-  const runId = process.env.QCET_RUN_ID || '';
-  const sessionScope = process.env.QCET_SESSION_ID || process.env.CLAUDE_CONVERSATION_ID || '';
-  const candidateFiles = [
-    process.env.QCET_ACTIVE_SHARDS_FILE,
-    process.env.QCET_STATE_FILE,
-    runId ? path.join('/tmp', `qcet-active-shards-${runId}.json`) : null,
-    sessionScope ? path.join('/tmp', `qcet-active-shards-${sessionScope}.json`) : null,
-    path.join('/tmp', 'qcet-active-shards.json'),
-    path.join('/tmp', 'qcet-shard-ownership.json'),
-    path.join(process.cwd(), '.claude', 'state', 'active-shards.json'),
-    path.join(process.cwd(), '.claude', 'state', 'qcet-active-shards.json')
-  ].filter(Boolean);
-
   let stateData = null;
 
-  for (const file of candidateFiles) {
-    try {
-      if (fs.existsSync(file)) {
-        const raw = fs.readFileSync(file, 'utf8');
-        stateData = JSON.parse(raw);
-        if (stateData) break;
-      }
-    } catch (_) {}
-  }
-
-  // Also check QCET_ACTIVE_SHARDS env var (can be JSON string or file path)
-  if (!stateData && process.env.QCET_ACTIVE_SHARDS) {
+  // Check QCET_ACTIVE_SHARDS env var (can be JSON string or file path)
+  if (process.env.QCET_ACTIVE_SHARDS) {
     const val = process.env.QCET_ACTIVE_SHARDS.trim();
     try {
       if (val.startsWith('{') || val.startsWith('[')) {
@@ -178,6 +154,32 @@ function resolveActiveShard(agentId, agentType, subagentLabel) {
         stateData = JSON.parse(fs.readFileSync(val, 'utf8'));
       }
     } catch (_) {}
+  }
+
+  // 2. Candidate state file locations (prioritize run-scoped files)
+  if (!stateData) {
+    const runId = process.env.QCET_RUN_ID || '';
+    const sessionScope = process.env.QCET_SESSION_ID || process.env.CLAUDE_CONVERSATION_ID || '';
+    const candidateFiles = [
+      process.env.QCET_ACTIVE_SHARDS_FILE,
+      process.env.QCET_STATE_FILE,
+      runId ? path.join('/tmp', `qcet-active-shards-${runId}.json`) : null,
+      sessionScope ? path.join('/tmp', `qcet-active-shards-${sessionScope}.json`) : null,
+      path.join('/tmp', 'qcet-active-shards.json'),
+      path.join('/tmp', 'qcet-shard-ownership.json'),
+      path.join(process.cwd(), '.claude', 'state', 'active-shards.json'),
+      path.join(process.cwd(), '.claude', 'state', 'qcet-active-shards.json')
+    ].filter(Boolean);
+
+    for (const file of candidateFiles) {
+      try {
+        if (fs.existsSync(file)) {
+          const raw = fs.readFileSync(file, 'utf8');
+          stateData = JSON.parse(raw);
+          if (stateData) break;
+        }
+      } catch (_) {}
+    }
   }
 
   if (!stateData) return null;
