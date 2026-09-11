@@ -220,3 +220,45 @@ test('subagent-stop-evidence-gate: builder agent with complete structured eviden
   assert.equal(res.status, 0);
 });
 
+
+
+test('pre-tool-use-ownership-guard: builder mutating Bash is blocked', () => {
+  const res = runHook(ownershipGuard, {
+    tool_name: 'Bash',
+    agent_type: 'qcet-builder',
+    agent_id: 'shard-auth:implement',
+    tool_input: { command: "sed -i 's/a/b/' src/server/auth/session.ts" },
+  });
+  assert.equal(res.status, 2);
+  assert.ok(res.stderr.includes('shell file mutation'));
+});
+
+test('pre-tool-use-ownership-guard: builder inline interpreter mutation is blocked', () => {
+  const res = runHook(ownershipGuard, {
+    tool_name: 'Bash',
+    agent_type: 'qcet-builder',
+    agent_id: 'shard-auth:implement',
+    tool_input: { command: "python -c \"open('src/server/auth/session.ts','w').write('x')\"" },
+  });
+  assert.equal(res.status, 2);
+  assert.ok(res.stderr.includes('shell file mutation'));
+});
+
+test('pre-tool-use-ownership-guard: builder non-mutating Bash remains allowed', () => {
+  const res = runHook(ownershipGuard, {
+    tool_name: 'Bash',
+    agent_type: 'qcet-builder',
+    agent_id: 'shard-auth:implement',
+    tool_input: { command: 'npm test -- tests/unit/auth.test.ts' },
+  });
+  assert.equal(res.status, 0);
+});
+
+test('settings: ownership guard also receives Bash PreToolUse events', () => {
+  const settings = JSON.parse(fs.readFileSync(path.join(rootDir, '.claude', 'settings.json'), 'utf8'));
+  const entry = settings.hooks.PreToolUse.find((item: any) =>
+    item.hooks?.some((hook: any) => hook.command === './.claude/hooks/pre-tool-use-ownership-guard')
+  );
+  assert.ok(entry);
+  assert.ok(String(entry.matcher).split('|').includes('Bash'));
+});

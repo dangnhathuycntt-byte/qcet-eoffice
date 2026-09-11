@@ -1007,6 +1007,90 @@ export function computeShardPriorities(manifest) {
   return priorityMap;
 }
 
+export function createConcurrencyLimiter(maxConcurrent = Infinity) {
+  const parsed = Number(maxConcurrent);
+  const limit = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : Infinity;
+  let active = 0;
+  const queue = [];
+
+  const drain = () => {
+    while (active < limit && queue.length > 0) {
+      const next = queue.shift();
+      active++;
+      Promise.resolve()
+        .then(next.task)
+        .then(next.resolve, next.reject)
+        .finally(() => {
+          active--;
+          drain();
+        });
+    }
+  };
+
+  return (task) =>
+    new Promise((resolve, reject) => {
+      queue.push({ task, resolve, reject });
+      drain();
+    });
+}
+
+export function selectIntegrationReviewDimensionIds(shardSummary = []) {
+  const summaries = Array.isArray(shardSummary) ? shardSummary : [];
+  const risks = summaries.map((item) => String(item?.risk || 'low').toLowerCase());
+  const hasHighRisk = risks.some((risk) => risk === 'high' || risk === 'critical');
+  const hasMediumRisk = risks.some((risk) => risk === 'medium');
+  const authSurface = summaries.some((item) => {
+    const haystack = JSON.stringify({
+      files: item?.changedFiles || [],
+      requirements: item?.requirements || [],
+      id: item?.id || '',
+    }).toLowerCase();
+    return /auth|permission|rbac|session|security|token|role/.test(haystack);
+  });
+
+  if (hasHighRisk || authSurface) {
+    return ['contracts', 'authorization', 'semantics', 'regression'];
+  }
+  if (hasMediumRisk || summaries.length > 2) {
+    return ['contracts', 'semantics', 'regression'];
+  }
+  return ['contracts', 'regression'];
+}
+
+export function computeCriticalPathDurationMs(manifest, shardDurations = {}) {
+  const shards = Array.isArray(manifest?.shards) ? manifest.shards : [];
+  const byId = new Map(shards.map((shard) => [shard.id, shard]));
+  const memo = new Map();
+  const visiting = new Set();
+
+  const durationOf = (id) => {
+    const value = Number(shardDurations?.[id]);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  };
+
+  const longestTo = (id) => {
+    if (memo.has(id)) return memo.get(id);
+    if (visiting.has(id)) return 0;
+    visiting.add(id);
+    const shard = byId.get(id);
+    const deps = Array.isArray(shard?.dependencies) ? shard.dependencies : [];
+    let upstream = 0;
+    for (const depId of deps) {
+      upstream = Math.max(upstream, longestTo(depId));
+    }
+    visiting.delete(id);
+    const total = upstream + durationOf(id);
+    memo.set(id, total);
+    return total;
+  };
+
+  let critical = 0;
+  for (const shard of shards) {
+    critical = Math.max(critical, longestTo(shard.id));
+  }
+  return critical > 0 ? Math.round(critical) : null;
+}
+
 export function shouldIsolateShard(shard, manifest, isolationConfig = 'auto') {
   if (isolationConfig === 'always' || isolationConfig === true) {
     return true;
@@ -1153,8 +1237,8 @@ export function evaluateDeterministicReleaseGate({
 
   // 2. Integration review defects
   const synthFindings = Array.isArray(integrationSynthesis?.findings) ? integrationSynthesis.findings : [];
-  const criticalIntegrationDefects = synthFindings.filter(
-    (d) => d?.severity === 'CRITICAL' || d?.severity === 'HIGH'
+  const criticalIntegrationDefects = synthFindings.filter((d) =>
+    ['critical', 'high'].includes(String(d?.severity || '').toLowerCase())
   );
   if (criticalIntegrationDefects.length > 0) {
     if (!integrationRepair || integrationRepair.status !== 'completed') {
@@ -1266,6 +1350,11 @@ export function buildRunTelemetry({
   totalAgents = 0,
   peakConcurrent = 1,
   tokensTotal = null,
+  timeToFirstBuilderMs = null,
+  criticalPathDurationMs = null,
+  avgDependencyWaitMs = null,
+  domain = 'general',
+  executorVersion = 'v1.5',
   planPath = '',
   timestamp = '2026-09-10T00:00:00.000Z',
   runId = '',
@@ -1363,9 +1452,9 @@ export function buildRunTelemetry({
 
   const wallClock = typeof wallClockMs === 'number' && wallClockMs > 0 ? Math.round(wallClockMs) : null;
   const calibrationDuration = typeof calibrationDurationMs === 'number' && calibrationDurationMs > 0 ? Math.round(calibrationDurationMs) : null;
-  const timeToFirstBuilder = null;
-  const criticalPathDuration = null;
-  const avgDependencyWait = null;
+  const timeToFirstBuilder = typeof timeToFirstBuilderMs === 'number' && timeToFirstBuilderMs >= 0 ? Math.round(timeToFirstBuilderMs) : null;
+  const criticalPathDuration = typeof criticalPathDurationMs === 'number' && criticalPathDurationMs >= 0 ? Math.round(criticalPathDurationMs) : null;
+  const avgDependencyWait = typeof avgDependencyWaitMs === 'number' && avgDependencyWaitMs >= 0 ? Math.round(avgDependencyWaitMs) : null;
 
   const requirementCoveragePct = requirementsTotal > 0
     ? Number(((requirementsCovered / requirementsTotal) * 100).toFixed(1))
@@ -1406,9 +1495,9 @@ export function buildRunTelemetry({
     runId: resolvedRunId,
     plan: planPath || 'docs/plans/active/plan.md',
     timestamp,
-    executorVersion: 'v1.4',
-    domain: 'general',
-    description: `QCET Plan Executor v1.4 execution run for ${planPath || 'manifest'}`,
+    executorVersion,
+    domain,
+    description: `QCET Plan Executor ${executorVersion} execution run for ${planPath || 'manifest'}`,
     wallClockMs: wallClock,
     calibrationDurationMs: calibrationDuration,
     shards: Array.isArray(manifest?.shards) ? manifest.shards.length : 0,
@@ -1879,28 +1968,52 @@ const ambiguityFallback = planPath
   : '';
 
 // Concurrency & wall-clock tracking for evaluation telemetry
-const startTime = typeof args?.startTime === 'number' ? args.startTime : 0;
-let calibrationDurationMs = typeof args?.calibrationDurationMs === 'number' ? args.calibrationDurationMs : 0;
+const workflowStartedAtMs = typeof rawArgs?.startTime === 'number' && rawArgs.startTime > 0
+  ? rawArgs.startTime
+  : Date.now();
+const calibrationStartedAtMs = Date.now();
+let calibrationDurationMs = typeof rawArgs?.calibrationDurationMs === 'number' ? rawArgs.calibrationDurationMs : 0;
 let activeAgents = 0;
 let peakConcurrent = 0;
 let totalAgentsCount = 0;
+let firstBuilderStartedAtMs = null;
+const dependencyWaitDurationsMs = [];
+
+const configuredMaxConcurrent = Number(budgetConfig?.maxConcurrentAgents ?? budgetConfig?.maxConcurrent ?? 8);
+const maxConcurrentAgents = Number.isFinite(configuredMaxConcurrent) && configuredMaxConcurrent > 0
+  ? Math.floor(configuredMaxConcurrent)
+  : 8;
+const configuredMaxAgents = Number(budgetConfig?.maxAgents);
+const maxAgents = Number.isFinite(configuredMaxAgents) && configuredMaxAgents > 0
+  ? Math.floor(configuredMaxAgents)
+  : Infinity;
+const runWithAgentSlot = createConcurrencyLimiter(maxConcurrentAgents);
 
 const rawAgent = agent;
 const callAgent = async (prompt, options) => {
+  if (totalAgentsCount >= maxAgents) {
+    log(`WARNING: Agent budget exhausted (${maxAgents}). Returning null from callAgent.`);
+    return null;
+  }
   if (typeof budget !== 'undefined' && budget?.total && budget.remaining() <= 0) {
     log('WARNING: Token budget exhausted. Returning null from callAgent.');
     return null;
   }
-  activeAgents++;
   totalAgentsCount++;
-  if (activeAgents > peakConcurrent) {
-    peakConcurrent = activeAgents;
-  }
-  try {
-    return await rawAgent(prompt, options);
-  } finally {
-    activeAgents--;
-  }
+  return runWithAgentSlot(async () => {
+    activeAgents++;
+    if (options?.phase === 'Implement' && firstBuilderStartedAtMs === null) {
+      firstBuilderStartedAtMs = Date.now();
+    }
+    if (activeAgents > peakConcurrent) {
+      peakConcurrent = activeAgents;
+    }
+    try {
+      return await rawAgent(prompt, options);
+    } finally {
+      activeAgents--;
+    }
+  });
 };
 
 
@@ -2066,7 +2179,9 @@ Return only the final structured manifest.
     }
   );
 
-  calibrationDurationMs = typeof args?.calibrationDurationMs === 'number' ? args.calibrationDurationMs : 0;
+  calibrationDurationMs = typeof rawArgs?.calibrationDurationMs === 'number' && rawArgs.calibrationDurationMs > 0
+    ? rawArgs.calibrationDurationMs
+    : Math.max(0, Date.now() - calibrationStartedAtMs);
   log('Calibration phase completed.');
 
 
@@ -2947,6 +3062,7 @@ ${ambiguityFallback}`;
       builderOptions.isolation = 'worktree';
     }
 
+    const shardExecutionStartedAtMs = Date.now();
     const implementation = await callAgent(
       implementationPrompt,
       builderOptions
@@ -3034,12 +3150,15 @@ ${ambiguityFallback}`;
       }
     }
 
+    state.timing = {
+      durationMs: Math.max(0, Date.now() - shardExecutionStartedAtMs),
+    };
     return state;
   }
 
 
-  // ---------------------------------------------------------------------------
-  // CREATE BLOCKED RESULT
+  // ===========================================================================
+  // DEPENDENCY-READY DAG SCHEDULER
   // ---------------------------------------------------------------------------
 
   function blockedByDependency(
@@ -3107,8 +3226,12 @@ ${ambiguityFallback}`;
       scheduleShard(shardById.get(dependencyId))
     );
 
+    const dependencyWaitStartedAtMs = Date.now();
     const promise = Promise.all(dependencyPromises)
       .then(async (dependencyResults) => {
+        if (dependencyPromises.length > 0) {
+          dependencyWaitDurationsMs.push(Math.max(0, Date.now() - dependencyWaitStartedAtMs));
+        }
         const badDependency = dependencyResults.find(
           (result) =>
             !result ||
@@ -3276,7 +3399,7 @@ ${ambiguityFallback}`;
   }));
 
 
-  const reviewDimensions = [
+  const allReviewDimensions = [
     {
       id: 'contracts',
       charter:
@@ -3298,6 +3421,12 @@ ${ambiguityFallback}`;
         'Regression risk, missing tests, integration behavior, accessibility/performance regressions where relevant.',
     },
   ];
+
+  const selectedReviewDimensionIds = selectIntegrationReviewDimensionIds(shardSummary);
+  const reviewDimensions = allReviewDimensions.filter((dimension) =>
+    selectedReviewDimensionIds.includes(dimension.id)
+  );
+  log(`Adaptive integration review selected: ${selectedReviewDimensionIds.join(', ')}`);
 
 
   const integrationReviews = await parallel(
@@ -3773,7 +3902,19 @@ Return exactly the structured release verdict.
   // CAPTURE & PERSIST EVALUATION RUN TELEMETRY
   // ===========================================================================
 
-  const wallClockMs = typeof args?.wallClockMs === 'number' ? args.wallClockMs : (calibrationDurationMs + 10000);
+  const wallClockMs = typeof rawArgs?.wallClockMs === 'number' && rawArgs.wallClockMs > 0
+    ? rawArgs.wallClockMs
+    : Math.max(0, Date.now() - workflowStartedAtMs);
+  const timeToFirstBuilderMs = firstBuilderStartedAtMs === null
+    ? null
+    : Math.max(0, firstBuilderStartedAtMs - workflowStartedAtMs);
+  const avgDependencyWaitMs = dependencyWaitDurationsMs.length > 0
+    ? dependencyWaitDurationsMs.reduce((sum, value) => sum + value, 0) / dependencyWaitDurationsMs.length
+    : 0;
+  const shardDurations = Object.fromEntries(
+    allShardResults.map((result) => [result?.shard?.id, result?.timing?.durationMs || 0]).filter(([id]) => id)
+  );
+  const criticalPathDurationMs = computeCriticalPathDurationMs(manifest, shardDurations);
   const runTelemetry = buildRunTelemetry({
     planPath,
     manifest,
@@ -3787,6 +3928,11 @@ Return exactly the structured release verdict.
     agentsCount: totalAgentsCount,
     totalAgents: totalAgentsCount,
     peakConcurrent,
+    timeToFirstBuilderMs,
+    criticalPathDurationMs,
+    avgDependencyWaitMs,
+    domain: domainConfig,
+    executorVersion: 'v1.5',
     timestamp: typeof args?.timestamp === 'string' ? args.timestamp : undefined,
     runId: typeof args?.runId === 'string' ? args.runId : undefined,
   });

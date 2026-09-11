@@ -249,6 +249,15 @@ function allow() {
   process.exit(EXIT_ALLOW);
 }
 
+function isMutatingShellCommand(command) {
+  const text = String(command || '').trim();
+  if (!text) return false;
+  const mutatingPrimitive = /(?:^|[;&|]\s*)(?:sed\s+-i\b|perl\s+-pi\b|tee\b|touch\b|truncate\b|cp\b|mv\b|rm\b|patch\b|git\s+(?:apply|restore|rm|mv|checkout\s+--?)\b)/i;
+  const outputRedirect = /(?:^|[^<])>>?\s*(?:["']?)(?:\.?\.?\/)?[A-Za-z0-9_.-]/m;
+  const inlineInterpreter = /\b(?:python3?|node|ruby|perl|bash|sh)\s+(?:-c|-e)\b/i;
+  return mutatingPrimitive.test(text) || outputRedirect.test(text) || inlineInterpreter.test(text);
+}
+
 // -----------------------------------------------------------------------------
 // MAIN EXECUTION
 // -----------------------------------------------------------------------------
@@ -282,12 +291,32 @@ function main() {
   }
 
   const toolName = data.tool_name || data.toolName || '';
-  // PreToolUse ownership guard specifically enforces Write and Edit invocations
-  if (toolName !== 'Write' && toolName !== 'Edit') {
+  const isFileMutationTool = toolName === 'Write' || toolName === 'Edit';
+  const isBashTool = toolName === 'Bash';
+  if (!isFileMutationTool && !isBashTool) {
     process.exit(EXIT_ALLOW);
   }
 
   const toolInput = data.tool_input || data.toolInput || {};
+  const agentId = data.agent_id || data.agentId || process.env.QCET_AGENT_ID || '';
+  const agentType = data.agent_type || data.agentType || process.env.QCET_AGENT_TYPE || '';
+  const agentRole = data.agent_role || data.agentRole || process.env.QCET_AGENT_ROLE || '';
+  const subagentLabel = data.subagent_label || data.subagentLabel || data.label || '';
+  const readOnly = isReadOnlyAgent(agentType, agentId, agentRole, subagentLabel);
+  const builder = [agentType, agentRole, agentId, subagentLabel]
+    .filter(Boolean)
+    .some((value) => /builder|:implement|:repair/i.test(String(value)));
+
+  if (isBashTool) {
+    const command = toolInput.command || '';
+    if ((readOnly || builder) && isMutatingShellCommand(command)) {
+      block(
+        `Agent '${agentType || agentId || subagentLabel}' attempted shell file mutation. Use Write/Edit so shard ownership can be enforced deterministically.`
+      );
+    }
+    process.exit(EXIT_ALLOW);
+  }
+
   const rawPath =
     toolInput.file_path ||
     toolInput.filePath ||
@@ -299,13 +328,8 @@ function main() {
     process.exit(EXIT_ALLOW);
   }
 
-  const agentId = data.agent_id || data.agentId || process.env.QCET_AGENT_ID || '';
-  const agentType = data.agent_type || data.agentType || process.env.QCET_AGENT_TYPE || '';
-  const agentRole = data.agent_role || data.agentRole || process.env.QCET_AGENT_ROLE || '';
-  const subagentLabel = data.subagent_label || data.subagentLabel || data.label || '';
-
   // 1. Prohibit read-only agents from writing or editing
-  if (isReadOnlyAgent(agentType, agentId, agentRole, subagentLabel)) {
+  if (readOnly) {
     block(
       `Agent '${agentType || agentId || subagentLabel}' has a read-only role. Write and Edit tools are prohibited.`
     );

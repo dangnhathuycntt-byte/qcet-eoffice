@@ -16,6 +16,9 @@ const {
   evaluateDeterministicReleaseGate,
   buildRunTelemetry,
   validateResearchEscalation,
+  createConcurrencyLimiter,
+  selectIntegrationReviewDimensionIds,
+  computeCriticalPathDurationMs,
 } = sandbox;
 
 test('workflow-executor: shouldIsolateShard adheres to isolationConfig modes', () => {
@@ -163,4 +166,99 @@ test('workflow-executor: validateResearchEscalation rejects local codebase queri
   );
   assert.equal(accepted.allowed, true);
   assert.equal(accepted.questions.length, 1);
+});
+
+
+test('workflow-executor: lowercase high integration severity blocks release', () => {
+  const gate = evaluateDeterministicReleaseGate({
+    manifest: { requirements: [{ id: 'REQ-1' }] },
+    allShardResults: [
+      { shard: { id: 's1', requirements: ['REQ-1'] }, lastVerification: { verdict: 'pass', issues: [] } },
+    ],
+    integrationSynthesis: {
+      findings: [
+        { id: 'INT-1', severity: 'high', category: 'contracts', file: 'src/a.ts', evidence: 'broken', impact: 'runtime', recommendedFix: 'fix' },
+      ],
+    },
+    integrationRepair: null,
+    validation: { status: 'passed', checks: [] },
+    finalVerdict: { status: 'READY' },
+  });
+
+  assert.equal(gate.status, 'BLOCKED');
+  assert.ok(gate.blockers.some((b: string) => b.includes('critical/high integration defect')));
+});
+
+test('workflow-executor: concurrency limiter caps simultaneous agent work', async () => {
+  const limit = createConcurrencyLimiter(2);
+  let active = 0;
+  let peak = 0;
+  const tasks = Array.from({ length: 6 }, (_, i) =>
+    limit(async () => {
+      active += 1;
+      peak = Math.max(peak, active);
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      active -= 1;
+      return i;
+    })
+  );
+  const results = await Promise.all(tasks);
+  assert.deepEqual(results, [0, 1, 2, 3, 4, 5]);
+  assert.equal(peak, 2);
+});
+
+test('workflow-executor: buildRunTelemetry preserves measured scheduler timings', () => {
+  const telemetry = buildRunTelemetry({
+    planPath: 'test-plan.md',
+    manifest: { requirements: [], shards: [] },
+    allShardResults: [],
+    integrationSynthesis: { findings: [] },
+    validation: { status: 'passed', checks: [] },
+    finalVerdict: { status: 'READY' },
+    wallClockMs: 1500,
+    calibrationDurationMs: 200,
+    timeToFirstBuilderMs: 250,
+    criticalPathDurationMs: 900,
+    avgDependencyWaitMs: 80,
+    domain: 'ux',
+    executorVersion: 'v1.5',
+  });
+
+  assert.equal(telemetry.run.metrics.speed.timeToFirstBuilderMs, 250);
+  assert.equal(telemetry.run.metrics.speed.criticalPathDurationMs, 900);
+  assert.equal(telemetry.run.metrics.speed.avgDependencyWaitMs, 80);
+  assert.equal(telemetry.run.domain, 'ux');
+  assert.equal(telemetry.run.executorVersion, 'v1.5');
+});
+
+test('workflow-executor: integration review dimensions adapt to risk', () => {
+  assert.equal(
+    Array.from(selectIntegrationReviewDimensionIds([
+      { id: 's1', risk: 'low', changedFiles: ['src/ui/a.tsx'] },
+      { id: 's2', risk: 'low', changedFiles: ['src/ui/b.tsx'] },
+    ])).join(','),
+    'contracts,regression'
+  );
+
+  assert.equal(
+    Array.from(selectIntegrationReviewDimensionIds([
+      { id: 's1', risk: 'critical', changedFiles: ['src/server/auth/session.ts'] },
+    ])).join(','),
+    'contracts,authorization,semantics,regression'
+  );
+});
+
+test('workflow-executor: critical path sums the longest dependency chain', () => {
+  const duration = computeCriticalPathDurationMs(
+    {
+      shards: [
+        { id: 'a', dependencies: [] },
+        { id: 'b', dependencies: ['a'] },
+        { id: 'c', dependencies: ['a'] },
+        { id: 'd', dependencies: ['b', 'c'] },
+      ],
+    },
+    { a: 100, b: 200, c: 500, d: 50 }
+  );
+  assert.equal(duration, 650);
 });
