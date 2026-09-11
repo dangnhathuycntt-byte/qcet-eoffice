@@ -274,31 +274,32 @@ test('workflow-executor: normalizeBudgetConfig resolves presets and clamps limit
   assert.equal(high.profile, 'high');
   assert.equal(high.maxConcurrentAgents, 8);
   assert.equal(high.maxAgents, 128);
-  assert.deepEqual({ ...high.laneLimits }, { read: 3, write: 3, verify: 2, gitControl: 1 });
+  assert.equal('laneLimits' in high, false, 'laneLimits must be removed in Lean V2');
 
   // Preset 'medium'
   const medium = normalizeBudgetConfig('medium');
   assert.equal(medium.profile, 'medium');
   assert.equal(medium.maxConcurrentAgents, 6);
   assert.equal(medium.maxAgents, 72);
+  assert.equal('laneLimits' in medium, false, 'laneLimits must be removed in Lean V2');
 
   // Preset 'low'
   const low = normalizeBudgetConfig('low');
   assert.equal(low.profile, 'low');
   assert.equal(low.maxConcurrentAgents, 4);
   assert.equal(low.maxAgents, 40);
+  assert.equal('laneLimits' in low, false, 'laneLimits must be removed in Lean V2');
 
   // Object overrides
   const overridden = normalizeBudgetConfig({
     profile: 'high',
     maxConcurrentAgents: 10,
     maxAgents: 200,
-    laneLimits: { read: 4, write: 4, verify: 3, gitControl: 1 },
   });
   assert.equal(overridden.profile, 'high');
   assert.equal(overridden.maxConcurrentAgents, 10);
   assert.equal(overridden.maxAgents, 200);
-  assert.equal(overridden.laneLimits.read, 4);
+  assert.equal('laneLimits' in overridden, false, 'laneLimits must be removed in Lean V2');
 
   // Clamping concurrency: 99 clamps to 16
   const clampedHigh = normalizeBudgetConfig({ maxConcurrentAgents: 99 });
@@ -307,16 +308,6 @@ test('workflow-executor: normalizeBudgetConfig resolves presets and clamps limit
   // Clamping agents: 5000 clamps to 1000
   const clampedAgents = normalizeBudgetConfig({ maxAgents: 5000 });
   assert.equal(clampedAgents.maxAgents, 1000);
-
-  // Lane clamping: every lane clamped to 1..maxConcurrentAgents
-  const clampedLanes = normalizeBudgetConfig({
-    maxConcurrentAgents: 4,
-    laneLimits: { read: 10, write: 0, verify: 5, gitControl: 0 },
-  });
-  assert.equal(clampedLanes.laneLimits.read, 4);
-  assert.equal(clampedLanes.laneLimits.write, 1);
-  assert.equal(clampedLanes.laneLimits.verify, 4);
-  assert.equal(clampedLanes.laneLimits.gitControl, 1);
 
   // Unknown profile 'turbo' throws
   assert.throws(() => {

@@ -1901,9 +1901,9 @@ Return structured reconciliation evidence adhering strictly to schema.`;
 // -----------------------------------------------------------------------------
 
 export const BUDGET_PROFILES = {
-  low:    { maxConcurrentAgents: 4, maxAgents: 40,  laneLimits: { read: 2, write: 1, verify: 1, gitControl: 1 } },
-  medium: { maxConcurrentAgents: 6, maxAgents: 72,  laneLimits: { read: 2, write: 2, verify: 2, gitControl: 1 } },
-  high:   { maxConcurrentAgents: 8, maxAgents: 128, laneLimits: { read: 3, write: 3, verify: 2, gitControl: 1 } },
+  low:    { maxConcurrentAgents: 4, maxAgents: 40 },
+  medium: { maxConcurrentAgents: 6, maxAgents: 72 },
+  high:   { maxConcurrentAgents: 8, maxAgents: 128 },
 };
 
 export const FAILURE_REASONS = new Set([
@@ -1958,29 +1958,10 @@ export function normalizeBudgetConfig(input) {
   }
   maxAgents = Math.min(1000, Math.max(1, Math.floor(maxAgents)));
 
-  const baseLanes = base.laneLimits;
-  const inputLanes = (overrides.laneLimits && typeof overrides.laneLimits === 'object')
-    ? overrides.laneLimits
-    : {};
-
-  function clampLane(val, fallback) {
-    const n = Number(val ?? fallback);
-    if (!Number.isFinite(n) || n < 1) return 1;
-    return Math.min(maxConcurrent, Math.max(1, Math.floor(n)));
-  }
-
-  const laneLimits = {
-    read: clampLane(inputLanes.read, baseLanes.read),
-    write: clampLane(inputLanes.write, baseLanes.write),
-    verify: clampLane(inputLanes.verify, baseLanes.verify),
-    gitControl: clampLane(inputLanes.gitControl, baseLanes.gitControl),
-  };
-
   return {
     profile,
     maxConcurrentAgents: maxConcurrent,
     maxAgents,
-    laneLimits,
   };
 }
 
@@ -2096,7 +2077,6 @@ const dependencyWaitDurationsMs = [];
 const normalizedBudget = normalizeBudgetConfig(budgetConfig);
 const maxConcurrentAgents = normalizedBudget.maxConcurrentAgents;
 const maxAgents = normalizedBudget.maxAgents;
-const laneLimits = normalizedBudget.laneLimits;
 const runWithAgentSlot = createConcurrencyLimiter(maxConcurrentAgents);
 
 const rawAgent = agent;
