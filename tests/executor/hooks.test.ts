@@ -4,6 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import runState from '../../.claude/hooks/qcet-run-state.cjs';
+
+const { getRunDir, writeWitness } = runState;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,6 +62,7 @@ test('pre-tool-use-ownership-guard: skeptic agent cannot call Edit (exit 2 block
 
 test('pre-tool-use-ownership-guard: builder with subagent label resolves shard and allows owned file', () => {
   const runId = 'test-run-' + Date.now();
+  const runDir = getRunDir(rootDir, runId);
   const stateFile = path.join('/tmp', `qcet-active-shards-${runId}.json`);
   const activeShards = [
     {
@@ -68,6 +72,10 @@ test('pre-tool-use-ownership-guard: builder with subagent label resolves shard a
     },
   ];
   fs.writeFileSync(stateFile, JSON.stringify(activeShards), 'utf8');
+  writeWitness(runDir, 'shards/shard-auth/worktree.json', {
+    root: rootDir,
+    shardId: 'shard-auth',
+  });
 
   try {
     const res = runHook(
@@ -83,11 +91,13 @@ test('pre-tool-use-ownership-guard: builder with subagent label resolves shard a
     assert.equal(res.status, 0);
   } finally {
     if (fs.existsSync(stateFile)) fs.unlinkSync(stateFile);
+    if (fs.existsSync(runDir)) fs.rmSync(runDir, { recursive: true, force: true });
   }
 });
 
 test('pre-tool-use-ownership-guard: builder modifying file outside owns is blocked (exit 2)', () => {
   const runId = 'test-run-' + Date.now();
+  const runDir = getRunDir(rootDir, runId);
   const stateFile = path.join('/tmp', `qcet-active-shards-${runId}.json`);
   const activeShards = [
     {
@@ -97,6 +107,10 @@ test('pre-tool-use-ownership-guard: builder modifying file outside owns is block
     },
   ];
   fs.writeFileSync(stateFile, JSON.stringify(activeShards), 'utf8');
+  writeWitness(runDir, 'shards/shard-auth/worktree.json', {
+    root: rootDir,
+    shardId: 'shard-auth',
+  });
 
   try {
     const res = runHook(
@@ -113,11 +127,13 @@ test('pre-tool-use-ownership-guard: builder modifying file outside owns is block
     assert.ok(res.stderr.includes('outside assigned ownership scope'));
   } finally {
     if (fs.existsSync(stateFile)) fs.unlinkSync(stateFile);
+    if (fs.existsSync(runDir)) fs.rmSync(runDir, { recursive: true, force: true });
   }
 });
 
 test('pre-tool-use-ownership-guard: builder modifying file matching antiOwns is blocked (exit 2)', () => {
   const runId = 'test-run-' + Date.now();
+  const runDir = getRunDir(rootDir, runId);
   const stateFile = path.join('/tmp', `qcet-active-shards-${runId}.json`);
   const activeShards = [
     {
@@ -127,6 +143,10 @@ test('pre-tool-use-ownership-guard: builder modifying file matching antiOwns is 
     },
   ];
   fs.writeFileSync(stateFile, JSON.stringify(activeShards), 'utf8');
+  writeWitness(runDir, 'shards/shard-auth/worktree.json', {
+    root: rootDir,
+    shardId: 'shard-auth',
+  });
 
   try {
     const res = runHook(
@@ -143,6 +163,7 @@ test('pre-tool-use-ownership-guard: builder modifying file matching antiOwns is 
     assert.ok(res.stderr.includes('violates antiOwns constraint'));
   } finally {
     if (fs.existsSync(stateFile)) fs.unlinkSync(stateFile);
+    if (fs.existsSync(runDir)) fs.rmSync(runDir, { recursive: true, force: true });
   }
 });
 

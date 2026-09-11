@@ -47,6 +47,13 @@ const {
   toRepoRelativePath,
 } = require('./path-matcher.cjs');
 
+const {
+  getRunDir,
+  readJson,
+  claimFile,
+} = require('./qcet-run-state.cjs');
+const { spawnSync } = require('child_process');
+
 // -----------------------------------------------------------------------------
 // READ-ONLY AGENT DETECTION
 // -----------------------------------------------------------------------------
@@ -212,6 +219,14 @@ function resolveActiveShard(agentId, agentType, subagentLabel) {
       }
       if ((agentId || subagentLabel) && stateData.activeShards.length === 1) return stateData.activeShards[0];
     }
+    // Nested shards array (manifest format)
+    if (Array.isArray(stateData.shards)) {
+      if (candidateIds.length > 0) {
+        const match = stateData.shards.find(matchesShard);
+        if (match) return match;
+      }
+      if ((agentId || subagentLabel) && stateData.shards.length === 1) return stateData.shards[0];
+    }
     // Single shard object with 'owns'
     if (Array.isArray(stateData.owns)) {
       if ((agentId || subagentLabel) && (candidateIds.length === 0 || matchesShard(stateData))) {
@@ -221,6 +236,61 @@ function resolveActiveShard(agentId, agentType, subagentLabel) {
   }
 
   return null;
+}
+
+// -----------------------------------------------------------------------------
+// WORKTREE IDENTITY & REPO VERIFICATION
+// -----------------------------------------------------------------------------
+function verifyWorktreeIdentity(runDir, shard, explicitCwd) {
+  const shardId = (shard && (shard.id || shard.shardId || shard.agentId)) || process.env.QCET_SHARD_ID || '';
+  if (!shardId) {
+    block('WORKTREE_INVALID: missing required shard identity during executor run');
+  }
+
+  const witnessPath = path.join(runDir, 'shards', shardId, 'worktree.json');
+  if (!fs.existsSync(witnessPath)) {
+    block(`WORKTREE_INVALID: missing required worktree witness for shard '${shardId}'`);
+  }
+
+  const witness = readJson(witnessPath);
+  if (!witness || !witness.root) {
+    block(`WORKTREE_INVALID: invalid worktree witness for shard '${shardId}'`);
+  }
+
+  const effectiveCwd = explicitCwd || process.cwd();
+  const gitRootRes = spawnSync('git', ['rev-parse', '--show-toplevel'], {
+    cwd: effectiveCwd,
+    encoding: 'utf8',
+  });
+  if (gitRootRes.status !== 0 || !gitRootRes.stdout) {
+    block(`WORKTREE_INVALID: unable to resolve git root for '${effectiveCwd}'`);
+  }
+  const actualGitRoot = gitRootRes.stdout.trim();
+
+  function resolveReal(p) {
+    try {
+      return fs.realpathSync(path.resolve(p));
+    } catch (_) {
+      return path.resolve(p);
+    }
+  }
+
+  if (resolveReal(actualGitRoot) !== resolveReal(witness.root)) {
+    block(`WORKTREE_INVALID: cwd root mismatch (expected '${witness.root}', got '${actualGitRoot}')`);
+  }
+
+  if (witness.baseCommit || witness.baseRef) {
+    const base = witness.baseCommit || witness.baseRef;
+    const ancestorRes = spawnSync('git', ['merge-base', '--is-ancestor', base, 'HEAD'], {
+      cwd: effectiveCwd,
+      encoding: 'utf8',
+    });
+    if (ancestorRes.status !== 0) {
+      block(`WORKTREE_INVALID: base commit ancestry mismatch for shard '${shardId}'`);
+    }
+  }
+
+  return { shardId, witness };
 }
 
 // -----------------------------------------------------------------------------
@@ -339,6 +409,13 @@ function main() {
     .filter(Boolean)
     .some((value) => /builder|:implement|:repair/i.test(String(value)));
 
+  const explicitCwd =
+    data.cwd ||
+    toolInput.cwd ||
+    (data.execution_context && data.execution_context.cwd) ||
+    process.env.QCET_WORKTREE_PATH ||
+    '';
+
   if (isBashTool) {
     const command = toolInput.command || '';
     if (readOnly) {
@@ -350,6 +427,12 @@ function main() {
       allow();
     }
     if (builder && isMutatingShellCommand(command)) {
+      if (process.env.QCET_RUN_ID) {
+        const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+        const runDir = getRunDir(projectDir, process.env.QCET_RUN_ID);
+        const shard = resolveActiveShard(agentId, agentType, subagentLabel);
+        verifyWorktreeIdentity(runDir, shard, explicitCwd);
+      }
       block(
         `Agent '${agentType || agentId || subagentLabel}' attempted shell file mutation. Use Write/Edit so shard ownership can be enforced deterministically.`
       );
@@ -378,6 +461,17 @@ function main() {
   // 2. Resolve active shard ownership
   const shard = resolveActiveShard(agentId, agentType, subagentLabel);
 
+  // 3. Executor run worktree and identity enforcement
+  let runDir = null;
+  let activeShardId = '';
+
+  if (process.env.QCET_RUN_ID) {
+    const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+    runDir = getRunDir(projectDir, process.env.QCET_RUN_ID);
+    const verified = verifyWorktreeIdentity(runDir, shard, explicitCwd);
+    activeShardId = verified.shardId;
+  }
+
   // Fail-closed invariant: builder agents MUST have an active shard ownership context
   if (!shard) {
     if (
@@ -393,28 +487,22 @@ function main() {
     allow();
   }
 
-  const explicitCwd =
-    data.cwd ||
-    toolInput.cwd ||
-    (data.execution_context && data.execution_context.cwd) ||
-    process.env.QCET_WORKTREE_PATH ||
-    '';
   const targetFile = toRepoRelativePath(rawPath, explicitCwd);
   if (!targetFile) {
     allow();
   }
 
-  // 3. Check antiOwns violations
+  // 4. Check antiOwns violations
   const antiOwns = Array.isArray(shard.antiOwns) ? shard.antiOwns : [];
   for (const pattern of antiOwns) {
-    if (matchesOwnership(targetFile, pattern)) {
+    if (matchesOwnership(targetFile, pattern, explicitCwd)) {
       block(
         `Modification of '${targetFile}' is blocked. File violates antiOwns constraint '${pattern}' for shard '${shard.id || 'current'}'.`
       );
     }
   }
 
-  // 4. Check owns scope (fail-closed: empty owns prohibits file modification)
+  // 5. Check owns scope (fail-closed: empty owns prohibits file modification)
   const owns = Array.isArray(shard.owns) ? shard.owns : [];
   if (owns.length === 0) {
     block(
@@ -424,7 +512,7 @@ function main() {
 
   let hasOwnership = false;
   for (const pattern of owns) {
-    if (matchesOwnership(targetFile, pattern)) {
+    if (matchesOwnership(targetFile, pattern, explicitCwd)) {
       hasOwnership = true;
       break;
     }
@@ -434,6 +522,16 @@ function main() {
     block(
       `Modification of '${targetFile}' is blocked. File is outside assigned ownership scope for shard '${shard.id || 'current'}'. Allowed paths: [${owns.join(', ')}].`
     );
+  }
+
+  // 6. Atomic file claim lock in executor run
+  if (runDir && activeShardId) {
+    const claimRes = claimFile(runDir, activeShardId, targetFile);
+    if (!claimRes.success) {
+      block(
+        `Modification of '${targetFile}' blocked: file is already claimed by shard '${claimRes.ownerShardId}'.`
+      );
+    }
   }
 
   // All ownership and lifecycle constraints satisfied
