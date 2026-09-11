@@ -155,46 +155,54 @@ test('verifyTreatmentFidelity validates Arm A, Arm B, and Arm C invariants', () 
     assert.equal(resAContaminated.reason, 'HARNESS_LEAKAGE');
     fs.rmSync(path.join(tempDir, '.claude'), { recursive: true, force: true });
 
-    // Arm B without V1.5 evidence -> invalid (HARNESS_NOT_INVOKED)
+    // Helper: write a minimal transcript with a valid Skill invocation for qcet-plan-executor.
+    // Tier-1 requires a JSONL file with a tool_use block: name="Skill", input.skill contains "qcet-plan-executor".
+    const transcriptPath = path.join(tempDir, 'transcript.jsonl');
+    const skillInvocationLine = JSON.stringify({
+      content: [{ type: 'tool_use', name: 'Skill', input: { skill: 'qcet-plan-executor' } }]
+    });
+    fs.writeFileSync(transcriptPath, skillInvocationLine + '\n');
+
+    // Arm B without V1.5 evidence and no transcript -> invalid (HARNESS_NOT_INVOKED)
     const resBMissing = verifyTreatmentFidelity('B', tempDir);
     assert.equal(resBMissing.valid, false);
     assert.equal(resBMissing.reason, 'HARNESS_NOT_INVOKED');
 
-    // Arm B with run-ledger.jsonl -> valid
+    // Arm B with run-ledger.jsonl + valid transcript -> valid (both tiers satisfied)
     fs.mkdirSync(path.join(tempDir, '.claude', 'dist'), { recursive: true });
     fs.writeFileSync(path.join(tempDir, '.claude', 'dist', 'run-ledger.jsonl'), '{"type":"run_start"}\n');
-    const resBLedgerValid = verifyTreatmentFidelity('B', tempDir);
+    const resBLedgerValid = verifyTreatmentFidelity({ arm: 'B', trialDir: tempDir, transcriptPath });
     assert.equal(resBLedgerValid.valid, true);
     fs.rmSync(path.join(tempDir, '.claude'), { recursive: true, force: true });
 
-    // Arm B with run-telemetry.json -> valid
+    // Arm B with run-telemetry.json + valid transcript -> valid (both tiers satisfied)
     fs.mkdirSync(path.join(tempDir, '.claude', 'executor-evals'), { recursive: true });
     fs.writeFileSync(path.join(tempDir, '.claude', 'executor-evals', 'run-telemetry.json'), JSON.stringify({
       verdict: 'READY',
       engineVersion: '1.5.0'
     }));
-    const resBValid = verifyTreatmentFidelity('B', tempDir);
+    const resBValid = verifyTreatmentFidelity({ arm: 'B', trialDir: tempDir, transcriptPath });
     assert.equal(resBValid.valid, true);
     fs.rmSync(path.join(tempDir, '.claude'), { recursive: true, force: true });
 
-    // Arm C without gate-verdict.json or ledger -> invalid (HARNESS_NOT_INVOKED)
+    // Arm C without gate-verdict.json or ledger and no transcript -> invalid (HARNESS_NOT_INVOKED)
     const resCMissing = verifyTreatmentFidelity('C', tempDir);
     assert.equal(resCMissing.valid, false);
     assert.equal(resCMissing.reason, 'HARNESS_NOT_INVOKED');
 
-    // Arm C with run-ledger.jsonl -> valid
+    // Arm C with run-ledger.jsonl + valid transcript -> valid (both tiers satisfied)
     fs.mkdirSync(path.join(tempDir, '.claude', 'dist'), { recursive: true });
     fs.writeFileSync(path.join(tempDir, '.claude', 'dist', 'run-ledger.jsonl'), '{"type":"run_start"}\n');
-    const resCLedgerValid = verifyTreatmentFidelity('C', tempDir);
+    const resCLedgerValid = verifyTreatmentFidelity({ arm: 'C', trialDir: tempDir, transcriptPath });
     assert.equal(resCLedgerValid.valid, true);
     fs.rmSync(path.join(tempDir, '.claude'), { recursive: true, force: true });
 
-    // Arm C with gate-verdict.json -> valid
+    // Arm C with gate-verdict.json + valid transcript -> valid (both tiers satisfied)
     fs.writeFileSync(path.join(tempDir, 'gate-verdict.json'), JSON.stringify({
       verdict: 'READY',
       runtimeFingerprint: 'qcet-lean-v2-native'
     }));
-    const resCValid = verifyTreatmentFidelity('C', tempDir);
+    const resCValid = verifyTreatmentFidelity({ arm: 'C', trialDir: tempDir, transcriptPath });
     assert.equal(resCValid.valid, true);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
