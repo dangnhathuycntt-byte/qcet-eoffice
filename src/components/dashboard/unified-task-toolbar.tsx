@@ -644,11 +644,11 @@ export function UnifiedTaskToolbar({
       )}
     >
       {/* ==================================================================== */}
-      {/* ROW 1: Scope Switcher, Search Input, and Primary Action Button       */}
+      {/* ROW 1: Scope Switcher + Primary Action Button (VIEW-FIRST)           */}
       {/* ==================================================================== */}
       <div
         data-slot="unified-task-toolbar-row-1"
-        className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between"
+        className="flex items-center justify-between gap-2"
       >
         {/* Left: Scope Switcher (Only Authorized Scopes) */}
         <div
@@ -701,45 +701,6 @@ export function UnifiedTaskToolbar({
           })}
         </div>
 
-        {/* Center: Search Input Bar with "/" Keyboard Shortcut (min 44px on mobile) */}
-        <div className="relative flex-1 min-w-[200px] max-w-xl">
-          <Search
-            className="size-4 sm:size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
-            strokeWidth={1.5}
-          />
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder}
-            aria-label="Tìm nhiệm vụ"
-            className="h-11 sm:h-9 min-h-[44px] sm:min-h-[36px] w-full rounded-xl border border-border/80 bg-background pl-9 pr-14 text-xs sm:text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs transition-colors"
-          />
-
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-            {loading && (
-              <Loader2
-                className="size-3.5 animate-spin text-muted-foreground"
-                aria-label="Đang tải dữ liệu"
-              />
-            )}
-            {searchQuery ? (
-              <button
-                type="button"
-                onClick={() => onSearchChange("")}
-                aria-label="Xóa từ khóa tìm kiếm"
-                className="min-h-[36px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground p-1 sm:p-0.5 rounded cursor-pointer touch-manipulation"
-              >
-                <X className="size-4 sm:size-3.5" strokeWidth={1.5} />
-              </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono font-medium text-muted-foreground bg-muted border border-border/80 rounded select-none pointer-events-none">
-                /
-              </kbd>
-            )}
-          </div>
-        </div>
 
         {/* Right: Primary Action Button */}
         {canCreateTask && handlePrimaryAction && (
@@ -836,112 +797,68 @@ export function UnifiedTaskToolbar({
           </div>
         </div>
       )}
-
       {/* ==================================================================== */}
-      {/* ROW 2: Smart Filter Pills + Controls (Popover, View, Density)        */}
+      {/* ROW 2: View Selector, Search, Filter, Display (VIEW-FIRST)           */}
       {/* ==================================================================== */}
       <div
         data-slot="unified-task-toolbar-row-2"
-        className="flex flex-col gap-2 pt-1 border-t border-border/50 sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/50"
       >
-        {/* Left: Smart Filter Pills */}
-        <div
-          className="inline-flex items-center gap-1 overflow-x-auto overscroll-x-contain py-0.5 scrollbar-none"
-          role="tablist"
-          aria-label="Lọc nhanh trạng thái nhiệm vụ"
-        >
-          {smartFilterPills.map((pill) => {
-            const isActive =
-              activeTab === pill.id ||
-              (pill.id === "all" &&
-                (!activeTab || activeTab === "all" || activeTab === "my" || activeTab === "my_tasks")) ||
-              (pill.id === "waiting_approval" &&
-                (activeTab === "review" ||
-                  activeTab === "waiting_approval" ||
-                  activeTab === "my_pending_approval")) ||
-              (pill.id === "pending_submission" &&
-                (activeTab === "pending_submission" ||
-                  activeTab === "my_pending_submission"));
+        {/* Leftmost: Saved View Selector — primary work navigation trigger */}
+        {showSavedViews && (
+          <SavedViewsSelector
+            user={user}
+            activeViewId={activeViewId}
+            onSelectView={onSelectView}
+            currentCriteria={effectiveCriteria}
+            onSaveView={onSaveView}
+            onDeleteView={onDeleteView}
+            onRenameView={onRenameView}
+            defaultLabel="Việc cần tôi xử lý"
+          />
+        )}
 
-            return (
+        {/* Center: Search Input (flex-1, min-width 160px) */}
+        <div className="relative flex-1 min-w-[160px]">
+          <Search
+            className="size-4 sm:size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+            strokeWidth={1.5}
+          />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label="Tìm nhiệm vụ"
+            className="h-11 sm:h-9 min-h-[44px] sm:min-h-[36px] w-full rounded-xl border border-border/80 bg-background pl-9 pr-10 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs transition-colors"
+          />
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            {loading && (
+              <Loader2
+                className="size-3.5 animate-spin text-muted-foreground"
+                aria-label="Đang tải dữ liệu"
+              />
+            )}
+            {searchQuery ? (
               <button
-                key={pill.id}
                 type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => onTabChange?.(pill.id)}
-                className={cn(
-                  "inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-1.5 rounded-xl px-3 sm:px-2.5 text-xs font-medium transition-all cursor-pointer select-none whitespace-nowrap touch-manipulation active:scale-95",
-                  isActive
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/60"
-                )}
+                onClick={() => onSearchChange("")}
+                aria-label="Xóa từ khóa tìm kiếm"
+                className="min-h-[36px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground p-1 rounded cursor-pointer touch-manipulation"
               >
-                <span>{pill.label}</span>
-                {typeof pill.count === "number" && (
-                  <span
-                    className={cn(
-                      "inline-flex items-center justify-center rounded-full px-1.5 py-0.2 text-xs font-mono tabular-nums font-semibold",
-                      isActive
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : "bg-card text-muted-foreground border border-border/50"
-                    )}
-                  >
-                    {pill.count}
-                  </span>
-                )}
+                <X className="size-4 sm:size-3.5" strokeWidth={1.5} />
               </button>
-            );
-          })}
+            ) : (
+              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono font-medium text-muted-foreground bg-muted border border-border/80 rounded select-none pointer-events-none">
+                /
+              </kbd>
+            )}
+          </div>
         </div>
 
-        {/* Right: Advanced Filter Popover + View Switcher + Density Selector */}
-        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 relative">
-          {/* Quick Sort button for mobile */}
-          {onSort && (
-            <button
-              type="button"
-              onClick={() => {
-                const nextSort =
-                  sortField === "dueDate"
-                    ? "title"
-                    : sortField === "title"
-                    ? "progress"
-                    : "dueDate";
-                onSort(nextSort);
-              }}
-              className="sm:hidden inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-border/80 bg-background px-3 text-xs font-medium text-foreground hover:bg-muted/50 cursor-pointer shadow-2xs touch-manipulation active:scale-95"
-              aria-label="Sắp xếp danh sách"
-            >
-              <ArrowUpDown className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-              <span>
-                {sortField === "dueDate"
-                  ? "Hạn"
-                  : sortField === "title"
-                  ? "Tên"
-                  : sortField === "progress"
-                  ? "Tiến độ"
-                  : "Sắp xếp"}
-              </span>
-              <span className="font-mono text-xs text-muted-foreground">
-                {sortDirection === "asc" ? "▲" : "▼"}
-              </span>
-            </button>
-          )}
-
-          {/* Saved Views Selector (Role Presets & Custom Views) */}
-          {showSavedViews && (
-            <SavedViewsSelector
-              user={user}
-              activeViewId={activeViewId}
-              onSelectView={onSelectView}
-              currentCriteria={effectiveCriteria}
-              onSaveView={onSaveView}
-              onDeleteView={onDeleteView}
-              onRenameView={onRenameView}
-            />
-          )}
-
+        {/* Right: Filter + Display controls */}
+        <div className="flex items-center gap-2 shrink-0 relative">
           {/* 1. Advanced Filter Popover Trigger */}
           <div className="relative" ref={popoverRef}>
             <button
