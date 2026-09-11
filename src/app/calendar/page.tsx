@@ -884,6 +884,7 @@ function CalendarRouteContent() {
           </div>
         </div>
 
+        {/* Global Actions: Refresh (Single Global Primary Action + Tạo is in Control Row 2) */}
         <Button
           variant="outline"
           size="sm"
@@ -897,6 +898,7 @@ function CalendarRouteContent() {
         </Button>
       </div>
 
+      {/* Unified Calendar Chrome */}
       <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-3 sm:p-4 shadow-card" data-slot="calendar-controls-container">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3" data-slot="calendar-controls-row-1">
           <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex items-center rounded-xl border border-border/70 bg-secondary/50 p-0.5 shrink-0 self-start" data-slot="calendar-scope-switcher">
@@ -1081,6 +1083,7 @@ function CalendarRouteContent() {
             </div>
           </div>
 
+          {/* Right: Single Global Primary Action (+ Tạo Dropdown) */}
           <div className="relative shrink-0 self-end sm:self-auto" ref={createDropdownRef}>
             <Button size="sm" onClick={() => setIsCreateDropdownOpen((previous) => !previous)} aria-expanded={isCreateDropdownOpen} aria-haspopup="true" className="h-9 gap-1.5 px-3.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs rounded-xl">
               <Plus className="size-4" strokeWidth={1.5} />
@@ -1103,6 +1106,7 @@ function CalendarRouteContent() {
         </div>
       </div>
 
+      {/* Calendar Content: Month Grid or Agenda List */}
       {error && (
         <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 flex items-center justify-between gap-3 text-destructive">
           <div className="flex items-center gap-2 text-xs">

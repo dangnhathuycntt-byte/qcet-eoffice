@@ -472,7 +472,7 @@ export function CalendarMonthGrid({
                 </div>
 
                 {summary.total > 0 && (
-                  <div className="mt-1.5 min-h-[18px] flex items-center gap-2 overflow-hidden whitespace-nowrap text-[11px] leading-none">
+                  <div className="mt-1.5 min-h-[18px] flex items-center gap-2 overflow-hidden whitespace-nowrap text-xs leading-none">
                     {summary.overdue > 0 && (
                       <span className="inline-flex items-center gap-1 font-semibold text-rose-700" title={`${summary.overdue} nhiệm vụ quá hạn`}>
                         <AlertTriangle className="size-3" aria-hidden="true" />
