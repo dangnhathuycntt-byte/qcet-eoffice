@@ -1,0 +1,625 @@
+{
+  "benchmarkId": "bench-1789118944630",
+  "environment": {
+    "timestamp": "2026-09-11T09:29:04.789Z",
+    "platform": "darwin",
+    "arch": "arm64",
+    "osVersion": "15.7.3",
+    "osBuild": "24G419",
+    "cpuCount": 12,
+    "nodeVersion": "v22.23.2",
+    "npmVersion": "10.9.8",
+    "gitSha": "3c72491b779ef8063b7be283e7601b90cacdbb81",
+    "gitBranch": "refactor/qcet-executor-lean-v2",
+    "claudeVersion": "2.1.268 (Claude Code)",
+    "claudeCodeVersion": "2.1.268 (Claude Code)",
+    "model": "claude-combo[1m]",
+    "effort": "high",
+    "workloadBaseSha": "3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c",
+    "workloadBaseTag": "benchmark/workload-base-3f0e5320",
+    "executorBSha": "3f5e804c5bf55c88634535971d605f40b1b8713d",
+    "executorCSha": "45453bb8d6a3db3ca974495c7b3b36187004c503",
+    "evalHarnessSha": "3c72491b779ef8063b7be283e7601b90cacdbb81"
+  },
+  "options": {
+    "dryRun": false,
+    "arms": [
+      "A",
+      "B",
+      "C"
+    ],
+    "tasks": [
+      "small-01"
+    ],
+    "trials": 1,
+    "keepTrials": true,
+    "workloadBaseSha": "3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c",
+    "harnessShaB": "3f5e804c5bf55c88634535971d605f40b1b8713d",
+    "harnessShaC": "45453bb8d6a3db3ca974495c7b3b36187004c503",
+    "outputDir": "/Users/dnhhuy/Projects/QCET/QCET-Executor-Recovery/benchmarks/live/results",
+    "model": "claude-combo[1m]",
+    "effort": "high",
+    "taskTimeouts": {},
+    "customTimeoutMs": null,
+    "dangerouslySkipPermissions": false,
+    "skipPreflight": false
+  },
+  "summary": {
+    "timestamp": "2026-09-11T10:10:45.694Z",
+    "provenance": {
+      "workloadBaseSha": "3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c",
+      "workloadBaseTag": "benchmark/workload-base-3f0e5320",
+      "executorBSha": "3f5e804c5bf55c88634535971d605f40b1b8713d",
+      "executorCSha": "45453bb8d6a3db3ca974495c7b3b36187004c503",
+      "evalHarnessSha": "3c72491b779ef8063b7be283e7601b90cacdbb81",
+      "claudeVersion": "2.1.268 (Claude Code)",
+      "model": "claude-combo[1m]",
+      "effort": "high"
+    },
+    "armSummaries": {
+      "A": {
+        "arm": "A",
+        "totalTrials": 1,
+        "passedTrials": 0,
+        "passRate": 0,
+        "falseReadyCount": 0,
+        "harnessNotInvokedCount": 0,
+        "harnessLeakageCount": 0,
+        "invalidTrialsCount": 0,
+        "treatmentFidelityRate": 100,
+        "timeouts": 1,
+        "crashes": 1,
+        "escapedDefects": 6,
+        "ownershipViolations": 0,
+        "wallClockMs": {
+          "mean": 1200502,
+          "median": 1200502,
+          "q1": 1200502,
+          "q3": 1200502,
+          "iqr": 0
+        },
+        "tokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "inputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "outputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "cacheCreationInputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "cacheReadInputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "totalCostUsd": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        }
+      },
+      "B": {
+        "arm": "B",
+        "totalTrials": 1,
+        "passedTrials": 0,
+        "passRate": 0,
+        "falseReadyCount": 0,
+        "harnessNotInvokedCount": 1,
+        "harnessLeakageCount": 0,
+        "invalidTrialsCount": 1,
+        "treatmentFidelityRate": 0,
+        "timeouts": 0,
+        "crashes": 0,
+        "escapedDefects": 6,
+        "ownershipViolations": 0,
+        "wallClockMs": {
+          "mean": 1037019,
+          "median": 1037019,
+          "q1": 1037019,
+          "q3": 1037019,
+          "iqr": 0
+        },
+        "tokens": {
+          "mean": 14320781,
+          "median": 14320781,
+          "q1": 14320781,
+          "q3": 14320781,
+          "iqr": 0
+        },
+        "inputTokens": {
+          "mean": 7811716,
+          "median": 7811716,
+          "q1": 7811716,
+          "q3": 7811716,
+          "iqr": 0
+        },
+        "outputTokens": {
+          "mean": 85147,
+          "median": 85147,
+          "q1": 85147,
+          "q3": 85147,
+          "iqr": 0
+        },
+        "cacheCreationInputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "cacheReadInputTokens": {
+          "mean": 6423918,
+          "median": 6423918,
+          "q1": 6423918,
+          "q3": 6423918,
+          "iqr": 0
+        },
+        "totalCostUsd": {
+          "mean": 46,
+          "median": 46,
+          "q1": 46,
+          "q3": 46,
+          "iqr": 0
+        }
+      },
+      "C": {
+        "arm": "C",
+        "totalTrials": 1,
+        "passedTrials": 0,
+        "passRate": 0,
+        "falseReadyCount": 0,
+        "harnessNotInvokedCount": 1,
+        "harnessLeakageCount": 0,
+        "invalidTrialsCount": 1,
+        "treatmentFidelityRate": 0,
+        "timeouts": 0,
+        "crashes": 0,
+        "escapedDefects": 6,
+        "ownershipViolations": 0,
+        "wallClockMs": {
+          "mean": 245019,
+          "median": 245019,
+          "q1": 245019,
+          "q3": 245019,
+          "iqr": 0
+        },
+        "tokens": {
+          "mean": 2909342,
+          "median": 2909342,
+          "q1": 2909342,
+          "q3": 2909342,
+          "iqr": 0
+        },
+        "inputTokens": {
+          "mean": 1139076,
+          "median": 1139076,
+          "q1": 1139076,
+          "q3": 1139076,
+          "iqr": 0
+        },
+        "outputTokens": {
+          "mean": 35336,
+          "median": 35336,
+          "q1": 35336,
+          "q3": 35336,
+          "iqr": 0
+        },
+        "cacheCreationInputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "cacheReadInputTokens": {
+          "mean": 1734930,
+          "median": 1734930,
+          "q1": 1734930,
+          "q3": 1734930,
+          "iqr": 0
+        },
+        "totalCostUsd": {
+          "mean": 7,
+          "median": 7,
+          "q1": 7,
+          "q3": 7,
+          "iqr": 0
+        }
+      }
+    },
+    "taskSummaries": {
+      "small-01": {
+        "A": {
+          "task": "small-01",
+          "arm": "A",
+          "totalTrials": 1,
+          "passedTrials": 0,
+          "passRate": 0,
+          "falseReadyCount": 0,
+          "harnessNotInvokedCount": 0,
+          "harnessLeakageCount": 0,
+          "invalidTrialsCount": 0,
+          "treatmentFidelityRate": 100,
+          "timeouts": 1,
+          "crashes": 1,
+          "escapedDefects": 6,
+          "ownershipViolations": 0,
+          "wallClockMs": {
+            "mean": 1200502,
+            "median": 1200502,
+            "q1": 1200502,
+            "q3": 1200502,
+            "iqr": 0
+          },
+          "tokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "inputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "outputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "cacheCreationInputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "cacheReadInputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "totalCostUsd": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "B": {
+          "task": "small-01",
+          "arm": "B",
+          "totalTrials": 1,
+          "passedTrials": 0,
+          "passRate": 0,
+          "falseReadyCount": 0,
+          "harnessNotInvokedCount": 1,
+          "harnessLeakageCount": 0,
+          "invalidTrialsCount": 1,
+          "treatmentFidelityRate": 0,
+          "timeouts": 0,
+          "crashes": 0,
+          "escapedDefects": 6,
+          "ownershipViolations": 0,
+          "wallClockMs": {
+            "mean": 1037019,
+            "median": 1037019,
+            "q1": 1037019,
+            "q3": 1037019,
+            "iqr": 0
+          },
+          "tokens": {
+            "mean": 14320781,
+            "median": 14320781,
+            "q1": 14320781,
+            "q3": 14320781,
+            "iqr": 0
+          },
+          "inputTokens": {
+            "mean": 7811716,
+            "median": 7811716,
+            "q1": 7811716,
+            "q3": 7811716,
+            "iqr": 0
+          },
+          "outputTokens": {
+            "mean": 85147,
+            "median": 85147,
+            "q1": 85147,
+            "q3": 85147,
+            "iqr": 0
+          },
+          "cacheCreationInputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "cacheReadInputTokens": {
+            "mean": 6423918,
+            "median": 6423918,
+            "q1": 6423918,
+            "q3": 6423918,
+            "iqr": 0
+          },
+          "totalCostUsd": {
+            "mean": 46,
+            "median": 46,
+            "q1": 46,
+            "q3": 46,
+            "iqr": 0
+          }
+        },
+        "C": {
+          "task": "small-01",
+          "arm": "C",
+          "totalTrials": 1,
+          "passedTrials": 0,
+          "passRate": 0,
+          "falseReadyCount": 0,
+          "harnessNotInvokedCount": 1,
+          "harnessLeakageCount": 0,
+          "invalidTrialsCount": 1,
+          "treatmentFidelityRate": 0,
+          "timeouts": 0,
+          "crashes": 0,
+          "escapedDefects": 6,
+          "ownershipViolations": 0,
+          "wallClockMs": {
+            "mean": 245019,
+            "median": 245019,
+            "q1": 245019,
+            "q3": 245019,
+            "iqr": 0
+          },
+          "tokens": {
+            "mean": 2909342,
+            "median": 2909342,
+            "q1": 2909342,
+            "q3": 2909342,
+            "iqr": 0
+          },
+          "inputTokens": {
+            "mean": 1139076,
+            "median": 1139076,
+            "q1": 1139076,
+            "q3": 1139076,
+            "iqr": 0
+          },
+          "outputTokens": {
+            "mean": 35336,
+            "median": 35336,
+            "q1": 35336,
+            "q3": 35336,
+            "iqr": 0
+          },
+          "cacheCreationInputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "cacheReadInputTokens": {
+            "mean": 1734930,
+            "median": 1734930,
+            "q1": 1734930,
+            "q3": 1734930,
+            "iqr": 0
+          },
+          "totalCostUsd": {
+            "mean": 7,
+            "median": 7,
+            "q1": 7,
+            "q3": 7,
+            "iqr": 0
+          }
+        }
+      }
+    },
+    "comparisons": {
+      "speedupVsV15": 4.23,
+      "tokenRatioVsV15": 0.2,
+      "cacheReadTokenRatioVsV15": 0.27,
+      "cacheCreationTokenRatioVsV15": 1,
+      "speedupVsUltracode": 4.9
+    },
+    "recommendation": "BLOCKED_QUALITY_REGRESSION",
+    "rawResultsCount": 3
+  },
+  "trials": [
+    {
+      "trialId": "A-small-01-r1",
+      "arm": "A",
+      "task": "small-01",
+      "trial": 1,
+      "timing": {
+        "prepMs": 893,
+        "agentWallClockMs": 1200502,
+        "graderMs": 549,
+        "totalTrialMs": 1201944,
+        "durationMs": 1200502
+      },
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "total_tokens": 0,
+        "total_cost_usd": 0
+      },
+      "durationMs": 1200502,
+      "totalTokens": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 0,
+      "totalCostUsd": 0,
+      "transcriptPath": "benchmarks/live/results/transcripts/A-small-01-r1.jsonl",
+      "timeoutMs": 1200000,
+      "timedOut": true,
+      "isError": true,
+      "dryRun": false,
+      "grade": {
+        "task": "small-01",
+        "timestamp": "2026-09-11T09:49:20.220Z",
+        "success": false,
+        "requirementsTotal": 3,
+        "requirementsPassed": 1,
+        "hiddenTestsTotal": 6,
+        "hiddenTestsPassed": 0,
+        "forbiddenFilesChanged": 0,
+        "ownershipViolations": 0,
+        "escapedDefects": 6,
+        "errors": [
+          "Missing export isOperationalMonthBoundary in src/lib/academic-calendar.ts",
+          "Missing tests/unit/academic-calendar.test.ts"
+        ],
+        "agentVerdict": "TIMEOUT",
+        "graderVerdict": "FAIL",
+        "falseReady": false,
+        "treatmentFidelity": true
+      }
+    },
+    {
+      "trialId": "B-small-01-r1",
+      "arm": "B",
+      "task": "small-01",
+      "trial": 1,
+      "timing": {
+        "prepMs": 990,
+        "agentWallClockMs": 1037019,
+        "graderMs": 347,
+        "totalTrialMs": 1038356,
+        "durationMs": 1037019
+      },
+      "usage": {
+        "input_tokens": 7811716,
+        "output_tokens": 85147,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 6423918,
+        "total_tokens": 14320781,
+        "total_cost_usd": 45.9262175
+      },
+      "durationMs": 1037019,
+      "totalTokens": 14320781,
+      "inputTokens": 7811716,
+      "outputTokens": 85147,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 6423918,
+      "totalCostUsd": 45.9262175,
+      "transcriptPath": "benchmarks/live/results/transcripts/B-small-01-r1.jsonl",
+      "timeoutMs": 1200000,
+      "timedOut": false,
+      "isError": false,
+      "dryRun": false,
+      "grade": {
+        "task": "small-01",
+        "timestamp": "2026-09-11T10:06:38.788Z",
+        "success": false,
+        "requirementsTotal": 3,
+        "requirementsPassed": 1,
+        "hiddenTestsTotal": 6,
+        "hiddenTestsPassed": 0,
+        "forbiddenFilesChanged": 0,
+        "ownershipViolations": 0,
+        "escapedDefects": 6,
+        "errors": [
+          "Missing export isOperationalMonthBoundary in src/lib/academic-calendar.ts",
+          "Missing tests/unit/academic-calendar.test.ts",
+          "[Treatment Fidelity Failure] HARNESS_NOT_INVOKED"
+        ],
+        "agentVerdict": "HARNESS_NOT_INVOKED",
+        "graderVerdict": "FAIL",
+        "falseReady": false,
+        "treatmentFidelity": false
+      }
+    },
+    {
+      "trialId": "C-small-01-r1",
+      "arm": "C",
+      "task": "small-01",
+      "trial": 1,
+      "timing": {
+        "prepMs": 1055,
+        "agentWallClockMs": 245019,
+        "graderMs": 476,
+        "totalTrialMs": 246550,
+        "durationMs": 245019
+      },
+      "usage": {
+        "input_tokens": 1139076,
+        "output_tokens": 35336,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 1734930,
+        "total_tokens": 2909342,
+        "total_cost_usd": 7.446245
+      },
+      "durationMs": 245019,
+      "totalTokens": 2909342,
+      "inputTokens": 1139076,
+      "outputTokens": 35336,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 1734930,
+      "totalCostUsd": 7.446245,
+      "transcriptPath": "benchmarks/live/results/transcripts/C-small-01-r1.jsonl",
+      "timeoutMs": 1200000,
+      "timedOut": false,
+      "isError": false,
+      "dryRun": false,
+      "grade": {
+        "task": "small-01",
+        "timestamp": "2026-09-11T10:10:45.217Z",
+        "success": false,
+        "requirementsTotal": 3,
+        "requirementsPassed": 1,
+        "hiddenTestsTotal": 6,
+        "hiddenTestsPassed": 0,
+        "forbiddenFilesChanged": 0,
+        "ownershipViolations": 0,
+        "escapedDefects": 6,
+        "errors": [
+          "Missing export isOperationalMonthBoundary in src/lib/academic-calendar.ts",
+          "Missing tests/unit/academic-calendar.test.ts",
+          "[Treatment Fidelity Failure] HARNESS_NOT_INVOKED"
+        ],
+        "agentVerdict": "HARNESS_NOT_INVOKED",
+        "graderVerdict": "FAIL",
+        "falseReady": false,
+        "treatmentFidelity": false
+      }
+    }
+  ]
+}
