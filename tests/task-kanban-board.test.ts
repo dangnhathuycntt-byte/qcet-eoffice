@@ -483,4 +483,49 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       "Source must NOT import or use ChevronLeft (prev-status button removed)"
     );
   });
+
+  test("Source contains Escape key handler (e.key === \"Escape\") wired to dismiss menu", () => {
+    const kanbanPath = path.resolve(__dirname, "../src/components/tasks/task-kanban-board.tsx");
+    const src = fs.readFileSync(kanbanPath, "utf-8");
+
+    // 1. The Escape key comparison must be present in source
+    assert.ok(
+      src.includes('e.key === "Escape"'),
+      'Source must contain e.key === "Escape" to detect Escape key presses'
+    );
+
+    // 2. The handler must be registered on document via addEventListener for keydown
+    assert.ok(
+      src.includes('document.addEventListener("keydown"'),
+      'Source must wire the Escape handler to document via addEventListener("keydown", ...)'
+    );
+
+    // 3. The handler must call setMenuOpen(false) to dismiss the menu
+    assert.ok(
+      src.includes("setMenuOpen(false)"),
+      "Source must call setMenuOpen(false) to dismiss the menu on Escape"
+    );
+
+    // 4. The cleanup must remove the keydown listener to prevent leaks
+    assert.ok(
+      src.includes('document.removeEventListener("keydown"'),
+      'Source must clean up the keydown listener via document.removeEventListener("keydown", ...)'
+    );
+  });
+
+  test("Escape key handler is co-located with menuOpen guard (only active when menu is open)", () => {
+    const kanbanPath = path.resolve(__dirname, "../src/components/tasks/task-kanban-board.tsx");
+    const src = fs.readFileSync(kanbanPath, "utf-8");
+
+    // The useEffect block that registers the keydown listener must guard on menuOpen
+    // Pattern: the effect that calls document.addEventListener("keydown") must early-return when !menuOpen
+    const effectBlock = src.slice(
+      src.indexOf('document.addEventListener("keydown"') - 600,
+      src.indexOf('document.addEventListener("keydown"') + 10
+    );
+    assert.ok(
+      effectBlock.includes("if (!menuOpen) return"),
+      "The useEffect registering the keydown Escape handler must guard with 'if (!menuOpen) return' so it is only active when the menu is open"
+    );
+  });
 });
