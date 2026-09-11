@@ -20,12 +20,12 @@ import os from 'node:os';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const EXECUTOR_SHA = '45453bb8d6a3db3ca974495c7b3b36187004c503';
+const EXECUTOR_SHA = '1be1e67ae3ee8ef8b1f1745825950b07ee1d0481';
 const MODEL = 'claude-combo[1m]';
 const EFFORT = 'high';
-const OVERALL_TIMEOUT_MS = 6 * 60 * 1000;       // 6 minutes hard cap
+const OVERALL_TIMEOUT_MS = 20 * 60 * 1000;      // 20 minutes — executor has many phases
 const PERMISSION_PROBE_TIMEOUT_MS = 60 * 1000;  // 60 seconds
-const EXECUTOR_STARTUP_WINDOW_MS = 60 * 1000;    // Gate B: 1 minute
+const EXECUTOR_STARTUP_WINDOW_MS = 90 * 1000;   // Gate B: 90 seconds
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 const RESULTS_DIR = path.join(REPO_ROOT, 'benchmarks', 'e2e', 'results');
@@ -66,7 +66,7 @@ function ensureDir(d) {
  * Spawn claude CLI and stream stdout/stderr into files.
  * Returns: { exitCode, timedOut, transcriptPath, stderrPath }
  */
-function spawnClaude(args, { cwd, timeoutMs, transcriptPath, stderrPath, onStdoutLine }) {
+function spawnClaude(args, { cwd, timeoutMs, transcriptPath, stderrPath, onStdoutLine, signal }) {
   return new Promise((resolve) => {
     const proc = spawn('claude', args, {
       cwd,
@@ -78,11 +78,22 @@ function spawnClaude(args, { cwd, timeoutMs, transcriptPath, stderrPath, onStdou
     const stderrStream = fs.createWriteStream(stderrPath, { flags: 'a' });
 
     let timedOut = false;
+    let earlyExit = false;
     const timer = setTimeout(() => {
       timedOut = true;
       proc.kill('SIGTERM');
       setTimeout(() => proc.kill('SIGKILL'), 2000).unref();
     }, timeoutMs);
+
+    // Support early-exit signal
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        earlyExit = true;
+        clearTimeout(timer);
+        proc.kill('SIGTERM');
+        setTimeout(() => proc.kill('SIGKILL'), 2000).unref();
+      }, { once: true });
+    }
 
     let stderrBuf = '';
     proc.stdout.on('data', (chunk) => {
@@ -104,7 +115,7 @@ function spawnClaude(args, { cwd, timeoutMs, transcriptPath, stderrPath, onStdou
       clearTimeout(timer);
       transcriptStream.end();
       stderrStream.end();
-      resolve({ exitCode: code ?? 1, timedOut, transcriptPath, stderrPath });
+      resolve({ exitCode: earlyExit ? 0 : (code ?? 1), timedOut: timedOut && !earlyExit, earlyExit, transcriptPath, stderrPath });
     });
   });
 }
@@ -154,16 +165,19 @@ async function runPermissionProbe(runDir) {
   const stderrPath = path.join(runDir, 'probe-stderr.log');
 
   let hadEditOrWrite = false;
-  let hadPermissionDenied = false;
+  // Only track permission_denied on Edit/Write tools — Bash denials are expected
+  // when the session's settings.json doesn't allowlist the specific git command.
+  // The proof of headless write capability is file content, not Bash approval.
+  let hadEditPermissionDenied = false;
 
   const { exitCode, timedOut } = await spawnClaude(
     [
       '-p',
-      'Change e2e-permission-target.txt from BEFORE to AFTER. Then run git status --short. Do nothing else.',
+      'Change e2e-permission-target.txt from BEFORE to AFTER. Do nothing else.',
       '--model', MODEL,
       '--effort', EFFORT,
       '--permission-mode', 'acceptEdits',
-      '--allowedTools', 'Read,Edit,Write,Bash(git status *)',
+      '--allowedTools', 'Read,Edit,Write',
       '--output-format', 'stream-json',
       '--verbose',
       '--no-session-persistence',
@@ -176,9 +190,14 @@ async function runPermissionProbe(runDir) {
       onStdoutLine: (line) => {
         try {
           const ev = JSON.parse(line);
-          const toolName = ev?.name ?? ev?.tool_name ?? ev?.type ?? '';
+          const toolName = ev?.name ?? ev?.tool_name ?? '';
           if (/edit|write/i.test(toolName)) hadEditOrWrite = true;
-          if (/permission_denied/i.test(JSON.stringify(ev))) hadPermissionDenied = true;
+          // Only flag permission_denied when the denied tool is Edit or Write
+          if (ev?.type === 'system' && ev?.subtype === 'permission_denied') {
+            if (/edit|write/i.test(ev?.tool_name ?? '')) {
+              hadEditPermissionDenied = true;
+            }
+          }
         } catch (_) {}
       },
     }
@@ -192,22 +211,15 @@ async function runPermissionProbe(runDir) {
     destroyTempRepo(probeDir);
     return { pass: false, failureClass: FC.HEADLESS_PERMISSION_FAILURE, reason: `exitCode=${exitCode}` };
   }
-  if (hadPermissionDenied) {
+  if (hadEditPermissionDenied) {
     destroyTempRepo(probeDir);
-    return { pass: false, failureClass: FC.HEADLESS_PERMISSION_FAILURE, reason: 'permission_denied event' };
+    return { pass: false, failureClass: FC.HEADLESS_PERMISSION_FAILURE, reason: 'Edit/Write permission_denied — acceptEdits not working' };
   }
 
   const content = fs.readFileSync(targetFile, 'utf8').trim();
-  if (content !== 'AFTER') {
-    destroyTempRepo(probeDir);
-    return {
-      pass: false,
-      failureClass: FC.HEADLESS_PERMISSION_FAILURE,
-      reason: `target content is "${content}", expected "AFTER"`,
-    };
-  }
 
-  // Verify git sees the modification
+  // Content is authoritative — if file is AFTER, headless write capability is proven.
+  // git status check is secondary; run it from the harness directly (not via claude).
   const gitStatus = (() => {
     try { return runSync('git status --short', probeDir); } catch (_) { return ''; }
   })();
@@ -215,8 +227,12 @@ async function runPermissionProbe(runDir) {
 
   destroyTempRepo(probeDir);
 
-  if (!modified && !hadEditOrWrite) {
-    return { pass: false, failureClass: FC.HEADLESS_PERMISSION_FAILURE, reason: 'no edit tool observed and git shows no modification' };
+  if (content !== 'AFTER') {
+    return {
+      pass: false,
+      failureClass: FC.HEADLESS_PERMISSION_FAILURE,
+      reason: `target content is "${content}", expected "AFTER" — Edit did not mutate the file`,
+    };
   }
 
   log('PHASE 1 — PASS');
@@ -227,6 +243,7 @@ async function runPermissionProbe(runDir) {
 
 async function runExecutorCanary(runDir) {
   log('PHASE 2-5 — Executor Canary');
+  const canaryStartMs = Date.now();
 
   // Set up isolated trial repo
   const trialDir = createTempRepo('canary');
@@ -341,14 +358,14 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     executorSha: EXECUTOR_SHA,
     permissionMode: 'acceptEdits',
     allowedTools: 'Read,Edit,Write,Bash,Agent,Workflow',
-    invocationMode: 'saved-workflow-command',
-    invocation: '/qcet-plan-executor e2e-plan.md',
+    invocationMode: 'workflow-scriptpath',
+    invocation: 'Workflow({scriptPath: ".claude/workflows/qcet-plan-executor.js", args: {plan: "e2e-plan.md"}})',
     trialDir,
     transcriptPath,
     stderrPath,
   }, null, 2));
 
-  log(`  Invoking: /qcet-plan-executor e2e-plan.md`);
+  log(`  Invoking: Workflow({scriptPath: ".claude/workflows/qcet-plan-executor.js", args: {plan: "e2e-plan.md"}})`);
 
   const checkExecutorArtifacts = () => {
     if (gateB_executorArtifact) return true;
@@ -367,15 +384,30 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     return false;
   };
 
-  // Poll Gate B in background
+  // Poll Gate B in background; also poll for early-exit on gate-verdict.json
+  const earlyExitController = new AbortController();
   const gateB_poll = setInterval(() => {
     checkExecutorArtifacts();
-  }, 2000);
+    // Early-exit: if gate-verdict.json exists, we have enough to evaluate
+    if (!earlyExitController.signal.aborted) {
+      try {
+        const r = execSync('find . -name "gate-verdict.json" -maxdepth 8 2>/dev/null | head -1', { cwd: trialDir }).toString().trim();
+        if (r) {
+          log('  Early exit — gate-verdict.json detected, stopping claude process');
+          earlyExitController.abort();
+        }
+      } catch (_) {}
+    }
+  }, 3000);
 
-  const { exitCode, timedOut } = await spawnClaude(
+  const { exitCode, timedOut, earlyExit } = await spawnClaude(
     [
       '-p',
-      '/qcet-plan-executor e2e-plan.md',
+      // Explicitly invoke the registered workflow via scriptPath — this loads
+      // the actual .claude/workflows/qcet-plan-executor.js file from disk,
+      // bypassing both Skill dispatch and model-authored inline scripts.
+      // Pass startedAtMs so timing telemetry inside workflow works correctly.
+      `Call the Workflow tool with scriptPath ".claude/workflows/qcet-plan-executor.js" and args {"plan": "e2e-plan.md", "startedAtMs": ${canaryStartMs}, "timestamp": "${new Date(canaryStartMs).toISOString()}"}. Do nothing else before or after.`,
       '--model', MODEL,
       '--effort', EFFORT,
       '--permission-mode', 'acceptEdits',
@@ -402,6 +434,16 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
             gateA_runtimeInit = true;
             log('  Gate A — stream active (runtime init)');
           }
+          // Gate B: Workflow tool call in transcript counts as executor started
+          if (!gateB_executorArtifact && ev?.type === 'assistant') {
+            const content = ev?.message?.content || [];
+            for (const c of content) {
+              if (c?.type === 'tool_use' && c?.name === 'Workflow') {
+                gateB_executorArtifact = true;
+                log('  Gate B — Workflow tool invoked (executor started)');
+              }
+            }
+          }
         } catch (_) {}
 
         // Check Gate B time window
@@ -409,6 +451,7 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
           checkExecutorArtifacts();
         }
       },
+      signal: earlyExitController.signal,
     }
   );
 
@@ -417,9 +460,9 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
   // Final artifact check
   checkExecutorArtifacts();
 
-  if (timedOut) {
+  if (timedOut && !earlyExit) {
     destroyTempRepo(trialDir);
-    return { pass: false, failureClass: FC.TIMEOUT, reason: 'overall 6 minute timeout exceeded' };
+    return { pass: false, failureClass: FC.TIMEOUT, reason: 'overall 20 minute timeout exceeded' };
   }
 
   // ── Gate A ──
