@@ -29,76 +29,29 @@ jobs:
         run: python3 scripts/apply-executor-hardening-v15.py tests
 
       - name: Normalize cross-realm assertions
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('tests/executor/workflow-executor.test.ts')
-          text = p.read_text()
-          old = """  assert.deepEqual(
-    selectIntegrationReviewDimensionIds([
-      { id: 's1', risk: 'low', changedFiles: ['src/ui/a.tsx'] },
-      { id: 's2', risk: 'low', changedFiles: ['src/ui/b.tsx'] },
-    ]),
-    ['contracts', 'regression']
-  );
+        run: python3 scripts/fix-executor-hardening-test.py
 
-  assert.deepEqual(
-    selectIntegrationReviewDimensionIds([
-      { id: 's1', risk: 'critical', changedFiles: ['src/server/auth/session.ts'] },
-    ]),
-    ['contracts', 'authorization', 'semantics', 'regression']
-  );"""
-          new = """  assert.equal(
-    Array.from(selectIntegrationReviewDimensionIds([
-      { id: 's1', risk: 'low', changedFiles: ['src/ui/a.tsx'] },
-      { id: 's2', risk: 'low', changedFiles: ['src/ui/b.tsx'] },
-    ])).join(','),
-    'contracts,regression'
-  );
-
-  assert.equal(
-    Array.from(selectIntegrationReviewDimensionIds([
-      { id: 's1', risk: 'critical', changedFiles: ['src/server/auth/session.ts'] },
-    ])).join(','),
-    'contracts,authorization,semantics,regression'
-  );"""
-          if old not in text:
-              raise SystemExit('adaptive review test block not found')
-          p.write_text(text.replace(old, new, 1))
-          PY
-
-      - name: RED - verify regressions fail on old implementation
+      - name: RED regression proof
         run: |
           set +e
           npx tsx --test tests/executor/workflow-executor.test.ts tests/executor/hooks.test.ts
           status=$?
           set -e
           if [ "$status" -eq 0 ]; then
-            echo "Expected regression tests to fail before implementation."
             exit 1
           fi
-          echo "RED confirmed."
+          echo "RED confirmed"
 
-      - name: Fix temporary patch anchor
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('scripts/apply-executor-hardening-v15.py')
-          text = p.read_text()
-          old = "  // ===========================================================================\\n  // DEPENDENCY-READY DAG SCHEDULER"
-          new = "  // ---------------------------------------------------------------------------\\n  // CREATE BLOCKED RESULT"
-          if old not in text:
-              raise SystemExit('temporary patch anchor not found')
-          p.write_text(text.replace(old, new, 1))
-          PY
+      - name: Fix patch anchor
+        run: python3 scripts/fix-executor-hardening-anchor.py
 
       - name: Apply executor hardening
         run: python3 scripts/apply-executor-hardening-v15.py implementation
 
-      - name: GREEN - targeted executor tests
+      - name: GREEN targeted executor tests
         run: npx tsx --test tests/executor/workflow-executor.test.ts tests/executor/hooks.test.ts
 
-      - name: GREEN - full executor suite
+      - name: GREEN full executor suite
         run: npm run test:executor
 
       - name: Build executor bundle
@@ -108,6 +61,8 @@ jobs:
         run: |
           rm -f .github/workflows/qcet-executor-hardening-apply.yml
           rm -f scripts/apply-executor-hardening-v15.py
+          rm -f scripts/fix-executor-hardening-test.py
+          rm -f scripts/fix-executor-hardening-anchor.py
           rm -f .claude/executor-evals/.hardening-trigger
           git config user.name "qcet-executor-bot"
           git config user.email "qcet-executor-bot@users.noreply.github.com"
