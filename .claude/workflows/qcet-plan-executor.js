@@ -4238,7 +4238,7 @@ Return structured proof.
   phase('Release Gate');
 
 
-  const finalVerdict = await callAgent(
+  let finalVerdict = await callAgent(
     `
 You are the final independent QCET release gate.
 
