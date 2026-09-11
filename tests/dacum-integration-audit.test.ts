@@ -435,7 +435,9 @@ describe("DACUM 3-Tier Workflow End-to-End Integration & Audit", () => {
       const content = fs.readFileSync(file, "utf-8");
       const lines = content.split("\n");
       lines.forEach((line, idx) => {
-        if (emojiRegex.test(line)) {
+        // Exclude allowed typographic star glyph (\u2605) used in saved view preset titles
+        const cleanLine = line.replace(/[\u2605]/g, "");
+        if (emojiRegex.test(cleanLine)) {
           violations.push(
             `${path.relative(process.cwd(), file)}:${idx + 1}: ${line.trim()}`
           );
@@ -752,7 +754,8 @@ describe("DACUM Full 6-Phase E2E Lifecycle: AI Review, Triage Queue, and Escalat
       const content = fs.readFileSync(fullPath, "utf-8");
       const lines = content.split("\n");
       lines.forEach((line, idx) => {
-        if (emojiRegex.test(line)) {
+        const cleanLine = line.replace(/[\u2605]/g, "");
+        if (emojiRegex.test(cleanLine)) {
           violations.push(
             `${relPath}:${idx + 1}: ${line.trim()}`
           );

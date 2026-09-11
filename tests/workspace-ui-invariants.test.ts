@@ -109,7 +109,7 @@ describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () =
     });
 
     test("emoji detection regex correctly catches sample pictographs and symbols", () => {
-      const sampleViolations = ["🔥 Báo cáo khẩn", "🚀 Nhiệm vụ mới", "📅 Lịch tuần", "⚡ Điểm nghẽn"];
+      const sampleViolations = ["\u{1F525} Báo cáo khẩn", "\u{1F680} Nhiệm vụ mới", "\u{1F4C5} Lịch tuần", "\u26A1 Điểm nghẽn"];
       for (const text of sampleViolations) {
         assert.ok(
           EMOJI_REGEX.test(text),

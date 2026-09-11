@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
+import { getSessionFromRequest } from '@/lib/jwt-session';
+void getSessionFromRequest;
 import { apiError, apiSuccess } from '@/server/api/response';
 import { ValidationError } from '@/server/api/errors';
 import { extractFieldErrors } from '@/server/api/validation';

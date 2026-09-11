@@ -348,6 +348,8 @@ function CalendarRouteContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
+  // ExecutiveCalendarWorkspace compatibility and zone URL routing
+  const zoneParam = searchParams?.get("zone") || "calendar";
   const dateParam = searchParams?.get("date") || undefined;
   const viewParam = searchParams?.get("view");
   const taskIdParam = searchParams?.get("taskId") || undefined;

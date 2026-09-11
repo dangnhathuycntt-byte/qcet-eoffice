@@ -528,7 +528,7 @@ export function CalendarMonthGrid({
                   })}
                 </div>
 
-                {remainingCount > 0 && (
+                {remainingCount > 0 ? (
                   <button
                     type="button"
                     onClick={() => openDay(cell.dateString)}
@@ -538,7 +538,7 @@ export function CalendarMonthGrid({
                   >
                     +{remainingCount} nhiệm vụ
                   </button>
-                )}
+                ) : null}
               </section>
             );
           })}

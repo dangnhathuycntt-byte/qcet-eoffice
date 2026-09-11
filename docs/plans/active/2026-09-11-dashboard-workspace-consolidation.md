@@ -153,7 +153,7 @@ Snapshot behavioral baseline:
 - Files: `src/components/workspace/unified-adaptive-workspace.tsx`, `src/components/dashboard/unified-task-toolbar.tsx`
 - Sửa label thành `"Giao việc"`, không duplicate dấu `+` khi Lucide `Plus` đã render.
 
-### 5.3 Không tự render 12 tháng
+### 5.3 Không tự render 12 th��ng
 - File: `src/components/dashboard/unified-task-toolbar.tsx`
 - Trên `/tasks`, mặc định `showAcademicMonthBar = false`. Month nằm trong Filter popover.
 - Khi user chọn tháng (e.g. `month=9`), hiện filter chip `Tháng 9 ×`.

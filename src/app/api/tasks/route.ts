@@ -55,14 +55,16 @@ export async function GET(req: Request) {
       assertRateLimit(authUser.id, 'SEARCH');
     }
 
-    // Clamp pagination limit to max 100
+    // Clamp pagination limit to max 100 with priority: explicit pageSize > explicit limit > explicit take > default pageSize
     let effectiveLimit = 20;
-    if (validatedQuery.pageSize !== undefined && typeof validatedQuery.pageSize === 'number') {
+    if (rawParams.pageSize !== undefined && typeof validatedQuery.pageSize === 'number') {
       effectiveLimit = Math.min(Math.max(1, validatedQuery.pageSize), 100);
-    } else if (typeof validatedQuery.limit === 'number') {
+    } else if (rawParams.limit !== undefined && typeof validatedQuery.limit === 'number') {
       effectiveLimit = Math.min(Math.max(1, validatedQuery.limit), 100);
-    } else if (typeof validatedQuery.take === 'number') {
+    } else if (rawParams.take !== undefined && typeof validatedQuery.take === 'number') {
       effectiveLimit = Math.min(Math.max(1, validatedQuery.take), 100);
+    } else if (typeof validatedQuery.pageSize === 'number') {
+      effectiveLimit = Math.min(Math.max(1, validatedQuery.pageSize), 100);
     }
 
     const isAll =

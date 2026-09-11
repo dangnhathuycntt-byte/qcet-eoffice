@@ -2,6 +2,7 @@ import * as React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Briefcase, Clock } from "lucide-react";
+import { DocumentRegistryView } from "@/components/documents/document-registry-view";
 import { DocumentWorkspace } from "@/components/documents/document-workspace";
 // Retain DocumentRegistryView alias for backwards compatibility with tests
 export { DocumentWorkspace, DocumentWorkspace as DocumentRegistryView };
@@ -69,7 +70,7 @@ export default function DocumentsPage() {
           </div>
         }
       >
-        <DocumentWorkspace />
+        <DocumentRegistryView />
       </React.Suspense>
     </div>
   );
