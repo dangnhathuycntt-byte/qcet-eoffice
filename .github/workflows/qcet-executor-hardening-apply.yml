@@ -51,6 +51,11 @@ jobs:
       - name: GREEN targeted executor tests
         run: npx tsx --test tests/executor/workflow-executor.test.ts tests/executor/hooks.test.ts
 
+      - name: Configure git identity for worktree tests
+        run: |
+          git config user.name "qcet-executor-test"
+          git config user.email "qcet-executor-test@users.noreply.github.com"
+
       - name: GREEN full executor suite
         run: npm run test:executor
 
