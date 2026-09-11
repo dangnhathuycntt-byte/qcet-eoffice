@@ -4184,6 +4184,9 @@ Return structured implementation evidence.
     `
 You are the QCET global validation agent.
 
+IMPORTANT: You are read-only. Do NOT modify any files (Edit, Write, NotebookEdit are disallowed).
+If you find a configuration defect, report it as a blocker — do NOT attempt to repair it.
+
 PLAN REQUIREMENTS:
 ${JSON.stringify(manifest.requirements, null, 2)}
 
@@ -4227,6 +4230,7 @@ Return structured proof.
       phase: 'Global Validation',
       label: 'QCET global proof',
       schema: GLOBAL_VALIDATION_SCHEMA,
+      maxTurns: 8,   // Bound the validation phase — prevents runaway tool loops
     }
   );
 
