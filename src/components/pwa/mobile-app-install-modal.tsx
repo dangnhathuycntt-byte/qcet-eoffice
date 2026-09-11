@@ -545,7 +545,7 @@ export function MobileAppInstallModal({
                       <span>rồi nhấn <strong>Thêm (Add)</strong>.</span>
                     </div>
                   </div>
-                  <div className="mt-1 pt-1.5 border-t border-border/40 text-[11px] text-muted-foreground">
+                  <div className="mt-1 pt-1.5 border-t border-border/40 text-xs text-muted-foreground">
                     Thao tác nhanh: <strong>Nhấn biểu tượng Chia sẻ &rarr; Thêm vào Màn hình chính</strong>.
                   </div>
                 </div>

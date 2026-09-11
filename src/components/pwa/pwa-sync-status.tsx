@@ -232,7 +232,7 @@ export function PWASyncStatusBar({
               <span className="font-semibold truncate text-slate-900 leading-tight">
                 {statusText}
               </span>
-              <span className="text-[11px] text-slate-500 font-normal truncate">
+              <span className="text-xs text-slate-500 font-normal truncate">
                 {isOffline
                   ? "Dữ liệu được lưu an toàn tại thiết bị"
                   : isDegraded
@@ -278,7 +278,7 @@ export function PWASyncStatusBar({
             )}
 
             {isOffline && hasPending && (
-              <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200">
+              <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200">
                 {pendingItems.length} chờ gửi
               </span>
             )}

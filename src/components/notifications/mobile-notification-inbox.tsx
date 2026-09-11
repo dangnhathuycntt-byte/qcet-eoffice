@@ -102,7 +102,7 @@ export function MobileNotificationInbox({
             Hộp thư thông báo điều hành
           </span>
           {unreadCount > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[11px] font-mono tabular-nums font-bold bg-primary text-primary-foreground">
+            <span className="px-1.5 py-0.2 rounded-full text-xs font-mono tabular-nums font-bold bg-primary text-primary-foreground">
               {unreadCount}
             </span>
           )}
@@ -158,7 +158,7 @@ export function MobileNotificationInbox({
           data-testid="filter-tab-all"
         >
           <span>Tất cả</span>
-          <span className="font-mono tabular-nums text-[11px] opacity-80">
+          <span className="font-mono tabular-nums text-xs opacity-80">
             ({totalCount})
           </span>
         </button>
@@ -178,7 +178,7 @@ export function MobileNotificationInbox({
         >
           <span>Chưa đọc</span>
           {unreadCount > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono tabular-nums font-bold bg-primary/15 text-primary">
+            <span className="px-1.5 py-0.2 rounded-full text-xs font-mono tabular-nums font-bold bg-primary/15 text-primary">
               {unreadCount}
             </span>
           )}
@@ -199,7 +199,7 @@ export function MobileNotificationInbox({
         >
           <span>Cần xử lý</span>
           {actionRequiredCount > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono tabular-nums font-bold bg-amber-500/15 text-amber-800">
+            <span className="px-1.5 py-0.2 rounded-full text-xs font-mono tabular-nums font-bold bg-amber-500/15 text-amber-800">
               {actionRequiredCount}
             </span>
           )}
@@ -364,7 +364,7 @@ function MobileNotificationCard({
           {entity && (
             <span
               className={cn(
-                "inline-flex items-center px-1.5 py-0.2 rounded text-[11px] font-mono tabular-nums font-semibold",
+                "inline-flex items-center px-1.5 py-0.2 rounded text-xs font-mono tabular-nums font-semibold",
                 entity.type === "task"
                   ? "bg-primary/10 text-primary border border-primary/25"
                   : "bg-amber-500/10 text-amber-800 border border-amber-500/25"
@@ -376,12 +376,12 @@ function MobileNotificationCard({
           )}
 
           {/* Category Tag */}
-          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-muted text-muted-foreground border border-border/50">
+          <span className="px-1.5 py-0.2 rounded text-xs font-mono font-medium bg-muted text-muted-foreground border border-border/50">
             {item.category}
           </span>
 
           {/* Relative Timestamp */}
-          <span className="text-[11px] text-muted-foreground font-mono tabular-nums ml-auto flex items-center gap-1">
+          <span className="text-xs text-muted-foreground font-mono tabular-nums ml-auto flex items-center gap-1">
             <Clock size={11} strokeWidth={1.5} />
             <span>{item.timestamp}</span>
           </span>

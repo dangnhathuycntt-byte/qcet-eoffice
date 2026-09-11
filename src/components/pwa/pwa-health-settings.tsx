@@ -471,7 +471,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-slate-500">
+          <div className="flex items-center justify-between text-xs text-slate-500">
             <span>Tỷ lệ chiếm dụng: {estimate.percentUsed}%</span>
             {estimate.breakdown?.indexedDbBytes ? (
               <span>Cơ sở dữ liệu: ~{estimate.usageFormatted}</span>
