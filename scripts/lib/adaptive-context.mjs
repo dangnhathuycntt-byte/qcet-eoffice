@@ -440,3 +440,155 @@ export function formatIntegrationShardSummary(allShardResults = {}) {
   return summary;
 }
 
+/**
+ * Resolves risk-tiered verification strategy (skeptics count, effort, and arbitration policy).
+ *
+ * @param {string|Object} shardOrRisk - Shard object or risk string ('low'|'medium'|'high'|'critical')
+ * @returns {Object} Verification strategy definition
+ */
+export function resolveVerificationStrategy(shardOrRisk) {
+  let risk = 'low';
+  if (typeof shardOrRisk === 'string') {
+    risk = shardOrRisk.toLowerCase();
+  } else if (shardOrRisk && typeof shardOrRisk === 'object') {
+    if (shardOrRisk.risk) {
+      risk = String(shardOrRisk.risk).toLowerCase();
+    } else {
+      const policy = resolveAdaptivePolicy(shardOrRisk);
+      risk = policy.risk;
+    }
+  }
+
+  if (risk === 'critical') {
+    return {
+      risk: 'critical',
+      skepticsCount: 2,
+      effort: 'xhigh',
+      requiresArbiter: true,
+      allowFastPath: false,
+      lenses: ['spec', 'security'],
+      arbiterMandatory: true,
+    };
+  }
+
+  if (risk === 'high') {
+    return {
+      risk: 'high',
+      skepticsCount: 2,
+      effort: 'high',
+      requiresArbiter: false,
+      allowFastPath: true,
+      lenses: ['spec', 'security'],
+      arbiterMandatory: false,
+    };
+  }
+
+  if (risk === 'medium') {
+    return {
+      risk: 'medium',
+      skepticsCount: 1,
+      effort: 'medium',
+      requiresArbiter: false,
+      allowFastPath: false,
+      lenses: ['correctness', 'contracts'],
+      arbiterMandatory: false,
+    };
+  }
+
+  return {
+    risk: 'low',
+    skepticsCount: 1,
+    effort: 'low',
+    requiresArbiter: false,
+    allowFastPath: false,
+    lenses: ['correctness'],
+    arbiterMandatory: false,
+  };
+}
+
+/**
+ * Evaluates dual-skeptic or single-skeptic verification panel outcomes.
+ * On HIGH risk: If both independent skeptics return pass with zero issues, takes the clean fast path without arbiter.
+ * On CRITICAL risk: Arbiter synthesis is mandatory.
+ * On disagreement or reported defects: Triggers arbiter synthesis.
+ *
+ * @param {Array<Object>|Object} panelResults - Array of skeptic verifier results
+ * @param {string|Object} [riskOrStrategy='high'] - Shard risk or strategy object
+ * @returns {Object} Panel evaluation outcome
+ */
+export function evaluateVerificationPanelOutcome(panelResults, riskOrStrategy = 'high') {
+  const risk = typeof riskOrStrategy === 'string'
+    ? riskOrStrategy.toLowerCase()
+    : (riskOrStrategy?.risk ? String(riskOrStrategy.risk).toLowerCase() : 'high');
+
+  const results = Array.isArray(panelResults) ? panelResults : [panelResults];
+  const specVerifier = results[0] || {};
+  const securityVerifier = results[1] || results[0] || {};
+
+  const isPass = (v) => {
+    const verd = String(v?.verdict || '').toLowerCase();
+    const hasIssues = Array.isArray(v?.issues) && v.issues.length > 0;
+    return verd === 'pass' && !hasIssues;
+  };
+
+  const specPassed = isPass(specVerifier);
+  const securityPassed = isPass(securityVerifier);
+
+  if (risk === 'critical') {
+    return {
+      canBypassArbiter: false,
+      highRiskFastPath: false,
+      arbiterAvoided: false,
+      requiresArbiter: true,
+      reason: 'Critical risk requires mandatory arbitration synthesis',
+    };
+  }
+
+  if (risk === 'high') {
+    if (specPassed && securityPassed) {
+      const requirementsChecked = Array.from(
+        new Set([
+          ...(specVerifier.requirementsChecked || []),
+          ...(securityVerifier.requirementsChecked || []),
+        ])
+      );
+      return {
+        canBypassArbiter: true,
+        highRiskFastPath: true,
+        arbiterAvoided: true,
+        requiresArbiter: false,
+        synthesizedVerdict: {
+          verdict: 'pass',
+          requirementsChecked,
+          issues: [],
+          summary: `Both independent skeptics verified implementation with zero defects. Spec: ${specVerifier.summary || 'pass'}; Security: ${securityVerifier.summary || 'pass'}.`,
+        },
+      };
+    }
+
+    return {
+      canBypassArbiter: false,
+      highRiskFastPath: false,
+      arbiterAvoided: false,
+      requiresArbiter: true,
+      reason: 'Skeptic disagreement or confirmed issues require arbiter synthesis',
+    };
+  }
+
+  // Low or medium risk (single verifier)
+  const singleVerifier = results[0] || {};
+  const passed = isPass(singleVerifier);
+  return {
+    canBypassArbiter: true,
+    highRiskFastPath: false,
+    arbiterAvoided: true,
+    requiresArbiter: false,
+    synthesizedVerdict: {
+      verdict: passed ? 'pass' : (singleVerifier.verdict || 'fail'),
+      requirementsChecked: singleVerifier.requirementsChecked || [],
+      issues: singleVerifier.issues || [],
+      summary: singleVerifier.summary || '',
+    },
+  };
+}
+

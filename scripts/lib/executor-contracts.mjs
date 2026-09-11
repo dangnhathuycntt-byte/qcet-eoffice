@@ -293,16 +293,32 @@ export const ACTIVE_SHARDS_SCHEMA = {
  * @returns {Array<{id: string, charter: string}>}
  */
 export function selectIntegrationReviewDimensions(manifest, allShardResults = []) {
-  const allFiles = new Set();
+  const actualFiles = new Set();
   if (Array.isArray(allShardResults)) {
     for (const r of allShardResults) {
-      const files = r?.implementation?.changedFiles || r?.shard?.owns || [];
-      for (const f of files) allFiles.add(String(f).toLowerCase());
+      const changed = r?.implementation?.changedFiles;
+      if (Array.isArray(changed)) {
+        for (const f of changed) {
+          if (f) actualFiles.add(String(f).toLowerCase());
+        }
+      }
     }
   }
-  if (Array.isArray(manifest?.shards)) {
-    for (const s of manifest.shards) {
-      for (const f of s.owns || []) allFiles.add(String(f).toLowerCase());
+
+  const allFiles = new Set();
+  if (actualFiles.size > 0) {
+    for (const f of actualFiles) allFiles.add(f);
+  } else {
+    if (Array.isArray(allShardResults)) {
+      for (const r of allShardResults) {
+        const owns = r?.shard?.owns || r?.owns || [];
+        for (const f of owns) if (f) allFiles.add(String(f).toLowerCase());
+      }
+    }
+    if (Array.isArray(manifest?.shards)) {
+      for (const s of manifest.shards) {
+        for (const f of s.owns || []) if (f) allFiles.add(String(f).toLowerCase());
+      }
     }
   }
 
@@ -385,7 +401,7 @@ export function selectIntegrationReviewDimensions(manifest, allShardResults = []
     ALL_DIMENSIONS.authorization,
     ALL_DIMENSIONS.semantics,
     ALL_DIMENSIONS.regression,
-    ...(hasPrismaOrMigration ? [ALL_DIMENSIONS['data-integrity']] : []),
+    ALL_DIMENSIONS['data-integrity'],
   ];
 }
 
@@ -947,17 +963,36 @@ export function buildRunTelemetry({
   integrationRepair = null,
   validation = null,
   finalVerdict = null,
+  startTime = null,
+  endTime = null,
+  calibrationStartTime = null,
+  calibrationEndTime = null,
   wallClockMs = 0,
   calibrationDurationMs = 0,
   agentsCount = 0,
   totalAgents = 0,
+  totalAgentCalls = 0,
   peakConcurrent = 1,
+  peakConcurrentAgents = 1,
   tokensTotal = null,
   planPath = '',
   timestamp = '2026-09-10T00:00:00.000Z',
   runId = '',
   researchCacheHits = 0,
   researchCacheMisses = 0,
+  reconCalls = 0,
+  researchCalls = 0,
+  builderCalls = 0,
+  verifierCalls = 0,
+  arbiterCalls = 0,
+  repairCalls = 0,
+  integrationReviewerCalls = 0,
+  preReconScheduled = 0,
+  preReconAvoided = 0,
+  highRiskArbiterAvoided = 0,
+  highRiskFastPathCount = 0,
+  arbiterInvocations = 0,
+  arbiterAvoided = 0,
 }) {
   const requirementsTotal = Array.isArray(manifest?.requirements)
     ? manifest.requirements.length
@@ -1044,11 +1079,21 @@ export function buildRunTelemetry({
     finalStatus = 'READY_WITH_KNOWN_ISSUES';
   }
 
-  const resolvedAgentsCount = Math.max(1, totalAgents || agentsCount || 1);
+  const resolvedAgentsCount = totalAgentCalls || totalAgents || agentsCount || 0;
   const tokens = typeof tokensTotal === 'number' && tokensTotal > 0 ? tokensTotal : null;
 
-  const wallClock = typeof wallClockMs === 'number' && wallClockMs > 0 ? Math.round(wallClockMs) : null;
-  const calibrationDuration = typeof calibrationDurationMs === 'number' && calibrationDurationMs > 0 ? Math.round(calibrationDurationMs) : null;
+  const wallClock = typeof wallClockMs === 'number' && wallClockMs > 0
+    ? Math.round(wallClockMs)
+    : (typeof endTime === 'number' && typeof startTime === 'number' && startTime > 0 && endTime >= startTime
+        ? Math.round(endTime - startTime)
+        : null);
+
+  const calibrationDuration = typeof calibrationDurationMs === 'number' && calibrationDurationMs > 0
+    ? Math.round(calibrationDurationMs)
+    : (typeof calibrationEndTime === 'number' && typeof calibrationStartTime === 'number' && calibrationStartTime > 0 && calibrationEndTime >= calibrationStartTime
+        ? Math.round(calibrationEndTime - calibrationStartTime)
+        : null);
+
   const timeToFirstBuilder = null;
   const criticalPathDuration = null;
   const avgDependencyWait = null;
@@ -1067,6 +1112,8 @@ export function buildRunTelemetry({
     : synthFindings.length;
   const unresolvedFindings = unresolvedShardFindings + unresolvedIntegration + (finalStatus === 'BLOCKED' ? 1 : 0);
 
+  const resolvedPeakConcurrent = peakConcurrent || peakConcurrentAgents || 1;
+
   return {
     runId: resolvedRunId,
     timestamp,
@@ -1080,7 +1127,9 @@ export function buildRunTelemetry({
       avgDependencyWaitMs: avgDependencyWait,
       tokensTotal: tokens,
       agentsCount: resolvedAgentsCount,
-      peakConcurrentAgents: peakConcurrent,
+      totalAgentCalls: resolvedAgentsCount,
+      peakConcurrent: resolvedPeakConcurrent,
+      peakConcurrentAgents: resolvedPeakConcurrent,
       shardsTotal: shardsSummary.length,
       requirementsTotal,
       requirementsCovered,
@@ -1094,6 +1143,19 @@ export function buildRunTelemetry({
       finalStatus,
       researchCacheHits: researchCacheHits || 0,
       researchCacheMisses: researchCacheMisses || 0,
+      reconCalls: reconCalls || 0,
+      researchCalls: researchCalls || 0,
+      builderCalls: builderCalls || 0,
+      verifierCalls: verifierCalls || 0,
+      arbiterCalls: arbiterCalls || 0,
+      repairCalls: repairCalls || 0,
+      integrationReviewerCalls: integrationReviewerCalls || 0,
+      preReconScheduled: preReconScheduled || 0,
+      preReconAvoided: preReconAvoided || 0,
+      highRiskArbiterAvoided: highRiskArbiterAvoided || highRiskFastPathCount || 0,
+      highRiskFastPathCount: highRiskFastPathCount || highRiskArbiterAvoided || 0,
+      arbiterInvocations: arbiterInvocations || arbiterCalls || 0,
+      arbiterAvoided: arbiterAvoided || 0,
     },
     shards: shardsSummary,
   };
@@ -1136,6 +1198,8 @@ export {
 export {
   ResearchCache,
   resolveAdaptivePolicy,
+  resolveVerificationStrategy,
+  evaluateVerificationPanelOutcome,
   buildAdaptiveContextPacket,
   createEvidencePacket,
   compressDependencyContext,

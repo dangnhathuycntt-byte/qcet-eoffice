@@ -1243,16 +1243,32 @@ export function getAgentPriority(options = {}) {
  * modified files, and risk levels of the plan and execution results.
  */
 export function selectIntegrationReviewDimensions(manifest, allShardResults = []) {
-  const allFiles = new Set();
+  const actualFiles = new Set();
   if (Array.isArray(allShardResults)) {
     for (const r of allShardResults) {
-      const files = r?.implementation?.changedFiles || r?.shard?.owns || [];
-      for (const f of files) allFiles.add(String(f).toLowerCase());
+      const changed = r?.implementation?.changedFiles;
+      if (Array.isArray(changed)) {
+        for (const f of changed) {
+          if (f) actualFiles.add(String(f).toLowerCase());
+        }
+      }
     }
   }
-  if (Array.isArray(manifest?.shards)) {
-    for (const s of manifest.shards) {
-      for (const f of s.owns || []) allFiles.add(String(f).toLowerCase());
+
+  const allFiles = new Set();
+  if (actualFiles.size > 0) {
+    for (const f of actualFiles) allFiles.add(f);
+  } else {
+    if (Array.isArray(allShardResults)) {
+      for (const r of allShardResults) {
+        const owns = r?.shard?.owns || r?.owns || [];
+        for (const f of owns) if (f) allFiles.add(String(f).toLowerCase());
+      }
+    }
+    if (Array.isArray(manifest?.shards)) {
+      for (const s of manifest.shards) {
+        for (const f of s.owns || []) if (f) allFiles.add(String(f).toLowerCase());
+      }
     }
   }
 
@@ -1329,12 +1345,13 @@ export function selectIntegrationReviewDimensions(manifest, allShardResults = []
     return [ALL_DIMENSIONS.contracts, ALL_DIMENSIONS.authorization, ALL_DIMENSIONS.regression];
   }
 
+  // Cross-cutting, high-risk, or comprehensive blast radius: full review panel
   return [
     ALL_DIMENSIONS.contracts,
     ALL_DIMENSIONS.authorization,
     ALL_DIMENSIONS.semantics,
     ALL_DIMENSIONS.regression,
-    ...(hasPrismaOrMigration ? [ALL_DIMENSIONS['data-integrity']] : []),
+    ALL_DIMENSIONS['data-integrity'],
   ];
 }
 
@@ -2239,7 +2256,8 @@ export class ResearchCache {
     if (this.cacheDir && typeof path !== 'undefined' && typeof fs !== 'undefined' && path.join && fs.writeFileSync) {
       try {
         const filePath = path.join(this.cacheDir, `${key}.json`);
-        fs.writeFileSync(filePath, JSON.stringify({ query, key, result, timestamp: Date.now() }, null, 2), 'utf8');
+        const timestamp = typeof process !== 'undefined' && process.env?.QCET_TIMESTAMP ? process.env.QCET_TIMESTAMP : '2026-09-11T00:00:00.000Z';
+        fs.writeFileSync(filePath, JSON.stringify({ query, key, result, timestamp }, null, 2), 'utf8');
       } catch (_) {}
     }
   }
@@ -3457,7 +3475,7 @@ ${ambiguityFallback}`;
     ? runId
     : (typeof args?.runId === 'string' && args.runId
         ? args.runId
-        : `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+        : `run-${Math.random().toString(36).slice(2, 10)}`);
   const researchCache = new ResearchCache(executionRunId);
   const completedShardIds = new Set();
   const activeShardIds = new Set();
