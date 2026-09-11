@@ -364,7 +364,7 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
     isOverdue(item.dueDate, item.status) || item.status === "OVERDUE";
   const effectiveColId = mapTaskStatusToKanbanColumn(item.status);
 
-  // Close menu on outside click
+  // Close menu on outside mousedown or Escape keydown
   React.useEffect(() => {
     if (!menuOpen) return;
     function handleOutside(e: MouseEvent) {
@@ -373,8 +373,18 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
         setStatusSubmenuOpen(false);
       }
     }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setStatusSubmenuOpen(false);
+      }
+    }
     document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, [menuOpen]);
 
   function handleCardClick() {
@@ -449,6 +459,12 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
               role="menu"
               data-slot="kanban-action-menu"
               aria-label="Thao tác nhiệm vụ"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setMenuOpen(false);
+                  setStatusSubmenuOpen(false);
+                }
+              }}
               className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border border-border/80 bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100"
             >
               {/* Mở chi tiết */}
