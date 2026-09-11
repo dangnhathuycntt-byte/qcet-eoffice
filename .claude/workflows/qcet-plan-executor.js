@@ -4242,8 +4242,10 @@ Return structured proof.
   phase('Release Gate');
 
 
-  let finalVerdict = await callAgent(
-    `
+  let finalVerdict;
+  try {
+    finalVerdict = await callAgent(
+      `
 You are the final independent QCET release gate.
 
 You did not implement the changes.
@@ -4277,14 +4279,24 @@ Do not modify files.
 
 Return exactly the structured release verdict.
 `,
-    {
-      agent: 'qcet-skeptic',
-      agentType: 'qcet-skeptic',
-      phase: 'Release Gate',
-      label: 'final release skeptic',
-      schema: FINAL_SCHEMA,
-    }
-  );
+      {
+        agent: 'qcet-skeptic',
+        agentType: 'qcet-skeptic',
+        phase: 'Release Gate',
+        label: 'final release skeptic',
+        schema: FINAL_SCHEMA,
+      }
+    );
+  } catch (skepticError) {
+    log(`Release Gate skeptic failed: ${String(skepticError)}. Synthesizing BLOCKED verdict.`);
+    finalVerdict = {
+      status: 'BLOCKED',
+      rationale: `Release Gate agent failed: ${String(skepticError)}`,
+      blockers: ['RELEASE_GATE_AGENT_FAILURE'],
+      deterministicOverride: false,
+      agentVerdict: null,
+    };
+  }
 
   const deterministicGate = evaluateDeterministicReleaseGate({
     manifest,
@@ -4412,7 +4424,7 @@ You own ${gateVerdictPath}. Write the file accurately without modifying any othe
       }
     );
   } catch (gateVerdictError) {
-    log(`Failed to persist release gate verdict: ${String(gateVerdictError)}`);
+    log(`RELEASE_GATE_PERSIST_FAILURE: Failed to persist release gate verdict to ${gateVerdictPath}: ${String(gateVerdictError)}`);
   }
 
   try {
