@@ -58,7 +58,12 @@ export const MANIFEST_SCHEMA = {
 
           kind: {
             type: 'string',
-            enum: ['feature', 'infrastructure', 'validation'],
+            enum: ['feature', 'infrastructure', 'validation', 'support', 'exploratory', 'migration'],
+          },
+
+          isolation: {
+            type: 'string',
+            enum: ['none', 'worktree'],
           },
 
           owns: {
@@ -495,7 +500,23 @@ const INTEGRATION_VERDICT_SCHEMA = {
 
     remainingIssues: {
       type: 'array',
-      items: { type: 'string' },
+      items: {
+        anyOf: [
+          { type: 'string' },
+          {
+            type: 'object',
+            required: ['severity', 'description'],
+            properties: {
+              severity: {
+                type: 'string',
+                enum: ['critical', 'high', 'medium', 'low', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+              },
+              file: { type: 'string' },
+              description: { type: 'string' },
+            },
+          },
+        ],
+      },
     },
 
     summary: { type: 'string' },
@@ -762,7 +783,7 @@ export function getActiveShardsFilePaths() {
   return [...new Set(paths)];
 }
 
-export function syncActiveShardBoundaries(shardsPayload, phaseName = 'Calibrate') {
+export function syncActiveShardBoundaries(shardsPayload, _phaseName = 'Calibrate') {
   // If running in Node.js environment (e.g. tests), synchronize synchronously to disk
   if (typeof process !== 'undefined' && process.versions && process.versions.node) {
     try {
@@ -983,6 +1004,23 @@ export function computeShardPriorities(manifest) {
     }
     const transitiveDownstream = visited.size;
 
+    const pathMemo = new Map();
+    function getLongestPath(nodeId) {
+      if (pathMemo.has(nodeId)) return pathMemo.get(nodeId);
+      const nextNodes = dependentsMap.get(nodeId);
+      if (!nextNodes || nextNodes.size === 0) {
+        pathMemo.set(nodeId, 0);
+        return 0;
+      }
+      let maxChild = 0;
+      for (const childId of nextNodes) {
+        maxChild = Math.max(maxChild, 1 + getLongestPath(childId));
+      }
+      pathMemo.set(nodeId, maxChild);
+      return maxChild;
+    }
+    const criticalPathLength = getLongestPath(s.id);
+
     const risk = String(s.risk || 'medium').toLowerCase();
     let riskWeight = 2;
     if (risk === 'critical') riskWeight = 4;
@@ -994,10 +1032,12 @@ export function computeShardPriorities(manifest) {
     const acCount = Array.isArray(s.acceptanceCriteria) ? s.acceptanceCriteria.length : 0;
     const workCount = reqCount + ownsCount + acCount;
 
-    const priority = (transitiveDownstream * 10) + (riskWeight * 3) + workCount;
+    // Critical-path priority: weight longest DAG chain highest to minimize overall makespan
+    const priority = (criticalPathLength * 20) + (transitiveDownstream * 10) + (riskWeight * 3) + workCount;
 
     priorityMap.set(s.id, {
       priority,
+      criticalPathLength,
       transitiveDownstream,
       riskWeight,
       workCount,
@@ -1089,6 +1129,314 @@ export function computeCriticalPathDurationMs(manifest, shardDurations = {}) {
     critical = Math.max(critical, longestTo(shard.id));
   }
   return critical > 0 ? Math.round(critical) : null;
+}
+
+/**
+ * Computes the set of shard IDs eligible for pre-reconnaissance lookahead using canonical BFS.
+ * Shards are eligible if:
+ * 1. They are currently ready (0 unfinished dependencies), OR
+ * 2. They are within lookaheadDepth levels downstream from ready or active shards.
+ *
+ * Deep future shards are excluded to prevent unbounded agent fan-out and resource exhaustion.
+ */
+export function computeEligibleReconShards(
+  manifest,
+  activeIds = new Set(),
+  completedIds = new Set(),
+  lookaheadDepth = 1
+) {
+  const shards = Array.isArray(manifest?.shards) ? manifest.shards : [];
+  const activeSet = activeIds instanceof Set ? activeIds : new Set(activeIds);
+  const completedSet = completedIds instanceof Set ? completedIds : new Set(completedIds);
+
+  const eligible = new Set();
+  const dependentsMap = new Map();
+  const dependenciesMap = new Map();
+
+  for (const s of shards) {
+    dependentsMap.set(s.id, []);
+    const deps = Array.isArray(s.dependencies)
+      ? s.dependencies
+      : Array.isArray(s.dependsOn)
+      ? s.dependsOn
+      : [];
+    dependenciesMap.set(s.id, deps);
+  }
+
+  for (const [id, deps] of dependenciesMap.entries()) {
+    for (const d of deps) {
+      if (dependentsMap.has(d)) {
+        dependentsMap.get(d).push(id);
+      }
+    }
+  }
+
+  // Level 0: Ready shards (all dependencies completed or none)
+  const readyShards = [];
+  for (const s of shards) {
+    if (completedSet.has(s.id)) continue;
+    const deps = dependenciesMap.get(s.id) || [];
+    const allMet = deps.every((d) => completedSet.has(d));
+    if (allMet) {
+      eligible.add(s.id);
+      readyShards.push(s.id);
+    }
+  }
+
+  // Bounded lookahead: Traverse up to lookaheadDepth levels downstream from ready or currently active shards
+  let currentFrontier = [...readyShards, ...Array.from(activeSet)];
+  let currentDepth = 0;
+
+  while (currentDepth < lookaheadDepth && currentFrontier.length > 0) {
+    const nextFrontier = [];
+    for (const parentId of currentFrontier) {
+      for (const childId of dependentsMap.get(parentId) || []) {
+        if (!eligible.has(childId) && !completedSet.has(childId)) {
+          eligible.add(childId);
+          nextFrontier.push(childId);
+        }
+      }
+    }
+    currentFrontier = nextFrontier;
+    currentDepth++;
+  }
+
+  return eligible;
+}
+
+/**
+ * Asynchronous Priority Semaphore with Speculative Recon Reservation.
+ * Guarantees that agent concurrency is bounded by capacity and speculative pre-reads
+ * are capped at speculativeReadLimit so they never starve builders or verifiers.
+ */
+export function createSemaphore(capacity = 6, options = {}) {
+  const num = typeof capacity === 'number' ? capacity : (capacity !== undefined ? Number(capacity) : 6);
+  const rawCap = Number.isFinite(num) ? num : 6;
+  const maxCapacity = Math.max(1, Math.min(16, Math.floor(rawCap)));
+  const specNum = typeof options.speculativeReadLimit === 'number'
+    ? options.speculativeReadLimit
+    : (options.speculativeReadLimit !== undefined ? Number(options.speculativeReadLimit) : NaN);
+  const speculativeLimit = Number.isFinite(specNum)
+    ? Math.max(1, Math.min(maxCapacity, Math.floor(specNum)))
+    : Math.min(2, Math.max(1, Math.floor(maxCapacity / 2)));
+  let activeCount = 0;
+  let activeSpeculative = 0;
+  let peakConcurrent = 0;
+  const queue = [];
+
+  function tryAcquire(isSpeculative) {
+    if (activeCount >= maxCapacity) return false;
+    if (isSpeculative && activeSpeculative >= speculativeLimit) return false;
+    activeCount++;
+    if (isSpeculative) activeSpeculative++;
+    if (activeCount > peakConcurrent) peakConcurrent = activeCount;
+    return true;
+  }
+
+  function pump() {
+    if (activeCount >= maxCapacity || queue.length === 0) return;
+    for (let i = 0; i < queue.length; i++) {
+      const waiter = queue[i];
+      if (waiter.isSpeculative && activeSpeculative >= speculativeLimit) continue;
+      queue.splice(i, 1);
+      i--;
+      activeCount++;
+      if (waiter.isSpeculative) activeSpeculative++;
+      if (activeCount > peakConcurrent) peakConcurrent = activeCount;
+      waiter.resolve(createRelease(waiter.isSpeculative));
+      if (activeCount >= maxCapacity) break;
+    }
+  }
+
+  function createRelease(isSpeculative) {
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      activeCount--;
+      if (isSpeculative) activeSpeculative--;
+      pump();
+    };
+  }
+
+  function acquire(priority = 1, isSpeculative = false) {
+    const prio = typeof priority === 'number' ? priority : 1;
+    const spec = Boolean(isSpeculative);
+    if (queue.length === 0 && tryAcquire(spec)) {
+      return Promise.resolve(createRelease(spec));
+    }
+    return new Promise((resolve) => {
+      const waiter = { priority: prio, isSpeculative: spec, resolve };
+      let inserted = false;
+      for (let i = 0; i < queue.length; i++) {
+        if (queue[i].priority > prio) {
+          queue.splice(i, 0, waiter);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) queue.push(waiter);
+      pump();
+    });
+  }
+
+  async function withPermit(fn, priority = 1, isSpeculative = false) {
+    const release = await acquire(priority, isSpeculative);
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  }
+
+  return {
+    acquire,
+    withPermit,
+    getActiveCount: () => activeCount,
+    getActiveSpeculative: () => activeSpeculative,
+    getPeakConcurrent: () => peakConcurrent,
+    getQueueLength: () => queue.length,
+    capacity: maxCapacity,
+    speculativeLimit,
+  };
+}
+
+/**
+ * Resolves priority tier (P0..P5) for an agent invocation.
+ */
+export function getAgentPriority(options = {}) {
+  if (typeof options === 'number') return options;
+  if (typeof options?.priority === 'number') return options.priority;
+  const role = String(
+    options?.role || options?.type || options?.agentType || options?.agent || options?.phase || options?.label || ''
+  ).toLowerCase();
+  const isSpeculative = Boolean(options?.isSpeculative || options?.speculative);
+
+  if (role.includes('release') || role.includes('global')) return 0;
+  if (role.includes('builder') || role.includes('repair') || role.includes('implement')) return 1;
+  if (role.includes('verif') || role.includes('skeptic')) return 2;
+  if (role.includes('reconcil') || role.includes('merge')) return 3;
+  if (role.includes('recon')) {
+    return isSpeculative ? 5 : 4;
+  }
+  return 1;
+}
+
+/**
+ * Selects targeted integration review dimensions based on actual blast radius,
+ * modified files, and risk levels of the plan and execution results.
+ */
+export function selectIntegrationReviewDimensions(manifest, allShardResults = []) {
+  const actualFiles = new Set();
+  if (Array.isArray(allShardResults)) {
+    for (const r of allShardResults) {
+      const changed = r?.implementation?.changedFiles;
+      if (Array.isArray(changed)) {
+        for (const f of changed) {
+          if (f) actualFiles.add(String(f).toLowerCase());
+        }
+      }
+    }
+  }
+
+  const allFiles = new Set();
+  if (actualFiles.size > 0) {
+    for (const f of actualFiles) allFiles.add(f);
+  } else {
+    if (Array.isArray(allShardResults)) {
+      for (const r of allShardResults) {
+        const owns = r?.shard?.owns || r?.owns || [];
+        for (const f of owns) if (f) allFiles.add(String(f).toLowerCase());
+      }
+    }
+    if (Array.isArray(manifest?.shards)) {
+      for (const s of manifest.shards) {
+        for (const f of s.owns || []) if (f) allFiles.add(String(f).toLowerCase());
+      }
+    }
+  }
+
+  const fileList = Array.from(allFiles);
+  const shards = Array.isArray(manifest?.shards) ? manifest.shards : [];
+  const maxRisk = shards.reduce((acc, s) => {
+    const r = String(s.risk || 'medium').toLowerCase();
+    if (r === 'critical') return 'critical';
+    if (r === 'high' && acc !== 'critical') return 'high';
+    return acc;
+  }, 'low');
+
+  const isUiOnly =
+    fileList.length > 0 &&
+    fileList.every(
+      (f) =>
+        (f.includes('component') ||
+          f.includes('src/app/') ||
+          f.includes('ui') ||
+          f.endsWith('.tsx') ||
+          f.endsWith('.css')) &&
+        !f.includes('/api/') &&
+        !f.includes('prisma') &&
+        !f.includes('/auth/')
+    );
+
+  const hasAuthOrApi = fileList.some((f) => f.includes('/auth/') || f.includes('/api/') || f.includes('/server/'));
+  const hasPrismaOrMigration = fileList.some(
+    (f) => f.includes('prisma') || f.includes('migration') || f.includes('/db/')
+  );
+
+  const ALL_DIMENSIONS = {
+    contracts: {
+      id: 'contracts',
+      charter:
+        'Cross-module API/type/schema/contracts consistency, stale adapters, import drift, caller/consumer mismatch.',
+    },
+    authorization: {
+      id: 'authorization',
+      charter:
+        'Authorization, permission boundaries, server-side enforcement, trust boundaries, data exposure.',
+    },
+    semantics: {
+      id: 'semantics',
+      charter:
+        'Duplicated business semantics, competing sources of truth, duplicated UI meaning, inconsistent status/count logic.',
+    },
+    regression: {
+      id: 'regression',
+      charter:
+        'Regression risk, missing tests, integration behavior, accessibility/performance regressions where relevant.',
+    },
+    'data-integrity': {
+      id: 'data-integrity',
+      charter:
+        'Database schema consistency, transaction atomicity, migration safety, foreign key and constraint integrity.',
+    },
+    'ux-accessibility': {
+      id: 'ux-accessibility',
+      charter:
+        'UI ergonomics, light-only design compliance, accessibility, touch target sizing, empty/loading states.',
+    },
+  };
+
+  if (isUiOnly && maxRisk !== 'critical') {
+    return [ALL_DIMENSIONS.semantics, ALL_DIMENSIONS.regression, ALL_DIMENSIONS['ux-accessibility']];
+  }
+
+  if (hasPrismaOrMigration && !hasAuthOrApi && maxRisk !== 'critical') {
+    return [ALL_DIMENSIONS.contracts, ALL_DIMENSIONS['data-integrity'], ALL_DIMENSIONS.regression];
+  }
+
+  if (hasAuthOrApi && !hasPrismaOrMigration && maxRisk !== 'critical') {
+    return [ALL_DIMENSIONS.contracts, ALL_DIMENSIONS.authorization, ALL_DIMENSIONS.regression];
+  }
+
+  // Cross-cutting, high-risk, or comprehensive blast radius: full review panel
+  return [
+    ALL_DIMENSIONS.contracts,
+    ALL_DIMENSIONS.authorization,
+    ALL_DIMENSIONS.semantics,
+    ALL_DIMENSIONS.regression,
+    ALL_DIMENSIONS['data-integrity'],
+  ];
 }
 
 export function shouldIsolateShard(shard, manifest, isolationConfig = 'auto') {
@@ -1250,9 +1598,19 @@ export function evaluateDeterministicReleaseGate({
     ['critical', 'high'].includes(String(d?.severity || '').toLowerCase())
   );
   if (criticalIntegrationDefects.length > 0) {
-    if (!integrationRepair || integrationRepair.status !== 'completed') {
+    const isRepairVerified =
+      Boolean(integrationRepair) &&
+      integrationRepair.status === 'completed' &&
+      integrationRepair.verified === true &&
+      (!Array.isArray(integrationRepair.remainingDefects) ||
+        integrationRepair.remainingDefects.filter((def) => {
+          const s = String(def?.severity || (typeof def === 'string' ? def : '')).toUpperCase();
+          return s === 'CRITICAL' || s === 'HIGH' || typeof def === 'string';
+        }).length === 0);
+
+    if (!isRepairVerified) {
       deterministicBlockers.push(
-        `${criticalIntegrationDefects.length} critical/high integration defect(s) remain unresolved.`
+        `${criticalIntegrationDefects.length} critical/high integration defect(s) remain unresolved or unverified after repair.`
       );
     }
   }
@@ -1380,6 +1738,8 @@ export function buildRunTelemetry({
   planPath = '',
   timestamp = '2026-09-10T00:00:00.000Z',
   runId = '',
+  researchCacheHits = 0,
+  researchCacheMisses = 0,
 }) {
   const requirementsTotal = Array.isArray(manifest?.requirements)
     ? manifest.requirements.length
@@ -1557,6 +1917,8 @@ export function buildRunTelemetry({
         tokensPerVerifiedRequirement: tokens !== null && requirementsCovered > 0 ? Math.round(tokens / requirementsCovered) : null,
         verifierTokenCost: tokens !== null ? Math.round(tokens * 0.24) : null,
         researchEscalationRate: 0.0,
+        researchCacheHits: researchCacheHits || 0,
+        researchCacheMisses: researchCacheMisses || 0,
       },
       reliability: {
         nullAgentRate: 0.0,
@@ -1917,6 +2279,401 @@ Verify whether upstream changes invalidated any pre-recon assumptions, modified 
 Do NOT modify files.
 Return structured reconciliation evidence adhering strictly to schema.`;
 
+/**
+ * Cache for recon and research queries across the plan execution run.
+ */
+export class ResearchCache {
+  constructor(namespace = 'default', options = {}) {
+    this.namespace = namespace;
+    this.repoRoot = options.repoRoot || (typeof process !== 'undefined' && process.cwd ? process.cwd() : '.');
+    this.memoryCache = new Map();
+    this.hits = 0;
+    this.misses = 0;
+    this.cacheDir = options.cacheDir || null;
+    if (!this.cacheDir && typeof path !== 'undefined' && typeof fs !== 'undefined' && path.join && fs.mkdirSync) {
+      try {
+        this.cacheDir = path.join(this.repoRoot, '.superpowers', 'qcet-plan-executor', 'cache', 'research');
+        fs.mkdirSync(this.cacheDir, { recursive: true });
+      } catch (_) {}
+    }
+  }
+
+  get researchCacheHits() {
+    return this.hits;
+  }
+
+  get researchCacheMisses() {
+    return this.misses;
+  }
+
+  buildKey(query, scopeOrContext = 'global', extraContext = {}) {
+    let scope = 'global';
+    let sourceContext = '';
+    let dependencyVersion = '';
+
+    if (typeof scopeOrContext === 'string') {
+      scope = scopeOrContext;
+      if (typeof extraContext === 'object' && extraContext !== null) {
+        sourceContext = extraContext.sourceContext || extraContext.source || extraContext.sourceOrVersionContext || '';
+        dependencyVersion = extraContext.dependencyVersion || extraContext.frameworkVersion || extraContext.version || '';
+      }
+    } else if (typeof scopeOrContext === 'object' && scopeOrContext !== null) {
+      scope = scopeOrContext.scope || 'global';
+      sourceContext = scopeOrContext.sourceContext || scopeOrContext.source || scopeOrContext.sourceOrVersionContext || '';
+      dependencyVersion = scopeOrContext.dependencyVersion || scopeOrContext.frameworkVersion || scopeOrContext.version || '';
+    }
+
+    return `${this.namespace}:${scope}:${query}:${sourceContext}:${dependencyVersion}`;
+  }
+
+  _getKeyHash(query, scopeOrContext = 'global', extraContext = {}) {
+    const rawKey = this.buildKey(query, scopeOrContext, extraContext);
+    if (typeof crypto !== 'undefined' && crypto.createHash) {
+      return crypto.createHash('sha256').update(rawKey).digest('hex').slice(0, 16);
+    }
+    let hash = 0;
+    for (let i = 0; i < rawKey.length; i++) {
+      hash = ((hash << 5) - hash) + rawKey.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(16);
+  }
+
+  get(query, scopeOrContext = 'global', extraContext = {}) {
+    const key = this._getKeyHash(query, scopeOrContext, extraContext);
+    if (this.memoryCache.has(key)) {
+      this.hits++;
+      return this.memoryCache.get(key);
+    }
+    if (this.cacheDir && typeof path !== 'undefined' && typeof fs !== 'undefined' && path.join && fs.existsSync && fs.readFileSync) {
+      try {
+        const filePath = path.join(this.cacheDir, `${key}.json`);
+        if (fs.existsSync(filePath)) {
+          const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          this.memoryCache.set(key, data.result);
+          this.hits++;
+          return data.result;
+        }
+      } catch (_) {}
+    }
+    this.misses++;
+    return null;
+  }
+
+  set(query, result, scopeOrContext = 'global', extraContext = {}) {
+    const key = this._getKeyHash(query, scopeOrContext, extraContext);
+    this.memoryCache.set(key, result);
+    if (this.cacheDir && typeof path !== 'undefined' && typeof fs !== 'undefined' && path.join && fs.writeFileSync) {
+      try {
+        const filePath = path.join(this.cacheDir, `${key}.json`);
+        const timestamp = typeof process !== 'undefined' && process.env?.QCET_TIMESTAMP ? process.env.QCET_TIMESTAMP : '2026-09-11T00:00:00.000Z';
+        fs.writeFileSync(filePath, JSON.stringify({ query, key, result, timestamp }, null, 2), 'utf8');
+      } catch (_) {}
+    }
+  }
+
+  clear() {
+    this.memoryCache.clear();
+    this.hits = 0;
+    this.misses = 0;
+    if (this.cacheDir && typeof fs !== 'undefined' && fs.rmSync && fs.mkdirSync) {
+      try {
+        fs.rmSync(this.cacheDir, { recursive: true, force: true });
+        fs.mkdirSync(this.cacheDir, { recursive: true });
+      } catch (_) {}
+    }
+  }
+}
+
+export function resolveAdaptivePolicy(shard) {
+  const files = shard.owns || [];
+  let risk = 'low';
+  const lenses = new Set(['correctness']);
+
+  const isAuthOrSecurity = files.some((f) =>
+    /auth|crypto|session|permission|rbac|jwt|secret/i.test(f)
+  );
+  const isDatabaseOrCore = files.some((f) =>
+    /prisma|schema|database|db|migration|core/i.test(f)
+  );
+  const isRouterOrApi = files.some((f) =>
+    /api|routers|trpc|server/i.test(f)
+  );
+  const isUiOrComponent = files.some((f) =>
+    /components|views|ui|styles|pages/i.test(f)
+  );
+
+  if (isAuthOrSecurity) {
+    risk = 'critical';
+    lenses.add('security');
+    lenses.add('data-integrity');
+  } else if (isDatabaseOrCore) {
+    risk = 'high';
+    lenses.add('data-integrity');
+  } else if (isRouterOrApi) {
+    risk = 'medium';
+    lenses.add('security');
+  }
+
+  if (isUiOrComponent) {
+    lenses.add('ux');
+  }
+
+  let effort = 'low';
+  if (risk === 'critical') {
+    effort = 'xhigh';
+  } else if (risk === 'high') {
+    effort = 'high';
+  } else if (risk === 'medium') {
+    effort = 'medium';
+  }
+
+  return {
+    risk,
+    effort,
+    lenses: Array.from(lenses),
+    requireAdversarialVerification: risk === 'critical' || risk === 'high',
+    recommendedIsolation: shard.isolation === 'worktree' || risk === 'critical' ? 'worktree' : 'in_place',
+  };
+}
+
+export function buildAdaptiveContextPacket(shard, options = {}) {
+  const repoRoot = options.repoRoot || (typeof process !== 'undefined' && process.cwd ? process.cwd() : '.');
+  const files = shard.owns || [];
+  const extractedSignatures = {};
+  let originalBytes = 0;
+  let compressedBytes = 0;
+
+  for (const relFile of files) {
+    let content = null;
+    if (options.fileContents && options.fileContents[relFile]) {
+      content = options.fileContents[relFile];
+    } else if (typeof path !== 'undefined' && typeof fs !== 'undefined' && path.join && fs.existsSync && fs.statSync && fs.readFileSync) {
+      try {
+        const fullPath = path.join(repoRoot, relFile);
+        if (fs.existsSync(fullPath) && !fs.statSync(fullPath).isDirectory()) {
+          content = fs.readFileSync(fullPath, 'utf8');
+        }
+      } catch (_) {}
+    }
+
+    if (!content) continue;
+
+    try {
+      const byteLen = typeof Buffer !== 'undefined' ? Buffer.byteLength(content, 'utf8') : content.length;
+      originalBytes += byteLen;
+
+      const lines = content.split('\n');
+      const signatureLines = [];
+      let inDocBlock = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith('/**')) inDocBlock = true;
+        if (inDocBlock) {
+          signatureLines.push(line);
+          if (trimmed.endsWith('*/')) inDocBlock = false;
+          continue;
+        }
+
+        if (
+          trimmed.startsWith('export ') ||
+          trimmed.startsWith('import ') ||
+          trimmed.startsWith('interface ') ||
+          trimmed.startsWith('type ') ||
+          trimmed.startsWith('class ') ||
+          (trimmed.startsWith('const ') && trimmed.includes('=') && !trimmed.includes('{'))
+        ) {
+          signatureLines.push(line);
+        } else if (/^(async\s+)?function\s+/.test(trimmed)) {
+          signatureLines.push(line.replace(/\{.*$/, ';'));
+        }
+      }
+
+      const compressedText = signatureLines.join('\n');
+      const compLen = typeof Buffer !== 'undefined' ? Buffer.byteLength(compressedText, 'utf8') : compressedText.length;
+      compressedBytes += compLen;
+      extractedSignatures[relFile] = compressedText;
+    } catch (_) {}
+  }
+
+  const tokenSavingsPercent = originalBytes > 0
+    ? Math.round(((originalBytes - compressedBytes) / originalBytes) * 100)
+    : 0;
+
+  return {
+    shardId: shard.id,
+    signatures: extractedSignatures,
+    originalBytes,
+    compressedBytes,
+    tokenSavingsPercent,
+  };
+}
+
+export function createEvidencePacket(shard, state = {}) {
+  const reqDetails = Array.isArray(shard?.requirementDetails)
+    ? shard.requirementDetails
+    : (Array.isArray(state?.requirementDetails)
+        ? state.requirementDetails
+        : (shard?.requirements || state?.requirements || []).map((id) => ({ id, text: `Requirement ${id}` })));
+
+  const impl = state?.implementation || {};
+  const verif = state?.lastVerification || {};
+  const recon = state?.recon || {};
+  const research = state?.research || {};
+
+  const changedFiles = Array.isArray(impl.changedFiles)
+    ? impl.changedFiles
+    : (Array.isArray(state?.changedFiles) ? state.changedFiles : []);
+
+  const contractDelta = Array.isArray(impl.contractDelta)
+    ? impl.contractDelta
+    : (Array.isArray(state?.contractDelta)
+        ? state.contractDelta
+        : (Array.isArray(recon.contracts) ? recon.contracts : []));
+
+  const testEvidence = Array.isArray(impl.testsRun)
+    ? impl.testsRun
+    : (Array.isArray(impl.tests)
+        ? impl.tests
+        : (Array.isArray(state?.testsRun)
+            ? state.testsRun
+            : (Array.isArray(state?.tests)
+                ? state.tests
+                : (Array.isArray(state?.testEvidence) ? state.testEvidence : []))));
+
+  const confirmedFindings = Array.isArray(verif.issues)
+    ? verif.issues
+    : (Array.isArray(state?.confirmedFindings)
+        ? state.confirmedFindings
+        : (Array.isArray(state?.issues) ? state.issues : []));
+
+  const unresolvedRisks = Array.isArray(verif.risks)
+    ? verif.risks
+    : (Array.isArray(recon.risks)
+        ? recon.risks
+        : (Array.isArray(impl.risks)
+            ? impl.risks
+            : (Array.isArray(state?.unresolvedRisks)
+                ? state.unresolvedRisks
+                : (Array.isArray(state?.risks) ? state.risks : []))));
+
+  const rawClaims = Array.isArray(research.claims)
+    ? research.claims
+    : (Array.isArray(state?.relevantResearchClaims)
+        ? state.relevantResearchClaims
+        : (Array.isArray(state?.claims) ? state.claims : []));
+
+  const relevantResearchClaims = rawClaims.map((c) => ({
+    claim: c.claim || '',
+    source: c.source || c.sourceUrl || c.canonicalUrl || '',
+    sourceUrl: c.sourceUrl || c.source || c.canonicalUrl || '',
+    versionOrDate: c.versionOrDate || c.date || c.version || '',
+    applicability: c.applicability || '',
+    confidence: typeof c.confidence === 'number' ? c.confidence : (c.confidence ? String(c.confidence) : 'medium'),
+  }));
+
+  const verificationVerdict = verif.verdict || state?.verificationVerdict || state?.verdict || 'pending';
+
+  return {
+    shardId: shard?.id || state?.shardId || 'unknown',
+    requirements: shard?.requirements || state?.requirements || [],
+    requirementDetails: reqDetails,
+    acceptanceCriteria: shard?.acceptanceCriteria || state?.acceptanceCriteria || [],
+    ownership: shard?.owns || state?.ownership || state?.owns || [],
+    owns: shard?.owns || state?.ownership || state?.owns || [],
+    changedFiles,
+    contractDelta,
+    testEvidence,
+    confirmedFindings,
+    unresolvedRisks,
+    relevantResearchClaims,
+    verificationVerdict,
+  };
+}
+
+export function compressDependencyContext(dependencyResults = []) {
+  if (!Array.isArray(dependencyResults)) return [];
+  return dependencyResults
+    .filter(Boolean)
+    .map((res) => {
+      const shard = res.shard || { id: res.shardId || 'unknown' };
+      return createEvidencePacket(shard, res);
+    });
+}
+
+export function formatVerifierPacket(shardPacket, state = {}) {
+  const packet = createEvidencePacket(shardPacket, state);
+  const impl = state.implementation || {};
+  return {
+    shardId: shardPacket.id,
+    title: shardPacket.title || shardPacket.id,
+    requirements: packet.requirements,
+    requirementDetails: packet.requirementDetails,
+    acceptanceCriteria: packet.acceptanceCriteria,
+    ownership: shardPacket.owns || packet.owns || [],
+    changedFiles: packet.changedFiles,
+    implementationSummary: impl.summary || impl.notes || 'Implementation completed.',
+    testEvidence: packet.testEvidence,
+    relevantContracts: packet.contractDelta,
+    researchClaims: packet.relevantResearchClaims,
+  };
+}
+
+export function formatRepairPacket(shardPacket, state = {}) {
+  const packet = createEvidencePacket(shardPacket, state);
+  const verif = state.lastVerification || {};
+  return {
+    shardId: shardPacket.id,
+    shardOwnership: shardPacket.owns || packet.owns || [],
+    confirmedFindings: packet.confirmedFindings.length > 0 ? packet.confirmedFindings : (verif.issues || []),
+    currentChangedFiles: packet.changedFiles,
+    targetedTests: packet.testEvidence,
+    requirementMapping: packet.requirementDetails,
+    unresolvedRisks: packet.unresolvedRisks,
+  };
+}
+
+export function formatIntegrationShardSummary(allShardResults = {}) {
+  const summary = {};
+  const entries = Array.isArray(allShardResults)
+    ? allShardResults.map((s) => [s?.shard?.id || s?.shardId || s?.id, s])
+    : Object.entries(allShardResults || {});
+
+  for (const [shardId, res] of entries) {
+    if (!res) continue;
+    const shard = res.shard || { id: shardId };
+    const packet = createEvidencePacket(shard, res);
+    const highOrCriticalIssues = (packet.confirmedFindings || []).filter((i) => {
+      const sev = String(i?.severity || i?.level || '').toLowerCase();
+      return sev === 'high' || sev === 'critical';
+    });
+    const highOrCriticalRisks = (packet.unresolvedRisks || []).filter((r) => {
+      if (!r) return false;
+      if (typeof r === 'string') {
+        return !/\[?(?:low|info|trivial)\]?/i.test(r);
+      }
+      if (typeof r === 'object') {
+        return r.severity === 'high' || r.severity === 'critical' || r.level === 'high' || r.level === 'critical' || (!r.severity && !r.level);
+      }
+      return true;
+    });
+
+    summary[shardId] = {
+      shardId,
+      verificationVerdict: packet.verificationVerdict,
+      changedFiles: packet.changedFiles,
+      contractDelta: packet.contractDelta,
+      highOrCriticalFindings: highOrCriticalIssues,
+      highOrCriticalRisks: highOrCriticalRisks,
+      testCount: packet.testEvidence.length,
+    };
+  }
+  return summary;
+}
+
 
 // -----------------------------------------------------------------------------
 // BUDGET PROFILES, FAILURE REASONS & RUNTIME PROVENANCE
@@ -2227,10 +2984,12 @@ export function buildRuntimeFingerprint(input = {}) {
 const rawArgs = typeof args !== 'undefined' ? args : {};
 let planPath = null;
 let planContent = null;
-let budgetConfig = null;
 let worktreeIsolation = 'auto';
-let domainConfig = 'general';
 let maxRepairRounds = 2;
+let lookaheadDepth = 1;
+let concurrency = 6;
+let speculativeReadLimit = undefined;
+let runId = null;
 
 if (typeof rawArgs === 'string') {
   const trimmed = rawArgs.trim().replace(/^['"]|['"]$/g, '');
@@ -2244,10 +3003,24 @@ if (typeof rawArgs === 'string') {
       } else if (parsed.plan) {
         planContent = parsed.plan;
       }
-      budgetConfig = parsed.budget || null;
+      if (typeof parsed.runId === 'string' && parsed.runId) {
+        runId = parsed.runId;
+      }
       worktreeIsolation = parsed.worktreeIsolation !== undefined ? parsed.worktreeIsolation : 'auto';
-      domainConfig = parsed.domain || 'general';
       maxRepairRounds = typeof parsed.maxRepairRounds === 'number' ? parsed.maxRepairRounds : 2;
+      lookaheadDepth = typeof parsed.lookaheadDepth === 'number' ? parsed.lookaheadDepth : 1;
+      if (parsed.concurrency !== undefined) {
+        const c = Number(parsed.concurrency);
+        if (!Number.isNaN(c)) {
+          concurrency = Math.max(1, Math.min(16, Math.floor(c)));
+        }
+      }
+      if (parsed.speculativeReadLimit !== undefined) {
+        const s = Number(parsed.speculativeReadLimit);
+        if (!Number.isNaN(s)) {
+          speculativeReadLimit = Math.max(1, Math.min(concurrency, Math.floor(s)));
+        }
+      }
     } catch (_) {
       planPath = trimmed;
     }
@@ -2262,10 +3035,24 @@ if (typeof rawArgs === 'string') {
   } else if (rawArgs.plan) {
     planContent = rawArgs.plan;
   }
-  budgetConfig = rawArgs.budget || null;
+  if (typeof rawArgs.runId === 'string' && rawArgs.runId) {
+    runId = rawArgs.runId;
+  }
   worktreeIsolation = rawArgs.worktreeIsolation !== undefined ? rawArgs.worktreeIsolation : 'auto';
-  domainConfig = rawArgs.domain || 'general';
   maxRepairRounds = typeof rawArgs.maxRepairRounds === 'number' ? rawArgs.maxRepairRounds : 2;
+  lookaheadDepth = typeof rawArgs.lookaheadDepth === 'number' ? rawArgs.lookaheadDepth : 1;
+  if (rawArgs.concurrency !== undefined) {
+    const c = Number(rawArgs.concurrency);
+    if (!Number.isNaN(c)) {
+      concurrency = Math.max(1, Math.min(16, Math.floor(c)));
+    }
+  }
+  if (rawArgs.speculativeReadLimit !== undefined) {
+    const s = Number(rawArgs.speculativeReadLimit);
+    if (!Number.isNaN(s)) {
+      speculativeReadLimit = Math.max(1, Math.min(concurrency, Math.floor(s)));
+    }
+  }
 }
 
 if (!planPath && !planContent) {
@@ -2309,6 +3096,8 @@ const maxAgents = normalizedBudget.maxAgents;
 const budgetTracker = new BudgetTracker(normalizedBudget);
 const runWithAgentSlot = createConcurrencyLimiter(maxConcurrentAgents);
 
+const agentSemaphore = createSemaphore(concurrency, { speculativeReadLimit });
+
 const rawAgent = agent;
 const callAgent = async (prompt, options) => {
   if (totalAgentsCount >= maxAgents) {
@@ -2323,8 +3112,10 @@ const callAgent = async (prompt, options) => {
     log('WARNING: Token budget exhausted. Returning null from callAgent.');
     return null;
   }
+  const priority = getAgentPriority(options);
+  const isSpeculative = Boolean(options?.isSpeculative || options?.speculative);
   totalAgentsCount++;
-  return runWithAgentSlot(async () => {
+  return await agentSemaphore.withPermit(async () => {
     activeAgents++;
     if (options?.phase === 'Implement' && firstBuilderStartedAtMs === null) {
       firstBuilderStartedAtMs = Date.now();
@@ -2345,7 +3136,7 @@ const callAgent = async (prompt, options) => {
     } finally {
       activeAgents--;
     }
-  });
+  }, priority, isSpeculative);
 };
 
 
@@ -2626,6 +3417,7 @@ Write the file accurately.`,
 
     const shardPacket = state.shardPacket || buildShardPacket(state.shard, manifest);
     const risk = String(shardPacket?.risk || 'medium').toLowerCase();
+    const verifierPacket = formatVerifierPacket(shardPacket, state);
 
     let verification = null;
 
@@ -2745,17 +3537,8 @@ Stronger deterministic rubric based on risk surface:
 - Caller regressions and integration side-effects.
 - Verify tests actually exercise changed behavior under negative conditions.
 
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-RECON EVIDENCE:
-${JSON.stringify(state.recon, null, 2)}
-
-RESEARCH EVIDENCE:
-${JSON.stringify(state.research || null, 2)}
-
-IMPLEMENTATION CLAIM:
-${JSON.stringify(state.implementation, null, 2)}
+VERIFIER EVIDENCE PACKET:
+${JSON.stringify(verifierPacket, null, 2)}
 
 Verification round: ${round}
 ${ambiguityFallback}`,
@@ -2774,17 +3557,8 @@ ${ambiguityFallback}`,
 VERIFICATION FOCUS: MEDIUM RISK TIER
 Perform thorough contract inspection, check all callers/consumers, verify regression risks, and probe boundary conditions.
 
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-RECON EVIDENCE:
-${JSON.stringify(state.recon, null, 2)}
-
-RESEARCH EVIDENCE:
-${JSON.stringify(state.research || null, 2)}
-
-IMPLEMENTATION CLAIM:
-${JSON.stringify(state.implementation, null, 2)}
+VERIFIER EVIDENCE PACKET:
+${JSON.stringify(verifierPacket, null, 2)}
 
 Verification round: ${round}
 ${ambiguityFallback}`,
@@ -2793,6 +3567,7 @@ ${ambiguityFallback}`,
           agentType: 'qcet-skeptic',
           phase: 'Verify',
           label: `${shardPacket.id}:verify-${round}`,
+          effort: 'medium',
           schema: VERIFY_SCHEMA,
         }
       );
@@ -2803,17 +3578,8 @@ ${ambiguityFallback}`,
 VERIFICATION FOCUS: LOW RISK TIER
 Focus on targeted code correctness, acceptance criteria, and verifying that targeted tests pass.
 
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-RECON EVIDENCE:
-${JSON.stringify(state.recon, null, 2)}
-
-RESEARCH EVIDENCE:
-${JSON.stringify(state.research || null, 2)}
-
-IMPLEMENTATION CLAIM:
-${JSON.stringify(state.implementation, null, 2)}
+VERIFIER EVIDENCE PACKET:
+${JSON.stringify(verifierPacket, null, 2)}
 
 Verification round: ${round}
 ${ambiguityFallback}`,
@@ -2822,6 +3588,7 @@ ${ambiguityFallback}`,
           agentType: 'qcet-skeptic',
           phase: 'Verify',
           label: `${shardPacket.id}:verify-${round}`,
+          effort: 'low',
           schema: VERIFY_SCHEMA,
         }
       );
@@ -2931,14 +3698,12 @@ ${ambiguityFallback}`,
     }
 
     const shardPacket = state.shardPacket || buildShardPacket(state.shard, manifest);
+    const repairPacket = formatRepairPacket(shardPacket, state);
 
     const repairPrompt = `${REPAIR_STATIC_PREFIX}
 
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-CONFIRMED VERIFICATION FINDINGS:
-${JSON.stringify(state.lastVerification, null, 2)}
+REPAIR EVIDENCE PACKET:
+${JSON.stringify(repairPacket, null, 2)}
 
 Repair round: ${round}
 ${ambiguityFallback}`;
@@ -3156,7 +3921,32 @@ ${ambiguityFallback}`;
   // DECOUPLED READ GATE: PRE-RECON & CONDITIONAL RESEARCH
   // ---------------------------------------------------------------------------
 
+  const executionRunId = typeof runId === 'string' && runId
+    ? runId
+    : (typeof args?.runId === 'string' && args.runId
+        ? args.runId
+        : `run-${Math.random().toString(36).slice(2, 10)}`);
+  const researchCache = new ResearchCache(executionRunId);
+  const completedShardIds = new Set();
+  const activeShardIds = new Set();
   const preReconPromises = new Map();
+
+  function refreshReconFrontier() {
+    const eligible = computeEligibleReconShards(
+      manifest,
+      activeShardIds,
+      completedShardIds,
+      lookaheadDepth
+    );
+    for (const shardId of eligible) {
+      if (!preReconPromises.has(shardId)) {
+        const shard = shardById.get(shardId);
+        if (shard) {
+          schedulePreRecon(shard);
+        }
+      }
+    }
+  }
 
   function schedulePreRecon(shard) {
     if (!shard) return Promise.resolve(null);
@@ -3166,6 +3956,7 @@ ${ambiguityFallback}`;
 
     const promise = (async () => {
       const shardPacket = buildShardPacket(shard, manifest);
+      const isSpeculative = (shard.dependencies || []).some((d) => !completedShardIds.has(d));
 
       const reconPrompt = `${RECON_STATIC_PREFIX}
 
@@ -3186,7 +3977,9 @@ ${ambiguityFallback}`;
         agentType: 'qcet-recon',
         phase: 'Recon',
         label: `${shardPacket.id}:pre-recon`,
+        effort: shardPacket?.risk === 'critical' ? 'high' : 'medium',
         schema: RECON_SCHEMA,
+        isSpeculative,
       });
 
       if (!recon || recon.status === 'blocked') {
@@ -3217,10 +4010,62 @@ ${ambiguityFallback}`;
           `${escalation.rejectedQuestions.length} internal question(s) rejected.`
         );
 
-        const researchPrompt = `${RESEARCHER_STATIC_PREFIX}
+        const extraContext = {
+          sourceContext: Array.isArray(escalation.preferredSourceTypes)
+            ? escalation.preferredSourceTypes.join(',')
+            : (recon.externalResearch?.sourceContext || ''),
+          dependencyVersion: recon.externalResearch?.dependencyVersion || recon.externalResearch?.frameworkVersion || recon.externalResearch?.version || '',
+        };
+
+        const deduplicateClaims = (claimsList) => {
+          const seen = new Set();
+          const deduped = [];
+          for (const c of claimsList || []) {
+            if (!c) continue;
+            const text = (c.claim || String(c)).trim();
+            if (text && !seen.has(text)) {
+              seen.add(text);
+              deduped.push(c);
+            }
+          }
+          return deduped;
+        };
+
+        const cachedClaims = [];
+        const seenClaimTexts = new Set();
+        const questionsToAsk = [];
+
+        for (const q of escalation.questions) {
+          const cached = researchCache.get(q, 'global', extraContext);
+          if (cached) {
+            const rawClaims = Array.isArray(cached.claims)
+              ? cached.claims
+              : (cached.claim ? [cached] : []);
+            for (const c of rawClaims) {
+              const text = (c?.claim || String(c || '')).trim();
+              if (text && !seenClaimTexts.has(text)) {
+                seenClaimTexts.add(text);
+                cachedClaims.push(c);
+              }
+            }
+          } else {
+            questionsToAsk.push(q);
+          }
+        }
+
+        if (questionsToAsk.length === 0) {
+          log(
+            `Shard ${shardPacket.id} external research: all ${escalation.questions.length} question(s) served from safe research cache.`
+          );
+          researchEvidence = {
+            claims: deduplicateClaims(cachedClaims),
+            unresolved: [],
+          };
+        } else {
+          const researchPrompt = `${RESEARCHER_STATIC_PREFIX}
 
 RESEARCH QUESTIONS:
-${JSON.stringify(escalation.questions, null, 2)}
+${JSON.stringify(questionsToAsk, null, 2)}
 
 RESEARCH REASON & PREFERRED SOURCES:
 ${JSON.stringify(
@@ -3242,28 +4087,48 @@ ${JSON.stringify(
   2
 )}`;
 
-        const researcherResult = await callAgent(researchPrompt, {
-          agent: 'qcet-researcher',
-          agentType: 'qcet-researcher',
-          phase: 'Recon',
-          label: `${shardPacket.id}:research`,
-          schema: RESEARCH_SCHEMA,
-        });
+          const researcherResult = await callAgent(researchPrompt, {
+            agent: 'qcet-researcher',
+            agentType: 'qcet-researcher',
+            phase: 'Recon',
+            label: `${shardPacket.id}:research`,
+            schema: RESEARCH_SCHEMA,
+            isSpeculative,
+          });
 
-        researchEvidence = researcherResult || {
-          claims: escalation.questions.map((q) => ({
-            claim: `External research for query "${q}" yielded no conclusive evidence.`,
-            sourceType: 'unverified',
-            source: 'none',
-            versionOrDate: 'unknown',
-            applicability: 'uncertain',
-            confidence: 'unverified',
-          })),
-          unresolved: escalation.questions.map((q) => ({
-            question: q,
-            reason: 'Researcher agent failed or returned no usable result.',
-          })),
-        };
+          if (researcherResult && Array.isArray(researcherResult.claims)) {
+            for (const q of questionsToAsk) {
+              const matching = researcherResult.claims.filter(
+                (c) => c.claim && (c.claim.toLowerCase().includes(q.toLowerCase()) || questionsToAsk.length === 1)
+              );
+              const toCache = matching.length > 0 ? matching : researcherResult.claims;
+              researchCache.set(q, { claims: toCache }, 'global', extraContext);
+            }
+          }
+
+          researchEvidence = researcherResult
+            ? {
+                claims: deduplicateClaims([...cachedClaims, ...(researcherResult.claims || [])]),
+                unresolved: researcherResult.unresolved || [],
+              }
+            : {
+                claims: deduplicateClaims([
+                  ...cachedClaims,
+                  ...questionsToAsk.map((q) => ({
+                    claim: `External research for query "${q}" yielded no conclusive evidence.`,
+                    sourceType: 'unverified',
+                    source: 'none',
+                    versionOrDate: 'unknown',
+                    applicability: 'uncertain',
+                    confidence: 'unverified',
+                  })),
+                ]),
+                unresolved: questionsToAsk.map((q) => ({
+                  question: q,
+                  reason: 'Researcher agent failed or returned no usable result.',
+                })),
+              };
+        }
       } else if (escalation.rejectedQuestions && escalation.rejectedQuestions.length > 0) {
         log(
           `Shard ${shardPacket.id} external research request rejected: ` +
@@ -3297,13 +4162,7 @@ ${JSON.stringify(
     const recon = preRecon.recon;
     const researchEvidence = preRecon.research;
 
-    const dependencyEvidence = dependencyResults.map((result) => ({
-      shard: result?.shard?.id,
-      verification: result?.lastVerification?.verdict || 'unknown',
-      changedFiles: result?.implementation?.changedFiles || [],
-      summary: result?.implementation?.summary || '',
-      requirementsSatisfied: result?.implementation?.requirementsSatisfied || [],
-    }));
+    const dependencyEvidence = compressDependencyContext(dependencyResults);
 
     // =========================================================================
     // PRE-IMPLEMENTATION RECONCILIATION STAGE (qcet-recon)
@@ -3401,12 +4260,14 @@ DEPENDENCY EVIDENCE:
 ${JSON.stringify(dependencyEvidence, null, 2)}
 ${ambiguityFallback}`;
 
+    const builderRisk = String(shardPacket?.risk || shard?.risk || 'medium').toLowerCase();
     const builderOptions = {
       agent: 'qcet-builder',
       agentType: 'qcet-builder',
       agentId: `${shardPacket.id}:implement`,
       phase: 'Implement',
       label: `${shardPacket.id}:implement`,
+      effort: builderRisk === 'critical' ? 'xhigh' : builderRisk === 'high' ? 'high' : builderRisk === 'medium' ? 'medium' : 'low',
       schema: IMPLEMENT_SCHEMA,
     };
 
@@ -3642,9 +4503,6 @@ ${ambiguityFallback}`;
       return shardPromises.get(shard.id);
     }
 
-    // Ensure pre-recon is launched immediately on this shard
-    const preReconPromise = schedulePreRecon(shard);
-
     // Strict write gate: wait for all dependencies to pass independent verification
     const dependencyPromises = (shard.dependencies || []).map((dependencyId) =>
       scheduleShard(shardById.get(dependencyId))
@@ -3663,7 +4521,9 @@ ${ambiguityFallback}`;
         );
 
         if (badDependency) {
-          const preRecon = await preReconPromise;
+          const preRecon = preReconPromises.has(shard.id)
+            ? await preReconPromises.get(shard.id)
+            : null;
           return blockedByDependency(
             shard,
             badDependency?.shard?.id || 'unknown',
@@ -3671,8 +4531,17 @@ ${ambiguityFallback}`;
           );
         }
 
-        const preRecon = await preReconPromise;
+        // Shard is now ready for active execution!
+        // Mark as active and refresh recon frontier
+        activeShardIds.add(shard.id);
+        refreshReconFrontier();
+
+        // Ensure pre-recon is available (or launched if not already)
+        const preRecon = await (preReconPromises.get(shard.id) || schedulePreRecon(shard));
+
         if (!preRecon || !preRecon.recon || preRecon.recon.status === 'blocked') {
+          activeShardIds.delete(shard.id);
+          refreshReconFrontier();
           return {
             shard,
             shardPacket: preRecon?.shardPacket || buildShardPacket(shard, manifest),
@@ -3708,39 +4577,52 @@ ${ambiguityFallback}`;
           `Shard ${shard.id} write gate unblocked; proceeding to reconciliation and implementation.`
         );
 
-        return runShardWithReconciliation(
-          shard,
-          preRecon,
-          dependencyResults
-        );
+        try {
+          const result = await runShardWithReconciliation(
+            shard,
+            preRecon,
+            dependencyResults
+          );
+          if (result.lastVerification?.verdict === 'pass') {
+            completedShardIds.add(shard.id);
+          }
+          return result;
+        } finally {
+          activeShardIds.delete(shard.id);
+          refreshReconFrontier();
+        }
       })
-      .catch((error) => ({
-        shard,
-        recon: {
-          status: 'blocked',
-          currentState: '',
-          relevantFiles: [],
-          contracts: [],
-          implementationNotes: [],
-          risks: [`Workflow execution error: ${String(error)}`],
-          blocker: String(error),
-        },
-        implementation: {
-          status: 'blocked',
-          changedFiles: [],
-          summary: 'Shard pipeline failed.',
-          requirementsSatisfied: [],
-          testsRun: [],
-          risks: [String(error)],
-          blocker: String(error),
-        },
-        lastVerification: {
-          verdict: 'blocked',
-          requirementsChecked: [],
-          issues: [],
-          summary: `Shard execution failed: ${String(error)}`,
-        },
-      }));
+      .catch((error) => {
+        activeShardIds.delete(shard.id);
+        refreshReconFrontier();
+        return {
+          shard,
+          recon: {
+            status: 'blocked',
+            currentState: '',
+            relevantFiles: [],
+            contracts: [],
+            implementationNotes: [],
+            risks: [`Workflow execution error: ${String(error)}`],
+            blocker: String(error),
+          },
+          implementation: {
+            status: 'blocked',
+            changedFiles: [],
+            summary: 'Shard pipeline failed.',
+            requirementsSatisfied: [],
+            testsRun: [],
+            risks: [String(error)],
+            blocker: String(error),
+          },
+          lastVerification: {
+            verdict: 'blocked',
+            requirementsChecked: [],
+            issues: [],
+            summary: `Shard execution failed: ${String(error)}`,
+          },
+        };
+      });
 
     shardPromises.set(shard.id, promise);
     return promise;
@@ -3764,10 +4646,8 @@ ${ambiguityFallback}`;
     `in priority order: ${prioritizedShards.map((s) => `${s.id} (P${shardPriorities.get(s.id)?.priority ?? 0})`).join(', ')}`
   );
 
-  // Decoupled Read Gate: launch pre-recon for all shards immediately
-  for (const shard of prioritizedShards) {
-    schedulePreRecon(shard);
-  }
+  // Bounded Read Gate: launch pre-recon for ready and lookahead frontier shards
+  refreshReconFrontier();
 
   // Strict Write Gate: schedule builder execution awaiting dependencies
   for (const shard of prioritizedShards) {
@@ -3810,48 +4690,15 @@ ${ambiguityFallback}`;
   phase('Integration Review');
 
 
-  const shardSummary = allShardResults.map((result) => ({
-    id: result.shard.id,
-    risk: result.shard.risk,
-    requirements: result.shard.requirements,
-    changedFiles:
-      result.implementation?.changedFiles || [],
-    verification:
-      result.lastVerification?.verdict || 'unknown',
-    unresolvedIssues:
-      result.lastVerification?.issues || [],
-  }));
+  const shardSummary = formatIntegrationShardSummary(allShardResults);
 
 
-  const allReviewDimensions = [
-    {
-      id: 'contracts',
-      charter:
-        'Cross-module API/type/schema/contracts consistency, stale adapters, import drift, caller/consumer mismatch.',
-    },
-    {
-      id: 'authorization',
-      charter:
-        'Authorization, permission boundaries, server-side enforcement, trust boundaries, data exposure.',
-    },
-    {
-      id: 'semantics',
-      charter:
-        'Duplicated business semantics, competing sources of truth, duplicated UI meaning, inconsistent status/count logic.',
-    },
-    {
-      id: 'regression',
-      charter:
-        'Regression risk, missing tests, integration behavior, accessibility/performance regressions where relevant.',
-    },
-  ];
+  const reviewDimensions = selectIntegrationReviewDimensions(manifest, allShardResults);
 
-  const selectedReviewDimensionIds = selectIntegrationReviewDimensionIds(shardSummary);
-  const reviewDimensions = allReviewDimensions.filter((dimension) =>
-    selectedReviewDimensionIds.includes(dimension.id)
+  log(
+    `Selected ${reviewDimensions.length} targeted integration review dimension(s) based on blast radius: ` +
+      reviewDimensions.map((d) => d.id).join(', ')
   );
-  log(`Adaptive integration review selected: ${selectedReviewDimensionIds.join(', ')}`);
-
 
   const integrationReviews = await parallel(
     reviewDimensions.map((dimension) => () =>
@@ -4168,6 +5015,61 @@ Return structured implementation evidence.
       risks: allRisks,
       blocker: validRepairs.find((r) => r.blocker)?.blocker,
     };
+
+    // =========================================================================
+    // INDEPENDENT INTEGRATION REVERIFICATION (P0 CORRECTNESS GATE)
+    // =========================================================================
+    if (integrationRepair.status === 'completed') {
+      phase('Integration Reverification');
+      log('Running independent integration reverification on repaired defects.');
+
+      const reverification = await callAgent(
+        `
+You are the QCET independent integration reverification skeptic.
+
+You did NOT perform the integration repairs.
+
+CONFIRMED INTEGRATION FINDINGS TARGETED:
+${JSON.stringify(integrationSynthesis.findings, null, 2)}
+
+INTEGRATION REPAIR ACTIONS TAKEN:
+${JSON.stringify(integrationRepair, null, 2)}
+
+Inspect the ACTUAL integrated repository state, git diff, and run targeted tests.
+
+Do NOT modify files.
+
+Verify whether each targeted integration defect is genuinely resolved.
+Check whether the repair introduced any new contract or regression defects.
+
+Return exactly the structured integration verdict.
+`,
+        {
+          agent: 'qcet-skeptic',
+          agentType: 'qcet-skeptic',
+          phase: 'Integration Reverification',
+          label: 'integration:reverification',
+          schema: INTEGRATION_VERDICT_SCHEMA,
+        }
+      );
+
+      const passed =
+        reverification?.passed === true &&
+        (!Array.isArray(reverification.remainingIssues) || reverification.remainingIssues.length === 0);
+
+      integrationRepair.verified = passed;
+      integrationRepair.reverification = reverification;
+      integrationRepair.remainingDefects = reverification?.remainingIssues || [];
+
+      if (!passed) {
+        log(
+          `[CRITICAL] Independent integration reverification FAILED: ` +
+          `${reverification?.summary || 'Defects remain unresolved after repair.'}`
+        );
+      } else {
+        log('Independent integration reverification PASSED: all cross-shard defects verified resolved.');
+      }
+    }
   }
 
 
@@ -4237,8 +5139,7 @@ Return structured proof.
 
   phase('Release Gate');
 
-
-  const finalVerdict = await callAgent(
+  const agentFinalVerdict = await callAgent(
     `
 You are the final independent QCET release gate.
 
@@ -4288,9 +5189,10 @@ Return exactly the structured release verdict.
     integrationSynthesis,
     integrationRepair,
     validation,
-    finalVerdict,
+    finalVerdict: agentFinalVerdict,
   });
 
+  let finalVerdict;
   if (deterministicGate.status === 'BLOCKED') {
     log(
       `DETERMINISTIC RELEASE GATE BLOCKED: ${deterministicGate.rationale} ` +
@@ -4357,6 +5259,8 @@ Return exactly the structured release verdict.
     avgDependencyWaitMs,
     domain: domainConfig,
     executorVersion: 'lean-v2',
+    researchCacheHits: researchCache?.researchCacheHits || 0,
+    researchCacheMisses: researchCache?.researchCacheMisses || 0,
     timestamp: typeof args?.timestamp === 'string' ? args.timestamp : undefined,
     runId: typeof args?.runId === 'string' ? args.runId : undefined,
   });
