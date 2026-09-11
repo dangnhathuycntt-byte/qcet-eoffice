@@ -54,9 +54,6 @@ export const RegisterInputSchema = z
       .max(100, 'Title cannot exceed 100 characters')
       .nullable()
       .optional(),
-    role: z
-      .string()
-      .optional(),
   })
   .strict();
 

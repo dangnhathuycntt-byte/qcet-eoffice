@@ -278,6 +278,7 @@ export async function seedCanonicalOrg(prisma: PrismaClient) {
       name: CANONICAL_SCHOOL_ROOT.name,
       type: CANONICAL_SCHOOL_ROOT.type,
       status: UnitStatus.ACTIVE,
+      effectiveFrom: new Date('2024-01-01T00:00:00.000Z'),
       metadata: {
         shortName: CANONICAL_SCHOOL_ROOT.shortName,
         level: CANONICAL_SCHOOL_ROOT.level,
@@ -291,6 +292,7 @@ export async function seedCanonicalOrg(prisma: PrismaClient) {
       name: CANONICAL_SCHOOL_ROOT.name,
       type: CANONICAL_SCHOOL_ROOT.type,
       status: UnitStatus.ACTIVE,
+      effectiveFrom: new Date('2024-01-01T00:00:00.000Z'),
       metadata: {
         shortName: CANONICAL_SCHOOL_ROOT.shortName,
         level: CANONICAL_SCHOOL_ROOT.level,
@@ -327,6 +329,7 @@ export async function seedCanonicalOrg(prisma: PrismaClient) {
         type: unit.type,
         parentId: schoolRoot.id,
         status: UnitStatus.ACTIVE,
+        effectiveFrom: new Date('2024-01-01T00:00:00.000Z'),
         metadata: {
           shortName: unit.shortName,
           level: unit.level,
@@ -341,6 +344,7 @@ export async function seedCanonicalOrg(prisma: PrismaClient) {
         type: unit.type,
         parentId: schoolRoot.id,
         status: UnitStatus.ACTIVE,
+        effectiveFrom: new Date('2024-01-01T00:00:00.000Z'),
         metadata: {
           shortName: unit.shortName,
           level: unit.level,

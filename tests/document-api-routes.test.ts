@@ -153,7 +153,6 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
 
     test("validateDocumentUpdatePayload validates fields correctly", () => {
       const validUpdate = {
-        status: "DANG_XU_LY",
         summary: "Cập nhật tóm tắt nội dung",
         urgency: "HOA_TOC",
       };
@@ -161,10 +160,17 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
       assert.equal(result.isValid, true);
 
       const invalidUpdate = {
-        status: "NON_EXISTENT_STATUS",
+        urgency: "NON_EXISTENT_URGENCY",
       };
       const invalidResult = validateDocumentUpdatePayload(invalidUpdate);
       assert.equal(invalidResult.isValid, false);
+
+      const workflowControlledUpdate = {
+        status: "DANG_XU_LY",
+      };
+      const workflowResult = validateDocumentUpdatePayload(workflowControlledUpdate);
+      assert.equal(workflowResult.isValid, false);
+      assert.ok(workflowResult.errors.some((e) => e.includes("workflow")));
     });
   });
 
@@ -317,7 +323,6 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
           Authorization: `Bearer ${sessionToken}`,
         },
         body: JSON.stringify({
-          status: "DANG_XU_LY",
           summary: "Văn bản đã được cập nhật tóm tắt qua PATCH",
           urgency: "THUONG_KHAN",
         }),
@@ -328,7 +333,6 @@ describe("Document Registry API & Validation Tests (ND30)", () => {
 
       const body = await res.json();
       assert.equal(body.success, true);
-      assert.equal(body.data.status, "DANG_XU_LY");
       assert.equal(body.data.summary, "Văn bản đã được cập nhật tóm tắt qua PATCH");
       assert.equal(body.data.urgency, "THUONG_KHAN");
     });

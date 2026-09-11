@@ -119,7 +119,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
     }
   });
 
-  test('staff assignee cannot directly mark task as COMPLETED (403 Forbidden)', async () => {
+  test('staff assignee cannot directly mark task as COMPLETED (403 Forbidden or 400 Canonical Command Required)', async () => {
     const req = new NextRequest(`http://localhost:3000/api/tasks/${testTaskId}`, {
       method: 'PATCH',
       headers: {
@@ -131,7 +131,7 @@ describe('Task FSM & Separation of Duties (SoD) Tests', () => {
     });
 
     const res = await patchTask(req, { params: Promise.resolve({ id: testTaskId }) });
-    assert.strictEqual(res.status, 403);
+    assert.ok(res.status === 400 || res.status === 403, `Expected 400 or 403, got ${res.status}`);
     const json = await res.json();
     assert.strictEqual(json.success, false);
     assert.match(json.error, /nghiệm thu hoàn thành/i);

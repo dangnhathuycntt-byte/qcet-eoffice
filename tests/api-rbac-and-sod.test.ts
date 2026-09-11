@@ -4,9 +4,10 @@ import fs from "node:fs";
 import { NextRequest } from "next/server";
 import { GET as getOverview } from "../src/app/api/dashboard/overview/route";
 import { PATCH as patchTask } from "../src/app/api/tasks/[id]/route";
+import { POST as approveAction } from "../src/app/api/tasks/[id]/actions/approve/route";
 import prisma from "../src/lib/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
-import { TaskScope, TaskStatus, AssigneeRole } from "@prisma/client";
+import { TaskScope, TaskStatus, AssigneeRole, TaskActorRole } from "@prisma/client";
 
 describe("RBAC and Segregation of Duties (SoD) API Control", () => {
   let adminToken: string;
@@ -21,7 +22,6 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
 
   let schoolTaskId: string;
   let deptTaskId: string;
-  let testDelegationId: string | null = null;
 
   before(async () => {
     // 1. Fetch real seeded users
@@ -98,11 +98,21 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         academicMonth: 9,
         academicYear: "2026-2027",
         dueDate: new Date("2026-09-30"),
-        createdById: leaderUser.id,
+        createdById: bghUser.id,
         departmentId: leaderUser.departmentId,
         assignees: {
           create: [
             { userId: staffUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER },
+          ],
+        },
+        actors: {
+          create: [
+            {
+              userId: staffUser.id,
+              role: TaskActorRole.DRI,
+              isPrimaryDRI: true,
+              assignedById: bghUser.id,
+            },
           ],
         },
       },
@@ -112,25 +122,25 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
 
   after(async () => {
     // Cleanup created test records
-    if (testDelegationId) {
-      await prisma.dacumDelegation.deleteMany({ where: { id: testDelegationId } });
-    }
     if (schoolTaskId) {
+      await prisma.auditEvent.deleteMany({ where: { entityId: schoolTaskId } });
+      await prisma.taskActor.deleteMany({ where: { taskId: schoolTaskId } });
       await prisma.taskAssignee.deleteMany({ where: { taskId: schoolTaskId } });
       await prisma.task.deleteMany({ where: { id: schoolTaskId } });
     }
     if (deptTaskId) {
+      await prisma.auditEvent.deleteMany({ where: { entityId: deptTaskId } });
+      await prisma.taskActor.deleteMany({ where: { taskId: deptTaskId } });
       await prisma.taskAssignee.deleteMany({ where: { taskId: deptTaskId } });
       await prisma.task.deleteMany({ where: { id: deptTaskId } });
     }
   });
 
-  test("Task update API enforces BGH role for SCHOOL tasks completion", () => {
+  test("Task update API enforces generic PATCH restriction on workflow transitions", () => {
     const content = fs.readFileSync("src/app/api/tasks/[id]/route.ts", "utf8");
     assert.ok(
-      content.includes("existingTask.scope === TaskScope.SCHOOL") ||
-      content.includes("existing.scope === TaskScope.SCHOOL"),
-      "Must check existing task scope for SCHOOL"
+      content.includes("CANONICAL_COMMAND_REQUIRED"),
+      "Must require canonical domain actions for workflow transitions"
     );
   });
 
@@ -162,90 +172,76 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
     assert.strictEqual(body.source, "database");
   });
 
-  test("PATCH /api/tasks/[id] disallows non-BGH/admin from completing SCHOOL task", async () => {
-    // Leader of department is assigned to this school task, attempts to complete it without delegation
+  test("PATCH /api/tasks/[id] disallows direct status modification via generic PATCH", async () => {
     const req = new NextRequest(`http://localhost:3000/api/tasks/${schoolTaskId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         cookie: `${SESSION_COOKIE_NAME}=${leaderDeptToken}`,
+        origin: "http://localhost:3000",
       },
-      body: JSON.stringify({ status: "completed" }),
+      body: JSON.stringify({ status: "COMPLETED" }),
     });
 
     const res = await patchTask(req, { params: Promise.resolve({ id: schoolTaskId }) });
-    assert.strictEqual(res.status, 403);
+    assert.strictEqual(res.status, 400);
     const body = await res.json();
     assert.strictEqual(body.success, false);
+    assert.strictEqual(body.code, "CANONICAL_COMMAND_REQUIRED");
   });
 
-  test("PATCH /api/tasks/[id] disallows assignee self-approval (SoD) on department task without delegation", async () => {
-    // staffUser is PRIMARY_OWNER of deptTaskId
+  test("PATCH /api/tasks/[id] disallows direct approved manipulation via generic PATCH", async () => {
     const req = new NextRequest(`http://localhost:3000/api/tasks/${deptTaskId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         cookie: `${SESSION_COOKIE_NAME}=${staffToken}`,
+        origin: "http://localhost:3000",
       },
-      body: JSON.stringify({ status: "completed" }),
+      body: JSON.stringify({ approved: true, resolution: "COMPLETED" }),
     });
 
     const res = await patchTask(req, { params: Promise.resolve({ id: deptTaskId }) });
-    assert.strictEqual(res.status, 403);
+    assert.strictEqual(res.status, 400);
     const body = await res.json();
     assert.strictEqual(body.success, false);
-    assert.match(body.error, /phân lập nhiệm vụ|Segregation of Duties|không được tự/i);
+    assert.strictEqual(body.code, "CANONICAL_COMMAND_REQUIRED");
   });
 
-  test("PATCH /api/tasks/[id] allows assignee to complete task when possessing valid dacumDelegation", async () => {
-    // Create an active dacumDelegation for staffUser
-    const delegation = await prisma.dacumDelegation.create({
-      data: {
-        taskId: deptTaskId,
-        grantorId: leaderUser.id,
-        delegateId: staffUser.id,
-        committeeRole: "BAN_THAM_DINH",
-        authorityScope: "DACUM_REVIEW_STEP1",
-        departmentId: leaderUser.departmentId,
-        startDate: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        isActive: true,
-        reason: "Ủy quyền thẩm định và hoàn tất nhiệm vụ chuyên môn đợt 1",
-      },
-    });
-    testDelegationId = delegation.id;
-
-    // Now staffUser attempts to complete task with delegation
-    const req = new NextRequest(`http://localhost:3000/api/tasks/${deptTaskId}`, {
-      method: "PATCH",
+  test("Canonical approve action enforces Segregation of Duties (SoD) - DRI cannot self-approve", async () => {
+    const req = new NextRequest(`http://localhost:3000/api/tasks/${deptTaskId}/actions/approve`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         cookie: `${SESSION_COOKIE_NAME}=${staffToken}`,
+        origin: "http://localhost:3000",
       },
-      body: JSON.stringify({ status: "completed" }),
+      body: JSON.stringify({ note: "Tự phê duyệt chính mình" }),
     });
 
-    const res = await patchTask(req, { params: Promise.resolve({ id: deptTaskId }) });
-    assert.strictEqual(res.status, 200);
+    const res = await approveAction(req, { params: { id: deptTaskId } });
+    assert.strictEqual(res.status, 403);
     const body = await res.json();
-    assert.strictEqual(body.success, true);
-    assert.strictEqual(body.data.status, "completed");
+    assert.strictEqual(body.success, false);
+    assert.strictEqual(body.code, "SOD_VIOLATION");
+    assert.match(body.error, /phân lập trách nhiệm|SoD|không được tự phê duyệt/i);
   });
 
-  test("PATCH /api/tasks/[id] allows BGH to complete SCHOOL task", async () => {
-    const req = new NextRequest(`http://localhost:3000/api/tasks/${schoolTaskId}`, {
-      method: "PATCH",
+  test("Canonical approve action allows authorized leader to approve task", async () => {
+    const req = new NextRequest(`http://localhost:3000/api/tasks/${deptTaskId}/actions/approve`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
-        cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
+        cookie: `${SESSION_COOKIE_NAME}=${leaderDeptToken}`,
+        origin: "http://localhost:3000",
       },
-      body: JSON.stringify({ status: "completed" }),
+      body: JSON.stringify({ note: "Phê duyệt hoàn thành bởi Trưởng phòng phụ trách" }),
     });
 
-    const res = await patchTask(req, { params: Promise.resolve({ id: schoolTaskId }) });
+    const res = await approveAction(req, { params: { id: deptTaskId } });
     assert.strictEqual(res.status, 200);
     const body = await res.json();
     assert.strictEqual(body.success, true);
-    assert.strictEqual(body.data.status, "completed");
+    assert.strictEqual(body.data.status, "COMPLETED");
   });
 });

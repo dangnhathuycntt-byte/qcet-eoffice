@@ -93,6 +93,7 @@ export function isUnitLeaderPosition(posCode?: string): boolean {
   const code = (posCode || '').toUpperCase();
   return (
     code === 'TRUONG_DON_VI' ||
+    code === 'TRUONG_DON_VI_CANONICAL' ||
     code === 'TRUONG_PHONG' ||
     code === 'TRUONG_KHOA' ||
     code === 'GIAM_DOC_TRUNG_TAM'

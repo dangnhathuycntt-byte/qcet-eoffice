@@ -191,7 +191,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: "bgh@qcet.edu.vn",
+        email: "bgh@cdktcnqn.edu.vn",
         password: "WrongPassword999",
       }),
     });
@@ -209,7 +209,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: "bgh@qcet.edu.vn",
+        email: "bgh@cdktcnqn.edu.vn",
         password: "Qcet@2026",
       }),
     });
@@ -219,7 +219,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
 
     const json = await res.json();
     assert.strictEqual(json.success, true);
-    assert.strictEqual(json.user.email, "bgh@qcet.edu.vn");
+    assert.strictEqual(json.user.email, "bgh@cdktcnqn.edu.vn");
     assert.strictEqual(json.user.role, "BAN_GIAM_HIEU");
 
     const cookie = res.cookies.get(SESSION_COOKIE_NAME);
@@ -236,8 +236,8 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     assert.strictEqual(meRes.status, 200);
     const meJson = await meRes.json();
     assert.strictEqual(meJson.authenticated, true);
-    assert.strictEqual(meJson.user.email, "bgh@qcet.edu.vn");
-    assert.strictEqual(meJson.user.name, "TS. Nguyễn Văn Hiệu");
+    assert.strictEqual(meJson.user.email, "bgh@cdktcnqn.edu.vn");
+    assert.strictEqual(meJson.user.name, "ThS. Phạm Văn Tường");
   });
 
   test("Full lifecycle: register new user -> authenticate -> query me -> logout", async () => {
@@ -310,7 +310,7 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     await prisma.$disconnect();
   });
 
-  test("POST /api/auth/register ignores arbitrary role escalation and unconditionally assigns CHUYEN_VIEN", async () => {
+  test("POST /api/auth/register rejects arbitrary role escalation and mass-assignment with status 400", async () => {
     const { prisma } = await import("../src/lib/prisma");
     const roleEscalateEmail = "hacker@qcet.edu.vn";
 
@@ -332,16 +332,12 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
       });
 
       const regRes = await registerPost(regReq);
-      assert.strictEqual(regRes.status, 201);
-      const regJson = await regRes.json();
-      assert.strictEqual(regJson.success, true);
-      assert.strictEqual(regJson.user.role, "CHUYEN_VIEN");
+      assert.strictEqual(regRes.status, 400);
 
       const dbUser = await prisma.user.findUnique({
         where: { email: roleEscalateEmail },
       });
-      assert.ok(dbUser);
-      assert.strictEqual(dbUser.role, "CHUYEN_VIEN");
+      assert.strictEqual(dbUser, null);
     } finally {
       await prisma.user.deleteMany({
         where: { email: roleEscalateEmail },

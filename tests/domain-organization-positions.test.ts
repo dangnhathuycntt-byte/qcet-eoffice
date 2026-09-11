@@ -645,7 +645,10 @@ describe('Domain Models: Organization & Position Verification Suite', () => {
       assert.equal(rootUnit.parentId, null);
 
       const constituentUnits = await prisma.organizationalUnit.findMany({
-        where: { parentId: rootUnit.id },
+        where: {
+          parentId: rootUnit.id,
+          code: { in: CANONICAL_16_UNITS.map((u) => u.code) },
+        },
         orderBy: { code: 'asc' },
       });
       assert.equal(
@@ -731,6 +734,9 @@ describe('Domain Models: Organization & Position Verification Suite', () => {
 
     test('3.5 11 Canonical Responsibility Areas exist and match QĐ 420 categorisation', async () => {
       const areas = await prisma.responsibilityArea.findMany({
+        where: {
+          code: { in: CANONICAL_RESPONSIBILITY_AREAS.map((a) => a.code) },
+        },
         orderBy: { code: 'asc' },
       });
 

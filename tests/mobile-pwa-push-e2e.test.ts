@@ -149,6 +149,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${userToken}`,
       },
       body: JSON.stringify({
@@ -186,6 +187,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${userToken}`,
       },
       body: JSON.stringify({
@@ -219,6 +221,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        origin: 'http://localhost:3000',
         cookie: `${SESSION_COOKIE_NAME}=${userToken}`,
       },
       body: JSON.stringify({
@@ -378,6 +381,7 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
 
     assert.ok(
       manifest.name === 'QCET E-Office - Hệ thống Điều hành Văn phòng Điện tử' ||
+      manifest.name === 'QCET E-Office - Trường CĐ Kinh tế & Công nghệ Quảng Ninh' ||
       manifest.name === 'QCET E-Office - Trường CĐ Kinh tế & Công nghệ ',
       `Unexpected manifest name: ${manifest.name}`
     );

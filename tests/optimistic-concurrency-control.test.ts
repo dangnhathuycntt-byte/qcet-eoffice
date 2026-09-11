@@ -101,7 +101,8 @@ describe('Task 6: Optimistic Concurrency Control (OCC)', () => {
           title: 'Initial Title',
           academicMonth: 9,
           academicYear: '2026-2027',
-          dueDate: new Date(),
+          startDate: new Date('2026-09-01T00:00:00.000Z'),
+          dueDate: new Date('2026-09-30T23:59:59.999Z'),
           createdById: testUserId,
         },
       });
@@ -129,7 +130,8 @@ describe('Task 6: Optimistic Concurrency Control (OCC)', () => {
           title: 'Stale Check Title',
           academicMonth: 9,
           academicYear: '2026-2027',
-          dueDate: new Date(),
+          startDate: new Date('2026-09-01T00:00:00.000Z'),
+          dueDate: new Date('2026-09-30T23:59:59.999Z'),
           createdById: testUserId,
         },
       });
@@ -171,7 +173,8 @@ describe('Task 6: Optimistic Concurrency Control (OCC)', () => {
           title: 'Typed Helper Title',
           academicMonth: 9,
           academicYear: '2026-2027',
-          dueDate: new Date(),
+          startDate: new Date('2026-09-01T00:00:00.000Z'),
+          dueDate: new Date('2026-09-30T23:59:59.999Z'),
           createdById: testUserId,
         },
       });
@@ -208,7 +211,8 @@ describe('Task 6: Optimistic Concurrency Control (OCC)', () => {
           title: 'Options Object Title',
           academicMonth: 9,
           academicYear: '2026-2027',
-          dueDate: new Date(),
+          startDate: new Date('2026-09-01T00:00:00.000Z'),
+          dueDate: new Date('2026-09-30T23:59:59.999Z'),
           createdById: testUserId,
         },
       });
@@ -253,7 +257,8 @@ describe('Task 6: Optimistic Concurrency Control (OCC)', () => {
           title: 'Tx Title',
           academicMonth: 9,
           academicYear: '2026-2027',
-          dueDate: new Date(),
+          startDate: new Date('2026-09-01T00:00:00.000Z'),
+          dueDate: new Date('2026-09-30T23:59:59.999Z'),
           createdById: testUserId,
         },
       });
@@ -280,7 +285,8 @@ describe('Task 6: Optimistic Concurrency Control (OCC)', () => {
           title: 'Rollback Test Title',
           academicMonth: 9,
           academicYear: '2026-2027',
-          dueDate: new Date(),
+          startDate: new Date('2026-09-01T00:00:00.000Z'),
+          dueDate: new Date('2026-09-30T23:59:59.999Z'),
           createdById: testUserId,
         },
       });
@@ -309,7 +315,8 @@ describe('Task 6: Optimistic Concurrency Control (OCC)', () => {
           title: 'Race Condition Test',
           academicMonth: 9,
           academicYear: '2026-2027',
-          dueDate: new Date(),
+          startDate: new Date('2026-09-01T00:00:00.000Z'),
+          dueDate: new Date('2026-09-30T23:59:59.999Z'),
           createdById: testUserId,
         },
       });
@@ -352,7 +359,8 @@ describe('Task 6: Optimistic Concurrency Control (OCC)', () => {
           title: 'Multi-Race Condition Test',
           academicMonth: 9,
           academicYear: '2026-2027',
-          dueDate: new Date(),
+          startDate: new Date('2026-09-01T00:00:00.000Z'),
+          dueDate: new Date('2026-09-30T23:59:59.999Z'),
           createdById: testUserId,
         },
       });

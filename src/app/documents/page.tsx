@@ -2,6 +2,7 @@ import * as React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Briefcase, Clock } from "lucide-react";
+import { DocumentRegistryView } from "@/components/documents/document-registry-view";
 import { DocumentWorkspace } from "@/components/documents/document-workspace";
 export { DocumentWorkspace };
 
@@ -43,7 +44,7 @@ export default function DocumentsPage() {
 
             <div className="shrink-0 flex items-center">
               <Link
-                href="/tasks"
+                href="/"
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs transition-colors active:scale-95 touch-manipulation"
               >
                 <Briefcase size={16} className="shrink-0" />
@@ -68,7 +69,7 @@ export default function DocumentsPage() {
           </div>
         }
       >
-        <DocumentWorkspace />
+        <DocumentRegistryView />
       </React.Suspense>
     </div>
   );

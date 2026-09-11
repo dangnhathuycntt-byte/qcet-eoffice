@@ -347,6 +347,8 @@ function CalendarRouteContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
+  // ExecutiveCalendarWorkspace compatibility and zone URL routing
+  const zoneParam = searchParams?.get("zone") || "calendar";
   const dateParam = searchParams?.get("date") || undefined;
   const viewParam = searchParams?.get("view");
   const taskIdParam = searchParams?.get("taskId") || undefined;
@@ -902,25 +904,42 @@ function CalendarRouteContent() {
       <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-3 sm:p-4 shadow-card" data-slot="calendar-controls-container">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3" data-slot="calendar-controls-row-1">
           <div role="tablist" aria-label="Phạm vi công việc" className="inline-flex items-center rounded-xl border border-border/70 bg-secondary/50 p-0.5 shrink-0 self-start" data-slot="calendar-scope-switcher">
-            {([
-              ["school", "Toàn trường"],
-              ["unit", "Đơn vị"],
-              ["my", "Của tôi"],
-            ] as const).map(([scope, label]) => (
-              <button
-                key={scope}
-                type="button"
-                role="tab"
-                aria-selected={activeScope === scope}
-                onClick={() => handleScopeChange(scope)}
-                className={cn(
-                  "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
-                  activeScope === scope ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {label}
-              </button>
-            ))}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeScope === "school"}
+              onClick={() => handleScopeChange("school")}
+              className={cn(
+                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                activeScope === "school" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Toàn trường
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeScope === "unit"}
+              onClick={() => handleScopeChange("unit")}
+              className={cn(
+                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                activeScope === "unit" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Đơn vị
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeScope === "my"}
+              onClick={() => handleScopeChange("my")}
+              className={cn(
+                "min-h-9 px-3 py-1 rounded-lg text-xs font-semibold transition-all",
+                activeScope === "my" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Của tôi
+            </button>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap" data-slot="calendar-period-navigation">

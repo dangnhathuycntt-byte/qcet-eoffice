@@ -284,7 +284,7 @@ describe("Task 5: Task Row Simplification & Bulk Action Floating Bar", () => {
       assert.equal(html, "");
     });
 
-    it("renders floating dock with [☑ N nhiệm vụ được chọn], [Đổi trạng thái], [Giao lại], [Gia hạn], [Xuất], [Esc Bỏ chọn]", () => {
+    it("renders floating dock with [[x] N nhiệm vụ được chọn], [Đổi trạng thái], [Giao lại], [Gia hạn], [Xuất], [Esc Bỏ chọn]", () => {
       const html = renderToStaticMarkup(
         React.createElement(BatchActionBar, {
           selectedCount: 4,
@@ -298,7 +298,7 @@ describe("Task 5: Task Row Simplification & Bulk Action Floating Bar", () => {
         })
       );
 
-      // [☑ N nhiệm vụ được chọn]
+      // [[x] N nhiệm vụ được chọn]
       assert.ok(html.includes("Đã chọn"), "Mentions selection count");
       assert.ok(html.includes("4"), "Displays 4 selected count");
       assert.ok(html.includes("/12"), "Displays total 12 tasks count");
