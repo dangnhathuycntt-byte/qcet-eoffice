@@ -15,6 +15,43 @@ function run(cmd, cwd, options = {}) {
 }
 
 /**
+ * Verification function for harness overlay.
+ * Asserts presence of required skill, workflow, and rule files.
+ */
+export function verifyHarnessOverlay(targetDir, arm) {
+  if (arm === 'B' || arm === 'C') {
+    const requiredFiles = [
+      path.join(targetDir, '.claude', 'workflows', 'qcet-plan-executor.js'),
+      path.join(targetDir, '.claude', 'settings.json')
+    ];
+
+    for (const req of requiredFiles) {
+      if (!fs.existsSync(req)) {
+        throw new Error(`[Harness Overlay Error] Required harness file missing: ${path.relative(targetDir, req)} for arm ${arm}`);
+      }
+    }
+
+    const skillJson = path.join(targetDir, '.claude', 'skills', 'qcet-plan-executor', 'skill.json');
+    if (!fs.existsSync(skillJson)) {
+      throw new Error(`[Harness Overlay Error] Required file missing: .claude/skills/qcet-plan-executor/skill.json for arm ${arm}`);
+    }
+  }
+
+  if (arm === 'C') {
+    const coreRules = path.join(targetDir, '.claude', 'rules', '00-core.md');
+    if (!fs.existsSync(coreRules)) {
+      throw new Error(`[Harness Overlay Error] Required rules missing: .claude/rules/00-core.md for arm C`);
+    }
+    const content = fs.readFileSync(coreRules, 'utf8');
+    if (!content.includes('Core System Invariants') || !content.includes('One Capability, One Implementation')) {
+      throw new Error(`[Harness Overlay Error] .claude/rules/00-core.md does not match Lean V2 invariants for arm C`);
+    }
+  }
+
+  return true;
+}
+
+/**
  * Fail-closed harness overlay extractor.
  * Verifies harness commit existence, extracts .claude directory,
  * and asserts presence of required skill and workflow files.
@@ -43,24 +80,19 @@ export function archiveHarnessOrThrow({ gitDir, harnessSha, targetDir, repoRoot,
     run(`git --git-dir="${gitDir}" archive "${harnessSha}" scripts/build-executor-bundle.mjs scripts/run-executor-tests.mjs 2>/dev/null | tar -x -C "${targetDir}" 2>/dev/null`, repoRoot, { silent: true });
   } catch (_) {}
 
-  // 4. Verify presence of required harness files
-  const requiredFiles = [
-    path.join(targetDir, '.claude', 'workflows', 'qcet-plan-executor.js'),
-    path.join(targetDir, '.claude', 'settings.json')
-  ];
-
-  for (const req of requiredFiles) {
-    if (!fs.existsSync(req)) {
-      throw new Error(`[Harness Overlay Error] Required harness file missing: ${path.relative(targetDir, req)} in arm ${arm} (${harnessSha})`);
-    }
-  }
-
-  // Verify presence of skill definition (SKILL.md or skill.json)
+  // 4. Ensure skill.json exists: synthesize if only SKILL.md was present in harness commit
   const skillDir = path.join(targetDir, '.claude', 'skills', 'qcet-plan-executor');
-  const hasSkillFile = fs.existsSync(path.join(skillDir, 'SKILL.md')) || fs.existsSync(path.join(skillDir, 'skill.json'));
-  if (!hasSkillFile) {
-    throw new Error(`[Harness Overlay Error] Required skill definition (SKILL.md or skill.json) missing in ${path.relative(targetDir, skillDir)} in arm ${arm} (${harnessSha})`);
+  const skillJson = path.join(skillDir, 'skill.json');
+  const skillMd = path.join(skillDir, 'SKILL.md');
+  if (!fs.existsSync(skillJson) && fs.existsSync(skillMd)) {
+    fs.writeFileSync(skillJson, JSON.stringify({
+      name: 'qcet-plan-executor',
+      description: 'Execute a QCET implementation plan with sharded parallel implementation'
+    }, null, 2), 'utf8');
   }
+
+  // 5. Verify presence of required harness files via verifyHarnessOverlay
+  verifyHarnessOverlay(targetDir, arm);
 }
 
 /**

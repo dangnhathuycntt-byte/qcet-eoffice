@@ -3,9 +3,12 @@ import path from 'node:path';
 
 /**
  * Verify treatment fidelity for benchmark arms.
- * - Arm A: Must NOT produce any QCET executor artifacts (runs or fresh run telemetry).
- * - Arm B: Must produce V1.5 evidence (.claude/executor-evals/run-telemetry.json).
- * - Arm C: Must produce Lean V2 gate-verdict.json and runtimeFingerprint / lean-v2 provenance.
+ * - Arm A: Must NOT produce any QCET executor artifacts (gate-verdict.json, run-ledger.jsonl, or telemetry).
+ *   If found, mark HARNESS_LEAKAGE.
+ * - Arm B: Must produce V1.5 run evidence (e.g. run-ledger.jsonl or run telemetry).
+ *   If missing, mark HARNESS_NOT_INVOKED.
+ * - Arm C: Must produce Lean V2 gate-verdict.json (and/or run-ledger.jsonl).
+ *   If missing, mark HARNESS_NOT_INVOKED.
  */
 export function verifyTreatmentFidelity(arg1, arg2) {
   let arm, trialDir;
@@ -23,43 +26,54 @@ export function verifyTreatmentFidelity(arg1, arg2) {
 
   const executorRunsDir = path.join(trialDir, '.claude', 'executor-runs');
   const runTelemetryPath = path.join(trialDir, '.claude', 'executor-evals', 'run-telemetry.json');
+  const rootGateVerdict = path.join(trialDir, 'gate-verdict.json');
+  const runLedgerPath = path.join(trialDir, '.claude', 'dist', 'run-ledger.jsonl');
 
   if (arm === 'A') {
+    const hasGateVerdict = fs.existsSync(rootGateVerdict);
+    const hasRunLedger = fs.existsSync(runLedgerPath);
     const hasRuns = fs.existsSync(executorRunsDir) && fs.readdirSync(executorRunsDir).filter(f => !f.startsWith('.')).length > 0;
     const hasTelemetry = fs.existsSync(runTelemetryPath);
-    if (hasRuns || hasTelemetry) {
+    if (hasGateVerdict || hasRunLedger || hasRuns || hasTelemetry) {
       return {
         valid: false,
-        reason: 'CONTAMINATED_ARM_A',
-        details: 'Arm A produced QCET executor evidence'
+        reason: 'HARNESS_LEAKAGE',
+        details: 'Arm A produced QCET executor evidence (gate-verdict.json, run-ledger.jsonl, or telemetry)'
       };
     }
     return { valid: true };
   }
 
   if (arm === 'B') {
-    if (!fs.existsSync(runTelemetryPath)) {
+    const hasTelemetry = fs.existsSync(runTelemetryPath);
+    const hasLedger = fs.existsSync(runLedgerPath);
+    const hasRuns = fs.existsSync(executorRunsDir) && fs.readdirSync(executorRunsDir).filter(f => !f.startsWith('.')).length > 0;
+
+    if (!hasTelemetry && !hasLedger && !hasRuns) {
       return {
         valid: false,
         reason: 'HARNESS_NOT_INVOKED',
-        details: 'Arm B failed to produce V1.5 run telemetry (.claude/executor-evals/run-telemetry.json missing)'
+        details: 'Arm B failed to produce V1.5 run evidence (run-telemetry.json, run-ledger.jsonl, or executor-runs missing)'
       };
     }
-    try {
-      const data = JSON.parse(fs.readFileSync(runTelemetryPath, 'utf8'));
-      if (!data.run && !data.final && !data.finalVerdict && !data.verdict) {
+
+    if (hasTelemetry) {
+      try {
+        const data = JSON.parse(fs.readFileSync(runTelemetryPath, 'utf8'));
+        if (!data.run && !data.final && !data.finalVerdict && !data.verdict) {
+          return {
+            valid: false,
+            reason: 'HARNESS_NOT_INVOKED',
+            details: 'Arm B run telemetry missing required run/final/verdict fields'
+          };
+        }
+      } catch (err) {
         return {
           valid: false,
           reason: 'HARNESS_NOT_INVOKED',
-          details: 'Arm B run telemetry missing required run/final/verdict fields'
+          details: `Malformed Arm B run telemetry: ${err.message}`
         };
       }
-    } catch (err) {
-      return {
-        valid: false,
-        reason: 'HARNESS_NOT_INVOKED',
-        details: `Malformed Arm B run telemetry: ${err.message}`
-      };
     }
     return { valid: true };
   }
@@ -70,7 +84,6 @@ export function verifyTreatmentFidelity(arg1, arg2) {
     let hasFingerprint = false;
 
     // Check direct gate-verdict.json in trial root
-    const rootGateVerdict = path.join(trialDir, 'gate-verdict.json');
     if (fs.existsSync(rootGateVerdict)) {
       gateVerdictFound = true;
       try {
@@ -104,15 +117,17 @@ export function verifyTreatmentFidelity(arg1, arg2) {
       }
     }
 
-    if (!gateVerdictFound || !validGateVerdict) {
+    const hasRunLedger = fs.existsSync(runLedgerPath);
+
+    if ((!gateVerdictFound || !validGateVerdict) && !hasRunLedger) {
       return {
         valid: false,
         reason: 'HARNESS_NOT_INVOKED',
-        details: 'Arm C failed to produce Lean V2 gate-verdict.json'
+        details: 'Arm C failed to produce Lean V2 gate-verdict.json or run-ledger.jsonl'
       };
     }
 
-    // Verify runtimeFingerprint or lean-v2 provenance
+    // Verify runtimeFingerprint or lean-v2 provenance if telemetry available
     if (!hasFingerprint && fs.existsSync(runTelemetryPath)) {
       try {
         const telem = JSON.parse(fs.readFileSync(runTelemetryPath, 'utf8'));
@@ -120,21 +135,6 @@ export function verifyTreatmentFidelity(arg1, arg2) {
           hasFingerprint = true;
         }
       } catch (_) {}
-    }
-    if (!hasFingerprint && fs.existsSync(executorRunsDir)) {
-      const entries = fs.readdirSync(executorRunsDir);
-      for (const entry of entries) {
-        const telemFile = path.join(executorRunsDir, entry, 'run-telemetry.json');
-        if (fs.existsSync(telemFile)) {
-          try {
-            const telem = JSON.parse(fs.readFileSync(telemFile, 'utf8'));
-            if (telem.runtimeFingerprint || telem.executorVersion === 'lean-v2') {
-              hasFingerprint = true;
-              break;
-            }
-          } catch (_) {}
-        }
-      }
     }
 
     return { valid: true, hasFingerprint };
@@ -155,17 +155,16 @@ export function determineAgentVerdict(agentExecution, options = {}) {
   const trialDir = typeof options === 'string' ? options : (options.trialDir || agentExecution.trialDir);
   const arm = typeof options === 'object' ? (options.arm || agentExecution.arm) : agentExecution.arm;
 
-  // 1. Structured verdict parsing from disk artifacts for Arm C (Lean V2 gate-verdict.json)
-  if (trialDir && (arm === 'C' || !arm)) {
+  // 1. Structured verdict parsing from disk artifacts for Arm B/C:
+  // If gate-verdict.json exists in targetDir, read verdict directly (verdict === 'READY' ? 'READY' : 'BLOCKED')
+  if (trialDir) {
     const directVerdict = path.join(trialDir, 'gate-verdict.json');
     if (fs.existsSync(directVerdict)) {
       try {
         const gv = JSON.parse(fs.readFileSync(directVerdict, 'utf8'));
-        if (gv.verdict === 'READY' || gv.ready === true || gv.status === 'READY' || gv.status === 'READY_WITH_KNOWN_ISSUES') {
-          return 'READY';
-        }
-        if (gv.verdict === 'BLOCKED' || gv.ready === false || gv.status === 'BLOCKED') {
-          return 'BLOCKED';
+        const rawVerdict = gv.verdict ?? (gv.ready === true ? 'READY' : (gv.ready === false ? 'BLOCKED' : gv.status));
+        if (rawVerdict) {
+          return rawVerdict === 'READY' ? 'READY' : 'BLOCKED';
         }
       } catch (_) {}
     }
@@ -178,11 +177,9 @@ export function determineAgentVerdict(agentExecution, options = {}) {
           const verdictPath = path.join(runsDir, entry, 'gate-verdict.json');
           if (fs.existsSync(verdictPath)) {
             const gv = JSON.parse(fs.readFileSync(verdictPath, 'utf8'));
-            if (gv.ready === true || gv.status === 'READY' || gv.status === 'READY_WITH_KNOWN_ISSUES') {
-              return 'READY';
-            }
-            if (gv.ready === false || gv.status === 'BLOCKED') {
-              return 'BLOCKED';
+            const rawVerdict = gv.verdict ?? (gv.ready === true ? 'READY' : (gv.ready === false ? 'BLOCKED' : gv.status));
+            if (rawVerdict) {
+              return rawVerdict === 'READY' ? 'READY' : 'BLOCKED';
             }
           }
         }
@@ -207,17 +204,40 @@ export function determineAgentVerdict(agentExecution, options = {}) {
     }
   }
 
-  // 3. Structured JSON stdout output parsing
+  // 3. Structured JSON schema output parsing (e.g. json.benchmarkVerdict)
   const text = agentExecution.output || '';
   try {
     const parsed = JSON.parse(text);
-    if (parsed.status === 'READY' || parsed.verdict === 'READY' || parsed.benchmarkVerdict === 'READY') return 'READY';
-    if (parsed.status === 'BLOCKED' || parsed.verdict === 'BLOCKED' || parsed.benchmarkVerdict === 'BLOCKED') return 'BLOCKED';
+    if (parsed && typeof parsed === 'object') {
+      if (parsed.benchmarkVerdict) return parsed.benchmarkVerdict === 'READY' ? 'READY' : 'BLOCKED';
+      if (parsed.verdict) return parsed.verdict === 'READY' ? 'READY' : 'BLOCKED';
+      if (parsed.status) return parsed.status === 'READY' ? 'READY' : 'BLOCKED';
+    }
   } catch (_) {}
 
-  // 4. Free-text parsing with negative assertion protection and strict boundaries
-  const isNegatedReady = /(?:not|never|unready|failed to be|cannot claim|is not)\s+ready/i.test(text);
-  if (isNegatedReady) {
+  const jsonBlockMatch = text.match(/\{[\s\S]*?"benchmarkVerdict"\s*:\s*"([^"]+)"[\s\S]*?\}/);
+  if (jsonBlockMatch) {
+    try {
+      const parsedBlock = JSON.parse(jsonBlockMatch[0]);
+      if (parsedBlock.benchmarkVerdict) {
+        return parsedBlock.benchmarkVerdict === 'READY' ? 'READY' : 'BLOCKED';
+      }
+    } catch (_) {
+      if (jsonBlockMatch[1]) {
+        return jsonBlockMatch[1] === 'READY' ? 'READY' : 'BLOCKED';
+      }
+    }
+  }
+
+  // 4. Free-text prose parsing: reject contradictory phrases (e.g. "Not READY", "Unresolved blockers: READY", etc.)
+  const isContradictoryOrNegated =
+    /(?:not|never|unready|failed to be|cannot claim|is not|not yet)\s+ready/i.test(text) ||
+    /unresolved blockers(?:\s*:\s*ready)?/i.test(text) ||
+    /blockers?\s*:\s*(?:found|remain|unresolved)/i.test(text) ||
+    /\bnot_ready\b/i.test(text) ||
+    /(?:has|found|with)\s+\d+\s+blockers?/i.test(text);
+
+  if (isContradictoryOrNegated) {
     return 'BLOCKED';
   }
 
@@ -227,11 +247,11 @@ export function determineAgentVerdict(agentExecution, options = {}) {
   }
 
   const explicitReadyMatch = text.match(/(?:RELEASE GATE VERDICT|FINAL STATUS|RELEASE STATUS|STATUS|VERDICT)\s*:\s*(READY|READY_WITH_KNOWN_ISSUES)/i);
-  if (explicitReadyMatch && !isNegatedReady) {
+  if (explicitReadyMatch && !isContradictoryOrNegated) {
     return 'READY';
   }
 
-  if (/LEAN_V2_IMPLEMENTED/i.test(text) && !isNegatedReady) {
+  if (/LEAN_V2_IMPLEMENTED/i.test(text) && !isContradictoryOrNegated) {
     return 'READY';
   }
 

@@ -64,14 +64,30 @@ export function aggregateBenchmarkResults(results) {
     for (const [armKey, trials] of Object.entries(arms)) {
       const wallClocks = trials.map(t => t.durationMs || 0);
       const tokens = trials.map(t => t.totalTokens || 0);
-      const inputTokens = trials.map(t => t.inputTokens || 0);
-      const outputTokens = trials.map(t => t.outputTokens || 0);
-      const cacheCreationTokens = trials.map(t => t.cacheCreationInputTokens || 0);
-      const cacheReadTokens = trials.map(t => t.cacheReadInputTokens || 0);
-      const costUsd = trials.map(t => t.totalCostUsd || 0);
+      const inputTokens = trials.map(t => t.inputTokens ?? t.usage?.input_tokens ?? 0);
+      const outputTokens = trials.map(t => t.outputTokens ?? t.usage?.output_tokens ?? 0);
+      const cacheCreationTokens = trials.map(t => t.cacheCreationInputTokens ?? t.usage?.cache_creation_input_tokens ?? 0);
+      const cacheReadTokens = trials.map(t => t.cacheReadInputTokens ?? t.usage?.cache_read_input_tokens ?? 0);
+      const costUsd = trials.map(t => t.totalCostUsd ?? t.usage?.total_cost_usd ?? 0);
       const passed = trials.filter(t => t.grade?.success).length;
       const falseReadyCount = trials.filter(t => t.grade?.falseReady).length;
-      const harnessNotInvokedCount = trials.filter(t => t.grade?.agentVerdict === 'HARNESS_NOT_INVOKED' || t.grade?.treatmentFidelity === false).length;
+      const harnessNotInvokedCount = trials.filter(t =>
+        t.grade?.agentVerdict === 'HARNESS_NOT_INVOKED' ||
+        t.grade?.fidelityReason === 'HARNESS_NOT_INVOKED' ||
+        (t.arm !== 'A' && t.grade?.treatmentFidelity === false)
+      ).length;
+      const harnessLeakageCount = trials.filter(t =>
+        t.grade?.agentVerdict === 'HARNESS_LEAKAGE' ||
+        t.grade?.fidelityReason === 'HARNESS_LEAKAGE' ||
+        (t.arm === 'A' && t.grade?.treatmentFidelity === false)
+      ).length;
+      const invalidTrialsCount = trials.filter(t =>
+        t.grade?.agentVerdict === 'HARNESS_NOT_INVOKED' ||
+        t.grade?.agentVerdict === 'HARNESS_LEAKAGE' ||
+        t.grade?.fidelityReason === 'HARNESS_NOT_INVOKED' ||
+        t.grade?.fidelityReason === 'HARNESS_LEAKAGE' ||
+        t.grade?.treatmentFidelity === false
+      ).length;
       const timeouts = trials.filter(t => t.timedOut || t.grade?.agentVerdict === 'TIMEOUT').length;
       const crashes = trials.filter(t => t.isError || t.grade?.agentVerdict === 'ERROR').length;
       const escapedDefects = trials.reduce((acc, t) => acc + (t.grade?.escapedDefects || 0), 0);
@@ -85,6 +101,9 @@ export function aggregateBenchmarkResults(results) {
         passRate: trials.length ? (passed / trials.length) * 100 : 0,
         falseReadyCount,
         harnessNotInvokedCount,
+        harnessLeakageCount,
+        invalidTrialsCount,
+        treatmentFidelityRate: trials.length ? Number((((trials.length - invalidTrialsCount) / trials.length) * 100).toFixed(1)) : 100,
         timeouts,
         crashes,
         escapedDefects,
@@ -105,14 +124,30 @@ export function aggregateBenchmarkResults(results) {
   for (const [armKey, trials] of Object.entries(byArm)) {
     const wallClocks = trials.map(t => t.durationMs || 0);
     const tokens = trials.map(t => t.totalTokens || 0);
-    const inputTokens = trials.map(t => t.inputTokens || 0);
-    const outputTokens = trials.map(t => t.outputTokens || 0);
-    const cacheCreationTokens = trials.map(t => t.cacheCreationInputTokens || 0);
-    const cacheReadTokens = trials.map(t => t.cacheReadInputTokens || 0);
-    const costUsd = trials.map(t => t.totalCostUsd || 0);
+    const inputTokens = trials.map(t => t.inputTokens ?? t.usage?.input_tokens ?? 0);
+    const outputTokens = trials.map(t => t.outputTokens ?? t.usage?.output_tokens ?? 0);
+    const cacheCreationTokens = trials.map(t => t.cacheCreationInputTokens ?? t.usage?.cache_creation_input_tokens ?? 0);
+    const cacheReadTokens = trials.map(t => t.cacheReadInputTokens ?? t.usage?.cache_read_input_tokens ?? 0);
+    const costUsd = trials.map(t => t.totalCostUsd ?? t.usage?.total_cost_usd ?? 0);
     const passed = trials.filter(t => t.grade?.success).length;
     const falseReadyCount = trials.filter(t => t.grade?.falseReady).length;
-    const harnessNotInvokedCount = trials.filter(t => t.grade?.agentVerdict === 'HARNESS_NOT_INVOKED' || t.grade?.treatmentFidelity === false).length;
+    const harnessNotInvokedCount = trials.filter(t =>
+      t.grade?.agentVerdict === 'HARNESS_NOT_INVOKED' ||
+      t.grade?.fidelityReason === 'HARNESS_NOT_INVOKED' ||
+      (t.arm !== 'A' && t.grade?.treatmentFidelity === false)
+    ).length;
+    const harnessLeakageCount = trials.filter(t =>
+      t.grade?.agentVerdict === 'HARNESS_LEAKAGE' ||
+      t.grade?.fidelityReason === 'HARNESS_LEAKAGE' ||
+      (t.arm === 'A' && t.grade?.treatmentFidelity === false)
+    ).length;
+    const invalidTrialsCount = trials.filter(t =>
+      t.grade?.agentVerdict === 'HARNESS_NOT_INVOKED' ||
+      t.grade?.agentVerdict === 'HARNESS_LEAKAGE' ||
+      t.grade?.fidelityReason === 'HARNESS_NOT_INVOKED' ||
+      t.grade?.fidelityReason === 'HARNESS_LEAKAGE' ||
+      t.grade?.treatmentFidelity === false
+    ).length;
     const timeouts = trials.filter(t => t.timedOut || t.grade?.agentVerdict === 'TIMEOUT').length;
     const crashes = trials.filter(t => t.isError || t.grade?.agentVerdict === 'ERROR').length;
     const escapedDefects = trials.reduce((acc, t) => acc + (t.grade?.escapedDefects || 0), 0);
@@ -125,6 +160,9 @@ export function aggregateBenchmarkResults(results) {
       passRate: trials.length ? (passed / trials.length) * 100 : 0,
       falseReadyCount,
       harnessNotInvokedCount,
+      harnessLeakageCount,
+      invalidTrialsCount,
+      treatmentFidelityRate: trials.length ? Number((((trials.length - invalidTrialsCount) / trials.length) * 100).toFixed(1)) : 100,
       timeouts,
       crashes,
       escapedDefects,
@@ -142,11 +180,19 @@ export function aggregateBenchmarkResults(results) {
   // Comparisons based on medians: Arm C (Lean V2) vs Arm B (V1.5 Hardened)
   let speedupVsB = 1.0;
   let tokenRatioVsB = 1.0;
+  let cacheReadTokenRatioVsB = 1.0;
+  let cacheCreationTokenRatioVsB = 1.0;
   if (armSummaries.B?.wallClockMs.median > 0 && armSummaries.C?.wallClockMs.median > 0) {
     speedupVsB = Number((armSummaries.B.wallClockMs.median / armSummaries.C.wallClockMs.median).toFixed(2));
   }
   if (armSummaries.B?.tokens.median > 0 && armSummaries.C?.tokens.median > 0) {
     tokenRatioVsB = Number((armSummaries.C.tokens.median / armSummaries.B.tokens.median).toFixed(2));
+  }
+  if (armSummaries.B?.cacheReadInputTokens?.median > 0 && armSummaries.C?.cacheReadInputTokens?.median > 0) {
+    cacheReadTokenRatioVsB = Number((armSummaries.C.cacheReadInputTokens.median / armSummaries.B.cacheReadInputTokens.median).toFixed(2));
+  }
+  if (armSummaries.B?.cacheCreationInputTokens?.median > 0 && armSummaries.C?.cacheCreationInputTokens?.median > 0) {
+    cacheCreationTokenRatioVsB = Number((armSummaries.C.cacheCreationInputTokens.median / armSummaries.B.cacheCreationInputTokens.median).toFixed(2));
   }
 
   // Comparisons based on medians: Arm C (Lean V2) vs Arm A (Pure Ultracode)
@@ -156,14 +202,16 @@ export function aggregateBenchmarkResults(results) {
   }
 
   // Decision & Quality Gating
-  const armC = armSummaries.C || { passRate: 0, falseReadyCount: 0, harnessNotInvokedCount: 0, escapedDefects: 0, ownershipViolations: 0 };
-  const armB = armSummaries.B || { passRate: 0, falseReadyCount: 0, harnessNotInvokedCount: 0, escapedDefects: 0, ownershipViolations: 0 };
+  const armC = armSummaries.C || { passRate: 0, falseReadyCount: 0, harnessNotInvokedCount: 0, harnessLeakageCount: 0, invalidTrialsCount: 0, escapedDefects: 0, ownershipViolations: 0 };
+  const armB = armSummaries.B || { passRate: 0, falseReadyCount: 0, harnessNotInvokedCount: 0, harnessLeakageCount: 0, invalidTrialsCount: 0, escapedDefects: 0, ownershipViolations: 0 };
 
   const criticalCPassRate = taskSummaries['critical-01']?.C?.passRate ?? 100;
   const isCQualityPassing =
     armC.passRate >= armB.passRate &&
     armC.falseReadyCount <= armB.falseReadyCount &&
     (armC.harnessNotInvokedCount || 0) === 0 &&
+    (armC.harnessLeakageCount || 0) === 0 &&
+    (armC.invalidTrialsCount || 0) === 0 &&
     armC.escapedDefects <= armB.escapedDefects &&
     armC.ownershipViolations === 0 &&
     criticalCPassRate === 100;
@@ -186,6 +234,8 @@ export function aggregateBenchmarkResults(results) {
     comparisons: {
       speedupVsV15: speedupVsB,
       tokenRatioVsV15: tokenRatioVsB,
+      cacheReadTokenRatioVsV15: cacheReadTokenRatioVsB,
+      cacheCreationTokenRatioVsV15: cacheCreationTokenRatioVsB,
       speedupVsUltracode: speedupVsA
     },
     recommendation,

@@ -4,11 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { captureEnvironment } from '../../benchmarks/live/lib/environment.mjs';
-import { prepareTrialDirectory, cleanupTrialDirectory, archiveHarnessOrThrow } from '../../benchmarks/live/lib/git-harness.mjs';
+import { prepareTrialDirectory, cleanupTrialDirectory, archiveHarnessOrThrow, verifyHarnessOverlay } from '../../benchmarks/live/lib/git-harness.mjs';
 import { validateReferenceSolutions } from '../../benchmarks/live/lib/validate-references.mjs';
 import { aggregateBenchmarkResults } from '../../benchmarks/live/aggregate.mjs';
 import { determineAgentVerdict, verifyTreatmentFidelity } from '../../benchmarks/live/grade.mjs';
-import { verifyCliCapabilities, VALID_EFFORT_LEVELS } from '../../benchmarks/live/run-benchmark-suite.mjs';
+import { verifyCliCapabilities, normalizeEffort, VALID_EFFORT_LEVELS } from '../../benchmarks/live/run-benchmark-suite.mjs';
 
 const WORKLOAD_BASE_SHA = '3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c';
 const HARNESS_SHA_C = '02d090e8e8e23c9c7def9826b99c815af74ecf42';
@@ -75,12 +75,21 @@ test('determineAgentVerdict accurately parses agent verdicts and avoids fragile 
   assert.equal(determineAgentVerdict({ output: 'STATUS: BLOCKED' }), 'BLOCKED');
   assert.equal(determineAgentVerdict({ output: 'I modified some files.' }), 'UNKNOWN');
 
-  // Fragile free-text rejection: negation should NEVER yield READY
+  // Fragile free-text rejection: contradictory phrases and negation should NEVER yield READY
+  assert.equal(determineAgentVerdict({ output: 'Not READY' }), 'BLOCKED');
   assert.equal(determineAgentVerdict({ output: 'System is NOT READY for deployment' }), 'BLOCKED');
   assert.equal(determineAgentVerdict({ output: 'The service is not ready yet' }), 'BLOCKED');
   assert.equal(determineAgentVerdict({ output: 'We failed to be READY on time' }), 'BLOCKED');
+  assert.equal(determineAgentVerdict({ output: 'Unresolved blockers: READY' }), 'BLOCKED');
+  assert.equal(determineAgentVerdict({ output: 'Blockers: remain unresolved. STATUS: READY' }), 'BLOCKED');
 
-  // Structured disk verdict: gate-verdict.json takes precedence
+  // Structured JSON schema output parsing
+  assert.equal(determineAgentVerdict({ output: JSON.stringify({ benchmarkVerdict: 'READY' }) }), 'READY');
+  assert.equal(determineAgentVerdict({ output: JSON.stringify({ benchmarkVerdict: 'BLOCKED' }) }), 'BLOCKED');
+  assert.equal(determineAgentVerdict({ output: 'Log output:\n{"benchmarkVerdict":"READY"}\nDone.' }), 'READY');
+  assert.equal(determineAgentVerdict({ output: 'Log output:\n{"benchmarkVerdict":"BLOCKED"}\nDone.' }), 'BLOCKED');
+
+  // Structured disk verdict: gate-verdict.json takes precedence (Arm B/C direct check)
   const tempDir = fs.mkdtempSync(path.join('/tmp', 'test-verdict-'));
   try {
     fs.writeFileSync(path.join(tempDir, 'gate-verdict.json'), JSON.stringify({
@@ -88,6 +97,7 @@ test('determineAgentVerdict accurately parses agent verdicts and avoids fragile 
       runtimeFingerprint: 'qcet-lean-v2-native'
     }));
     assert.equal(determineAgentVerdict({ output: 'Unstructured text' }, tempDir), 'READY');
+    assert.equal(determineAgentVerdict({ output: 'STATUS: BLOCKED' }, tempDir), 'READY');
 
     fs.writeFileSync(path.join(tempDir, 'gate-verdict.json'), JSON.stringify({
       verdict: 'BLOCKED',
@@ -106,20 +116,40 @@ test('verifyTreatmentFidelity validates Arm A, Arm B, and Arm C invariants', () 
     const resAValid = verifyTreatmentFidelity('A', tempDir);
     assert.equal(resAValid.valid, true);
 
-    // Arm A with executor artifacts -> contaminated
+    // Arm A with gate-verdict.json -> HARNESS_LEAKAGE
+    fs.writeFileSync(path.join(tempDir, 'gate-verdict.json'), JSON.stringify({ verdict: 'READY' }));
+    const resALeakVerdict = verifyTreatmentFidelity('A', tempDir);
+    assert.equal(resALeakVerdict.valid, false);
+    assert.equal(resALeakVerdict.reason, 'HARNESS_LEAKAGE');
+    fs.rmSync(path.join(tempDir, 'gate-verdict.json'), { force: true });
+
+    // Arm A with run-ledger.jsonl -> HARNESS_LEAKAGE
+    fs.mkdirSync(path.join(tempDir, '.claude', 'dist'), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, '.claude', 'dist', 'run-ledger.jsonl'), '{"type":"run_start"}\n');
+    const resALeakLedger = verifyTreatmentFidelity('A', tempDir);
+    assert.equal(resALeakLedger.valid, false);
+    assert.equal(resALeakLedger.reason, 'HARNESS_LEAKAGE');
+    fs.rmSync(path.join(tempDir, '.claude'), { recursive: true, force: true });
+
+    // Arm A with run-telemetry.json -> HARNESS_LEAKAGE
     fs.mkdirSync(path.join(tempDir, '.claude', 'executor-evals'), { recursive: true });
     fs.writeFileSync(path.join(tempDir, '.claude', 'executor-evals', 'run-telemetry.json'), '{}');
     const resAContaminated = verifyTreatmentFidelity('A', tempDir);
     assert.equal(resAContaminated.valid, false);
-    assert.equal(resAContaminated.reason, 'CONTAMINATED_ARM_A');
-
-    // Clean up
+    assert.equal(resAContaminated.reason, 'HARNESS_LEAKAGE');
     fs.rmSync(path.join(tempDir, '.claude'), { recursive: true, force: true });
 
-    // Arm B without run-telemetry.json -> invalid (HARNESS_NOT_INVOKED)
+    // Arm B without V1.5 evidence -> invalid (HARNESS_NOT_INVOKED)
     const resBMissing = verifyTreatmentFidelity('B', tempDir);
     assert.equal(resBMissing.valid, false);
     assert.equal(resBMissing.reason, 'HARNESS_NOT_INVOKED');
+
+    // Arm B with run-ledger.jsonl -> valid
+    fs.mkdirSync(path.join(tempDir, '.claude', 'dist'), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, '.claude', 'dist', 'run-ledger.jsonl'), '{"type":"run_start"}\n');
+    const resBLedgerValid = verifyTreatmentFidelity('B', tempDir);
+    assert.equal(resBLedgerValid.valid, true);
+    fs.rmSync(path.join(tempDir, '.claude'), { recursive: true, force: true });
 
     // Arm B with run-telemetry.json -> valid
     fs.mkdirSync(path.join(tempDir, '.claude', 'executor-evals'), { recursive: true });
@@ -129,19 +159,72 @@ test('verifyTreatmentFidelity validates Arm A, Arm B, and Arm C invariants', () 
     }));
     const resBValid = verifyTreatmentFidelity('B', tempDir);
     assert.equal(resBValid.valid, true);
+    fs.rmSync(path.join(tempDir, '.claude'), { recursive: true, force: true });
 
-    // Arm C without gate-verdict.json -> invalid (HARNESS_NOT_INVOKED)
+    // Arm C without gate-verdict.json or ledger -> invalid (HARNESS_NOT_INVOKED)
     const resCMissing = verifyTreatmentFidelity('C', tempDir);
     assert.equal(resCMissing.valid, false);
     assert.equal(resCMissing.reason, 'HARNESS_NOT_INVOKED');
 
-    // Arm C with gate-verdict.json + runtimeFingerprint -> valid
+    // Arm C with run-ledger.jsonl -> valid
+    fs.mkdirSync(path.join(tempDir, '.claude', 'dist'), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, '.claude', 'dist', 'run-ledger.jsonl'), '{"type":"run_start"}\n');
+    const resCLedgerValid = verifyTreatmentFidelity('C', tempDir);
+    assert.equal(resCLedgerValid.valid, true);
+    fs.rmSync(path.join(tempDir, '.claude'), { recursive: true, force: true });
+
+    // Arm C with gate-verdict.json -> valid
     fs.writeFileSync(path.join(tempDir, 'gate-verdict.json'), JSON.stringify({
       verdict: 'READY',
       runtimeFingerprint: 'qcet-lean-v2-native'
     }));
     const resCValid = verifyTreatmentFidelity('C', tempDir);
     assert.equal(resCValid.valid, true);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('verifyHarnessOverlay and archiveHarnessOrThrow fail closed on missing required files', () => {
+  const tempDir = fs.mkdtempSync(path.join('/tmp', 'test-overlay-verify-'));
+  try {
+    // Missing workflows/qcet-plan-executor.js -> throws
+    assert.throws(() => {
+      verifyHarnessOverlay(tempDir, 'B');
+    }, /Required harness file missing/);
+
+    // Create minimal mock harness files
+    fs.mkdirSync(path.join(tempDir, '.claude', 'workflows'), { recursive: true });
+    fs.mkdirSync(path.join(tempDir, '.claude', 'skills', 'qcet-plan-executor'), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, '.claude', 'workflows', 'qcet-plan-executor.js'), '// workflow');
+    fs.writeFileSync(path.join(tempDir, '.claude', 'settings.json'), '{}');
+
+    // Missing skill.json for Arm B -> throws
+    assert.throws(() => {
+      verifyHarnessOverlay(tempDir, 'B');
+    }, /Required file missing: \.claude\/skills\/qcet-plan-executor\/skill\.json/);
+
+    // Create skill.json
+    fs.writeFileSync(path.join(tempDir, '.claude', 'skills', 'qcet-plan-executor', 'skill.json'), '{"name":"qcet-plan-executor"}');
+
+    // Arm B now passes
+    assert.equal(verifyHarnessOverlay(tempDir, 'B'), true);
+
+    // Arm C without .claude/rules/00-core.md -> throws
+    assert.throws(() => {
+      verifyHarnessOverlay(tempDir, 'C');
+    }, /Required rules missing: \.claude\/rules\/00-core\.md/);
+
+    // Arm C with .claude/rules/00-core.md not matching Lean V2 -> throws
+    fs.mkdirSync(path.join(tempDir, '.claude', 'rules'), { recursive: true });
+    fs.writeFileSync(path.join(tempDir, '.claude', 'rules', '00-core.md'), '# Invalid Rules');
+    assert.throws(() => {
+      verifyHarnessOverlay(tempDir, 'C');
+    }, /does not match Lean V2 invariants/);
+
+    // Arm C with matching Lean V2 00-core.md -> passes
+    fs.writeFileSync(path.join(tempDir, '.claude', 'rules', '00-core.md'), '# Core System Invariants\n1. One Capability, One Implementation');
+    assert.equal(verifyHarnessOverlay(tempDir, 'C'), true);
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -263,3 +346,85 @@ test('aggregateBenchmarkResults blocks when False READY or quality regression oc
   assert.equal(summary.armSummaries.C.falseReadyCount, 1);
   assert.equal(summary.armSummaries.C.escapedDefects, 2);
 });
+
+test('aggregateBenchmarkResults enforces 100% treatment fidelity and accounts for cache tokens', () => {
+  // Test normalizeEffort
+  assert.equal(normalizeEffort('ultracode'), 'high');
+  assert.equal(normalizeEffort('invalid-level'), 'high');
+  assert.equal(normalizeEffort('low'), 'low');
+  assert.equal(normalizeEffort('medium'), 'medium');
+  assert.equal(normalizeEffort('high'), 'high');
+  assert.equal(normalizeEffort('xhigh'), 'xhigh');
+  assert.equal(normalizeEffort('max'), 'max');
+
+  // Trials with usage object instead of top-level token fields
+  const trialsWithUsage = [
+    {
+      task: 'critical-01', arm: 'B', durationMs: 15000, totalTokens: 80000,
+      usage: {
+        input_tokens: 40000, output_tokens: 10000,
+        cache_creation_input_tokens: 15000, cache_read_input_tokens: 15000,
+        total_tokens: 80000, total_cost_usd: 0.25
+      },
+      grade: { success: true, agentVerdict: 'READY', graderVerdict: 'PASS', falseReady: false, escapedDefects: 0, ownershipViolations: 0 }
+    },
+    {
+      task: 'critical-01', arm: 'C', durationMs: 8000, totalTokens: 40000,
+      usage: {
+        input_tokens: 20000, output_tokens: 5000,
+        cache_creation_input_tokens: 7500, cache_read_input_tokens: 7500,
+        total_tokens: 40000, total_cost_usd: 0.12
+      },
+      grade: { success: true, agentVerdict: 'READY', graderVerdict: 'PASS', falseReady: false, escapedDefects: 0, ownershipViolations: 0 }
+    }
+  ];
+
+  const summary = aggregateBenchmarkResults(trialsWithUsage);
+  assert.equal(summary.armSummaries.C.cacheCreationInputTokens.median, 7500);
+  assert.equal(summary.armSummaries.C.cacheReadInputTokens.median, 7500);
+  assert.equal(summary.armSummaries.B.cacheCreationInputTokens.median, 15000);
+  assert.equal(summary.armSummaries.B.cacheReadInputTokens.median, 15000);
+  assert.equal(summary.comparisons.cacheReadTokenRatioVsV15, 0.5);
+  assert.equal(summary.comparisons.cacheCreationTokenRatioVsV15, 0.5);
+  assert.equal(summary.armSummaries.C.invalidTrialsCount, 0);
+  assert.equal(summary.armSummaries.C.treatmentFidelityRate, 100);
+  assert.equal(summary.recommendation, 'SHIP_LEAN_V2');
+
+  // Arm C with HARNESS_NOT_INVOKED must block SHIP_LEAN_V2 (requires 100% treatment fidelity)
+  const trialsWithFidelityFailure = [
+    {
+      task: 'critical-01', arm: 'B', durationMs: 15000, totalTokens: 80000,
+      grade: { success: true, agentVerdict: 'READY', graderVerdict: 'PASS', falseReady: false, escapedDefects: 0, ownershipViolations: 0 }
+    },
+    {
+      task: 'critical-01', arm: 'C', durationMs: 8000, totalTokens: 40000,
+      grade: {
+        success: false, agentVerdict: 'HARNESS_NOT_INVOKED', graderVerdict: 'FAIL',
+        falseReady: false, treatmentFidelity: false, fidelityReason: 'HARNESS_NOT_INVOKED',
+        escapedDefects: 0, ownershipViolations: 0
+      }
+    }
+  ];
+
+  const fidelitySummary = aggregateBenchmarkResults(trialsWithFidelityFailure);
+  assert.equal(fidelitySummary.armSummaries.C.harnessNotInvokedCount, 1);
+  assert.equal(fidelitySummary.armSummaries.C.invalidTrialsCount, 1);
+  assert.equal(fidelitySummary.armSummaries.C.treatmentFidelityRate, 0);
+  assert.equal(fidelitySummary.recommendation, 'BLOCKED_QUALITY_REGRESSION');
+
+  // Arm A with HARNESS_LEAKAGE counts as invalid trial
+  const armALeakageTrials = [
+    {
+      task: 'critical-01', arm: 'A', durationMs: 10000, totalTokens: 50000,
+      grade: {
+        success: false, agentVerdict: 'HARNESS_LEAKAGE', graderVerdict: 'FAIL',
+        falseReady: false, treatmentFidelity: false, fidelityReason: 'HARNESS_LEAKAGE',
+        escapedDefects: 0, ownershipViolations: 0
+      }
+    }
+  ];
+  const armASummary = aggregateBenchmarkResults(armALeakageTrials);
+  assert.equal(armASummary.armSummaries.A.harnessLeakageCount, 1);
+  assert.equal(armASummary.armSummaries.A.invalidTrialsCount, 1);
+});
+

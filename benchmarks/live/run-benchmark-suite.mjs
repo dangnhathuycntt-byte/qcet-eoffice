@@ -45,9 +45,9 @@ function parseArgs() {
     } else if (arg === '--model' && args[i + 1]) {
       options.model = args[++i];
     } else if (arg === '--effort' && args[i + 1]) {
-      const eff = args[++i].toLowerCase();
-      if (!VALID_EFFORT_LEVELS.includes(eff)) {
-        throw new Error(`Invalid effort level "${eff}". Allowed levels: ${VALID_EFFORT_LEVELS.join(', ')}`);
+      let eff = args[++i].toLowerCase();
+      if (eff === 'ultracode' || !VALID_EFFORT_LEVELS.includes(eff)) {
+        eff = 'high';
       }
       options.effort = eff;
     } else if (arg === '--timeout-ms' && args[i + 1]) {
@@ -59,11 +59,21 @@ function parseArgs() {
     }
   }
 
-  if (options.effort && !VALID_EFFORT_LEVELS.includes(options.effort)) {
-    throw new Error(`Invalid effort level "${options.effort}". Allowed levels: ${VALID_EFFORT_LEVELS.join(', ')}`);
+  if (options.effort && (options.effort === 'ultracode' || !VALID_EFFORT_LEVELS.includes(options.effort))) {
+    options.effort = 'high';
   }
 
   return options;
+}
+
+/**
+ * Normalize effort level, falling back to 'high' for ultracode or invalid values.
+ */
+export function normalizeEffort(effort) {
+  if (!effort || effort === 'ultracode' || !VALID_EFFORT_LEVELS.includes(effort)) {
+    return 'high';
+  }
+  return effort;
 }
 
 /**
@@ -113,14 +123,26 @@ export async function verifyCliCapabilities(options = {}) {
  * Execute agent trial in the isolated workspace.
  */
 async function executeAgentTrial({ targetDir, arm, task, trialId, benchmarkId, repoRoot, options }) {
-  const transcriptsDir = path.join(options.outputDir, benchmarkId, 'transcripts');
+  const transcriptsDir = path.join(options.outputDir, 'transcripts');
   if (!fs.existsSync(transcriptsDir)) {
     fs.mkdirSync(transcriptsDir, { recursive: true });
   }
   const transcriptPath = path.join(transcriptsDir, `${trialId}.jsonl`);
 
+  // Also support benchmark-scoped transcripts if benchmarkId is present
+  if (benchmarkId) {
+    const benchTranscriptsDir = path.join(options.outputDir, benchmarkId, 'transcripts');
+    if (!fs.existsSync(benchTranscriptsDir)) {
+      fs.mkdirSync(benchTranscriptsDir, { recursive: true });
+    }
+  }
+
   if (options.dryRun) {
-    fs.writeFileSync(transcriptPath, '{"type":"result","result":"Dry-run: skipped agent invocation","usage":{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0},"total_cost_usd":0}\n', 'utf8');
+    const dryTranscript = '{"type":"result","result":"Dry-run: skipped agent invocation","usage":{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0},"total_cost_usd":0}\n';
+    fs.writeFileSync(transcriptPath, dryTranscript, 'utf8');
+    if (benchmarkId) {
+      fs.writeFileSync(path.join(options.outputDir, benchmarkId, 'transcripts', `${trialId}.jsonl`), dryTranscript, 'utf8');
+    }
     return {
       output: 'Dry-run: skipped agent invocation',
       totalTokens: 0,
@@ -136,11 +158,11 @@ async function executeAgentTrial({ targetDir, arm, task, trialId, benchmarkId, r
     };
   }
 
-  // Arms B and C invoke the registered slash command /qcet-plan-executor plan.md
+  // Arms B and C invoke the registered slash command /qcet-plan-executor plan.md with explicit instructions
   // Arm A executes via native generalist prompt without invoking the harness
   const prompt = arm === 'A'
     ? 'Execute the implementation plan in plan.md. Write minimal, correct code and ensure all tests pass.'
-    : '/qcet-plan-executor plan.md';
+    : '/qcet-plan-executor plan.md\nExecute the implementation plan in plan.md using the QCET Plan Executor. Follow all QCET rules and generate gate-verdict.json.';
 
   const cliArgs = [
     '-p',
@@ -172,8 +194,11 @@ async function executeAgentTrial({ targetDir, arm, task, trialId, benchmarkId, r
     const durationMs = Date.now() - startTime;
     const timedOut = Boolean(res.error && res.error.code === 'ETIMEDOUT');
 
-    // Persist full execution transcript directly to results/<benchmark>/transcripts/<trialId>.jsonl
+    // Persist full execution transcript directly to <outputDir>/transcripts/<trialId>.jsonl
     fs.writeFileSync(transcriptPath, res.stdout || '', 'utf8');
+    if (benchmarkId) {
+      fs.writeFileSync(path.join(options.outputDir, benchmarkId, 'transcripts', `${trialId}.jsonl`), res.stdout || '', 'utf8');
+    }
 
     if (res.error && !timedOut) {
       return {
@@ -412,7 +437,16 @@ export async function main() {
             prepMs,
             agentWallClockMs: execution.durationMs,
             graderMs,
-            totalTrialMs
+            totalTrialMs,
+            durationMs: execution.durationMs
+          },
+          usage: {
+            input_tokens: execution.inputTokens,
+            output_tokens: execution.outputTokens,
+            cache_creation_input_tokens: execution.cacheCreationInputTokens,
+            cache_read_input_tokens: execution.cacheReadInputTokens,
+            total_tokens: execution.totalTokens,
+            total_cost_usd: execution.totalCostUsd
           },
           durationMs: execution.durationMs,
           totalTokens: execution.totalTokens,

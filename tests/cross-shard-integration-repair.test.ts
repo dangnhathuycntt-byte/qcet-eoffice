@@ -375,6 +375,12 @@ describe('Cross-Shard Integration Repair Verification', () => {
       }
     } finally {
       process.env.QCET_SESSION_ID = origSession;
+      try {
+        const paths = helpers.getActiveShardsFilePaths();
+        for (const p of paths) {
+          if (fs.existsSync(p)) fs.rmSync(p, { force: true });
+        }
+      } catch (_) {}
     }
   });
 
