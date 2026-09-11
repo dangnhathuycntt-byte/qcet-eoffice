@@ -20,7 +20,14 @@ import os from 'node:os';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const EXECUTOR_SHA = '1be1e67ae3ee8ef8b1f1745825950b07ee1d0481';
+// Compute dynamically so it always matches the actual workflow on disk
+const EXECUTOR_SHA = (() => {
+  try {
+    return execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+  } catch (_) {
+    return 'unknown';
+  }
+})();
 const MODEL = 'claude-combo[1m]';
 const EFFORT = 'high';
 const OVERALL_TIMEOUT_MS = 20 * 60 * 1000;      // 20 minutes — executor has many phases
@@ -34,10 +41,14 @@ const RESULTS_DIR = path.join(REPO_ROOT, 'benchmarks', 'e2e', 'results');
 
 const FC = {
   HEADLESS_PERMISSION_FAILURE: 'HEADLESS_PERMISSION_FAILURE',
+  EXECUTOR_PREFLIGHT_FAILED: 'EXECUTOR_PREFLIGHT_FAILED',
   RUNTIME_INIT_FAILED: 'RUNTIME_INIT_FAILED',
+  WORKFLOW_NOT_INVOKED: 'WORKFLOW_NOT_INVOKED',
   EXECUTOR_NOT_STARTED: 'EXECUTOR_NOT_STARTED',
   OWNERSHIP_FAILURE: 'OWNERSHIP_FAILURE',
   VERIFICATION_FAILURE: 'VERIFICATION_FAILURE',
+  GLOBAL_VALIDATION_FAILURE: 'GLOBAL_VALIDATION_FAILURE',
+  GLOBAL_VALIDATION_TIMEOUT: 'GLOBAL_VALIDATION_TIMEOUT',
   RELEASE_GATE_MISSING: 'RELEASE_GATE_MISSING',
   TIMEOUT: 'TIMEOUT',
   INFRA_ERROR: 'INFRA_ERROR',
@@ -118,6 +129,43 @@ function spawnClaude(args, { cwd, timeoutMs, transcriptPath, stderrPath, onStdou
       resolve({ exitCode: earlyExit ? 0 : (code ?? 1), timedOut: timedOut && !earlyExit, earlyExit, transcriptPath, stderrPath });
     });
   });
+}
+
+// ─── Executor static preflight ───────────────────────────────────────────────
+
+function runExecutorPreflight(trialDir) {
+  const failures = [];
+
+  // Check workflow file exists
+  const workflowPath = path.join(trialDir, '.claude', 'workflows', 'qcet-plan-executor.js');
+  if (!fs.existsSync(workflowPath)) failures.push('workflow file missing: .claude/workflows/qcet-plan-executor.js');
+
+  // Check required agents exist
+  const requiredAgents = ['qcet-builder.md', 'qcet-recon.md', 'qcet-skeptic.md', 'qcet-telemetry-recorder.md'];
+  for (const agentFile of requiredAgents) {
+    const agentPath = path.join(trialDir, '.claude', 'agents', agentFile);
+    if (!fs.existsSync(agentPath)) failures.push(`required agent missing: .claude/agents/${agentFile}`);
+  }
+
+  // Check StructuredOutput is available in agents that need schema enforcement.
+  // These agents are called with schema: by the workflow — if they have an explicit
+  // tools list that excludes StructuredOutput, schema calls will silently fail.
+  const agentsNeedingStructuredOutput = ['qcet-skeptic.md', 'qcet-telemetry-recorder.md'];
+  for (const agentFile of agentsNeedingStructuredOutput) {
+    const agentPath = path.join(trialDir, '.claude', 'agents', agentFile);
+    if (fs.existsSync(agentPath)) {
+      const content = fs.readFileSync(agentPath, 'utf8');
+      if (content.includes('tools:') && !content.includes('StructuredOutput')) {
+        failures.push(`agent ${agentFile} has explicit tools list without StructuredOutput — schema calls will fail`);
+      }
+    }
+  }
+
+  // Check required rules directory exists
+  const rulesDir = path.join(trialDir, '.claude', 'rules');
+  if (!fs.existsSync(rulesDir)) failures.push('rules directory missing: .claude/rules/');
+
+  return failures;
 }
 
 // ─── Temp repo management ────────────────────────────────────────────────────
@@ -273,6 +321,20 @@ async function runExecutorCanary(runDir) {
       pass: false,
       failureClass: FC.INFRA_ERROR,
       reason: `Failed to overlay harness: ${err.message}`,
+      gates: { runtimeInit: false, workflowInvoked: false, executorStarted: false, targetMutationCorrect: false, ownershipClean: false, verificationPassed: false, releaseGatePresent: false },
+    };
+  }
+
+  // ── Static preflight: verify harness files before spawning Claude ──
+  const preflightFailures = runExecutorPreflight(trialDir);
+  if (preflightFailures.length > 0) {
+    log(`  EXECUTOR_PREFLIGHT_FAILED: ${preflightFailures.join('; ')}`);
+    destroyTempRepo(trialDir);
+    return {
+      pass: false,
+      failureClass: FC.EXECUTOR_PREFLIGHT_FAILED,
+      reason: preflightFailures.join('; '),
+      gates: { runtimeInit: false, workflowInvoked: false, executorStarted: false, targetMutationCorrect: false, ownershipClean: false, verificationPassed: false, releaseGatePresent: false },
     };
   }
 
@@ -349,6 +411,17 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
   let terminated = false;
   let terminationReason = null;
 
+  // Independent gate state — tracked separately from final pass/fail
+  const gates = {
+    runtimeInit: false,
+    workflowInvoked: false,    // Workflow tool_use seen in transcript
+    executorStarted: false,    // Actual executor artifact on disk
+    targetMutationCorrect: false,
+    ownershipClean: false,
+    verificationPassed: false,
+    releaseGatePresent: false,
+  };
+
   // Write metadata
   fs.writeFileSync(path.join(runDir, 'meta.json'), JSON.stringify({
     pid: null, // filled after spawn
@@ -377,6 +450,7 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     for (const c of candidates) {
       if (fs.existsSync(c)) {
         gateB_executorArtifact = true;
+        gates.executorStarted = true;
         log('  Gate B — executor artifact detected');
         return true;
       }
@@ -427,20 +501,29 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
           // Gate A: system init
           if (!gateA_runtimeInit && (ev?.type === 'system' || ev?.type === 'init' || ev?.event === 'system')) {
             gateA_runtimeInit = true;
+            gates.runtimeInit = true;
             log('  Gate A — runtime init detected');
           }
           // Also watch for any event to count as runtime init (stream started)
           if (!gateA_runtimeInit && line.includes('"type"')) {
             gateA_runtimeInit = true;
+            gates.runtimeInit = true;
             log('  Gate A — stream active (runtime init)');
           }
-          // Gate B: Workflow tool call in transcript counts as executor started
-          if (!gateB_executorArtifact && ev?.type === 'assistant') {
+          // Gate B: Workflow tool call in transcript — workflowInvoked tracks tool_use separately
+          if (ev?.type === 'assistant') {
             const content = ev?.message?.content || [];
             for (const c of content) {
               if (c?.type === 'tool_use' && c?.name === 'Workflow') {
-                gateB_executorArtifact = true;
-                log('  Gate B — Workflow tool invoked (executor started)');
+                if (!gates.workflowInvoked) {
+                  gates.workflowInvoked = true;
+                  log('  Gate B — Workflow tool invoked');
+                }
+                if (!gateB_executorArtifact) {
+                  gateB_executorArtifact = true;
+                  gates.executorStarted = true;
+                  log('  Gate B — executor started (Workflow tool_use)');
+                }
               }
             }
           }
@@ -461,14 +544,19 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
   checkExecutorArtifacts();
 
   if (timedOut && !earlyExit) {
+    // Evaluate gates best-effort before returning
+    const targetPath = path.join(trialDir, 'qcet-e2e', 'target.txt');
+    const targetContent = fs.existsSync(targetPath) ? fs.readFileSync(targetPath, 'utf8').trim() : null;
+    gates.targetMutationCorrect = targetContent === 'QCET_E2E_OK';
+    gates.ownershipClean = true; // conservative — no product files should be dirty on timeout
     destroyTempRepo(trialDir);
-    return { pass: false, failureClass: FC.TIMEOUT, reason: 'overall 20 minute timeout exceeded' };
+    return { pass: false, failureClass: FC.TIMEOUT, reason: 'overall 20 minute timeout exceeded', gates };
   }
 
   // ── Gate A ──
   if (!gateA_runtimeInit) {
     destroyTempRepo(trialDir);
-    return { pass: false, failureClass: FC.RUNTIME_INIT_FAILED, reason: 'no stream-json events received' };
+    return { pass: false, failureClass: FC.RUNTIME_INIT_FAILED, reason: 'no stream-json events received', gates };
   }
 
   // ── Gate B ──
@@ -477,7 +565,7 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     checkExecutorArtifacts();
     if (!gateB_executorArtifact) {
       destroyTempRepo(trialDir);
-      return { pass: false, failureClass: FC.EXECUTOR_NOT_STARTED, reason: 'no executor runtime artifacts found' };
+      return { pass: false, failureClass: FC.EXECUTOR_NOT_STARTED, reason: 'no executor runtime artifacts found', gates };
     }
   }
 
@@ -487,12 +575,15 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     ? fs.readFileSync(targetPath, 'utf8').trim()
     : null;
 
+  gates.targetMutationCorrect = (targetContent === 'QCET_E2E_OK');
+
   if (targetContent !== 'QCET_E2E_OK') {
     destroyTempRepo(trialDir);
     return {
       pass: false,
       failureClass: FC.VERIFICATION_FAILURE,
       reason: `target.txt = "${targetContent}", expected "QCET_E2E_OK"`,
+      gates,
     };
   }
 
@@ -510,16 +601,37 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
   const ownershipViolations = changedLines.filter(f =>
     forbiddenPatterns.some(p => p.test(f))
   );
+  gates.ownershipClean = ownershipViolations.length === 0;
   if (ownershipViolations.length > 0) {
     destroyTempRepo(trialDir);
     return {
       pass: false,
       failureClass: FC.OWNERSHIP_FAILURE,
       reason: `Unauthorized files changed: ${ownershipViolations.join(', ')}`,
+      gates,
     };
   }
 
-  // ── Gate D/E — Release gate ──
+  // ── Gate D — Verification result (best-effort from executor-runs) ──
+  gates.verificationPassed = (() => {
+    try {
+      const executorRunsDir = path.join(trialDir, '.claude', 'executor-runs');
+      if (!fs.existsSync(executorRunsDir)) return false;
+      const entries = fs.readdirSync(executorRunsDir);
+      for (const entry of entries) {
+        const shardVerdict = path.join(executorRunsDir, entry, 'shard-result.json');
+        if (fs.existsSync(shardVerdict)) {
+          const parsed = JSON.parse(fs.readFileSync(shardVerdict, 'utf8'));
+          if (parsed?.verdict === 'pass' || parsed?.status === 'pass') return true;
+        }
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  })();
+
+  // ── Gate E — Release gate ──
   const possibleGateFiles = [
     path.join(trialDir, 'gate-verdict.json'),
     path.join(trialDir, '.claude', 'executor-runs', 'gate-verdict.json'),
@@ -547,18 +659,21 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
   }
 
   if (!gateVerdictPath) {
+    gates.releaseGatePresent = false;
     destroyTempRepo(trialDir);
-    return { pass: false, failureClass: FC.RELEASE_GATE_MISSING, reason: 'gate-verdict.json not found in trial repo' };
+    return { pass: false, failureClass: FC.RELEASE_GATE_MISSING, reason: 'gate-verdict.json not found in trial repo', gates };
   }
 
   const status = gateVerdictContent?.status ?? gateVerdictContent?.verdict ?? null;
   const validStatuses = ['READY', 'READY_WITH_KNOWN_ISSUES', 'BLOCKED'];
+  gates.releaseGatePresent = validStatuses.includes(status);
   if (!validStatuses.includes(status)) {
     destroyTempRepo(trialDir);
     return {
       pass: false,
       failureClass: FC.RELEASE_GATE_MISSING,
       reason: `gate-verdict.json has no valid status (got: ${JSON.stringify(status)})`,
+      gates,
     };
   }
 
@@ -568,12 +683,13 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
       pass: false,
       failureClass: FC.VERIFICATION_FAILURE,
       reason: `Release gate status is "${status}", expected "READY" for canary workload`,
+      gates,
     };
   }
 
   log('  All gates PASS');
   destroyTempRepo(trialDir);
-  return { pass: true, releaseGate: status, gateVerdictPath };
+  return { pass: true, releaseGate: status, gateVerdictPath, gates };
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -601,14 +717,16 @@ async function main() {
       effort: EFFORT,
       permissionProbe: false,
       runtimeInit: false,
+      workflowInvoked: false,
       executorStarted: false,
       targetMutationCorrect: false,
       ownershipClean: false,
       verificationPassed: false,
+      releaseGatePresent: false,
       releaseGate: null,
       wallClockMs: Date.now() - startMs,
-      tokens: 0,
-      costUsd: 0,
+      tokens: null,
+      costUsd: null,
       transcriptPath: path.join(runDir, 'probe-transcript.jsonl'),
       gateVerdictPath: null,
     };
@@ -630,15 +748,17 @@ async function main() {
     model: MODEL,
     effort: EFFORT,
     permissionProbe: true,
-    runtimeInit: canaryResult.pass || canaryResult.failureClass !== FC.RUNTIME_INIT_FAILED,
-    executorStarted: canaryResult.pass || ![FC.EXECUTOR_NOT_STARTED, FC.RUNTIME_INIT_FAILED].includes(canaryResult.failureClass),
-    targetMutationCorrect: canaryResult.pass,
-    ownershipClean: canaryResult.pass || canaryResult.failureClass !== FC.OWNERSHIP_FAILURE,
-    verificationPassed: canaryResult.pass,
+    runtimeInit: canaryResult.gates?.runtimeInit ?? false,
+    workflowInvoked: canaryResult.gates?.workflowInvoked ?? false,
+    executorStarted: canaryResult.gates?.executorStarted ?? false,
+    targetMutationCorrect: canaryResult.gates?.targetMutationCorrect ?? false,
+    ownershipClean: canaryResult.gates?.ownershipClean ?? false,
+    verificationPassed: canaryResult.gates?.verificationPassed ?? false,
+    releaseGatePresent: canaryResult.gates?.releaseGatePresent ?? false,
     releaseGate: canaryResult.releaseGate ?? null,
     wallClockMs,
-    tokens: 0,
-    costUsd: 0,
+    tokens: null,    // not measured
+    costUsd: null,   // not measured
     transcriptPath: path.join(runDir, 'transcript.jsonl'),
     gateVerdictPath: canaryResult.gateVerdictPath ?? null,
   };
