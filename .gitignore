@@ -55,3 +55,7 @@ qcet-backend-api/
 /uploads/
 /test_storage_*/
 /test_uploads_*/
+
+# E2E harness — raw transcripts are too large for git
+benchmarks/e2e/results/**/transcript.jsonl
+benchmarks/e2e/results/**/probe-transcript.jsonl
