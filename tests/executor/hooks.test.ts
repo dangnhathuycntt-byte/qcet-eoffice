@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '../..');
 const ownershipGuard = path.join(rootDir, '.claude', 'hooks', 'pre-tool-use-ownership-guard');
 const evidenceGate = path.join(rootDir, '.claude', 'hooks', 'subagent-stop-evidence-gate');
+const runEventHook = path.join(rootDir, '.claude', 'hooks', 'qcet-run-event');
 
 function runHook(hookPath: string, stdinJson: Record<string, any>, env: Record<string, any> = {}) {
   const res = spawnSync('node', [hookPath], {
@@ -341,5 +342,45 @@ test('pre-tool-use-ownership-guard: read-only agent blocked on compound/redirect
       tool_input: { command: cmd },
     });
     assert.equal(res.status, 2, `Compound or risky command should be blocked: ${cmd}`);
+  }
+});
+
+test('qcet-run-event: no-op exit 0 when QCET_RUN_ID is absent', () => {
+  const res = runHook(runEventHook, {
+    tool_name: 'Read',
+    agent_type: 'qcet-recon',
+  }, { QCET_RUN_ID: '' });
+  assert.equal(res.status, 0);
+});
+
+test('qcet-run-event: records bounded event when QCET_RUN_ID is present', () => {
+  const runId = 'test-hook-event-' + Date.now();
+  const runDir = path.join(rootDir, '.claude', 'executor-runs', runId);
+
+  try {
+    const res = runHook(runEventHook, {
+      hook_event_name: 'PostToolUse',
+      tool_name: 'Write',
+      agent_type: 'qcet-builder',
+      tool_input: { file_path: 'src/app.ts', content: 'SECRET_DUMP_OMITTED' },
+    }, { QCET_RUN_ID: runId });
+
+    assert.equal(res.status, 0);
+    const eventsFile = path.join(runDir, 'events.jsonl');
+    assert.ok(fs.existsSync(eventsFile));
+    const lines = fs.readFileSync(eventsFile, 'utf8').trim().split('\n');
+    assert.equal(lines.length, 1);
+    const parsed = JSON.parse(lines[0]);
+    assert.equal(parsed.seq, 1);
+    assert.equal(parsed.type, 'PostToolUse');
+    assert.equal(parsed.agentType, 'qcet-builder');
+    assert.equal(parsed.toolName, 'Write');
+    assert.equal(parsed.path, 'src/app.ts');
+    // Content should not be dumped
+    assert.equal(parsed.content, undefined);
+  } finally {
+    if (fs.existsSync(runDir)) {
+      fs.rmSync(runDir, { recursive: true, force: true });
+    }
   }
 });

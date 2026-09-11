@@ -74,6 +74,16 @@
         ]
       }
     ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/qcet-run-event"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
@@ -82,6 +92,24 @@
             "type": "command",
             "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/fast-changed-file-check",
             "statusMessage": "Linting changed files for QCET architectural invariants..."
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/qcet-run-event"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/qcet-run-event"
           }
         ]
       }
@@ -93,6 +121,10 @@
             "type": "command",
             "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/subagent-stop-evidence-gate",
             "statusMessage": "Verifying subagent execution evidence..."
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/qcet-run-event"
           }
         ]
       }
