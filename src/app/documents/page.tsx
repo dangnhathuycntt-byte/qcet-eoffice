@@ -4,8 +4,6 @@ import Link from "next/link";
 import { Briefcase, Clock } from "lucide-react";
 import { DocumentRegistryView } from "@/components/documents/document-registry-view";
 import { DocumentWorkspace } from "@/components/documents/document-workspace";
-// Retain DocumentRegistryView alias for backwards compatibility with tests
-export { DocumentWorkspace, DocumentWorkspace as DocumentRegistryView };
 
 export const metadata: Metadata = {
   title: "Văn bản & Quản lý Công văn - QCET E-Office",

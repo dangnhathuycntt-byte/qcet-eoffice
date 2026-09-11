@@ -41,7 +41,10 @@ describe('Dashboard API Routes (Zero Mock Fallback)', () => {
 
   test('GET /api/documents/stats phải trả về thống kê sổ văn bản từ cơ sở dữ liệu thực', async () => {
     assert.ok(typeof getDocumentStats === 'function', 'GET route cho documents/stats phải tồn tại');
-    const response = await getDocumentStats();
+    const req = new NextRequest('http://localhost:3000/api/documents/stats', {
+      headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
+    });
+    const response = await getDocumentStats(req);
     assert.strictEqual(response.status, 200);
 
     const json = await response.json();

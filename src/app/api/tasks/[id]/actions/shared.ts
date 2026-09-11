@@ -24,7 +24,7 @@ import {
 } from "@/lib/services/task-actor-service";
 
 export interface ActionRouteContext {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export function handleActionError(error: any) {

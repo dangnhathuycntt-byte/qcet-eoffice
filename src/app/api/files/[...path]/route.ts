@@ -24,7 +24,7 @@ import { logger } from "@/server/observability/logger";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   let requestId = crypto.randomUUID();
   try {

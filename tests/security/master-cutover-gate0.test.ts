@@ -533,7 +533,8 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
 
   describe('Task 5 (F08: PWA Service Worker cache isolation & logout cleanup)', () => {
     test('POST /api/auth/logout includes Clear-Site-Data cache header', async () => {
-      const res = await logoutRoute();
+      const req = new NextRequest('http://localhost:3000/api/auth/logout', { method: 'POST' });
+      const res = await logoutRoute(req);
       assert.equal(res.status, 200);
       assert.equal(res.headers.get('Clear-Site-Data'), '"cache"');
     });

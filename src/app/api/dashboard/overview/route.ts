@@ -10,16 +10,9 @@ void getSessionFromRequest;
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(request?: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   let requestId = 'req-dashboard-overview';
   try {
-    if (!request) {
-      return NextResponse.json(
-        { success: false, error: 'Chưa xác thực danh tính' },
-        { status: 401 }
-      );
-    }
-
     const context = await getApiContext(request);
     requestId = context.requestId;
     requireAuthenticated(context);

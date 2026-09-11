@@ -196,12 +196,16 @@ describe("Calendar Task Interaction & Unified Detail Surface", () => {
       );
     });
 
-    test("Breadcrumb links to /tasks preserving active taskId context", () => {
+    test("Level-1 /calendar eliminates redundant 3-tier breadcrumbs while preserving task context", () => {
       const pageCode = fs.readFileSync(calendarPagePath, "utf8");
+      assert.equal(
+        pageCode.includes('<nav aria-label="Breadcrumb"'),
+        false,
+        "Level-1 primary calendar screen must not repeat location via redundant breadcrumb (P1 navigation invariant)"
+      );
       assert.ok(
-        pageCode.includes('href={selectedTask ? `/tasks?taskId=${selectedTask.id}` : "/tasks"}') ||
-          pageCode.includes("tasks?taskId="),
-        "Breadcrumb link must carry active taskId to tasks workspace"
+        pageCode.includes("taskIdParam") || pageCode.includes("selectedTask"),
+        "Calendar page must preserve selectedTask and taskId URL context"
       );
     });
   });

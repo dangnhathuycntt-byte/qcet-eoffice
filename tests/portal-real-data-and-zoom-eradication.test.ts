@@ -5,11 +5,12 @@ import path from "node:path";
 import React from "react";
 import { renderToString } from "react-dom/server";
 import { AuthContext, type AuthContextType } from "../src/lib/auth-context";
-import PortalPage, {
+import PortalPage from "../src/app/portal/page";
+import {
   formatProgressMetric,
   formatSchoolTasksMetric,
   type PortalStatsSummary,
-} from "../src/app/portal/page";
+} from "../src/lib/portal-metrics";
 
 const portalPagePath = path.resolve(process.cwd(), "src/app/portal/page.tsx");
 

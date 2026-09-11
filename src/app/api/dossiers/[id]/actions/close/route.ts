@@ -4,7 +4,7 @@ import { apiError, apiSuccess } from "@/server/api/response";
 import { DossierService } from "@/lib/services/dossier-service";
 
 interface RouteContext {
-  params: { id: string } | Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 }
 
 export async function POST(req: NextRequest, context: RouteContext) {

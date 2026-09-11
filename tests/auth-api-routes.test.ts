@@ -61,7 +61,8 @@ describe("Auth API Route Handlers Contracts", () => {
   });
 
   test("POST /api/auth/logout clears session cookie and returns success", async () => {
-    const res = await logoutPost();
+    const req = new NextRequest("http://localhost:3000/api/auth/logout", { method: "POST" });
+    const res = await logoutPost(req);
     assert.strictEqual(res.status, 200);
 
     const json = await res.json();
@@ -298,7 +299,8 @@ describe("End-to-End Authentication Lifecycle with PostgreSQL", () => {
     assert.strictEqual(meJson.user.name, "Kiểm Thử E2E");
 
     // 4. Logout clears session
-    const logoutRes = await logoutPost();
+    const logoutReq = new NextRequest("http://localhost:3000/api/auth/logout", { method: "POST" });
+    const logoutRes = await logoutPost(logoutReq);
     assert.strictEqual(logoutRes.status, 200);
     const logoutCookie = logoutRes.cookies.get(SESSION_COOKIE_NAME);
     assert.strictEqual(logoutCookie?.value, "");

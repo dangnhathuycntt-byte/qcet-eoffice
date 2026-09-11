@@ -219,7 +219,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
       body: JSON.stringify({ note: "Tự phê duyệt chính mình" }),
     });
 
-    const res = await approveAction(req, { params: { id: deptTaskId } });
+    const res = await approveAction(req, { params: Promise.resolve({ id: deptTaskId }) });
     assert.strictEqual(res.status, 403);
     const body = await res.json();
     assert.strictEqual(body.success, false);
@@ -238,7 +238,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
       body: JSON.stringify({ note: "Phê duyệt hoàn thành bởi Trưởng phòng phụ trách" }),
     });
 
-    const res = await approveAction(req, { params: { id: deptTaskId } });
+    const res = await approveAction(req, { params: Promise.resolve({ id: deptTaskId }) });
     assert.strictEqual(res.status, 200);
     const body = await res.json();
     assert.strictEqual(body.success, true);

@@ -5,8 +5,6 @@ import { TasksPageClient } from "./tasks-page-client";
 import { TaskManagementWorkspace, type ViewMode, type WorkspaceScope } from "@/components/tasks/task-management-workspace";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { isUserExecutive } from "@/domain/tasks/attention-resolver";
-export { TaskManagementWorkspace, TaskManagementWorkspace as TaskWorkspace };
-export type { ViewMode, WorkspaceScope };
 
 export default async function TasksPage(props: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const resolved = props.searchParams ? await props.searchParams : {};

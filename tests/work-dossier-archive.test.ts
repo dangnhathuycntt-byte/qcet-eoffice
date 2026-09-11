@@ -721,7 +721,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         },
       });
 
-      const res = await getDossierDetailRoute(req, { params: { id: apiDossierId } });
+      const res = await getDossierDetailRoute(req, { params: Promise.resolve({ id: apiDossierId }) });
       const data = await res.json();
 
       assert.equal(res.status, 200);
@@ -744,7 +744,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         }),
       });
 
-      const res = await addItemRoute(req, { params: { id: apiDossierId } });
+      const res = await addItemRoute(req, { params: Promise.resolve({ id: apiDossierId }) });
       const data = await res.json();
 
       assert.equal(res.status, 201);
@@ -761,7 +761,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         },
       });
 
-      const res = await listItemsRoute(req, { params: { id: apiDossierId } });
+      const res = await listItemsRoute(req, { params: Promise.resolve({ id: apiDossierId }) });
       const data = await res.json();
 
       assert.equal(res.status, 200);
@@ -784,7 +784,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         }
       );
 
-      const res = await closeDossierRoute(req, { params: { id: apiDossierId } });
+      const res = await closeDossierRoute(req, { params: Promise.resolve({ id: apiDossierId }) });
       const data = await res.json();
 
       assert.equal(res.status, 200);
@@ -806,7 +806,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         }
       );
 
-      const res = await submitArchiveRoute(req, { params: { id: apiDossierId } });
+      const res = await submitArchiveRoute(req, { params: Promise.resolve({ id: apiDossierId }) });
       const data = await res.json();
 
       assert.equal(res.status, 200);
@@ -828,7 +828,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         }
       );
 
-      const res = await acceptArchiveRoute(req, { params: { id: apiDossierId } });
+      const res = await acceptArchiveRoute(req, { params: Promise.resolve({ id: apiDossierId }) });
       const data = await res.json();
 
       assert.equal(res.status, 403);
@@ -851,7 +851,7 @@ describe("Phase 7: Work Dossier & Institutional Archival Domain (Hồ sơ công 
         }
       );
 
-      const res = await acceptArchiveRoute(req, { params: { id: apiDossierId } });
+      const res = await acceptArchiveRoute(req, { params: Promise.resolve({ id: apiDossierId }) });
       const data = await res.json();
 
       assert.equal(res.status, 200);

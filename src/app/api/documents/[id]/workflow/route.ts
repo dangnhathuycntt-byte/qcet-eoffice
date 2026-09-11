@@ -5,7 +5,7 @@ import { getIncomingDocument } from "@/lib/services/incoming-document-service";
 import { NotFoundError } from "@/server/api/errors";
 
 interface RouteContext {
-  params: { id: string } | Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(req: NextRequest, context: RouteContext) {
