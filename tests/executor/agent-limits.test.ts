@@ -54,19 +54,19 @@ function parseFrontmatter(filePath: string): Record<string, any> {
   return result;
 }
 
-test('agent-limits: builder turn cap is 25 in frontmatter', () => {
+test('agent-limits: builder turn cap is 30 in frontmatter', () => {
   const fm = parseFrontmatter(path.join(rootDir, '.claude', 'agents', 'qcet-builder.md'));
-  assert.equal(fm.maxTurns, 25);
+  assert.equal(fm.maxTurns, 30);
 });
 
-test('agent-limits: skeptic turn cap is 15 in frontmatter', () => {
+test('agent-limits: skeptic turn cap is 20 in frontmatter', () => {
   const fm = parseFrontmatter(path.join(rootDir, '.claude', 'agents', 'qcet-skeptic.md'));
-  assert.equal(fm.maxTurns, 15);
+  assert.equal(fm.maxTurns, 20);
 });
 
-test('agent-limits: recon turn cap is 10 in frontmatter', () => {
+test('agent-limits: recon turn cap is 15 in frontmatter', () => {
   const fm = parseFrontmatter(path.join(rootDir, '.claude', 'agents', 'qcet-recon.md'));
-  assert.equal(fm.maxTurns, 10);
+  assert.equal(fm.maxTurns, 15);
 });
 
 test('agent-limits: verifier turn cap is 15 in frontmatter', () => {
@@ -83,20 +83,20 @@ test('agent-limits: specialized reviewers have maxTurns 10', () => {
 
 test('agent-limits: Lean V2 role turn limits match canonical policy', () => {
   const canonicalLimits: Record<string, number> = {
-    builder: 25,
+    builder: 30,
     repair: 20,
-    skeptic: 15,
+    skeptic: 20,
     verifier: 15,
     reconcile: 12,
-    recon: 10,
+    recon: 15,
     evaluator: 10,
   };
 
-  assert.equal(canonicalLimits.builder, 25);
+  assert.equal(canonicalLimits.builder, 30);
   assert.equal(canonicalLimits.repair, 20);
-  assert.equal(canonicalLimits.skeptic, 15);
+  assert.equal(canonicalLimits.skeptic, 20);
   assert.equal(canonicalLimits.verifier, 15);
   assert.equal(canonicalLimits.reconcile, 12);
-  assert.equal(canonicalLimits.recon, 10);
+  assert.equal(canonicalLimits.recon, 15);
   assert.equal(canonicalLimits.evaluator, 10);
 });

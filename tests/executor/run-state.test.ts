@@ -13,7 +13,6 @@ const {
   getRunDir,
   atomicWriteJson,
   readJson,
-  appendEvent,
   writeWitness,
   claimFile,
 } = runState;
@@ -65,33 +64,12 @@ test('run-state: atomicWriteJson and readJson write atomically and read correctl
   }
 });
 
-test('run-state: appendEvent assigns strictly increasing sequence numbers', () => {
-  const runId = 'test-seq-' + Date.now();
-  const runDir = getRunDir(rootDir, runId);
-
-  try {
-    const ev1 = appendEvent(runDir, { type: 'SubagentStart', agent: 'qcet-recon' });
-    const ev2 = appendEvent(runDir, { type: 'PostToolUse', tool: 'Read' });
-    const ev3 = appendEvent(runDir, { type: 'SubagentStop', agent: 'qcet-recon' });
-
-    assert.equal(ev1.seq, 1);
-    assert.equal(ev2.seq, 2);
-    assert.equal(ev3.seq, 3);
-
-    const lines = fs.readFileSync(path.join(runDir, 'events.jsonl'), 'utf8')
-      .trim()
-      .split('\n')
-      .map((l) => JSON.parse(l));
-
-    assert.equal(lines.length, 3);
-    assert.equal(lines[0].seq, 1);
-    assert.equal(lines[1].seq, 2);
-    assert.equal(lines[2].seq, 3);
-  } finally {
-    if (fs.existsSync(runDir)) {
-      fs.rmSync(runDir, { recursive: true, force: true });
-    }
-  }
+test('run-state: appendEvent is removed in Lean V2 to prevent event firehose overhead', () => {
+  assert.equal(
+    (runState as any).appendEvent,
+    undefined,
+    'appendEvent must not be exported in Lean V2'
+  );
 });
 
 test('run-state: writeWitness writes structured shard witness atomically', () => {

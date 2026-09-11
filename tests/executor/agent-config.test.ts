@@ -54,10 +54,10 @@ function parseFrontmatter(filePath: string): Record<string, any> {
   return result;
 }
 
-test('agent-config: qcet-recon policy enforces maxTurns 10, no Bash, read tools', () => {
+test('agent-config: qcet-recon policy enforces maxTurns 15, no Bash, read tools', () => {
   const agentPath = path.join(rootDir, '.claude', 'agents', 'qcet-recon.md');
   const fm = parseFrontmatter(agentPath);
-  assert.equal(fm.maxTurns, 10);
+  assert.equal(fm.maxTurns, 15);
   const tools = fm.tools || [];
   assert.ok(tools.includes('Read'));
   assert.ok(tools.includes('Grep'));
@@ -80,10 +80,10 @@ test('agent-config: qcet-researcher policy enforces maxTurns 12, web/read tools,
   assert.ok(!tools.includes('Bash'), 'qcet-researcher must not have Bash in tools');
 });
 
-test('agent-config: qcet-skeptic policy enforces maxTurns 15 with Bash and read tools', () => {
+test('agent-config: qcet-skeptic policy enforces maxTurns 20 with Bash and read tools', () => {
   const agentPath = path.join(rootDir, '.claude', 'agents', 'qcet-skeptic.md');
   const fm = parseFrontmatter(agentPath);
-  assert.equal(fm.maxTurns, 15);
+  assert.equal(fm.maxTurns, 20);
   const tools = fm.tools || [];
   assert.ok(tools.includes('Read'));
   assert.ok(tools.includes('Grep'));
@@ -92,10 +92,10 @@ test('agent-config: qcet-skeptic policy enforces maxTurns 15 with Bash and read 
   assert.ok(tools.includes('Skill'));
 });
 
-test('agent-config: qcet-builder policy enforces maxTurns 25 and denies web tools', () => {
+test('agent-config: qcet-builder policy enforces maxTurns 30 and denies web tools', () => {
   const agentPath = path.join(rootDir, '.claude', 'agents', 'qcet-builder.md');
   const fm = parseFrontmatter(agentPath);
-  assert.equal(fm.maxTurns, 25);
+  assert.equal(fm.maxTurns, 30);
   const disallowed = fm.disallowedTools || [];
   assert.ok(disallowed.includes('WebSearch'));
   assert.ok(disallowed.includes('WebFetch'));

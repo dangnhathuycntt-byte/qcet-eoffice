@@ -3,7 +3,7 @@ name: qcet-recon
 description: Specialized read-only reconnaissance agent for repository discovery, caller and contract analysis, test discovery, and uncertainty classification.
 model: inherit
 effort: medium
-maxTurns: 10
+maxTurns: 15
 tools:
   - Read
   - Grep

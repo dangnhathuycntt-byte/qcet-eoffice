@@ -57,56 +57,6 @@ function readJson(filePath) {
   }
 }
 
-function appendEvent(runDir, event) {
-  fs.mkdirSync(runDir, { recursive: true });
-  const eventsFile = path.join(runDir, 'events.jsonl');
-
-  let nextSeq = 1;
-  if (fs.existsSync(eventsFile)) {
-    try {
-      const content = fs.readFileSync(eventsFile, 'utf8');
-      const lines = content.trim().split('\n').filter(Boolean);
-      if (lines.length > 0) {
-        const last = JSON.parse(lines[lines.length - 1]);
-        if (typeof last.seq === 'number') {
-          nextSeq = last.seq + 1;
-        } else {
-          nextSeq = lines.length + 1;
-        }
-      }
-    } catch (_) {
-      // fallback
-    }
-  }
-
-  // Bounded record: do not store unbounded prompt, stdout, secrets
-  const sanitizedEvent = {
-    seq: nextSeq,
-    timestamp: new Date().toISOString(),
-    type: event.type || 'unknown',
-    ...event,
-  };
-  sanitizedEvent.seq = nextSeq;
-
-  // Sanitize bounded fields
-  if (typeof sanitizedEvent.stdout === 'string' && sanitizedEvent.stdout.length > 1000) {
-    sanitizedEvent.stdout = sanitizedEvent.stdout.slice(0, 1000) + '...[truncated]';
-  }
-  if (typeof sanitizedEvent.stderr === 'string' && sanitizedEvent.stderr.length > 1000) {
-    sanitizedEvent.stderr = sanitizedEvent.stderr.slice(0, 1000) + '...[truncated]';
-  }
-  if (typeof sanitizedEvent.prompt === 'string') {
-    sanitizedEvent.prompt = '[omitted]';
-  }
-  if (typeof sanitizedEvent.content === 'string') {
-    sanitizedEvent.content = '[omitted]';
-  }
-
-  const line = JSON.stringify(sanitizedEvent) + '\n';
-  fs.appendFileSync(eventsFile, line, 'utf8');
-  return sanitizedEvent;
-}
-
 function writeWitness(runDir, relativePath, value) {
   const targetPath = path.resolve(runDir, relativePath);
   if (!targetPath.startsWith(runDir)) {
@@ -165,7 +115,6 @@ module.exports = {
   getRunDir,
   atomicWriteJson,
   readJson,
-  appendEvent,
   writeWitness,
   claimFile,
 };
