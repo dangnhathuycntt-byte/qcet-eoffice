@@ -31,6 +31,7 @@ import {
 } from "@/components/tasks/cascading-task-table";
 import { cn } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
+import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
 
 export type TaskLevelFilter = "ALL" | "TRUONG" | "DON_VI";
 
@@ -340,10 +341,9 @@ function formatDate(dateStr?: string): string {
   }
 }
 
-function isOverdue(dueDateStr?: string, status?: TaskStatus): boolean {
-  if (!dueDateStr || status === "COMPLETED") return false;
-  const d = dueDateStr.length > 10 ? dueDateStr.slice(0, 10) : dueDateStr;
-  return d < "2026-09-04";
+function isOverdue(dueDateStr?: string, status?: TaskStatus, referenceDate: string = getSystemReferenceDate()): boolean {
+  if (!dueDateStr || status === "COMPLETED" || status === "CANCELLED") return false;
+  return isTaskPastDue(dueDateStr, referenceDate);
 }
 
 function getInitials(name: string): string {

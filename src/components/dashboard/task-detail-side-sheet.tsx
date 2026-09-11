@@ -58,6 +58,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCategoryBadgeConfig } from "./cascading-task-table";
+import { getSystemReferenceDate, isTaskOverdue } from "@/lib/academic-calendar";
 
 export function formatDetailDate(dateStr?: string): string {
   if (!dateStr) return "Chưa đặt";
@@ -234,7 +235,7 @@ function getRelativeTimeString(
   }
   if (!dueDateStr) return null;
   try {
-    const now = new Date("2026-09-04T00:00:00");
+    const now = new Date(getSystemReferenceDate() + "T00:00:00");
     const due = new Date(dueDateStr.split("T")[0] + "T00:00:00");
     const diffDays = Math.ceil(
       (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
@@ -481,11 +482,7 @@ export function TaskDetailSideSheet({
   const statusConfig = getDetailStatusConfig(task.status);
   const assigneeName = isSchool ? task.leadAssigneeName : task.assigneeName;
   const relativeTime = getRelativeTimeString(task.dueDate, isDone);
-  const isOverdue =
-    !isDone &&
-    Boolean(task.dueDate) &&
-    new Date(task.dueDate.split("T")[0] + "T00:00:00") <
-      new Date("2026-09-04T00:00:00");
+  const isOverdue = isTaskOverdue(task.status, task.dueDate);
   const auditTimeline = getTaskAuditTimeline(task);
 
   // Permission evaluations & Stanford Authority Delegation Engine
