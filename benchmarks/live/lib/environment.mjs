@@ -52,6 +52,6 @@ export async function captureEnvironment(options = {}) {
     gitBranch,
     claudeCodeVersion,
     model,
-    effort: options.effort || 'ultracode'
+    effort: options.effort || 'high'
   };
 }

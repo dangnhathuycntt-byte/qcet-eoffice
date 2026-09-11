@@ -64,8 +64,14 @@ export function aggregateBenchmarkResults(results) {
     for (const [armKey, trials] of Object.entries(arms)) {
       const wallClocks = trials.map(t => t.durationMs || 0);
       const tokens = trials.map(t => t.totalTokens || 0);
+      const inputTokens = trials.map(t => t.inputTokens || 0);
+      const outputTokens = trials.map(t => t.outputTokens || 0);
+      const cacheCreationTokens = trials.map(t => t.cacheCreationInputTokens || 0);
+      const cacheReadTokens = trials.map(t => t.cacheReadInputTokens || 0);
+      const costUsd = trials.map(t => t.totalCostUsd || 0);
       const passed = trials.filter(t => t.grade?.success).length;
       const falseReadyCount = trials.filter(t => t.grade?.falseReady).length;
+      const harnessNotInvokedCount = trials.filter(t => t.grade?.agentVerdict === 'HARNESS_NOT_INVOKED' || t.grade?.treatmentFidelity === false).length;
       const timeouts = trials.filter(t => t.timedOut || t.grade?.agentVerdict === 'TIMEOUT').length;
       const crashes = trials.filter(t => t.isError || t.grade?.agentVerdict === 'ERROR').length;
       const escapedDefects = trials.reduce((acc, t) => acc + (t.grade?.escapedDefects || 0), 0);
@@ -78,12 +84,18 @@ export function aggregateBenchmarkResults(results) {
         passedTrials: passed,
         passRate: trials.length ? (passed / trials.length) * 100 : 0,
         falseReadyCount,
+        harnessNotInvokedCount,
         timeouts,
         crashes,
         escapedDefects,
         ownershipViolations,
         wallClockMs: calculateDistribution(wallClocks),
-        tokens: calculateDistribution(tokens)
+        tokens: calculateDistribution(tokens),
+        inputTokens: calculateDistribution(inputTokens),
+        outputTokens: calculateDistribution(outputTokens),
+        cacheCreationInputTokens: calculateDistribution(cacheCreationTokens),
+        cacheReadInputTokens: calculateDistribution(cacheReadTokens),
+        totalCostUsd: calculateDistribution(costUsd)
       };
     }
   }
@@ -93,8 +105,14 @@ export function aggregateBenchmarkResults(results) {
   for (const [armKey, trials] of Object.entries(byArm)) {
     const wallClocks = trials.map(t => t.durationMs || 0);
     const tokens = trials.map(t => t.totalTokens || 0);
+    const inputTokens = trials.map(t => t.inputTokens || 0);
+    const outputTokens = trials.map(t => t.outputTokens || 0);
+    const cacheCreationTokens = trials.map(t => t.cacheCreationInputTokens || 0);
+    const cacheReadTokens = trials.map(t => t.cacheReadInputTokens || 0);
+    const costUsd = trials.map(t => t.totalCostUsd || 0);
     const passed = trials.filter(t => t.grade?.success).length;
     const falseReadyCount = trials.filter(t => t.grade?.falseReady).length;
+    const harnessNotInvokedCount = trials.filter(t => t.grade?.agentVerdict === 'HARNESS_NOT_INVOKED' || t.grade?.treatmentFidelity === false).length;
     const timeouts = trials.filter(t => t.timedOut || t.grade?.agentVerdict === 'TIMEOUT').length;
     const crashes = trials.filter(t => t.isError || t.grade?.agentVerdict === 'ERROR').length;
     const escapedDefects = trials.reduce((acc, t) => acc + (t.grade?.escapedDefects || 0), 0);
@@ -106,12 +124,18 @@ export function aggregateBenchmarkResults(results) {
       passedTrials: passed,
       passRate: trials.length ? (passed / trials.length) * 100 : 0,
       falseReadyCount,
+      harnessNotInvokedCount,
       timeouts,
       crashes,
       escapedDefects,
       ownershipViolations,
       wallClockMs: calculateDistribution(wallClocks),
-      tokens: calculateDistribution(tokens)
+      tokens: calculateDistribution(tokens),
+      inputTokens: calculateDistribution(inputTokens),
+      outputTokens: calculateDistribution(outputTokens),
+      cacheCreationInputTokens: calculateDistribution(cacheCreationTokens),
+      cacheReadInputTokens: calculateDistribution(cacheReadTokens),
+      totalCostUsd: calculateDistribution(costUsd)
     };
   }
 
@@ -132,13 +156,14 @@ export function aggregateBenchmarkResults(results) {
   }
 
   // Decision & Quality Gating
-  const armC = armSummaries.C || { passRate: 0, falseReadyCount: 0, escapedDefects: 0, ownershipViolations: 0 };
-  const armB = armSummaries.B || { passRate: 0, falseReadyCount: 0, escapedDefects: 0, ownershipViolations: 0 };
+  const armC = armSummaries.C || { passRate: 0, falseReadyCount: 0, harnessNotInvokedCount: 0, escapedDefects: 0, ownershipViolations: 0 };
+  const armB = armSummaries.B || { passRate: 0, falseReadyCount: 0, harnessNotInvokedCount: 0, escapedDefects: 0, ownershipViolations: 0 };
 
   const criticalCPassRate = taskSummaries['critical-01']?.C?.passRate ?? 100;
   const isCQualityPassing =
     armC.passRate >= armB.passRate &&
     armC.falseReadyCount <= armB.falseReadyCount &&
+    (armC.harnessNotInvokedCount || 0) === 0 &&
     armC.escapedDefects <= armB.escapedDefects &&
     armC.ownershipViolations === 0 &&
     criticalCPassRate === 100;

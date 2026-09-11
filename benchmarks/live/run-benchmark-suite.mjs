@@ -7,6 +7,8 @@ import { validateReferenceSolutions } from './lib/validate-references.mjs';
 import { gradeTrial } from './grade.mjs';
 import { aggregateBenchmarkResults } from './aggregate.mjs';
 
+export const VALID_EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
+
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
@@ -17,10 +19,10 @@ function parseArgs() {
     keepTrials: false,
     workloadBaseSha: '3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c',
     harnessShaB: '3f5e804c5bf55c88634535971d605f40b1b8713d',
-    harnessShaC: '9f90ca70bc8601c902781d4a8ec9ec5908ecfeee',
+    harnessShaC: '02d090e8e8e23c9c7def9826b99c815af74ecf42',
     outputDir: path.join(process.cwd(), 'benchmarks', 'live', 'results'),
     model: process.env.QCET_BENCHMARK_MODEL || '',
-    effort: 'ultracode',
+    effort: 'high',
     timeoutMs: 600000,
     dangerouslySkipPermissions: false,
     skipPreflight: false
@@ -43,7 +45,11 @@ function parseArgs() {
     } else if (arg === '--model' && args[i + 1]) {
       options.model = args[++i];
     } else if (arg === '--effort' && args[i + 1]) {
-      options.effort = args[++i];
+      const eff = args[++i].toLowerCase();
+      if (!VALID_EFFORT_LEVELS.includes(eff)) {
+        throw new Error(`Invalid effort level "${eff}". Allowed levels: ${VALID_EFFORT_LEVELS.join(', ')}`);
+      }
+      options.effort = eff;
     } else if (arg === '--timeout-ms' && args[i + 1]) {
       options.timeoutMs = parseInt(args[++i], 10);
     } else if (arg === '--dangerously-skip-permissions') {
@@ -53,33 +59,94 @@ function parseArgs() {
     }
   }
 
+  if (options.effort && !VALID_EFFORT_LEVELS.includes(options.effort)) {
+    throw new Error(`Invalid effort level "${options.effort}". Allowed levels: ${VALID_EFFORT_LEVELS.join(', ')}`);
+  }
+
   return options;
+}
+
+/**
+ * CLI capability preflight probe.
+ * Verifies claude executable availability and validates flag compatibility.
+ */
+export async function verifyCliCapabilities(options = {}) {
+  if (options.dryRun) {
+    return { verified: true, mode: 'dry-run' };
+  }
+
+  const effort = options.effort || 'high';
+  if (!VALID_EFFORT_LEVELS.includes(effort)) {
+    throw new Error(`Invalid effort level "${effort}". Allowed: ${VALID_EFFORT_LEVELS.join(', ')}`);
+  }
+
+  // Probe claude binary
+  const probeVer = spawnSync('claude', ['--version'], { encoding: 'utf8', timeout: 10000 });
+  if (probeVer.error || probeVer.status !== 0) {
+    throw new Error(`Claude CLI not accessible: ${probeVer.error?.message || probeVer.stderr || 'exit code ' + probeVer.status}`);
+  }
+
+  // Probe effort flag support with probe invocation
+  const probeEffort = spawnSync('claude', ['-p', 'probe', '--effort', effort, '--output-format', 'json', '--no-session-persistence'], {
+    encoding: 'utf8',
+    timeout: 15000,
+    maxBuffer: 5 * 1024 * 1024
+  });
+
+  if (probeEffort.error && probeEffort.error.code !== 'ETIMEDOUT') {
+    throw new Error(`Claude CLI effort probe execution failed: ${probeEffort.error.message}`);
+  }
+
+  const outputCombined = (probeEffort.stderr || '') + (probeEffort.stdout || '');
+  if (probeEffort.status !== 0 && (outputCombined.includes('unknown option') || outputCombined.includes('Invalid effort'))) {
+    throw new Error(`Claude CLI rejected --effort ${effort}: ${outputCombined.trim()}`);
+  }
+
+  return {
+    verified: true,
+    version: probeVer.stdout.trim(),
+    effort
+  };
 }
 
 /**
  * Execute agent trial in the isolated workspace.
  */
-async function executeAgentTrial({ targetDir, arm, task, options }) {
+async function executeAgentTrial({ targetDir, arm, task, trialId, benchmarkId, repoRoot, options }) {
+  const transcriptsDir = path.join(options.outputDir, benchmarkId, 'transcripts');
+  if (!fs.existsSync(transcriptsDir)) {
+    fs.mkdirSync(transcriptsDir, { recursive: true });
+  }
+  const transcriptPath = path.join(transcriptsDir, `${trialId}.jsonl`);
+
   if (options.dryRun) {
+    fs.writeFileSync(transcriptPath, '{"type":"result","result":"Dry-run: skipped agent invocation","usage":{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0},"total_cost_usd":0}\n', 'utf8');
     return {
       output: 'Dry-run: skipped agent invocation',
       totalTokens: 0,
       inputTokens: 0,
       outputTokens: 0,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 0,
+      totalCostUsd: 0,
+      transcriptPath: path.relative(repoRoot, transcriptPath),
       durationMs: 0,
       timedOut: false,
       isError: false
     };
   }
 
+  // Arms B and C invoke the registered slash command /qcet-plan-executor plan.md
+  // Arm A executes via native generalist prompt without invoking the harness
   const prompt = arm === 'A'
     ? 'Execute the implementation plan in plan.md. Write minimal, correct code and ensure all tests pass.'
-    : 'Execute the implementation plan in plan.md using the QCET Plan Executor. Follow all QCET rules, invariants, and policies.';
+    : '/qcet-plan-executor plan.md';
 
   const cliArgs = [
     '-p',
     prompt,
-    '--output-format', 'json',
+    '--output-format', 'stream-json',
+    '--verbose',
     '--no-session-persistence'
   ];
 
@@ -105,36 +172,73 @@ async function executeAgentTrial({ targetDir, arm, task, options }) {
     const durationMs = Date.now() - startTime;
     const timedOut = Boolean(res.error && res.error.code === 'ETIMEDOUT');
 
+    // Persist full execution transcript directly to results/<benchmark>/transcripts/<trialId>.jsonl
+    fs.writeFileSync(transcriptPath, res.stdout || '', 'utf8');
+
     if (res.error && !timedOut) {
       return {
         output: res.error.message,
         totalTokens: 0,
         inputTokens: 0,
         outputTokens: 0,
+        cacheCreationInputTokens: 0,
+        cacheReadInputTokens: 0,
+        totalCostUsd: 0,
+        transcriptPath: path.relative(repoRoot, transcriptPath),
         durationMs,
         timedOut: false,
         isError: true
       };
     }
 
-    let json = null;
-    try {
-      json = JSON.parse(res.stdout || '{}');
-    } catch (_) {}
+    let resultEvent = null;
+    const lines = (res.stdout || '').split('\n').filter(Boolean);
+    for (const line of lines) {
+      try {
+        const parsed = JSON.parse(line);
+        if (parsed.type === 'result') {
+          resultEvent = parsed;
+        }
+      } catch (_) {}
+    }
 
-    const inputTokens = json?.usage?.input_tokens || 0;
-    const outputTokens = json?.usage?.output_tokens || 0;
-    const totalTokens = inputTokens + outputTokens;
-    const outputText = json?.result || res.stdout || '';
+    if (!resultEvent) {
+      for (let i = lines.length - 1; i >= 0; i--) {
+        try {
+          const parsed = JSON.parse(lines[i]);
+          if (parsed && typeof parsed === 'object') {
+            resultEvent = parsed;
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+
+    const usage = resultEvent?.usage || {};
+    const modelUsage = resultEvent?.modelUsage ? Object.values(resultEvent.modelUsage)[0] : null;
+
+    const inputTokens = usage.input_tokens ?? modelUsage?.inputTokens ?? 0;
+    const outputTokens = usage.output_tokens ?? modelUsage?.outputTokens ?? 0;
+    const cacheCreationInputTokens = usage.cache_creation_input_tokens ?? modelUsage?.cacheCreationInputTokens ?? 0;
+    const cacheReadInputTokens = usage.cache_read_input_tokens ?? modelUsage?.cacheReadInputTokens ?? 0;
+    const totalTokens = inputTokens + outputTokens + cacheCreationInputTokens + cacheReadInputTokens;
+    const totalCostUsd = typeof resultEvent?.total_cost_usd === 'number'
+      ? resultEvent.total_cost_usd
+      : (typeof modelUsage?.costUSD === 'number' ? modelUsage.costUSD : 0);
+    const outputText = resultEvent?.result || res.stdout || '';
 
     return {
       output: outputText,
       totalTokens,
       inputTokens,
       outputTokens,
+      cacheCreationInputTokens,
+      cacheReadInputTokens,
+      totalCostUsd,
+      transcriptPath: path.relative(repoRoot, transcriptPath),
       durationMs,
       timedOut,
-      isError: Boolean(res.status !== 0 || json?.is_error)
+      isError: Boolean(res.status !== 0 || resultEvent?.is_error)
     };
   } catch (err) {
     return {
@@ -142,6 +246,10 @@ async function executeAgentTrial({ targetDir, arm, task, options }) {
       totalTokens: 0,
       inputTokens: 0,
       outputTokens: 0,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 0,
+      totalCostUsd: 0,
+      transcriptPath: path.relative(repoRoot, transcriptPath),
       durationMs: Date.now() - startTime,
       timedOut: false,
       isError: true
@@ -180,7 +288,7 @@ export async function main() {
   console.log(`Output Dir   : ${options.outputDir}`);
   console.log('----------------------------------------------------');
 
-  // Preflight validation: verify all reference solutions against graders
+  // Preflight validation: verify reference solutions and CLI capabilities
   if (!options.skipPreflight) {
     console.log('[Preflight] Verifying reference solutions against graders...');
     try {
@@ -192,6 +300,15 @@ export async function main() {
       console.log(`[Preflight] Passed for ${preflight.validatedTasks.length} tasks.`);
     } catch (preflightErr) {
       console.error(`[Preflight FAILED] ${preflightErr.message}`);
+      process.exit(1);
+    }
+
+    console.log('[Preflight] Verifying Claude CLI capabilities and effort level...');
+    try {
+      const cliPreflight = await verifyCliCapabilities(options);
+      console.log(`[Preflight] CLI ready (effort: ${cliPreflight.effort || 'dry-run'}).`);
+    } catch (cliErr) {
+      console.error(`[Preflight FAILED] ${cliErr.message}`);
       process.exit(1);
     }
   }
@@ -236,6 +353,12 @@ export async function main() {
             timing: { prepMs: Date.now() - prepStart, agentWallClockMs: 0, graderMs: 0, totalTrialMs: Date.now() - prepStart },
             durationMs: 0,
             totalTokens: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheCreationInputTokens: 0,
+            cacheReadInputTokens: 0,
+            totalCostUsd: 0,
+            transcriptPath: null,
             timedOut: false,
             isError: true,
             grade: { success: false, escapedDefects: 1, errors: [err.message] }
@@ -251,14 +374,20 @@ export async function main() {
           targetDir,
           arm,
           task,
+          trialId,
+          benchmarkId,
+          repoRoot,
           options
         });
 
-        // Grade trial
+        // Grade trial with treatment fidelity gate
         const gradeStart = Date.now();
         let gradeResult;
         try {
-          gradeResult = await gradeTrial(task, targetDir, tasksBaseDir, execution);
+          gradeResult = await gradeTrial(task, targetDir, tasksBaseDir, execution, {
+            arm,
+            skipTreatmentGate: options.dryRun
+          });
         } catch (gradeErr) {
           gradeResult = {
             success: false,
@@ -267,6 +396,7 @@ export async function main() {
             agentVerdict: 'ERROR',
             graderVerdict: 'FAIL',
             falseReady: false,
+            treatmentFidelity: false,
             errors: [`Grader failed to execute: ${gradeErr.message}`]
           };
         }
@@ -288,6 +418,10 @@ export async function main() {
           totalTokens: execution.totalTokens,
           inputTokens: execution.inputTokens,
           outputTokens: execution.outputTokens,
+          cacheCreationInputTokens: execution.cacheCreationInputTokens,
+          cacheReadInputTokens: execution.cacheReadInputTokens,
+          totalCostUsd: execution.totalCostUsd,
+          transcriptPath: execution.transcriptPath,
           timedOut: execution.timedOut,
           isError: execution.isError,
           dryRun: options.dryRun,
@@ -296,7 +430,7 @@ export async function main() {
 
         results.push(trialRecord);
         console.log(
-          `  Result: Success=${gradeResult.success} | AgentVerdict=${gradeResult.agentVerdict} | FalseReady=${gradeResult.falseReady} | AgentMs=${execution.durationMs}ms | Tokens=${execution.totalTokens}`
+          `  Result: Success=${gradeResult.success} | AgentVerdict=${gradeResult.agentVerdict} | FalseReady=${gradeResult.falseReady} | AgentMs=${execution.durationMs}ms | Tokens=${execution.totalTokens} (In:${execution.inputTokens}, Out:${execution.outputTokens}, Cost:$${execution.totalCostUsd.toFixed(4)})`
         );
 
         if (!options.keepTrials) {
@@ -342,11 +476,11 @@ export async function main() {
 
 ## 2. Overall Arm Summaries
 
-| Arm | Trials | Pass Rate | Median Wall Clock (IQR ms) | Median Tokens | False READY | Escaped Defects |
-|---|---|---|---|---|---|---|
-| **Arm A (Ultracode)** | ${armA.totalTrials} | ${armA.passRate.toFixed(1)}% | ${armA.wallClockMs.median} (IQR: ${armA.wallClockMs.iqr}) | ${armA.tokens.median} | ${armA.falseReadyCount} | ${armA.escapedDefects} |
-| **Arm B (V1.5 Hardened)** | ${armB.totalTrials} | ${armB.passRate.toFixed(1)}% | ${armB.wallClockMs.median} (IQR: ${armB.wallClockMs.iqr}) | ${armB.tokens.median} | ${armB.falseReadyCount} | ${armB.escapedDefects} |
-| **Arm C (Lean V2)** | ${armC.totalTrials} | ${armC.passRate.toFixed(1)}% | ${armC.wallClockMs.median} (IQR: ${armC.wallClockMs.iqr}) | ${armC.tokens.median} | ${armC.falseReadyCount} | ${armC.escapedDefects} |
+| Arm | Trials | Pass Rate | Median Wall Clock (IQR ms) | Median Tokens | Cache In/Out | Median Cost USD | False READY | Harness Miss | Escaped Defects |
+|---|---|---|---|---|---|---|---|---|---|
+| **Arm A (Ultracode)** | ${armA.totalTrials} | ${armA.passRate.toFixed(1)}% | ${armA.wallClockMs.median} (IQR: ${armA.wallClockMs.iqr}) | ${armA.tokens.median} | ${armA.cacheReadInputTokens.median}/${armA.outputTokens.median} | $${(armA.totalCostUsd.median || 0).toFixed(4)} | ${armA.falseReadyCount} | ${armA.harnessNotInvokedCount} | ${armA.escapedDefects} |
+| **Arm B (V1.5 Hardened)** | ${armB.totalTrials} | ${armB.passRate.toFixed(1)}% | ${armB.wallClockMs.median} (IQR: ${armB.wallClockMs.iqr}) | ${armB.tokens.median} | ${armB.cacheReadInputTokens.median}/${armB.outputTokens.median} | $${(armB.totalCostUsd.median || 0).toFixed(4)} | ${armB.falseReadyCount} | ${armB.harnessNotInvokedCount} | ${armB.escapedDefects} |
+| **Arm C (Lean V2)** | ${armC.totalTrials} | ${armC.passRate.toFixed(1)}% | ${armC.wallClockMs.median} (IQR: ${armC.wallClockMs.iqr}) | ${armC.tokens.median} | ${armC.cacheReadInputTokens.median}/${armC.outputTokens.median} | $${(armC.totalCostUsd.median || 0).toFixed(4)} | ${armC.falseReadyCount} | ${armC.harnessNotInvokedCount} | ${armC.escapedDefects} |
 
 ## 3. Disaggregated Task Summaries
 

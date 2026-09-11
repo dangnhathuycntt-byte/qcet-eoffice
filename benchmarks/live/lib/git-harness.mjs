@@ -15,6 +15,55 @@ function run(cmd, cwd, options = {}) {
 }
 
 /**
+ * Fail-closed harness overlay extractor.
+ * Verifies harness commit existence, extracts .claude directory,
+ * and asserts presence of required skill and workflow files.
+ */
+export function archiveHarnessOrThrow({ gitDir, harnessSha, targetDir, repoRoot, arm }) {
+  if (!harnessSha) {
+    throw new Error(`Arm ${arm} requires a valid harnessSha`);
+  }
+
+  // 1. Verify git commit object exists
+  try {
+    run(`git --git-dir="${gitDir}" cat-file -e "${harnessSha}"`, repoRoot, { silent: true });
+  } catch (err) {
+    throw new Error(`[Harness Overlay Error] harnessSha "${harnessSha}" does not exist in git repository: ${err.message}`);
+  }
+
+  // 2. Extract .claude directory from harness commit
+  try {
+    run(`git --git-dir="${gitDir}" archive "${harnessSha}" .claude | tar -x -C "${targetDir}"`, repoRoot, { silent: true });
+  } catch (err) {
+    throw new Error(`[Harness Overlay Error] Failed to archive .claude from ${harnessSha}: ${err.message}`);
+  }
+
+  // 3. Extract executor build/test scripts if present in commit
+  try {
+    run(`git --git-dir="${gitDir}" archive "${harnessSha}" scripts/build-executor-bundle.mjs scripts/run-executor-tests.mjs 2>/dev/null | tar -x -C "${targetDir}" 2>/dev/null`, repoRoot, { silent: true });
+  } catch (_) {}
+
+  // 4. Verify presence of required harness files
+  const requiredFiles = [
+    path.join(targetDir, '.claude', 'workflows', 'qcet-plan-executor.js'),
+    path.join(targetDir, '.claude', 'settings.json')
+  ];
+
+  for (const req of requiredFiles) {
+    if (!fs.existsSync(req)) {
+      throw new Error(`[Harness Overlay Error] Required harness file missing: ${path.relative(targetDir, req)} in arm ${arm} (${harnessSha})`);
+    }
+  }
+
+  // Verify presence of skill definition (SKILL.md or skill.json)
+  const skillDir = path.join(targetDir, '.claude', 'skills', 'qcet-plan-executor');
+  const hasSkillFile = fs.existsSync(path.join(skillDir, 'SKILL.md')) || fs.existsSync(path.join(skillDir, 'skill.json'));
+  if (!hasSkillFile) {
+    throw new Error(`[Harness Overlay Error] Required skill definition (SKILL.md or skill.json) missing in ${path.relative(targetDir, skillDir)} in arm ${arm} (${harnessSha})`);
+  }
+}
+
+/**
  * Prepare an isolated, sanitized trial repository.
  * Invariants enforced:
  * - Product snapshot is extracted via git archive so trial has NO remotes and NO access to benchmark branch history/graders.
@@ -60,24 +109,42 @@ export async function prepareTrialDirectory({
   run('git config user.email "benchmark@qcet.local"', targetDir, { silent: true });
   run('git add -A && git commit -m "chore(baseline): initial product baseline"', targetDir, { silent: true });
 
-  // 5. Harness Overlay
   if (arm === 'B' || arm === 'C') {
-    if (!harnessSha) {
-      throw new Error(`Arm ${arm} requires a valid harnessSha`);
-    }
-    // Overlay .claude/ and executor scripts from harnessSha
-    try {
-      run(`git --git-dir="${gitDir}" archive "${harnessSha}" .claude | tar -x -C "${targetDir}"`, repoRoot, { silent: true });
-    } catch (_) {}
-    try {
-      run(`git --git-dir="${gitDir}" archive "${harnessSha}" scripts/build-executor-bundle.mjs scripts/run-executor-tests.mjs | tar -x -C "${targetDir}"`, repoRoot, { silent: true });
-    } catch (_) {}
+    archiveHarnessOrThrow({
+      gitDir,
+      harnessSha,
+      targetDir,
+      repoRoot,
+      arm
+    });
   } else if (arm === 'A') {
-    // Pure Ultracode: remove QCET executor skill and rules to ensure pure native behavior
+    // Pure Ultracode: remove QCET executor skill, workflows, and evals to guarantee pure native behavior
     const executorSkill = path.join(targetDir, '.claude', 'skills', 'qcet-plan-executor');
     if (fs.existsSync(executorSkill)) {
       fs.rmSync(executorSkill, { recursive: true, force: true });
     }
+    const executorWorkflow = path.join(targetDir, '.claude', 'workflows', 'qcet-plan-executor.js');
+    if (fs.existsSync(executorWorkflow)) {
+      fs.rmSync(executorWorkflow, { force: true });
+    }
+    const executorBundle = path.join(targetDir, '.claude', 'dist', 'qcet-plan-executor.bundle.js');
+    if (fs.existsSync(executorBundle)) {
+      fs.rmSync(executorBundle, { force: true });
+    }
+  }
+
+  // Purge any preexisting evaluation telemetry, runs, or gate-verdicts carried from baseline/harness archives
+  const preexistingTelemetry = path.join(targetDir, '.claude', 'executor-evals', 'run-telemetry.json');
+  if (fs.existsSync(preexistingTelemetry)) {
+    fs.rmSync(preexistingTelemetry, { force: true });
+  }
+  const preexistingRuns = path.join(targetDir, '.claude', 'executor-runs');
+  if (fs.existsSync(preexistingRuns)) {
+    fs.rmSync(preexistingRuns, { recursive: true, force: true });
+  }
+  const preexistingGateVerdict = path.join(targetDir, 'gate-verdict.json');
+  if (fs.existsSync(preexistingGateVerdict)) {
+    fs.rmSync(preexistingGateVerdict, { force: true });
   }
 
   // 6. Apply Task setup.patch if present and contains valid patch headers
