@@ -195,10 +195,10 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       "Counters must use font-mono tabular-nums"
     );
 
-    // Assert 22px avatar size
+    // Assert action menu button (⋯) is present — replaces avatar 22px check
     assert.ok(
-      content.includes("22px") || content.includes("size-[22px]"),
-      "Assignee avatar must be standardized 22px"
+      content.includes('aria-label="Thao tác"') || content.includes("MoreHorizontal"),
+      "Card must render ⋯ action menu button (MoreHorizontal icon)"
     );
 
     // Assert micro progress bar
@@ -211,6 +211,18 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
     assert.ok(
       content.includes("strokeWidth={1.5}"),
       "Lucide icons must be standardized to strokeWidth={1.5}"
+    );
+
+    // Assert permanent status select dropdown is NOT present
+    assert.ok(
+      !content.includes("<select") && !content.includes("status-select-"),
+      "Kanban card must NOT render a permanent status <select> dropdown"
+    );
+
+    // Assert prev/next chevron buttons (ChevronLeft) are NOT present on cards
+    assert.ok(
+      !content.includes("ChevronLeft"),
+      "Kanban card must NOT render ChevronLeft prev-status button"
     );
   });
 
@@ -398,7 +410,7 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
     );
   });
 
-  test("Kanban exposes accessible keyboard/dropdown menu alternative to dragging ('Chuyển trạng thái')", () => {
+  test("Kanban exposes accessible contextual action menu ('⋯') with status transition and WCAG single-pointer compliance", () => {
     const mockTasks: SchoolTask[] = [
       {
         id: "task-test-a11y",
@@ -421,18 +433,54 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       React.createElement(TaskKanbanBoard, { tasks: mockTasks })
     );
 
-    // Verify accessible dropdown alternative to drag and drop
+    // Card must render ⋯ action menu trigger button with accessible name
     assert.ok(
-      html.includes('aria-label="Chuyển trạng thái"'),
-      "Card must render select with aria-label='Chuyển trạng thái'"
+      html.includes('aria-label="Thao tác"'),
+      "Card must render ⋯ button with aria-label='Thao tác'"
     );
+
+    // Trigger button must have data-slot for testability
     assert.ok(
-      html.includes("Chuyển trạng thái"),
-      "Dropdown options must mention 'Chuyển trạng thái'"
+      html.includes('data-slot="kanban-action-menu-trigger"'),
+      "⋯ button must carry data-slot='kanban-action-menu-trigger'"
     );
+
+    // Trigger button must declare status-transition as its action domain
+    assert.ok(
+      html.includes('data-actions="status-transition"'),
+      "⋯ button must declare data-actions='status-transition'"
+    );
+
+    // Touch targets: ⋯ button must meet 44px minimum on mobile
     assert.ok(
       html.includes("min-h-[44px]"),
-      "Touch target for mobile status transition must be >= 44px (min-h-[44px])"
+      "⋯ action menu button must have touch target >= 44px (min-h-[44px])"
+    );
+
+    // Card must NOT render permanent <select> status dropdown
+    assert.ok(
+      !html.includes("<select"),
+      "Card must NOT render a permanent <select> status dropdown"
+    );
+
+    // Card title must be rendered
+    assert.ok(
+      html.includes("Nhiệm vụ kiểm thử A11Y"),
+      "Card must render the task title"
+    );
+
+    // Card must show deadline with 'Hạn' prefix
+    assert.ok(
+      html.includes("Hạn"),
+      "Card must render deadline with 'Hạn' prefix"
+    );
+
+    // Card must NOT render ChevronLeft or prev-status step buttons
+    const kanbanPath = path.resolve(__dirname, "../src/components/tasks/task-kanban-board.tsx");
+    const src = fs.readFileSync(kanbanPath, "utf-8");
+    assert.ok(
+      !src.includes("ChevronLeft"),
+      "Source must NOT import or use ChevronLeft (prev-status button removed)"
     );
   });
 });
