@@ -1155,6 +1155,7 @@ export function createSemaphore(capacity = 6, options = {}) {
       const waiter = queue[i];
       if (waiter.isSpeculative && activeSpeculative >= speculativeLimit) continue;
       queue.splice(i, 1);
+      i--;
       activeCount++;
       if (waiter.isSpeculative) activeSpeculative++;
       if (activeCount > peakConcurrent) peakConcurrent = activeCount;
@@ -1610,6 +1611,8 @@ export function buildRunTelemetry({
   planPath = '',
   timestamp = '2026-09-10T00:00:00.000Z',
   runId = '',
+  researchCacheHits = 0,
+  researchCacheMisses = 0,
 }) {
   const requirementsTotal = Array.isArray(manifest?.requirements)
     ? manifest.requirements.length
@@ -1787,6 +1790,8 @@ export function buildRunTelemetry({
         tokensPerVerifiedRequirement: tokens !== null && requirementsCovered > 0 ? Math.round(tokens / requirementsCovered) : null,
         verifierTokenCost: tokens !== null ? Math.round(tokens * 0.24) : null,
         researchEscalationRate: 0.0,
+        researchCacheHits: researchCacheHits || 0,
+        researchCacheMisses: researchCacheMisses || 0,
       },
       reliability: {
         nullAgentRate: 0.0,
@@ -2146,6 +2151,399 @@ Inspect the actual repository and upstream changed files.
 Verify whether upstream changes invalidated any pre-recon assumptions, modified contracts, or introduced unexpected blockers.
 Do NOT modify files.
 Return structured reconciliation evidence adhering strictly to schema.`;
+
+/**
+ * Cache for recon and research queries across the plan execution run.
+ */
+export class ResearchCache {
+  constructor(namespace = 'default', options = {}) {
+    this.namespace = namespace;
+    this.repoRoot = options.repoRoot || (typeof process !== 'undefined' && process.cwd ? process.cwd() : '.');
+    this.memoryCache = new Map();
+    this.hits = 0;
+    this.misses = 0;
+    this.cacheDir = options.cacheDir || null;
+    if (!this.cacheDir && typeof path !== 'undefined' && typeof fs !== 'undefined' && path.join && fs.mkdirSync) {
+      try {
+        this.cacheDir = path.join(this.repoRoot, '.superpowers', 'qcet-plan-executor', 'cache', 'research');
+        fs.mkdirSync(this.cacheDir, { recursive: true });
+      } catch (_) {}
+    }
+  }
+
+  get researchCacheHits() {
+    return this.hits;
+  }
+
+  get researchCacheMisses() {
+    return this.misses;
+  }
+
+  buildKey(query, scopeOrContext = 'global', extraContext = {}) {
+    let scope = 'global';
+    let sourceContext = '';
+    let dependencyVersion = '';
+
+    if (typeof scopeOrContext === 'string') {
+      scope = scopeOrContext;
+      if (typeof extraContext === 'object' && extraContext !== null) {
+        sourceContext = extraContext.sourceContext || extraContext.source || extraContext.sourceOrVersionContext || '';
+        dependencyVersion = extraContext.dependencyVersion || extraContext.frameworkVersion || extraContext.version || '';
+      }
+    } else if (typeof scopeOrContext === 'object' && scopeOrContext !== null) {
+      scope = scopeOrContext.scope || 'global';
+      sourceContext = scopeOrContext.sourceContext || scopeOrContext.source || scopeOrContext.sourceOrVersionContext || '';
+      dependencyVersion = scopeOrContext.dependencyVersion || scopeOrContext.frameworkVersion || scopeOrContext.version || '';
+    }
+
+    return `${this.namespace}:${scope}:${query}:${sourceContext}:${dependencyVersion}`;
+  }
+
+  _getKeyHash(query, scopeOrContext = 'global', extraContext = {}) {
+    const rawKey = this.buildKey(query, scopeOrContext, extraContext);
+    if (typeof crypto !== 'undefined' && crypto.createHash) {
+      return crypto.createHash('sha256').update(rawKey).digest('hex').slice(0, 16);
+    }
+    let hash = 0;
+    for (let i = 0; i < rawKey.length; i++) {
+      hash = ((hash << 5) - hash) + rawKey.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(16);
+  }
+
+  get(query, scopeOrContext = 'global', extraContext = {}) {
+    const key = this._getKeyHash(query, scopeOrContext, extraContext);
+    if (this.memoryCache.has(key)) {
+      this.hits++;
+      return this.memoryCache.get(key);
+    }
+    if (this.cacheDir && typeof path !== 'undefined' && typeof fs !== 'undefined' && path.join && fs.existsSync && fs.readFileSync) {
+      try {
+        const filePath = path.join(this.cacheDir, `${key}.json`);
+        if (fs.existsSync(filePath)) {
+          const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          this.memoryCache.set(key, data.result);
+          this.hits++;
+          return data.result;
+        }
+      } catch (_) {}
+    }
+    this.misses++;
+    return null;
+  }
+
+  set(query, result, scopeOrContext = 'global', extraContext = {}) {
+    const key = this._getKeyHash(query, scopeOrContext, extraContext);
+    this.memoryCache.set(key, result);
+    if (this.cacheDir && typeof path !== 'undefined' && typeof fs !== 'undefined' && path.join && fs.writeFileSync) {
+      try {
+        const filePath = path.join(this.cacheDir, `${key}.json`);
+        fs.writeFileSync(filePath, JSON.stringify({ query, key, result, timestamp: Date.now() }, null, 2), 'utf8');
+      } catch (_) {}
+    }
+  }
+
+  clear() {
+    this.memoryCache.clear();
+    this.hits = 0;
+    this.misses = 0;
+    if (this.cacheDir && typeof fs !== 'undefined' && fs.rmSync && fs.mkdirSync) {
+      try {
+        fs.rmSync(this.cacheDir, { recursive: true, force: true });
+        fs.mkdirSync(this.cacheDir, { recursive: true });
+      } catch (_) {}
+    }
+  }
+}
+
+export function resolveAdaptivePolicy(shard) {
+  const files = shard.owns || [];
+  let risk = 'low';
+  const lenses = new Set(['correctness']);
+
+  const isAuthOrSecurity = files.some((f) =>
+    /auth|crypto|session|permission|rbac|jwt|secret/i.test(f)
+  );
+  const isDatabaseOrCore = files.some((f) =>
+    /prisma|schema|database|db|migration|core/i.test(f)
+  );
+  const isRouterOrApi = files.some((f) =>
+    /api|routers|trpc|server/i.test(f)
+  );
+  const isUiOrComponent = files.some((f) =>
+    /components|views|ui|styles|pages/i.test(f)
+  );
+
+  if (isAuthOrSecurity) {
+    risk = 'critical';
+    lenses.add('security');
+    lenses.add('data-integrity');
+  } else if (isDatabaseOrCore) {
+    risk = 'high';
+    lenses.add('data-integrity');
+  } else if (isRouterOrApi) {
+    risk = 'medium';
+    lenses.add('security');
+  }
+
+  if (isUiOrComponent) {
+    lenses.add('ux');
+  }
+
+  let effort = 'low';
+  if (risk === 'critical') {
+    effort = 'xhigh';
+  } else if (risk === 'high') {
+    effort = 'high';
+  } else if (risk === 'medium') {
+    effort = 'medium';
+  }
+
+  return {
+    risk,
+    effort,
+    lenses: Array.from(lenses),
+    requireAdversarialVerification: risk === 'critical' || risk === 'high',
+    recommendedIsolation: shard.isolation === 'worktree' || risk === 'critical' ? 'worktree' : 'in_place',
+  };
+}
+
+export function buildAdaptiveContextPacket(shard, options = {}) {
+  const repoRoot = options.repoRoot || (typeof process !== 'undefined' && process.cwd ? process.cwd() : '.');
+  const files = shard.owns || [];
+  const extractedSignatures = {};
+  let originalBytes = 0;
+  let compressedBytes = 0;
+
+  for (const relFile of files) {
+    let content = null;
+    if (options.fileContents && options.fileContents[relFile]) {
+      content = options.fileContents[relFile];
+    } else if (typeof path !== 'undefined' && typeof fs !== 'undefined' && path.join && fs.existsSync && fs.statSync && fs.readFileSync) {
+      try {
+        const fullPath = path.join(repoRoot, relFile);
+        if (fs.existsSync(fullPath) && !fs.statSync(fullPath).isDirectory()) {
+          content = fs.readFileSync(fullPath, 'utf8');
+        }
+      } catch (_) {}
+    }
+
+    if (!content) continue;
+
+    try {
+      const byteLen = typeof Buffer !== 'undefined' ? Buffer.byteLength(content, 'utf8') : content.length;
+      originalBytes += byteLen;
+
+      const lines = content.split('\n');
+      const signatureLines = [];
+      let inDocBlock = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith('/**')) inDocBlock = true;
+        if (inDocBlock) {
+          signatureLines.push(line);
+          if (trimmed.endsWith('*/')) inDocBlock = false;
+          continue;
+        }
+
+        if (
+          trimmed.startsWith('export ') ||
+          trimmed.startsWith('import ') ||
+          trimmed.startsWith('interface ') ||
+          trimmed.startsWith('type ') ||
+          trimmed.startsWith('class ') ||
+          (trimmed.startsWith('const ') && trimmed.includes('=') && !trimmed.includes('{'))
+        ) {
+          signatureLines.push(line);
+        } else if (/^(async\s+)?function\s+/.test(trimmed)) {
+          signatureLines.push(line.replace(/\{.*$/, ';'));
+        }
+      }
+
+      const compressedText = signatureLines.join('\n');
+      const compLen = typeof Buffer !== 'undefined' ? Buffer.byteLength(compressedText, 'utf8') : compressedText.length;
+      compressedBytes += compLen;
+      extractedSignatures[relFile] = compressedText;
+    } catch (_) {}
+  }
+
+  const tokenSavingsPercent = originalBytes > 0
+    ? Math.round(((originalBytes - compressedBytes) / originalBytes) * 100)
+    : 0;
+
+  return {
+    shardId: shard.id,
+    signatures: extractedSignatures,
+    originalBytes,
+    compressedBytes,
+    tokenSavingsPercent,
+  };
+}
+
+export function createEvidencePacket(shard, state = {}) {
+  const reqDetails = Array.isArray(shard?.requirementDetails)
+    ? shard.requirementDetails
+    : (Array.isArray(state?.requirementDetails)
+        ? state.requirementDetails
+        : (shard?.requirements || state?.requirements || []).map((id) => ({ id, text: `Requirement ${id}` })));
+
+  const impl = state?.implementation || {};
+  const verif = state?.lastVerification || {};
+  const recon = state?.recon || {};
+  const research = state?.research || {};
+
+  const changedFiles = Array.isArray(impl.changedFiles)
+    ? impl.changedFiles
+    : (Array.isArray(state?.changedFiles) ? state.changedFiles : []);
+
+  const contractDelta = Array.isArray(impl.contractDelta)
+    ? impl.contractDelta
+    : (Array.isArray(state?.contractDelta)
+        ? state.contractDelta
+        : (Array.isArray(recon.contracts) ? recon.contracts : []));
+
+  const testEvidence = Array.isArray(impl.testsRun)
+    ? impl.testsRun
+    : (Array.isArray(impl.tests)
+        ? impl.tests
+        : (Array.isArray(state?.testsRun)
+            ? state.testsRun
+            : (Array.isArray(state?.tests)
+                ? state.tests
+                : (Array.isArray(state?.testEvidence) ? state.testEvidence : []))));
+
+  const confirmedFindings = Array.isArray(verif.issues)
+    ? verif.issues
+    : (Array.isArray(state?.confirmedFindings)
+        ? state.confirmedFindings
+        : (Array.isArray(state?.issues) ? state.issues : []));
+
+  const unresolvedRisks = Array.isArray(verif.risks)
+    ? verif.risks
+    : (Array.isArray(recon.risks)
+        ? recon.risks
+        : (Array.isArray(impl.risks)
+            ? impl.risks
+            : (Array.isArray(state?.unresolvedRisks)
+                ? state.unresolvedRisks
+                : (Array.isArray(state?.risks) ? state.risks : []))));
+
+  const rawClaims = Array.isArray(research.claims)
+    ? research.claims
+    : (Array.isArray(state?.relevantResearchClaims)
+        ? state.relevantResearchClaims
+        : (Array.isArray(state?.claims) ? state.claims : []));
+
+  const relevantResearchClaims = rawClaims.map((c) => ({
+    claim: c.claim || '',
+    source: c.source || c.sourceUrl || c.canonicalUrl || '',
+    sourceUrl: c.sourceUrl || c.source || c.canonicalUrl || '',
+    versionOrDate: c.versionOrDate || c.date || c.version || '',
+    applicability: c.applicability || '',
+    confidence: typeof c.confidence === 'number' ? c.confidence : (c.confidence ? String(c.confidence) : 'medium'),
+  }));
+
+  const verificationVerdict = verif.verdict || state?.verificationVerdict || state?.verdict || 'pending';
+
+  return {
+    shardId: shard?.id || state?.shardId || 'unknown',
+    requirements: shard?.requirements || state?.requirements || [],
+    requirementDetails: reqDetails,
+    acceptanceCriteria: shard?.acceptanceCriteria || state?.acceptanceCriteria || [],
+    ownership: shard?.owns || state?.ownership || state?.owns || [],
+    owns: shard?.owns || state?.ownership || state?.owns || [],
+    changedFiles,
+    contractDelta,
+    testEvidence,
+    confirmedFindings,
+    unresolvedRisks,
+    relevantResearchClaims,
+    verificationVerdict,
+  };
+}
+
+export function compressDependencyContext(dependencyResults = []) {
+  if (!Array.isArray(dependencyResults)) return [];
+  return dependencyResults
+    .filter(Boolean)
+    .map((res) => {
+      const shard = res.shard || { id: res.shardId || 'unknown' };
+      return createEvidencePacket(shard, res);
+    });
+}
+
+export function formatVerifierPacket(shardPacket, state = {}) {
+  const packet = createEvidencePacket(shardPacket, state);
+  const impl = state.implementation || {};
+  return {
+    shardId: shardPacket.id,
+    title: shardPacket.title || shardPacket.id,
+    requirements: packet.requirements,
+    requirementDetails: packet.requirementDetails,
+    acceptanceCriteria: packet.acceptanceCriteria,
+    ownership: shardPacket.owns || packet.owns || [],
+    changedFiles: packet.changedFiles,
+    implementationSummary: impl.summary || impl.notes || 'Implementation completed.',
+    testEvidence: packet.testEvidence,
+    relevantContracts: packet.contractDelta,
+    researchClaims: packet.relevantResearchClaims,
+  };
+}
+
+export function formatRepairPacket(shardPacket, state = {}) {
+  const packet = createEvidencePacket(shardPacket, state);
+  const verif = state.lastVerification || {};
+  return {
+    shardId: shardPacket.id,
+    shardOwnership: shardPacket.owns || packet.owns || [],
+    confirmedFindings: packet.confirmedFindings.length > 0 ? packet.confirmedFindings : (verif.issues || []),
+    currentChangedFiles: packet.changedFiles,
+    targetedTests: packet.testEvidence,
+    requirementMapping: packet.requirementDetails,
+    unresolvedRisks: packet.unresolvedRisks,
+  };
+}
+
+export function formatIntegrationShardSummary(allShardResults = {}) {
+  const summary = {};
+  const entries = Array.isArray(allShardResults)
+    ? allShardResults.map((s) => [s?.shard?.id || s?.shardId || s?.id, s])
+    : Object.entries(allShardResults || {});
+
+  for (const [shardId, res] of entries) {
+    if (!res) continue;
+    const shard = res.shard || { id: shardId };
+    const packet = createEvidencePacket(shard, res);
+    const highOrCriticalIssues = (packet.confirmedFindings || []).filter(
+      (i) => i.severity === 'high' || i.severity === 'critical'
+    );
+    const highOrCriticalRisks = (packet.unresolvedRisks || []).filter((r) => {
+      if (!r) return false;
+      if (typeof r === 'string') {
+        return !/\[?(?:low|info|trivial)\]?/i.test(r);
+      }
+      if (typeof r === 'object') {
+        return r.severity === 'high' || r.severity === 'critical' || r.level === 'high' || r.level === 'critical' || (!r.severity && !r.level);
+      }
+      return true;
+    });
+
+    summary[shardId] = {
+      shardId,
+      verificationVerdict: packet.verificationVerdict,
+      changedFiles: packet.changedFiles,
+      contractDelta: packet.contractDelta,
+      highOrCriticalFindings: highOrCriticalIssues,
+      highOrCriticalRisks: highOrCriticalRisks,
+      testCount: packet.testEvidence.length,
+    };
+  }
+  return summary;
+}
 
 
 // -----------------------------------------------------------------------------
@@ -2549,6 +2947,7 @@ Write the file accurately.`,
 
     const shardPacket = state.shardPacket || buildShardPacket(state.shard, manifest);
     const risk = String(shardPacket?.risk || 'medium').toLowerCase();
+    const verifierPacket = formatVerifierPacket(shardPacket, state);
 
     let verification = null;
 
@@ -2571,17 +2970,8 @@ Your specific focus:
 - Regression hazards and integration side-effects.
 - Verify tests actually exercise the changed behavior.
 
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-RECON EVIDENCE:
-${JSON.stringify(state.recon, null, 2)}
-
-RESEARCH EVIDENCE:
-${JSON.stringify(state.research || null, 2)}
-
-IMPLEMENTATION CLAIM:
-${JSON.stringify(state.implementation, null, 2)}
+VERIFIER EVIDENCE PACKET:
+${JSON.stringify(verifierPacket, null, 2)}
 
 Verification round: ${round}
 ${ambiguityFallback}`,
@@ -2607,17 +2997,8 @@ Your specific focus:
 - Data integrity: transaction boundaries, concurrency, and persistence correctness.
 - Test validity: ensure tests assert failure on broken invariants.
 
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-RECON EVIDENCE:
-${JSON.stringify(state.recon, null, 2)}
-
-RESEARCH EVIDENCE:
-${JSON.stringify(state.research || null, 2)}
-
-IMPLEMENTATION CLAIM:
-${JSON.stringify(state.implementation, null, 2)}
+VERIFIER EVIDENCE PACKET:
+${JSON.stringify(verifierPacket, null, 2)}
 
 Verification round: ${round}
 ${ambiguityFallback}`,
@@ -2668,11 +3049,8 @@ ${JSON.stringify(specVerifier, null, 2)}
 SKEPTIC 2 (SECURITY & BOUNDARIES):
 ${JSON.stringify(securityVerifier, null, 2)}
 
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-IMPLEMENTATION CLAIM:
-${JSON.stringify(state.implementation, null, 2)}
+VERIFIER EVIDENCE PACKET:
+${JSON.stringify(verifierPacket, null, 2)}
 
 Verification round: ${round}
 
@@ -2703,17 +3081,8 @@ ${ambiguityFallback}`;
 VERIFICATION FOCUS: MEDIUM RISK TIER
 Perform thorough contract inspection, check all callers/consumers, verify regression risks, and probe boundary conditions.
 
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-RECON EVIDENCE:
-${JSON.stringify(state.recon, null, 2)}
-
-RESEARCH EVIDENCE:
-${JSON.stringify(state.research || null, 2)}
-
-IMPLEMENTATION CLAIM:
-${JSON.stringify(state.implementation, null, 2)}
+VERIFIER EVIDENCE PACKET:
+${JSON.stringify(verifierPacket, null, 2)}
 
 Verification round: ${round}
 ${ambiguityFallback}`,
@@ -2733,17 +3102,8 @@ ${ambiguityFallback}`,
 VERIFICATION FOCUS: LOW RISK TIER
 Focus on targeted code correctness, acceptance criteria, and verifying that targeted tests pass.
 
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-RECON EVIDENCE:
-${JSON.stringify(state.recon, null, 2)}
-
-RESEARCH EVIDENCE:
-${JSON.stringify(state.research || null, 2)}
-
-IMPLEMENTATION CLAIM:
-${JSON.stringify(state.implementation, null, 2)}
+VERIFIER EVIDENCE PACKET:
+${JSON.stringify(verifierPacket, null, 2)}
 
 Verification round: ${round}
 ${ambiguityFallback}`,
@@ -2862,14 +3222,12 @@ ${ambiguityFallback}`,
     }
 
     const shardPacket = state.shardPacket || buildShardPacket(state.shard, manifest);
+    const repairPacket = formatRepairPacket(shardPacket, state);
 
     const repairPrompt = `${REPAIR_STATIC_PREFIX}
 
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-CONFIRMED VERIFICATION FINDINGS:
-${JSON.stringify(state.lastVerification, null, 2)}
+REPAIR EVIDENCE PACKET:
+${JSON.stringify(repairPacket, null, 2)}
 
 Repair round: ${round}
 ${ambiguityFallback}`;
@@ -3087,6 +3445,7 @@ ${ambiguityFallback}`;
   // DECOUPLED READ GATE: PRE-RECON & CONDITIONAL RESEARCH
   // ---------------------------------------------------------------------------
 
+  const researchCache = new ResearchCache('executor-run');
   const completedShardIds = new Set();
   const activeShardIds = new Set();
   const preReconPromises = new Map();
@@ -3170,10 +3529,42 @@ ${ambiguityFallback}`;
           `${escalation.rejectedQuestions.length} internal question(s) rejected.`
         );
 
-        const researchPrompt = `${RESEARCHER_STATIC_PREFIX}
+        const extraContext = {
+          sourceContext: Array.isArray(escalation.preferredSourceTypes)
+            ? escalation.preferredSourceTypes.join(',')
+            : (recon.externalResearch?.sourceContext || ''),
+          dependencyVersion: recon.externalResearch?.dependencyVersion || recon.externalResearch?.frameworkVersion || recon.externalResearch?.version || '',
+        };
+
+        const cachedClaims = [];
+        const questionsToAsk = [];
+
+        for (const q of escalation.questions) {
+          const cached = researchCache.get(q, 'global', extraContext);
+          if (cached) {
+            if (Array.isArray(cached.claims)) {
+              cachedClaims.push(...cached.claims);
+            } else if (cached.claim) {
+              cachedClaims.push(cached);
+            }
+          } else {
+            questionsToAsk.push(q);
+          }
+        }
+
+        if (questionsToAsk.length === 0) {
+          log(
+            `Shard ${shardPacket.id} external research: all ${escalation.questions.length} question(s) served from safe research cache.`
+          );
+          researchEvidence = {
+            claims: cachedClaims,
+            unresolved: [],
+          };
+        } else {
+          const researchPrompt = `${RESEARCHER_STATIC_PREFIX}
 
 RESEARCH QUESTIONS:
-${JSON.stringify(escalation.questions, null, 2)}
+${JSON.stringify(questionsToAsk, null, 2)}
 
 RESEARCH REASON & PREFERRED SOURCES:
 ${JSON.stringify(
@@ -3195,29 +3586,48 @@ ${JSON.stringify(
   2
 )}`;
 
-        const researcherResult = await callAgent(researchPrompt, {
-          agent: 'qcet-researcher',
-          agentType: 'qcet-researcher',
-          phase: 'Recon',
-          label: `${shardPacket.id}:research`,
-          schema: RESEARCH_SCHEMA,
-          isSpeculative,
-        });
+          const researcherResult = await callAgent(researchPrompt, {
+            agent: 'qcet-researcher',
+            agentType: 'qcet-researcher',
+            phase: 'Recon',
+            label: `${shardPacket.id}:research`,
+            schema: RESEARCH_SCHEMA,
+            isSpeculative,
+          });
 
-        researchEvidence = researcherResult || {
-          claims: escalation.questions.map((q) => ({
-            claim: `External research for query "${q}" yielded no conclusive evidence.`,
-            sourceType: 'unverified',
-            source: 'none',
-            versionOrDate: 'unknown',
-            applicability: 'uncertain',
-            confidence: 'unverified',
-          })),
-          unresolved: escalation.questions.map((q) => ({
-            question: q,
-            reason: 'Researcher agent failed or returned no usable result.',
-          })),
-        };
+          if (researcherResult && Array.isArray(researcherResult.claims)) {
+            for (const q of questionsToAsk) {
+              const matching = researcherResult.claims.filter(
+                (c) => c.claim && (c.claim.toLowerCase().includes(q.toLowerCase()) || questionsToAsk.length === 1)
+              );
+              const toCache = matching.length > 0 ? matching : researcherResult.claims;
+              researchCache.set(q, { claims: toCache }, 'global', extraContext);
+            }
+          }
+
+          researchEvidence = researcherResult
+            ? {
+                claims: [...cachedClaims, ...(researcherResult.claims || [])],
+                unresolved: researcherResult.unresolved || [],
+              }
+            : {
+                claims: [
+                  ...cachedClaims,
+                  ...questionsToAsk.map((q) => ({
+                    claim: `External research for query "${q}" yielded no conclusive evidence.`,
+                    sourceType: 'unverified',
+                    source: 'none',
+                    versionOrDate: 'unknown',
+                    applicability: 'uncertain',
+                    confidence: 'unverified',
+                  })),
+                ],
+                unresolved: questionsToAsk.map((q) => ({
+                  question: q,
+                  reason: 'Researcher agent failed or returned no usable result.',
+                })),
+              };
+        }
       } else if (escalation.rejectedQuestions && escalation.rejectedQuestions.length > 0) {
         log(
           `Shard ${shardPacket.id} external research request rejected: ` +
@@ -3251,13 +3661,7 @@ ${JSON.stringify(
     const recon = preRecon.recon;
     const researchEvidence = preRecon.research;
 
-    const dependencyEvidence = dependencyResults.map((result) => ({
-      shard: result?.shard?.id,
-      verification: result?.lastVerification?.verdict || 'unknown',
-      changedFiles: result?.implementation?.changedFiles || [],
-      summary: result?.implementation?.summary || '',
-      requirementsSatisfied: result?.implementation?.requirementsSatisfied || [],
-    }));
+    const dependencyEvidence = compressDependencyContext(dependencyResults);
 
     // =========================================================================
     // PRE-IMPLEMENTATION RECONCILIATION STAGE (qcet-recon)
@@ -3706,17 +4110,7 @@ ${ambiguityFallback}`;
   phase('Integration Review');
 
 
-  const shardSummary = allShardResults.map((result) => ({
-    id: result.shard.id,
-    risk: result.shard.risk,
-    requirements: result.shard.requirements,
-    changedFiles:
-      result.implementation?.changedFiles || [],
-    verification:
-      result.lastVerification?.verdict || 'unknown',
-    unresolvedIssues:
-      result.lastVerification?.issues || [],
-  }));
+  const shardSummary = formatIntegrationShardSummary(allShardResults);
 
 
   const reviewDimensions = selectIntegrationReviewDimensions(manifest, allShardResults);
@@ -4272,6 +4666,8 @@ Return exactly the structured release verdict.
     agentsCount: totalAgentsCount,
     totalAgents: totalAgentsCount,
     peakConcurrent,
+    researchCacheHits: researchCache.researchCacheHits,
+    researchCacheMisses: researchCache.researchCacheMisses,
     timestamp: typeof args?.timestamp === 'string' ? args.timestamp : undefined,
     runId: typeof args?.runId === 'string' ? args.runId : undefined,
   });

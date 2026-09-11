@@ -397,6 +397,7 @@ export function createSemaphore(capacity = 6, options = {}) {
       const waiter = queue[i];
       if (waiter.isSpeculative && activeSpeculative >= speculativeLimit) continue;
       queue.splice(i, 1);
+      i--;
       activeCount++;
       if (waiter.isSpeculative) activeSpeculative++;
       if (activeCount > peakConcurrent) peakConcurrent = activeCount;

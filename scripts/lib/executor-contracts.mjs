@@ -956,6 +956,8 @@ export function buildRunTelemetry({
   planPath = '',
   timestamp = '2026-09-10T00:00:00.000Z',
   runId = '',
+  researchCacheHits = 0,
+  researchCacheMisses = 0,
 }) {
   const requirementsTotal = Array.isArray(manifest?.requirements)
     ? manifest.requirements.length
@@ -1090,6 +1092,8 @@ export function buildRunTelemetry({
       globalValidation,
       buildStatus,
       finalStatus,
+      researchCacheHits: researchCacheHits || 0,
+      researchCacheMisses: researchCacheMisses || 0,
     },
     shards: shardsSummary,
   };
@@ -1133,6 +1137,11 @@ export {
   ResearchCache,
   resolveAdaptivePolicy,
   buildAdaptiveContextPacket,
+  createEvidencePacket,
+  compressDependencyContext,
+  formatVerifierPacket,
+  formatRepairPacket,
+  formatIntegrationShardSummary,
 } from './adaptive-context.mjs';
 
 export {

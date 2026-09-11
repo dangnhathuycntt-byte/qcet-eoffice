@@ -8,6 +8,9 @@ import {
   buildAdaptiveContextPacket,
   createEvidencePacket,
   compressDependencyContext,
+  formatVerifierPacket,
+  formatRepairPacket,
+  formatIntegrationShardSummary,
 } from '../../scripts/lib/adaptive-context.mjs';
 import { selectIntegrationReviewDimensions } from '../../scripts/lib/executor-contracts.mjs';
 
@@ -175,3 +178,50 @@ test('adaptive-context: selectIntegrationReviewDimensions adapts review lenses t
   const criticalDims = selectIntegrationReviewDimensions(criticalManifest).map((d) => d.id);
   assert.equal(criticalDims.length, 5, 'Critical risk requires all 5 core integration review dimensions');
 });
+
+test('adaptive-context: receiver formats provide tailored, minimal evidence', () => {
+  const shard = {
+    id: 'shard-billing',
+    requirements: ['REQ-BILL-01'],
+    acceptanceCriteria: ['Invoice PDF generates on settlement'],
+    owns: ['src/billing/invoice.ts'],
+  };
+
+  const state = {
+    implementation: {
+      changedFiles: ['src/billing/invoice.ts'],
+      summary: 'Added invoice PDF generation using PDFKit.',
+      contractDelta: [{ symbol: 'generateInvoicePdf', change: 'added' }],
+      testsRun: ['tests/billing/invoice.test.ts'],
+    },
+    lastVerification: {
+      verdict: 'fail',
+      issues: [
+        { id: 'ISS-1', severity: 'high', file: 'src/billing/invoice.ts', evidence: 'Missing tax calculation' },
+      ],
+      risks: ['Currency exchange API timeout'],
+    },
+  };
+
+  // Verifier packet: objective diffs, tests, contracts, zero recon rambling
+  const vPacket = formatVerifierPacket(shard, state);
+  assert.equal(vPacket.shardId, 'shard-billing');
+  assert.deepEqual(vPacket.changedFiles, ['src/billing/invoice.ts']);
+  assert.equal(vPacket.implementationSummary, 'Added invoice PDF generation using PDFKit.');
+  assert.equal(vPacket.currentState, undefined);
+  assert.equal(vPacket.recon, undefined);
+
+  // Repair packet: findings, changed files, target tests
+  const rPacket = formatRepairPacket(shard, state);
+  assert.equal(rPacket.shardId, 'shard-billing');
+  assert.equal(rPacket.confirmedFindings.length, 1);
+  assert.equal(rPacket.confirmedFindings[0].id, 'ISS-1');
+  assert.deepEqual(rPacket.targetedTests, ['tests/billing/invoice.test.ts']);
+
+  // Integration summary: high/critical findings and contract deltas
+  const summary = formatIntegrationShardSummary({ 'shard-billing': state });
+  assert.ok(summary['shard-billing']);
+  assert.equal(summary['shard-billing'].highOrCriticalFindings.length, 1);
+  assert.equal(summary['shard-billing'].highOrCriticalRisks.length, 1);
+});
+
