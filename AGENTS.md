@@ -35,7 +35,7 @@ All agents and contributors across all environments must uphold these invariants
   Assertions require real proof. Always execute checks (`npm run typecheck`, `npm test`) and inspect outputs before claiming success.
 
 - **Git Safety**:
-  Keep commits focused and atomic. Never push, rebase, or force-reset without explicit user instruction.
+  Keep commits focused and atomic. Never rebase or force-reset without explicit user instruction.
 
 ## Change Workflow
 1. Inspect canonical documentation and existing implementations before authoring code.

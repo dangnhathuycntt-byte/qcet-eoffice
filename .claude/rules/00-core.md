@@ -9,4 +9,4 @@ These universal invariants apply unconditionally across all files and operations
 5. **Preserve Unrelated Changes**: Never overwrite, discard, or format away unrelated user code or parallel work.
 6. **Never Weaken Security to Pass Tests**: Server-side RBAC and validation must never be bypassed or diluted.
 7. **Never Claim Unexecuted Verification**: Run verification commands directly and inspect outputs before claiming success.
-8. **Git Safety**: Never push, rebase interactively, or force-reset without explicit user instruction.
+8. **Git Safety**: Keep commits focused and atomic. Never rebase interactively or force-reset without explicit user instruction.
