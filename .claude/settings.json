@@ -63,6 +63,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "./.claude/hooks/pre-tool-use-ownership-guard",
+            "statusMessage": "Enforcing read-only and ownership invariants..."
+          },
+          {
+            "type": "command",
             "command": "./.claude/hooks/guard-next-build",
             "statusMessage": "Checking dev server port 3001 cache safety..."
           },

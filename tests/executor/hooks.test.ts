@@ -37,41 +37,128 @@ test('pre-tool-use-ownership-guard: non-Write/Edit tools are immediately allowed
 });
 
 test('pre-tool-use-ownership-guard: read-only agent can run read-only Bash commands (exit 0 allowed)', () => {
-  const res = runHook(ownershipGuard, {
-    tool_name: 'Bash',
-    agent_type: 'qcet-recon',
-    tool_input: { command: 'npm test -- tests/auth.test.ts' },
-  });
-  assert.equal(res.status, 0);
+  const readOnlyAgents = ['qcet-recon', 'qcet-skeptic', 'qcet-researcher', 'verifier'];
+  const allowedCommands = [
+    'git status',
+    'git diff',
+    'git diff --staged',
+    'rg "function login" src/',
+    'npm test',
+    'npm run typecheck',
+    'git status > /dev/null 2>&1',
+  ];
+
+  for (const agent of readOnlyAgents) {
+    for (const cmd of allowedCommands) {
+      const res = runHook(ownershipGuard, {
+        tool_name: 'Bash',
+        agent_type: agent,
+        tool_input: { command: cmd },
+      });
+      assert.equal(
+        res.status,
+        0,
+        `Expected command '${cmd}' to be allowed for read-only agent '${agent}'`
+      );
+    }
+  }
 });
 
 test('pre-tool-use-ownership-guard: read-only agent cannot run mutating Bash commands (exit 2 blocked)', () => {
-  const res = runHook(ownershipGuard, {
-    tool_name: 'Bash',
-    agent_type: 'qcet-recon',
-    tool_input: { command: 'rm -rf src/critical.ts' },
-  });
-  assert.equal(res.status, 2);
-  assert.ok(res.stderr.includes('prohibited from executing mutating Bash command'));
+  const readOnlyAgents = ['qcet-recon', 'qcet-skeptic', 'qcet-researcher', 'verifier'];
+  const blockedCommands = [
+    'rm -rf src/critical.ts',
+    'mv src/a.ts src/b.ts',
+    'cp src/a.ts src/b.ts',
+    'touch src/new_file.ts',
+    'sed -i "s/old/new/g" src/index.ts',
+    'git checkout HEAD -- src/app.ts',
+    'git reset --hard HEAD',
+    'git clean -fd',
+    'git apply patch.diff',
+    'npm install lodash',
+    'npm i express',
+    'echo "hello" > src/output.txt',
+    'echo "hello" >> src/output.txt',
+    'echo "data" >src/output.txt',
+    'echo "data" 1> src/output.txt',
+  ];
+
+  for (const agent of readOnlyAgents) {
+    for (const cmd of blockedCommands) {
+      const res = runHook(ownershipGuard, {
+        tool_name: 'Bash',
+        agent_type: agent,
+        tool_input: { command: cmd },
+      });
+      assert.equal(
+        res.status,
+        2,
+        `Expected command '${cmd}' to be blocked for read-only agent '${agent}'`
+      );
+      assert.ok(
+        res.stderr.includes('prohibited from executing mutating Bash command'),
+        `Expected stderr to explain prohibition for command '${cmd}'`
+      );
+    }
+  }
 });
 
-test('pre-tool-use-ownership-guard: skeptic agent blocked from git checkout via Bash (exit 2 blocked)', () => {
-  const res = runHook(ownershipGuard, {
-    tool_name: 'Bash',
-    agent_type: 'qcet-skeptic',
-    tool_input: { command: 'git checkout HEAD -- src/app.ts' },
-  });
-  assert.equal(res.status, 2);
-  assert.ok(res.stderr.includes('prohibited from executing mutating Bash command'));
+test('pre-tool-use-ownership-guard: builder agent is not blocked by read-only bash guard (exit 0 allowed)', () => {
+  const builderCommands = [
+    'git checkout HEAD -- src/app.ts',
+    'rm -rf tmp/cache.log',
+    'mv tmp/old.ts tmp/new.ts',
+    'cp tmp/a.ts tmp/b.ts',
+    'touch tmp/marker.ts',
+    'npm install --ignore-scripts',
+    'echo "builder work" > tmp/status.txt',
+  ];
+
+  for (const cmd of builderCommands) {
+    const res = runHook(ownershipGuard, {
+      tool_name: 'Bash',
+      agent_type: 'qcet-builder',
+      tool_input: { command: cmd },
+    });
+    assert.equal(
+      res.status,
+      0,
+      `Expected builder agent to be permitted for Bash command '${cmd}'`
+    );
+  }
 });
 
-test('pre-tool-use-ownership-guard: builder agent can run git checkout via Bash (exit 0 allowed)', () => {
-  const res = runHook(ownershipGuard, {
-    tool_name: 'Bash',
-    agent_type: 'qcet-builder',
-    tool_input: { command: 'git checkout HEAD -- src/app.ts' },
-  });
-  assert.equal(res.status, 0);
+test('settings.json: PreToolUse Bash hook configuration enforces exact guard ordering', () => {
+  const settingsPath = path.join(rootDir, '.claude', 'settings.json');
+  const raw = fs.readFileSync(settingsPath, 'utf8');
+  const settings = JSON.parse(raw);
+
+  const bashHooksEntry = settings.hooks?.PreToolUse?.find(
+    (entry: { matcher: string }) => entry.matcher === 'Bash'
+  );
+  assert.ok(bashHooksEntry, 'Bash matcher entry should exist in PreToolUse');
+  assert.equal(bashHooksEntry.hooks.length, 3, 'Bash matcher should have exactly 3 hooks');
+
+  // Ordering invariant:
+  // 1. ./.claude/hooks/pre-tool-use-ownership-guard (ownership/read-only guard)
+  // 2. ./.claude/hooks/guard-next-build (build safety guard)
+  // 3. ./.claude/hooks/protect-sensitive-files (sensitive-file guard)
+  assert.equal(
+    bashHooksEntry.hooks[0].command,
+    './.claude/hooks/pre-tool-use-ownership-guard',
+    'First hook must be pre-tool-use-ownership-guard'
+  );
+  assert.equal(
+    bashHooksEntry.hooks[1].command,
+    './.claude/hooks/guard-next-build',
+    'Second hook must be guard-next-build'
+  );
+  assert.equal(
+    bashHooksEntry.hooks[2].command,
+    './.claude/hooks/protect-sensitive-files',
+    'Third hook must be protect-sensitive-files'
+  );
 });
 
 test('pre-tool-use-ownership-guard: read-only agent cannot call Write (exit 2 blocked)', () => {
