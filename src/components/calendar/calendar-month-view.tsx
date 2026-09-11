@@ -270,7 +270,6 @@ export function generateMonthGrid(
   const year = periodOrYear;
   const targetMonth = month ?? 0;
 
-  const today = new Date();
   const todayString = getSystemReferenceDate();
 
   // 1st day of target month
