@@ -1,7 +1,13 @@
-# Workload Critical-01: Statutory RBAC Authorization & Document Classification Boundary
+# Workload Critical-01: Institutional RBAC Authorization & Document Clearance Boundary
 
 ## Objective
-Implement server-side security authorization for confidential document access based on Vietnamese statutory positions (Hiệu trưởng, Phó Hiệu trưởng, Trưởng phòng, Chuyên viên) and document security classification levels (THUONG, MAT, TOI_MAT, TUYET_MAT) under Decree 30/2020/ND-CP.
+Implement server-side security authorization for confidential institutional document access based on QCET internal administrative roles (Hiệu trưởng, Phó Hiệu trưởng, Trưởng phòng, Chuyên viên) and document security classification levels (THUONG, MAT, TOI_MAT, TUYET_MAT).
+
+> **Policy Fixture Notice**:
+> For the purposes of this benchmark evaluation, assume the following QCET Internal Institutional Security & Document Clearance Policy (Fixture), aligned strictly with core QCET invariants (05-domain-freeze, 00-core):
+> - `TaskScope` is strictly a visual display filter, never an authorization token.
+> - Inactive user accounts (`isActive: false`) are denied unconditionally.
+> - Role represents institutional authority, not SaaS tiering.
 
 ## Scope
 - Permitted files:
@@ -12,21 +18,26 @@ Implement server-side security authorization for confidential document access ba
   - Any files outside the permitted list.
 
 ## Requirements
-1. **Requirement 1 (Contract & Clearance Levels)**:
-   - Ensure `DocumentSecurityLevelSchema` in `src/contracts/documents.ts` is strictly typed.
-   - Define statutory clearance mapping in `src/lib/auth/document-clearance.ts`:
-     * `TUYET_MAT` & `TOI_MAT`: Only accessible by `HIEU_TRUONG` or explicit statutory designee.
-     * `MAT`: Accessible by `HIEU_TRUONG`, `PHO_HIEU_TRUONG`, and `TRUONG_PHONG` of the owning department.
-     * `THUONG`: Standard institutional access.
+1. **Requirement 1 (Contract & Classification Schema)**:
+   - In `src/contracts/documents.ts`, define `DocumentSecurityLevelSchema` supporting:
+     * `THUONG` (Unclassified / Standard)
+     * `MAT` (Confidential)
+     * `TOI_MAT` (Secret)
+     * `TUYET_MAT` (Top Secret)
+   - Export type `DocumentSecurityLevel`.
 
-2. **Requirement 2 (Negative Security Assertion & Tamper Resistance)**:
-   - Implement `assertDocumentReadAccess({ user, document })`:
-     * Throws or returns `{ allowed: false, reason: string }` if user lacks statutory clearance.
-     * Rejects disabled or inactive user accounts immediately regardless of role.
-     * Prevents scope masquerading (client cannot claim school-wide clearance through TaskScope).
+2. **Requirement 2 (Clearance Evaluation Engine & Negative Assertions)**:
+   - In `src/lib/auth/document-clearance.ts`, implement `assertDocumentReadAccess({ user, document, scope })`:
+     * If `user.isActive === false`: unconditionally throw or return `{ allowed: false, reason: 'USER_INACTIVE' }`.
+     * If `document.securityLevel === 'TUYET_MAT'`: only `HIEU_TRUONG` may access.
+     * If `document.securityLevel === 'TOI_MAT'`: only `HIEU_TRUONG` and `PHO_HIEU_TRUONG` may access.
+     * If `document.securityLevel === 'MAT'`: only `HIEU_TRUONG`, `PHO_HIEU_TRUONG`, `TRUONG_PHONG`, and `TRUONG_KHOA` may access.
+     * If `document.securityLevel === 'THUONG'`: accessible by authenticated institutional roles (`CHUYEN_VIEN`, `GIANG_VIEN`, etc.).
+     * **Scope Invariant**: `scope` (e.g. `TaskScope.SCHOOL`) must NEVER bypass or elevate security level checks. An unauthorized user requesting `SCHOOL` scope must still be rejected.
 
-3. **Requirement 3 (Adversarial Security Tests)**:
-   - Comprehensive test suite in `tests/unit/document-clearance.test.ts` proving negative assertions:
-     * Staff/Chuyên viên cannot access `MAT` or `TOI_MAT`.
-     * Disabled Hiệu trưởng account cannot access any document.
-     * Scope manipulation does not grant unauthorized clearance.
+3. **Requirement 3 (Adversarial Security Unit Tests)**:
+   - Provide unit tests in `tests/unit/document-clearance.test.ts` covering:
+     * Chuyên viên rejected from `MAT`, `TOI_MAT`, `TUYET_MAT`.
+     * Inactive Hiệu trưởng rejected from all levels.
+     * Scope spoofing rejected.
+     * Authorized reads permitted.

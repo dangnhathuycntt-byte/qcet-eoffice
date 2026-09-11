@@ -15,8 +15,13 @@ function run(cmd, cwd, options = {}) {
 }
 
 /**
- * Prepare an isolated trial directory with workload base SHA,
- * harness overlay (if Arm B or C), and task setup patch.
+ * Prepare an isolated, sanitized trial repository.
+ * Invariants enforced:
+ * - Product snapshot is extracted via git archive so trial has NO remotes and NO access to benchmark branch history/graders.
+ * - Single synthetic initial commit is created in a fresh git repository.
+ * - Arm overlay (.claude/) and plan.md are committed BEFORE timing starts.
+ * - BENCHMARK_START_SHA is recorded so graders diff against benchmark-start, not dirty uncommitted setup state.
+ * - node_modules is symlinked so TypeScript, TSX, and runtime dependencies execute without overhead.
  */
 export async function prepareTrialDirectory({
   benchmarkId,
@@ -37,32 +42,45 @@ export async function prepareTrialDirectory({
   }
   fs.mkdirSync(targetDir, { recursive: true });
 
-  // 2. Clone locally from repoRoot at workloadBaseSha into targetDir
-  // Using git worktree or shallow clone
-  run(`git clone --no-checkout "${repoRoot}" "${targetDir}"`, repoRoot, { silent: true });
-  run(`git checkout --force "${workloadBaseSha}"`, targetDir, { silent: true });
+  // 2. Extract clean product snapshot from workloadBaseSha via git archive
+  const gitDir = path.join(repoRoot, '.git');
+  run(`git --git-dir="${gitDir}" archive "${workloadBaseSha}" | tar -x -C "${targetDir}"`, repoRoot, { silent: true });
 
-  // 3. Harness Overlay
+  // 3. Symlink node_modules from repoRoot for rapid execution without downloading packages
+  const rootNodeModules = path.join(repoRoot, 'node_modules');
+  if (fs.existsSync(rootNodeModules)) {
+    try {
+      fs.symlinkSync(rootNodeModules, path.join(targetDir, 'node_modules'), 'junction');
+    } catch (_) {}
+  }
+
+  // 4. Initialize fresh git repository with clean baseline commit (zero foreign history/refs)
+  run('git init', targetDir, { silent: true });
+  run('git config user.name "QCET Benchmark Baseline"', targetDir, { silent: true });
+  run('git config user.email "benchmark@qcet.local"', targetDir, { silent: true });
+  run('git add -A && git commit -m "chore(baseline): initial product baseline"', targetDir, { silent: true });
+
+  // 5. Harness Overlay
   if (arm === 'B' || arm === 'C') {
     if (!harnessSha) {
       throw new Error(`Arm ${arm} requires a valid harnessSha`);
     }
-    // Checkout .claude and executor scripts from harnessSha
+    // Overlay .claude/ and executor scripts from harnessSha
     try {
-      run(`git checkout "${harnessSha}" -- .claude/`, targetDir, { silent: true });
+      run(`git --git-dir="${gitDir}" archive "${harnessSha}" .claude | tar -x -C "${targetDir}"`, repoRoot, { silent: true });
     } catch (_) {}
     try {
-      run(`git checkout "${harnessSha}" -- scripts/build-executor-bundle.mjs scripts/run-executor-tests.mjs`, targetDir, { silent: true });
+      run(`git --git-dir="${gitDir}" archive "${harnessSha}" scripts/build-executor-bundle.mjs scripts/run-executor-tests.mjs | tar -x -C "${targetDir}"`, repoRoot, { silent: true });
     } catch (_) {}
   } else if (arm === 'A') {
-    // Pure Ultracode: remove QCET executor skills and rules to ensure pure native behavior
+    // Pure Ultracode: remove QCET executor skill and rules to ensure pure native behavior
     const executorSkill = path.join(targetDir, '.claude', 'skills', 'qcet-plan-executor');
     if (fs.existsSync(executorSkill)) {
       fs.rmSync(executorSkill, { recursive: true, force: true });
     }
   }
 
-  // 4. Apply Task setup.patch if present and contains valid patch headers
+  // 6. Apply Task setup.patch if present and contains valid patch headers
   const taskDir = path.join(repoRoot, 'benchmarks', 'live', 'tasks', task);
   const patchPath = path.join(taskDir, 'setup.patch');
   if (fs.existsSync(patchPath) && fs.statSync(patchPath).size > 0) {
@@ -72,17 +90,24 @@ export async function prepareTrialDirectory({
     }
   }
 
-  // 5. Copy task plan.md into trial directory
+  // 7. Copy task plan.md into trial directory
   const planPath = path.join(taskDir, 'plan.md');
   if (fs.existsSync(planPath)) {
     fs.copyFileSync(planPath, path.join(targetDir, 'plan.md'));
   }
 
+  // 8. Commit setup baseline to record BENCHMARK_START_SHA
+  // Any files modified or created after this point will belong strictly to the agent under evaluation
+  run('git add -A && git commit -m "chore(benchmark): benchmark start baseline"', targetDir, { silent: true });
+  const benchmarkStartSha = run('git rev-parse HEAD', targetDir, { silent: true });
+  fs.writeFileSync(path.join(targetDir, '.qcet-benchmark-start-sha'), benchmarkStartSha, 'utf8');
+
   return {
     trialId,
     targetDir,
     workloadBaseSha,
-    harnessSha: arm === 'A' ? 'native' : harnessSha
+    harnessSha: arm === 'A' ? 'native' : harnessSha,
+    benchmarkStartSha
   };
 }
 

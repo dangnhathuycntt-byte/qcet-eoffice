@@ -2,9 +2,27 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
- * Grade a trial directory by locating its task-specific grader.
+ * Determine agent verdict from execution output and status.
  */
-export async function gradeTrial(taskName, trialDir, tasksBaseDir) {
+export function determineAgentVerdict(agentExecution) {
+  if (!agentExecution) return 'UNKNOWN';
+  if (agentExecution.timedOut) return 'TIMEOUT';
+  if (agentExecution.isError) return 'ERROR';
+
+  const text = agentExecution.output || '';
+  if (/RELEASE GATE VERDICT:\s*READY|Final status:\s*READY|STATUS:\s*READY|\bREADY\b|LEAN_V2_IMPLEMENTED/i.test(text)) {
+    return 'READY';
+  }
+  if (/RELEASE GATE VERDICT:\s*BLOCKED|Final status:\s*BLOCKED|STATUS:\s*BLOCKED|\bBLOCKED\b/i.test(text)) {
+    return 'BLOCKED';
+  }
+  return 'UNKNOWN';
+}
+
+/**
+ * Grade a trial directory by locating its task-specific grader and comparing with agent verdict.
+ */
+export async function gradeTrial(taskName, trialDir, tasksBaseDir, agentExecution = null) {
   const graderPath = path.join(tasksBaseDir, taskName, 'grader', 'verify.mjs');
   if (!fs.existsSync(graderPath)) {
     throw new Error(`Grader not found at ${graderPath}`);
@@ -12,7 +30,17 @@ export async function gradeTrial(taskName, trialDir, tasksBaseDir) {
 
   const { runGrader } = await import(graderPath);
   const gradeResult = await runGrader(trialDir);
-  return gradeResult;
+
+  const agentVerdict = determineAgentVerdict(agentExecution);
+  const graderVerdict = gradeResult.success ? 'PASS' : 'FAIL';
+  const falseReady = (agentVerdict === 'READY' && graderVerdict === 'FAIL');
+
+  return {
+    ...gradeResult,
+    agentVerdict,
+    graderVerdict,
+    falseReady
+  };
 }
 
 if (process.argv[1] && process.argv[1].endsWith('grade.mjs')) {

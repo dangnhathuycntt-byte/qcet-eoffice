@@ -13,8 +13,9 @@ function runCmd(cmd, fallback = 'unknown') {
 
 /**
  * Capture host environment fingerprint according to QCET Live Benchmark Plan.
+ * Never invents model identifiers; uses explicit env var, argument, or marks as unknown.
  */
-export async function captureEnvironment() {
+export async function captureEnvironment(options = {}) {
   const isDarwin = process.platform === 'darwin';
 
   const osVersion = isDarwin
@@ -36,6 +37,8 @@ export async function captureEnvironment() {
   const gitBranch = runCmd('git branch --show-current', 'unknown');
   const claudeCodeVersion = runCmd('claude --version', 'unknown');
 
+  const model = process.env.QCET_BENCHMARK_MODEL || options.model || (options.dryRun ? 'dry-run' : 'unknown');
+
   return {
     timestamp: new Date().toISOString(),
     platform: process.platform,
@@ -48,7 +51,7 @@ export async function captureEnvironment() {
     gitSha,
     gitBranch,
     claudeCodeVersion,
-    model: process.env.QCET_BENCHMARK_MODEL || 'claude-combo[1m]',
-    effort: 'ultracode'
+    model,
+    effort: options.effort || 'ultracode'
   };
 }

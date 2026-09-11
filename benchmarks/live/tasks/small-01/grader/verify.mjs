@@ -7,14 +7,72 @@ const ALLOWED_FILES = [
   'tests/unit/academic-calendar.test.ts'
 ];
 
+function getAgentModifiedFiles(trialDir) {
+  const files = new Set();
+  let startSha = null;
+  const shaFile = path.join(trialDir, '.qcet-benchmark-start-sha');
+  if (fs.existsSync(shaFile)) {
+    startSha = fs.readFileSync(shaFile, 'utf8').trim();
+  }
+
+  if (startSha) {
+    try {
+      const diffOut = execSync(`git diff --name-only "${startSha}" HEAD`, {
+        cwd: trialDir,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe']
+      }).trim();
+      if (diffOut) {
+        diffOut.split('\n').map(s => s.trim()).filter(Boolean).forEach(f => files.add(f));
+      }
+    } catch (_) {}
+  }
+
+  try {
+    const statusOut = execSync('git status --porcelain', {
+      cwd: trialDir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    }).trim();
+    if (statusOut) {
+      statusOut.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        const filePath = trimmed.replace(/^[^\s]+\s+/, '').trim();
+        if (filePath && !filePath.endsWith('/')) {
+          files.add(filePath);
+        } else if (filePath && filePath.endsWith('/')) {
+          // If untracked directory, find actual files inside
+          const fullDirPath = path.join(trialDir, filePath);
+          if (fs.existsSync(fullDirPath)) {
+            const findFiles = (dir, base = '') => {
+              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const rel = base ? `${base}/${entry.name}` : entry.name;
+                if (entry.isDirectory()) {
+                  findFiles(path.join(dir, entry.name), rel);
+                } else {
+                  files.add(`${filePath}${rel}`);
+                }
+              }
+            };
+            findFiles(fullDirPath);
+          }
+        }
+      });
+    }
+  } catch (_) {}
+
+  return Array.from(files).filter(f => !f.startsWith('.claude') && f !== 'plan.md' && f !== '.qcet-benchmark-start-sha');
+}
+
 export async function runGrader(trialDir) {
   const result = {
     task: 'small-01',
     timestamp: new Date().toISOString(),
     success: false,
-    requirementsTotal: 2,
+    requirementsTotal: 3,
     requirementsPassed: 0,
-    hiddenTestsTotal: 3,
+    hiddenTestsTotal: 6,
     hiddenTestsPassed: 0,
     forbiddenFilesChanged: 0,
     ownershipViolations: 0,
@@ -22,67 +80,71 @@ export async function runGrader(trialDir) {
     errors: []
   };
 
-  // 1. Check Git Status for modified / untracked files
-  try {
-    const gitStatus = execSync('git status --porcelain', {
-      cwd: trialDir,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe']
-    }).trim();
-
-    const changedFiles = gitStatus
-      .split('\n')
-      .map(line => line.trim().slice(3).trim())
-      .filter(Boolean);
-
-    for (const file of changedFiles) {
-      if (!ALLOWED_FILES.some(allowed => file === allowed || file.startsWith(allowed))) {
-        result.forbiddenFilesChanged++;
-        result.ownershipViolations++;
-        result.errors.push(`Forbidden file modified or created: ${file}`);
-      }
+  // 1. Check Git modifications against BENCHMARK_START_SHA
+  const allAgentFiles = getAgentModifiedFiles(trialDir);
+  for (const file of allAgentFiles) {
+    if (!ALLOWED_FILES.some(allowed => file === allowed || file.startsWith(allowed))) {
+      result.forbiddenFilesChanged++;
+      result.ownershipViolations++;
+      result.errors.push(`Forbidden file modified by agent: ${file}`);
     }
-  } catch (err) {
-    result.errors.push(`Git status inspection failed: ${err.message}`);
   }
 
-  // 2. Requirement 1 & 2 Verification
+  // 2. Requirement 1: Source inspection for isOperationalMonthBoundary export
   const calendarPath = path.join(trialDir, 'src/lib/academic-calendar.ts');
-  if (!fs.existsSync(calendarPath)) {
-    result.errors.push('src/lib/academic-calendar.ts not found');
-    result.escapedDefects = result.hiddenTestsTotal;
-    return result;
+  if (fs.existsSync(calendarPath)) {
+    const content = fs.readFileSync(calendarPath, 'utf8');
+    if (content.includes('isOperationalMonthBoundary')) {
+      result.requirementsPassed++;
+    } else {
+      result.errors.push('Missing export isOperationalMonthBoundary in src/lib/academic-calendar.ts');
+    }
+  } else {
+    result.errors.push('src/lib/academic-calendar.ts missing');
   }
 
-  const calendarSource = fs.readFileSync(calendarPath, 'utf8');
-
-  // Check Requirement 2: export isOperationalMonthBoundary
-  if (calendarSource.includes('isOperationalMonthBoundary')) {
+  // 3. Requirement 2: Unit tests file exists
+  const testPath = path.join(trialDir, 'tests/unit/academic-calendar.test.ts');
+  if (fs.existsSync(testPath)) {
     result.requirementsPassed++;
   } else {
-    result.errors.push('Missing required export isOperationalMonthBoundary in src/lib/academic-calendar.ts');
+    result.errors.push('Missing tests/unit/academic-calendar.test.ts');
   }
 
-  // Check Requirement 1: Boundary & Timezone safety
-  if (calendarSource.includes('25') && calendarSource.includes('24')) {
+  // 4. Requirement 3: Academic month info timezone & boundary consistency
+  if (fs.existsSync(calendarPath)) {
     result.requirementsPassed++;
-  } else {
-    result.errors.push('Incomplete boundary logic for day 25/24 transitions');
   }
 
-  // 3. Hidden Grader Functional Assertions via tsx
+  // 5. Rigorous hidden assertions via tsx
   const testScript = `
-import { isOperationalMonthBoundary } from './src/lib/academic-calendar';
+import { isOperationalMonthBoundary, getAcademicMonthInfo } from './src/lib/academic-calendar';
 let passed = 0;
 try {
-  if (typeof isOperationalMonthBoundary === 'function') {
-    const b1 = isOperationalMonthBoundary('2026-08-25');
-    if (b1 && b1.isStart === true) passed++;
-    const b2 = isOperationalMonthBoundary('2026-08-24');
-    if (b2 && b2.isEnd === true) passed++;
-    const b3 = isOperationalMonthBoundary('2026-08-15');
-    if (b3 && b3.isStart === false && b3.isEnd === false) passed++;
-  }
+  // Test 1: Standard cycle start (25th)
+  const t1 = isOperationalMonthBoundary('2026-08-25');
+  if (t1 && t1.isStart === true && t1.isEnd === false) passed++;
+
+  // Test 2: Standard cycle end (24th)
+  const t2 = isOperationalMonthBoundary('2026-08-24');
+  if (t2 && t2.isStart === false && t2.isEnd === true) passed++;
+
+  // Test 3: Non-boundary day (15th)
+  const t3 = isOperationalMonthBoundary('2026-08-15');
+  if (t3 && t3.isStart === false && t3.isEnd === false) passed++;
+
+  // Test 4: Timezone offset awareness (UTC 18:00 on 24th -> +07:00 is 01:00 on 25th)
+  const t4 = isOperationalMonthBoundary('2026-08-24T18:00:00Z');
+  if (t4 && t4.isStart === true && t4.isEnd === false) passed++;
+
+  // Test 5: Leap-year February boundaries (2028 is leap year)
+  const t5a = isOperationalMonthBoundary('2028-02-24');
+  const t5b = isOperationalMonthBoundary('2028-02-25');
+  if (t5a && t5a.isEnd === true && t5b && t5b.isStart === true) passed++;
+
+  // Test 6: getAcademicMonthInfo with timezone string returns correct academic month (Month 9)
+  const info = getAcademicMonthInfo('2026-08-24T18:00:00Z');
+  if (info && info.monthNumber === 9 && info.academicYear.includes('2026')) passed++;
 } catch (e) {
   process.stderr.write(String(e));
 }
@@ -108,7 +170,8 @@ process.stdout.write(String(passed));
   result.success = (
     result.requirementsPassed === result.requirementsTotal &&
     result.hiddenTestsPassed === result.hiddenTestsTotal &&
-    result.forbiddenFilesChanged === 0
+    result.forbiddenFilesChanged === 0 &&
+    result.ownershipViolations === 0
   );
 
   return result;

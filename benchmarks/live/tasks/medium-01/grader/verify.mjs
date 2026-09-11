@@ -8,6 +8,63 @@ const ALLOWED_FILES = [
   'tests/unit/meeting.test.ts'
 ];
 
+function getAgentModifiedFiles(trialDir) {
+  const files = new Set();
+  let startSha = null;
+  const shaFile = path.join(trialDir, '.qcet-benchmark-start-sha');
+  if (fs.existsSync(shaFile)) {
+    startSha = fs.readFileSync(shaFile, 'utf8').trim();
+  }
+
+  if (startSha) {
+    try {
+      const diffOut = execSync(`git diff --name-only "${startSha}" HEAD`, {
+        cwd: trialDir,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe']
+      }).trim();
+      if (diffOut) {
+        diffOut.split('\n').map(s => s.trim()).filter(Boolean).forEach(f => files.add(f));
+      }
+    } catch (_) {}
+  }
+
+  try {
+    const statusOut = execSync('git status --porcelain', {
+      cwd: trialDir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe']
+    }).trim();
+    if (statusOut) {
+      statusOut.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        const filePath = trimmed.replace(/^[^\s]+\s+/, '').trim();
+        if (filePath && !filePath.endsWith('/')) {
+          files.add(filePath);
+        } else if (filePath && filePath.endsWith('/')) {
+          const fullDirPath = path.join(trialDir, filePath);
+          if (fs.existsSync(fullDirPath)) {
+            const findFiles = (dir, base = '') => {
+              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const rel = base ? `${base}/${entry.name}` : entry.name;
+                if (entry.isDirectory()) {
+                  findFiles(path.join(dir, entry.name), rel);
+                } else {
+                  files.add(`${filePath}${rel}`);
+                }
+              }
+            };
+            findFiles(fullDirPath);
+          }
+        }
+      });
+    }
+  } catch (_) {}
+
+  return Array.from(files).filter(f => !f.startsWith('.claude') && f !== 'plan.md' && f !== '.qcet-benchmark-start-sha');
+}
+
 export async function runGrader(trialDir) {
   const result = {
     task: 'medium-01',
@@ -15,7 +72,7 @@ export async function runGrader(trialDir) {
     success: false,
     requirementsTotal: 3,
     requirementsPassed: 0,
-    hiddenTestsTotal: 3,
+    hiddenTestsTotal: 6,
     hiddenTestsPassed: 0,
     forbiddenFilesChanged: 0,
     ownershipViolations: 0,
@@ -23,31 +80,17 @@ export async function runGrader(trialDir) {
     errors: []
   };
 
-  // 1. Check Git Status for forbidden modifications
-  try {
-    const gitStatus = execSync('git status --porcelain', {
-      cwd: trialDir,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe']
-    }).trim();
-
-    const changedFiles = gitStatus
-      .split('\n')
-      .map(line => line.trim().slice(3).trim())
-      .filter(Boolean);
-
-    for (const file of changedFiles) {
-      if (!ALLOWED_FILES.some(allowed => file === allowed || file.startsWith(allowed))) {
-        result.forbiddenFilesChanged++;
-        result.ownershipViolations++;
-        result.errors.push(`Forbidden file modified: ${file}`);
-      }
+  // 1. Check Git Status / Diff against BENCHMARK_START_SHA for forbidden modifications
+  const allAgentFiles = getAgentModifiedFiles(trialDir);
+  for (const file of allAgentFiles) {
+    if (!ALLOWED_FILES.some(allowed => file === allowed || file.startsWith(allowed))) {
+      result.forbiddenFilesChanged++;
+      result.ownershipViolations++;
+      result.errors.push(`Forbidden file modified by agent: ${file}`);
     }
-  } catch (err) {
-    result.errors.push(`Git status inspection failed: ${err.message}`);
   }
 
-  // 2. Requirement 1: VerifyAttendanceSchema
+  // 2. Requirement 1: VerifyAttendanceSchema in src/contracts/meeting.ts
   const meetingContractPath = path.join(trialDir, 'src/contracts/meeting.ts');
   if (fs.existsSync(meetingContractPath)) {
     const content = fs.readFileSync(meetingContractPath, 'utf8');
@@ -60,7 +103,7 @@ export async function runGrader(trialDir) {
     result.errors.push('src/contracts/meeting.ts missing');
   }
 
-  // 3. Requirement 2: validateMeetingQuorum
+  // 3. Requirement 2: validateMeetingQuorum in src/lib/services/meeting-service.ts
   const meetingServicePath = path.join(trialDir, 'src/lib/services/meeting-service.ts');
   if (fs.existsSync(meetingServicePath)) {
     const content = fs.readFileSync(meetingServicePath, 'utf8');
@@ -84,8 +127,10 @@ export async function runGrader(trialDir) {
   // 5. Hidden assertions via tsx
   const testScript = `
 import { VerifyAttendanceSchema } from './src/contracts/meeting';
+import { validateMeetingQuorum } from './src/lib/services/meeting-service';
 let passed = 0;
 try {
+  // Test 1: VerifyAttendanceSchema valid parsing
   const parsed = VerifyAttendanceSchema.safeParse({
     meetingId: 'm1',
     participantId: 'p1',
@@ -94,9 +139,36 @@ try {
     verifiedBy: 'u1'
   });
   if (parsed.success) passed++;
-  const invalid = VerifyAttendanceSchema.safeParse({ meetingId: '' });
+
+  // Test 2: VerifyAttendanceSchema rejects missing participant
+  const invalid = VerifyAttendanceSchema.safeParse({ meetingId: 'm1' });
   if (!invalid.success) passed++;
-  passed++;
+
+  // Test 3: Quorum meets >= 50% threshold (1 present, 1 absent -> 50%)
+  const q1 = validateMeetingQuorum('m1', [
+    { id: 'p1', status: 'PRESENT' },
+    { id: 'p2', status: 'ABSENT' }
+  ]);
+  if (q1 && q1.hasQuorum === true && Math.abs(q1.ratio - 0.5) < 0.01) passed++;
+
+  // Test 4: Quorum rejects < 50% threshold (1 present, 2 absent -> 33.3%)
+  const q2 = validateMeetingQuorum('m2', [
+    { id: 'p1', status: 'PRESENT' },
+    { id: 'p2', status: 'ABSENT' },
+    { id: 'p3', status: 'ABSENT' }
+  ]);
+  if (q2 && q2.hasQuorum === false && q2.ratio < 0.5) passed++;
+
+  // Test 5: Quorum treats EXCUSED as attending for quorum calculation (1 excused, 1 absent -> 50%)
+  const q3 = validateMeetingQuorum('m3', [
+    { id: 'p1', status: 'EXCUSED' },
+    { id: 'p2', status: 'ABSENT' }
+  ]);
+  if (q3 && q3.hasQuorum === true) passed++;
+
+  // Test 6: Empty participants returns hasQuorum = false
+  const q4 = validateMeetingQuorum('m4', []);
+  if (q4 && q4.hasQuorum === false) passed++;
 } catch (e) {
   process.stderr.write(String(e));
 }
@@ -122,7 +194,8 @@ process.stdout.write(String(passed));
   result.success = (
     result.requirementsPassed === result.requirementsTotal &&
     result.hiddenTestsPassed === result.hiddenTestsTotal &&
-    result.forbiddenFilesChanged === 0
+    result.forbiddenFilesChanged === 0 &&
+    result.ownershipViolations === 0
   );
 
   return result;

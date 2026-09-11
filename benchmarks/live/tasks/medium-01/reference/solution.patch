@@ -1,0 +1,94 @@
+diff --git a/src/contracts/meeting.ts b/src/contracts/meeting.ts
+index 544fe2f..52dd303 100644
+--- a/src/contracts/meeting.ts
++++ b/src/contracts/meeting.ts
+@@ -120,3 +120,13 @@ export const ListMeetingsQuerySchema = z.object({
+ });
+ 
+ export type ListMeetingsQuery = z.infer<typeof ListMeetingsQuerySchema>;
++
++export const VerifyAttendanceSchema = z.object({
++  meetingId: z.string().min(1),
++  participantId: z.string().min(1),
++  status: z.enum(["PRESENT", "ABSENT", "EXCUSED", "LATE"]),
++  verifiedAt: z.string().min(1),
++  verifiedBy: z.string().min(1),
++});
++
++export type VerifyAttendanceInput = z.infer<typeof VerifyAttendanceSchema>;
+diff --git a/src/lib/services/meeting-service.ts b/src/lib/services/meeting-service.ts
+new file mode 100644
+index 0000000..a213ed1
+--- /dev/null
++++ b/src/lib/services/meeting-service.ts
+@@ -0,0 +1,33 @@
++export interface MeetingQuorumResult {
++  hasQuorum: boolean;
++  ratio: number;
++  presentCount: number;
++  totalCount: number;
++}
++
++export function validateMeetingQuorum(
++  meetingId: string,
++  participants: Array<{ id: string; status: string }>
++): MeetingQuorumResult {
++  if (!participants || participants.length === 0) {
++    return {
++      hasQuorum: false,
++      ratio: 0,
++      presentCount: 0,
++      totalCount: 0,
++    };
++  }
++
++  const presentCount = participants.filter(
++    (p) => p.status === "PRESENT" || p.status === "EXCUSED"
++  ).length;
++  const totalCount = participants.length;
++  const ratio = presentCount / totalCount;
++
++  return {
++    hasQuorum: ratio >= 0.5,
++    ratio,
++    presentCount,
++    totalCount,
++  };
++}
+diff --git a/tests/unit/meeting.test.ts b/tests/unit/meeting.test.ts
+new file mode 100644
+index 0000000..4fe9cbc
+--- /dev/null
++++ b/tests/unit/meeting.test.ts
+@@ -0,0 +1,31 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { VerifyAttendanceSchema } from "../../src/contracts/meeting";
++import { validateMeetingQuorum } from "../../src/lib/services/meeting-service";
++
++test("VerifyAttendanceSchema validates input correctly", () => {
++  const valid = VerifyAttendanceSchema.safeParse({
++    meetingId: "m1",
++    participantId: "p1",
++    status: "PRESENT",
++    verifiedAt: new Date().toISOString(),
++    verifiedBy: "u1"
++  });
++  assert.equal(valid.success, true);
++});
++
++test("validateMeetingQuorum enforces 50% attendance quorum", () => {
++  const quorumPass = validateMeetingQuorum("m1", [
++    { id: "1", status: "PRESENT" },
++    { id: "2", status: "ABSENT" }
++  ]);
++  assert.equal(quorumPass.hasQuorum, true);
++  assert.equal(quorumPass.ratio, 0.5);
++
++  const quorumFail = validateMeetingQuorum("m2", [
++    { id: "1", status: "PRESENT" },
++    { id: "2", status: "ABSENT" },
++    { id: "3", status: "ABSENT" }
++  ]);
++  assert.equal(quorumFail.hasQuorum, false);
++});

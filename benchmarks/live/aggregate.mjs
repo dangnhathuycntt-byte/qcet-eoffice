@@ -2,105 +2,147 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
- * Basic statistical operations: mean, median, standard deviation.
+ * Basic statistical operations: mean, median, quantiles, and IQR.
  */
 function mean(arr) {
   if (!arr.length) return 0;
   return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
 
-function median(arr) {
-  if (!arr.length) return 0;
-  const s = [...arr].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 !== 0 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+function percentile(sortedArr, p) {
+  if (!sortedArr.length) return 0;
+  if (sortedArr.length === 1) return sortedArr[0];
+  const idx = (p / 100) * (sortedArr.length - 1);
+  const lower = Math.floor(idx);
+  const upper = Math.ceil(idx);
+  const weight = idx - lower;
+  return sortedArr[lower] * (1 - weight) + sortedArr[upper] * weight;
 }
 
-/**
- * Compute 95% bootstrap confidence interval (1000 resamples).
- */
-function bootstrapCI(arr, samples = 1000, alpha = 0.05) {
-  if (!arr.length) return [0, 0];
-  if (arr.length === 1) return [arr[0], arr[0]];
-
-  const means = [];
-  const n = arr.length;
-
-  for (let i = 0; i < samples; i++) {
-    let sum = 0;
-    for (let j = 0; j < n; j++) {
-      const idx = Math.floor(Math.random() * n);
-      sum += arr[idx];
-    }
-    means.push(sum / n);
+function calculateDistribution(arr) {
+  if (!arr.length) {
+    return { mean: 0, median: 0, q1: 0, q3: 0, iqr: 0 };
   }
-
-  means.sort((a, b) => a - b);
-  const lowerIdx = Math.floor(samples * (alpha / 2));
-  const upperIdx = Math.floor(samples * (1 - alpha / 2));
-
-  return [means[lowerIdx], means[upperIdx]];
+  const s = [...arr].sort((a, b) => a - b);
+  const q1 = Math.round(percentile(s, 25));
+  const med = Math.round(percentile(s, 50));
+  const q3 = Math.round(percentile(s, 75));
+  const iqr = q3 - q1;
+  return {
+    mean: Math.round(mean(s)),
+    median: med,
+    q1,
+    q3,
+    iqr
+  };
 }
 
 /**
- * Aggregate trial results across arms and tasks.
+ * Aggregate trial results disaggregated per Task x Arm, and overall by Arm.
+ * Enforces strict tracking of agentVerdict, graderVerdict, falseReady, timeouts, and defects.
  */
 export function aggregateBenchmarkResults(results) {
   const byArm = { A: [], B: [], C: [] };
+  const byTaskAndArm = {};
 
   for (const r of results) {
     if (byArm[r.arm]) {
       byArm[r.arm].push(r);
     }
+    if (!byTaskAndArm[r.task]) {
+      byTaskAndArm[r.task] = { A: [], B: [], C: [] };
+    }
+    if (byTaskAndArm[r.task][r.arm]) {
+      byTaskAndArm[r.task][r.arm].push(r);
+    }
   }
 
+  // Calculate detailed summary per Task x Arm
+  const taskSummaries = {};
+  for (const [taskName, arms] of Object.entries(byTaskAndArm)) {
+    taskSummaries[taskName] = {};
+    for (const [armKey, trials] of Object.entries(arms)) {
+      const wallClocks = trials.map(t => t.durationMs || 0);
+      const tokens = trials.map(t => t.totalTokens || 0);
+      const passed = trials.filter(t => t.grade?.success).length;
+      const falseReadyCount = trials.filter(t => t.grade?.falseReady).length;
+      const timeouts = trials.filter(t => t.timedOut || t.grade?.agentVerdict === 'TIMEOUT').length;
+      const crashes = trials.filter(t => t.isError || t.grade?.agentVerdict === 'ERROR').length;
+      const escapedDefects = trials.reduce((acc, t) => acc + (t.grade?.escapedDefects || 0), 0);
+      const ownershipViolations = trials.reduce((acc, t) => acc + (t.grade?.ownershipViolations || 0), 0);
+
+      taskSummaries[taskName][armKey] = {
+        task: taskName,
+        arm: armKey,
+        totalTrials: trials.length,
+        passedTrials: passed,
+        passRate: trials.length ? (passed / trials.length) * 100 : 0,
+        falseReadyCount,
+        timeouts,
+        crashes,
+        escapedDefects,
+        ownershipViolations,
+        wallClockMs: calculateDistribution(wallClocks),
+        tokens: calculateDistribution(tokens)
+      };
+    }
+  }
+
+  // Calculate overall summary per Arm
   const armSummaries = {};
   for (const [armKey, trials] of Object.entries(byArm)) {
     const wallClocks = trials.map(t => t.durationMs || 0);
     const tokens = trials.map(t => t.totalTokens || 0);
+    const passed = trials.filter(t => t.grade?.success).length;
+    const falseReadyCount = trials.filter(t => t.grade?.falseReady).length;
+    const timeouts = trials.filter(t => t.timedOut || t.grade?.agentVerdict === 'TIMEOUT').length;
+    const crashes = trials.filter(t => t.isError || t.grade?.agentVerdict === 'ERROR').length;
     const escapedDefects = trials.reduce((acc, t) => acc + (t.grade?.escapedDefects || 0), 0);
     const ownershipViolations = trials.reduce((acc, t) => acc + (t.grade?.ownershipViolations || 0), 0);
-    const passes = trials.filter(t => t.grade?.success).length;
 
     armSummaries[armKey] = {
       arm: armKey,
       totalTrials: trials.length,
-      passedTrials: passes,
-      passRate: trials.length ? (passes / trials.length) * 100 : 0,
-      wallClockMs: {
-        mean: Math.round(mean(wallClocks)),
-        median: Math.round(median(wallClocks)),
-        ci95: bootstrapCI(wallClocks).map(v => Math.round(v))
-      },
-      tokens: {
-        mean: Math.round(mean(tokens)),
-        median: Math.round(median(tokens)),
-        ci95: bootstrapCI(tokens).map(v => Math.round(v))
-      },
-      totalEscapedDefects: escapedDefects,
-      totalOwnershipViolations: ownershipViolations
+      passedTrials: passed,
+      passRate: trials.length ? (passed / trials.length) * 100 : 0,
+      falseReadyCount,
+      timeouts,
+      crashes,
+      escapedDefects,
+      ownershipViolations,
+      wallClockMs: calculateDistribution(wallClocks),
+      tokens: calculateDistribution(tokens)
     };
   }
 
-  // Comparisons: Arm C (Lean V2) vs Arm B (V1.5 Hardened)
+  // Comparisons based on medians: Arm C (Lean V2) vs Arm B (V1.5 Hardened)
   let speedupVsB = 1.0;
-  let tokenReductionVsB = 1.0;
-  if (armSummaries.B.wallClockMs.mean > 0 && armSummaries.C.wallClockMs.mean > 0) {
-    speedupVsB = Number((armSummaries.B.wallClockMs.mean / armSummaries.C.wallClockMs.mean).toFixed(2));
+  let tokenRatioVsB = 1.0;
+  if (armSummaries.B?.wallClockMs.median > 0 && armSummaries.C?.wallClockMs.median > 0) {
+    speedupVsB = Number((armSummaries.B.wallClockMs.median / armSummaries.C.wallClockMs.median).toFixed(2));
   }
-  if (armSummaries.B.tokens.mean > 0 && armSummaries.C.tokens.mean > 0) {
-    tokenReductionVsB = Number((armSummaries.C.tokens.mean / armSummaries.B.tokens.mean).toFixed(2));
+  if (armSummaries.B?.tokens.median > 0 && armSummaries.C?.tokens.median > 0) {
+    tokenRatioVsB = Number((armSummaries.C.tokens.median / armSummaries.B.tokens.median).toFixed(2));
   }
 
-  // Comparisons: Arm C (Lean V2) vs Arm A (Pure Ultracode)
+  // Comparisons based on medians: Arm C (Lean V2) vs Arm A (Pure Ultracode)
   let speedupVsA = 1.0;
-  if (armSummaries.A.wallClockMs.mean > 0 && armSummaries.C.wallClockMs.mean > 0) {
-    speedupVsA = Number((armSummaries.A.wallClockMs.mean / armSummaries.C.wallClockMs.mean).toFixed(2));
+  if (armSummaries.A?.wallClockMs.median > 0 && armSummaries.C?.wallClockMs.median > 0) {
+    speedupVsA = Number((armSummaries.A.wallClockMs.median / armSummaries.C.wallClockMs.median).toFixed(2));
   }
 
-  // Decision Logic
-  const armC = armSummaries.C;
-  const isCQualityPassing = armC.totalEscapedDefects === 0 && armC.totalOwnershipViolations === 0;
+  // Decision & Quality Gating
+  const armC = armSummaries.C || { passRate: 0, falseReadyCount: 0, escapedDefects: 0, ownershipViolations: 0 };
+  const armB = armSummaries.B || { passRate: 0, falseReadyCount: 0, escapedDefects: 0, ownershipViolations: 0 };
+
+  const criticalCPassRate = taskSummaries['critical-01']?.C?.passRate ?? 100;
+  const isCQualityPassing =
+    armC.passRate >= armB.passRate &&
+    armC.falseReadyCount <= armB.falseReadyCount &&
+    armC.escapedDefects <= armB.escapedDefects &&
+    armC.ownershipViolations === 0 &&
+    criticalCPassRate === 100;
+
   const isEfficiencyMet = speedupVsB >= 1.0 || speedupVsA >= 0.9;
 
   let recommendation = 'INCONCLUSIVE';
@@ -115,9 +157,10 @@ export function aggregateBenchmarkResults(results) {
   return {
     timestamp: new Date().toISOString(),
     armSummaries,
+    taskSummaries,
     comparisons: {
       speedupVsV15: speedupVsB,
-      tokenRatioVsV15: tokenReductionVsB,
+      tokenRatioVsV15: tokenRatioVsB,
       speedupVsUltracode: speedupVsA
     },
     recommendation,
