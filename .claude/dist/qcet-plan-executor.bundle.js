@@ -2044,6 +2044,53 @@ export function hasIdenticalRootCauseFailure(failures) {
   return Boolean(sig1 && sig2 && sig1 === sig2);
 }
 
+export function mergeVerificationResults(res1, res2) {
+  if (!res1 && !res2) {
+    return {
+      verdict: 'fail',
+      requirementsChecked: [],
+      issues: [{ id: 'merge-null', severity: 'critical', summary: 'Both verifiers returned null.' }],
+      summary: 'Verification failed: both verifiers failed to return output.',
+    };
+  }
+  if (!res1) return res2;
+  if (!res2) return res1;
+
+  const v1 = String(res1.verdict || 'fail').toLowerCase();
+  const v2 = String(res2.verdict || 'fail').toLowerCase();
+
+  let finalVerdict = 'pass';
+  if (v1 === 'blocked' || v2 === 'blocked') {
+    finalVerdict = 'blocked';
+  } else if (v1 === 'fail' || v2 === 'fail') {
+    finalVerdict = 'fail';
+  }
+
+  const reqs = Array.from(new Set([...(res1.requirementsChecked || []), ...(res2.requirementsChecked || [])]));
+  const seenIssues = new Set();
+  const issues = [];
+
+  for (const issue of [...(res1.issues || []), ...(res2.issues || [])]) {
+    if (!issue) continue;
+    const key = `${issue.file || ''}:${issue.title || issue.description || issue.id || ''}`.toLowerCase();
+    if (!seenIssues.has(key)) {
+      seenIssues.add(key);
+      issues.push(issue);
+    }
+  }
+
+  if (issues.length > 0 && finalVerdict === 'pass') {
+    finalVerdict = 'fail';
+  }
+
+  return {
+    verdict: finalVerdict,
+    requirementsChecked: reqs,
+    issues,
+    summary: `Merged verifier verdicts: [verifier1=${v1}, verifier2=${v2}]. Issues: ${issues.length}.`,
+  };
+}
+
 export const FAILURE_REASONS = new Set([
   'DEPENDENCY_BLOCKED', 'WORKTREE_INVALID', 'OWNERSHIP_CONFLICT',
   'RUNTIME_FILE_CONFLICT', 'AGENT_BUDGET_EXHAUSTED',
@@ -2560,59 +2607,121 @@ Write the file accurately.`,
 
     let verification = null;
 
-    if (risk === 'high' || risk === 'critical') {
-      log(
-        `Shard ${shardPacket.id} is ${risk.toUpperCase()} risk: dispatching parallel multi-skeptic panel + arbiter synthesis.`
+    if (risk === 'critical') {
+      const isAuthOrSecurity = shardPacket.owns?.some((f) =>
+        /auth|crypto|session|permission|rbac|jwt|secret/i.test(f)
       );
+      const isDatabaseOrCore = shardPacket.owns?.some((f) =>
+        /prisma|schema|database|db|migration/i.test(f)
+      );
+      const specializedAgentType = isAuthOrSecurity
+        ? 'security-reviewer'
+        : isDatabaseOrCore
+          ? 'data-reviewer'
+          : null;
 
-      const panelResults = await parallel([
-        // Skeptic 1: Functional specifications, contracts, callers, and regressions
-        () =>
-          callAgent(
-            `${SKEPTIC_STATIC_PREFIX}
+      const skepticPrompt = `${SKEPTIC_STATIC_PREFIX}
 
-PANEL AUDIT FOCUS: SKEPTIC 1 — SPECIFICATION, CONTRACTS & REGRESSIONS
+PANEL AUDIT FOCUS: CRITICAL RISK TIER (INDEPENDENT SKEPTIC)
 Your specific focus:
 - Acceptance criteria and mapped requirements compliance.
-- Public API signatures, TypeScript contracts, Prisma model interactions.
-- Caller and consumer drift across adjacent modules.
-- Regression hazards and integration side-effects.
-- Verify tests actually exercise the changed behavior.
-
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-RECON EVIDENCE:
-${JSON.stringify(state.recon, null, 2)}
-
-RESEARCH EVIDENCE:
-${JSON.stringify(state.research || null, 2)}
-
-IMPLEMENTATION CLAIM:
-${JSON.stringify(state.implementation, null, 2)}
-
-Verification round: ${round}
-${ambiguityFallback}`,
-            {
-              agent: 'qcet-skeptic',
-              agentType: 'qcet-skeptic',
-              phase: 'Verify',
-              label: `${shardPacket.id}:verify-${round}-spec`,
-              schema: VERIFY_SCHEMA,
-            }
-          ),
-
-        // Skeptic 2: Security boundaries, negative assertions, data integrity
-        () =>
-          callAgent(
-            `${SKEPTIC_STATIC_PREFIX}
-
-PANEL AUDIT FOCUS: SKEPTIC 2 — SECURITY, AUTHORIZATION & BOUNDARIES
-Your specific focus:
 - Server-side authorization, RBAC, session verification, and trust boundaries.
 - Negative assertions: invalid, null, malformed, empty, or unauthorized inputs.
 - Data integrity: transaction boundaries, concurrency, and persistence correctness.
-- Test validity: ensure tests assert failure on broken invariants.
+- Public API signatures, TypeScript contracts, Prisma model interactions.
+- Caller and consumer drift across adjacent modules.
+- Verify tests actually exercise the changed behavior under negative conditions.
+
+JIT SHARD PACKET:
+${JSON.stringify(shardPacket, null, 2)}
+
+RECON EVIDENCE:
+${JSON.stringify(state.recon, null, 2)}
+
+RESEARCH EVIDENCE:
+${JSON.stringify(state.research || null, 2)}
+
+IMPLEMENTATION CLAIM:
+${JSON.stringify(state.implementation, null, 2)}
+
+Verification round: ${round}
+${ambiguityFallback}`;
+
+      if (specializedAgentType) {
+        log(
+          `Shard ${shardPacket.id} is CRITICAL risk: dispatching independent qcet-skeptic + specialized ${specializedAgentType}.`
+        );
+        const domainPrompt = `${SKEPTIC_STATIC_PREFIX}
+
+PANEL AUDIT FOCUS: CRITICAL DOMAIN VERIFICATION (${specializedAgentType.toUpperCase()})
+Your specific focus:
+${
+  specializedAgentType === 'security-reviewer'
+    ? '- Server-side authorization, RBAC, session verification, and trust boundaries.\n- Authentication bypass vulnerabilities and secret leakage prevention.\n- Separation of duties and payload sanitization.'
+    : '- Data integrity, transaction atomicity, and schema backward-compatibility.\n- Real database entities, server truth reconciliation, and zero synthetic operational data.\n- Proper metric calculation and denominator separation.'
+}
+
+JIT SHARD PACKET:
+${JSON.stringify(shardPacket, null, 2)}
+
+RECON EVIDENCE:
+${JSON.stringify(state.recon, null, 2)}
+
+RESEARCH EVIDENCE:
+${JSON.stringify(state.research || null, 2)}
+
+IMPLEMENTATION CLAIM:
+${JSON.stringify(state.implementation, null, 2)}
+
+Verification round: ${round}
+${ambiguityFallback}`;
+
+        const [skepticResult, domainResult] = await parallel([
+          () =>
+            callAgent(skepticPrompt, {
+              agent: 'qcet-skeptic',
+              agentType: 'qcet-skeptic',
+              phase: 'Verify',
+              label: `${shardPacket.id}:verify-${round}-skeptic`,
+              schema: VERIFY_SCHEMA,
+            }),
+          () =>
+            callAgent(domainPrompt, {
+              agent: specializedAgentType,
+              agentType: specializedAgentType,
+              phase: 'Verify',
+              label: `${shardPacket.id}:verify-${round}-${specializedAgentType}`,
+              schema: VERIFY_SCHEMA,
+            }),
+        ]);
+
+        verification = mergeVerificationResults(skepticResult, domainResult);
+      } else {
+        log(
+          `Shard ${shardPacket.id} is CRITICAL risk: dispatching single independent qcet-skeptic with critical risk rubric.`
+        );
+        verification = await callAgent(skepticPrompt, {
+          agent: 'qcet-skeptic',
+          agentType: 'qcet-skeptic',
+          phase: 'Verify',
+          label: `${shardPacket.id}:verify-${round}`,
+          schema: VERIFY_SCHEMA,
+        });
+      }
+    } else if (risk === 'high') {
+      log(
+        `Shard ${shardPacket.id} is HIGH risk: dispatching single independent qcet-skeptic with high-risk rubric.`
+      );
+      verification = await callAgent(
+        `${SKEPTIC_STATIC_PREFIX}
+
+VERIFICATION FOCUS: HIGH RISK TIER
+Stronger deterministic rubric based on risk surface:
+- Authorization boundaries and role/scope separation.
+- Schema compatibility, migration safety, and public API contracts.
+- Caller and consumer drift across adjacent modules.
+- Caller regressions and integration side-effects.
+- Verify tests actually exercise changed behavior under negative conditions.
 
 JIT SHARD PACKET:
 ${JSON.stringify(shardPacket, null, 2)}
@@ -2628,55 +2737,14 @@ ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
 ${ambiguityFallback}`,
-            {
-              agent: 'qcet-skeptic',
-              agentType: 'qcet-skeptic',
-              phase: 'Verify',
-              label: `${shardPacket.id}:verify-${round}-security`,
-              schema: VERIFY_SCHEMA,
-            }
-          ),
-      ]);
-
-      const [specVerifier, securityVerifier] = panelResults;
-
-      const arbiterPrompt = `${SKEPTIC_STATIC_PREFIX}
-
-You are the QCET ADVERSARIAL VERIFICATION ARBITER for shard ${shardPacket.id}.
-Two independent skeptics audited this ${risk.toUpperCase()} risk implementation:
-
-SKEPTIC 1 (SPECIFICATION & CONTRACTS):
-${JSON.stringify(specVerifier, null, 2)}
-
-SKEPTIC 2 (SECURITY & BOUNDARIES):
-${JSON.stringify(securityVerifier, null, 2)}
-
-JIT SHARD PACKET:
-${JSON.stringify(shardPacket, null, 2)}
-
-IMPLEMENTATION CLAIM:
-${JSON.stringify(state.implementation, null, 2)}
-
-Verification round: ${round}
-
-YOUR MANDATE:
-Synthesize an authoritative, consolidated verification verdict.
-
-CRITICAL INVARIANTS:
-1. Prioritize concrete repository evidence over synthetic consensus: do NOT dismiss a true defect merely because only one skeptic discovered it. If an issue is supported by real repository evidence, it MUST be included.
-2. Refute only clear false positives or deduplicate findings describing the same root cause.
-3. If ANY confirmed defect or invariant violation remains, verdict MUST be 'fail'.
-4. If both skeptics passed with zero defects and repository evidence confirms correctness, verdict is 'pass'.
-${ambiguityFallback}`;
-
-      verification = await callAgent(arbiterPrompt, {
-        agent: 'qcet-skeptic',
-        agentType: 'qcet-skeptic',
-        phase: 'Verify',
-        label: `${shardPacket.id}:verify-${round}-arbiter`,
-        schema: VERIFY_SCHEMA,
-      });
-
+        {
+          agent: 'qcet-skeptic',
+          agentType: 'qcet-skeptic',
+          phase: 'Verify',
+          label: `${shardPacket.id}:verify-${round}`,
+          schema: VERIFY_SCHEMA,
+        }
+      );
     } else if (risk === 'medium') {
       verification = await callAgent(
         `${SKEPTIC_STATIC_PREFIX}

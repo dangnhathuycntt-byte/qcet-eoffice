@@ -85,13 +85,17 @@ export function resolveAdaptivePolicy(shard) {
     /components|views|ui|styles|pages/i.test(f)
   );
 
+  let specializedVerifier = null;
+
   if (isAuthOrSecurity) {
     risk = 'critical';
     lenses.add('security');
     lenses.add('data-integrity');
+    specializedVerifier = 'security-reviewer';
   } else if (isDatabaseOrCore) {
-    risk = 'high';
+    risk = files.some((f) => /prisma|schema|migration/i.test(f)) ? 'critical' : 'high';
     lenses.add('data-integrity');
+    specializedVerifier = 'data-reviewer';
   } else if (isRouterOrApi) {
     risk = 'medium';
     lenses.add('security');
@@ -117,6 +121,60 @@ export function resolveAdaptivePolicy(shard) {
     lenses: Array.from(lenses),
     requireAdversarialVerification: risk === 'critical' || risk === 'high',
     recommendedIsolation: shard.isolation === 'worktree' || risk === 'critical' ? 'worktree' : 'in_place',
+    specializedVerifier,
+  };
+}
+
+/**
+ * Deterministically merges verification results from independent verifiers without requiring an arbiter agent.
+ * @param {Object} res1
+ * @param {Object} res2
+ * @returns {Object} Merged verification result
+ */
+export function mergeVerificationResults(res1, res2) {
+  if (!res1 && !res2) {
+    return {
+      verdict: 'fail',
+      requirementsChecked: [],
+      issues: [{ id: 'merge-null', severity: 'critical', summary: 'Both verifiers returned null.' }],
+      summary: 'Verification failed: both verifiers failed to return output.',
+    };
+  }
+  if (!res1) return res2;
+  if (!res2) return res1;
+
+  const v1 = String(res1.verdict || 'fail').toLowerCase();
+  const v2 = String(res2.verdict || 'fail').toLowerCase();
+
+  let finalVerdict = 'pass';
+  if (v1 === 'blocked' || v2 === 'blocked') {
+    finalVerdict = 'blocked';
+  } else if (v1 === 'fail' || v2 === 'fail') {
+    finalVerdict = 'fail';
+  }
+
+  const reqs = Array.from(new Set([...(res1.requirementsChecked || []), ...(res2.requirementsChecked || [])]));
+  const seenIssues = new Set();
+  const issues = [];
+
+  for (const issue of [...(res1.issues || []), ...(res2.issues || [])]) {
+    if (!issue) continue;
+    const key = `${issue.file || ''}:${issue.title || issue.description || issue.id || ''}`.toLowerCase();
+    if (!seenIssues.has(key)) {
+      seenIssues.add(key);
+      issues.push(issue);
+    }
+  }
+
+  if (issues.length > 0 && finalVerdict === 'pass') {
+    finalVerdict = 'fail';
+  }
+
+  return {
+    verdict: finalVerdict,
+    requirementsChecked: reqs,
+    issues,
+    summary: `Merged verifier verdicts: [verifier1=${v1}, verifier2=${v2}]. Issues: ${issues.length}.`,
   };
 }
 
