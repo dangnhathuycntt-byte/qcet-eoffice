@@ -153,7 +153,7 @@ Snapshot behavioral baseline:
 - Files: `src/components/workspace/unified-adaptive-workspace.tsx`, `src/components/dashboard/unified-task-toolbar.tsx`
 - Sửa label thành `"Giao việc"`, không duplicate dấu `+` khi Lucide `Plus` đã render.
 
-### 5.3 Không tự render 12 tháng
+### 5.3 Không tự render 12 th��ng
 - File: `src/components/dashboard/unified-task-toolbar.tsx`
 - Trên `/tasks`, mặc định `showAcademicMonthBar = false`. Month nằm trong Filter popover.
 - Khi user chọn tháng (e.g. `month=9`), hiện filter chip `Tháng 9 ×`.
@@ -178,7 +178,7 @@ Snapshot behavioral baseline:
 
 - Một URL owner duy nhất: `src/hooks/use-task-workspace-query.ts` (hoặc refactor `use-task-filters.ts`).
 - URL canonical contract: `scope`, `dept`, `month`, `date`, `status`, `attention`, `view`, `q`, `taskId`, `viewId`.
-- Backward compatibility: Tự động normalize legacy params (`SCHOOL_TASKS`, `workbox=review`, `workbox=my_pending_approval`, `urgent_overdue`, etc.) về canonical keys.
+- Backward compatibility: Tự động normalize legacy params (`SCHOOL_TASKS`, `workbox=review`, `workbox=my_pending_approval`, `urgent_overdue`) về canonical keys.
 
 ---
 
@@ -186,7 +186,7 @@ Snapshot behavioral baseline:
 
 - Không tạo engine mới; sử dụng `resolveUserAttention(task, user)` và `UserAttentionType`.
 - Phân biệt rõ `status` (vòng đời khách quan) và `attention` (việc người dùng cần can thiệp).
-- Smart pills thích ứng theo quyền: BGH (Tất cả, Chờ tôi duy���t, Quá hạn, Vướng mắc, Sắp đến hạn), Manager (+ Cần tôi xử lý), Staff (Cần tôi xử lý, Quá hạn, Sắp đến hạn).
+- Smart pills thích ứng theo quyền: BGH (Tất cả, Chờ tôi duyệt, Quá hạn, Vướng mắc, Sắp đến hạn), Manager (+ Cần tôi xử lý), Staff (Cần tôi xử lý, Quá hạn, Sắp đến hạn).
 - Aggregator đếm duy nhất cho Attention counts để các surface (Pills, Queue, Dashboard, Badges) luôn đồng bộ tuyệt đối.
 
 ---
@@ -209,22 +209,51 @@ Snapshot behavioral baseline:
 
 ---
 
-## 11. PHASE 7 & 8 — Refactor UnifiedAdaptiveWorkspace & Mobile Alignment
+## 11. Cấu trúc Shard và Phân chia Trách nhiệm (Mandatory Disjoint Shards)
 
-- Thu nhỏ `UnifiedAdaptiveWorkspace` bằng cách extract hooks và composition components sạch sẽ.
-- Mobile giữ cùng mental model với Desktop, tinh chỉnh geometry responsive, duy trì touch target >= 44px và tuân thủ WCAG 2.2 AA.
+Để tránh xung đột tệp (file ownership collision), các shard được phân định ranh giới sở hữu nghiêm ngặt (`owns`) như sau:
 
----
+### Shard 1: Semantic, Scope Policy & URL Engine (`shard-semantic-url`)
+- **Owns**:
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/domain/tasks/workspace-scope-policy.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/domain/tasks/attention-resolver.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/hooks/use-task-filters.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/hooks/use-task-workspace-query.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/app/tasks/page.tsx`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/app/tasks/tasks-page-client.tsx`
+- **Mục tiêu**: Cung cấp `workspace-scope-policy.ts`, một URL owner canonical duy nhất (`use-task-workspace-query.ts`), chuẩn hóa legacy URL parameters, cập nhật Suspense fallback cho `/tasks`.
 
-## 12. Test Plan & Regression Gates
+### Shard 2: Task Toolbar & Table Presentation (`shard-task-ux`)
+- **Owns**:
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/components/dashboard/unified-task-toolbar.tsx`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/components/tasks/task-management-workspace.tsx`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/components/tasks/table/**`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/components/workspace/components/active-filter-breadcrumb.tsx`
+- **Mục tiêu**: Default table view, loại bỏ "+ + Giao việc", progressive disclosure cho 12 tháng, rút gọn toolbar thành query bar, visual hierarchy cho task table rows.
 
-- `task-workspace-default-view.test.ts`
-- `task-toolbar-period-disclosure.test.ts`
-- `task-toolbar-primary-action.test.ts`
-- `workspace-scope-policy.test.ts`
-- `workspace-query-canonicalization.test.ts`
-- `workspace-attention-filter.test.ts`
-- `workspace-attention-count-consistency.test.ts`
-- `executive-dashboard-attention-first.test.ts`
-- `executive-dashboard-zero-state.test.ts`
-- `workspace-role-boundary.test.ts`
+### Shard 3: Executive Dashboard & Action Center (`shard-executive-dashboard`)
+- **Owns**:
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/components/dashboard/zones/dashboard-zone.tsx`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/components/dashboard/executive-action-center.tsx`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/components/dashboard/executive-stat-strip.tsx`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/components/dashboard/personal-workbench.tsx`
+- **Mục tiêu**: Dashboard BGH attention-first queue, zero-state healthy consolidation, phân chia workbench theo role (BGH không trùng Action Center).
+
+### Shard 4: Regression Tests & Verification (`shard-verification`)
+- **Owns**:
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/tests/task-workspace-default-view.test.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/tests/task-toolbar-period-disclosure.test.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/tests/task-toolbar-primary-action.test.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/tests/workspace-scope-policy.test.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/tests/workspace-query-canonicalization.test.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/tests/workspace-attention-filter.test.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/tests/workspace-attention-count-consistency.test.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/tests/executive-dashboard-attention-first.test.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/tests/executive-dashboard-zero-state.test.ts`
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/tests/workspace-role-boundary.test.ts`
+- **Mục tiêu**: Viết bộ test regression cho tất cả các requirement trên.
+
+### Integration Shard (Phase 7): Unified Adaptive Workspace
+- **Owns**:
+  - `/Users/dnhhuy/Projects/QCET/QCET Work/src/components/workspace/unified-adaptive-workspace.tsx`
+- **Mục tiêu**: Tích hợp các API từ Shard 1 và Shard 2 vào workspace chung, đồng bộ counts và state.
