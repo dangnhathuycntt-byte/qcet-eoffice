@@ -2,13 +2,14 @@
 /**
  * QCET Plan Executor - Controlled A/B Benchmark (T11 / Phase 3 & 12)
  * Compares Baseline B0 vs Optimized B1 on identical independent eval cases
- * using REAL execution, real context bytes measurement, real DAG scheduling,
+ * using local harness execution, real context bytes measurement, real DAG scheduling,
  * and deterministic release readiness gates. Zero synthetic setTimeout or fabricated tokens.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { fileURLToPath } from 'node:url';
 import {
   getRepoRoot,
   ExecutionTelemetry,
@@ -29,18 +30,18 @@ import {
   selectIntegrationReviewDimensions,
 } from './lib/executor-contracts.mjs';
 
-async function runBenchmark() {
-  const repoRoot = getRepoRoot();
+async function runBenchmark(options = {}) {
+  const repoRoot = options.repoRoot || getRepoRoot();
   const evalsDir = path.join(repoRoot, '.superpowers', 'qcet-plan-executor', 'evals');
   fs.mkdirSync(evalsDir, { recursive: true });
 
-  const fixturesDir = path.join(repoRoot, 'tests', 'fixtures', 'eval-cases');
+  const fixturesDir = options.fixturesDir || path.join(repoRoot, 'tests', 'fixtures', 'eval-cases');
   const allFixtureFiles = fs.readdirSync(fixturesDir).filter((f) => f.endsWith('.json')).sort();
 
   // Highlight representative cases
   const representativeCases = ['case-ui-portal.json', 'case-auth-api.json', 'case-db-migration.json'];
 
-  console.log(`[benchmark] Running REAL A/B benchmark on ${allFixtureFiles.length} eval cases...`);
+  console.log(`[benchmark] Running local harness A/B microbenchmark on ${allFixtureFiles.length} eval cases...`);
   console.log(`[benchmark] Representative cases: ${representativeCases.join(', ')}`);
 
   // ---------------------------------------------------------------------------
@@ -53,6 +54,12 @@ async function runBenchmark() {
 
   let b0TotalContextBytes = 0;
   let b0TotalAgentCalls = 0;
+  let b0TotalReconCalls = 0;
+  let b0TotalBuilderCalls = 0;
+  let b0TotalVerifierCalls = 0;
+  let b0TotalReviewerCalls = 0;
+  let b0ExtractionDurationMs = 0;
+  let b0SchedulerMakespanMs = 0;
   let b0PeakConcurrent = 1;
   const b0Grades = [];
   const b0CaseMetrics = [];
@@ -71,17 +78,22 @@ async function runBenchmark() {
     // Baseline: Unbounded speculative pre-recon for ALL shards immediately
     const allShards = manifest.shards || [];
     let reconCalls = allShards.length; // Unbounded speculative recon
+    b0TotalReconCalls += reconCalls;
     b0TotalAgentCalls += reconCalls;
 
     // Baseline: Sequential shard execution (no concurrent DAG unblocking)
     const shardResults = {};
     const fixtureFileContents = {};
 
+    const seqStart = performance.now();
     for (const shard of allShards) {
+      b0TotalBuilderCalls += 1;
       b0TotalAgentCalls += 1; // builder call
+      b0TotalVerifierCalls += 2;
       b0TotalAgentCalls += 2; // fixed 2 verifiers without adaptive scaling
 
       // Full context: read all files without signature extraction
+      const extractStart = performance.now();
       let fullContextText = '';
       for (const filePath of shard.owns || []) {
         try {
@@ -96,6 +108,7 @@ async function runBenchmark() {
           fixtureFileContents[filePath] = fileText;
         } catch (_) {}
       }
+      b0ExtractionDurationMs += performance.now() - extractStart;
       const shardBytes = Buffer.byteLength(fullContextText, 'utf8');
       b0TotalContextBytes += shardBytes;
 
@@ -105,9 +118,11 @@ async function runBenchmark() {
         requirementsSatisfied: shard.requirements,
       };
     }
+    b0SchedulerMakespanMs += performance.now() - seqStart;
     caseFilesCache.set(file, fixtureFileContents);
 
     // Fixed integration review: always runs all 4 dimensions in baseline
+    b0TotalReviewerCalls += 4;
     b0TotalAgentCalls += 4;
 
     const diffSample = allShards.flatMap((s) => s.owns).map((f) => `+++ b/${f}\n+ // code modification`).join('\n');
@@ -136,6 +151,7 @@ async function runBenchmark() {
     b0CaseMetrics.push({
       file,
       durationMs: caseDuration,
+      estimatedAgentCalls: reconCalls + allShards.length * 3 + 4,
       agentCalls: reconCalls + allShards.length * 3 + 4,
       contextBytes: b0TotalContextBytes,
       score: grade.score,
@@ -159,6 +175,12 @@ async function runBenchmark() {
 
   let b1TotalContextBytes = 0;
   let b1TotalAgentCalls = 0;
+  let b1TotalReconCalls = 0;
+  let b1TotalBuilderCalls = 0;
+  let b1TotalVerifierCalls = 0;
+  let b1TotalReviewerCalls = 0;
+  let b1ExtractionDurationMs = 0;
+  let b1SchedulerMakespanMs = 0;
   let b1PeakConcurrent = 0;
   const b1Grades = [];
   const b1CaseMetrics = [];
@@ -182,6 +204,7 @@ async function runBenchmark() {
     // Bounded pre-recon lookahead (depth=1): only ready and 1-hop downstream shards
     const eligibleRecon = computeEligibleReconShards(manifest, activeIds, completedIds, 1);
     const reconCalls = eligibleRecon.size;
+    b1TotalReconCalls += reconCalls;
     b1TotalAgentCalls += reconCalls;
 
     // Dynamic DAG Scheduler with priority queue and concurrency pooling
@@ -196,13 +219,17 @@ async function runBenchmark() {
         if (currentConcurrent > b1PeakConcurrent) b1PeakConcurrent = currentConcurrent;
 
         // Adaptive context packet with signature extraction
+        const extractStart = performance.now();
         const ctx = buildAdaptiveContextPacket(shard, { repoRoot, fileContents: fixtureFileContents });
+        b1ExtractionDurationMs += performance.now() - extractStart;
         const shardBytes = ctx.compressedBytes || 0;
         b1TotalContextBytes += shardBytes;
 
         // Policy-aware adaptive verification (1 verifier for low/medium risk, 2 for high/critical)
         const policy = resolveAdaptivePolicy(shard);
         const verifierCalls = policy.risk === 'low' ? 1 : 2;
+        b1TotalBuilderCalls += 1;
+        b1TotalVerifierCalls += verifierCalls;
         b1TotalAgentCalls += 1 + verifierCalls; // builder + adaptive verifiers
 
         shardResults[shard.id] = {
@@ -216,11 +243,14 @@ async function runBenchmark() {
       },
     });
 
+    const schedStart = performance.now();
     await scheduler.execute();
+    b1SchedulerMakespanMs += performance.now() - schedStart;
 
     // Adaptive integration review: select only relevant dimensions based on changed files
     const allChangedFiles = allShards.flatMap((s) => s.owns || []);
     const activeReviewDimensions = selectIntegrationReviewDimensions(manifest, Object.values(shardResults));
+    b1TotalReviewerCalls += activeReviewDimensions.length;
     b1TotalAgentCalls += activeReviewDimensions.length;
 
     const diffSample = allChangedFiles.map((f) => `+++ b/${f}\n+ // code modification`).join('\n');
@@ -249,6 +279,7 @@ async function runBenchmark() {
     b1CaseMetrics.push({
       file,
       durationMs: caseDuration,
+      estimatedAgentCalls: reconCalls + allShards.length * 2 + activeReviewDimensions.length,
       agentCalls: reconCalls + allShards.length * 2 + activeReviewDimensions.length,
       contextBytes: b1TotalContextBytes,
       score: grade.score,
@@ -263,7 +294,7 @@ async function runBenchmark() {
   console.log(`[benchmark] Optimized B1 complete: Duration = ${b1DurationMs.toFixed(2)}ms, ContextBytes = ${b1TotalContextBytes}, AgentCalls = ${b1TotalAgentCalls}, Avg Score = ${b1AvgScore.toFixed(2)}`);
 
   // ---------------------------------------------------------------------------
-  // 3. REAL PERFORMANCE & QUALITY COMPARISON
+  // 3. PERFORMANCE & QUALITY COMPARISON
   // ---------------------------------------------------------------------------
   const contextSavingsPercent = b0TotalContextBytes > 0
     ? Math.round(((b0TotalContextBytes - b1TotalContextBytes) / b0TotalContextBytes) * 100)
@@ -276,16 +307,18 @@ async function runBenchmark() {
   const speedupRatio = Number((b0DurationMs / b1DurationMs).toFixed(2));
   const qualityDelta = Number((b1AvgScore - b0AvgScore).toFixed(2));
 
+  // Truthful telemetry: Do NOT substitute context bytes for model tokens.
+  // When live model token counter is not connected, measuredTokens is null.
   const benchmarkResult = gradeBenchmark(
     {
       totalDurationMs: b0DurationMs,
-      tokenUsage: { totalTokens: b0TotalContextBytes },
+      totalContextBytes: b0TotalContextBytes,
       qualityScore: b0AvgScore,
       verificationPassed: true,
     },
     {
       totalDurationMs: b1DurationMs,
-      tokenUsage: { totalTokens: b1TotalContextBytes },
+      totalContextBytes: b1TotalContextBytes,
       qualityScore: b1AvgScore,
       verificationPassed: true,
     }
@@ -293,7 +326,7 @@ async function runBenchmark() {
 
   const report = {
     timestamp: new Date().toISOString(),
-    benchmarkType: 'REAL_EXECUTION',
+    benchmarkType: 'LOCAL_HARNESS_BENCHMARK',
     fixturesCount: allFixtureFiles.length,
     representativeCases,
     hardGates: {
@@ -306,18 +339,46 @@ async function runBenchmark() {
       releaseReadinessDemonstrable: true,
     },
     baselineB0: {
+      observedLocalMetrics: {
+        totalWallClockMs: Number(b0DurationMs.toFixed(2)),
+        totalContextBytes: b0TotalContextBytes,
+        schedulerMakespanMs: Number(b0SchedulerMakespanMs.toFixed(2)),
+        localExtractionDurationMs: Number(b0ExtractionDurationMs.toFixed(2)),
+      },
+      estimatedStructuralMetrics: {
+        expectedAgentCalls: b0TotalAgentCalls,
+        theoreticalVerifierCalls: b0TotalVerifierCalls,
+        theoreticalBuilderCalls: b0TotalBuilderCalls,
+        theoreticalReconCalls: b0TotalReconCalls,
+        theoreticalReviewerCalls: b0TotalReviewerCalls,
+      },
       totalWallClockMs: Number(b0DurationMs.toFixed(2)),
       totalContextBytes: b0TotalContextBytes,
       measuredTokens: null, // null when API token counter is not connected - zero fabrication
+      estimatedAgentCalls: b0TotalAgentCalls,
       totalAgentCalls: b0TotalAgentCalls,
       peakConcurrentAgents: b0PeakConcurrent,
       avgQualityScore: b0AvgScore,
       cases: b0CaseMetrics,
     },
     optimizedB1: {
+      observedLocalMetrics: {
+        totalWallClockMs: Number(b1DurationMs.toFixed(2)),
+        totalContextBytes: b1TotalContextBytes,
+        schedulerMakespanMs: Number(b1SchedulerMakespanMs.toFixed(2)),
+        localExtractionDurationMs: Number(b1ExtractionDurationMs.toFixed(2)),
+      },
+      estimatedStructuralMetrics: {
+        expectedAgentCalls: b1TotalAgentCalls,
+        theoreticalVerifierCalls: b1TotalVerifierCalls,
+        theoreticalBuilderCalls: b1TotalBuilderCalls,
+        theoreticalReconCalls: b1TotalReconCalls,
+        theoreticalReviewerCalls: b1TotalReviewerCalls,
+      },
       totalWallClockMs: Number(b1DurationMs.toFixed(2)),
       totalContextBytes: b1TotalContextBytes,
       measuredTokens: null, // null when API token counter is not connected - zero fabrication
+      estimatedAgentCalls: b1TotalAgentCalls,
       totalAgentCalls: b1TotalAgentCalls,
       peakConcurrentAgents: b1PeakConcurrent,
       avgQualityScore: b1AvgScore,
@@ -326,6 +387,7 @@ async function runBenchmark() {
     gains: {
       speedupRatio,
       contextSavingsPercent,
+      estimatedAgentCallsSavedPercent: agentCallsSavedPercent,
       agentCallsSavedPercent,
       qualityDelta,
       passesQualityGate: benchmarkResult.passesQualityGate,
@@ -336,18 +398,33 @@ async function runBenchmark() {
   const reportPath = path.join(evalsDir, 'benchmark-B0-vs-B1.json');
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf8');
 
-  console.log('\n[benchmark] ================= REAL BENCHMARK RESULT =================');
+  console.log('\n[benchmark] ================= BENCHMARK RESULT (LOCAL_HARNESS_BENCHMARK) =================');
   console.log(`Hard Gates Status: ALL PASS (100% Coverage, 0 Violations, 0 Unresolved Defects)`);
   console.log(`Speedup Ratio: ${speedupRatio}x`);
   console.log(`Context Savings: ${contextSavingsPercent}% (${b0TotalContextBytes} bytes -> ${b1TotalContextBytes} bytes)`);
   console.log(`Agent Calls Saved: ${agentCallsSavedPercent}% (${b0TotalAgentCalls} calls -> ${b1TotalAgentCalls} calls)`);
   console.log(`Quality Difference: ${qualityDelta >= 0 ? '+' : ''}${qualityDelta}`);
-  console.log(`Benchmark Passed: ${benchmarkResult.passed ? 'PASSED' : 'PASSED (Target Speedup & Quality Gate met)'}`);
+  console.log(`Benchmark Passed: ${benchmarkResult.passed ? 'PASSED' : 'FAILED'}`);
   console.log(`Report written to: ${reportPath}`);
   console.log('=======================================================================\n');
+
+  if (!benchmarkResult.passed) {
+    process.exitCode = 1;
+  }
+
+  return { report, benchmarkResult };
 }
 
-runBenchmark().catch((err) => {
-  console.error('[benchmark] Error during benchmark:', err);
-  process.exit(1);
-});
+export { runBenchmark };
+
+const isMainModule = Boolean(
+  process.argv[1] &&
+  (process.argv[1] === fileURLToPath(import.meta.url) || process.argv[1].endsWith('run-benchmark.mjs'))
+);
+
+if (isMainModule) {
+  runBenchmark().catch((err) => {
+    console.error('[benchmark] Error during benchmark:', err);
+    process.exit(1);
+  });
+}
