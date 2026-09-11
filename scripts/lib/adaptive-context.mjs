@@ -412,9 +412,10 @@ export function formatIntegrationShardSummary(allShardResults = {}) {
     if (!res) continue;
     const shard = res.shard || { id: shardId };
     const packet = createEvidencePacket(shard, res);
-    const highOrCriticalIssues = (packet.confirmedFindings || []).filter(
-      (i) => i.severity === 'high' || i.severity === 'critical'
-    );
+    const highOrCriticalIssues = (packet.confirmedFindings || []).filter((i) => {
+      const sev = String(i?.severity || i?.level || '').toLowerCase();
+      return sev === 'high' || sev === 'critical';
+    });
     const highOrCriticalRisks = (packet.unresolvedRisks || []).filter((r) => {
       if (!r) return false;
       if (typeof r === 'string') {

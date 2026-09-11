@@ -223,5 +223,33 @@ test('adaptive-context: receiver formats provide tailored, minimal evidence', ()
   assert.ok(summary['shard-billing']);
   assert.equal(summary['shard-billing'].highOrCriticalFindings.length, 1);
   assert.equal(summary['shard-billing'].highOrCriticalRisks.length, 1);
+
+  // Integration summary: case-insensitivity and alias-awareness (severity vs level)
+  const caseAndAliasState = {
+    implementation: { changedFiles: [] },
+    lastVerification: {
+      issues: [
+        { id: 'ISS-2', severity: 'HIGH', file: 'a.ts' },
+        { id: 'ISS-3', level: 'critical', file: 'b.ts' },
+        { id: 'ISS-4', severity: 'Low', file: 'c.ts' },
+      ],
+    },
+  };
+  const caseSummary = formatIntegrationShardSummary({ 'shard-alias': caseAndAliasState });
+  assert.equal(caseSummary['shard-alias'].highOrCriticalFindings.length, 2);
+  assert.deepEqual(
+    caseSummary['shard-alias'].highOrCriticalFindings.map((f) => f.id),
+    ['ISS-2', 'ISS-3']
+  );
+});
+
+test('adaptive-context: ResearchCache isolates cache namespaces across different runs', () => {
+  const run1Cache = new ResearchCache(`run-1-${Date.now()}`);
+  const run2Cache = new ResearchCache(`run-2-${Date.now()}`);
+
+  run1Cache.set('How to configure CORS?', { answer: 'Use cors middleware' });
+
+  assert.ok(run1Cache.get('How to configure CORS?'));
+  assert.equal(run2Cache.get('How to configure CORS?'), null);
 });
 

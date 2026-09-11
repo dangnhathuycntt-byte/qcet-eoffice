@@ -2518,9 +2518,10 @@ export function formatIntegrationShardSummary(allShardResults = {}) {
     if (!res) continue;
     const shard = res.shard || { id: shardId };
     const packet = createEvidencePacket(shard, res);
-    const highOrCriticalIssues = (packet.confirmedFindings || []).filter(
-      (i) => i.severity === 'high' || i.severity === 'critical'
-    );
+    const highOrCriticalIssues = (packet.confirmedFindings || []).filter((i) => {
+      const sev = String(i?.severity || i?.level || '').toLowerCase();
+      return sev === 'high' || sev === 'critical';
+    });
     const highOrCriticalRisks = (packet.unresolvedRisks || []).filter((r) => {
       if (!r) return false;
       if (typeof r === 'string') {
@@ -2558,6 +2559,7 @@ let maxRepairRounds = 2;
 let lookaheadDepth = 1;
 let concurrency = 6;
 let speculativeReadLimit = undefined;
+let runId = null;
 
 if (typeof rawArgs === 'string') {
   const trimmed = rawArgs.trim().replace(/^['"]|['"]$/g, '');
@@ -2570,6 +2572,9 @@ if (typeof rawArgs === 'string') {
         planPath = parsed.planPath;
       } else if (parsed.plan) {
         planContent = parsed.plan;
+      }
+      if (typeof parsed.runId === 'string' && parsed.runId) {
+        runId = parsed.runId;
       }
       worktreeIsolation = parsed.worktreeIsolation !== undefined ? parsed.worktreeIsolation : 'auto';
       maxRepairRounds = typeof parsed.maxRepairRounds === 'number' ? parsed.maxRepairRounds : 2;
@@ -2599,6 +2604,9 @@ if (typeof rawArgs === 'string') {
     planPath = rawArgs.planPath;
   } else if (rawArgs.plan) {
     planContent = rawArgs.plan;
+  }
+  if (typeof rawArgs.runId === 'string' && rawArgs.runId) {
+    runId = rawArgs.runId;
   }
   worktreeIsolation = rawArgs.worktreeIsolation !== undefined ? rawArgs.worktreeIsolation : 'auto';
   maxRepairRounds = typeof rawArgs.maxRepairRounds === 'number' ? rawArgs.maxRepairRounds : 2;
@@ -3445,7 +3453,12 @@ ${ambiguityFallback}`;
   // DECOUPLED READ GATE: PRE-RECON & CONDITIONAL RESEARCH
   // ---------------------------------------------------------------------------
 
-  const researchCache = new ResearchCache('executor-run');
+  const executionRunId = typeof runId === 'string' && runId
+    ? runId
+    : (typeof args?.runId === 'string' && args.runId
+        ? args.runId
+        : `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  const researchCache = new ResearchCache(executionRunId);
   const completedShardIds = new Set();
   const activeShardIds = new Set();
   const preReconPromises = new Map();
@@ -3536,16 +3549,36 @@ ${ambiguityFallback}`;
           dependencyVersion: recon.externalResearch?.dependencyVersion || recon.externalResearch?.frameworkVersion || recon.externalResearch?.version || '',
         };
 
+        const deduplicateClaims = (claimsList) => {
+          const seen = new Set();
+          const deduped = [];
+          for (const c of claimsList || []) {
+            if (!c) continue;
+            const text = (c.claim || String(c)).trim();
+            if (text && !seen.has(text)) {
+              seen.add(text);
+              deduped.push(c);
+            }
+          }
+          return deduped;
+        };
+
         const cachedClaims = [];
+        const seenClaimTexts = new Set();
         const questionsToAsk = [];
 
         for (const q of escalation.questions) {
           const cached = researchCache.get(q, 'global', extraContext);
           if (cached) {
-            if (Array.isArray(cached.claims)) {
-              cachedClaims.push(...cached.claims);
-            } else if (cached.claim) {
-              cachedClaims.push(cached);
+            const rawClaims = Array.isArray(cached.claims)
+              ? cached.claims
+              : (cached.claim ? [cached] : []);
+            for (const c of rawClaims) {
+              const text = (c?.claim || String(c || '')).trim();
+              if (text && !seenClaimTexts.has(text)) {
+                seenClaimTexts.add(text);
+                cachedClaims.push(c);
+              }
             }
           } else {
             questionsToAsk.push(q);
@@ -3557,7 +3590,7 @@ ${ambiguityFallback}`;
             `Shard ${shardPacket.id} external research: all ${escalation.questions.length} question(s) served from safe research cache.`
           );
           researchEvidence = {
-            claims: cachedClaims,
+            claims: deduplicateClaims(cachedClaims),
             unresolved: [],
           };
         } else {
@@ -3607,11 +3640,11 @@ ${JSON.stringify(
 
           researchEvidence = researcherResult
             ? {
-                claims: [...cachedClaims, ...(researcherResult.claims || [])],
+                claims: deduplicateClaims([...cachedClaims, ...(researcherResult.claims || [])]),
                 unresolved: researcherResult.unresolved || [],
               }
             : {
-                claims: [
+                claims: deduplicateClaims([
                   ...cachedClaims,
                   ...questionsToAsk.map((q) => ({
                     claim: `External research for query "${q}" yielded no conclusive evidence.`,
@@ -3621,7 +3654,7 @@ ${JSON.stringify(
                     applicability: 'uncertain',
                     confidence: 'unverified',
                   })),
-                ],
+                ]),
                 unresolved: questionsToAsk.map((q) => ({
                   question: q,
                   reason: 'Researcher agent failed or returned no usable result.',
