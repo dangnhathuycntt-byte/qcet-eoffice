@@ -176,11 +176,51 @@ function createTempRepo(label) {
   execSync('git init --initial-branch=main', { cwd: dir });
   execSync('git config user.email "e2e@qcet.test"', { cwd: dir });
   execSync('git config user.name "QCET E2E"', { cwd: dir });
+  // Grant trust for the isolated repo so Claude Code honours settings.json
+  // permissions inside the temp dir (prevents "Ignoring N permissions.allow
+  // entries … has not been trusted" which silently blocks all agent edits).
+  patchClaudeJsonTrust(dir);
   return dir;
+}
+
+/**
+ * Writes `hasTrustDialogAccepted: true` for `dir` into ~/.claude.json.
+ * Claude Code refuses to apply allowedTools / settings.json entries for
+ * untrusted project paths, causing all inner agent Edit/Write calls to be
+ * silently blocked. This mirrors what an interactive `claude` invocation
+ * does when the user accepts the trust dialog.
+ */
+function patchClaudeJsonTrust(dir) {
+  const claudeJsonPath = path.join(os.homedir(), '.claude.json');
+  try {
+    let root = {};
+    if (fs.existsSync(claudeJsonPath)) {
+      root = JSON.parse(fs.readFileSync(claudeJsonPath, 'utf8'));
+    }
+    if (!root.projects) root.projects = {};
+    if (!root.projects[dir]) root.projects[dir] = {};
+    root.projects[dir].hasTrustDialogAccepted = true;
+    fs.writeFileSync(claudeJsonPath, JSON.stringify(root, null, 2) + '\n', 'utf8');
+  } catch (err) {
+    // Non-fatal: log and continue — the E2E will fail at Gate B if trust
+    // is required, giving a clear EXECUTOR_NOT_STARTED failure class.
+    process.stderr.write(`[e2e] WARN: could not patch ~/.claude.json trust for ${dir}: ${err.message}\n`);
+  }
 }
 
 function destroyTempRepo(dir) {
   try { fs.rmSync(dir, { recursive: true, force: true }); } catch (_) {}
+  // Clean up the trust entry we added so ~/.claude.json doesn't accumulate stale paths
+  const claudeJsonPath = path.join(os.homedir(), '.claude.json');
+  try {
+    if (fs.existsSync(claudeJsonPath)) {
+      const root = JSON.parse(fs.readFileSync(claudeJsonPath, 'utf8'));
+      if (root.projects && root.projects[dir]) {
+        delete root.projects[dir];
+        fs.writeFileSync(claudeJsonPath, JSON.stringify(root, null, 2) + '\n', 'utf8');
+      }
+    }
+  } catch (_) {} // best-effort
 }
 
 // ─── Phase 0: Environment capture ────────────────────────────────────────────
