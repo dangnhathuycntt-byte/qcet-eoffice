@@ -2,6 +2,40 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
+ * Check whether the agent transcript contains an explicit Skill tool invocation
+ * for qcet-plan-executor. This is the Tier-1 fidelity proof (model-level intent),
+ * complementing Tier-2 executor artifact proof.
+ *
+ * Returns { invoked: boolean, detail: string }.
+ */
+export function verifySkillInvocation(transcriptPath) {
+  if (!transcriptPath || !fs.existsSync(transcriptPath)) {
+    return { invoked: false, detail: 'transcript not found' };
+  }
+  let lines;
+  try {
+    lines = fs.readFileSync(transcriptPath, 'utf8').split('\n').filter(Boolean);
+  } catch (err) {
+    return { invoked: false, detail: `transcript read error: ${err.message}` };
+  }
+  for (const line of lines) {
+    let obj;
+    try { obj = JSON.parse(line); } catch (_) { continue; }
+    // Claude Code stream-json: tool_use blocks appear inside assistant message content arrays
+    const content = obj?.message?.content ?? obj?.content;
+    if (!Array.isArray(content)) continue;
+    for (const block of content) {
+      if (block?.type !== 'tool_use' || block?.name !== 'Skill') continue;
+      const skillName = block?.input?.skill ?? block?.input?.name ?? '';
+      if (String(skillName).includes('qcet-plan-executor')) {
+        return { invoked: true, detail: `Skill tool called with skill="${skillName}"` };
+      }
+    }
+  }
+  return { invoked: false, detail: 'no Skill tool invocation for qcet-plan-executor found in transcript' };
+}
+
+/**
  * Verify treatment fidelity for benchmark arms.
  * - Arm A: Must NOT produce any QCET executor artifacts (gate-verdict.json, run-ledger.jsonl, or telemetry).
  *   If found, mark HARNESS_LEAKAGE.
@@ -9,15 +43,20 @@ import path from 'node:path';
  *   If missing, mark HARNESS_NOT_INVOKED.
  * - Arm C: Must produce Lean V2 gate-verdict.json (and/or run-ledger.jsonl).
  *   If missing, mark HARNESS_NOT_INVOKED.
+ *
+ * For B and C, also verifies transcript contains an explicit Skill tool invocation
+ * (Tier-1 proof), in addition to executor artifact evidence (Tier-2 proof).
  */
 export function verifyTreatmentFidelity(arg1, arg2) {
-  let arm, trialDir;
+  let arm, trialDir, transcriptPath;
   if (typeof arg1 === 'object' && arg1 !== null && arg1.arm) {
     arm = arg1.arm;
     trialDir = arg1.trialDir;
+    transcriptPath = arg1.transcriptPath ?? null;
   } else {
     arm = arg1;
     trialDir = arg2;
+    transcriptPath = null;
   }
 
   if (!trialDir || !fs.existsSync(trialDir)) {
@@ -72,6 +111,17 @@ export function verifyTreatmentFidelity(arg1, arg2) {
           valid: false,
           reason: 'HARNESS_NOT_INVOKED',
           details: `Malformed Arm B run telemetry: ${err.message}`
+        };
+      }
+    }
+    // Tier-1: verify Skill tool was explicitly invoked (model-level intent proof)
+    if (transcriptPath) {
+      const skillCheck = verifySkillInvocation(transcriptPath);
+      if (!skillCheck.invoked) {
+        return {
+          valid: false,
+          reason: 'HARNESS_NOT_INVOKED',
+          details: `Arm B Skill invocation missing: ${skillCheck.detail}`
         };
       }
     }
@@ -135,6 +185,18 @@ export function verifyTreatmentFidelity(arg1, arg2) {
           hasFingerprint = true;
         }
       } catch (_) {}
+    }
+
+    // Tier-1: verify Skill tool was explicitly invoked (model-level intent proof)
+    if (transcriptPath) {
+      const skillCheck = verifySkillInvocation(transcriptPath);
+      if (!skillCheck.invoked) {
+        return {
+          valid: false,
+          reason: 'HARNESS_NOT_INVOKED',
+          details: `Arm C Skill invocation missing: ${skillCheck.detail}`
+        };
+      }
     }
 
     return { valid: true, hasFingerprint };
@@ -275,7 +337,11 @@ export async function gradeTrial(taskName, trialDir, tasksBaseDir, agentExecutio
   let fidelityReason = null;
 
   if (arm && !options.skipTreatmentGate) {
-    const fidelity = verifyTreatmentFidelity({ arm, trialDir });
+    const transcriptPathRel = options.transcriptPath ?? agentExecution?.transcriptPath ?? null;
+    const transcriptPath = transcriptPathRel
+      ? path.isAbsolute(transcriptPathRel) ? transcriptPathRel : path.resolve(transcriptPathRel)
+      : null;
+    const fidelity = verifyTreatmentFidelity({ arm, trialDir, transcriptPath });
     if (!fidelity.valid) {
       treatmentFidelity = false;
       fidelityReason = fidelity.reason;
