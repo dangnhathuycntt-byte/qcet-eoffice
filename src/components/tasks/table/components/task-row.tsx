@@ -329,7 +329,7 @@ export const TaskRow = React.memo(function TaskRow({
               className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums shrink-0"
               title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
             >
-              Hạn T{selectedAcademicMonth} ({dueInMonthCount})
+              Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
             </span>
           )}
         </div>

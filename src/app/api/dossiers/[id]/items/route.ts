@@ -6,7 +6,7 @@ import { DossierService } from "@/lib/services/dossier-service";
 import { prisma } from "@/lib/prisma";
 
 interface RouteContext {
-  params: { id: string } | Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(req: NextRequest, context: RouteContext) {

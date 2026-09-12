@@ -48,6 +48,7 @@ const testDbUrl = (process.env.DATABASE_URL || "").replace(/\/qcet_eoffice(\?.*)
 
 const env = {
   ...process.env,
+  TZ: process.env.TZ || "UTC",
   NODE_ENV: "test",
   QCET_ALLOW_DB_TESTS: "1",
   DATABASE_URL: testDbUrl,

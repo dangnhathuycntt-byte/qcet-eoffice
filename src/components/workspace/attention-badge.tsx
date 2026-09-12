@@ -84,7 +84,7 @@ const sizeStyles: Record<
     container: "px-2 py-0.5 text-xs gap-1.5 min-h-[28px]",
     icon: "w-3.5 h-3.5",
     text: "text-xs font-semibold",
-    count: "text-[11px] px-1.5 py-0.2 min-w-[18px]",
+    count: "text-xs px-1.5 py-0.2 min-w-[18px]",
   },
   default: {
     container: "px-3 py-1.5 text-xs sm:text-sm gap-2 min-h-[36px]",

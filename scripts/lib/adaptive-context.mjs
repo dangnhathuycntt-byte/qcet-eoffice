@@ -16,15 +16,47 @@ export class ResearchCache {
     this.cacheDir = path.join(this.repoRoot, '.superpowers', 'qcet-plan-executor', 'cache', 'research');
     fs.mkdirSync(this.cacheDir, { recursive: true });
     this.memoryCache = new Map();
+    this.hits = 0;
+    this.misses = 0;
   }
 
-  _getKeyHash(query, scope) {
-    return crypto.createHash('sha256').update(`${this.namespace}:${scope}:${query}`).digest('hex').slice(0, 16);
+  get researchCacheHits() {
+    return this.hits;
   }
 
-  get(query, scope = 'global') {
-    const key = this._getKeyHash(query, scope);
+  get researchCacheMisses() {
+    return this.misses;
+  }
+
+  buildKey(query, scopeOrContext = 'global', extraContext = {}) {
+    let scope = 'global';
+    let sourceContext = '';
+    let dependencyVersion = '';
+
+    if (typeof scopeOrContext === 'string') {
+      scope = scopeOrContext;
+      if (typeof extraContext === 'object' && extraContext !== null) {
+        sourceContext = extraContext.sourceContext || extraContext.source || extraContext.sourceOrVersionContext || '';
+        dependencyVersion = extraContext.dependencyVersion || extraContext.frameworkVersion || extraContext.version || '';
+      }
+    } else if (typeof scopeOrContext === 'object' && scopeOrContext !== null) {
+      scope = scopeOrContext.scope || 'global';
+      sourceContext = scopeOrContext.sourceContext || scopeOrContext.source || scopeOrContext.sourceOrVersionContext || '';
+      dependencyVersion = scopeOrContext.dependencyVersion || scopeOrContext.frameworkVersion || scopeOrContext.version || '';
+    }
+
+    return `${this.namespace}:${scope}:${query}:${sourceContext}:${dependencyVersion}`;
+  }
+
+  _getKeyHash(query, scopeOrContext = 'global', extraContext = {}) {
+    const rawKey = this.buildKey(query, scopeOrContext, extraContext);
+    return crypto.createHash('sha256').update(rawKey).digest('hex').slice(0, 16);
+  }
+
+  get(query, scopeOrContext = 'global', extraContext = {}) {
+    const key = this._getKeyHash(query, scopeOrContext, extraContext);
     if (this.memoryCache.has(key)) {
+      this.hits++;
       return this.memoryCache.get(key);
     }
     const filePath = path.join(this.cacheDir, `${key}.json`);
@@ -32,20 +64,23 @@ export class ResearchCache {
       try {
         const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
         this.memoryCache.set(key, data.result);
+        this.hits++;
         return data.result;
       } catch {
+        this.misses++;
         return null;
       }
     }
+    this.misses++;
     return null;
   }
 
-  set(query, result, scope = 'global') {
-    const key = this._getKeyHash(query, scope);
+  set(query, result, scopeOrContext = 'global', extraContext = {}) {
+    const key = this._getKeyHash(query, scopeOrContext, extraContext);
     this.memoryCache.set(key, result);
     const filePath = path.join(this.cacheDir, `${key}.json`);
     try {
-      fs.writeFileSync(filePath, JSON.stringify({ query, scope, result, timestamp: Date.now() }, null, 2), 'utf8');
+      fs.writeFileSync(filePath, JSON.stringify({ query, key, result, timestamp: Date.now() }, null, 2), 'utf8');
     } catch {
       // Ignore disk write errors
     }
@@ -53,6 +88,8 @@ export class ResearchCache {
 
   clear() {
     this.memoryCache.clear();
+    this.hits = 0;
+    this.misses = 0;
     try {
       fs.rmSync(this.cacheDir, { recursive: true, force: true });
       fs.mkdirSync(this.cacheDir, { recursive: true });
@@ -194,13 +231,23 @@ export function buildAdaptiveContextPacket(shard, options = {}) {
   let compressedBytes = 0;
 
   for (const relFile of files) {
-    const fullPath = path.join(repoRoot, relFile);
-    if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
-      continue;
+    let content = null;
+    if (options.fileContents && options.fileContents[relFile]) {
+      content = options.fileContents[relFile];
+    } else {
+      const fullPath = path.join(repoRoot, relFile);
+      if (fs.existsSync(fullPath) && !fs.statSync(fullPath).isDirectory()) {
+        try {
+          content = fs.readFileSync(fullPath, 'utf8');
+        } catch {
+          // Ignore read errors
+        }
+      }
     }
 
+    if (!content) continue;
+
     try {
-      const content = fs.readFileSync(fullPath, 'utf8');
       originalBytes += Buffer.byteLength(content, 'utf8');
 
       // Extract exports, types, interfaces, and function signatures
@@ -253,3 +300,353 @@ export function buildAdaptiveContextPacket(shard, options = {}) {
     tokenSavingsPercent,
   };
 }
+
+/**
+ * Creates a canonical, compact EvidencePacket containing only the factual evidence
+ * required by downstream agents, avoiding full uncompressed dump propagation.
+ *
+ * @param {Object} shard
+ * @param {Object} [state]
+ * @returns {Object} Canonical EvidencePacket
+ */
+export function createEvidencePacket(shard, state = {}) {
+  const reqDetails = Array.isArray(shard?.requirementDetails)
+    ? shard.requirementDetails
+    : (Array.isArray(state?.requirementDetails)
+        ? state.requirementDetails
+        : (shard?.requirements || state?.requirements || []).map((id) => ({ id, text: `Requirement ${id}` })));
+
+  const impl = state?.implementation || {};
+  const verif = state?.lastVerification || {};
+  const recon = state?.recon || {};
+  const research = state?.research || {};
+
+  const changedFiles = Array.isArray(impl.changedFiles)
+    ? impl.changedFiles
+    : (Array.isArray(state?.changedFiles) ? state.changedFiles : []);
+
+  const contractDelta = Array.isArray(impl.contractDelta)
+    ? impl.contractDelta
+    : (Array.isArray(state?.contractDelta)
+        ? state.contractDelta
+        : (Array.isArray(recon.contracts) ? recon.contracts : []));
+
+  const testEvidence = Array.isArray(impl.testsRun)
+    ? impl.testsRun
+    : (Array.isArray(impl.tests)
+        ? impl.tests
+        : (Array.isArray(state?.testsRun)
+            ? state.testsRun
+            : (Array.isArray(state?.tests)
+                ? state.tests
+                : (Array.isArray(state?.testEvidence) ? state.testEvidence : []))));
+
+  const confirmedFindings = Array.isArray(verif.issues)
+    ? verif.issues
+    : (Array.isArray(state?.confirmedFindings)
+        ? state.confirmedFindings
+        : (Array.isArray(state?.issues) ? state.issues : []));
+
+  const unresolvedRisks = Array.isArray(verif.risks)
+    ? verif.risks
+    : (Array.isArray(recon.risks)
+        ? recon.risks
+        : (Array.isArray(impl.risks)
+            ? impl.risks
+            : (Array.isArray(state?.unresolvedRisks)
+                ? state.unresolvedRisks
+                : (Array.isArray(state?.risks) ? state.risks : []))));
+
+  const rawClaims = Array.isArray(research.claims)
+    ? research.claims
+    : (Array.isArray(state?.relevantResearchClaims)
+        ? state.relevantResearchClaims
+        : (Array.isArray(state?.claims) ? state.claims : []));
+
+  const relevantResearchClaims = rawClaims.map((c) => ({
+    claim: c.claim || '',
+    source: c.source || c.sourceUrl || c.canonicalUrl || '',
+    sourceUrl: c.sourceUrl || c.source || c.canonicalUrl || '',
+    versionOrDate: c.versionOrDate || c.date || c.version || '',
+    applicability: c.applicability || '',
+    confidence: typeof c.confidence === 'number' ? c.confidence : (c.confidence ? String(c.confidence) : 'medium'),
+  }));
+
+  const verificationVerdict = verif.verdict || state?.verificationVerdict || state?.verdict || 'pending';
+
+  return {
+    shardId: shard?.id || state?.shardId || 'unknown',
+    requirements: shard?.requirements || state?.requirements || [],
+    requirementDetails: reqDetails,
+    acceptanceCriteria: shard?.acceptanceCriteria || state?.acceptanceCriteria || [],
+    ownership: shard?.owns || state?.ownership || state?.owns || [],
+    owns: shard?.owns || state?.ownership || state?.owns || [],
+    changedFiles,
+    contractDelta,
+    testEvidence,
+    confirmedFindings,
+    unresolvedRisks,
+    relevantResearchClaims,
+    verificationVerdict,
+  };
+}
+
+/**
+ * Compresses an array of dependency execution results into compact EvidencePackets.
+ *
+ * @param {Array<Object>} dependencyResults
+ * @returns {Array<Object>} Array of compact EvidencePackets
+ */
+export function compressDependencyContext(dependencyResults = []) {
+  if (!Array.isArray(dependencyResults)) return [];
+  return dependencyResults
+    .filter(Boolean)
+    .map((res) => {
+      const shard = res.shard || { id: res.shardId || 'unknown' };
+      return createEvidencePacket(shard, res);
+    });
+}
+
+/**
+ * Receiver 2: Formats compact verifier packet without raw recon prose.
+ * Eliminates currentState, implementationNotes, raw file lists.
+ *
+ * @param {Object} shardPacket
+ * @param {Object} [state]
+ * @returns {Object}
+ */
+export function formatVerifierPacket(shardPacket, state = {}) {
+  const packet = createEvidencePacket(shardPacket, state);
+  const impl = state.implementation || {};
+  return {
+    shardId: shardPacket.id,
+    title: shardPacket.title || shardPacket.id,
+    requirements: packet.requirements,
+    requirementDetails: packet.requirementDetails,
+    acceptanceCriteria: packet.acceptanceCriteria,
+    ownership: shardPacket.owns || packet.owns || [],
+    changedFiles: packet.changedFiles,
+    implementationSummary: impl.summary || impl.notes || 'Implementation completed.',
+    testEvidence: packet.testEvidence,
+    relevantContracts: packet.contractDelta,
+    researchClaims: packet.relevantResearchClaims,
+  };
+}
+
+/**
+ * Receiver 3: Formats compact repair agent packet.
+ *
+ * @param {Object} shardPacket
+ * @param {Object} [state]
+ * @returns {Object}
+ */
+export function formatRepairPacket(shardPacket, state = {}) {
+  const packet = createEvidencePacket(shardPacket, state);
+  const verif = state.lastVerification || {};
+  return {
+    shardId: shardPacket.id,
+    shardOwnership: shardPacket.owns || packet.owns || [],
+    confirmedFindings: packet.confirmedFindings.length > 0 ? packet.confirmedFindings : (verif.issues || []),
+    currentChangedFiles: packet.changedFiles,
+    targetedTests: packet.testEvidence,
+    requirementMapping: packet.requirementDetails,
+    unresolvedRisks: packet.unresolvedRisks,
+  };
+}
+
+/**
+ * Receiver 4: Formats compact shard summary for integration review.
+ *
+ * @param {Object|Array<Object>} allShardResults
+ * @returns {Object}
+ */
+export function formatIntegrationShardSummary(allShardResults = {}) {
+  const summary = {};
+  const entries = Array.isArray(allShardResults)
+    ? allShardResults.map((s) => [s?.shard?.id || s?.shardId || s?.id, s])
+    : Object.entries(allShardResults || {});
+
+  for (const [shardId, res] of entries) {
+    if (!res) continue;
+    const shard = res.shard || { id: shardId };
+    const packet = createEvidencePacket(shard, res);
+    const highOrCriticalIssues = (packet.confirmedFindings || []).filter((i) => {
+      const sev = String(i?.severity || i?.level || '').toLowerCase();
+      return sev === 'high' || sev === 'critical';
+    });
+    const highOrCriticalRisks = (packet.unresolvedRisks || []).filter((r) => {
+      if (!r) return false;
+      if (typeof r === 'string') {
+        return !/\[?(?:low|info|trivial)\]?/i.test(r);
+      }
+      if (typeof r === 'object') {
+        return r.severity === 'high' || r.severity === 'critical' || r.level === 'high' || r.level === 'critical' || (!r.severity && !r.level);
+      }
+      return true;
+    });
+
+    summary[shardId] = {
+      shardId,
+      verificationVerdict: packet.verificationVerdict,
+      changedFiles: packet.changedFiles,
+      contractDelta: packet.contractDelta,
+      highOrCriticalFindings: highOrCriticalIssues,
+      highOrCriticalRisks: highOrCriticalRisks,
+      testCount: packet.testEvidence.length,
+    };
+  }
+  return summary;
+}
+
+/**
+ * Resolves risk-tiered verification strategy (skeptics count, effort, and arbitration policy).
+ *
+ * @param {string|Object} shardOrRisk - Shard object or risk string ('low'|'medium'|'high'|'critical')
+ * @returns {Object} Verification strategy definition
+ */
+export function resolveVerificationStrategy(shardOrRisk) {
+  let risk = 'low';
+  if (typeof shardOrRisk === 'string') {
+    risk = shardOrRisk.toLowerCase();
+  } else if (shardOrRisk && typeof shardOrRisk === 'object') {
+    if (shardOrRisk.risk) {
+      risk = String(shardOrRisk.risk).toLowerCase();
+    } else {
+      const policy = resolveAdaptivePolicy(shardOrRisk);
+      risk = policy.risk;
+    }
+  }
+
+  if (risk === 'critical') {
+    return {
+      risk: 'critical',
+      skepticsCount: 2,
+      effort: 'xhigh',
+      requiresArbiter: true,
+      allowFastPath: false,
+      lenses: ['spec', 'security'],
+      arbiterMandatory: true,
+    };
+  }
+
+  if (risk === 'high') {
+    return {
+      risk: 'high',
+      skepticsCount: 2,
+      effort: 'high',
+      requiresArbiter: false,
+      allowFastPath: true,
+      lenses: ['spec', 'security'],
+      arbiterMandatory: false,
+    };
+  }
+
+  if (risk === 'medium') {
+    return {
+      risk: 'medium',
+      skepticsCount: 1,
+      effort: 'medium',
+      requiresArbiter: false,
+      allowFastPath: false,
+      lenses: ['correctness', 'contracts'],
+      arbiterMandatory: false,
+    };
+  }
+
+  return {
+    risk: 'low',
+    skepticsCount: 1,
+    effort: 'low',
+    requiresArbiter: false,
+    allowFastPath: false,
+    lenses: ['correctness'],
+    arbiterMandatory: false,
+  };
+}
+
+/**
+ * Evaluates dual-skeptic or single-skeptic verification panel outcomes.
+ * On HIGH risk: If both independent skeptics return pass with zero issues, takes the clean fast path without arbiter.
+ * On CRITICAL risk: Arbiter synthesis is mandatory.
+ * On disagreement or reported defects: Triggers arbiter synthesis.
+ *
+ * @param {Array<Object>|Object} panelResults - Array of skeptic verifier results
+ * @param {string|Object} [riskOrStrategy='high'] - Shard risk or strategy object
+ * @returns {Object} Panel evaluation outcome
+ */
+export function evaluateVerificationPanelOutcome(panelResults, riskOrStrategy = 'high') {
+  const risk = typeof riskOrStrategy === 'string'
+    ? riskOrStrategy.toLowerCase()
+    : (riskOrStrategy?.risk ? String(riskOrStrategy.risk).toLowerCase() : 'high');
+
+  const results = Array.isArray(panelResults) ? panelResults : [panelResults];
+  const specVerifier = results[0] || {};
+  const securityVerifier = results[1] || results[0] || {};
+
+  const isPass = (v) => {
+    const verd = String(v?.verdict || '').toLowerCase();
+    const hasIssues = Array.isArray(v?.issues) && v.issues.length > 0;
+    return verd === 'pass' && !hasIssues;
+  };
+
+  const specPassed = isPass(specVerifier);
+  const securityPassed = isPass(securityVerifier);
+
+  if (risk === 'critical') {
+    return {
+      canBypassArbiter: false,
+      highRiskFastPath: false,
+      arbiterAvoided: false,
+      requiresArbiter: true,
+      reason: 'Critical risk requires mandatory arbitration synthesis',
+    };
+  }
+
+  if (risk === 'high') {
+    if (specPassed && securityPassed) {
+      const requirementsChecked = Array.from(
+        new Set([
+          ...(specVerifier.requirementsChecked || []),
+          ...(securityVerifier.requirementsChecked || []),
+        ])
+      );
+      return {
+        canBypassArbiter: true,
+        highRiskFastPath: true,
+        arbiterAvoided: true,
+        requiresArbiter: false,
+        synthesizedVerdict: {
+          verdict: 'pass',
+          requirementsChecked,
+          issues: [],
+          summary: `Both independent skeptics verified implementation with zero defects. Spec: ${specVerifier.summary || 'pass'}; Security: ${securityVerifier.summary || 'pass'}.`,
+        },
+      };
+    }
+
+    return {
+      canBypassArbiter: false,
+      highRiskFastPath: false,
+      arbiterAvoided: false,
+      requiresArbiter: true,
+      reason: 'Skeptic disagreement or confirmed issues require arbiter synthesis',
+    };
+  }
+
+  // Low or medium risk (single verifier)
+  const singleVerifier = results[0] || {};
+  const passed = isPass(singleVerifier);
+  return {
+    canBypassArbiter: true,
+    highRiskFastPath: false,
+    arbiterAvoided: true,
+    requiresArbiter: false,
+    synthesizedVerdict: {
+      verdict: passed ? 'pass' : (singleVerifier.verdict || 'fail'),
+      requirementsChecked: singleVerifier.requirementsChecked || [],
+      issues: singleVerifier.issues || [],
+      summary: singleVerifier.summary || '',
+    },
+  };
+}
+

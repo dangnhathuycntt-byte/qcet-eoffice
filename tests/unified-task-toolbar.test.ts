@@ -228,7 +228,27 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
     );
   });
 
-  test("UnifiedTaskToolbar renders 'Cả năm' as selected when selectedAcademicMonth is ALL", () => {
+  test("UnifiedTaskToolbar does NOT render academic month rail by default", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "SCHOOL_TASKS",
+        onScopeChange: () => {},
+        viewMode: "table",
+        onViewModeChange: () => {},
+        searchQuery: "",
+        onSearchChange: () => {},
+        selectedAcademicMonth: "ALL",
+        academicYear: "2026-2027",
+      })
+    );
+
+    assert.ok(
+      !html.includes('aria-label="Chu kỳ 12 tháng công tác năm học"'),
+      "Academic month rail must NOT render by default"
+    );
+  });
+
+  test("UnifiedTaskToolbar renders 'Cả năm' as selected when selectedAcademicMonth is ALL and showAcademicMonthBar is true", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
         scope: "SCHOOL_TASKS",
@@ -246,6 +266,7 @@ describe("Academic Month Filter Bar & Precision Logic", () => {
         onNewTaskClick: () => {},
         selectedAcademicMonth: "ALL",
         academicYear: "2026-2027",
+        showAcademicMonthBar: true,
       })
     );
 

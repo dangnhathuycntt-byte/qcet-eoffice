@@ -27,11 +27,17 @@ export default function SettingsPage() {
         <PWAHealthSettings />
       </React.Suspense>
 
-      <MaintenanceView
-        feature="settings"
-        title="Quản trị thông số nâng cao"
-        description="Mô-đun quản trị phân quyền tập trung và tích hợp hạ tầng số đang được đồng bộ theo tiêu chuẩn an toàn thông tin QCET."
-      />
+      <React.Suspense
+        fallback={
+          <div className="h-64 rounded-xl border border-slate-200 bg-slate-50 animate-pulse" />
+        }
+      >
+        <MaintenanceView
+          feature="settings"
+          title="Quản trị thông số nâng cao"
+          description="Mô-đun quản trị phân quyền tập trung và tích hợp hạ tầng số đang được đồng bộ theo tiêu chuẩn an toàn thông tin QCET."
+        />
+      </React.Suspense>
     </div>
   );
 }

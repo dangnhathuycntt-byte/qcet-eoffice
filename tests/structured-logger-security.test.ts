@@ -29,7 +29,7 @@ async function testStructuredLogger() {
   assert.equal(isSensitiveKey('apiKey'), true);
   assert.equal(isSensitiveKey('author'), false, 'author should not be treated as sensitive');
   assert.equal(isSensitiveKey('authority'), false, 'authority should not be treated as sensitive');
-  console.log('✓ Sensitive key patterns correctly distinguished from safe business terms.');
+  console.log('[PASS] Sensitive key patterns correctly distinguished from safe business terms.');
 
   console.log('--- Test: Single-Line JSON & Standard Attributes ---');
   const capturedEntries: { entry: StructuredLogEntry; rawJson: string }[] = [];
@@ -68,7 +68,7 @@ async function testStructuredLogger() {
   assert.equal(parsed.userId, 'user-888');
   assert.equal(parsed.metadata?.title, 'Kế hoạch kiểm tra đào tạo');
   assert.ok(parsed.timestamp, 'Timestamp must be ISO string');
-  console.log('✓ Single-line JSON emitted with standard fields (requestId, durationMs, route, action, resourceId, userId).');
+  console.log('[PASS] Single-line JSON emitted with standard fields (requestId, durationMs, route, action, resourceId, userId).');
 
   console.log('--- Test: Secret Redaction & Institutional Confidential Fields ---');
   capturedEntries.length = 0;
@@ -109,7 +109,7 @@ async function testStructuredLogger() {
   assert.ok(secJson.includes('[REDACTED'), 'Redacted marker must be applied to sensitive fields');
   assert.ok(secJson.includes('Public informational announcement'), 'Non-sensitive field must remain intact');
   assert.ok(secJson.includes('Họp giao ban tuần'), 'Safe nested field must remain intact');
-  console.log('✓ Sensitive credentials and confidential document payloads thoroughly redacted.');
+  console.log('[PASS] Sensitive credentials and confidential document payloads thoroughly redacted.');
 
   console.log('--- Test: logger.action() Helper ---');
   capturedEntries.length = 0;
@@ -132,7 +132,7 @@ async function testStructuredLogger() {
   assert.equal(actionEntry.resourceId, 'doc-99');
   assert.equal(actionEntry.userId, 'usr-forwarder');
   assert.equal(actionEntry.durationMs, 15);
-  console.log('✓ logger.action() helper successfully structured the domain action event.');
+  console.log('[PASS] logger.action() helper successfully structured the domain action event.');
 
   console.log('--- Test: Circular References & Error Handling ---');
   const circularObj: any = { name: 'Root' };
@@ -149,7 +149,7 @@ async function testStructuredLogger() {
   const errEntry = capturedEntries[capturedEntries.length - 1].entry;
   assert.equal(errEntry.level, 'error');
   assert.equal(errEntry.metadata?.error?.message, 'Database connection timeout');
-  console.log('✓ Circular references and Error instances handled safely without throwing.');
+  console.log('[PASS] Circular references and Error instances handled safely without throwing.');
 }
 
 testStructuredLogger().then(() => {

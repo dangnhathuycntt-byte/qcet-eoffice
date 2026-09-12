@@ -1,25 +1,21 @@
-"use client";
+import { permanentRedirect } from "next/navigation";
 
-import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { TaskManagementWorkspace, type ViewMode, type WorkspaceScope } from "@/components/tasks/task-management-workspace";
-export type { ViewMode, WorkspaceScope };
-
-function UnitTasksRedirect() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  React.useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("scope", "unit");
-    router.replace(`/tasks?${params.toString()}`);
-  }, [router, searchParams]);
-  return <TaskManagementWorkspace scope="unit" />;
+interface UnitTasksPageProps {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default function UnitTasksPage() {
-  return (
-    <React.Suspense fallback={<TaskManagementWorkspace scope="unit" />}>
-      <UnitTasksRedirect />
-    </React.Suspense>
-  );
+export default async function UnitTasksPage({ searchParams }: UnitTasksPageProps) {
+  const resolvedParams = searchParams ? await searchParams : {};
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(resolvedParams)) {
+    if (key !== "scope" && typeof value === "string") {
+      params.set(key, value);
+    } else if (Array.isArray(value) && value.length > 0) {
+      params.set(key, value[0]);
+    }
+  }
+  params.set("scope", "unit");
+
+  permanentRedirect(`/tasks?${params.toString()}`);
 }

@@ -57,12 +57,14 @@ export async function GET(req: Request) {
 
     // Clamp pagination limit to max 100
     let effectiveLimit = 20;
-    if (validatedQuery.pageSize !== undefined && typeof validatedQuery.pageSize === 'number') {
-      effectiveLimit = Math.min(Math.max(1, validatedQuery.pageSize), 100);
-    } else if (typeof validatedQuery.limit === 'number') {
+    if (typeof validatedQuery.limit === 'number') {
       effectiveLimit = Math.min(Math.max(1, validatedQuery.limit), 100);
     } else if (typeof validatedQuery.take === 'number') {
       effectiveLimit = Math.min(Math.max(1, validatedQuery.take), 100);
+    } else if (rawParams.pageSize !== undefined && typeof validatedQuery.pageSize === 'number') {
+      effectiveLimit = Math.min(Math.max(1, validatedQuery.pageSize), 100);
+    } else if (typeof validatedQuery.pageSize === 'number') {
+      effectiveLimit = Math.min(Math.max(1, validatedQuery.pageSize), 100);
     }
 
     const isAll =
@@ -75,6 +77,7 @@ export async function GET(req: Request) {
       all: isAll,
       page: validatedQuery.page,
       limit: isAll ? undefined : effectiveLimit,
+      take: typeof validatedQuery.take === 'number' ? validatedQuery.take : undefined,
       cursor: validatedQuery.cursor,
       q: validatedQuery.q,
       search: validatedQuery.search,

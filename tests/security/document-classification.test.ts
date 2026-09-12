@@ -647,7 +647,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         headers: authHeaders(tokenUserB),
       });
 
-      const res = await getDocumentRoute(req, { params: { id: docInternalA.id } });
+      const res = await getDocumentRoute(req, { params: Promise.resolve({ id: docInternalA.id }) });
       assert.equal(res.status, 403);
     });
 
@@ -658,7 +658,7 @@ describe('Sprint 2: Task 6 (F15: Document Classification Authorization)', () => 
         headers: authHeaders(tokenUserA),
       });
 
-      const res = await getDocumentRoute(req, { params: { id: docRestrictedA.id } });
+      const res = await getDocumentRoute(req, { params: Promise.resolve({ id: docRestrictedA.id }) });
       assert.equal(res.status, 200);
       const data = await res.json();
       assert.equal(data.success, true);

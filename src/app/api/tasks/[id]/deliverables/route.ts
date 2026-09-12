@@ -15,7 +15,7 @@ import { canSubmitDeliverable } from '@/server/policies/task-policy';
 import { toTaskDeliverableDTO } from '@/server/dto/task-dto';
 
 interface RouteContext {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function POST(req: Request, routeContext: RouteContext) {

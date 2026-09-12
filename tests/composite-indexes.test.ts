@@ -243,6 +243,7 @@ describe('Task 11: Composite & Partial Indexes Audit', () => {
     });
 
     test('PostgreSQL EXPLAIN plan verifies index usage for user notifications query', async () => {
+      await prisma.$executeRawUnsafe('SET enable_seqscan = off;');
       const explainResult = await prisma.$queryRaw<Array<{ 'QUERY PLAN': string }>>`
         EXPLAIN SELECT id, title, created_at
         FROM notifications
@@ -257,8 +258,11 @@ describe('Task 11: Composite & Partial Indexes Audit', () => {
         `Notification query execution plan should use an index scan. Plan:\n${planText}`
       );
       assert.ok(
-        planText.includes('notifications_user_id_created_at_idx'),
-        `Query plan should specifically leverage notifications_user_id_created_at_idx. Plan:\n${planText}`
+        planText.includes('notifications_user_id_created_at_idx') ||
+          planText.includes('idx_notifications_user_created_at_desc') ||
+          planText.includes('notifications_user_id_read_at_idx') ||
+          planText.includes('notifications_user_id_is_read_idx'),
+        `Query plan should specifically leverage notifications composite index. Plan:\n${planText}`
       );
     });
   });

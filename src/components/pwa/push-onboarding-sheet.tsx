@@ -658,7 +658,7 @@ export function PushOnboardingSheet({
                             <div className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-[#1e3a8a] transition-colors">
                               {topic.title}
                             </div>
-                            <div className="text-[11px] sm:text-xs text-slate-500 leading-normal mt-0.5">
+                            <div className="text-xs text-slate-500 leading-normal mt-0.5">
                               {topic.description}
                             </div>
                           </div>

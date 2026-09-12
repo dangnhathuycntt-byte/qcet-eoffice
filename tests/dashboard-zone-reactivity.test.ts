@@ -38,8 +38,10 @@ describe("DashboardZone Reactivity and Reactive Filtering", () => {
       "DashboardZone must consume filteredTasks from useDashboardData"
     );
     assert.ok(
-      content.includes("tasks={reactiveTasks}") || content.includes("tasks={filteredTasks}"),
-      "DashboardZone must pass filtered tasks to CascadingTaskTable"
+      content.includes("tasks={reactiveTasks}") ||
+        content.includes("tasks={filteredTasks}") ||
+        content.includes("filteredTasks={reactiveTasks}"),
+      "DashboardZone must pass filtered tasks to CascadingTaskTable or PersonalWorkbench"
     );
   });
 });

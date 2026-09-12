@@ -15,36 +15,13 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import {
+  type PortalStatsSummary,
+  formatProgressMetric,
+  formatSchoolTasksMetric,
+} from "@/lib/portal-metrics";
 
-export interface PortalStatsSummary {
-  completionRate: number;
-  total: number;
-  schoolTasks: number;
-}
-
-export function formatProgressMetric(
-  stats: PortalStatsSummary | null,
-  isLoading: boolean,
-  isAuthenticated: boolean
-): string {
-  if (isLoading) return "Đang tải...";
-  if (!isAuthenticated) return "Đăng nhập để xem";
-  if (!stats) return "Chưa có dữ liệu";
-  return `${stats.completionRate}% hoàn thành (${stats.total} việc)`;
-}
-
-export function formatSchoolTasksMetric(
-  stats: PortalStatsSummary | null,
-  isLoading: boolean,
-  isAuthenticated: boolean
-): string {
-  if (isLoading) return "Đang tải...";
-  if (!isAuthenticated) return "Đăng nhập để xem";
-  if (!stats) return "Chưa có dữ liệu";
-  return `${stats.schoolTasks} việc trọng tâm`;
-}
-
-export function PortalLiveClock() {
+function PortalLiveClock() {
   const [timeStr, setTimeStr] = React.useState<string>("");
 
   React.useEffect(() => {

@@ -18,7 +18,7 @@ env:
 jobs:
   security-and-lint:
     name: Security, Lint & Quality Audit
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, qcet]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
 
   typecheck-and-test:
     name: TypeScript & Unit Test Suite
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, qcet]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
 
   build-artifact:
     name: Standalone Build & Artifact Gate
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, qcet]
     needs: [security-and-lint, typecheck-and-test]
     steps:
       - name: Checkout repository

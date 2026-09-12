@@ -78,11 +78,11 @@ describe("Single-Tier Navigation Configuration (sidebar-context.tsx)", () => {
   });
 
   it("provides default badge configuration for operational counters", () => {
-    assert.strictEqual(DEFAULT_SIDEBAR_BADGES.calendar, 1);
+    assert.strictEqual(DEFAULT_SIDEBAR_BADGES.calendar, 0);
     assert.strictEqual(DEFAULT_SIDEBAR_BADGES.notifications, 0);
-    assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsInbox, 6);
-    assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsOutbox, 4);
-    assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsPending, 2);
+    assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsInbox, 0);
+    assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsOutbox, 0);
+    assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsPending, 0);
   });
 
   it("resolves breadcrumbs accurately for all system routes", () => {

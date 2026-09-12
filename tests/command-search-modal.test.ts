@@ -57,8 +57,8 @@ describe("Global Command Search Palette", () => {
     const content = fs.readFileSync(apiRoutePath, "utf-8");
 
     assert.ok(
-      content.includes("getSessionFromRequest"),
-      "Must authenticate via getSessionFromRequest"
+      content.includes("requireAuthenticated") || content.includes("getSessionFromRequest"),
+      "Must authenticate via requireAuthenticated or getSessionFromRequest"
     );
     assert.ok(
       content.includes("prisma.task.findMany"),

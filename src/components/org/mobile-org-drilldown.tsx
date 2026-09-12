@@ -578,12 +578,12 @@ function StaffTouchCard({ staff, onSelectStaff }: StaffTouchCardProps) {
                 {staff.titlePrefix} {staff.name}
               </span>
               {isLeader && (
-                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-primary/15 text-primary border border-primary/25">
+                <span className="px-1.5 py-0.2 rounded text-xs font-semibold bg-primary/15 text-primary border border-primary/25">
                   Trưởng đơn vị
                 </span>
               )}
               {isDeputy && (
-                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-indigo-500/15 text-indigo-700 border border-indigo-500/25">
+                <span className="px-1.5 py-0.2 rounded text-xs font-semibold bg-indigo-500/15 text-indigo-700 border border-indigo-500/25">
                   Phó đơn vị
                 </span>
               )}
@@ -591,7 +591,7 @@ function StaffTouchCard({ staff, onSelectStaff }: StaffTouchCardProps) {
             <div className="text-xs text-primary/90 font-medium mt-0.5">
               {staff.role}
             </div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">
+            <div className="text-xs text-muted-foreground mt-0.5">
               {staff.departmentName}
             </div>
           </div>

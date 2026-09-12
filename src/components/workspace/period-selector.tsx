@@ -205,7 +205,7 @@ export function PeriodSelector({
           {/* Semesters / Quick shortcuts */}
           {showSemesterPresets && (
             <div className="mb-3">
-              <span className="text-[11px] font-semibold text-slate-600 block mb-1.5">
+              <span className="text-xs font-semibold text-slate-600 block mb-1.5">
                 Phân kỳ học kỳ
               </span>
               <div className="grid grid-cols-3 gap-1.5">
@@ -225,7 +225,7 @@ export function PeriodSelector({
                       )}
                     >
                       <span className="font-bold text-slate-800">{sem.shortLabel}</span>
-                      <span className="text-[10px] text-slate-600 mt-0.5">
+                      <span className="text-xs text-slate-600 mt-0.5">
                         T{sem.months[0]} - T{sem.months[sem.months.length - 1]}
                       </span>
                     </div>
@@ -237,7 +237,7 @@ export function PeriodSelector({
 
           {/* 12 Academic Months Grid in Canonical Academic Order [9 -> 8] */}
           <div>
-            <span className="text-[11px] font-semibold text-slate-600 block mb-2">
+            <span className="text-xs font-semibold text-slate-600 block mb-2">
               Các tháng trong năm học (Tháng 9 đến Tháng 8)
             </span>
             <div className="grid grid-cols-4 gap-1.5">
@@ -262,7 +262,7 @@ export function PeriodSelector({
                     {typeof count === "number" && (
                       <span
                         className={cn(
-                          "mt-0.5 text-[10px] font-mono",
+                          "mt-0.5 text-xs font-mono",
                           isSelected ? "text-blue-100" : "text-slate-500"
                         )}
                       >

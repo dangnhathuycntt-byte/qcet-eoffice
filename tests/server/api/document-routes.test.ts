@@ -195,7 +195,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
 
     it('GET /api/documents/[id] returns 401 when unauthenticated', async () => {
       const req = new NextRequest('http://localhost:3000/api/documents/any-id');
-      const res = await getDocumentRoute(req, { params: { id: 'any-id' } });
+      const res = await getDocumentRoute(req, { params: Promise.resolve({ id: 'any-id' }) });
       assert.strictEqual(res.status, 401);
     });
 
@@ -205,7 +205,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ summary: 'Update' }),
       });
-      const res = await patchDocumentRoute(req, { params: { id: 'any-id' } });
+      const res = await patchDocumentRoute(req, { params: Promise.resolve({ id: 'any-id' }) });
       assert.strictEqual(res.status, 401);
     });
 
@@ -213,13 +213,13 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       const req = new NextRequest('http://localhost:3000/api/documents/any-id', {
         method: 'DELETE',
       });
-      const res = await deleteDocumentRoute(req, { params: { id: 'any-id' } });
+      const res = await deleteDocumentRoute(req, { params: Promise.resolve({ id: 'any-id' }) });
       assert.strictEqual(res.status, 401);
     });
 
     it('GET /api/documents/[id]/directives returns 401 when unauthenticated', async () => {
       const req = new NextRequest('http://localhost:3000/api/documents/any-id/directives');
-      const res = await getDirectivesRoute(req, { params: { id: 'any-id' } });
+      const res = await getDirectivesRoute(req, { params: Promise.resolve({ id: 'any-id' }) });
       assert.strictEqual(res.status, 401);
     });
 
@@ -229,7 +229,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ instruction: 'Direct' }),
       });
-      const res = await postDirectiveRoute(req, { params: { id: 'any-id' } });
+      const res = await postDirectiveRoute(req, { params: Promise.resolve({ id: 'any-id' }) });
       assert.strictEqual(res.status, 401);
     });
 
@@ -382,7 +382,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         }
       );
       const res = await getDocumentRoute(req, {
-        params: { id: departmentDocumentId },
+        params: Promise.resolve({ id: departmentDocumentId }),
       });
       assert.strictEqual(res.status, 403);
       const json = await res.json();
@@ -402,7 +402,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         }
       );
       const res = await patchDocumentRoute(req, {
-        params: { id: departmentDocumentId },
+        params: Promise.resolve({ id: departmentDocumentId }),
       });
       assert.strictEqual(res.status, 403);
     });
@@ -416,7 +416,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         }
       );
       const res = await deleteDocumentRoute(req, {
-        params: { id: departmentDocumentId },
+        params: Promise.resolve({ id: departmentDocumentId }),
       });
       assert.strictEqual(res.status, 403);
     });
@@ -437,7 +437,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         }
       );
       const res = await postDirectiveRoute(req, {
-        params: { id: departmentDocumentId },
+        params: Promise.resolve({ id: departmentDocumentId }),
       });
       assert.strictEqual(res.status, 403);
     });
@@ -492,7 +492,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       const req = new NextRequest(`http://localhost:3000/api/documents/${testDocId}`, {
         headers: { authorization: `Bearer ${adminToken}` },
       });
-      const res = await getDocumentRoute(req, { params: { id: testDocId } });
+      const res = await getDocumentRoute(req, { params: Promise.resolve({ id: testDocId }) });
       assert.strictEqual(res.status, 200);
       const json = await res.json();
       assert.strictEqual(json.success, true);
@@ -512,7 +512,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           status: 'DANG_XU_LY',
         }),
       });
-      const res = await patchDocumentRoute(req, { params: { id: testDocId } });
+      const res = await patchDocumentRoute(req, { params: Promise.resolve({ id: testDocId }) });
       assert.strictEqual(res.status, 200);
       const json = await res.json();
       assert.strictEqual(json.success, true);
@@ -535,7 +535,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           }),
         }
       );
-      const res = await postDirectiveRoute(req, { params: { id: testDocId } });
+      const res = await postDirectiveRoute(req, { params: Promise.resolve({ id: testDocId }) });
       assert.strictEqual(res.status, 201);
       const json = await res.json();
       assert.strictEqual(json.success, true);
@@ -553,7 +553,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
           headers: { authorization: `Bearer ${adminToken}` },
         }
       );
-      const res = await getDirectivesRoute(req, { params: { id: testDocId } });
+      const res = await getDirectivesRoute(req, { params: Promise.resolve({ id: testDocId }) });
       assert.strictEqual(res.status, 200);
       const json = await res.json();
       assert.strictEqual(json.success, true);
@@ -610,7 +610,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
         method: 'DELETE',
         headers: { authorization: `Bearer ${adminToken}` },
       });
-      const res = await deleteDocumentRoute(req, { params: { id: testDocId } });
+      const res = await deleteDocumentRoute(req, { params: Promise.resolve({ id: testDocId }) });
       assert.strictEqual(res.status, 200);
       const json = await res.json();
       assert.strictEqual(json.success, true);
@@ -619,7 +619,7 @@ describe('Document Routes API & Security Hardening (Task 11)', () => {
       const verifyReq = new NextRequest(`http://localhost:3000/api/documents/${testDocId}`, {
         headers: { authorization: `Bearer ${adminToken}` },
       });
-      const verifyRes = await getDocumentRoute(verifyReq, { params: { id: testDocId } });
+      const verifyRes = await getDocumentRoute(verifyReq, { params: Promise.resolve({ id: testDocId }) });
       assert.strictEqual(verifyRes.status, 404);
     });
   });

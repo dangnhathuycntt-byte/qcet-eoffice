@@ -109,7 +109,7 @@ export function gradeExecution(telemetry, manifest, options = {}) {
  * @param {any} manifest
  * @returns {any}
  */
-export function gradeBenchmark(baselineTelemetry, candidateTelemetry, manifest) {
+export function gradeBenchmark(baselineTelemetry, candidateTelemetry, manifest, options = {}) {
   let gradeBase = baselineTelemetry.qualityScore !== undefined
     ? { score: baselineTelemetry.qualityScore, passed: baselineTelemetry.verificationPassed ?? true }
     : gradeExecution(baselineTelemetry, manifest);
@@ -121,19 +121,47 @@ export function gradeBenchmark(baselineTelemetry, candidateTelemetry, manifest) 
   const durationCand = candidateTelemetry.totalDurationMs || 1;
   const speedupRatio = Number((durationBase / durationCand).toFixed(2));
 
-  const tokensBase = baselineTelemetry.tokenUsage?.totalTokens || 0;
-  const tokensCand = candidateTelemetry.tokenUsage?.totalTokens || 0;
-  const tokenSavingsPercent = tokensBase > 0 ? Math.round(((tokensBase - tokensCand) / tokensBase) * 100) : 0;
+  const hasTokenTelemetry =
+    typeof baselineTelemetry.tokenUsage?.totalTokens === 'number' &&
+    typeof candidateTelemetry.tokenUsage?.totalTokens === 'number';
+
+  const tokenSavingsPercent = hasTokenTelemetry && baselineTelemetry.tokenUsage.totalTokens > 0
+    ? Math.round(((baselineTelemetry.tokenUsage.totalTokens - candidateTelemetry.tokenUsage.totalTokens) / baselineTelemetry.tokenUsage.totalTokens) * 100)
+    : null;
+
+  const measuredTokens = hasTokenTelemetry
+    ? {
+        baseline: baselineTelemetry.tokenUsage.totalTokens,
+        candidate: candidateTelemetry.tokenUsage.totalTokens,
+      }
+    : null;
+
+  const hasContextBytes =
+    typeof baselineTelemetry.totalContextBytes === 'number' &&
+    typeof candidateTelemetry.totalContextBytes === 'number';
+  const contextSavingsPercent = hasContextBytes && baselineTelemetry.totalContextBytes > 0
+    ? Math.round(((baselineTelemetry.totalContextBytes - candidateTelemetry.totalContextBytes) / baselineTelemetry.totalContextBytes) * 100)
+    : null;
+
   const qualityDelta = gradeCand.score - gradeBase.score;
 
   const passesQualityGate = gradeCand.passed && gradeCand.score >= (gradeBase.score - 5);
-  const achievesTargetSpeedup = speedupRatio >= 1.2; // At least 20% speedup target
+  const targetSpeedup = Number(
+    (typeof options === 'object' && options?.targetSpeedup !== undefined)
+      ? options.targetSpeedup
+      : (typeof manifest === 'object' && manifest?.targetSpeedup !== undefined)
+        ? manifest.targetSpeedup
+        : (process.env.QCET_BENCHMARK_TARGET_SPEEDUP || 1.2)
+  );
+  const achievesTargetSpeedup = speedupRatio >= targetSpeedup;
 
   return {
     baselineGrade: gradeBase,
     candidateGrade: gradeCand,
     speedupRatio,
     tokenSavingsPercent,
+    contextSavingsPercent,
+    measuredTokens,
     qualityDelta,
     achievesTargetSpeedup,
     passesQualityGate,

@@ -245,10 +245,12 @@ describe('DAG Scheduler and Concurrency Upgrades (REQ-10, REQ-11, REQ-14, REQ-15
 
     it('workflow injects isolation: "worktree" for isolated shards and omits it for disjoint shards', () => {
       assert.ok(
+        fullWorkflowCode.includes('if (shouldIsolateShard(shard, manifest, worktreeIsolation)) {\n      log(`Shard ${shard.id} invoked with adaptive git worktree isolation.`);\n      builderOptions.isolation = \'worktree\';\n    }') ||
         fullWorkflowCode.includes('if (shouldIsolateShard(shard, manifest)) {\n      log(`Shard ${shard.id} invoked with adaptive git worktree isolation.`);\n      builderOptions.isolation = \'worktree\';\n    }'),
         'Builder options must set isolation to worktree when shouldIsolateShard is true'
       );
       assert.ok(
+        fullWorkflowCode.includes('if (shouldIsolateShard(state.shard, manifest, worktreeIsolation)) {\n      log(`Shard ${state.shard.id} repair invoked with adaptive worktree isolation.`);\n      repairOptions.isolation = \'worktree\';\n    }') ||
         fullWorkflowCode.includes('if (shouldIsolateShard(state.shard, manifest)) {\n      log(`Shard ${state.shard.id} repair invoked with adaptive worktree isolation.`);\n      repairOptions.isolation = \'worktree\';\n    }'),
         'Repair options must set isolation to worktree when shouldIsolateShard is true'
       );

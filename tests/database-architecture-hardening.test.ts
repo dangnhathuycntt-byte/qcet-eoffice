@@ -152,7 +152,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
           title: "Initial Task OCC Title",
           academicMonth: 9,
           academicYear: "2026-2027",
-          dueDate: new Date(),
+          dueDate: new Date(Date.now() + 86400000),
           createdById: testUserId1,
         },
       });
@@ -179,7 +179,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
           title: "Task For Stale OCC Check",
           academicMonth: 9,
           academicYear: "2026-2027",
-          dueDate: new Date(),
+          dueDate: new Date(Date.now() + 86400000),
           createdById: testUserId1,
         },
       });
@@ -256,7 +256,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
           title: "Concurrent Race Condition Target",
           academicMonth: 9,
           academicYear: "2026-2027",
-          dueDate: new Date(),
+          dueDate: new Date(Date.now() + 86400000),
           createdById: testUserId1,
         },
       });
@@ -545,7 +545,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
             title: "Task with Transactional Audit Trail",
             academicMonth: 9,
             academicYear: "2026-2027",
-            dueDate: new Date(),
+            dueDate: new Date(Date.now() + 86400000),
             createdById: testUserId1,
           },
         });
@@ -839,7 +839,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
           title: "Task To Be Soft-Archived",
           academicMonth: 9,
           academicYear: "2026-2027",
-          dueDate: new Date(),
+          dueDate: new Date(Date.now() + 86400000),
           createdById: testUserId1,
         },
       });
@@ -909,7 +909,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
           title: "Active Operational Task",
           academicMonth: 9,
           academicYear: "2026-2027",
-          dueDate: new Date(),
+          dueDate: new Date(Date.now() + 86400000),
           createdById: testUserId1,
         },
       });
@@ -920,7 +920,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
           title: "Archived Operational Task",
           academicMonth: 9,
           academicYear: "2026-2027",
-          dueDate: new Date(),
+          dueDate: new Date(Date.now() + 86400000),
           createdById: testUserId1,
         },
       });
@@ -1022,7 +1022,7 @@ describe("Task 14: Comprehensive Database Architecture Hardening Test Suite", ()
           title: "Task Binding User with Restrict Constraint",
           academicMonth: 9,
           academicYear: "2026-2027",
-          dueDate: new Date(),
+          dueDate: new Date(Date.now() + 86400000),
           createdById: restrictedUser.id,
         },
       });

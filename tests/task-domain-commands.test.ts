@@ -347,7 +347,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         `http://localhost:3000/api/tasks/${testTask.id}/actions/submit-result`,
         { summary: "Báo cáo hoàn thành" }
       );
-      const res = await submitResultRoute(req, { params: { id: testTask.id } });
+      const res = await submitResultRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 401);
       const data = await res.json();
       assert.equal(data.success, false);
@@ -359,7 +359,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         { summary: "" },
         driToken
       );
-      const res = await submitResultRoute(req, { params: { id: testTask.id } });
+      const res = await submitResultRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 400);
       const data = await res.json();
       assert.equal(data.success, false);
@@ -378,7 +378,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         },
         driToken
       );
-      const res = await submitResultRoute(req, { params: { id: testTask.id } });
+      const res = await submitResultRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 200);
 
       const body = await res.json();
@@ -418,7 +418,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         },
         driToken
       );
-      const res = await submitResultRoute(req, { params: { id: testTask.id } });
+      const res = await submitResultRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 409);
       const body = await res.json();
       assert.equal(body.success, false);
@@ -446,7 +446,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         },
         driToken // Submitter attempts self-review
       );
-      const res = await reviewRoute(req, { params: { id: testTask.id } });
+      const res = await reviewRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 403);
       const data = await res.json();
       assert.equal(data.success, false);
@@ -469,7 +469,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         },
         creatorToken
       );
-      const res = await reviewRoute(req, { params: { id: testTask.id } });
+      const res = await reviewRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 200);
 
       const data = await res.json();
@@ -494,7 +494,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         { reason: "" },
         creatorToken
       );
-      const res = await requestRevisionRoute(req, { params: { id: testTask.id } });
+      const res = await requestRevisionRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 400);
       const data = await res.json();
       assert.equal(data.success, false);
@@ -507,7 +507,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         { reason: "Tự thấy chưa được" },
         driToken
       );
-      const res = await requestRevisionRoute(req, { params: { id: testTask.id } });
+      const res = await requestRevisionRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 403);
       const data = await res.json();
       assert.equal(data.success, false);
@@ -522,7 +522,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         },
         creatorToken
       );
-      const res = await requestRevisionRoute(req, { params: { id: testTask.id } });
+      const res = await requestRevisionRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 200);
 
       const data = await res.json();
@@ -563,7 +563,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         { note: "Tôi tự duyệt nhiệm vụ tôi tạo" },
         creatorToken
       );
-      const res = await approveRoute(req, { params: { id: testTask.id } });
+      const res = await approveRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 403);
       const data = await res.json();
       assert.equal(data.success, false);
@@ -576,7 +576,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         { note: "Tôi là DRI và tôi tự duyệt" },
         driToken
       );
-      const res = await approveRoute(req, { params: { id: testTask.id } });
+      const res = await approveRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 403);
       const data = await res.json();
       assert.equal(data.success, false);
@@ -589,7 +589,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         { note: "Đồng ý phê duyệt hoàn thành nhiệm vụ theo báo cáo thẩm định." },
         unitHeadToken
       );
-      const res = await approveRoute(req, { params: { id: testTask.id } });
+      const res = await approveRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 200);
 
       const data = await res.json();
@@ -628,7 +628,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         },
         collaboratorToken // Collaborator tries to reassign
       );
-      const res = await reassignRoute(req, { params: { id: testTask.id } });
+      const res = await reassignRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 403);
       const data = await res.json();
       assert.equal(data.success, false);
@@ -645,7 +645,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         },
         creatorToken
       );
-      const res = await reassignRoute(req, { params: { id: testTask.id } });
+      const res = await reassignRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 200);
 
       const data = await res.json();
@@ -686,7 +686,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         },
         creatorToken
       );
-      const res = await reassignRoute(req, { params: { id: testTask.id } });
+      const res = await reassignRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 400);
       const data = await res.json();
       assert.equal(data.success, false);
@@ -707,7 +707,7 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
         },
         creatorToken
       );
-      const res = await remindRoute(req, { params: { id: testTask.id } });
+      const res = await remindRoute(req, { params: Promise.resolve({ id: testTask.id }) });
       assert.equal(res.status, 200);
 
       const data = await res.json();

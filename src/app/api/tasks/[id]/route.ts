@@ -27,7 +27,7 @@ import {
 import { toTaskDetailDTO } from '@/server/dto/task-dto';
 
 interface RouteContext {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(req: Request, routeContext: RouteContext) {

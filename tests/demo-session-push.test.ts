@@ -24,18 +24,31 @@ describe('Push Notification Authentication & Session Integration', () => {
     assert.strictEqual(res.status, 401);
     const json = await res.json();
     assert.strictEqual(json.success, false);
-    assert.strictEqual(json.error, 'Unauthorized');
+    assert.match(json.error, /Unauthorized/);
   });
 
   test('Push notification lifecycle succeeds when authenticated via session cookie', async () => {
+    // 0. Ensure user exists in database
+    let user = await prisma.user.findFirst({ where: { email: 'bgh@cdktcnqn.edu.vn' } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          id: 'user-admin-bgh',
+          email: 'bgh@cdktcnqn.edu.vn',
+          name: 'Ban Giám Hiệu',
+          role: 'ADMIN',
+        },
+      });
+    }
+
     // 1. Establish session using signed JWT token directly
     const sessionCookie = signSessionToken({
-      id: 'user-admin-bgh',
-      email: 'bgh@cdktcnqn.edu.vn',
-      name: 'Ban Giám Hiệu',
-      role: 'ADMIN',
-      departmentId: 'ban-giam-hieu',
-      title: 'Hiệu trưởng',
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      departmentId: user.departmentId || 'ban-giam-hieu',
+      title: user.title || 'Hiệu trưởng',
     });
     assert.ok(sessionCookie, 'Session cookie must exist');
 
@@ -47,6 +60,7 @@ describe('Push Notification Authentication & Session Integration', () => {
       headers: {
         'Content-Type': 'application/json',
         cookie: `qcet_session=${sessionCookie}`,
+        origin: 'http://localhost:3000',
       },
       body: JSON.stringify({
         endpoint: testEndpoint,
@@ -64,7 +78,7 @@ describe('Push Notification Authentication & Session Integration', () => {
       where: { endpoint: testEndpoint },
     });
     assert.ok(dbSub);
-    assert.strictEqual(dbSub?.userId, 'user-admin-bgh');
+    assert.strictEqual(dbSub?.userId, user.id);
 
     // 3. Test push notification dispatch with session cookie
     const testReq = new NextRequest('http://localhost:3000/api/notifications/push/test', {
@@ -72,6 +86,7 @@ describe('Push Notification Authentication & Session Integration', () => {
       headers: {
         'Content-Type': 'application/json',
         cookie: `qcet_session=${sessionCookie}`,
+        origin: 'http://localhost:3000',
       },
       body: JSON.stringify({
         title: 'Thử nghiệm thông báo',
@@ -89,6 +104,7 @@ describe('Push Notification Authentication & Session Integration', () => {
       headers: {
         'Content-Type': 'application/json',
         cookie: `qcet_session=${sessionCookie}`,
+        origin: 'http://localhost:3000',
       },
       body: JSON.stringify({
         endpoint: testEndpoint,

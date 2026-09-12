@@ -226,11 +226,11 @@ export function AppSidebar() {
       if (item.badgeKey && badgeCounts?.[item.badgeKey] !== undefined) {
         text = badgeCounts[item.badgeKey];
       } else if (item.href === "/calendar") {
-        text = badgeCounts?.calendar ?? 1;
+        text = badgeCounts?.calendar;
       } else if (item.href === "/notifications") {
-        text = badgeCounts?.notifications ?? 5;
+        text = badgeCounts?.notifications;
       } else if (item.href === "/documents") {
-        text = badgeCounts?.docsInbox ?? 6;
+        text = badgeCounts?.docsInbox;
       } else if (item.href === "/tasks") {
         text = badgeCounts?.allTasks ?? badgeCounts?.tasks;
       }

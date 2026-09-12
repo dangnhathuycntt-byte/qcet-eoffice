@@ -249,4 +249,48 @@ test('Phase 9: Institutional Context API & Action Inbox Aggregator', async (t) =
     assert.equal(presItem?.priority, 'URGENT');
     assert.equal(presItem?.reasonWhyMe, 'Văn bản đến đang chờ Ban Giám hiệu chỉ đạo xử lý');
   });
+
+  t.after(async () => {
+    try {
+      await prisma.documentIncomingWorkflow.deleteMany({
+        where: { document: { originalNumber: `CV-DEN-${runId}` } },
+      });
+      await prisma.document.deleteMany({
+        where: { originalNumber: `CV-DEN-${runId}` },
+      });
+      await prisma.taskActor.deleteMany({
+        where: { task: { code: `TASK-DRI-${runId}` } },
+      });
+      await prisma.task.deleteMany({
+        where: { code: `TASK-DRI-${runId}` },
+      });
+      await prisma.delegationGrant.deleteMany({
+        where: { sourceDocumentNumber: `QD-UQ-${runId}` },
+      });
+      await prisma.portfolioAssignment.deleteMany({
+        where: { responsibilityAreaId: respArea.id },
+      });
+      await prisma.positionAssignment.deleteMany({
+        where: {
+          id: { in: [bghAssignment.id, headAssignment.id, specAssignment.id] },
+        },
+      });
+      await prisma.positionDefinition.deleteMany({
+        where: {
+          id: { in: [principalPosition.id, headPosition.id, specialistPosition.id] },
+        },
+      });
+      await prisma.responsibilityArea.deleteMany({
+        where: { id: respArea.id },
+      });
+      await prisma.user.deleteMany({
+        where: { id: { in: [bghUser.id, headUser.id, specialistUser.id] } },
+      });
+      await prisma.organizationalUnit.deleteMany({
+        where: { id: { in: [trainingUnit.id, bghUnit.id] } },
+      });
+    } catch (e) {
+      console.error('Cleanup error in user-context-and-inbox.test.ts:', e);
+    }
+  });
 });

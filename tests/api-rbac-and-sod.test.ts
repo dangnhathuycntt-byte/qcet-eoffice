@@ -4,6 +4,8 @@ import fs from "node:fs";
 import { NextRequest } from "next/server";
 import { GET as getOverview } from "../src/app/api/dashboard/overview/route";
 import { PATCH as patchTask } from "../src/app/api/tasks/[id]/route";
+import { taskCommandService } from "../src/server/tasks";
+import { ForbiddenError } from "../src/server/api/errors";
 import prisma from "../src/lib/prisma";
 import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
 import { TaskScope, TaskStatus, AssigneeRole } from "@prisma/client";
@@ -73,7 +75,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         code: `TEST-RBAC-SCH-${Date.now()}`,
         title: "Test RBAC School Scope Task",
         scope: TaskScope.SCHOOL,
-        status: TaskStatus.IN_PROGRESS,
+        status: TaskStatus.WAITING_APPROVAL,
         academicMonth: 9,
         academicYear: "2026-2027",
         dueDate: new Date("2026-09-30"),
@@ -94,7 +96,7 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
         code: `TEST-RBAC-DEP-${Date.now()}`,
         title: "Test RBAC Department Scope Task",
         scope: TaskScope.DEPARTMENT,
-        status: TaskStatus.IN_PROGRESS,
+        status: TaskStatus.WAITING_APPROVAL,
         academicMonth: 9,
         academicYear: "2026-2027",
         dueDate: new Date("2026-09-30"),
@@ -126,19 +128,23 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
   });
 
   test("Task update API enforces BGH role for SCHOOL tasks completion", () => {
-    const content = fs.readFileSync("src/app/api/tasks/[id]/route.ts", "utf8");
+    const content = fs.existsSync("src/server/tasks/task-policy.ts")
+      ? fs.readFileSync("src/server/tasks/task-policy.ts", "utf8")
+      : fs.readFileSync("src/server/policies/task-policy.ts", "utf8");
     assert.ok(
-      content.includes("existingTask.scope === TaskScope.SCHOOL") ||
-      content.includes("existing.scope === TaskScope.SCHOOL"),
+      content.includes("TaskScope.SCHOOL") ||
+      content.includes("scopeUpper === 'SCHOOL'") ||
+      content.includes("task.scope === 'SCHOOL'"),
       "Must check existing task scope for SCHOOL"
     );
   });
 
-  test("Overview API enforces session authentication via getSessionFromRequest", () => {
+  test("Overview API enforces session authentication via getSessionFromRequest or requireAuthenticated", () => {
     const content = fs.readFileSync("src/app/api/dashboard/overview/route.ts", "utf8");
     assert.ok(
-      content.includes("getSessionFromRequest"),
-      "Overview route must import and invoke getSessionFromRequest"
+      content.includes("getSessionFromRequest") ||
+      content.includes("requireAuthenticated"),
+      "Overview route must enforce authentication"
     );
   });
 
@@ -162,42 +168,54 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
     assert.strictEqual(body.source, "database");
   });
 
-  test("PATCH /api/tasks/[id] disallows non-BGH/admin from completing SCHOOL task", async () => {
-    // Leader of department is assigned to this school task, attempts to complete it without delegation
+  test("PATCH /api/tasks/[id] rejects direct status mutation (CANONICAL_COMMAND_REQUIRED)", async () => {
     const req = new NextRequest(`http://localhost:3000/api/tasks/${schoolTaskId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
+        origin: "http://localhost:3000",
         cookie: `${SESSION_COOKIE_NAME}=${leaderDeptToken}`,
       },
       body: JSON.stringify({ status: "completed" }),
     });
 
     const res = await patchTask(req, { params: Promise.resolve({ id: schoolTaskId }) });
-    assert.strictEqual(res.status, 403);
+    assert.strictEqual(res.status, 400);
     const body = await res.json();
     assert.strictEqual(body.success, false);
+    assert.strictEqual(body.code, "CANONICAL_COMMAND_REQUIRED");
   });
 
-  test("PATCH /api/tasks/[id] disallows assignee self-approval (SoD) on department task without delegation", async () => {
-    // staffUser is PRIMARY_OWNER of deptTaskId
-    const req = new NextRequest(`http://localhost:3000/api/tasks/${deptTaskId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        cookie: `${SESSION_COOKIE_NAME}=${staffToken}`,
+  test("taskCommandService disallows non-BGH/admin from completing SCHOOL task", async () => {
+    // Leader of department is assigned to this school task, attempts to complete it without delegation
+    const ctx = { user: leaderUser, requestId: "req-rbac-sch-1" };
+    await assert.rejects(
+      async () => {
+        await taskCommandService.updateTask(ctx, schoolTaskId, { status: "completed" });
       },
-      body: JSON.stringify({ status: "completed" }),
-    });
-
-    const res = await patchTask(req, { params: Promise.resolve({ id: deptTaskId }) });
-    assert.strictEqual(res.status, 403);
-    const body = await res.json();
-    assert.strictEqual(body.success, false);
-    assert.match(body.error, /phân lập nhiệm vụ|Segregation of Duties|không được tự/i);
+      (err: any) => {
+        assert.strictEqual(err.statusCode, 403);
+        return true;
+      }
+    );
   });
 
-  test("PATCH /api/tasks/[id] allows assignee to complete task when possessing valid dacumDelegation", async () => {
+  test("taskCommandService disallows assignee self-approval (SoD) on department task without delegation", async () => {
+    // staffUser is PRIMARY_OWNER of deptTaskId
+    const ctx = { user: staffUser, requestId: "req-rbac-dep-sod" };
+    await assert.rejects(
+      async () => {
+        await taskCommandService.updateTask(ctx, deptTaskId, { status: "completed" });
+      },
+      (err: any) => {
+        assert.strictEqual(err.statusCode, 403);
+        assert.match(err.message, /phân lập nhiệm vụ|Segregation of Duties|không được tự/i);
+        return true;
+      }
+    );
+  });
+
+  test("taskCommandService allows assignee to complete task when possessing valid dacumDelegation", async () => {
     // Create an active dacumDelegation for staffUser
     const delegation = await prisma.dacumDelegation.create({
       data: {
@@ -215,37 +233,15 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
     });
     testDelegationId = delegation.id;
 
-    // Now staffUser attempts to complete task with delegation
-    const req = new NextRequest(`http://localhost:3000/api/tasks/${deptTaskId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        cookie: `${SESSION_COOKIE_NAME}=${staffToken}`,
-      },
-      body: JSON.stringify({ status: "completed" }),
-    });
-
-    const res = await patchTask(req, { params: Promise.resolve({ id: deptTaskId }) });
-    assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.success, true);
-    assert.strictEqual(body.data.status, "completed");
+    // Now staffUser completes task with delegation
+    const ctx = { user: staffUser, requestId: "req-rbac-dep-delegation" };
+    const updated = await taskCommandService.updateTask(ctx, deptTaskId, { status: "completed" });
+    assert.strictEqual(updated.status, TaskStatus.COMPLETED);
   });
 
-  test("PATCH /api/tasks/[id] allows BGH to complete SCHOOL task", async () => {
-    const req = new NextRequest(`http://localhost:3000/api/tasks/${schoolTaskId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        cookie: `${SESSION_COOKIE_NAME}=${bghToken}`,
-      },
-      body: JSON.stringify({ status: "completed" }),
-    });
-
-    const res = await patchTask(req, { params: Promise.resolve({ id: schoolTaskId }) });
-    assert.strictEqual(res.status, 200);
-    const body = await res.json();
-    assert.strictEqual(body.success, true);
-    assert.strictEqual(body.data.status, "completed");
+  test("taskCommandService allows BGH to complete SCHOOL task", async () => {
+    const ctx = { user: bghUser, requestId: "req-rbac-sch-bgh" };
+    const updated = await taskCommandService.updateTask(ctx, schoolTaskId, { status: "completed" });
+    assert.strictEqual(updated.status, TaskStatus.COMPLETED);
   });
 });

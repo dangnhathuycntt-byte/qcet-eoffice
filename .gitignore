@@ -63,3 +63,4 @@ benchmarks/e2e/results/
 
 # Executor runtime verdict artifacts (non-sensitive path, outside .claude/)
 qcet-executor-runs/
+.gstack/

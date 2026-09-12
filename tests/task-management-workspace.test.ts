@@ -305,8 +305,10 @@ describe("TaskManagementWorkspace Unit & Integration Suite", () => {
       "TasksPage must mount TaskManagementWorkspace with scope='school'"
     );
     assert.ok(
-      unitTasksContent.includes('<TaskManagementWorkspace scope="unit"'),
-      "UnitTasksPage must mount TaskManagementWorkspace with scope='unit'"
+      (unitTasksContent.includes('permanentRedirect') || unitTasksContent.includes('redirect')) &&
+        unitTasksContent.includes('/tasks') &&
+        unitTasksContent.includes('scope'),
+      "UnitTasksPage must canonically redirect to /tasks with scope=unit"
     );
 
     // Both pages should be concise (< 30 lines)
