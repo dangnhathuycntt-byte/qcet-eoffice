@@ -3781,6 +3781,32 @@ ${ambiguityFallback}`;
 
         const preRecon = await preReconPromise;
         if (!preRecon || !preRecon.recon || preRecon.recon.status === 'blocked') {
+          // For low-risk shards with no dependencies, attempt implementation with
+          // a degraded recon state rather than blocking entirely.  The builder
+          // receives the full shard packet and can proceed without recon context.
+          const shardRisk = String(shard.risk || 'medium').toLowerCase();
+          const hasDependencies = (shard.dependencies || []).length > 0;
+          if (shardRisk === 'low' && !hasDependencies) {
+            log(
+              `Shard ${shard.id} pre-recon blocked; proceeding with degraded recon ` +
+              `(risk=${shardRisk}, no dependencies).`
+            );
+            const degradedPreRecon = {
+              shard,
+              shardPacket: preRecon?.shardPacket || buildShardPacket(shard, manifest),
+              recon: {
+                status: 'degraded',
+                currentState: 'Pre-recon agent failed to produce structured output. Proceeding from shard packet alone.',
+                relevantFiles: [],
+                contracts: [],
+                implementationNotes: [],
+                risks: ['Pre-recon failed; builder proceeding from shard packet context only.'],
+                blocker: null,
+              },
+              research: null,
+            };
+            return runShardWithReconciliation(shard, degradedPreRecon, dependencyResults);
+          }
           return {
             shard,
             shardPacket: preRecon?.shardPacket || buildShardPacket(shard, manifest),

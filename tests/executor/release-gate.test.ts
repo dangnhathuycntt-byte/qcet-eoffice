@@ -353,3 +353,75 @@ test('gate path: buildGateVerdictPath throws for invalid runId', () => {
   assert.throws(() => buildGateVerdictPath(''), /Invalid executor runId/);
   assert.throws(() => buildGateVerdictPath('has space'), /Invalid executor runId/);
 });
+
+// ─── Degraded-recon fallback regression tests ─────────────────────────────────
+// When pre-recon agent fails and the executor proceeds with a degraded recon
+// state for low-risk, dependency-free shards, the gate still evaluates based
+// on the final shard verification result (not the recon status).
+
+test('degraded-recon: shard with degraded recon that passes verification → READY', () => {
+  const manifest = makeManifest(['canary'], ['R1']);
+  // Shard proceeded with degraded recon, builder succeeded, verifier passed
+  const allShardResults = [
+    {
+      shard: { id: 'canary', requirements: ['R1'], risk: 'low', dependencies: [] },
+      recon: { status: 'degraded', currentState: 'Pre-recon blocked.' },
+      implementation: { status: 'ok', changedFiles: ['qcet-e2e/target.txt'] },
+      lastVerification: { verdict: 'pass', requirementsChecked: ['R1'], issues: [], summary: 'ok' },
+    },
+  ];
+  const verificationPassed = computeCanonicalVerificationPassed(manifest, allShardResults);
+  assert.equal(verificationPassed, true);
+  const gate = evaluateDeterministicReleaseGate({
+    manifest,
+    allShardResults,
+    validation: passingValidation,
+    finalVerdict: { status: 'READY' },
+  });
+  assert.equal(gate.status, 'READY');
+  assert.equal(gate.ready, true);
+});
+
+test('degraded-recon: shard with degraded recon that fails verification → BLOCKED', () => {
+  const manifest = makeManifest(['canary'], ['R1']);
+  const allShardResults = [
+    {
+      shard: { id: 'canary', requirements: ['R1'], risk: 'low', dependencies: [] },
+      recon: { status: 'degraded', currentState: 'Pre-recon blocked.' },
+      implementation: { status: 'blocked', changedFiles: [] },
+      lastVerification: { verdict: 'blocked', requirementsChecked: [], issues: [], summary: 'blocked' },
+    },
+  ];
+  const verificationPassed = computeCanonicalVerificationPassed(manifest, allShardResults);
+  assert.equal(verificationPassed, false);
+  const gate = evaluateDeterministicReleaseGate({
+    manifest,
+    allShardResults,
+    validation: passingValidation,
+    finalVerdict: { status: 'READY' },
+  });
+  assert.equal(gate.status, 'BLOCKED');
+  assert.equal(gate.ready, false);
+  assert.ok(gate.blockers.some((b: string) => b.startsWith('SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE')));
+});
+
+test('degraded-recon: Global Validation PASS cannot override degraded-recon shard blocked verdict', () => {
+  const manifest = makeManifest(['canary'], ['R1']);
+  const allShardResults = [
+    {
+      shard: { id: 'canary', requirements: ['R1'] },
+      recon: { status: 'degraded' },
+      lastVerification: { verdict: 'blocked' },
+    },
+  ];
+  const verificationPassed = computeCanonicalVerificationPassed(manifest, allShardResults);
+  assert.equal(verificationPassed, false);
+  const gate = evaluateDeterministicReleaseGate({
+    manifest,
+    allShardResults,
+    validation: { status: 'pass', checks: [{ name: 'typecheck', status: 'passed' }] },
+    finalVerdict: { status: 'READY' },
+  });
+  assert.equal(gate.status, 'BLOCKED');
+  assert.notEqual(gate.status, 'READY');
+});
