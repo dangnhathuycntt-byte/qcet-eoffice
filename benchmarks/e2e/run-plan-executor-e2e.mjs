@@ -548,16 +548,21 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     }
   }, 3000);
 
-  // Invoke /qcet-plan-executor as a slash command (-p mode).
-  // Slash commands in -p mode are dispatched by the Claude Code CLI handler
-  // SYNCHRONOUSLY — the workflow runs inline and the process blocks until
-  // it completes. This is fundamentally different from the model calling the
-  // Workflow() tool (which returns a background task ID that gets killed when
-  // the -p session ends).
+  // Invoke /qcet-plan-executor as a slash-command prompt in -p mode.
   //
-  // The CLI sees the leading "/" and dispatches to the registered workflow
-  // .claude/workflows/qcet-plan-executor.js directly, bypassing the model for
-  // invocation. The invocation mode is: cli-slash-command → workflow.
+  // What actually happens:
+  //   1. The model receives the slash-command string as the user prompt.
+  //   2. Claude Code dispatches it: the model calls Workflow({name: "qcet-plan-executor", args: "e2e-plan.md"}).
+  //   3. Workflow() launches the orchestration as a background task.
+  //   4. Claude Code waits for the background task to complete and delivers
+  //      a task-notification user event, waking the model for a second turn.
+  //   5. The model reports the final verdict; the -p session then ends.
+  //
+  // Critical: do NOT pass --no-session-persistence — with it the session exits
+  // after producing the first result ("workflow running in background") without
+  // waiting for the background task notification that carries the READY verdict.
+  // Without it, Claude Code keeps the process alive until all background tasks
+  // complete and the model has produced its final result turn.
   const { exitCode, timedOut, earlyExit } = await spawnClaude(
     [
       '-p',
@@ -568,7 +573,8 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
       '--allowedTools', 'Read,Edit,Write,Bash,Agent,Workflow',
       '--output-format', 'stream-json',
       '--verbose',
-      '--no-session-persistence',
+      // NOTE: no --no-session-persistence — session must stay alive to receive
+      // the workflow background-task completion notification.
     ],
     {
       cwd: trialDir,
