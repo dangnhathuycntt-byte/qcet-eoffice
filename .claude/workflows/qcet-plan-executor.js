@@ -1217,35 +1217,34 @@ function evaluateDeterministicReleaseGate({
 
   // 1. Shard execution checks
   if (!Array.isArray(allShardResults) || allShardResults.length === 0) {
-    deterministicBlockers.push('No shard execution results available.');
+    deterministicBlockers.push('SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: No shard execution results available.');
   } else {
-    // If integration repair completed AND global validation passed, shard-level blocked
-    // verdicts may have been resolved by the repair/integration path. Only treat them as
-    // hard blockers when we have no downstream evidence of resolution.
-    const integrationRepairCompleted = integrationRepair?.status === 'completed';
-    const globalValidationPassed =
-      validation &&
-      validation.status !== 'fail' && validation.status !== 'failed' &&
-      validation.overallStatus !== 'failed' &&
-      (!Array.isArray(validation.blockers) || validation.blockers.length === 0) &&
-      (!Array.isArray(validation.violations) || validation.violations.length === 0);
-    const downstreamResolutionEvident = integrationRepairCompleted && globalValidationPassed;
+    // Independent shard verification is mandatory. Global Validation and Integration Repair
+    // are supplementary proof only — they cannot substitute for required per-shard verification.
+
+    // 1a. Every manifest shard must have a corresponding result (no silent null/missing shard).
+    if (Array.isArray(manifest?.shards) && manifest.shards.length > 0) {
+      for (const shard of manifest.shards) {
+        const result = allShardResults.find((r) => r?.shard?.id === shard.id);
+        if (!result) {
+          deterministicBlockers.push(`SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: Required shard '${shard.id}' has no execution result.`);
+        }
+      }
+    }
 
     for (const res of allShardResults) {
       if (!res) {
-        deterministicBlockers.push('One or more shards produced null execution results.');
+        deterministicBlockers.push('SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: One or more shards produced null execution results.');
         continue;
       }
       const shardId = res.shard?.id || 'unknown-shard';
       const verdict = res.lastVerification?.verdict;
-      if (verdict === 'blocked' || verdict === 'BLOCKED' || verdict === 'fail' || verdict === 'FAIL') {
-        if (downstreamResolutionEvident) {
-          // Integration repair + global validation provide downstream proof that the
-          // shard's work was resolved. The stale shard-level verdict does not override
-          // that independent evidence.
-        } else {
-          deterministicBlockers.push(`Shard '${shardId}' verification failed (${verdict}).`);
-        }
+      if (!res.lastVerification) {
+        deterministicBlockers.push(`SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: Shard '${shardId}' has no verification record.`);
+      } else if (verdict === 'blocked' || verdict === 'BLOCKED' || verdict === 'fail' || verdict === 'FAIL') {
+        // Shard verification is required. No downstream path (integration repair, global
+        // validation, or final skeptic) may override a blocked/fail shard verdict.
+        deterministicBlockers.push(`SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: Shard '${shardId}' verification failed (${verdict}).`);
       }
       if (res.repaired && res.repairResult && res.repairResult.success === false) {
         deterministicBlockers.push(`Shard '${shardId}' repair failed to resolve defects.`);
@@ -1323,22 +1322,11 @@ function evaluateDeterministicReleaseGate({
     }
     const missingReqs = manifest.requirements.filter((r) => !coveredReqs.has(r.id));
     if (missingReqs.length > 0) {
-      // When downstream evidence (integration repair + global validation) demonstrates
-      // all requirements were fulfilled, the requirement coverage check is superseded.
-      // Shard-level blocked verdicts may prevent coverage tracking even when the actual
-      // work was completed via the integration repair path.
-      const integrationRepairCompleted = integrationRepair?.status === 'completed';
-      const globalValidationPassed =
-        validation &&
-        validation.status !== 'fail' && validation.status !== 'failed' &&
-        validation.overallStatus !== 'failed' &&
-        (!Array.isArray(validation.blockers) || validation.blockers.length === 0) &&
-        (!Array.isArray(validation.violations) || validation.violations.length === 0);
-      if (!(integrationRepairCompleted && globalValidationPassed)) {
-        deterministicBlockers.push(
-          `${missingReqs.length}/${totalReqs} requirements missing successful shard implementation: ${missingReqs.map((r) => r.id).join(', ')}`
-        );
-      }
+      // Independent shard verification is mandatory. Requirement coverage cannot be
+      // superseded by integration repair or global validation.
+      deterministicBlockers.push(
+        `SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: ${missingReqs.length}/${totalReqs} requirements missing successful shard implementation: ${missingReqs.map((r) => r.id).join(', ')}`
+      );
     }
   }
 
@@ -2263,25 +2251,78 @@ async function verifyWithBoundedRetry(invoke, prompt, options) {
   const usable = (value) => value && ['pass', 'fail', 'blocked'].includes(value.verdict)
     && Array.isArray(value.requirementsChecked) && Array.isArray(value.issues)
     && typeof value.summary === 'string';
-  const first = await invoke(prompt, options);
+  const blockedSentinel = (label) => ({
+    verdict: 'blocked', requirementsChecked: [],
+    issues: [{ id: `${label}-VERIFIER-STRUCTURED-OUTPUT`, severity: 'high',
+      category: 'verifier-structured-output-failure',
+      file: 'none',
+      evidence: 'Independent verifier failed to provide usable StructuredOutput after one bounded retry.',
+      impact: 'Independent shard verification could not be established.',
+      recommendedFix: 'Re-run verification with a functioning structured-output verifier.' }],
+    summary: 'Independent verifier failed to produce usable structured output after one bounded retry.',
+  });
+  let first;
+  try {
+    first = await invoke(prompt, options);
+  } catch (_firstErr) {
+    first = null;
+  }
   // An explicit negative verdict must never be replaced with a retry approval.
   if (usable(first) || first?.verdict === 'fail' || first?.verdict === 'blocked') return first;
-  const second = await invoke(`${prompt}
-
-STRUCTURED OUTPUT RETRY (one attempt only):
-The previous call did not return a usable verification result. Independently inspect the evidence above.
-Do not modify files. You MUST call StructuredOutput using the supplied schema before finishing.`,
-    { ...options, label: `${options.label}-retry` });
-  return usable(second) ? second : {
-    verdict: 'blocked', requirementsChecked: [],
-    issues: [{ id: `${options.label}-VERIFY-BLOCKED`, severity: 'critical', category: 'verifier-failure',
-      file: 'none', evidence: 'No usable StructuredOutput after one retry.',
-      impact: 'Independent verification is unavailable.', recommendedFix: 'Check verifier output transport.' }],
-    summary: 'Verifier missing StructuredOutput after bounded retry — BLOCKED.',
-  };
+  // first was null / malformed / threw — perform exactly ONE retry.
+  let second;
+  try {
+    second = await invoke(
+      'You MUST return the final independent verification result through StructuredOutput matching VERIFY_SCHEMA.\n' +
+      'Do not implement or repair anything.\n' +
+      'Only return the structured verification result.',
+      { ...options, label: `${options.label}-retry` }
+    );
+  } catch (_retryErr) {
+    return blockedSentinel(options.label);
+  }
+  if (usable(second)) return second;
+  return blockedSentinel(options.label);
 }
 
 // -----------------------------------------------------------------------------
+// Canonical computation: every required manifest shard must have a corresponding result
+// with lastVerification.verdict === 'pass'. Any missing/null/non-pass result → false.
+function computeCanonicalVerificationPassed(manifest, allShardResults) {
+  if (!Array.isArray(allShardResults) || allShardResults.length === 0) return false;
+  const requiredShards = manifest?.shards;
+  if (!Array.isArray(requiredShards) || requiredShards.length === 0) return false;
+  return requiredShards.every((shard) => {
+    const result = allShardResults.find((r) => r?.shard?.id === shard.id);
+    return result != null && result.lastVerification?.verdict === 'pass';
+  });
+}
+
+// Build the gate-verdict artifact, enforcing the internal invariant:
+// READY or READY_WITH_KNOWN_ISSUES implies verificationPassed === true.
+function buildGateArtifact(runId, manifest, allShardResults, finalVerdict, extraFields) {
+  const verificationPassed = computeCanonicalVerificationPassed(manifest, allShardResults);
+  let statusForArtifact = finalVerdict.status;
+  const invariantViolation = !verificationPassed &&
+    (statusForArtifact === 'READY' || statusForArtifact === 'READY_WITH_KNOWN_ISSUES');
+  if (invariantViolation) {
+    statusForArtifact = 'BLOCKED';
+  }
+  return {
+    runId,
+    verificationPassed,
+    status: statusForArtifact,
+    ready: statusForArtifact === 'READY' || statusForArtifact === 'READY_WITH_KNOWN_ISSUES',
+    blockers: invariantViolation
+      ? ['INTERNAL_RELEASE_GATE_INVARIANT_VIOLATION', ...(finalVerdict.blockers || [])]
+      : (finalVerdict.blockers || []),
+    rationale: finalVerdict.rationale,
+    deterministicOverride: finalVerdict.deterministicOverride || false,
+    agentVerdict: finalVerdict.agentVerdict,
+    ...extraFields,
+  };
+}
+
 // WORKFLOW
 // -----------------------------------------------------------------------------
 
@@ -4468,17 +4509,20 @@ Return exactly the structured release verdict.
 
   // Use a non-.claude path so Claude Code safetyCheck does not block the Write.
   const gateVerdictPath = buildGateVerdictPath(resolvedRunId);
-  const gateVerdictPayload = {
-    runId: resolvedRunId,
-    verificationPassed: allShardResults.length > 0 && allShardResults.every(result => result.lastVerification?.verdict === 'pass'),
-    status: finalVerdict.status,
-    ready: finalVerdict.status === 'READY' || finalVerdict.status === 'READY_WITH_KNOWN_ISSUES',
-    blockers: finalVerdict.blockers || [],
-    rationale: finalVerdict.rationale,
-    deterministicOverride: finalVerdict.deterministicOverride || false,
-    agentVerdict: finalVerdict.agentVerdict,
-    timestamp: (args?.timestamp || 'unknown'),
-  };
+  // Canonical verificationPassed + invariant enforcement: delegate to helper functions
+  // so the same logic can be deterministically tested.
+  const canonicalVerificationPassed = computeCanonicalVerificationPassed(manifest, allShardResults);
+  if (!canonicalVerificationPassed &&
+      (finalVerdict.status === 'READY' || finalVerdict.status === 'READY_WITH_KNOWN_ISSUES')) {
+    log(`INTERNAL_RELEASE_GATE_INVARIANT_VIOLATION: status=${finalVerdict.status} but verificationPassed=false. Forcing BLOCKED.`);
+  }
+  const gateVerdictPayload = buildGateArtifact(
+    resolvedRunId,
+    manifest,
+    allShardResults,
+    finalVerdict,
+    { timestamp: (args?.timestamp || 'unknown') }
+  );
 
   try {
     log(`Persisting release gate verdict to ${gateVerdictPath}`);
