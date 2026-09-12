@@ -505,14 +505,14 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     executorSha: EXECUTOR_SHA,
     permissionMode: 'acceptEdits',
     allowedTools: 'Read,Edit,Write,Bash,Agent,Workflow',
-    invocationMode: 'slash-command',
+    invocationMode: 'stdin-slash-command',
     invocation: '/qcet-plan-executor e2e-plan.md',
     trialDir,
     transcriptPath,
     stderrPath,
   }, null, 2));
 
-  log(`  Invoking: /qcet-plan-executor e2e-plan.md (slash-command — registered workflow)`);
+  log(`  Invoking: /qcet-plan-executor e2e-plan.md (stdin slash-command — keeps session alive for workflow task completion)`);
 
   const checkExecutorArtifacts = () => {
     if (gateB_executorArtifact) return true;
@@ -548,39 +548,50 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     }
   }, 3000);
 
-  // Invoke /qcet-plan-executor as a slash-command prompt in -p mode.
+  // Invoke /qcet-plan-executor via stdin (not -p arg) to keep the session
+  // alive through workflow background-task completion.
   //
-  // What actually happens:
-  //   1. The model receives the slash-command string as the user prompt.
-  //   2. Claude Code dispatches it: the model calls Workflow({name: "qcet-plan-executor", args: "e2e-plan.md"}).
-  //   3. Workflow() launches the orchestration as a background task.
-  //   4. Claude Code waits for the background task to complete and delivers
-  //      a task-notification user event, waking the model for a second turn.
-  //   5. The model reports the final verdict; the -p session then ends.
+  // Why NOT -p "/qcet-plan-executor e2e-plan.md":
+  //   With -p the session produces one result turn ("workflow running in
+  //   background") and exits. The Workflow() tool dispatches a background task
+  //   whose completion notification arrives minutes later — but the process is
+  //   already gone, so the notification is lost and gate-verdict.json never
+  //   appears in the transcript. This is a race: -p exits after one result, the
+  //   background task notification arrives after ~10 min.
   //
-  // Critical: do NOT pass --no-session-persistence — with it the session exits
-  // after producing the first result ("workflow running in background") without
-  // waiting for the background task notification that carries the READY verdict.
-  // Without it, Claude Code keeps the process alive until all background tasks
-  // complete and the model has produced its final result turn.
+  // Why stdin works:
+  //   Passing the prompt via stdin triggers the same agentic turn as -p, but
+  //   Claude Code holds the process open — processing tool calls, background
+  //   task notifications, and subsequent turns — until the model produces its
+  //   final response AND all background tasks have completed. The process then
+  //   exits naturally. The workflow completion notification (second system/init
+  //   + second result/success) is delivered inline before exit.
+  //
+  // Invocation chain:
+  //   stdin "/qcet-plan-executor e2e-plan.md"
+  //   → model calls Workflow({name: "qcet-plan-executor", args: "e2e-plan.md"})
+  //   → background task launched
+  //   → Claude Code loops, waiting for task completion notification
+  //   → task completes → user event → model second turn → READY verdict
+  //   → process exits naturally (or SIGTERM on overall timeout)
   const { exitCode, timedOut, earlyExit } = await spawnClaude(
     [
-      '-p',
-      `/qcet-plan-executor e2e-plan.md`,
       '--model', MODEL,
       '--effort', EFFORT,
       '--permission-mode', 'acceptEdits',
       '--allowedTools', 'Read,Edit,Write,Bash,Agent,Workflow',
       '--output-format', 'stream-json',
       '--verbose',
-      // NOTE: no --no-session-persistence — session must stay alive to receive
-      // the workflow background-task completion notification.
+      '--no-session-persistence',
     ],
     {
       cwd: trialDir,
       timeoutMs: OVERALL_TIMEOUT_MS,
       transcriptPath,
       stderrPath,
+      // Send the slash command via stdin — this triggers the interactive session
+      // path that keeps the process alive to receive background task completions.
+      stdinMessage: `/qcet-plan-executor e2e-plan.md\n`,
       onStdoutLine: (line) => {
         try {
           const ev = JSON.parse(line);
