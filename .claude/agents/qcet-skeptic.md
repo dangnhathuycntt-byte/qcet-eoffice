@@ -10,6 +10,7 @@ tools:
   - Glob
   - Bash
   - Skill
+  - StructuredOutput
 disallowedTools:
   - Write
   - Edit

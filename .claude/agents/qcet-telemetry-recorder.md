@@ -7,6 +7,7 @@ maxTurns: 4
 tools:
   - Read
   - Write
+  - StructuredOutput
 disallowedTools:
   - WebSearch
   - WebFetch

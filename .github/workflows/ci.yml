@@ -18,14 +18,8 @@ env:
 jobs:
   security-and-lint:
     name: Security, Lint & Quality Audit
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: [self-hosted, Linux, X64, qcet]
     steps:
-      - name: Runner diagnostics
-        run: |
-          echo "Runner name: ${{ runner.name }}"
-          echo "Runner OS: ${{ runner.os }}"
-          echo "Runner arch: ${{ runner.arch }}"
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -49,14 +43,8 @@ jobs:
 
   typecheck-and-test:
     name: TypeScript & Unit Test Suite
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: [self-hosted, Linux, X64, qcet]
     steps:
-      - name: Runner diagnostics
-        run: |
-          echo "Runner name: ${{ runner.name }}"
-          echo "Runner OS: ${{ runner.os }}"
-          echo "Runner arch: ${{ runner.arch }}"
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -80,15 +68,9 @@ jobs:
 
   build-artifact:
     name: Standalone Build & Artifact Gate
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: [self-hosted, Linux, X64, qcet]
     needs: [security-and-lint, typecheck-and-test]
     steps:
-      - name: Runner diagnostics
-        run: |
-          echo "Runner name: ${{ runner.name }}"
-          echo "Runner OS: ${{ runner.os }}"
-          echo "Runner arch: ${{ runner.arch }}"
-
       - name: Checkout repository
         uses: actions/checkout@v4
 

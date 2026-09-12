@@ -1,0 +1,571 @@
+{
+  "benchmarkId": "bench-1789128210508",
+  "environment": {
+    "timestamp": "2026-09-11T12:03:30.654Z",
+    "platform": "darwin",
+    "arch": "arm64",
+    "osVersion": "15.7.3",
+    "osBuild": "24G419",
+    "cpuCount": 12,
+    "nodeVersion": "v22.23.2",
+    "npmVersion": "10.9.8",
+    "gitSha": "316498c1296a44eba96a9989bf3cd7ad24f70fa8",
+    "gitBranch": "refactor/qcet-executor-lean-v2",
+    "claudeVersion": "2.1.268 (Claude Code)",
+    "claudeCodeVersion": "2.1.268 (Claude Code)",
+    "model": "claude-combo[1m]",
+    "effort": "high",
+    "workloadBaseSha": "3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c",
+    "workloadBaseTag": "benchmark/workload-base-3f0e5320",
+    "executorBSha": "3f5e804c5bf55c88634535971d605f40b1b8713d",
+    "executorCSha": "45453bb8d6a3db3ca974495c7b3b36187004c503",
+    "evalHarnessSha": "316498c1296a44eba96a9989bf3cd7ad24f70fa8"
+  },
+  "options": {
+    "dryRun": false,
+    "arms": [
+      "B",
+      "C"
+    ],
+    "tasks": [
+      "small-01"
+    ],
+    "trials": 1,
+    "keepTrials": true,
+    "workloadBaseSha": "3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c",
+    "harnessShaB": "3f5e804c5bf55c88634535971d605f40b1b8713d",
+    "harnessShaC": "45453bb8d6a3db3ca974495c7b3b36187004c503",
+    "outputDir": "/Users/dnhhuy/Projects/QCET/QCET-Executor-Recovery/benchmarks/live/results",
+    "model": "claude-combo[1m]",
+    "effort": "high",
+    "taskTimeouts": {},
+    "customTimeoutMs": null,
+    "dangerouslySkipPermissions": false,
+    "skipPreflight": false
+  },
+  "summary": {
+    "timestamp": "2026-09-11T12:43:49.101Z",
+    "provenance": {
+      "workloadBaseSha": "3f0e5320b67acf5fd814c6a0c49e3b9ff9e09a1c",
+      "workloadBaseTag": "benchmark/workload-base-3f0e5320",
+      "executorBSha": "3f5e804c5bf55c88634535971d605f40b1b8713d",
+      "executorCSha": "45453bb8d6a3db3ca974495c7b3b36187004c503",
+      "evalHarnessSha": "316498c1296a44eba96a9989bf3cd7ad24f70fa8",
+      "claudeVersion": "2.1.268 (Claude Code)",
+      "model": "claude-combo[1m]",
+      "effort": "high"
+    },
+    "armSummaries": {
+      "A": {
+        "arm": "A",
+        "totalTrials": 0,
+        "passedTrials": 0,
+        "passRate": 0,
+        "falseReadyCount": 0,
+        "harnessNotInvokedCount": 0,
+        "harnessLeakageCount": 0,
+        "invalidTrialsCount": 0,
+        "treatmentFidelityRate": 100,
+        "timeouts": 0,
+        "crashes": 0,
+        "escapedDefects": 0,
+        "ownershipViolations": 0,
+        "wallClockMs": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "tokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "inputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "outputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "cacheCreationInputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "cacheReadInputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "totalCostUsd": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        }
+      },
+      "B": {
+        "arm": "B",
+        "totalTrials": 1,
+        "passedTrials": 0,
+        "passRate": 0,
+        "falseReadyCount": 0,
+        "harnessNotInvokedCount": 1,
+        "harnessLeakageCount": 0,
+        "invalidTrialsCount": 1,
+        "treatmentFidelityRate": 0,
+        "timeouts": 1,
+        "crashes": 1,
+        "escapedDefects": 6,
+        "ownershipViolations": 0,
+        "wallClockMs": {
+          "mean": 1200308,
+          "median": 1200308,
+          "q1": 1200308,
+          "q3": 1200308,
+          "iqr": 0
+        },
+        "tokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "inputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "outputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "cacheCreationInputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "cacheReadInputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "totalCostUsd": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        }
+      },
+      "C": {
+        "arm": "C",
+        "totalTrials": 1,
+        "passedTrials": 0,
+        "passRate": 0,
+        "falseReadyCount": 0,
+        "harnessNotInvokedCount": 1,
+        "harnessLeakageCount": 0,
+        "invalidTrialsCount": 1,
+        "treatmentFidelityRate": 0,
+        "timeouts": 1,
+        "crashes": 1,
+        "escapedDefects": 6,
+        "ownershipViolations": 0,
+        "wallClockMs": {
+          "mean": 1200292,
+          "median": 1200292,
+          "q1": 1200292,
+          "q3": 1200292,
+          "iqr": 0
+        },
+        "tokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "inputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "outputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "cacheCreationInputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "cacheReadInputTokens": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        },
+        "totalCostUsd": {
+          "mean": 0,
+          "median": 0,
+          "q1": 0,
+          "q3": 0,
+          "iqr": 0
+        }
+      }
+    },
+    "taskSummaries": {
+      "small-01": {
+        "A": {
+          "task": "small-01",
+          "arm": "A",
+          "totalTrials": 0,
+          "passedTrials": 0,
+          "passRate": 0,
+          "falseReadyCount": 0,
+          "harnessNotInvokedCount": 0,
+          "harnessLeakageCount": 0,
+          "invalidTrialsCount": 0,
+          "treatmentFidelityRate": 100,
+          "timeouts": 0,
+          "crashes": 0,
+          "escapedDefects": 0,
+          "ownershipViolations": 0,
+          "wallClockMs": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "tokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "inputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "outputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "cacheCreationInputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "cacheReadInputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "totalCostUsd": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "B": {
+          "task": "small-01",
+          "arm": "B",
+          "totalTrials": 1,
+          "passedTrials": 0,
+          "passRate": 0,
+          "falseReadyCount": 0,
+          "harnessNotInvokedCount": 1,
+          "harnessLeakageCount": 0,
+          "invalidTrialsCount": 1,
+          "treatmentFidelityRate": 0,
+          "timeouts": 1,
+          "crashes": 1,
+          "escapedDefects": 6,
+          "ownershipViolations": 0,
+          "wallClockMs": {
+            "mean": 1200308,
+            "median": 1200308,
+            "q1": 1200308,
+            "q3": 1200308,
+            "iqr": 0
+          },
+          "tokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "inputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "outputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "cacheCreationInputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "cacheReadInputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "totalCostUsd": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        },
+        "C": {
+          "task": "small-01",
+          "arm": "C",
+          "totalTrials": 1,
+          "passedTrials": 0,
+          "passRate": 0,
+          "falseReadyCount": 0,
+          "harnessNotInvokedCount": 1,
+          "harnessLeakageCount": 0,
+          "invalidTrialsCount": 1,
+          "treatmentFidelityRate": 0,
+          "timeouts": 1,
+          "crashes": 1,
+          "escapedDefects": 6,
+          "ownershipViolations": 0,
+          "wallClockMs": {
+            "mean": 1200292,
+            "median": 1200292,
+            "q1": 1200292,
+            "q3": 1200292,
+            "iqr": 0
+          },
+          "tokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "inputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "outputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "cacheCreationInputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "cacheReadInputTokens": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          },
+          "totalCostUsd": {
+            "mean": 0,
+            "median": 0,
+            "q1": 0,
+            "q3": 0,
+            "iqr": 0
+          }
+        }
+      }
+    },
+    "comparisons": {
+      "speedupVsV15": 1,
+      "tokenRatioVsV15": 1,
+      "cacheReadTokenRatioVsV15": 1,
+      "cacheCreationTokenRatioVsV15": 1,
+      "speedupVsUltracode": 1
+    },
+    "recommendation": "BLOCKED_QUALITY_REGRESSION",
+    "rawResultsCount": 2
+  },
+  "trials": [
+    {
+      "trialId": "B-small-01-r1",
+      "arm": "B",
+      "task": "small-01",
+      "trial": 1,
+      "timing": {
+        "prepMs": 939,
+        "agentWallClockMs": 1200308,
+        "graderMs": 544,
+        "totalTrialMs": 1201791,
+        "durationMs": 1200308
+      },
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "total_tokens": 0,
+        "total_cost_usd": 0
+      },
+      "durationMs": 1200308,
+      "totalTokens": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 0,
+      "totalCostUsd": 0,
+      "transcriptPath": "benchmarks/live/results/transcripts/B-small-01-r1.jsonl",
+      "timeoutMs": 1200000,
+      "timedOut": true,
+      "isError": true,
+      "dryRun": false,
+      "grade": {
+        "task": "small-01",
+        "timestamp": "2026-09-11T12:23:46.774Z",
+        "success": false,
+        "requirementsTotal": 3,
+        "requirementsPassed": 1,
+        "hiddenTestsTotal": 6,
+        "hiddenTestsPassed": 0,
+        "forbiddenFilesChanged": 0,
+        "ownershipViolations": 0,
+        "escapedDefects": 6,
+        "errors": [
+          "Missing export isOperationalMonthBoundary in src/lib/academic-calendar.ts",
+          "Missing tests/unit/academic-calendar.test.ts",
+          "[Treatment Fidelity Failure] HARNESS_NOT_INVOKED"
+        ],
+        "agentVerdict": "HARNESS_NOT_INVOKED",
+        "graderVerdict": "FAIL",
+        "falseReady": false,
+        "treatmentFidelity": false
+      }
+    },
+    {
+      "trialId": "C-small-01-r1",
+      "arm": "C",
+      "task": "small-01",
+      "trial": 1,
+      "timing": {
+        "prepMs": 979,
+        "agentWallClockMs": 1200292,
+        "graderMs": 506,
+        "totalTrialMs": 1201777,
+        "durationMs": 1200292
+      },
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "total_tokens": 0,
+        "total_cost_usd": 0
+      },
+      "durationMs": 1200292,
+      "totalTokens": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 0,
+      "totalCostUsd": 0,
+      "transcriptPath": "benchmarks/live/results/transcripts/C-small-01-r1.jsonl",
+      "timeoutMs": 1200000,
+      "timedOut": true,
+      "isError": true,
+      "dryRun": false,
+      "grade": {
+        "task": "small-01",
+        "timestamp": "2026-09-11T12:43:48.595Z",
+        "success": false,
+        "requirementsTotal": 3,
+        "requirementsPassed": 1,
+        "hiddenTestsTotal": 6,
+        "hiddenTestsPassed": 0,
+        "forbiddenFilesChanged": 0,
+        "ownershipViolations": 0,
+        "escapedDefects": 6,
+        "errors": [
+          "Missing export isOperationalMonthBoundary in src/lib/academic-calendar.ts",
+          "Missing tests/unit/academic-calendar.test.ts",
+          "[Treatment Fidelity Failure] HARNESS_NOT_INVOKED"
+        ],
+        "agentVerdict": "HARNESS_NOT_INVOKED",
+        "graderVerdict": "FAIL",
+        "falseReady": false,
+        "treatmentFidelity": false
+      }
+    }
+  ]
+}

@@ -3,7 +3,9 @@ import { SESSION_COOKIE_NAME, getSessionFromRequest } from "@/lib/jwt-session";
 import { revokeSession } from "@/server/auth/session-policy";
 import { extractTokenFromRequest } from "@/server/auth/current-session";
 
-export async function POST(req: Request | NextRequest) {
+export async function POST(req: Request | NextRequest): Promise<NextResponse>;
+export async function POST(): Promise<NextResponse>;
+export async function POST(req?: Request | NextRequest): Promise<NextResponse> {
   if (req) {
     try {
       const token = extractTokenFromRequest(req as any);

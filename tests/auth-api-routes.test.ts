@@ -40,9 +40,11 @@ describe("JWT Session Utilities", () => {
     const env = process.env as Record<string, string | undefined>;
     const originalNodeEnv = env.NODE_ENV;
     const originalSecret = env.JWT_SECRET;
+    const originalAuthSecret = env.AUTH_SECRET;
     try {
       env.NODE_ENV = "production";
       delete env.JWT_SECRET;
+      delete env.AUTH_SECRET;
       assert.throws(() => {
         getJwtSecret();
       }, /JWT_SECRET environment variable is required in production/);
@@ -50,6 +52,9 @@ describe("JWT Session Utilities", () => {
       env.NODE_ENV = originalNodeEnv;
       if (originalSecret !== undefined) {
         env.JWT_SECRET = originalSecret;
+      }
+      if (originalAuthSecret !== undefined) {
+        env.AUTH_SECRET = originalAuthSecret;
       }
     }
   });

@@ -342,8 +342,8 @@ export class TaskStateMachine {
       // Approval (WAITING_APPROVAL -> COMPLETED)
       if (to === 'COMPLETED') {
         // 1. Maker-Checker / Segregation of Duties (SoD) Invariant:
-        // The person who created the deliverable or is the sole DRI cannot approve the task.
-        if (this.isMaker(actor, task)) {
+        // The person who created the deliverable or is the sole DRI cannot approve the task unless delegated.
+        if (this.isMaker(actor, task) && !hasDelegation) {
           return {
             allowed: false,
             reason: 'Người thực hiện chính (DRI) hoặc người tạo minh chứng không thể tự phê duyệt nghiệm thu nhiệm vụ (Vi phạm Maker-Checker / Segregation of Duties).',
@@ -351,8 +351,8 @@ export class TaskStateMachine {
           };
         }
 
-        // 2. Staff cannot approve
-        if (isStaff) {
+        // 2. Staff cannot approve unless delegated
+        if (isStaff && !hasDelegation) {
           return {
             allowed: false,
             reason: 'Chuyên viên / Giảng viên không có thẩm quyền phê duyệt nghiệm thu nhiệm vụ.',

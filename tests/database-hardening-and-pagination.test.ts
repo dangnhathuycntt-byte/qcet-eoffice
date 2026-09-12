@@ -14,13 +14,13 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
   let otherDept: any;
   let staffUser: any;
   let managerUser: any;
-  let bghUser: any;
+  let adminUser: any;
   let sessionToken: string;
 
   const createdTaskIds: string[] = [];
 
   const REFERENCE_DATE_STR = '2026-09-09';
-  const OVERDUE_START_DATE = new Date('2026-08-01T00:00:00.000Z');
+  const PAST_START_DATE = new Date('2026-08-01T00:00:00.000Z');
   const OVERDUE_DUE_DATE = new Date('2026-09-01T00:00:00.000Z');
   const FUTURE_DUE_DATE = new Date('2026-09-20T00:00:00.000Z');
 
@@ -69,14 +69,14 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       },
     });
 
-    bghUser = await prisma.user.upsert({
-      where: { id: 'user-harden-bgh' },
-      update: { role: UserRole.BAN_GIAM_HIEU, departmentId: testDept.id },
+    adminUser = await prisma.user.upsert({
+      where: { id: 'user-harden-admin' },
+      update: { role: UserRole.ADMIN, departmentId: testDept.id },
       create: {
-        id: 'user-harden-bgh',
-        email: 'bgh.harden@cdktcnqn.edu.vn',
-        name: 'Ban Giám Hiệu Hardening',
-        role: UserRole.BAN_GIAM_HIEU,
+        id: 'user-harden-admin',
+        email: 'admin.harden@cdktcnqn.edu.vn',
+        name: 'Admin Hardening',
+        role: UserRole.ADMIN,
         departmentId: testDept.id,
       },
     });
@@ -127,7 +127,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         parentTaskId: task1.id,
         academicYear: '2026-2027',
         academicMonth: 9,
-        startDate: OVERDUE_START_DATE,
+        startDate: PAST_START_DATE,
         dueDate: OVERDUE_DUE_DATE, // Overdue!
         assignees: {
           create: [{ userId: staffUser.id, roleInTask: AssigneeRole.COLLABORATOR }],
@@ -150,7 +150,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         createdById: staffUser.id,
         academicYear: '2026-2027',
         academicMonth: 9,
-        startDate: OVERDUE_START_DATE,
+        startDate: PAST_START_DATE,
         dueDate: OVERDUE_DUE_DATE, // Past due date but COMPLETED
         assignees: {
           create: [{ userId: staffUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
@@ -195,7 +195,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         createdById: managerUser.id,
         academicYear: '2026-2027',
         academicMonth: 9,
-        startDate: OVERDUE_START_DATE,
+        startDate: PAST_START_DATE,
         dueDate: OVERDUE_DUE_DATE, // Overdue!
         assignees: {
           create: [{ userId: managerUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
@@ -218,7 +218,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
         createdById: managerUser.id,
         academicYear: '2026-2027',
         academicMonth: 9,
-        startDate: OVERDUE_START_DATE,
+        startDate: PAST_START_DATE,
         dueDate: OVERDUE_DUE_DATE, // Past due date but CANCELLED
         assignees: {
           create: [{ userId: managerUser.id, roleInTask: AssigneeRole.PRIMARY_OWNER }],
@@ -248,7 +248,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
     // Teardown users and departments
     await prisma.user.deleteMany({
-      where: { id: { in: ['user-harden-staff', 'user-harden-mgr', 'user-harden-bgh'] } },
+      where: { id: { in: ['user-harden-staff', 'user-harden-mgr', 'user-harden-admin'] } },
     });
     await prisma.department.deleteMany({
       where: { id: { in: ['DEPT-HARDEN-01', 'DEPT-HARDEN-02'] } },
@@ -531,7 +531,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
     test('filters by departmentId and dept alias', async () => {
       const res1 = await taskQueryService.queryTasks(
-        { user: bghUser },
+        { user: adminUser },
         {
           departmentId: otherDept.id,
           all: true,
@@ -541,7 +541,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       assert.equal(res1.tasks[0].id, createdTaskIds[3]);
 
       const res2 = await taskQueryService.queryTasks(
-        { user: bghUser },
+        { user: adminUser },
         {
           dept: otherDept.id,
           all: true,
@@ -554,7 +554,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
     test('filters by academicMonth/month and academicYear/year', async () => {
       // 1. Scoped to otherDept where task4 is the only task created
       const month10 = await taskQueryService.queryTasks(
-        { user: bghUser },
+        { user: adminUser },
         {
           departmentId: otherDept.id,
           month: 10,
@@ -569,7 +569,7 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
 
       // 2. Global query also verifies all returned tasks have month 10
       const allMonth10 = await taskQueryService.queryTasks(
-        { user: bghUser },
+        { user: adminUser },
         {
           month: 10,
           year: '2026-2027',

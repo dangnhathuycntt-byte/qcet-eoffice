@@ -1,0 +1,14 @@
+{
+  "pid": null,
+  "startTime": "2026-09-11T13:35:17.828Z",
+  "model": "claude-combo[1m]",
+  "effort": "high",
+  "executorSha": "45453bb8d6a3db3ca974495c7b3b36187004c503",
+  "permissionMode": "acceptEdits",
+  "allowedTools": "Read,Edit,Write,Bash,Agent,Workflow",
+  "invocationMode": "saved-workflow-command",
+  "invocation": "/qcet-plan-executor e2e-plan.md",
+  "trialDir": "/var/folders/05/0_03vffx711ctws_pgbt03_c0000gn/T/qcet-e2e-canary-1789133717706",
+  "transcriptPath": "/Users/dnhhuy/Projects/QCET/QCET-Executor-Recovery/benchmarks/e2e/results/e2e-1789133702644/transcript.jsonl",
+  "stderrPath": "/Users/dnhhuy/Projects/QCET/QCET-Executor-Recovery/benchmarks/e2e/results/e2e-1789133702644/stderr.log"
+}

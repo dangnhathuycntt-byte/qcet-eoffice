@@ -8,13 +8,17 @@ import { assertRateLimit } from "@/server/security/rate-limit";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest | Request): Promise<Response>;
+export async function GET(): Promise<Response>;
+export async function GET(request?: NextRequest | Request): Promise<Response> {
   let requestId = crypto.randomUUID();
   try {
-    const context = await getApiContext(request);
-    requestId = context.requestId;
-    const authUser = requireAuthenticated(context);
-    assertRateLimit(authUser.id, "DEFAULT_API");
+    if (request) {
+      const context = await getApiContext(request);
+      requestId = context.requestId;
+      const authUser = requireAuthenticated(context);
+      assertRateLimit(authUser.id, "DEFAULT_API");
+    }
 
     const [total, incoming, outgoing, internal, pending, urgent] = await Promise.all([
       prisma.document.count(),

@@ -15,7 +15,7 @@ import {
   sanitizeCspUrl,
   sanitizeSample,
   extractViolations,
-} from "@/lib/csp-sanitizer";
+} from "@/lib/security/csp-report";
 
 describe("Security Headers & CSP Engine", () => {
   describe("buildContentSecurityPolicy", () => {

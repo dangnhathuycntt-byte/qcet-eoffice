@@ -40,9 +40,8 @@ describe("DashboardZone Reactivity and Reactive Filtering", () => {
     assert.ok(
       content.includes("tasks={reactiveTasks}") ||
         content.includes("tasks={filteredTasks}") ||
-        content.includes("filteredTasks={reactiveTasks}") ||
-        content.includes("filteredTasks={filteredTasks}"),
-      "DashboardZone must pass filtered tasks to child components"
+        content.includes("filteredTasks={reactiveTasks}"),
+      "DashboardZone must pass filtered tasks to CascadingTaskTable or PersonalWorkbench"
     );
   });
 });

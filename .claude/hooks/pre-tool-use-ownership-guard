@@ -165,137 +165,171 @@ function extractCandidateShardIds(agentId, subagentLabel) {
 }
 
 function resolveActiveShard(agentId, agentType, subagentLabel) {
-  // 1. Check explicit environment variables
-  if (process.env.QCET_CURRENT_SHARD) {
-    try {
-      const parsed = JSON.parse(process.env.QCET_CURRENT_SHARD);
-      if (parsed && typeof parsed === 'object') return parsed;
-    } catch (_) {}
-  }
-
-  if (process.env.QCET_SHARD_OWNS) {
-    let owns = [];
-    try {
-      owns = JSON.parse(process.env.QCET_SHARD_OWNS);
-    } catch (_) {
-      owns = process.env.QCET_SHARD_OWNS.split(',').map((s) => s.trim()).filter(Boolean);
-    }
-    let antiOwns = [];
-    if (process.env.QCET_SHARD_ANTI_OWNS) {
-      try {
-        antiOwns = JSON.parse(process.env.QCET_SHARD_ANTI_OWNS);
-      } catch (_) {
-        antiOwns = process.env.QCET_SHARD_ANTI_OWNS.split(',').map((s) => s.trim()).filter(Boolean);
-      }
-    }
-    return {
-      id: process.env.QCET_SHARD_ID || 'env-configured-shard',
-      owns,
-      antiOwns
-    };
-  }
-
-  let stateData = null;
-
-  // Check QCET_ACTIVE_SHARDS env var (can be JSON string or file path)
-  if (process.env.QCET_ACTIVE_SHARDS) {
-    const val = process.env.QCET_ACTIVE_SHARDS.trim();
-    try {
-      if (val.startsWith('{') || val.startsWith('[')) {
-        stateData = JSON.parse(val);
-      } else if (fs.existsSync(val)) {
-        stateData = JSON.parse(fs.readFileSync(val, 'utf8'));
-      }
-    } catch (_) {}
-  }
-
-  // 2. Candidate state file locations (prioritize run-scoped files)
-  if (!stateData) {
-    const runId = process.env.QCET_RUN_ID || '';
-    const sessionScope = process.env.QCET_SESSION_ID || process.env.CLAUDE_CONVERSATION_ID || '';
-    const candidateFiles = [
-      process.env.QCET_ACTIVE_SHARDS_FILE,
-      process.env.QCET_STATE_FILE,
-      runId ? path.join('/tmp', `qcet-active-shards-${runId}.json`) : null,
-      sessionScope ? path.join('/tmp', `qcet-active-shards-${sessionScope}.json`) : null,
-      path.join('/tmp', 'qcet-active-shards.json'),
-      path.join('/tmp', 'qcet-shard-ownership.json'),
-      path.join(process.cwd(), '.claude', 'state', 'active-shards.json'),
-      path.join(process.cwd(), '.claude', 'state', 'qcet-active-shards.json')
-    ].filter(Boolean);
-
-    for (const file of candidateFiles) {
-      try {
-        if (fs.existsSync(file)) {
-          const raw = fs.readFileSync(file, 'utf8');
-          stateData = JSON.parse(raw);
-          if (stateData) break;
-        }
-      } catch (_) {}
-    }
-  }
-
-  if (!stateData) return null;
-
   const candidateIds = extractCandidateShardIds(agentId, subagentLabel);
 
-  // Helper to match shard against candidate IDs
   function matchesShard(shard) {
     if (!shard || typeof shard !== 'object') return false;
     const shardId = shard.id || shard.agentId || shard.agent_id;
     if (!shardId) return false;
     if (candidateIds.includes(shardId)) return true;
-    for (const c of candidateIds) {
-      if (shardId === c || shardId.startsWith(c + ':') || c.startsWith(shardId + ':')) return true;
+    for (const item of candidateIds) {
+      if (shardId === item || shardId.startsWith(item + ':') || item.startsWith(shardId + ':')) return true;
     }
     return false;
   }
 
-  // Structure A: Array of shards
-  if (Array.isArray(stateData)) {
-    if (candidateIds.length > 0) {
-      const match = stateData.find(matchesShard);
-      if (match) return match;
-    }
-    if ((agentId || subagentLabel) && stateData.length === 1) return stateData[0];
-    return null;
+  // 1. Check explicit environment variables (priority 1)
+  if (process.env.QCET_CURRENT_SHARD) {
+    try {
+      const parsed = JSON.parse(process.env.QCET_CURRENT_SHARD);
+      if (parsed && typeof parsed === 'object') {
+        if (candidateIds.length === 0 || matchesShard(parsed)) return parsed;
+      }
+    } catch (_) {}
   }
 
-  // Structure B: Object keyed by agent_id or shard_id
-  if (typeof stateData === 'object') {
-    for (const c of candidateIds) {
-      if (stateData[c]) return stateData[c];
-    }
-    // Nested activeShards property
-    if (Array.isArray(stateData.activeShards)) {
-      if (candidateIds.length > 0) {
-        const match = stateData.activeShards.find(matchesShard);
-        if (match) return match;
+  if (process.env.QCET_SHARD_OWNS) {
+    const envShardId = process.env.QCET_SHARD_ID || 'env-configured-shard';
+    const matchesEnv =
+      candidateIds.length === 0 ||
+      candidateIds.includes(envShardId) ||
+      candidateIds.some(function(item) {
+        return envShardId.startsWith(item + ':') || item.startsWith(envShardId + ':');
+      });
+
+    if (matchesEnv && (candidateIds.length !== 0 || process.env.QCET_RUN_ID)) {
+      let owns = [];
+      try {
+        owns = JSON.parse(process.env.QCET_SHARD_OWNS);
+      } catch (_) {
+        owns = process.env.QCET_SHARD_OWNS.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
       }
-      if ((agentId || subagentLabel) && stateData.activeShards.length === 1) return stateData.activeShards[0];
-    }
-    // Nested shards array (manifest format)
-    if (Array.isArray(stateData.shards)) {
-      if (candidateIds.length > 0) {
-        const match = stateData.shards.find(matchesShard);
-        if (match) return match;
+      let antiOwns = [];
+      if (process.env.QCET_SHARD_ANTI_OWNS) {
+        try {
+          antiOwns = JSON.parse(process.env.QCET_SHARD_ANTI_OWNS);
+        } catch (_) {
+          antiOwns = process.env.QCET_SHARD_ANTI_OWNS.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        }
       }
-      if ((agentId || subagentLabel) && stateData.shards.length === 1) return stateData.shards[0];
+      return {
+        id: envShardId,
+        owns,
+        antiOwns,
+      };
     }
-    // Single shard object with 'owns'
-    if (Array.isArray(stateData.owns)) {
-      if ((agentId || subagentLabel) && (candidateIds.length === 0 || matchesShard(stateData))) {
-        return stateData;
+  }
+
+  // Check QCET_ACTIVE_SHARDS env var (can be JSON string or file path)
+  if (process.env.QCET_ACTIVE_SHARDS) {
+    const val = process.env.QCET_ACTIVE_SHARDS.trim();
+    try {
+      let parsed = null;
+      if (val.startsWith('{') || val.startsWith('[')) {
+        parsed = JSON.parse(val);
+      } else if (fs.existsSync(val)) {
+        parsed = JSON.parse(fs.readFileSync(val, 'utf8'));
       }
+      if (parsed) {
+        const found = findShardInState(parsed, candidateIds, matchesShard, true);
+        if (found) return found;
+      }
+    } catch (_) {}
+  }
+
+  // 2. Candidate state file locations (strict precedence)
+  const runId = process.env.QCET_RUN_ID || '';
+  const sessionScope = process.env.QCET_SESSION_ID || process.env.CLAUDE_CONVERSATION_ID || '';
+
+  // Priority 2: run-scoped and session-scoped state files
+  const runScopedFiles = [
+    process.env.QCET_ACTIVE_SHARDS_FILE,
+    process.env.QCET_STATE_FILE,
+    runId ? path.join('/tmp', `qcet-active-shards-${runId}.json`) : null,
+    sessionScope ? path.join('/tmp', `qcet-active-shards-${sessionScope}.json`) : null,
+    path.join(process.cwd(), '.claude', 'state', 'active-shards.json'),
+    path.join(process.cwd(), '.claude', 'state', 'qcet-active-shards.json'),
+  ].filter(Boolean);
+
+  for (const file of runScopedFiles) {
+    try {
+      if (fs.existsSync(file)) {
+        const raw = fs.readFileSync(file, 'utf8');
+        const data = JSON.parse(raw);
+        if (data) {
+          const found = findShardInState(data, candidateIds, matchesShard, true);
+          if (found) return found;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Priority 3: legacy global /tmp fallback ONLY when not in an active run and not in a session scope
+  if (!runId && !sessionScope) {
+    const legacyGlobalFiles = [
+      path.join('/tmp', 'qcet-active-shards.json'),
+      path.join('/tmp', 'qcet-shard-ownership.json'),
+    ];
+    for (const file of legacyGlobalFiles) {
+      try {
+        if (fs.existsSync(file)) {
+          const raw = fs.readFileSync(file, 'utf8');
+          const data = JSON.parse(raw);
+          if (data) {
+            // In legacy global files, NEVER bind unless candidateIds explicitly match!
+            const found = findShardInState(data, candidateIds, matchesShard, false);
+            if (found) return found;
+          }
+        }
+      } catch (_) {}
     }
   }
 
   return null;
 }
 
-// -----------------------------------------------------------------------------
-// WORKTREE IDENTITY & REPO VERIFICATION
-// -----------------------------------------------------------------------------
+function findShardInState(stateData, candidateIds, matchesShard, isScoped) {
+  if (!stateData) return null;
+
+  if (Array.isArray(stateData)) {
+    if (candidateIds.length !== 0) {
+      const match = stateData.find(matchesShard);
+      if (match) return match;
+      return null;
+    }
+    if (isScoped && stateData.length === 1) return stateData[0];
+    return null;
+  }
+
+  if (typeof stateData === 'object') {
+    for (const item of candidateIds) {
+      if (stateData[item]) return stateData[item];
+    }
+    if (Array.isArray(stateData.activeShards)) {
+      if (candidateIds.length !== 0) {
+        const match = stateData.activeShards.find(matchesShard);
+        if (match) return match;
+        return null;
+      }
+      if (isScoped && stateData.activeShards.length === 1) return stateData.activeShards[0];
+    }
+    if (Array.isArray(stateData.shards)) {
+      if (candidateIds.length !== 0) {
+        const match = stateData.shards.find(matchesShard);
+        if (match) return match;
+        return null;
+      }
+      if (isScoped && stateData.shards.length === 1) return stateData.shards[0];
+    }
+    if (Array.isArray(stateData.owns)) {
+      if (candidateIds.length === 0 && isScoped) return stateData;
+      if (matchesShard(stateData)) return stateData;
+    }
+  }
+
+  return null;
+}
+
 function verifyWorktreeIdentity(runDir, shard, explicitCwd) {
   const shardId = (shard && (shard.id || shard.shardId || shard.agentId)) || process.env.QCET_SHARD_ID || '';
   if (!shardId) {
@@ -536,11 +570,13 @@ function main() {
       agentRole === 'qcet-builder' ||
       String(agentType).toLowerCase().includes('builder')
     ) {
-      block(
-        `Builder agent '${agentType || agentId}' attempted file modification without an active shard ownership context (fail-closed boundary invariant).`
-      );
+      if (process.env.QCET_RUN_ID || subagentLabel || (agentId && agentId.includes(':'))) {
+        block(
+          `Builder agent '${agentType || agentId || subagentLabel}' attempted file modification without an active shard ownership context (fail-closed boundary invariant).`
+        );
+      }
     }
-    // Fail-safe: if no active shard is mapped and not read-only or builder, allow (manual/interactive session)
+    // Fail-safe: if no active shard is mapped and not in an active executor run, allow (manual/interactive session)
     allow();
   }
 

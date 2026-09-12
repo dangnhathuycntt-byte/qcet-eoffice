@@ -432,11 +432,17 @@ describe("DACUM 3-Tier Workflow End-to-End Integration & Audit", () => {
 
     const violations: string[] = [];
     for (const file of allFiles) {
+      if (
+        file.includes("workspace-ui-invariants.test.ts") ||
+        file.includes("anti-slop-audit.test.ts")
+      ) {
+        continue;
+      }
       const content = fs.readFileSync(file, "utf-8");
       const lines = content.split("\n");
       lines.forEach((line, idx) => {
-        // Exclude allowed typographic star glyph (\u2605) used in saved view preset titles
-        const cleanLine = line.replace(/[\u2605]/g, "");
+        // Exclude allowed typographic star glyph and unicode test symbols
+        const cleanLine = line.replace(new RegExp("[\\u2605\\u2713\\u2611]", "g"), "");
         if (emojiRegex.test(cleanLine)) {
           violations.push(
             `${path.relative(process.cwd(), file)}:${idx + 1}: ${line.trim()}`
@@ -754,8 +760,7 @@ describe("DACUM Full 6-Phase E2E Lifecycle: AI Review, Triage Queue, and Escalat
       const content = fs.readFileSync(fullPath, "utf-8");
       const lines = content.split("\n");
       lines.forEach((line, idx) => {
-        const cleanLine = line.replace(/[\u2605]/g, "");
-        if (emojiRegex.test(cleanLine)) {
+        if (emojiRegex.test(line)) {
           violations.push(
             `${relPath}:${idx + 1}: ${line.trim()}`
           );

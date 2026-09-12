@@ -1,6 +1,6 @@
 ---
-name: qcet-plan-executor
-description: "Execute a QCET implementation plan with sharded parallel implementation, adversarial verification, bounded repair, integration review, and global proof via Ultracode Workflow."
+name: qcet-plan-executor-guide
+description: "Reference guide for the QCET Plan Executor workflow. The executable entrypoint is /qcet-plan-executor (workflow). Use this skill only to understand the executor's phases and conventions."
 ---
 
 # QCET Plan Executor (`/qcet-plan-executor`)

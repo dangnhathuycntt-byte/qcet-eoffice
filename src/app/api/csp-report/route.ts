@@ -8,7 +8,9 @@
  * Invariant: Returns 204 No Content for all successfully parsed violation reports.
  */
 
-import { MAX_PAYLOAD_BYTES, extractViolations } from "@/lib/csp-sanitizer";
+import { extractViolations } from "@/lib/security/csp-report";
+
+const MAX_PAYLOAD_BYTES = 64 * 1024; // 64 KB protection against body bloat
 
 /**
  * Handles incoming CSP violation reports.

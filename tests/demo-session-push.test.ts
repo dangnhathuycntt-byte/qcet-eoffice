@@ -1,4 +1,4 @@
-import { test, describe, before, after } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import { NextRequest } from 'next/server';
 import { POST as subscribeRoute, DELETE as unsubscribeRoute } from '../src/app/api/notifications/push/subscribe/route';
@@ -7,51 +7,6 @@ import { prisma } from '../src/lib/prisma';
 import { signSessionToken } from '../src/lib/jwt-session';
 
 describe('Push Notification Authentication & Session Integration', () => {
-  let testUser: {
-    id: string;
-    email: string;
-    name: string;
-    role: any;
-    departmentId: string | null;
-    title: string | null;
-  };
-
-  before(async () => {
-    let user = await prisma.user.findFirst({
-      where: { email: 'bgh@cdktcnqn.edu.vn' },
-    });
-    if (!user) {
-      const dept = await prisma.department.upsert({
-        where: { id: 'ban-giam-hieu' },
-        update: {},
-        create: {
-          id: 'ban-giam-hieu',
-          name: 'Ban Giám Hiệu',
-          shortName: 'BGH',
-        },
-      });
-      user = await prisma.user.create({
-        data: {
-          email: 'bgh@cdktcnqn.edu.vn',
-          name: 'Ban Giám Hiệu',
-          role: 'ADMIN',
-          departmentId: dept.id,
-          title: 'Hiệu trưởng',
-        },
-      });
-    }
-    testUser = user;
-  });
-
-  after(async () => {
-    if (testUser) {
-      await prisma.pushSubscription.deleteMany({
-        where: {
-          userId: testUser.id,
-        },
-      });
-    }
-  });
   test('POST /api/notifications/push/subscribe strictly rejects unauthenticated requests with 401 (preventing userId injection)', async () => {
     const testEndpoint = `https://fcm.googleapis.com/fcm/send/tamper-${Date.now()}`;
     const req = new NextRequest('http://localhost:3000/api/notifications/push/subscribe', {
@@ -73,14 +28,27 @@ describe('Push Notification Authentication & Session Integration', () => {
   });
 
   test('Push notification lifecycle succeeds when authenticated via session cookie', async () => {
+    // 0. Ensure user exists in database
+    let user = await prisma.user.findFirst({ where: { email: 'bgh@cdktcnqn.edu.vn' } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          id: 'user-admin-bgh',
+          email: 'bgh@cdktcnqn.edu.vn',
+          name: 'Ban Giám Hiệu',
+          role: 'ADMIN',
+        },
+      });
+    }
+
     // 1. Establish session using signed JWT token directly
     const sessionCookie = signSessionToken({
-      id: testUser.id,
-      email: testUser.email,
-      name: testUser.name,
-      role: testUser.role,
-      departmentId: testUser.departmentId ?? undefined,
-      title: testUser.title ?? undefined,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      departmentId: user.departmentId || 'ban-giam-hieu',
+      title: user.title || 'Hiệu trưởng',
     });
     assert.ok(sessionCookie, 'Session cookie must exist');
 
@@ -91,8 +59,8 @@ describe('Push Notification Authentication & Session Integration', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        origin: 'http://localhost:3000',
         cookie: `qcet_session=${sessionCookie}`,
+        origin: 'http://localhost:3000',
       },
       body: JSON.stringify({
         endpoint: testEndpoint,
@@ -110,15 +78,15 @@ describe('Push Notification Authentication & Session Integration', () => {
       where: { endpoint: testEndpoint },
     });
     assert.ok(dbSub);
-    assert.strictEqual(dbSub?.userId, testUser.id);
+    assert.strictEqual(dbSub?.userId, user.id);
 
     // 3. Test push notification dispatch with session cookie
     const testReq = new NextRequest('http://localhost:3000/api/notifications/push/test', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        origin: 'http://localhost:3000',
         cookie: `qcet_session=${sessionCookie}`,
+        origin: 'http://localhost:3000',
       },
       body: JSON.stringify({
         title: 'Thử nghiệm thông báo',
@@ -135,8 +103,8 @@ describe('Push Notification Authentication & Session Integration', () => {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        origin: 'http://localhost:3000',
         cookie: `qcet_session=${sessionCookie}`,
+        origin: 'http://localhost:3000',
       },
       body: JSON.stringify({
         endpoint: testEndpoint,

@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLiveDashboardData, LiveDashboardOptions } from '@/lib/server/dashboard-service';
 import { getApiContext, requireAuthenticated } from '@/server/api/request-context';
-import { getSessionFromRequest } from '@/lib/jwt-session';
 import { apiError, apiSuccess } from '@/server/api/response';
 import { isAdmin } from '@/server/policies/document-policy';
-
-void getSessionFromRequest;
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse>;
+export async function GET(): Promise<NextResponse>;
+export async function GET(request?: NextRequest): Promise<NextResponse> {
   let requestId = 'req-dashboard-overview';
   try {
+    if (!request) {
+      return NextResponse.json(
+        { success: false, error: 'Chưa xác thực danh tính' },
+        { status: 401 }
+      );
+    }
+
     const context = await getApiContext(request);
     requestId = context.requestId;
     requireAuthenticated(context);

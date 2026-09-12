@@ -2,7 +2,7 @@ import * as React from "react";
 import { cookies } from "next/headers";
 import { getLiveDashboardData } from "@/lib/server/dashboard-service";
 import { TasksPageClient } from "./tasks-page-client";
-import { TaskManagementWorkspace, type ViewMode, type WorkspaceScope } from "@/components/tasks/task-management-workspace";
+import { TaskManagementWorkspace, type WorkspaceScope } from "@/components/tasks/task-management-workspace";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
 import { isUserExecutive } from "@/domain/tasks/attention-resolver";
 

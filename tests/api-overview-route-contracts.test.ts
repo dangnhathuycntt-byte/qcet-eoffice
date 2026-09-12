@@ -10,13 +10,13 @@ describe('Dashboard API Routes (Zero Mock Fallback)', () => {
   let token: string;
 
   before(async () => {
-    const user = (await prisma.user.findFirst()) || (await prisma.user.create({
+    const user = await prisma.user.findFirst() || await prisma.user.create({
       data: {
-        email: `dashboard-contract-test-${Date.now()}@qcet.edu.vn`,
+        email: `dashboard-test-${Date.now()}@qcet.edu.vn`,
         name: 'Dashboard Test User',
         role: 'ADMIN',
       },
-    }));
+    });
 
     token = await signSessionToken({
       id: user.id,
@@ -41,10 +41,7 @@ describe('Dashboard API Routes (Zero Mock Fallback)', () => {
 
   test('GET /api/documents/stats phải trả về thống kê sổ văn bản từ cơ sở dữ liệu thực', async () => {
     assert.ok(typeof getDocumentStats === 'function', 'GET route cho documents/stats phải tồn tại');
-    const req = new NextRequest('http://localhost:3000/api/documents/stats', {
-      headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
-    });
-    const response = await getDocumentStats(req);
+    const response = await getDocumentStats();
     assert.strictEqual(response.status, 200);
 
     const json = await response.json();
