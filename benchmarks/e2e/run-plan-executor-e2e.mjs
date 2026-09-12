@@ -733,17 +733,23 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
           if (ev?.type === 'result' && ev?.subtype === 'success' && typeof ev.result === 'string') {
             const text = ev.result;
             // Match "Release gate: **READY**" or "Release gate: READY" or "status: READY"
-            const m = text.match(/[Rr]elease\s+gate[:\s*]+\**\s*(READY(?:_WITH_KNOWN_ISSUES)?|BLOCKED)\**/);
+            const m = text.match(/[Rr]elease\s+[Gg]ate[:\s*]+\**\s*(READY(?:_WITH_KNOWN_ISSUES)?|BLOCKED)\**/);
             if (m) return { verdict: m[1], text };
             // Also match "QCET Plan Executor — READY" header
             const m2 = text.match(/QCET Plan Executor\s*[—–-]\s*(READY(?:_WITH_KNOWN_ISSUES)?|BLOCKED)/);
             if (m2) return { verdict: m2[1], text };
-            // Match "Actual Outcome: **PASS**" — executor summary when release gate note is separate
-            const m3 = text.match(/Actual Outcome[:\s*]+\**\s*PASS\**/i);
+            // Match "Release Gate: PASS" — executor emits PASS when all checks pass
+            const m3 = text.match(/[Rr]elease\s+[Gg]ate[:\s*]+\**\s*PASS\**/);
             if (m3) return { verdict: 'READY', text };
+            // Match "Actual Outcome: **PASS**" — executor summary when release gate note is separate
+            const m4 = text.match(/Actual Outcome[:\s*]+\**\s*PASS\**/i);
+            if (m4) return { verdict: 'READY', text };
             // Match bare "status: READY" or "verdict: READY"
-            const m4 = text.match(/(?:status|verdict)\s*:\s*["`']?(READY(?:_WITH_KNOWN_ISSUES)?|BLOCKED)["`']?/);
-            if (m4) return { verdict: m4[1], text };
+            const m5 = text.match(/(?:status|verdict)\s*:\s*["`']?(READY(?:_WITH_KNOWN_ISSUES)?|BLOCKED)["`']?/);
+            if (m5) return { verdict: m5[1], text };
+            // Match "✅ PASS" anywhere in a result that has PASS as overall verdict
+            const m6 = text.match(/\|\s*(?:Release\s+Gate|Overall|Final)\s*\|\s*✅\s*PASS/);
+            if (m6) return { verdict: 'READY', text };
           }
         } catch (_) {}
       }
