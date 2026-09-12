@@ -2395,6 +2395,9 @@ const ambiguityFallback = planPath
   ? `\nAMBIGUITY FALLBACK:\nIf and only if this shard packet is genuinely ambiguous, you may inspect the original master plan at:\n${planPath}\n`
   : '';
 
+// Appended to every verifier prompt to reinforce the StructuredOutput requirement.
+const VERIFY_STRUCTURED_OUTPUT_REMINDER = `\nSTRUCTURED OUTPUT MANDATE:\nYou MUST call the StructuredOutput tool with your final verification result before ending your reply.\nDo NOT end your reply with plain text only. The StructuredOutput call IS your verdict.\nThis is a hard requirement — your response is invalid and will be treated as a blocked sentinel if StructuredOutput is not called.\n`;
+
 // Concurrency & wall-clock tracking for evaluation telemetry
 const workflowStartedAtMs = typeof rawArgs?.startTime === 'number' && rawArgs.startTime > 0
   ? rawArgs.startTime
@@ -2775,7 +2778,7 @@ IMPLEMENTATION CLAIM:
 ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
-${ambiguityFallback}`;
+${ambiguityFallback}${VERIFY_STRUCTURED_OUTPUT_REMINDER}`;
 
       if (specializedAgentType) {
         log(
@@ -2804,7 +2807,7 @@ IMPLEMENTATION CLAIM:
 ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
-${ambiguityFallback}`;
+${ambiguityFallback}${VERIFY_STRUCTURED_OUTPUT_REMINDER}`;
 
         const [skepticResult, domainResult] = await parallel([
           () =>
@@ -2866,7 +2869,7 @@ IMPLEMENTATION CLAIM:
 ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
-${ambiguityFallback}`,
+${ambiguityFallback}${VERIFY_STRUCTURED_OUTPUT_REMINDER}`,
         {
           agent: 'qcet-skeptic',
           agentType: 'qcet-skeptic',
@@ -2895,7 +2898,7 @@ IMPLEMENTATION CLAIM:
 ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
-${ambiguityFallback}`,
+${ambiguityFallback}${VERIFY_STRUCTURED_OUTPUT_REMINDER}`,
         {
           agent: 'qcet-skeptic',
           agentType: 'qcet-skeptic',
@@ -2924,7 +2927,7 @@ IMPLEMENTATION CLAIM:
 ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
-${ambiguityFallback}`,
+${ambiguityFallback}${VERIFY_STRUCTURED_OUTPUT_REMINDER}`,
         {
           agent: 'qcet-skeptic',
           agentType: 'qcet-skeptic',
