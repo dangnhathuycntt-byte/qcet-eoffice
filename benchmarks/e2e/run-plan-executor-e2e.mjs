@@ -532,20 +532,15 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     return false;
   };
 
-  // Poll Gate B in background; also poll for early-exit on gate-verdict.json
-  const earlyExitController = new AbortController();
+  // Poll Gate B in background for executor artifact detection only.
+  // IMPORTANT: do NOT kill the claude process early — even after gate-verdict.json
+  // appears. The workflow runs as a background task inside the claude process; killing
+  // the process kills the task (status: "killed") and the second result turn (which
+  // carries the READY verdict in the transcript) never arrives. Let the session run to
+  // natural completion, then evaluate all gates from the transcript + filesystem.
+  const earlyExitController = new AbortController(); // kept for spawnClaude signature compat; never aborted
   const gateB_poll = setInterval(() => {
     checkExecutorArtifacts();
-    // Early-exit: if gate-verdict.json exists, we have enough to evaluate
-    if (!earlyExitController.signal.aborted) {
-      try {
-        const r = execSync('find . -name "gate-verdict.json" -maxdepth 8 2>/dev/null | head -1', { cwd: trialDir }).toString().trim();
-        if (r) {
-          log('  Early exit — gate-verdict.json detected, stopping claude process');
-          earlyExitController.abort();
-        }
-      } catch (_) {}
-    }
   }, 3000);
 
   // Invoke /qcet-plan-executor via stdin (not -p arg) to keep the session
