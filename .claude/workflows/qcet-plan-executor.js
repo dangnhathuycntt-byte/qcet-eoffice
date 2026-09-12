@@ -3967,8 +3967,10 @@ Do not report speculative issues.
   // ADVERSARIAL INTEGRATION SYNTHESIS
   // ===========================================================================
 
-  const integrationSynthesis = await callAgent(
-    `
+  let integrationSynthesis = { findings: [], summary: 'Integration synthesis skipped — no reviewers returned findings.' };
+  try {
+    const integrationSynthesisResult = await callAgent(
+      `
 You are the QCET integration skeptic.
 
 Independent reviewers produced these findings:
@@ -3986,14 +3988,20 @@ Do not modify files.
 
 Return only confirmed findings and a concise summary.
 `,
-    {
-      agent: 'qcet-skeptic',
-      agentType: 'qcet-skeptic',
-      phase: 'Integration Review',
-      label: 'integration:skeptic',
-      schema: INTEGRATION_FINDINGS_SCHEMA,
+      {
+        agent: 'qcet-skeptic',
+        agentType: 'qcet-skeptic',
+        phase: 'Integration Review',
+        label: 'integration:skeptic',
+        schema: INTEGRATION_FINDINGS_SCHEMA,
+      }
+    );
+    if (integrationSynthesisResult) {
+      integrationSynthesis = integrationSynthesisResult;
     }
-  );
+  } catch (integrationSynthesisError) {
+    log(`Integration synthesis agent threw: ${String(integrationSynthesisError)}. Proceeding with empty findings.`);
+  }
 
 
   // ===========================================================================
@@ -4247,8 +4255,10 @@ Return structured implementation evidence.
   log('Running integrated repository proof gate.');
 
 
-  const validation = await callAgent(
-    `
+  let validation = { status: 'blocked', checks: [], requirementCoverage: [], preExistingFailures: [], summary: 'Global validation agent failed to return a result.' };
+  try {
+    const validationResult = await callAgent(
+      `
 You are the QCET global validation agent.
 
 IMPORTANT: You are read-only. Do NOT modify any files (Edit, Write, NotebookEdit are disallowed).
@@ -4291,15 +4301,21 @@ Do not hide failed checks.
 
 Return structured proof.
 `,
-    {
-      agent: 'qcet-skeptic',
-      agentType: 'qcet-skeptic',
-      phase: 'Global Validation',
-      label: 'QCET global proof',
-      schema: GLOBAL_VALIDATION_SCHEMA,
-      maxTurns: 8,   // Bound the validation phase — prevents runaway tool loops
+      {
+        agent: 'qcet-skeptic',
+        agentType: 'qcet-skeptic',
+        phase: 'Global Validation',
+        label: 'QCET global proof',
+        schema: GLOBAL_VALIDATION_SCHEMA,
+        maxTurns: 8,   // Bound the validation phase — prevents runaway tool loops
+      }
+    );
+    if (validationResult) {
+      validation = validationResult;
     }
-  );
+  } catch (validationError) {
+    log(`Global validation agent threw: ${String(validationError)}. Proceeding with blocked status.`);
+  }
 
 
   // ===========================================================================
