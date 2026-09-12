@@ -2252,14 +2252,14 @@ function buildRuntimeFingerprint(input = {}) {
 }
 
 
-export function buildGateVerdictPath(runId) {
+function buildGateVerdictPath(runId) {
   if (typeof runId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(runId)) {
     throw new Error('Invalid executor runId');
   }
   return `qcet-executor-runs/${runId}/gate-verdict.json`;
 }
 
-export async function verifyWithBoundedRetry(invoke, prompt, options) {
+async function verifyWithBoundedRetry(invoke, prompt, options) {
   const usable = (value) => value && ['pass', 'fail', 'blocked'].includes(value.verdict)
     && Array.isArray(value.requirementsChecked) && Array.isArray(value.issues)
     && typeof value.summary === 'string';
