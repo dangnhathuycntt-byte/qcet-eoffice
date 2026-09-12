@@ -60,3 +60,6 @@ qcet-backend-api/
 benchmarks/e2e/results/**/transcript.jsonl
 benchmarks/e2e/results/**/probe-transcript.jsonl
 benchmarks/e2e/results/
+
+# Executor runtime verdict artifacts (non-sensitive path, outside .claude/)
+qcet-executor-runs/

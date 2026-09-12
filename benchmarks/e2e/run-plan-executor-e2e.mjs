@@ -366,7 +366,7 @@ async function runPermissionProbe(runDir) {
 
 // ─── Phase 2/3/4/5: Canary E2E run ───────────────────────────────────────────
 
-async function runExecutorCanary(runDir) {
+async function runExecutorCanary(runDir, e2eRunId) {
   log('PHASE 2-5 — Executor Canary');
   const canaryStartMs = Date.now();
 
@@ -525,7 +525,8 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     permissionMode: 'acceptEdits',
     allowedTools: 'Read,Edit,Write,Bash,Agent,Workflow',
     invocationMode: 'stdin-slash-command',
-    invocation: '/qcet-plan-executor e2e-plan.md',
+    runId: e2eRunId,
+    invocation: `/qcet-plan-executor ${JSON.stringify({ planPath: 'e2e-plan.md', runId: e2eRunId })}`,
     trialDir,
     transcriptPath,
     stderrPath,
@@ -536,7 +537,8 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
   const checkExecutorArtifacts = () => {
     if (gateB_executorArtifact) return true;
     const candidates = [
-      path.join(trialDir, '.claude', 'executor-runs'),
+      path.join(trialDir, 'qcet-executor-runs'),        // primary (workflow v2.3+)
+      path.join(trialDir, '.claude', 'executor-runs'),  // legacy path fallback
       path.join(trialDir, 'run-ledger.jsonl'),
       path.join(trialDir, '.qcet-executor-run'),
     ];
@@ -605,7 +607,7 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
       stderrPath,
       // Send the slash command via stdin — this triggers the interactive session
       // path that keeps the process alive to receive background task completions.
-      stdinMessage: `/qcet-plan-executor e2e-plan.md\n`,
+      stdinMessage: `/qcet-plan-executor ${JSON.stringify({ planPath: "e2e-plan.md", runId: e2eRunId })}\n`,
       onStdoutLine: (line) => {
         try {
           const ev = JSON.parse(line);
@@ -768,72 +770,21 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     } catch (_) { return null; }
   })();
 
-  // ── Gate D — Verification result ──────────────────────────────────────────
-  // Check shard-result.json on disk first; fall back to transcript verdict text.
-  gates.verificationPassed = (() => {
-    // Disk-based check (executor-runs shard files)
-    try {
-      const executorRunsDir = path.join(trialDir, '.claude', 'executor-runs');
-      if (fs.existsSync(executorRunsDir)) {
-        const entries = fs.readdirSync(executorRunsDir);
-        for (const entry of entries) {
-          const shardVerdict = path.join(executorRunsDir, entry, 'shard-result.json');
-          if (fs.existsSync(shardVerdict)) {
-            const parsed = JSON.parse(fs.readFileSync(shardVerdict, 'utf8'));
-            if (parsed?.verdict === 'pass' || parsed?.status === 'pass') return true;
-          }
-        }
-      }
-    } catch (_) {}
-    // Transcript-based fallback: if the executor emitted READY the verification passed
-    if (transcriptVerdictResult?.verdict === 'READY' || transcriptVerdictResult?.verdict === 'READY_WITH_KNOWN_ISSUES') {
-      return true;
-    }
-    return false;
-  })();
-
-  // ── Gate E — Release gate ──────────────────────────────────────────────────
-  // Primary: gate-verdict.json file on disk.
-  // Fallback: verdict extracted from the transcript result text (the executor
-  // returns its final verdict as structured markdown in the result field).
-  const possibleGateFiles = [
-    path.join(trialDir, 'gate-verdict.json'),
-    path.join(trialDir, '.claude', 'executor-runs', 'gate-verdict.json'),
-  ];
-  // Also search dynamically
-  const gateSearch = (() => {
-    try {
-      return runSync('find . -name "gate-verdict.json" -maxdepth 5 2>/dev/null | head -3', trialDir);
-    } catch (_) { return ''; }
-  })();
-  if (gateSearch) {
-    for (const line of gateSearch.split('\n').filter(Boolean)) {
-      possibleGateFiles.push(path.join(trialDir, line.replace(/^\.\//, '')));
-    }
-  }
-
-  let gateVerdictPath = null;
+  // Only the canonical artifact for this run can satisfy the release gate.
+  const canonicalPath = path.join(trialDir, 'qcet-executor-runs', e2eRunId, 'gate-verdict.json');
   let gateVerdictContent = null;
-  for (const gf of possibleGateFiles) {
-    if (fs.existsSync(gf)) {
-      gateVerdictPath = gf;
-      try { gateVerdictContent = JSON.parse(fs.readFileSync(gf, 'utf8')); } catch (_) {}
-      break;
-    }
-  }
-
-  // Fallback: synthesize gate verdict from transcript result text
-  if (!gateVerdictPath && transcriptVerdictResult) {
-    log(`  Gate E — verdict from transcript result text: ${transcriptVerdictResult.verdict}`);
-    gateVerdictPath = transcriptPath;  // point to transcript as evidence
-    gateVerdictContent = { status: transcriptVerdictResult.verdict, source: 'transcript-result-text' };
-  }
-
-  if (!gateVerdictPath) {
-    gates.releaseGatePresent = false;
+  let gateVerdictPath = null;
+  try {
+    gateVerdictContent = JSON.parse(fs.readFileSync(canonicalPath, 'utf8'));
+    gateVerdictPath = path.join(runDir, 'gate-verdict.json');
+    fs.copyFileSync(canonicalPath, gateVerdictPath);
+  } catch (_) {}
+  if (!gateVerdictPath || gateVerdictContent?.runId !== e2eRunId) {
     destroyTempRepo(trialDir);
-    return { pass: false, failureClass: FC.RELEASE_GATE_MISSING, reason: 'gate-verdict.json not found in trial repo and no verdict in transcript result', gates };
+    return { pass: false, failureClass: FC.RELEASE_GATE_MISSING,
+      reason: `Canonical verdict missing/invalid or runId mismatch. Transcript diagnostic: ${transcriptVerdictResult?.verdict || 'none'}`, gates };
   }
+  gates.verificationPassed = gateVerdictContent.verificationPassed === true;
 
   const status = gateVerdictContent?.status ?? gateVerdictContent?.verdict ?? null;
   const validStatuses = ['READY', 'READY_WITH_KNOWN_ISSUES', 'BLOCKED'];
@@ -848,12 +799,13 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
     };
   }
 
-  if (status !== 'READY') {
+  if (status !== 'READY' || !gates.verificationPassed) {
     destroyTempRepo(trialDir);
     return {
       pass: false,
       failureClass: FC.VERIFICATION_FAILURE,
-      reason: `Release gate status is "${status}", expected "READY" for canary workload`,
+      reason: `Release gate=${status}, verificationPassed=${gates.verificationPassed}; expected READY and independent verification PASS`,
+      releaseGate: status, gateVerdictPath,
       gates,
     };
   }
@@ -908,7 +860,7 @@ async function main() {
   }
 
   // ── Phase 2-5: Canary E2E ──
-  const canaryResult = await runExecutorCanary(runDir);
+  const canaryResult = await runExecutorCanary(runDir, runId);
 
   const wallClockMs = Date.now() - startMs;
   const result = {
