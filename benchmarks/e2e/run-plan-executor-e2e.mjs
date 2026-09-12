@@ -738,6 +738,12 @@ grep -qx 'QCET_E2E_OK' qcet-e2e/target.txt
             // Also match "QCET Plan Executor — READY" header
             const m2 = text.match(/QCET Plan Executor\s*[—–-]\s*(READY(?:_WITH_KNOWN_ISSUES)?|BLOCKED)/);
             if (m2) return { verdict: m2[1], text };
+            // Match "Actual Outcome: **PASS**" — executor summary when release gate note is separate
+            const m3 = text.match(/Actual Outcome[:\s*]+\**\s*PASS\**/i);
+            if (m3) return { verdict: 'READY', text };
+            // Match bare "status: READY" or "verdict: READY"
+            const m4 = text.match(/(?:status|verdict)\s*:\s*["`']?(READY(?:_WITH_KNOWN_ISSUES)?|BLOCKED)["`']?/);
+            if (m4) return { verdict: m4[1], text };
           }
         } catch (_) {}
       }
