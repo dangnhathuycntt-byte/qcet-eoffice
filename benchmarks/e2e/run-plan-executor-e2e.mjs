@@ -92,7 +92,15 @@ function spawnClaude(args, { cwd, timeoutMs, transcriptPath, stderrPath, onStdou
     const stdinMode = stdinMessage != null ? 'pipe' : 'ignore';
     const proc = spawn('claude', args, {
       cwd,
-      env: { ...process.env },
+      env: {
+        ...process.env,
+        // Disable the 600s background-task ceiling so the workflow can run to
+        // natural completion. Without this, Claude Code (in print/stdin mode) kills
+        // any background workflow that hasn't finished within 600 seconds, emitting:
+        //   "Background tasks still running after 600s; terminating."
+        // The qcet-plan-executor workflow takes ~10 min; this ceiling race-kills it.
+        CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: '0',
+      },
       stdio: [stdinMode, 'pipe', 'pipe'],
     });
 
