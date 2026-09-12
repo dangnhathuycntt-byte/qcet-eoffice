@@ -377,13 +377,7 @@ export function UnifiedAdaptiveWorkspace({
   const isExecutive = effectiveReviewerRole === "ADMIN" || isExecutiveUser(user);
 
   // Canonical workspace query state manager
-  let workspaceQuery: UseWorkspaceQueryReturn | null = null;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    workspaceQuery = useWorkspaceQuery();
-  } catch {
-    workspaceQuery = null;
-  }
+  const workspaceQuery = useWorkspaceQuery();
 
   const [activeScope, setActiveScope] = React.useState<WorkspaceScope>(defaultScope);
 

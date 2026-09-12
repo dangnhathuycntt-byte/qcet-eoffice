@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { SearchParamsContext, PathnameContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
 import {
   parseWorkspaceQuery,
   serializeWorkspaceQuery,
@@ -82,9 +83,17 @@ export interface UseWorkspaceQueryReturn {
 export function useWorkspaceQuery(
   options?: UseWorkspaceQueryOptions
 ): UseWorkspaceQueryReturn {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+  const router = React.useContext(AppRouterContext);
+  const rawSearchParams = React.useContext(SearchParamsContext);
+  const rawPathname = React.useContext(PathnameContext);
+
+  const searchParams = React.useMemo(() => {
+    if (rawSearchParams) return new URLSearchParams(rawSearchParams);
+    if (typeof window !== "undefined") return new URLSearchParams(window.location.search);
+    return new URLSearchParams();
+  }, [rawSearchParams]);
+
+  const pathname = rawPathname ?? (typeof window !== "undefined" ? window.location.pathname : "");
 
   const isCalendar = options?.isCalendar ?? false;
   const defaultView = options?.defaultView;
@@ -151,9 +160,19 @@ export function useWorkspaceQuery(
 
       // Next.js App Router navigation (default)
       if (shouldReplace) {
-        router.replace(targetUrl, { scroll: navOptions?.scroll ?? false });
+        if (router) {
+          router.replace(targetUrl, { scroll: navOptions?.scroll ?? false });
+        } else if (typeof window !== "undefined") {
+          window.history.replaceState(null, "", targetUrl);
+          setPopstateCount((c) => c + 1);
+        }
       } else {
-        router.push(targetUrl, { scroll: navOptions?.scroll ?? false });
+        if (router) {
+          router.push(targetUrl, { scroll: navOptions?.scroll ?? false });
+        } else if (typeof window !== "undefined") {
+          window.history.pushState(null, "", targetUrl);
+          setPopstateCount((c) => c + 1);
+        }
       }
     },
     [

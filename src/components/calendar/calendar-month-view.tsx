@@ -32,6 +32,8 @@ import {
   getAcademicMonthInfo,
   getAdjacentAcademicMonth,
   getAcademicMonthPeriod,
+  getSystemReferenceDate,
+  isTaskOverdue,
 } from "@/lib/academic-calendar";
 
 export interface CalendarDayCell {
@@ -112,18 +114,15 @@ export function getNextMonth(
  */
 export function getStatusDotClass(
   status: TaskStatus | "PENDING_EXECUTIVE_APPROVAL",
-  dueDate?: string
+  dueDate?: string,
+  referenceDate: string = getSystemReferenceDate()
 ): string {
   if (status === "COMPLETED") {
     return "bg-emerald-500";
   }
 
-  // Anchor date for system demo is 2026-09-04
-  if (dueDate) {
-    const cleanDue = dueDate.split("T")[0];
-    if (cleanDue < "2026-09-04") {
-      return "bg-rose-500";
-    }
+  if (isTaskOverdue(status, dueDate, referenceDate)) {
+    return "bg-rose-500";
   }
 
   if (status === "IN_PROGRESS") {
@@ -142,10 +141,11 @@ export function getStatusDotClass(
  */
 export function getStatusLabel(
   status: TaskStatus | "PENDING_EXECUTIVE_APPROVAL",
-  dueDate?: string
+  dueDate?: string,
+  referenceDate: string = getSystemReferenceDate()
 ): string {
   if (status === "COMPLETED") return "Đã hoàn thành";
-  if (dueDate && dueDate.split("T")[0] < "2026-09-04") return "Quá hạn";
+  if (isTaskOverdue(status, dueDate, referenceDate)) return "Quá hạn";
   if (status === "PENDING_EXECUTIVE_APPROVAL") return "Chờ BGH phê duyệt";
   if (status === "IN_PROGRESS") return "Đang thực hiện";
   if (status === "NEEDS_REVIEW") return "Chờ xét duyệt";
@@ -160,12 +160,7 @@ export function getStatusLabel(
 export function generateAcademicMonthGrid(
   period: AcademicMonthPeriod
 ): CalendarDayCell[] {
-  const today = new Date();
-  const todayString = toDateString(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
+  const todayString = getSystemReferenceDate();
 
   const [startYear, startMonth, startDay] = period.startDate
     .split("-")
@@ -275,12 +270,7 @@ export function generateMonthGrid(
   const year = periodOrYear;
   const targetMonth = month ?? 0;
 
-  const today = new Date();
-  const todayString = toDateString(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
+  const todayString = getSystemReferenceDate();
 
   // 1st day of target month
   const firstDay = new Date(year, targetMonth, 1);
@@ -583,12 +573,12 @@ export function CalendarMonthView({
     [controlledPeriod, onPeriodChange, onAcademicMonthChange]
   );
 
-  const [selectedDate, setSelectedDate] = React.useState<string>("2026-09-04");
+  const [selectedDate, setSelectedDate] = React.useState<string>(getSystemReferenceDate());
 
   // Keep selected date focused within cycle bounds
   React.useEffect(() => {
     if (selectedDate < period.startDate || selectedDate > period.endDate) {
-      const anchorToday = "2026-09-04";
+      const anchorToday = getSystemReferenceDate();
       if (anchorToday >= period.startDate && anchorToday <= period.endDate) {
         setSelectedDate(anchorToday);
       } else {
@@ -612,7 +602,7 @@ export function CalendarMonthView({
   const handleCurrentMonth = () => {
     const curPeriod = getAcademicMonthInfo(new Date());
     handlePeriodChange(curPeriod);
-    setSelectedDate("2026-09-04");
+    setSelectedDate(getSystemReferenceDate());
   };
 
   // Generate calendar cells for the 25th-to-24th academic cycle

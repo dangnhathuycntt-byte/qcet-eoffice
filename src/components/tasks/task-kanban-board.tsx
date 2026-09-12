@@ -2,18 +2,17 @@
 
 import * as React from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
   Plus,
   Calendar,
-  Building2,
-  Users,
   CheckCircle2,
   Clock,
   AlertCircle,
   AlertTriangle,
   Circle,
   FolderTree,
+  MoreHorizontal,
+  ChevronRight,
+  X,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -25,12 +24,9 @@ import type {
   KanbanColumnId,
   DetailedKanbanProjection,
 } from "@/contracts/workspace-semantic";
-import {
-  getCategoryBadgeConfig,
-  CATEGORY_TABS,
-} from "@/components/tasks/cascading-task-table";
 import { cn } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
+import { isTaskPastDue, getSystemReferenceDate } from "@/lib/academic-calendar";
 
 export type TaskLevelFilter = "ALL" | "TRUONG" | "DON_VI";
 
@@ -340,17 +336,285 @@ function formatDate(dateStr?: string): string {
   }
 }
 
-function isOverdue(dueDateStr?: string, status?: TaskStatus): boolean {
-  if (!dueDateStr || status === "COMPLETED") return false;
-  const d = dueDateStr.length > 10 ? dueDateStr.slice(0, 10) : dueDateStr;
-  return d < "2026-09-04";
+function isOverdue(dueDateStr?: string, status?: TaskStatus, referenceDate: string = getSystemReferenceDate()): boolean {
+  if (!dueDateStr || status === "COMPLETED" || status === "CANCELLED") return false;
+  return isTaskPastDue(dueDateStr, referenceDate);
 }
 
-function getInitials(name: string): string {
-  if (!name) return "—";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+// Status labels for action menu display
+const STATUS_LABELS: Record<string, string> = {
+  NEW: "Tiếp nhận",
+  IN_PROGRESS: "Đang làm",
+  NEEDS_REVIEW: "Chờ duyệt",
+  COMPLETED: "Hoàn thành",
+};
+
+interface KanbanCardProps {
+  item: KanbanItem;
+  onSelectTask?: (task: SchoolTask | StaffTask) => void;
+  onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
+}
+
+function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [statusSubmenuOpen, setStatusSubmenuOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  const overdue =
+    isOverdue(item.dueDate, item.status) || item.status === "OVERDUE";
+  const effectiveColId = mapTaskStatusToKanbanColumn(item.status);
+
+  // Close menu on outside mousedown or Escape keydown
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+        setStatusSubmenuOpen(false);
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setStatusSubmenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpen]);
+
+  function handleCardClick() {
+    onSelectTask?.(item.rawTask);
+  }
+
+  function handleMenuToggle(e: React.MouseEvent) {
+    e.stopPropagation();
+    setMenuOpen((prev) => !prev);
+    setStatusSubmenuOpen(false);
+  }
+
+  function handleStatusChange(newStatus: TaskStatus) {
+    triggerHaptic("selection");
+    onStatusChange?.(item.id, newStatus);
+    setMenuOpen(false);
+    setStatusSubmenuOpen(false);
+  }
+
+  function handleOpenDetail(e: React.MouseEvent) {
+    e.stopPropagation();
+    onSelectTask?.(item.rawTask);
+    setMenuOpen(false);
+  }
+
+  return (
+    <div
+      onClick={handleCardClick}
+      className={cn(
+        "group relative flex flex-col gap-2 rounded-lg border border-border/60 bg-card p-3 text-card-foreground transition-all duration-150 cursor-pointer shadow-2xs",
+        "hover:border-primary/40 hover:shadow-subtle hover:-translate-y-[1px] active:translate-y-0",
+        item.level === "TRUONG"
+          ? "border-l-2 border-l-blue-500/70"
+          : "border-l-2 border-l-indigo-500/70"
+      )}
+    >
+      {/* Row 1: Title + Action menu trigger */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          {item.parentSchoolTaskTitle && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-0.5 line-clamp-1">
+              <FolderTree
+                strokeWidth={1.5}
+                className="size-3 shrink-0 text-muted-foreground/70"
+              />
+              <span className="truncate">{item.parentSchoolTaskTitle}</span>
+            </div>
+          )}
+          <h4 className="text-xs font-semibold text-foreground leading-snug line-clamp-3 group-hover:text-primary transition-colors">
+            {item.title}
+          </h4>
+        </div>
+
+        {/* ⋯ Action menu button */}
+        <div ref={menuRef} className="relative shrink-0">
+          <button
+            type="button"
+            onClick={handleMenuToggle}
+            aria-label="Thao tác"
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            data-slot="kanban-action-menu-trigger"
+            data-actions="status-transition"
+            className="size-7 min-h-[44px] sm:min-h-[28px] flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60 touch-manipulation"
+          >
+            <MoreHorizontal strokeWidth={1.5} className="size-4" />
+          </button>
+
+          {/* Action menu popover */}
+          {menuOpen && (
+            <div
+              role="menu"
+              data-slot="kanban-action-menu"
+              aria-label="Thao tác nhiệm vụ"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setMenuOpen(false);
+                  setStatusSubmenuOpen(false);
+                }
+              }}
+              className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border border-border/80 bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100"
+            >
+              {/* Mở chi tiết */}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleOpenDetail}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px] text-left"
+              >
+                Mở chi tiết
+              </button>
+
+              <div className="h-px bg-border/50 mx-2 my-0.5" />
+
+              {/* Chuyển trạng thái submenu toggle */}
+              <button
+                type="button"
+                role="menuitem"
+                aria-label="Chuyển trạng thái"
+                aria-expanded={statusSubmenuOpen}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStatusSubmenuOpen((prev) => !prev);
+                }}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px]"
+              >
+                <span>Chuyển trạng thái</span>
+                <ChevronRight
+                  strokeWidth={1.5}
+                  className={cn(
+                    "size-3 text-muted-foreground transition-transform",
+                    statusSubmenuOpen && "rotate-90"
+                  )}
+                />
+              </button>
+
+              {/* Inline status options */}
+              {statusSubmenuOpen && (
+                <div className="pb-1">
+                  {KANBAN_COLUMNS.map((col) => {
+                    const isCurrent = col.id === effectiveColId;
+                    return (
+                      <button
+                        key={col.id}
+                        type="button"
+                        role="menuitem"
+                        disabled={isCurrent}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isCurrent) handleStatusChange(col.id);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-2 pl-6 pr-3 py-1.5 text-xs transition-colors cursor-pointer min-h-[40px] sm:min-h-[32px] text-left",
+                          isCurrent
+                            ? "text-primary font-semibold cursor-default"
+                            : "text-foreground hover:bg-muted/60"
+                        )}
+                      >
+                        <span
+                          className={cn("size-1.5 rounded-full shrink-0", col.dotColor)}
+                        />
+                        {STATUS_LABELS[col.id] ?? col.title}
+                        {isCurrent && (
+                          <span className="ml-auto text-muted-foreground font-normal">
+                            Hiện tại
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="h-px bg-border/50 mx-2 my-0.5" />
+
+              {/* Close */}
+              <button
+                type="button"
+                role="menuitem"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  setStatusSubmenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-muted/60 transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px] text-left"
+              >
+                <X strokeWidth={1.5} className="size-3" />
+                Đóng
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: Category (unit) · Assignee */}
+      <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+        <span className="font-medium text-foreground/80 truncate">
+          {item.categoryLabel}
+        </span>
+        <span className="shrink-0">·</span>
+        <span className="truncate">{item.assigneeName}</span>
+      </div>
+
+      {/* Row 3: Deadline + Overdue badge */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div
+          className={cn(
+            "flex items-center gap-1 text-xs font-mono tabular-nums",
+            overdue ? "text-destructive font-semibold" : "text-muted-foreground"
+          )}
+        >
+          <Calendar
+            strokeWidth={1.5}
+            className={cn("size-3 shrink-0", overdue ? "text-destructive" : "")}
+          />
+          <span>Hạn {formatDate(item.dueDate)}</span>
+        </div>
+        {overdue && (
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-red-500/10 text-destructive border border-red-500/20">
+            Quá hạn
+          </span>
+        )}
+      </div>
+
+      {/* Row 4: Progress bar (School tasks only) */}
+      {item.progressPercent !== undefined && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs text-muted-foreground font-mono tabular-nums">
+            <span className="text-muted-foreground/70">Tiến độ</span>
+            <span>{item.progressPercent ?? 0}%</span>
+          </div>
+          <div className="h-1 w-full overflow-hidden rounded-full bg-muted/60">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-300",
+                (item.progressPercent ?? 0) === 100
+                  ? "bg-emerald-500"
+                  : (item.progressPercent ?? 0) >= 50
+                  ? "bg-blue-500"
+                  : "bg-amber-500"
+              )}
+              style={{
+                width: `${Math.min(100, Math.max(0, item.progressPercent ?? 0))}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export interface TaskKanbanBoardProps {
@@ -554,265 +818,14 @@ export function TaskKanbanBoard({
                   </div>
                 ) : (
                   <>
-                    {displayedTasks.map((item) => {
-                      const categoryConfig = getCategoryBadgeConfig(
-                        item.category
-                      );
-                      const effectiveColId = mapTaskStatusToKanbanColumn(item.status);
-                      const overdue = isOverdue(item.dueDate, item.status) || item.status === "OVERDUE";
-                      const prevStatus = getPrevStatus(item.status);
-                      const nextStatus = getNextStatus(item.status);
-
-                      return (
-                        <div
-                          key={item.id}
-                          onClick={() => onSelectTask?.(item.rawTask)}
-                          className={cn(
-                            "group relative flex flex-col justify-between rounded-lg border border-border/60 bg-card p-3.5 text-card-foreground transition-all duration-150 cursor-pointer shadow-2xs",
-                            "hover:border-primary/40 hover:shadow-subtle hover:-translate-y-[1px] active:translate-y-0",
-                            item.level === "TRUONG"
-                              ? "border-l-2 border-l-blue-500/70"
-                              : "border-l-2 border-l-indigo-500/70"
-                          )}
-                        >
-                          <div className="space-y-2">
-                            {/* Top Row: Level Indicator & Category Badge */}
-                            <div className="flex items-center justify-between gap-1.5 flex-wrap">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {item.level === "TRUONG" ? (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20">
-                                    <Building2
-                                      strokeWidth={1.5}
-                                      className="size-3"
-                                    />
-                                    <span>Cấp Trường</span>
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
-                                    <Users
-                                      strokeWidth={1.5}
-                                      className="size-3"
-                                    />
-                                    <span>Đơn vị</span>
-                                  </span>
-                                )}
-
-                                <span
-                                  className={cn(
-                                    "inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border border-border/50",
-                                    categoryConfig.className
-                                  )}
-                                >
-                                  {categoryConfig.label}
-                                </span>
-
-                                {overdue && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-red-500/10 text-destructive border border-red-500/20">
-                                    Quá hạn
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Title & Parent School Task */}
-                            <div>
-                              {item.parentSchoolTaskTitle && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1 line-clamp-1">
-                                  <FolderTree
-                                    strokeWidth={1.5}
-                                    className="size-3 shrink-0 text-muted-foreground/70"
-                                  />
-                                  <span className="truncate">
-                                    {item.parentSchoolTaskTitle}
-                                  </span>
-                                </div>
-                              )}
-                              <h4 className="text-xs font-semibold text-foreground line-clamp-2 group-hover:text-primary leading-snug transition-colors">
-                                {item.title}
-                              </h4>
-                            </div>
-                          </div>
-
-                          {/* Bottom Area: Micro Progress Bar (for School Tasks) & Footer */}
-                          <div className="mt-2.5 space-y-2">
-                            {/* 2px Micro Progress Bar (h-1) */}
-                            {item.level === "TRUONG" && (
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between text-xs text-muted-foreground font-mono tabular-nums">
-                                  <span className="text-muted-foreground/70">
-                                    Tiến độ
-                                  </span>
-                                  <span>{item.progressPercent ?? 0}%</span>
-                                </div>
-                                <div className="h-1 w-full overflow-hidden rounded-full bg-muted/60">
-                                  <div
-                                    className={cn(
-                                      "h-full rounded-full transition-all duration-300",
-                                      (item.progressPercent ?? 0) === 100
-                                        ? "bg-emerald-500"
-                                        : (item.progressPercent ?? 0) >= 50
-                                        ? "bg-blue-500"
-                                        : "bg-amber-500"
-                                    )}
-                                    style={{
-                                      width: `${Math.min(
-                                        100,
-                                        Math.max(0, item.progressPercent ?? 0)
-                                      )}%`,
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Footer Info: Assignee, Due Date & Quick Status Move Buttons */}
-                            <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/40">
-                              {/* Assignee & Due Date */}
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div
-                                  className="size-[22px] rounded-full bg-secondary text-foreground border border-border/80 flex items-center justify-center text-xs font-semibold font-mono shrink-0"
-                                  title={item.assigneeName}
-                                >
-                                  {getInitials(item.assigneeName)}
-                                </div>
-                                <div className="flex items-center gap-1 text-xs truncate text-muted-foreground">
-                                  <Calendar
-                                    strokeWidth={1.5}
-                                    className={cn(
-                                      "size-3 shrink-0",
-                                      overdue ? "text-destructive" : ""
-                                    )}
-                                  />
-                                  <span
-                                    className={cn(
-                                      "truncate font-mono tabular-nums text-xs",
-                                      overdue
-                                        ? "text-destructive font-semibold"
-                                        : ""
-                                    )}
-                                  >
-                                    {formatDate(item.dueDate)}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Quick Move and Status Selection Controls */}
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                {/* Accessible Status Transition Menu (Chuyển trạng thái) */}
-                                <div className="relative inline-flex items-center">
-                                  <label
-                                    htmlFor={`status-select-${item.id}`}
-                                    className="sr-only"
-                                  >
-                                    Chuyển trạng thái
-                                  </label>
-                                  <select
-                                    id={`status-select-${item.id}`}
-                                    aria-label="Chuyển trạng thái"
-                                    title="Chuyển trạng thái"
-                                    value={effectiveColId}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onChange={(e) => {
-                                      e.stopPropagation();
-                                      const newStatus = e.target.value as TaskStatus;
-                                      if (newStatus && onStatusChange) {
-                                        triggerHaptic("selection");
-                                        onStatusChange(item.id, newStatus);
-                                      }
-                                    }}
-                                    className="h-8 min-h-[44px] sm:min-h-[28px] sm:h-7 pl-2 pr-6 text-xs font-medium rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground cursor-pointer transition-colors focus:outline-hidden focus:ring-1 focus:ring-primary/40 appearance-none touch-manipulation"
-                                  >
-                                    <option value="" disabled>
-                                      Chuyển trạng thái
-                                    </option>
-                                    {KANBAN_COLUMNS.map((col) => (
-                                      <option
-                                        key={col.id}
-                                        value={col.id}
-                                        disabled={col.id === effectiveColId}
-                                      >
-                                        {col.id === effectiveColId
-                                          ? `[Hiện tại] ${col.title}`
-                                          : `→ ${col.title}`}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <ChevronRight
-                                    className="pointer-events-none absolute right-1.5 size-3 text-muted-foreground rotate-90"
-                                    strokeWidth={1.5}
-                                  />
-                                </div>
-
-                                {/* Step-by-step Chevrons */}
-                                <button
-                                  type="button"
-                                  disabled={!prevStatus}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (prevStatus && onStatusChange) {
-                                      triggerHaptic("selection");
-                                      onStatusChange(item.id, prevStatus);
-                                    }
-                                  }}
-                                  aria-label={
-                                    prevStatus
-                                      ? `Lùi về ${prevStatus}`
-                                      : "Không thể lùi"
-                                  }
-                                  title={
-                                    prevStatus
-                                      ? `Chuyển về ${prevStatus}`
-                                      : "Không thể lùi"
-                                  }
-                                  className={cn(
-                                    "size-8 sm:size-7 min-w-[32px] min-h-[44px] sm:min-w-[28px] sm:min-h-[28px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95 touch-manipulation",
-                                    !prevStatus &&
-                                      "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
-                                  )}
-                                >
-                                  <ChevronLeft
-                                    strokeWidth={1.5}
-                                    className="size-3.5"
-                                  />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  disabled={!nextStatus}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (nextStatus && onStatusChange) {
-                                      triggerHaptic("selection");
-                                      onStatusChange(item.id, nextStatus);
-                                    }
-                                  }}
-                                  aria-label={
-                                    nextStatus
-                                      ? `Tiến sang ${nextStatus}`
-                                      : "Không thể tiến"
-                                  }
-                                  title={
-                                    nextStatus
-                                      ? `Chuyển sang ${nextStatus}`
-                                      : "Không thể tiến"
-                                  }
-                                  className={cn(
-                                    "size-8 sm:size-7 min-w-[32px] min-h-[44px] sm:min-w-[28px] sm:min-h-[28px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95 touch-manipulation",
-                                    !nextStatus &&
-                                      "opacity-30 cursor-not-allowed hover:bg-background hover:text-muted-foreground"
-                                  )}
-                                >
-                                  <ChevronRight
-                                    strokeWidth={1.5}
-                                    className="size-3.5"
-                                  />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {displayedTasks.map((item) => (
+                      <KanbanCard
+                        key={item.id}
+                        item={item}
+                        onSelectTask={onSelectTask}
+                        onStatusChange={onStatusChange}
+                      />
+                    ))}
                     {colTasks.length > limit && (
                       <button
                         type="button"

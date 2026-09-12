@@ -1,21 +1,23 @@
 /**
  * Dashboard Composition Invariants Test Suite (Phase 0 / Regression Lock)
  * Target: Canonical Dashboard (src/components/dashboard/zones/dashboard-zone.tsx, src/app/page.tsx)
- * Invariants: DASH-01, DASH-02, DASH-04, DASH-06, DASH-07
+ * Invariants: DASH-01, DASH-02, DASH-04, DASH-06, DASH-07, DASH-09 (ACTION→SITUATION→CONTEXT order)
  *
  * Requirements:
- * 1. Enforce exactly ONE metric strip on canonical dashboard
+ * 1. Enforce exactly ONE situation summary on canonical dashboard (DashboardSituationStrip)
  * 2. Enforce exactly ONE primary action queue
  * 3. Prohibit SmartWorkbox on dashboard
  * 4. Prohibit ExecutiveActionCenter metric cards on dashboard
  * 5. Prohibit literal markers: "Verified Clear", "Hàng đợi điều hành thông suốt", "Operational Clear", "Ổn định tuyệt đối"
  * 6. Enforce department dashboard summary has at most 5 rows
+ * 7. (DASH-09) Enforce ACTION section appears before SITUATION, SITUATION before CONTEXT
  */
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { deriveSituationState } from "../src/components/dashboard/dashboard-situation-strip";
 
 const DASHBOARD_ZONE_PATH = path.join(
   process.cwd(),
@@ -61,16 +63,23 @@ describe("Dashboard Composition Invariants (Phase 0)", () => {
   const dashboardSource = fs.readFileSync(DASHBOARD_ZONE_PATH, "utf8");
   const actionCenterSource = fs.readFileSync(ACTION_CENTER_PATH, "utf8");
 
-  test("1. Enforce exactly ONE metric strip on canonical dashboard (DASH-01)", () => {
-    // Metric strip components: ExecutiveStatStrip or AdaptiveMetricStrip
-    const executiveStatStripMatches = dashboardSource.match(/<ExecutiveStatStrip\b/g) || [];
+  test("1. Enforce exactly ONE situation summary on canonical dashboard (DASH-01)", () => {
+    // Situation summary component: DashboardSituationStrip (replaces legacy ExecutiveStatStrip on dashboard)
+    const situationStripMatches = dashboardSource.match(/<DashboardSituationStrip\b/g) || [];
     const adaptiveMetricStripMatches = dashboardSource.match(/<AdaptiveMetricStrip\b/g) || [];
-    const totalMetricStrips = executiveStatStripMatches.length + adaptiveMetricStripMatches.length;
+    const totalSituationSurfaces = situationStripMatches.length + adaptiveMetricStripMatches.length;
 
     assert.equal(
-      totalMetricStrips,
+      totalSituationSurfaces,
       1,
-      `Canonical dashboard must contain exactly ONE metric strip component (found ${totalMetricStrips}: ${executiveStatStripMatches.length} ExecutiveStatStrip, ${adaptiveMetricStripMatches.length} AdaptiveMetricStrip)`
+      `Canonical dashboard must contain exactly ONE situation summary (found ${totalSituationSurfaces}: ${situationStripMatches.length} DashboardSituationStrip, ${adaptiveMetricStripMatches.length} AdaptiveMetricStrip)`
+    );
+
+    // ExecutiveStatStrip must not appear in dashboard-zone (it's a KPI card grid — too heavy for dashboard SITUATION)
+    assert.equal(
+      dashboardSource.includes("<ExecutiveStatStrip"),
+      false,
+      "dashboard-zone.tsx must NOT render <ExecutiveStatStrip /> — use DashboardSituationStrip for the compact SITUATION section"
     );
 
     // Ensure no secondary metric strip container exists
@@ -82,15 +91,31 @@ describe("Dashboard Composition Invariants (Phase 0)", () => {
   });
 
   test("2. Enforce exactly ONE primary action queue on canonical dashboard (DASH-02)", () => {
-    // Action queue components: ExecutiveActionCenter or ActionInboxQueue
+    // Action queue components: ExecutiveActionCenter (for execs) or PersonalWorkbench with attentionOnly (for others)
     const actionCenterMatches = dashboardSource.match(/<ExecutiveActionCenter\b/g) || [];
     const actionInboxMatches = dashboardSource.match(/<ActionInboxQueue\b/g) || [];
-    const totalActionQueues = actionCenterMatches.length + actionInboxMatches.length;
+    // PersonalWorkbench rendered with attentionOnly in section-action is the non-exec action surface
+    const personalWorkbenchMatches = dashboardSource.match(/<PersonalWorkbench\b/g) || [];
+    const totalActionQueues = actionCenterMatches.length + actionInboxMatches.length + personalWorkbenchMatches.length;
 
     assert.equal(
       totalActionQueues,
-      1,
-      `Canonical dashboard must contain exactly ONE primary action queue (found ${totalActionQueues})`
+      2,
+      `Canonical dashboard must contain exactly ONE executive action queue + ONE non-exec action queue (PersonalWorkbench), found ${totalActionQueues} (ExecCenter: ${actionCenterMatches.length}, ActionInbox: ${actionInboxMatches.length}, PersonalWorkbench: ${personalWorkbenchMatches.length}). They render exclusively based on isExecutive.`
+    );
+
+    // Both must live inside section-action, not duplicated outside
+    const sectionActionContent = dashboardSource.slice(
+      dashboardSource.indexOf('data-slot="section-action"'),
+      dashboardSource.indexOf('data-slot="section-situation"')
+    );
+    assert.ok(
+      sectionActionContent.includes("<ExecutiveActionCenter"),
+      "ExecutiveActionCenter must be inside section-action"
+    );
+    assert.ok(
+      sectionActionContent.includes("<PersonalWorkbench"),
+      "PersonalWorkbench (non-exec action surface) must be inside section-action"
     );
   });
 
@@ -164,5 +189,69 @@ describe("Dashboard Composition Invariants (Phase 0)", () => {
     // Small list (e.g. 3 departments) is preserved without expansion
     const smallList = mock17Departments.slice(0, 3);
     assert.equal(getDepartmentDashboardSummary(smallList).length, 3);
+  });
+
+  test("7. Enforce ACTION → SITUATION → CONTEXT section order on canonical dashboard (DASH-09)", () => {
+    const actionPos = dashboardSource.indexOf('data-slot="section-action"');
+    const situationPos = dashboardSource.indexOf('data-slot="section-situation"');
+    const contextPos = dashboardSource.indexOf('data-slot="section-context"');
+
+    assert.ok(actionPos > -1, 'dashboard-zone.tsx must have data-slot="section-action"');
+    assert.ok(situationPos > -1, 'dashboard-zone.tsx must have data-slot="section-situation"');
+    assert.ok(contextPos > -1, 'dashboard-zone.tsx must have data-slot="section-context"');
+    assert.ok(
+      actionPos < situationPos,
+      `DASH-09: ACTION section (pos ${actionPos}) must appear before SITUATION section (pos ${situationPos})`
+    );
+    assert.ok(
+      situationPos < contextPos,
+      `DASH-09: SITUATION section (pos ${situationPos}) must appear before CONTEXT section (pos ${contextPos})`
+    );
+
+    // DashboardSituationStrip must be inside section-situation
+    const situationSectionStart = dashboardSource.indexOf('data-slot="section-situation"');
+    const contextSectionStart = dashboardSource.indexOf('data-slot="section-context"');
+    const situationSectionContent = dashboardSource.slice(situationSectionStart, contextSectionStart);
+    assert.ok(
+      situationSectionContent.includes("<DashboardSituationStrip"),
+      "DashboardSituationStrip must reside inside section-situation"
+    );
+  });
+
+  test("8. Executive overdue display: HAS_ISSUES when stats.overdueTasksCount=0 but executiveStats.overdueTasksCount>0 (DASH-Task5)", () => {
+    // stats has no personal overdue tasks
+    const stats = {
+      totalSchoolTasks: 10,
+      totalStaffTasks: 0,
+      overdueTasksCount: 0,
+      averageSchoolProgressPercent: 80,
+    } as import("@/types/dashboard").DashboardStats;
+
+    // executive layer has overdue tasks that must surface
+    const executiveStats = {
+      overdueTasksCount: 3,
+      blockedTasksCount: 0,
+      pendingSchoolApprovalCount: 0,
+      strategicActiveCount: 0,
+    } as import("@/lib/executive-matrix-aggregator").ExecutiveActionStats;
+
+    const state = deriveSituationState(stats, executiveStats);
+    assert.equal(
+      state,
+      "HAS_ISSUES",
+      "deriveSituationState must return HAS_ISSUES when executiveStats.overdueTasksCount>0 even if stats.overdueTasksCount===0"
+    );
+
+    // Also verify that zero executiveStats yields HEALTHY (baseline sanity)
+    const healthyState = deriveSituationState(stats, {
+      ...executiveStats,
+      overdueTasksCount: 0,
+      blockedTasksCount: 0,
+    });
+    assert.equal(
+      healthyState,
+      "HEALTHY",
+      "deriveSituationState must return HEALTHY when both overdue counts are 0"
+    );
   });
 });

@@ -58,6 +58,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCategoryBadgeConfig } from "./cascading-task-table";
+import { getSystemReferenceDate, isTaskOverdue } from "@/lib/academic-calendar";
 
 export function formatDetailDate(dateStr?: string): string {
   if (!dateStr) return "Chưa đặt";
@@ -234,7 +235,7 @@ function getRelativeTimeString(
   }
   if (!dueDateStr) return null;
   try {
-    const now = new Date("2026-09-04T00:00:00");
+    const now = new Date(getSystemReferenceDate() + "T00:00:00");
     const due = new Date(dueDateStr.split("T")[0] + "T00:00:00");
     const diffDays = Math.ceil(
       (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
@@ -386,12 +387,7 @@ export function TaskDetailSideSheet({
   const [isAddingSubtask, setIsAddingSubtask] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
 
-  let dashboardModal: any = null;
-  try {
-    dashboardModal = React.useContext(DashboardModalContext);
-  } catch {
-    dashboardModal = null;
-  }
+  const dashboardModal = React.useContext(DashboardModalContext);
 
   const effectiveOnAddSubTask = React.useCallback(
     (parentSchoolTaskId: string, prefillTitle?: string) => {
@@ -471,36 +467,20 @@ export function TaskDetailSideSheet({
     return screenDeliverablesWithAI(task as StaffTask);
   }, [task]);
 
-  if (!visible || !task) {
-    return null;
-  }
-
-  const isSchool = isSchoolTask(task);
-  const isDone = task.status === "COMPLETED";
-  const levelBadge = getTaskLevelBadge(isSchool);
-  const statusConfig = getDetailStatusConfig(task.status);
-  const assigneeName = isSchool ? task.leadAssigneeName : task.assigneeName;
-  const relativeTime = getRelativeTimeString(task.dueDate, isDone);
-  const isOverdue =
-    !isDone &&
-    Boolean(task.dueDate) &&
-    new Date(task.dueDate.split("T")[0] + "T00:00:00") <
-      new Date("2026-09-04T00:00:00");
-  const auditTimeline = getTaskAuditTimeline(task);
-
-  // Permission evaluations & Stanford Authority Delegation Engine
+  // Permission evaluations & Stanford Authority Delegation Engine (must be above early return to respect Rules of Hooks)
+  const isSchoolForPermission = task ? isSchoolTask(task) : false;
   const taskDepartmentCode =
-    (!isSchool && (task as StaffTask).departmentCode) ||
-    (isSchool && (task as SchoolTask).leadDepartmentCode) ||
+    (!isSchoolForPermission && task && (task as StaffTask).departmentCode) ||
+    (isSchoolForPermission && task && (task as SchoolTask).leadDepartmentCode) ||
     user?.departmentCode ||
     "";
 
   const taskAssigneeId =
-    !isSchool
-      ? (task as StaffTask).assigneeId ||
-        (user && (task as StaffTask).assigneeName === user.name ? user.id : undefined)
-      : (task as SchoolTask).leadAssigneeId ||
-        (user && (task as SchoolTask).leadAssigneeName === user.name ? user.id : undefined);
+    !isSchoolForPermission
+      ? (task && (task as StaffTask).assigneeId) ||
+        (user && task && (task as StaffTask).assigneeName === user.name ? user.id : undefined)
+      : (task && (task as SchoolTask).leadAssigneeId) ||
+        (user && task && (task as SchoolTask).leadAssigneeName === user.name ? user.id : undefined);
 
   const approvalResult = React.useMemo(() => {
     if (!user || !task) {
@@ -521,6 +501,19 @@ export function TaskDetailSideSheet({
       activeDelegations: delegations,
     });
   }, [user, task, taskDepartmentCode, taskAssigneeId, delegations]);
+
+  if (!visible || !task) {
+    return null;
+  }
+
+  const isSchool = isSchoolTask(task);
+  const isDone = task.status === "COMPLETED";
+  const levelBadge = getTaskLevelBadge(isSchool);
+  const statusConfig = getDetailStatusConfig(task.status);
+  const assigneeName = isSchool ? task.leadAssigneeName : task.assigneeName;
+  const relativeTime = getRelativeTimeString(task.dueDate, isDone);
+  const isOverdue = isTaskOverdue(task.status, task.dueDate);
+  const auditTimeline = getTaskAuditTimeline(task);
 
   const canSubmitDeliverable =
     !isSchool && canUserSubmitDeliverable(task as StaffTask, user);

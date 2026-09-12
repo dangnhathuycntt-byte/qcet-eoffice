@@ -91,6 +91,8 @@ export interface PersonalWorkbenchProps {
   onRefresh?: () => void;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   hideHeader?: boolean;
+  /** When true: render ONLY the attention queue (ACTION surface). Omits SmartWorkbox and context widgets. */
+  attentionOnly?: boolean;
   className?: string;
 }
 
@@ -480,6 +482,7 @@ export function PersonalWorkbench({
   onRefresh,
   onSelectTask,
   hideHeader = false,
+  attentionOnly = false,
   className,
 }: PersonalWorkbenchProps) {
   // Infer active role
@@ -600,28 +603,30 @@ export function PersonalWorkbench({
         </div>
       )}
 
-      {/* 2. Smart Workbox Quick Filters */}
-      <section aria-label="Hộp việc thông minh">
-        <SmartWorkbox
-          tasks={baseTasks}
-          user={user}
-          roleScope={effectiveScope}
-          referenceDate={referenceDate}
-        />
-      </section>
+      {/* 2. Smart Workbox Quick Filters — omitted in attentionOnly mode */}
+      {!attentionOnly && (
+        <section aria-label="Hộp việc thông minh">
+          <SmartWorkbox
+            tasks={baseTasks}
+            user={user}
+            roleScope={effectiveScope}
+            referenceDate={referenceDate}
+          />
+        </section>
+      )}
 
-      {/* 3. Dual-Column Attention Grid (Linear / Plane 'Your Work' Split-Cockpit) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: What Needs My Attention Stream (~60% desktop width) */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="p-4 sm:p-5 rounded-2xl border border-border/80 bg-card shadow-2xs space-y-4">
+      {/* 3. Attention Grid: full-width in attentionOnly, dual-column otherwise */}
+      <div className={attentionOnly ? "" : "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"}>
+        {/* Attention Queue Column */}
+        <div className={attentionOnly ? "" : "lg:col-span-7 space-y-4"}>
+          <div className="p-4 sm:p-5 rounded-2xl border border-border/80 bg-card shadow-2xs space-y-4" data-slot="action-surface">
             {/* Attention Stream Header */}
             <div className="flex items-center justify-between gap-3">
               <div className="space-y-0.5 min-w-0">
                 <div className="flex items-center gap-2">
                   <Clock size={16} className="text-primary shrink-0" strokeWidth={1.5} />
                   <h2 className="font-heading font-semibold text-base text-foreground tracking-tight truncate">
-                    Việc cần xử lý ngay
+                    CẦN XỬ LÝ
                   </h2>
                   <Badge variant="secondary" className="text-xs font-mono tabular-nums px-2 py-0">
                     {attentionQueue.length}
@@ -629,7 +634,7 @@ export function PersonalWorkbench({
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
                   {effectiveRole === "EXECUTIVE"
-                    ? "Hồ sơ chờ phê duyệt L2, điểm nghẽn chiến lược và tiến độ toàn trường"
+                    ? "Hồ sơ chờ phê duyệt L2, điểm nghẽn chi���n lược và tiến độ toàn trường"
                     : effectiveRole === "MANAGER"
                     ? "Hồ sơ chờ duyệt cấp đơn vị L1, công việc trễ hạn và các nhiệm vụ trọng tâm"
                     : "Nhiệm vụ cá nhân hôm nay, việc chờ nộp minh chứng và hạn chót gần nhất"}
@@ -647,12 +652,15 @@ export function PersonalWorkbench({
 
             {/* Attention Items List */}
             {attentionQueue.length === 0 ? (
-              <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-xs text-emerald-900 flex items-center gap-3">
-                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" strokeWidth={1.5} />
+              <div
+                className="p-4 rounded-xl border border-border/60 bg-muted/20 text-xs text-foreground/80 flex items-center gap-3"
+                data-slot="action-empty-state"
+              >
+                <CheckCircle2 size={16} className="text-muted-foreground shrink-0" strokeWidth={1.5} />
                 <div className="space-y-0.5">
-                  <p className="font-semibold">Không có nhiệm vụ nào cần xử lý khẩn cấp</p>
-                  <p className="text-emerald-800/80">
-                    Tất cả công việc đều đúng tiến độ và không có hồ sơ tồn đọng cần phê duyệt.
+                  <p className="font-semibold">Không có việc cần bạn xử lý</p>
+                  <p className="text-muted-foreground">
+                    Các hàng đợi hiện đã được giải quyết.
                   </p>
                 </div>
               </div>
@@ -761,8 +769,9 @@ export function PersonalWorkbench({
           </div>
         </div>
 
-        {/* Right Column: Operational Context & Supporting Widgets (~40% desktop width) */}
-        <div className="lg:col-span-5 space-y-4">
+        {/* Right Column: Operational Context & Supporting Widgets (~40% desktop width) — omitted in attentionOnly mode */}
+        {!attentionOnly && (
+          <div className="lg:col-span-5 space-y-4">
           {/* Executive Widgets */}
           {effectiveRole === "EXECUTIVE" && departmentHealth.length > 0 && (
             <div className="space-y-4">
@@ -797,6 +806,7 @@ export function PersonalWorkbench({
             <ActivityFeedWidget activities={activities.slice(0, 5)} />
           )}
         </div>
+        )}
       </div>
     </div>
   );

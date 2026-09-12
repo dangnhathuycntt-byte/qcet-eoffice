@@ -167,6 +167,7 @@ export function SubmitDeliverableModal({
   const [hasDraftRestored, setHasDraftRestored] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [localSubmitting, setLocalSubmitting] = React.useState(false);
+  const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const nameInputRef = React.useRef<HTMLInputElement>(null);
@@ -395,7 +396,6 @@ export function SubmitDeliverableModal({
 
   if (!isOpen || !mounted) return null;
 
-  const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
   const submittingNow = isSubmitting || localSubmitting;
 
   const modalContent = (

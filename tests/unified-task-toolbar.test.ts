@@ -372,34 +372,58 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
     assert.ok(filledHtml.includes("Xóa từ khóa tìm kiếm"), "Must show clear search button");
   });
 
-  test("Row 2 renders 5 Smart Filter Pills: Tất cả, Của tôi, Chờ duyệt, Quá hạn, Hôm nay with counts", () => {
+  // Task 3 (Phase 3A): VIEW-FIRST Row 2 — smart-filter rail removed; Saved Views is primary nav.
+  // The permanent smart-filter pills (Tất cả / Chờ duyệt / Quá hạn / Hôm nay) are intentionally
+  // eliminated from the default render surface. Their filter criteria are preserved as Saved View
+  // presets and Filter-popover options, not as a permanent third control row.
+  test("Row 2 VIEW-FIRST: renders Saved View trigger, Search input, Filter button, Display button — no smart-filter pill rail", () => {
     const html = renderToStaticMarkup(
       React.createElement(UnifiedTaskToolbar, {
         scope: "school",
         onScopeChange: () => {},
         searchQuery: "",
         onSearchChange: () => {},
-        activeTab: "all",
-        tabCounts: {
-          all: 42,
-          my: 12,
-          waiting_approval: 5,
-          overdue: 3,
-          today: 2,
-        },
+        showSavedViews: true,
+        onViewModeChange: () => {},
+        onDensityChange: () => {},
+        selectedDepartment: "ALL",
+        selectedCategory: "ALL",
+        selectedPriority: "ALL",
+        selectedAcademicMonth: "ALL",
       })
     );
 
-    assert.ok(html.includes("Tất cả"), "Must render Tất cả pill");
-    assert.ok(html.includes("42"), "Must render all count badge");
-    assert.ok(html.includes("Của tôi"), "Must render Của tôi pill");
-    assert.ok(html.includes("12"), "Must render my count badge");
-    assert.ok(html.includes("Chờ duyệt"), "Must render Chờ duyệt pill");
-    assert.ok(html.includes("5"), "Must render waiting approval badge");
-    assert.ok(html.includes("Quá hạn"), "Must render Quá hạn pill");
-    assert.ok(html.includes("3"), "Must render overdue badge");
-    assert.ok(html.includes("Hôm nay"), "Must render Hôm nay pill");
-    assert.ok(html.includes("2"), "Must render today badge");
+    // Row 2 slot must be present
+    assert.ok(
+      html.includes('data-slot="unified-task-toolbar-row-2"'),
+      "Row 2 slot must be rendered"
+    );
+
+    // SavedViewsSelector is leftmost — its trigger renders the default label
+    assert.ok(
+      html.includes("Việc cần tôi xử lý") || html.includes("saved-views-selector"),
+      "Must render Saved Views trigger as primary work navigation"
+    );
+
+    // Search input must be in Row 2 (aria-label present)
+    assert.ok(
+      html.includes("Tìm nhiệm vụ"),
+      "Must render search input with aria-label in Row 2"
+    );
+
+    // Filter popover button must be present
+    assert.ok(html.includes("Bộ lọc"), "Must render Filter (Bộ lọc) button");
+
+    // Display popover button must be present
+    assert.ok(html.includes("Hiển thị"), "Must render Display (Hiển thị) button");
+
+    // Smart-filter pill rail must NOT be rendered as a permanent control row.
+    // The scope switcher legitimately uses role="tablist" (aria-label="Phạm vi công việc"),
+    // but the old filter-pill tablist (aria-label="Lọc nhanh trạng thái nhiệm vụ") must be gone.
+    assert.ok(
+      !html.includes("Lọc nhanh trạng thái nhiệm vụ"),
+      "Permanent smart-filter pill tablist (Lọc nhanh trạng thái nhiệm vụ) must not be rendered"
+    );
   });
 
   test("Advanced Filter Popover button displays active filter count badge", () => {

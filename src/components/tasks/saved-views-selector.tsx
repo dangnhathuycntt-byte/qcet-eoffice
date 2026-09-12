@@ -29,6 +29,8 @@ export interface SavedViewsSelectorProps {
   onSaveView?: (newView: SavedTaskView) => void;
   onDeleteView?: (viewId: string) => void;
   onRenameView?: (viewId: string, newName: string) => void;
+  /** Label shown on the trigger button when no view is active. Defaults to "Góc nhìn". */
+  defaultLabel?: string;
   className?: string;
 }
 
@@ -40,6 +42,7 @@ export function SavedViewsSelector({
   onSaveView,
   onDeleteView,
   onRenameView,
+  defaultLabel = "Góc nhìn",
   className,
 }: SavedViewsSelectorProps) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -200,7 +203,7 @@ export function SavedViewsSelector({
         aria-expanded={isOpen}
         aria-label="Chọn hoặc lưu góc nhìn nhiệm vụ"
         className={cn(
-          "inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-[32px] px-2.5 sm:px-2 rounded-xl sm:rounded-lg text-xs font-medium border transition-colors cursor-pointer select-none",
+          "inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-[36px] sm:h-9 px-3 sm:px-2.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer select-none",
           effectiveActiveView
             ? "border-primary/40 bg-primary/5 text-foreground hover:bg-primary/10 shadow-2xs font-semibold"
             : "border-border/80 bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -214,7 +217,7 @@ export function SavedViewsSelector({
           strokeWidth={1.5}
         />
         <span className="truncate max-w-[130px] sm:max-w-[160px] text-left">
-          {effectiveActiveView ? effectiveActiveView.name : "Góc nhìn"}
+          {effectiveActiveView ? effectiveActiveView.name : defaultLabel}
         </span>
         <ChevronDown
           className={cn(

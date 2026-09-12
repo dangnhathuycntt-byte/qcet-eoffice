@@ -173,6 +173,7 @@ export function ReviewActionDialog({
   const [comment, setComment] = React.useState("");
   const [validationError, setValidationError] = React.useState<string | null>(null);
   const [localSubmitting, setLocalSubmitting] = React.useState(false);
+  const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
 
   // Derive task data from either explicit props or task object
   const effectiveTaskId = taskId || task?.id || "";
@@ -226,8 +227,6 @@ export function ReviewActionDialog({
   if (!isOpen || !mounted) {
     return null;
   }
-
-  const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
 
   const activeDecisionConfig =
     DECISION_OPTIONS.find((opt) => opt.id === decision) || DECISION_OPTIONS[0];
