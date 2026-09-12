@@ -59,3 +59,4 @@ qcet-backend-api/
 # E2E harness — raw transcripts are too large for git
 benchmarks/e2e/results/**/transcript.jsonl
 benchmarks/e2e/results/**/probe-transcript.jsonl
+benchmarks/e2e/results/

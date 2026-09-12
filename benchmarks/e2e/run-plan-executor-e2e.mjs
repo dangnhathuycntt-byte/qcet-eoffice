@@ -28,7 +28,11 @@ const EXECUTOR_SHA = (() => {
     return 'unknown';
   }
 })();
-const MODEL = 'claude-combo[1m]';
+// Use the resolved model alias from ~/.claude/settings.json (currently 'fable').
+// 'claude-combo[1m]' is the interactive-session alias and is NOT recognised by
+// the headless `claude -p` SDK path — it returns api_error 404 and the
+// subprocess hangs indefinitely consuming a process slot without doing any work.
+const MODEL = 'fable';
 const EFFORT = 'high';
 const OVERALL_TIMEOUT_MS = 20 * 60 * 1000;      // 20 minutes — executor has many phases
 const PERMISSION_PROBE_TIMEOUT_MS = 60 * 1000;  // 60 seconds
@@ -219,13 +223,20 @@ function createTempRepo(label) {
 function patchClaudeJsonTrust(dir) {
   const claudeJsonPath = path.join(os.homedir(), '.claude.json');
   try {
+    // Claude Code looks up trust using the canonical (realpath) form of the
+    // project directory. On macOS, os.tmpdir() returns /var/folders/… but
+    // Claude Code interns paths as /private/var/folders/… — write both so
+    // the lookup succeeds regardless of which form Claude Code uses.
+    const realDir = (() => { try { return fs.realpathSync(dir); } catch (_) { return dir; } })();
     let root = {};
     if (fs.existsSync(claudeJsonPath)) {
       root = JSON.parse(fs.readFileSync(claudeJsonPath, 'utf8'));
     }
     if (!root.projects) root.projects = {};
-    if (!root.projects[dir]) root.projects[dir] = {};
-    root.projects[dir].hasTrustDialogAccepted = true;
+    for (const key of Array.from(new Set([dir, realDir]))) {
+      if (!root.projects[key]) root.projects[key] = {};
+      root.projects[key].hasTrustDialogAccepted = true;
+    }
     fs.writeFileSync(claudeJsonPath, JSON.stringify(root, null, 2) + '\n', 'utf8');
   } catch (err) {
     // Non-fatal: log and continue — the E2E will fail at Gate B if trust
