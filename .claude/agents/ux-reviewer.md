@@ -3,11 +3,12 @@ name: ux-reviewer
 description: Specialized reviewer for UI/UX, responsive layouts, safe areas, touch targets, typography floor, Light-Only standard, WCAG AA accessibility, empty/loading states, and anti-slop.
 model: inherit
 effort: high
-maxTurns: 10
+maxTurns: 80
 tools:
   - Bash
   - Read
   - Skill
+  - StructuredOutput
 disallowedTools:
   - Write
   - Edit

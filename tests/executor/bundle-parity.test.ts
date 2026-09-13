@@ -20,6 +20,10 @@ const src = fs.readFileSync(workflowPath, 'utf8');
 const helpersPart = src
   .split('// WORKFLOW')[0]
   .replace(/^export\s+const\s+([A-Za-z0-9_]+)\s*=/gm, 'globalThis.$1 =')
+  // The workflow declares its schemas as top-level (non-exported) `const` bindings.
+  // A `const` in a vm Script is script-scoped, not a global property, so it must be
+  // assigned onto globalThis to become visible to parity assertions.
+  .replace(/^const\s+([A-Za-z0-9_]+)\s*=/gm, 'globalThis.$1 =')
   .replace(/^export\s+function\s+([A-Za-z0-9_]+)/gm, 'globalThis.$1 = function $1')
   .replace(/^export\s+/gm, '');
 const sandbox: Record<string, any> = { console, process };

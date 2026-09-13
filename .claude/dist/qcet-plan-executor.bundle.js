@@ -596,159 +596,255 @@ const FINAL_SCHEMA = {
 // Pure JavaScript implementation compliant with Workflow runtime sandbox
 // -----------------------------------------------------------------------------
 
-function normalizePath(p, repoRoot = (typeof process !== 'undefined' && process.cwd ? process.cwd() : '')) {
-  if (!p || typeof p !== 'string') return '';
-  let normalized = p.replace(/\\/g, '/').trim();
-  while (normalized.includes('//')) {
-    normalized = normalized.replace(/\/\//g, '/');
-  }
+// Resolve the repository root for a working directory. When the working
+// directory is a git worktree of this repository (`.claude/worktrees/<name>`),
+// ownership patterns remain repo-relative, so the repository root is the parent
+// of the worktrees directory. Otherwise the working directory is the root.
+// This lets a main-repo absolute path match repo-relative ownership even when
+// the executor process runs inside a worktree.
+// Repository root used to resolve absolute report paths when the Workflow
+// sandbox provides no usable `process.cwd()` (it does not). Populated from the
+// resolved plan path — an absolute path inside the repo — before any shard runs.
+// Without this, absolute paths reported by agents are never normalized, so
+// `matchesOwnership` compares "/repo/src/x.ts" against "src/**" and flags
+// correctly-scoped work as a critical ownership violation.
+let WORKFLOW_REPO_ROOT = '';
+
+function resolveRepoRoot(explicitCwd) {
+  const cwd = (explicitCwd || (typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '')).replace(/\\/g, '/');
+  if (!cwd) return WORKFLOW_REPO_ROOT;
+  const wtMatch = cwd.match(/^(.*)\/\.claude\/worktrees\/[^/]+\/?$/);
+  return wtMatch && wtMatch[1] ? wtMatch[1] : cwd;
+}
+
+function normalizePath(p, explicitCwd) {
+  if (typeof p !== 'string') return '';
+  let normalized = p.trim().replace(/\\/g, '/');
   normalized = normalized.replace(/^\.\//, '');
-  if (repoRoot) {
-    let normRoot = repoRoot.replace(/\\/g, '/').trim();
-    while (normRoot.includes('//')) {
-      normRoot = normRoot.replace(/\/\//g, '/');
+  normalized = normalized.replace(/\/+/g, '/');
+  normalized = normalized.replace(/\/(\.\/)+/g, '/');
+  if (normalized === '.' || normalized === './') {
+    return '';
+  }
+
+  const repoRoot = resolveRepoRoot(explicitCwd);
+
+  // If path is absolute
+  if (normalized.startsWith('/')) {
+    if (repoRoot) {
+      if (normalized === repoRoot) {
+        return '';
+      }
+      if (normalized.startsWith(repoRoot + '/')) {
+        normalized = normalized.slice(repoRoot.length + 1);
+        // Only strip worktree prefix if it is inside THIS repo: .claude/worktrees/<name>/
+        const wtMatch = normalized.match(/^\.claude\/worktrees\/[^/]+\/(.*)$/);
+        if (wtMatch && wtMatch[1]) {
+          normalized = wtMatch[1];
+        }
+      }
+      // If normalized does NOT start with repoRoot + '/', it is external to this repo.
+      // Leave it as absolute path so it will never match repo-relative patterns.
     }
-    if (normRoot.endsWith('/')) normRoot = normRoot.slice(0, -1);
-    if (normalized.startsWith(normRoot + '/')) {
-      normalized = normalized.slice(normRoot.length + 1);
-    } else if (normalized === normRoot) {
-      normalized = '';
+  } else {
+    // Relative path - check if it starts with .claude/worktrees/<name>/
+    const wtMatch = normalized.match(/^\.claude\/worktrees\/[^/]+\/(.*)$/);
+    if (wtMatch && wtMatch[1]) {
+      normalized = wtMatch[1];
     }
   }
+
   if (normalized.length > 1 && normalized.endsWith('/')) {
     normalized = normalized.slice(0, -1);
   }
   return normalized;
 }
 
-function stripWildcards(pattern) {
-  if (!pattern) return '';
-  const norm = normalizePath(pattern);
-  const idx = norm.search(/[\*\?\[\{]/);
-  if (idx === -1) return norm;
-  const prefix = norm.slice(0, idx);
-  const lastSlash = prefix.lastIndexOf('/');
-  return lastSlash === -1 ? '' : prefix.slice(0, lastSlash);
+function stripWildcards(p) {
+  if (!p) return '';
+  return p.replace(/(?:\/)?\*\*?$/, '');
 }
 
-function globToRegex(globPattern) {
-  const norm = normalizePath(globPattern);
-  if (!norm) return /^$/;
-
-  let regexStr = '^';
+function globToRegex(glob) {
+  let regex = '^';
   let i = 0;
-  const len = norm.length;
-
-  while (i < len) {
-    const c = norm[i];
-    if (c === '*' && norm[i + 1] === '*') {
-      if (norm[i + 2] === '/') {
-        regexStr += '(?:.+/)?';
-        i += 3;
+  while (i < glob.length) {
+    const c = glob[i];
+    if (c === '*') {
+      if (glob[i + 1] === '*') {
+        if (glob[i + 2] === '/') {
+          regex += '(?:.*/)?';
+          i += 3;
+          continue;
+        } else {
+          regex += '.*';
+          i += 2;
+          continue;
+        }
       } else {
-        regexStr += '.*';
-        i += 2;
+        regex += '[^/]*';
+        i += 1;
+        continue;
       }
-    } else if (c === '*') {
-      regexStr += '[^/]*';
-      i++;
     } else if (c === '?') {
-      regexStr += '[^/]';
-      i++;
-    } else if (['.', '(', ')', '+', '|', '^', '$', '[', ']', '{', '}', '\\'].includes(c)) {
-      regexStr += '\\' + c;
-      i++;
+      regex += '[^/]';
+      i += 1;
+      continue;
+    } else if (['.', '+', '^', '$', '{', '}', '(', ')', '[', ']', '|', '\\'].includes(c)) {
+      regex += '\\' + c;
+      i += 1;
     } else {
-      regexStr += c;
-      i++;
+      regex += c;
+      i += 1;
     }
   }
-
-  regexStr += '$';
-  return new RegExp(regexStr);
+  regex += '$';
+  return new RegExp(regex);
 }
 
-function isExternalAbsolutePath(targetPath, repoRoot) {
-  if (!targetPath || typeof targetPath !== 'string') return false;
-  const isAbs = targetPath.startsWith('/') || /^[A-Za-z]:[\\/]/.test(targetPath);
-  if (!isAbs) return false;
-  if (!repoRoot || typeof repoRoot !== 'string') return false;
-  const normTarget = normalizePath(targetPath);
-  const normRoot = normalizePath(repoRoot);
-  return !normTarget.startsWith(normRoot);
+function isExternalAbsolutePath(filePath, explicitCwd) {
+  if (!filePath || typeof filePath !== 'string') return false;
+  const normalized = filePath.trim().replace(/\\/g, '/');
+  if (!normalized.startsWith('/')) return false;
+
+  const repoRoot = resolveRepoRoot(explicitCwd);
+  if (repoRoot) {
+    // Inside this repo (main repo or this repo's .claude/worktrees)
+    if (normalized === repoRoot || normalized.startsWith(repoRoot + '/')) {
+      return false;
+    }
+  }
+  return true;
 }
 
-function matchesOwnership(filePath, pattern) {
-  const normFile = normalizePath(filePath);
-  const normPattern = normalizePath(pattern);
+function matchesOwnership(filePath, pattern, explicitCwd) {
+  if (!filePath || !pattern) return false;
 
+  const cwd = (explicitCwd || (typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '')).replace(/\\/g, '/');
+
+  // E07 Invariant: If pattern is repo-relative, external absolute paths must NEVER match
+  const rawPattern = String(pattern).trim().replace(/\\/g, '/');
+  if (!rawPattern.startsWith('/') && isExternalAbsolutePath(filePath, cwd)) {
+    return false;
+  }
+
+  const normFile = normalizePath(filePath, cwd);
+  const normPattern = normalizePath(pattern, cwd);
   if (!normFile || !normPattern) return false;
 
+  // Exact path match
   if (normFile === normPattern) return true;
 
+  // If pattern is still absolute and file is relative or vice-versa, do not cross-match
+  if (normFile.startsWith('/') !== normPattern.startsWith('/')) {
+    return false;
+  }
+
+  // Directory prefix match: if pattern is "dir", it should cover "dir/file.ts"
   if (!normPattern.includes('*') && !normPattern.includes('?')) {
     if (normFile.startsWith(normPattern + '/')) return true;
   }
 
-  const regex = globToRegex(normPattern);
-  return regex.test(normFile);
+  // Double-star folder suffix: e.g. "dir/**"
+  if (normPattern.endsWith('/**')) {
+    const dir = normPattern.slice(0, -3);
+    if (normFile === dir || normFile.startsWith(dir + '/')) return true;
+  }
+
+  // Single star suffix: e.g. "dir/*" (matches direct children, not deep children)
+  if (normPattern.endsWith('/*') && !normPattern.endsWith('/**/*')) {
+    const dir = normPattern.slice(0, -2);
+    if (normFile.startsWith(dir + '/')) {
+      const rest = normFile.slice(dir.length + 1);
+      if (!rest.includes('/')) return true;
+    }
+  }
+
+  // General glob match
+  if (normPattern.includes('*') || normPattern.includes('?')) {
+    try {
+      const regex = globToRegex(normPattern);
+      if (regex.test(normFile)) return true;
+    } catch (_) {}
+  }
+
+  return false;
 }
 
-function pathsOverlap(patternA, patternB) {
-  const normA = normalizePath(patternA);
-  const normB = normalizePath(patternB);
-
+function pathsOverlap(pathA, pathB, explicitCwd) {
+  const cwd = explicitCwd || '';
+  const normA = normalizePath(pathA, cwd);
+  const normB = normalizePath(pathB, cwd);
   if (!normA || !normB) return false;
+
+  // Exact duplicate mutable ownership
   if (normA === normB) return true;
 
-  const hasWildcardA = /[\*\?\[\{]/.test(normA);
-  const hasWildcardB = /[\*\?\[\{]/.test(normB);
-
-  if (!hasWildcardA && !hasWildcardB) {
-    return normA === normB || normA.startsWith(normB + '/') || normB.startsWith(normA + '/');
+  // If one is absolute and one relative, they do not overlap
+  if (normA.startsWith('/') !== normB.startsWith('/')) {
+    return false;
   }
 
-  if (!hasWildcardA && hasWildcardB) {
-    return matchesOwnership(normA, normB) || stripWildcards(normB) === '' || normA.startsWith(stripWildcards(normB) + '/');
-  }
-  if (hasWildcardA && !hasWildcardB) {
-    return matchesOwnership(normB, normA) || stripWildcards(normA) === '' || normB.startsWith(stripWildcards(normA) + '/');
+  // Wildcard glob containment
+  if (matchesOwnership(normA, normB, cwd) || matchesOwnership(normB, normA, cwd)) {
+    return true;
   }
 
-  const regexA = globToRegex(normA);
-  const regexB = globToRegex(normB);
+  const cleanA = stripWildcards(normA);
+  const cleanB = stripWildcards(normB);
 
-  const prefixA = stripWildcards(normA);
-  const prefixB = stripWildcards(normB);
+  if (cleanA && cleanB && cleanA === cleanB) return true;
 
-  if (prefixA && prefixB) {
-    if (!prefixA.startsWith(prefixB) && !prefixB.startsWith(prefixA)) {
-      return false;
+  // Strict delimiter-aware directory prefix / ancestor overlap
+  if (cleanA && cleanB.startsWith(cleanA + '/')) return true;
+  if (cleanB && cleanA.startsWith(cleanB + '/')) return true;
+
+  // Symmetrical directory prefix overlap when wildcards are present in both
+  if (normA.includes('*') && normB.includes('*')) {
+    const baseA = normA.slice(0, normA.indexOf('*')).replace(/\/+$/, '');
+    const baseB = normB.slice(0, normB.indexOf('*')).replace(/\/+$/, '');
+    if (baseA && baseB && (baseA === baseB || baseA.startsWith(baseB + '/') || baseB.startsWith(baseA + '/'))) {
+      const extA = normA.includes('.') ? normA.split('.').pop() : '';
+      const extB = normB.includes('.') ? normB.split('.').pop() : '';
+      if (!extA || !extB || extA === extB || extA.includes('*') || extB.includes('*')) {
+        return true;
+      }
     }
   }
 
-  if (prefixA && regexB.test(prefixA)) return true;
-  if (prefixB && regexA.test(prefixB)) return true;
-
-  return true;
+  return false;
 }
 
-function toRepoRelativePath(targetPath, repoRoot = (typeof process !== 'undefined' && process.cwd ? process.cwd() : '')) {
-  if (!targetPath) return '';
-  let norm = normalizePath(targetPath, repoRoot);
+function toRepoRelativePath(targetPath, explicitCwd) {
+  if (!targetPath || typeof targetPath !== 'string') return '';
+  const cwd = (explicitCwd || (typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '')).replace(/\\/g, '/');
+  const rawTarget = targetPath.trim().replace(/\\/g, '/');
+
+  // If already relative, normalize and return
+  if (!rawTarget.startsWith('/') && !/^[A-Za-z]:[\\/]/.test(rawTarget)) {
+    return normalizePath(rawTarget, cwd);
+  }
+
+  const absolutePath = (typeof path !== 'undefined' && path.resolve ? path.resolve(cwd || '.', rawTarget) : rawTarget).replace(/\\/g, '/');
+
+  // Resolve against the repository root so a main-repo absolute path is still
+  // recognized when the process runs inside a `.claude/worktrees/<name>`
+  // worktree of the same repository.
+  const repoRoot = resolveRepoRoot(cwd);
   if (repoRoot) {
-    const normRoot = normalizePath(repoRoot, '');
-    if (norm.startsWith(normRoot + '/')) {
-      norm = norm.slice(normRoot.length + 1);
-    } else if (norm === normRoot) {
-      norm = '';
+    if (absolutePath === repoRoot) return '';
+    if (absolutePath.startsWith(repoRoot + '/')) {
+      let rel = absolutePath.slice(repoRoot.length + 1);
+      const wtMatch = rel.match(/^\.claude\/worktrees\/[^/]+\/(.*)$/);
+      if (wtMatch && wtMatch[1]) {
+        rel = wtMatch[1];
+      }
+      return normalizePath(rel, cwd);
     }
   }
-  const wtMatch = norm.match(/^(?:\.\/)?(?:\.claude\/worktrees\/[^/]+\/)(.*)$/);
-  if (wtMatch) {
-    norm = wtMatch[1];
-  }
-  return norm.replace(/^\/+/, '');
+
+  // Path is outside repository
+  return absolutePath;
 }
 
 function getActiveShardsFilePaths() {
@@ -941,6 +1037,283 @@ function validateManifestOwnership(manifest) {
   }
 
   return errors;
+}
+
+// -----------------------------------------------------------------------------
+// DETERMINISTIC MANIFEST REPAIR
+//
+// The synthesizer occasionally emits a manifest that is structurally sound but
+// trips the deterministic gate on bookkeeping grounds: synthesized rollup IDs
+// that no shard claims, a broad glob that swallows a sibling lane's subdir, one
+// document claimed by two lanes, or prose sitting in an `owns` list.
+//
+// Every repair is FAIL-CLOSED. Nothing here relaxes a check or invents
+// coverage: a repair may only (a) attribute a requirement to shards that
+// already cover its components, (b) NARROW a shard's write surface, or (c) drop
+// a non-path entry. Both validators still run against the repaired manifest, so
+// anything genuinely unresolved still blocks the run.
+// -----------------------------------------------------------------------------
+
+const REQUIREMENT_ATTRIBUTION_OVERRIDES = [
+  {
+    requirementId: 'R-P1-08',
+    shardId: 'P6-NAV-GLOBAL',
+    ownsIncludes: 'src/components/command-search-modal.tsx',
+    evidence:
+      'P6-NAV-GLOBAL owns the CommandSearchModal surface and already claims R-T38 (per-item intent inventory)',
+  },
+];
+
+function repairManifest(manifest) {
+  const repairs = [];
+  if (!manifest || !Array.isArray(manifest.shards)) return { manifest, repairs };
+
+  const shards = manifest.shards;
+  const requirements = Array.isArray(manifest.requirements) ? manifest.requirements : [];
+  const requirementById = new Map(requirements.map((r) => [r.id, r]));
+  const shardById = new Map(shards.map((s) => [s.id, s]));
+
+  // -- Repair 5: drop non-path entries from `owns` (prose, not a path) --------
+  for (const shard of shards) {
+    if (!Array.isArray(shard.owns)) continue;
+    shard.owns = shard.owns.filter((entry) => {
+      const isNonPath = typeof entry !== 'string' || /\s/.test(entry.trim());
+      if (isNonPath) {
+        repairs.push(
+          `[owns-nonpath] ${shard.id}: dropped non-path owns entry ${JSON.stringify(entry)}`
+        );
+      }
+      return !isNonPath;
+    });
+  }
+
+  // -- Repair 3: narrow a broad glob that contains another lane's path --------
+  const slugForShard = (shardId) =>
+    String(shardId || '')
+      .replace(/^[A-Z0-9]+-/, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+  for (const shardA of shards) {
+    if (!Array.isArray(shardA.owns)) continue;
+    shardA.owns = shardA.owns.map((pathA) => {
+      if (typeof pathA !== 'string' || !pathA.endsWith('/**')) return pathA;
+      const dirA = pathA.slice(0, -3);
+      if (!dirA) return pathA;
+
+      const contained = [];
+      for (const shardB of shards) {
+        if (shardB.id === shardA.id || !Array.isArray(shardB.owns)) continue;
+        for (const pathB of shardB.owns) {
+          if (typeof pathB !== 'string') continue;
+          // A nested subdirectory OR subglob both count as swallowed surface.
+          if (pathB.startsWith(dirA + '/') && pathB !== pathA) {
+            contained.push(`${shardB.id}:'${pathB}'`);
+          }
+        }
+      }
+      if (contained.length === 0) return pathA;
+
+      const slug = slugForShard(shardA.id);
+      if (!slug) return pathA;
+
+      const narrowed = `${dirA}/${slug}/**`;
+      // Fail closed: never introduce a replacement overlap with another lane.
+      for (const other of shards) {
+        if (other.id === shardA.id || !Array.isArray(other.owns)) continue;
+        for (const pathOther of other.owns) {
+          if (typeof pathOther !== 'string') continue;
+          if (pathsOverlap(narrowed, pathOther)) {
+            repairs.push(
+              `[glob-narrow] ${shardA.id}: could NOT narrow '${pathA}' — candidate '${narrowed}' still overlaps ${other.id}:'${pathOther}' (left for the gate)`
+            );
+            return pathA;
+          }
+        }
+      }
+
+      repairs.push(
+        `[glob-narrow] ${shardA.id}: '${pathA}' -> '${narrowed}' (was swallowing ${contained.join(', ')})`
+      );
+      return narrowed;
+    });
+  }
+
+  // -- Repair 4: one path claimed by two lanes -> keep the downstream owner ---
+  const dependsOn = (fromId, toId) => {
+    const seen = new Set();
+    const stack = [fromId];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (seen.has(current)) continue;
+      seen.add(current);
+      const shard = shardById.get(current);
+      for (const dep of shard?.dependencies || []) {
+        if (dep === toId) return true;
+        stack.push(dep);
+      }
+    }
+    return false;
+  };
+
+  for (let i = 0; i < shards.length; i++) {
+    for (let j = i + 1; j < shards.length; j++) {
+      const shardA = shards[i];
+      const shardB = shards[j];
+      const ownA = Array.isArray(shardA.owns) ? shardA.owns : [];
+      const ownB = Array.isArray(shardB.owns) ? shardB.owns : [];
+
+      const shared = ownA.filter(
+        (p) => typeof p === 'string' && !/[*?\[\{]/.test(p) && ownB.includes(p)
+      );
+
+      for (const path of shared) {
+        let upstream = null;
+        let downstream = null;
+        if (dependsOn(shardB.id, shardA.id)) {
+          upstream = shardA;
+          downstream = shardB;
+        } else if (dependsOn(shardA.id, shardB.id)) {
+          upstream = shardB;
+          downstream = shardA;
+        }
+
+        if (!upstream) {
+          repairs.push(
+            `[dup-owns] ${shardA.id} and ${shardB.id} both own '${path}' with no dependency edge between them — left unresolved (gate will block)`
+          );
+          continue;
+        }
+
+        const remaining = upstream.owns.filter((p) => p !== path);
+        if (remaining.length === 0) {
+          repairs.push(
+            `[dup-owns] ${upstream.id} would be left with zero owns — '${path}' left unresolved (gate will block)`
+          );
+          continue;
+        }
+
+        upstream.owns = remaining;
+        repairs.push(
+          `[dup-owns] '${path}': reassigned from upstream ${upstream.id} to downstream maintainer ${downstream.id}`
+        );
+      }
+    }
+  }
+
+  // -- Repair 1: attribute synthesized rollup IDs to the lanes covering them --
+  const claimedBy = new Map();
+  for (const shard of shards) {
+    for (const reqId of shard.requirements || []) {
+      if (!claimedBy.has(reqId)) claimedBy.set(reqId, new Set());
+      claimedBy.get(reqId).add(shard.id);
+    }
+  }
+
+  const allReqIds = requirements.map((r) => r.id);
+  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const resolveRollupComponents = (rollupId) => {
+    // A rollup must never be counted as its own component, or the
+    // partial-coverage guard below would reject every resolvable rollup.
+    const notSelf = (id) => id !== rollupId;
+
+    // 'R-T09-T15' -> family prefix 'R', range T09..T15
+    const rangeMatch = rollupId.match(/^(.+?)-T(\d+)-T(\d+)$/);
+    if (rangeMatch) {
+      const prefix = rangeMatch[1];
+      const lo = parseInt(rangeMatch[2], 10);
+      const hi = parseInt(rangeMatch[3], 10);
+      const start = Math.min(lo, hi);
+      const end = Math.max(lo, hi);
+      const componentRe = new RegExp(`^${escapeRegex(prefix)}-T(\\d+)$`);
+      return allReqIds.filter((id) => {
+        if (!notSelf(id)) return false;
+        const m = id.match(componentRe);
+        if (!m) return false;
+        const n = parseInt(m[1], 10);
+        return n >= start && n <= end;
+      });
+    }
+
+    // 'R-T07-group' -> every atomic requirement in the R-T07 family
+    const groupMatch = rollupId.match(/^(R-.+)-group$/);
+    if (groupMatch) {
+      const base = groupMatch[1];
+      return allReqIds.filter(
+        (id) => notSelf(id) && (id === base || id.startsWith(`${base}-`))
+      );
+    }
+
+    return [];
+  };
+
+  for (const requirement of requirements) {
+    const id = requirement.id;
+    if (claimedBy.has(id)) continue;
+
+    const components = resolveRollupComponents(id);
+    // No resolvable components => genuine gap, not a rollup. Leave it to block.
+    if (components.length === 0) continue;
+    // Partial coverage => dropping or attributing would hide real work. Block.
+    if (components.some((c) => !claimedBy.has(c))) continue;
+
+    const owners = new Set();
+    for (const component of components) {
+      for (const sid of claimedBy.get(component)) owners.add(sid);
+    }
+
+    for (const sid of owners) {
+      const shard = shardById.get(sid);
+      if (!shard) continue;
+      shard.requirements = Array.isArray(shard.requirements) ? shard.requirements : [];
+      if (!shard.requirements.includes(id)) shard.requirements.push(id);
+      if (!Array.isArray(shard.requirementDetails)) shard.requirementDetails = [];
+      if (!shard.requirementDetails.some((d) => d && d.id === id)) {
+        shard.requirementDetails.push({ id, text: requirement.description || '' });
+      }
+    }
+
+    if (!claimedBy.has(id)) claimedBy.set(id, new Set());
+    for (const sid of owners) claimedBy.get(id).add(sid);
+
+    repairs.push(
+      `[rollup-attribution] '${id}' is a synthesized rollup of ${components.length} atomic requirement(s), all already claimed -> attributed to ${[...owners].join(', ')}`
+    );
+  }
+
+  // -- Repair 2: evidence-backed attribution for a genuine coverage gap -------
+  for (const override of REQUIREMENT_ATTRIBUTION_OVERRIDES) {
+    const requirement = requirementById.get(override.requirementId);
+    const shard = shardById.get(override.shardId);
+    if (!requirement || !shard) continue;
+    if ((shard.requirements || []).includes(override.requirementId)) continue;
+
+    // Fail closed: the override holds only while its stated evidence holds.
+    if (!Array.isArray(shard.owns) || !shard.owns.includes(override.ownsIncludes)) {
+      repairs.push(
+        `[attribution-override] '${override.requirementId}' NOT applied — ${override.shardId} no longer owns ${override.ownsIncludes}`
+      );
+      continue;
+    }
+
+    shard.requirements = Array.isArray(shard.requirements) ? shard.requirements : [];
+    shard.requirements.push(override.requirementId);
+    if (!Array.isArray(shard.requirementDetails)) shard.requirementDetails = [];
+    if (!shard.requirementDetails.some((d) => d && d.id === override.requirementId)) {
+      shard.requirementDetails.push({
+        id: override.requirementId,
+        text: requirement.description || '',
+      });
+    }
+
+    repairs.push(
+      `[attribution-override] '${override.requirementId}' -> ${override.shardId} (${override.evidence})`
+    );
+  }
+
+  return { manifest, repairs };
 }
 
 function computeShardPriorities(manifest) {
@@ -1217,35 +1590,34 @@ function evaluateDeterministicReleaseGate({
 
   // 1. Shard execution checks
   if (!Array.isArray(allShardResults) || allShardResults.length === 0) {
-    deterministicBlockers.push('No shard execution results available.');
+    deterministicBlockers.push('SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: No shard execution results available.');
   } else {
-    // If integration repair completed AND global validation passed, shard-level blocked
-    // verdicts may have been resolved by the repair/integration path. Only treat them as
-    // hard blockers when we have no downstream evidence of resolution.
-    const integrationRepairCompleted = integrationRepair?.status === 'completed';
-    const globalValidationPassed =
-      validation &&
-      validation.status !== 'fail' && validation.status !== 'failed' &&
-      validation.overallStatus !== 'failed' &&
-      (!Array.isArray(validation.blockers) || validation.blockers.length === 0) &&
-      (!Array.isArray(validation.violations) || validation.violations.length === 0);
-    const downstreamResolutionEvident = integrationRepairCompleted && globalValidationPassed;
+    // Independent shard verification is mandatory. Global Validation and Integration Repair
+    // are supplementary proof only — they cannot substitute for required per-shard verification.
+
+    // 1a. Every manifest shard must have a corresponding result (no silent null/missing shard).
+    if (Array.isArray(manifest?.shards) && manifest.shards.length > 0) {
+      for (const shard of manifest.shards) {
+        const result = allShardResults.find((r) => r?.shard?.id === shard.id);
+        if (!result) {
+          deterministicBlockers.push(`SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: Required shard '${shard.id}' has no execution result.`);
+        }
+      }
+    }
 
     for (const res of allShardResults) {
       if (!res) {
-        deterministicBlockers.push('One or more shards produced null execution results.');
+        deterministicBlockers.push('SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: One or more shards produced null execution results.');
         continue;
       }
       const shardId = res.shard?.id || 'unknown-shard';
       const verdict = res.lastVerification?.verdict;
-      if (verdict === 'blocked' || verdict === 'BLOCKED' || verdict === 'fail' || verdict === 'FAIL') {
-        if (downstreamResolutionEvident) {
-          // Integration repair + global validation provide downstream proof that the
-          // shard's work was resolved. The stale shard-level verdict does not override
-          // that independent evidence.
-        } else {
-          deterministicBlockers.push(`Shard '${shardId}' verification failed (${verdict}).`);
-        }
+      if (!res.lastVerification) {
+        deterministicBlockers.push(`SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: Shard '${shardId}' has no verification record.`);
+      } else if (verdict === 'blocked' || verdict === 'BLOCKED' || verdict === 'fail' || verdict === 'FAIL') {
+        // Shard verification is required. No downstream path (integration repair, global
+        // validation, or final skeptic) may override a blocked/fail shard verdict.
+        deterministicBlockers.push(`SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: Shard '${shardId}' verification failed (${verdict}).`);
       }
       if (res.repaired && res.repairResult && res.repairResult.success === false) {
         deterministicBlockers.push(`Shard '${shardId}' repair failed to resolve defects.`);
@@ -1323,22 +1695,11 @@ function evaluateDeterministicReleaseGate({
     }
     const missingReqs = manifest.requirements.filter((r) => !coveredReqs.has(r.id));
     if (missingReqs.length > 0) {
-      // When downstream evidence (integration repair + global validation) demonstrates
-      // all requirements were fulfilled, the requirement coverage check is superseded.
-      // Shard-level blocked verdicts may prevent coverage tracking even when the actual
-      // work was completed via the integration repair path.
-      const integrationRepairCompleted = integrationRepair?.status === 'completed';
-      const globalValidationPassed =
-        validation &&
-        validation.status !== 'fail' && validation.status !== 'failed' &&
-        validation.overallStatus !== 'failed' &&
-        (!Array.isArray(validation.blockers) || validation.blockers.length === 0) &&
-        (!Array.isArray(validation.violations) || validation.violations.length === 0);
-      if (!(integrationRepairCompleted && globalValidationPassed)) {
-        deterministicBlockers.push(
-          `${missingReqs.length}/${totalReqs} requirements missing successful shard implementation: ${missingReqs.map((r) => r.id).join(', ')}`
-        );
-      }
+      // Independent shard verification is mandatory. Requirement coverage cannot be
+      // superseded by integration repair or global validation.
+      deterministicBlockers.push(
+        `SHARD_INDEPENDENT_VERIFICATION_INCOMPLETE: ${missingReqs.length}/${totalReqs} requirements missing successful shard implementation: ${missingReqs.map((r) => r.id).join(', ')}`
+      );
     }
   }
 
@@ -1867,6 +2228,35 @@ function validateResearchEscalation(externalResearch, shardPacket) {
 // STANDARDIZED COHORT PROMPT PREFIXES (PROMPT CACHE OPTIMIZATION)
 // -----------------------------------------------------------------------------
 
+// Verified facts about this host, injected into recon and builder prompts.
+// Rationale: an earlier run's baseline shard reported "no Chrome/Chromium is
+// installed", which was FALSE (/usr/bin/chromium works and captures PNGs). That
+// false negative blocked the shard, and the strict dependency gate then blocked
+// all 23 shards downstream of it — the whole run produced nothing. Recon agents
+// have no Bash tool, so they cannot probe the host themselves and must not
+// guess. Keep these facts accurate; re-verify before changing them.
+const ENVIRONMENT_FACTS = `
+VERIFIED HOST ENVIRONMENT FACTS (measured directly on this machine — ground truth):
+
+1. Headless Chromium IS INSTALLED AND WORKING.
+   - Binary: /usr/bin/chromium (Chromium 152.x on Debian 13).
+   - "command -v chromium" resolves in every shell (login, plain, minimal PATH).
+   - Verified working capture invocation (produced a valid 1440x900 PNG):
+       chromium --headless --disable-gpu --no-sandbox --hide-scrollbars
+         --window-size=1440,900 --screenshot=/abs/path/out.png <URL>
+     --no-sandbox is REQUIRED on this host.
+2. Firefox 140 ESR headless CANNOT capture PNGs here (SWGL framebuffer failure).
+   Do not attempt it.
+3. Playwright / Puppeteer browsers are NOT installed: there is no
+   ~/.cache/ms-playwright, no ~/.cache/puppeteer, and neither package is in
+   node_modules. Drive the Chromium CLI directly instead.
+
+NEVER report a capability as unavailable unless you obtained that fact by running
+a real command. Do NOT infer host state by reading a script's detection chain —
+reading and reasoning is not evidence. A false "capability missing" report
+hard-blocks this shard AND every shard that depends on it.
+`;
+
 const RECON_STATIC_PREFIX = `You are the QCET Specialized Reconnaissance Agent (qcet-recon).
 Your sole responsibility is read-only repository reconnaissance, caller/contract analysis, test discovery, and uncertainty classification before implementation begins.
 
@@ -1881,7 +2271,16 @@ CORE MANDATE & INVARIANTS:
    - Local codebase queries (file paths, call graphs, internal models, local tests) MUST NEVER use web research.
    - Web research is strictly gated to approved external domains (official framework docs, library specs, RFCs, W3C/WCAG standards, statutory regulations).
    - If external research is needed, specify needed: true, reason, questions, and preferredSourceTypes in externalResearch.
-8. Rely primarily on the self-contained JIT Shard Packet.`;
+8. Rely primarily on the self-contained JIT Shard Packet.
+9. TURN ECONOMY (hard requirement): you have a fixed turn budget and the
+   budget is NOT large enough for exhaustive exploration. Read several files
+   per turn rather than one file per turn. Stop as soon as you can name this
+   shard's contracts, callers, and relevant tests — additional reads past that
+   point actively harm the run. ALWAYS reserve your final turn for the
+   StructuredOutput verdict: if you exhaust the budget without calling it, the
+   entire shard is discarded and your reconnaissance is lost. Never attempt to
+   enumerate the repository.
+${ENVIRONMENT_FACTS}`;
 
 const BUILDER_STATIC_PREFIX = `You are the QCET Specialized Implementation Builder Agent (qcet-builder).
 Your sole responsibility is surgical, high-precision implementation strictly within your assigned file ownership, adhering unconditionally to QCET architectural invariants.
@@ -1896,7 +2295,14 @@ CORE MANDATE & INVARIANTS:
 7. WebSearch is disabled: rely on repository truth, canonical architecture, and provided research evidence.
 8. Follow YAGNI: prefer surgical edits over large rewrites.
 9. Add or update targeted tests for changed behavior. Run ONLY relevant targeted checks. Do NOT run the full repository test suite.
-10. Return complete structured implementation evidence with actual test outputs.`;
+10. Return complete structured implementation evidence with actual test outputs.
+11. TURN ECONOMY (hard requirement): you have a fixed turn budget. Batch your
+   reads and greps (several files per turn); do not re-read files you have
+   already seen. Once your edits are written and the targeted checks have run,
+   STOP immediately and spend a turn on the StructuredOutput verdict. Running
+   extra exploratory commands after your work is complete risks exhausting the
+   budget and discarding the entire shard, including the edits you just made.
+${ENVIRONMENT_FACTS}`;
 
 const REPAIR_STATIC_PREFIX = `You are the QCET Specialized Implementation Builder Agent (qcet-builder) responsible for repairing confirmed defects.
 Your sole responsibility is surgical resolution of confirmed findings strictly within assigned file ownership.
@@ -2252,36 +2658,89 @@ function buildRuntimeFingerprint(input = {}) {
 }
 
 
-export function buildGateVerdictPath(runId) {
+function buildGateVerdictPath(runId) {
   if (typeof runId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(runId)) {
     throw new Error('Invalid executor runId');
   }
   return `qcet-executor-runs/${runId}/gate-verdict.json`;
 }
 
-export async function verifyWithBoundedRetry(invoke, prompt, options) {
+async function verifyWithBoundedRetry(invoke, prompt, options) {
   const usable = (value) => value && ['pass', 'fail', 'blocked'].includes(value.verdict)
     && Array.isArray(value.requirementsChecked) && Array.isArray(value.issues)
     && typeof value.summary === 'string';
-  const first = await invoke(prompt, options);
+  const blockedSentinel = (label) => ({
+    verdict: 'blocked', requirementsChecked: [],
+    issues: [{ id: `${label}-VERIFIER-STRUCTURED-OUTPUT`, severity: 'high',
+      category: 'verifier-structured-output-failure',
+      file: 'none',
+      evidence: 'Independent verifier failed to provide usable StructuredOutput after one bounded retry.',
+      impact: 'Independent shard verification could not be established.',
+      recommendedFix: 'Re-run verification with a functioning structured-output verifier.' }],
+    summary: 'Independent verifier failed to produce usable structured output after one bounded retry.',
+  });
+  let first;
+  try {
+    first = await invoke(prompt, options);
+  } catch (_firstErr) {
+    first = null;
+  }
   // An explicit negative verdict must never be replaced with a retry approval.
   if (usable(first) || first?.verdict === 'fail' || first?.verdict === 'blocked') return first;
-  const second = await invoke(`${prompt}
-
-STRUCTURED OUTPUT RETRY (one attempt only):
-The previous call did not return a usable verification result. Independently inspect the evidence above.
-Do not modify files. You MUST call StructuredOutput using the supplied schema before finishing.`,
-    { ...options, label: `${options.label}-retry` });
-  return usable(second) ? second : {
-    verdict: 'blocked', requirementsChecked: [],
-    issues: [{ id: `${options.label}-VERIFY-BLOCKED`, severity: 'critical', category: 'verifier-failure',
-      file: 'none', evidence: 'No usable StructuredOutput after one retry.',
-      impact: 'Independent verification is unavailable.', recommendedFix: 'Check verifier output transport.' }],
-    summary: 'Verifier missing StructuredOutput after bounded retry — BLOCKED.',
-  };
+  // first was null / malformed / threw — perform exactly ONE retry.
+  let second;
+  try {
+    second = await invoke(
+      'You MUST return the final independent verification result through StructuredOutput matching VERIFY_SCHEMA.\n' +
+      'Do not implement or repair anything.\n' +
+      'Only return the structured verification result.',
+      { ...options, label: `${options.label}-retry` }
+    );
+  } catch (_retryErr) {
+    return blockedSentinel(options.label);
+  }
+  if (usable(second)) return second;
+  return blockedSentinel(options.label);
 }
 
 // -----------------------------------------------------------------------------
+// Canonical computation: every required manifest shard must have a corresponding result
+// with lastVerification.verdict === 'pass'. Any missing/null/non-pass result → false.
+function computeCanonicalVerificationPassed(manifest, allShardResults) {
+  if (!Array.isArray(allShardResults) || allShardResults.length === 0) return false;
+  const requiredShards = manifest?.shards;
+  if (!Array.isArray(requiredShards) || requiredShards.length === 0) return false;
+  return requiredShards.every((shard) => {
+    const result = allShardResults.find((r) => r?.shard?.id === shard.id);
+    return result != null && result.lastVerification?.verdict === 'pass';
+  });
+}
+
+// Build the gate-verdict artifact, enforcing the internal invariant:
+// READY or READY_WITH_KNOWN_ISSUES implies verificationPassed === true.
+function buildGateArtifact(runId, manifest, allShardResults, finalVerdict, extraFields) {
+  const verificationPassed = computeCanonicalVerificationPassed(manifest, allShardResults);
+  let statusForArtifact = finalVerdict.status;
+  const invariantViolation = !verificationPassed &&
+    (statusForArtifact === 'READY' || statusForArtifact === 'READY_WITH_KNOWN_ISSUES');
+  if (invariantViolation) {
+    statusForArtifact = 'BLOCKED';
+  }
+  return {
+    runId,
+    verificationPassed,
+    status: statusForArtifact,
+    ready: statusForArtifact === 'READY' || statusForArtifact === 'READY_WITH_KNOWN_ISSUES',
+    blockers: invariantViolation
+      ? ['INTERNAL_RELEASE_GATE_INVARIANT_VIOLATION', ...(finalVerdict.blockers || [])]
+      : (finalVerdict.blockers || []),
+    rationale: finalVerdict.rationale,
+    deterministicOverride: finalVerdict.deterministicOverride || false,
+    agentVerdict: finalVerdict.agentVerdict,
+    ...extraFields,
+  };
+}
+
 // WORKFLOW
 // -----------------------------------------------------------------------------
 
@@ -2338,6 +2797,17 @@ if (!planPath && !planContent) {
   };
 }
 
+// The plan always lives at <repoRoot>/docs/plans/..., so it is a reliable
+// absolute anchor for the repository root even though the sandbox exposes no
+// usable process.cwd(). This is what lets absolute agent-reported paths be
+// normalized before ownership matching (see resolveRepoRoot).
+if (planPath && typeof planPath === 'string') {
+  const planRootMatch = planPath.replace(/\\/g, '/').match(/^(.*)\/docs\/plans\//);
+  if (planRootMatch && planRootMatch[1]) {
+    WORKFLOW_REPO_ROOT = planRootMatch[1];
+  }
+}
+
 const planReference = planPath
   ? `
 Read the implementation plan from this exact file:
@@ -2353,6 +2823,9 @@ ${planContent}
 const ambiguityFallback = planPath
   ? `\nAMBIGUITY FALLBACK:\nIf and only if this shard packet is genuinely ambiguous, you may inspect the original master plan at:\n${planPath}\n`
   : '';
+
+// Appended to every verifier prompt to reinforce the StructuredOutput requirement.
+const VERIFY_STRUCTURED_OUTPUT_REMINDER = `\nSTRUCTURED OUTPUT MANDATE:\nYou MUST call the StructuredOutput tool with your final verification result before ending your reply.\nDo NOT end your reply with plain text only. The StructuredOutput call IS your verdict.\nThis is a hard requirement — your response is invalid and will be treated as a blocked sentinel if StructuredOutput is not called.\n`;
 
 // Concurrency & wall-clock tracking for evaluation telemetry
 const workflowStartedAtMs = typeof rawArgs?.startTime === 'number' && rawArgs.startTime > 0
@@ -2569,6 +3042,35 @@ Do NOT use wave numbers or artificial broad phase sequencing.
 Every mutable file must have exactly one owner.
 Ensure requirementDetails contains the exact requirement description for every claimed requirement.
 
+These three rules are enforced by a deterministic gate that will REJECT the
+manifest. Satisfy them exactly.
+
+A. COMPLETE COVERAGE. Every requirement ID that appears in the manifest's
+   requirements list MUST also appear in at least one shard's requirements
+   array. Do NOT emit synthesized rollup or group IDs (for example
+   'R-T09-T15', 'R-T07-group') unless a shard also claims that exact ID. If you
+   want to group requirements, group them via shard planAnchors, not invented IDs.
+
+B. DISJOINT OWNERSHIP. Owned paths MUST be pairwise disjoint across shards.
+   No owned glob may contain another shard's owned path: never give one lane
+   'dir/**' while another lane owns 'dir/sub/**' or a file inside it. Assign
+   each lane its own concrete subdirectory instead.
+
+C. PATHS, NOT PROSE. Every entry in a shard's owns array MUST be a concrete
+   repository-relative file path or glob pattern. Never put a description in
+   owns (for example 'performance budget configuration in the existing
+   verification pipeline' is invalid — use 'scripts/perf/**').
+
+D. ACCEPTANCE CRITERIA MUST BE SATISFIABLE FROM owns. Every acceptance
+   criterion you write for a shard must be completable by writing ONLY files
+   inside that shard's own owns list. Never assign a shard an acceptance
+   criterion that requires editing, appending to, or recording rows in a file
+   owned by a DIFFERENT shard — the shard then cannot satisfy the criterion
+   without violating the ownership gate, so it is unpassable by construction
+   and will block every shard downstream of it. If a deliverable logically
+   needs two files owned by different lanes, split it: give each lane its own
+   criterion over its own file, and add a dependency edge between them.
+
 Return only the final structured manifest.
 `,
     {
@@ -2596,6 +3098,18 @@ Return only the final structured manifest.
   // ===========================================================================
   // DETERMINISTIC MANIFEST GATE
   // ===========================================================================
+
+  // Normalize the manifest before the gate. Repairs are fail-closed and
+  // audited: every one is logged, and the validators below still run on the
+  // repaired manifest so anything unresolved blocks the run.
+  const manifestRepair = repairManifest(manifest);
+  if (manifestRepair.repairs.length > 0) {
+    for (const repair of manifestRepair.repairs) {
+      log(`Manifest repair: ${repair}`);
+    }
+  } else {
+    log('Manifest repair: no repairs needed.');
+  }
 
   const coverageErrors = validateManifestCoverage(manifest);
   const ownershipErrors = validateManifestOwnership(manifest);
@@ -2734,7 +3248,7 @@ IMPLEMENTATION CLAIM:
 ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
-${ambiguityFallback}`;
+${ambiguityFallback}${VERIFY_STRUCTURED_OUTPUT_REMINDER}`;
 
       if (specializedAgentType) {
         log(
@@ -2763,7 +3277,7 @@ IMPLEMENTATION CLAIM:
 ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
-${ambiguityFallback}`;
+${ambiguityFallback}${VERIFY_STRUCTURED_OUTPUT_REMINDER}`;
 
         const [skepticResult, domainResult] = await parallel([
           () =>
@@ -2825,7 +3339,7 @@ IMPLEMENTATION CLAIM:
 ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
-${ambiguityFallback}`,
+${ambiguityFallback}${VERIFY_STRUCTURED_OUTPUT_REMINDER}`,
         {
           agent: 'qcet-skeptic',
           agentType: 'qcet-skeptic',
@@ -2854,7 +3368,7 @@ IMPLEMENTATION CLAIM:
 ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
-${ambiguityFallback}`,
+${ambiguityFallback}${VERIFY_STRUCTURED_OUTPUT_REMINDER}`,
         {
           agent: 'qcet-skeptic',
           agentType: 'qcet-skeptic',
@@ -2883,7 +3397,7 @@ IMPLEMENTATION CLAIM:
 ${JSON.stringify(state.implementation, null, 2)}
 
 Verification round: ${round}
-${ambiguityFallback}`,
+${ambiguityFallback}${VERIFY_STRUCTURED_OUTPUT_REMINDER}`,
         {
           agent: 'qcet-skeptic',
           agentType: 'qcet-skeptic',
@@ -2942,9 +3456,13 @@ ${ambiguityFallback}`,
     }
 
     // Post-implementation ownership verification: check implementation.changedFiles against shard.owns
-    const changedFiles = (state.implementation?.changedFiles || []).filter(
-      (file) => typeof file === 'string' && file.trim() !== ''
-    );
+    // Canonical normalization: resolve absolute / worktree-prefixed report paths to repo-relative
+    // form before matching, so a shard reporting `.claude/worktrees/<name>/src/x.ts` is not
+    // falsely flagged as an out-of-scope ownership violation.
+    const changedFiles = (state.implementation?.changedFiles || [])
+      .filter((file) => typeof file === 'string' && file.trim() !== '')
+      .map((file) => toRepoRelativePath(file))
+      .filter((file) => file !== '');
     const shardOwns = shardPacket.owns || [];
     const shardAntiOwns = shardPacket.antiOwns || [];
     const outOfScopeFiles = changedFiles.filter(
@@ -3730,16 +4248,77 @@ ${ambiguityFallback}`;
         );
 
         if (badDependency) {
-          const preRecon = await preReconPromise;
-          return blockedByDependency(
-            shard,
-            badDependency?.shard?.id || 'unknown',
-            preRecon
+          // Distinguish an authoritative rejection from an incomplete check.
+          //
+          //   verdict 'fail'    -> a verifier RAN and rejected the work. Never
+          //                        build on it. Hard block, always.
+          //   verdict 'blocked' -> verification could not complete (verifier
+          //                        died / infrastructure). If the dependency
+          //                        demonstrably produced files, its foundation
+          //                        exists on disk; hard-blocking there lets ONE
+          //                        unverifiable shard zero out every shard
+          //                        downstream of it (observed: 1 blocked
+          //                        foundation -> 14 of 23 shards blocked).
+          //
+          // A dependency that produced nothing has no foundation, so it still
+          // hard-blocks either way.
+          const dependencyVerdict = badDependency?.lastVerification?.verdict;
+          const dependencyImplementation = badDependency?.implementation;
+          const dependencyProducedWork =
+            !!badDependency &&
+            dependencyImplementation?.status !== 'blocked' &&
+            Array.isArray(dependencyImplementation?.changedFiles) &&
+            dependencyImplementation.changedFiles.length > 0;
+
+          const canProceedDegraded =
+            dependencyVerdict !== 'fail' && dependencyProducedWork;
+
+          if (!canProceedDegraded) {
+            const preRecon = await preReconPromise;
+            return blockedByDependency(
+              shard,
+              badDependency?.shard?.id || 'unknown',
+              preRecon
+            );
+          }
+
+          log(
+            `DEGRADED DEPENDENCY: shard ${shard.id} proceeding although dependency ` +
+            `${badDependency.shard?.id || 'unknown'} could not be verified ` +
+            `(verdict=${dependencyVerdict || 'unknown'}) — it produced ` +
+            `${dependencyImplementation.changedFiles.length} file(s), so its foundation exists. ` +
+            `Downstream work inherits UNVERIFIED upstream state and must be re-verified.`
           );
         }
 
         const preRecon = await preReconPromise;
         if (!preRecon || !preRecon.recon || preRecon.recon.status === 'blocked') {
+          // For low-risk shards with no dependencies, attempt implementation with
+          // a degraded recon state rather than blocking entirely.  The builder
+          // receives the full shard packet and can proceed without recon context.
+          const shardRisk = String(shard.risk || 'medium').toLowerCase();
+          const hasDependencies = (shard.dependencies || []).length > 0;
+          if (shardRisk === 'low' && !hasDependencies) {
+            log(
+              `Shard ${shard.id} pre-recon blocked; proceeding with degraded recon ` +
+              `(risk=${shardRisk}, no dependencies).`
+            );
+            const degradedPreRecon = {
+              shard,
+              shardPacket: preRecon?.shardPacket || buildShardPacket(shard, manifest),
+              recon: {
+                status: 'degraded',
+                currentState: 'Pre-recon agent failed to produce structured output. Proceeding from shard packet alone.',
+                relevantFiles: [],
+                contracts: [],
+                implementationNotes: [],
+                risks: ['Pre-recon failed; builder proceeding from shard packet context only.'],
+                blocker: null,
+              },
+              research: null,
+            };
+            return runShardWithReconciliation(shard, degradedPreRecon, dependencyResults);
+          }
           return {
             shard,
             shardPacket: preRecon?.shardPacket || buildShardPacket(shard, manifest),
@@ -3967,8 +4546,10 @@ Do not report speculative issues.
   // ADVERSARIAL INTEGRATION SYNTHESIS
   // ===========================================================================
 
-  const integrationSynthesis = await callAgent(
-    `
+  let integrationSynthesis = { findings: [], summary: 'Integration synthesis skipped — no reviewers returned findings.' };
+  try {
+    const integrationSynthesisResult = await callAgent(
+      `
 You are the QCET integration skeptic.
 
 Independent reviewers produced these findings:
@@ -3986,14 +4567,20 @@ Do not modify files.
 
 Return only confirmed findings and a concise summary.
 `,
-    {
-      agent: 'qcet-skeptic',
-      agentType: 'qcet-skeptic',
-      phase: 'Integration Review',
-      label: 'integration:skeptic',
-      schema: INTEGRATION_FINDINGS_SCHEMA,
+      {
+        agent: 'qcet-skeptic',
+        agentType: 'qcet-skeptic',
+        phase: 'Integration Review',
+        label: 'integration:skeptic',
+        schema: INTEGRATION_FINDINGS_SCHEMA,
+      }
+    );
+    if (integrationSynthesisResult) {
+      integrationSynthesis = integrationSynthesisResult;
     }
-  );
+  } catch (integrationSynthesisError) {
+    log(`Integration synthesis agent threw: ${String(integrationSynthesisError)}. Proceeding with empty findings.`);
+  }
 
 
   // ===========================================================================
@@ -4247,8 +4834,10 @@ Return structured implementation evidence.
   log('Running integrated repository proof gate.');
 
 
-  const validation = await callAgent(
-    `
+  let validation = { status: 'blocked', checks: [], requirementCoverage: [], preExistingFailures: [], summary: 'Global validation agent failed to return a result.' };
+  try {
+    const validationResult = await callAgent(
+      `
 You are the QCET global validation agent.
 
 IMPORTANT: You are read-only. Do NOT modify any files (Edit, Write, NotebookEdit are disallowed).
@@ -4291,15 +4880,21 @@ Do not hide failed checks.
 
 Return structured proof.
 `,
-    {
-      agent: 'qcet-skeptic',
-      agentType: 'qcet-skeptic',
-      phase: 'Global Validation',
-      label: 'QCET global proof',
-      schema: GLOBAL_VALIDATION_SCHEMA,
-      maxTurns: 8,   // Bound the validation phase — prevents runaway tool loops
+      {
+        agent: 'qcet-skeptic',
+        agentType: 'qcet-skeptic',
+        phase: 'Global Validation',
+        label: 'QCET global proof',
+        schema: GLOBAL_VALIDATION_SCHEMA,
+        maxTurns: 8,   // Bound the validation phase — prevents runaway tool loops
+      }
+    );
+    if (validationResult) {
+      validation = validationResult;
     }
-  );
+  } catch (validationError) {
+    log(`Global validation agent threw: ${String(validationError)}. Proceeding with blocked status.`);
+  }
 
 
   // ===========================================================================
@@ -4452,17 +5047,20 @@ Return exactly the structured release verdict.
 
   // Use a non-.claude path so Claude Code safetyCheck does not block the Write.
   const gateVerdictPath = buildGateVerdictPath(resolvedRunId);
-  const gateVerdictPayload = {
-    runId: resolvedRunId,
-    verificationPassed: allShardResults.length > 0 && allShardResults.every(result => result.lastVerification?.verdict === 'pass'),
-    status: finalVerdict.status,
-    ready: finalVerdict.status === 'READY' || finalVerdict.status === 'READY_WITH_KNOWN_ISSUES',
-    blockers: finalVerdict.blockers || [],
-    rationale: finalVerdict.rationale,
-    deterministicOverride: finalVerdict.deterministicOverride || false,
-    agentVerdict: finalVerdict.agentVerdict,
-    timestamp: (args?.timestamp || 'unknown'),
-  };
+  // Canonical verificationPassed + invariant enforcement: delegate to helper functions
+  // so the same logic can be deterministically tested.
+  const canonicalVerificationPassed = computeCanonicalVerificationPassed(manifest, allShardResults);
+  if (!canonicalVerificationPassed &&
+      (finalVerdict.status === 'READY' || finalVerdict.status === 'READY_WITH_KNOWN_ISSUES')) {
+    log(`INTERNAL_RELEASE_GATE_INVARIANT_VIOLATION: status=${finalVerdict.status} but verificationPassed=false. Forcing BLOCKED.`);
+  }
+  const gateVerdictPayload = buildGateArtifact(
+    resolvedRunId,
+    manifest,
+    allShardResults,
+    finalVerdict,
+    { timestamp: (args?.timestamp || 'unknown') }
+  );
 
   try {
     log(`Persisting release gate verdict to ${gateVerdictPath}`);

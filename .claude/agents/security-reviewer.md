@@ -3,11 +3,12 @@ name: security-reviewer
 description: Specialized reviewer for server-side RBAC, JWT session validation, payload sanitization, separation of duties, and secret leak prevention.
 model: inherit
 effort: high
-maxTurns: 10
+maxTurns: 80
 tools:
   - Bash
   - Read
   - Skill
+  - StructuredOutput
 disallowedTools:
   - Write
   - Edit

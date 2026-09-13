@@ -1,9 +1,9 @@
 ---
 name: qcet-researcher
 description: Specialized external research agent with web access enabled and file editing prohibited, providing source-backed claims from official documentation.
-model: inherit
+model: claude-combo
 effort: medium
-maxTurns: 12
+maxTurns: 60
 tools:
   - WebSearch
   - WebFetch
@@ -11,6 +11,7 @@ tools:
   - Grep
   - Glob
   - Skill
+  - StructuredOutput
 disallowedTools:
   - Bash
   - Write

@@ -3,98 +3,260 @@
   "templateVersion": "1.0.0",
   "description": "Standard reproducible evaluation telemetry for QCET Plan Executor",
   "run": {
-    "runId": "run-eval-v1.4-baseline-ux-20260910",
-    "plan": "docs/plans/active/2026-09-09-master-ux-consolidation-plan.md",
-    "timestamp": "2026-09-10T16:00:00.000Z",
-    "executorVersion": "v1.4",
-    "domain": "ux",
-    "description": "Execution run evaluating v1.4 executor on master UX consolidation plan with decoupled pre-recon and write-gate scheduling",
-    "wallClockMs": 412000,
-    "calibrationDurationMs": 36000,
-    "shards": 12,
-    "agents": 40,
+    "runId": "run-eval-v1.4-S-exec",
+    "plan": "/home/dnhhuy/projects/qcet-eoffice/docs/plans/active/QCET_EOFFICE_WORLD_CLASS_UX_MASTER_PLAN_V5_1_FINAL_2026-09-12.md",
+    "timestamp": "2026-09-10T00:00:00.000Z",
+    "executorVersion": "lean-v2",
+    "domain": "general",
+    "description": "QCET Plan Executor lean-v2 execution run for /home/dnhhuy/projects/qcet-eoffice/docs/plans/active/QCET_EOFFICE_WORLD_CLASS_UX_MASTER_PLAN_V5_1_FINAL_2026-09-12.md",
+    "wallClockMs": null,
+    "calibrationDurationMs": null,
+    "shards": 26,
+    "agents": 65,
     "peakConcurrent": 6,
-    "tokens": 768000,
-    "requirementsTotal": 36,
-    "requirementsCovered": 36,
-    "ownershipViolations": 0,
-    "verificationFindings": 5,
-    "findingsConfirmed": 2,
+    "tokens": null,
+    "requirementsTotal": 93,
+    "requirementsCovered": 5,
+    "ownershipViolations": 1,
+    "verificationFindings": 19,
+    "findingsConfirmed": 28,
     "repairRounds": 2,
-    "blockedShards": 0,
-    "globalValidation": "pass",
-    "buildStatus": "passed",
-    "finalStatus": "READY",
+    "blockedShards": 24,
+    "globalValidation": "fail",
+    "buildStatus": "failed",
+    "finalStatus": "BLOCKED",
     "metrics": {
       "correctness": {
-        "requirementCoveragePct": 100.0,
-        "unresolvedFindings": 0,
-        "outOfScopeEdits": 0,
-        "globalValidation": "pass",
-        "buildStatus": "passed"
+        "requirementCoveragePct": 5.4,
+        "unresolvedFindings": 20,
+        "outOfScopeEdits": 1,
+        "globalValidation": "fail",
+        "buildStatus": "failed"
       },
       "speed": {
-        "wallClockMs": 412000,
-        "calibrationDurationMs": 36000,
-        "timeToFirstBuilderMs": 44000,
-        "criticalPathDurationMs": 304880,
-        "avgDependencyWaitMs": 24720
+        "wallClockMs": null,
+        "calibrationDurationMs": null,
+        "timeToFirstBuilderMs": 0,
+        "criticalPathDurationMs": null,
+        "avgDependencyWaitMs": 0
       },
       "efficiency": {
-        "totalAgents": 40,
-        "tokens": 768000,
-        "tokensPerVerifiedRequirement": 21333,
-        "verifierTokenCost": 184320,
-        "researchEscalationRate": 0.0
+        "totalAgents": 65,
+        "tokens": null,
+        "tokensPerVerifiedRequirement": null,
+        "verifierTokenCost": null,
+        "researchEscalationRate": 0
       },
       "reliability": {
-        "nullAgentRate": 0.0,
-        "structuredOutputRetryRate": 0.0,
+        "nullAgentRate": 0,
+        "structuredOutputRetryRate": 0,
+        "cutoffBypasses": 0,
         "workflowReruns": 0,
-        "noProgressRepairRate": 0.0
+        "noProgressRepairRate": 0
       }
     },
     "shardsSummary": [
       {
-        "id": "shard-1-canonical-routes",
+        "id": "S-BASELINE",
+        "requirements": 2,
+        "risk": "low",
+        "repairRounds": 0,
+        "verdict": "pass"
+      },
+      {
+        "id": "S-DOCS",
         "requirements": 3,
         "risk": "low",
         "repairRounds": 0,
         "verdict": "pass"
       },
       {
-        "id": "shard-2-auth-guardrails",
-        "requirements": 4,
+        "id": "S-CONTRACTS",
+        "requirements": 2,
         "risk": "critical",
         "repairRounds": 1,
-        "verdict": "pass"
+        "verdict": "fail"
       },
       {
-        "id": "shard-3-navigation-shell",
+        "id": "F1-SEMANTICS",
+        "requirements": 5,
+        "risk": "critical",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "F2-QUERY",
+        "requirements": 6,
+        "risk": "high",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "F3-CREATE",
+        "requirements": 5,
+        "risk": "critical",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "P1-TASKS",
+        "requirements": 7,
+        "risk": "high",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "P2-DETAIL",
+        "requirements": 7,
+        "risk": "high",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "P3-CREATE-FORM",
+        "requirements": 7,
+        "risk": "high",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "P4-CALENDAR",
+        "requirements": 6,
+        "risk": "medium",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "P5-WORKBENCH",
+        "requirements": 4,
+        "risk": "medium",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "P6-NAV",
+        "requirements": 9,
+        "risk": "high",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "P7-NOTIFICATIONS",
+        "requirements": 7,
+        "risk": "medium",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "P8-DOCUMENTS",
+        "requirements": 8,
+        "risk": "medium",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "P9-ORG",
+        "requirements": 7,
+        "risk": "low",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "P10-PWA",
+        "requirements": 9,
+        "risk": "high",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "INT-WIRING",
+        "requirements": 3,
+        "risk": "critical",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "S-TEL",
+        "requirements": 1,
+        "risk": "low",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "C-CONVERGENCE",
+        "requirements": 4,
+        "risk": "high",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "S-ROLLOUT",
         "requirements": 3,
         "risk": "medium",
         "repairRounds": 0,
-        "verdict": "pass"
+        "verdict": "blocked"
+      },
+      {
+        "id": "S-LEDGER",
+        "requirements": 3,
+        "risk": "high",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "S-HARNESS",
+        "requirements": 1,
+        "risk": "low",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "S-PERF",
+        "requirements": 2,
+        "risk": "medium",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "S-EVAL",
+        "requirements": 2,
+        "risk": "high",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "S-JOURNEY",
+        "requirements": 3,
+        "risk": "high",
+        "repairRounds": 0,
+        "verdict": "blocked"
+      },
+      {
+        "id": "S-PILOT",
+        "requirements": 2,
+        "risk": "medium",
+        "repairRounds": 0,
+        "verdict": "blocked"
       }
     ]
   },
   "comparison": {
     "baselineRunId": "run-baseline-ux-consolidation-01",
-    "deltaWallClockMs": -50000,
-    "deltaWallClockPct": -10.82,
-    "deltaTokens": -126000,
-    "deltaTokensPct": -14.09,
-    "deltaCalibrationDurationMs": -6000,
-    "deltaAgents": -6,
+    "deltaWallClockMs": null,
+    "deltaWallClockPct": null,
+    "deltaTokens": null,
+    "deltaTokensPct": null,
+    "deltaCalibrationDurationMs": null,
+    "deltaAgents": 19,
     "deltaRepairRounds": -2,
     "regressionFlags": {
       "wallClockRegressed": false,
       "tokensBudgetExceeded": false,
-      "uncoveredRequirements": false,
-      "scopeViolations": false,
-      "correctnessRegressed": false
+      "uncoveredRequirements": true,
+      "scopeViolations": true,
+      "correctnessRegressed": true
     },
-    "verdict": "IMPROVEMENT",
-    "verdictRationale": "Full requirement coverage preserved (100.0%), 0 ownership violations, 10.82% wall-clock reduction, and 14.09% token efficiency gain with 0 correctness regressions."
+    "verdict": "REGRESSION_DETECTED",
+    "verdictRationale": "Execution triggered regression flags or failed correctness gates."
   }
 }

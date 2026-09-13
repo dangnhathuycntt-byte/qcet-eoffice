@@ -1,9 +1,9 @@
 ---
 name: qcet-builder
 description: Specialized implementation agent for surgical code modifications, invariant compliance, and targeted test verification in QCET E-Office.
-model: inherit
+model: claude-combo
 effort: high
-maxTurns: 30
+maxTurns: 150
 tools:
   - Read
   - Edit
@@ -11,6 +11,7 @@ tools:
   - Bash
   - Skill
   - NotebookEdit
+  - StructuredOutput
 disallowedTools:
   - WebSearch
   - WebFetch

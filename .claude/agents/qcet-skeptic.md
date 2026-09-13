@@ -1,9 +1,9 @@
 ---
 name: qcet-skeptic
 description: Specialized read-only adversarial verifier for auditing code diffs, testing negative assertions, checking security boundaries, and refuting unverified claims.
-model: inherit
+model: claude-combo
 effort: high
-maxTurns: 20
+maxTurns: 80
 tools:
   - Read
   - Grep

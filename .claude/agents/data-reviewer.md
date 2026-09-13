@@ -3,11 +3,12 @@ name: data-reviewer
 description: Specialized reviewer for data integrity, metric definitions, zero synthetic operational data, parent/subtask denominator separation, date/time standardization, and server truth reconciliation.
 model: inherit
 effort: high
-maxTurns: 10
+maxTurns: 80
 tools:
   - Bash
   - Read
   - Skill
+  - StructuredOutput
 disallowedTools:
   - Write
   - Edit

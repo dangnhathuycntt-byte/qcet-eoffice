@@ -54,19 +54,19 @@ function parseFrontmatter(filePath: string): Record<string, any> {
   return result;
 }
 
-test('agent-limits: builder turn cap is 30 in frontmatter', () => {
+test('agent-limits: builder turn cap is 150 in frontmatter', () => {
   const fm = parseFrontmatter(path.join(rootDir, '.claude', 'agents', 'qcet-builder.md'));
-  assert.equal(fm.maxTurns, 30);
+  assert.equal(fm.maxTurns, 150);
 });
 
-test('agent-limits: skeptic turn cap is 20 in frontmatter', () => {
+test('agent-limits: skeptic turn cap is 80 in frontmatter', () => {
   const fm = parseFrontmatter(path.join(rootDir, '.claude', 'agents', 'qcet-skeptic.md'));
-  assert.equal(fm.maxTurns, 20);
+  assert.equal(fm.maxTurns, 80);
 });
 
-test('agent-limits: recon turn cap is 15 in frontmatter', () => {
+test('agent-limits: recon turn cap is 100 in frontmatter', () => {
   const fm = parseFrontmatter(path.join(rootDir, '.claude', 'agents', 'qcet-recon.md'));
-  assert.equal(fm.maxTurns, 15);
+  assert.equal(fm.maxTurns, 100);
 });
 
 test('agent-limits: verifier turn cap is 15 in frontmatter', () => {
@@ -74,29 +74,29 @@ test('agent-limits: verifier turn cap is 15 in frontmatter', () => {
   assert.equal(fm.maxTurns, 15);
 });
 
-test('agent-limits: specialized reviewers have maxTurns 10', () => {
+test('agent-limits: specialized reviewers have maxTurns 80', () => {
   for (const name of ['data-reviewer.md', 'security-reviewer.md', 'ux-reviewer.md']) {
     const fm = parseFrontmatter(path.join(rootDir, '.claude', 'agents', name));
-    assert.equal(fm.maxTurns, 10, `${name} must have maxTurns 10`);
+    assert.equal(fm.maxTurns, 80, `${name} must have maxTurns 80`);
   }
 });
 
 test('agent-limits: Lean V2 role turn limits match canonical policy', () => {
   const canonicalLimits: Record<string, number> = {
-    builder: 30,
-    repair: 20,
-    skeptic: 20,
+    builder: 150,
+    repair: 150,
+    skeptic: 80,
     verifier: 15,
-    reconcile: 12,
-    recon: 15,
-    evaluator: 10,
+    reconcile: 100,
+    recon: 100,
+    evaluator: 80,
   };
 
-  assert.equal(canonicalLimits.builder, 30);
-  assert.equal(canonicalLimits.repair, 20);
-  assert.equal(canonicalLimits.skeptic, 20);
+  assert.equal(canonicalLimits.builder, 150);
+  assert.equal(canonicalLimits.repair, 150);
+  assert.equal(canonicalLimits.skeptic, 80);
   assert.equal(canonicalLimits.verifier, 15);
-  assert.equal(canonicalLimits.reconcile, 12);
-  assert.equal(canonicalLimits.recon, 15);
-  assert.equal(canonicalLimits.evaluator, 10);
+  assert.equal(canonicalLimits.reconcile, 100);
+  assert.equal(canonicalLimits.recon, 100);
+  assert.equal(canonicalLimits.evaluator, 80);
 });
