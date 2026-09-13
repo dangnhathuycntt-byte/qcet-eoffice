@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { MotionProvider } from "@/components/motion/motion-provider";
 import { AuthProvider } from "@/lib/auth-context";
 import { DisplayDensityProvider } from "@/components/density-provider";
 import { AppShell } from "@/components/layout/app-shell";
@@ -93,19 +94,21 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full overflow-x-hidden bg-background text-foreground font-sans">
-        <AuthProvider>
-          <DisplayDensityProvider>
-            <a
-              href="#main-content"
-              className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground shadow-lg"
-            >
-              Chuyển đến nội dung chính
-            </a>
-            <AppShell>{children}</AppShell>
-            <PWAServiceWorkerManager />
-            <WebVitalsReporter />
-          </DisplayDensityProvider>
-        </AuthProvider>
+        <MotionProvider>
+          <AuthProvider>
+            <DisplayDensityProvider>
+              <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground shadow-lg"
+              >
+                Chuyển đến nội dung chính
+              </a>
+              <AppShell>{children}</AppShell>
+              <PWAServiceWorkerManager />
+              <WebVitalsReporter />
+            </DisplayDensityProvider>
+          </AuthProvider>
+        </MotionProvider>
       </body>
     </html>
   );
