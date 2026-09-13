@@ -295,6 +295,15 @@ describe("Task 5: Task Row Simplification & Bulk Action Floating Bar", () => {
           onBulkExtendDeadline: () => {},
           onBulkReassign: () => {},
           onExportExcel: () => {},
+          // P0-07: approval-bearing actions render only when the whole selection
+          // holds the capability, so rendering them requires supplying it.
+          allowedLifecycleTargets: [
+            "IN_PROGRESS",
+            "WAITING_APPROVAL",
+            "NEEDS_REVIEW",
+            "COMPLETED",
+            "CANCELLED",
+          ],
         })
       );
 

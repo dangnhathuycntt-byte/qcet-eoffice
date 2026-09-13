@@ -56,6 +56,22 @@ import {
   aggregateFilterCounts,
 } from "./components/task-table-toolbar";
 import { BatchActionBar, TaskBulkActionBar } from "./components/batch-action-bar";
+import {
+  filterBulkTransitionTargets,
+} from "@/domain/tasks/bulk-lifecycle-capability";
+import type {
+  TaskActorContract,
+  TaskEntityContract,
+} from "@/domain/tasks/contract";
+
+/** Lifecycle targets the bulk bar may offer, before capability filtering. */
+const BULK_LIFECYCLE_CANDIDATES: TaskStatus[] = [
+  "IN_PROGRESS",
+  "WAITING_APPROVAL",
+  "NEEDS_REVIEW",
+  "COMPLETED",
+  "CANCELLED",
+];
 
 export interface ModularCascadingTaskTableProps {
   tasks: SchoolTask[];
@@ -384,8 +400,45 @@ export function ModularCascadingTaskTable({
     initialExpandedIds: autoExpandedParentIds,
   });
 
-  const prevAutoExpandedKeyRef = React.useRef<string>("");
-  React.useEffect(() => {
+  // 5b. P0-07 / R-T07-bulk: lifecycle targets valid for the ENTIRE selection.
+  // Derived from the canonical capability engine, never from a role string.
+  // Note: SchoolTask carries no creator identity, so the engine's SoD
+  // anti-self-approval rule cannot be evaluated client-side from this row type —
+  // the server remains the enforcement point for it.
+  const allowedLifecycleTargets = React.useMemo<TaskStatus[]>(() => {
+    const selectedIds = tableState.selectedIds;
+    if (!selectedIds || selectedIds.size === 0) return [];
+
+    const actorContract: TaskActorContract | null = user
+      ? {
+          id: user.id,
+          role: user.role,
+          departmentId: user.departmentCode ?? null,
+        }
+      : null;
+
+    const selectedEntities: TaskEntityContract[] = filteredTasks
+      .filter((task) => selectedIds.has(task.id))
+      .map((task) => {
+        const ownerId = task.leadAssigneeId ?? null;
+        return {
+          id: task.id,
+          status: task.status,
+          departmentId: task.leadDepartmentId ?? task.departmentId ?? null,
+          primaryOwnerId: ownerId,
+          driId: ownerId,
+          assigneeIds: ownerId ? [ownerId] : [],
+        };
+      });
+
+    return filterBulkTransitionTargets(
+      selectedEntities,
+      BULK_LIFECYCLE_CANDIDATES,
+      actorContract
+    );
+  }, [tableState.selectedIds, filteredTasks, user]);
+
+  const prevAutoExpandedKeyRef = React.useRef<string>("");  React.useEffect(() => {
     if (propDensity && tableState.density !== propDensity) {
       tableState.setDensity(propDensity);
     }
@@ -947,6 +1000,9 @@ export function ModularCascadingTaskTable({
       )}
 
       {/* 5. Floating Bulk Action Bar */}
+      {/* P0-07 / R-T07-bulk: expose only lifecycle transitions valid for EVERY
+          selected task, so an actor cannot launder approval authority through a
+          bulk call. Computed from the canonical capability engine. */}
       <TaskBulkActionBar
         selectedCount={tableState.selectedCount}
         selectedIds={Array.from(tableState.selectedIds)}
@@ -957,6 +1013,7 @@ export function ModularCascadingTaskTable({
         onBulkReassign={onBulkReassign}
         onBulkDelete={onBulkDelete}
         onExportExcel={onExportExcel}
+        allowedLifecycleTargets={allowedLifecycleTargets}
       />
     </div>
   );

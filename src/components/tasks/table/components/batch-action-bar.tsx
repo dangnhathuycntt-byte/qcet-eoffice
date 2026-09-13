@@ -80,7 +80,38 @@ export interface BatchActionBarProps {
   onExportExcel?: () => void;
   isLoading?: boolean;
   className?: string;
+  /**
+   * Lifecycle targets valid for the ENTIRE selection, computed by the caller
+   * from the canonical bulk gate (src/domain/tasks/bulk-lifecycle-capability.ts).
+   *
+   * P0-07 / R-T07-bulk: the bar must expose only capabilities valid for every
+   * selected task. When this is omitted no capability information is available,
+   * so the bar FAILS SAFE and withholds every approval-bearing action rather
+   * than offering an authority-laundering bulk approval.
+   */
+  allowedLifecycleTargets?: TaskStatus[];
 }
+
+/**
+ * Targets that change who holds lifecycle authority. Mirrors
+ * APPROVAL_TARGETS in src/domain/tasks/bulk-lifecycle-capability.ts; kept in
+ * sync there so the bar cannot offer an approval the domain gate would refuse.
+ */
+const APPROVAL_BEARING_TARGETS: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
+  "COMPLETED",
+  "WAITING_APPROVAL",
+  "NEEDS_REVIEW",
+  "PENDING_EXECUTIVE_APPROVAL",
+]);
+
+/** Lifecycle targets the status dropdown may offer, in display order. */
+const BULK_STATUS_OPTIONS: ReadonlyArray<{ value: TaskStatus; label: string }> = [
+  { value: "IN_PROGRESS", label: "Đang thực hiện" },
+  { value: "WAITING_APPROVAL", label: "Chờ phê duyệt" },
+  { value: "NEEDS_REVIEW", label: "Cần chỉnh sửa" },
+  { value: "COMPLETED", label: "Hoàn thành" },
+  { value: "CANCELLED", label: "Hủy nhiệm vụ" },
+];
 
 export type TaskBulkActionBarProps = BatchActionBarProps;
 
@@ -96,7 +127,24 @@ export function BatchActionBar({
   onExportExcel,
   isLoading = false,
   className,
+  allowedLifecycleTargets,
 }: BatchActionBarProps) {
+  /**
+   * P0-07: only offer a transition the WHOLE selection permits. With no
+   * capability information supplied, fail safe — withhold approval-bearing
+   * targets rather than expose an authority-laundering bulk approval.
+   */
+  const isTargetAllowed = React.useCallback(
+    (target: TaskStatus): boolean =>
+      allowedLifecycleTargets
+        ? allowedLifecycleTargets.includes(target)
+        : !APPROVAL_BEARING_TARGETS.has(target),
+    [allowedLifecycleTargets]
+  );
+
+  const permittedStatusOptions = BULK_STATUS_OPTIONS.filter((option) =>
+    isTargetAllowed(option.value)
+  );
   // Lắng nghe phím Escape để hủy chọn toàn bộ
   React.useEffect(() => {
     if (selectedCount <= 0) return;
@@ -140,8 +188,8 @@ export function BatchActionBar({
           </span>
         </div>
 
-        {/* Nút hành động nhanh: Đánh dấu Hoàn thành */}
-        {onBulkStatusChange && (
+        {/* Nút hành động nhanh: Đánh dấu Hoàn thành (P0-07: chỉ khi cả lựa chọn đủ quyền) */}
+        {onBulkStatusChange && isTargetAllowed("COMPLETED") && (
           <Button
             type="button"
             variant="outline"
@@ -159,8 +207,8 @@ export function BatchActionBar({
           </Button>
         )}
 
-        {/* [Đổi trạng thái]: Dropdown cập nhật trạng thái khác */}
-        {onBulkStatusChange && (
+        {/* [Đổi trạng thái]: chỉ hiện các trạng thái hợp lệ cho TOÀN BỘ lựa chọn (P0-07) */}
+        {onBulkStatusChange && permittedStatusOptions.length > 0 && (
           <div className="relative inline-flex items-center">
             <select
               aria-label="Đổi trạng thái hàng loạt"
@@ -178,11 +226,11 @@ export function BatchActionBar({
               <option value="" disabled>
                 Đổi trạng thái...
               </option>
-              <option value="IN_PROGRESS">Đang thực hiện</option>
-              <option value="WAITING_APPROVAL">Chờ phê duyệt</option>
-              <option value="NEEDS_REVIEW">Cần chỉnh sửa</option>
-              <option value="COMPLETED">Hoàn thành</option>
-              <option value="CANCELLED">Hủy nhiệm vụ</option>
+              {permittedStatusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
             <ChevronDown
               className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-slate-500 pointer-events-none"

@@ -321,6 +321,15 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
           onBulkStatusChange: () => {},
           onBulkExtendDeadline: () => {},
           onExportExcel: () => {},
+          // P0-07: the bar exposes only transitions valid for the whole
+          // selection, so rendering its approval actions requires capability.
+          allowedLifecycleTargets: [
+            "IN_PROGRESS",
+            "WAITING_APPROVAL",
+            "NEEDS_REVIEW",
+            "COMPLETED",
+            "CANCELLED",
+          ],
         })
       );
 
@@ -341,6 +350,54 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
       assert.ok(html.includes("Xuất Excel"));
       assert.ok(html.includes("Bỏ chọn"));
       assert.ok(html.includes("Esc"));
+    });
+
+    it("P0-07: withholds approval actions the whole selection may not perform", () => {
+      // Regression: before the fix the bar always offered "Hoàn thành" and a
+      // free status dropdown, letting an actor bulk-approve a selection that
+      // included tasks they had no authority over.
+      const html = renderToStaticMarkup(
+        React.createElement(TaskBulkActionBar, {
+          selectedCount: 2,
+          selectedIds: ["task-01", "task-02"],
+          onClearSelection: () => {},
+          onBulkStatusChange: () => {},
+          // Capability computed for this selection: write-only, no approval.
+          allowedLifecycleTargets: ["IN_PROGRESS", "CANCELLED"],
+        })
+      );
+
+      assert.ok(
+        !html.includes("Đánh dấu hoàn thành tất cả công việc đã chọn"),
+        "quick COMPLETED action must be withheld when the selection is not approvable"
+      );
+      assert.ok(
+        !html.includes('<option value="COMPLETED"'),
+        "COMPLETED must not be offered as a bulk status option"
+      );
+      assert.ok(
+        !html.includes('<option value="WAITING_APPROVAL"'),
+        "WAITING_APPROVAL must not be offered as a bulk status option"
+      );
+
+      // The bar must still expose what IS permitted.
+      assert.ok(html.includes('<option value="IN_PROGRESS"'), "permitted options remain");
+    });
+
+    it("P0-07: fails safe when no capability information is supplied", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(TaskBulkActionBar, {
+          selectedCount: 1,
+          selectedIds: ["task-01"],
+          onClearSelection: () => {},
+          onBulkStatusChange: () => {},
+        })
+      );
+
+      assert.ok(
+        !html.includes("Đánh dấu hoàn thành tất cả công việc đã chọn"),
+        "without capability information the bar must not offer a bulk approval"
+      );
     });
 
     it("renders batch reassign action when onBulkReassign is provided", () => {
