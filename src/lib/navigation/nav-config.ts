@@ -25,7 +25,6 @@ export const NAV_ITEMS: NavItemConfig[] = [
     label: "Bàn làm việc",
     href: "/",
     icon: LayoutDashboard,
-    badgeKey: "myFocus",
   },
   {
     id: "calendar",
@@ -47,7 +46,6 @@ export const NAV_ITEMS: NavItemConfig[] = [
     href: "/tasks",
     icon: CheckSquare,
     aliases: ["/unit-tasks"],
-    badgeKey: "allTasks",
   },
   {
     id: "documents",

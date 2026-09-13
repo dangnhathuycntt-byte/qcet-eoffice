@@ -8,6 +8,7 @@ import {
   type SidebarItem,
   resolveBreadcrumb,
 } from "@/components/layout/sidebar-context";
+import { CANONICAL_ROUTES } from "@/lib/navigation/canonical-navigation-registry";
 
 describe("Single-Tier Navigation Architecture Test Suite", () => {
   describe("Single-Tier Nav Items Specification", () => {
@@ -57,34 +58,38 @@ describe("Single-Tier Navigation Architecture Test Suite", () => {
   });
 
   describe("Breadcrumbs resolution contract", () => {
+    // T88: breadcrumb titles are the canonical registry labels.
+    const label = (href: string) =>
+      CANONICAL_ROUTES.find((r) => r.href === href)!.label;
+
     test("Resolves default root and page titles cleanly", () => {
       const [rootTitle, pageTitle] = resolveBreadcrumb("/");
       assert.strictEqual(rootTitle, "QCET E-Office");
-      assert.strictEqual(pageTitle, "Bàn làm việc");
+      assert.strictEqual(pageTitle, label("/"));
     });
 
     test("Resolves documents breadcrumb correctly", () => {
       const [rootTitle, pageTitle] = resolveBreadcrumb("/documents");
       assert.strictEqual(rootTitle, "QCET E-Office");
-      assert.strictEqual(pageTitle, "Văn bản & Công văn");
+      assert.strictEqual(pageTitle, label("/documents"));
     });
 
     test("Resolves calendar breadcrumb correctly", () => {
       const [rootTitle, pageTitle] = resolveBreadcrumb("/calendar");
       assert.strictEqual(rootTitle, "QCET E-Office");
-      assert.strictEqual(pageTitle, "Lịch công tác");
+      assert.strictEqual(pageTitle, label("/calendar"));
     });
 
     test("Resolves tasks breadcrumb correctly", () => {
       const [rootTitle, pageTitle] = resolveBreadcrumb("/tasks");
       assert.strictEqual(rootTitle, "QCET E-Office");
-      assert.strictEqual(pageTitle, "Nhiệm vụ cấp Trường");
+      assert.strictEqual(pageTitle, label("/tasks"));
     });
 
     test("Resolves org breadcrumb correctly", () => {
       const [rootTitle, pageTitle] = resolveBreadcrumb("/org");
       assert.strictEqual(rootTitle, "QCET E-Office");
-      assert.strictEqual(pageTitle, "Cơ cấu tổ chức & Danh bạ");
+      assert.strictEqual(pageTitle, label("/org"));
     });
   });
 });

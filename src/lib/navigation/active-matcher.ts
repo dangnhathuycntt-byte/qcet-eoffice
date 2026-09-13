@@ -6,6 +6,7 @@
 import {
   CANONICAL_ROUTES,
   getRouteByPath,
+  resolveCanonicalHref,
 } from "./canonical-navigation-registry";
 
 /**
@@ -149,32 +150,40 @@ export function resolveBreadcrumb(
     }
   }
 
-  // Zone and query overrides
+  // T88: zone and query overrides resolve through the canonical registry, so the
+  // breadcrumb shares one naming system with the sidebar, mobile bars and command
+  // palette instead of carrying its own copy of the route titles.
+  const canonicalLabel = (href: string): string | null => getRouteByPath(href)?.label ?? null;
+
+  const zoneRoute = zone ? CANONICAL_ROUTES.find((r) => r.zone === zone) : undefined;
+  if (zoneRoute) return ["QCET E-Office", zoneRoute.label];
   if (zone === "portal") return ["QCET E-Office", "Cổng Portal Điều hành"];
-  if (zone === "dashboard") return ["QCET E-Office", "Dashboard Điều hành & KPI"];
-  if (zone === "calendar" || view === "calendar" || view === "month") return ["QCET E-Office", "Lịch công tác"];
-  if (zone === "tasks" || scope === "school" || scope === "unit") return ["QCET E-Office", "Quản lý công việc"];
-  if (zone === "documents") return ["QCET E-Office", "Văn bản & Công văn"];
-  if (zone === "org") return ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"];
+  if (view === "calendar" || view === "month") {
+    return ["QCET E-Office", canonicalLabel("/calendar") ?? "Lịch công tác"];
+  }
+  if (scope === "school" || scope === "unit") {
+    return ["QCET E-Office", canonicalLabel("/tasks") ?? "Quản lý nhiệm vụ"];
+  }
 
   const cleanPath = normalizePath(path);
 
-  if (cleanPath === "/") {
-    return ["QCET E-Office", "Bàn làm việc"];
+  // Non-canonical surfaces keep their own titles; everything a canonical route
+  // claims — including its aliases and the zones routed to it — uses the registry.
+  if (cleanPath === "/portal" || cleanPath.startsWith("/portal/")) {
+    return ["QCET E-Office", "Cổng Portal Điều hành"];
   }
-
   if (cleanPath.startsWith("/maintenance")) return ["QCET E-Office", "Bảo trì & Nâng cấp"];
-  if (cleanPath.startsWith("/settings")) return ["QCET E-Office", "Cài đặt hệ thống"];
-  if (cleanPath.startsWith("/documents")) return ["QCET E-Office", "Văn bản & Công văn"];
-  if (cleanPath.startsWith("/unit-tasks")) return ["QCET E-Office", "Công việc Đơn vị"];
-  if (cleanPath.startsWith("/tasks")) return ["QCET E-Office", "Nhiệm vụ cấp Trường"];
-  if (cleanPath.startsWith("/calendar")) return ["QCET E-Office", "Lịch công tác"];
-  if (cleanPath.startsWith("/dashboard")) return ["QCET E-Office", "Báo cáo & Thống kê KPI"];
-  if (cleanPath.startsWith("/org")) return ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"];
-  if (cleanPath.startsWith("/notifications")) return ["QCET E-Office", "Thông báo điều hành"];
   if (cleanPath.startsWith("/login")) return ["QCET E-Office", "Đăng nhập"];
 
-  const matchedRoute = getRouteByPath(cleanPath);
+  const matchedRoute =
+    getRouteByPath(cleanPath) ??
+    getRouteByPath(resolveCanonicalHref(cleanPath)) ??
+    // Nested paths under a canonical route (e.g. a future `/documents/<id>`)
+    // inherit that route's title; longest href wins so `/tasks` never shadows a
+    // more specific prefix.
+    [...CANONICAL_ROUTES]
+      .filter((r) => r.href !== "/" && cleanPath.startsWith(`${r.href}/`))
+      .sort((a, b) => b.href.length - a.href.length)[0];
   if (matchedRoute) {
     return ["QCET E-Office", matchedRoute.label];
   }

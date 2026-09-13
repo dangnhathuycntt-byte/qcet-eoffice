@@ -9,6 +9,7 @@ import {
   SIDEBAR_STORAGE_KEY,
   DEFAULT_SIDEBAR_BADGES,
 } from "../src/components/layout/sidebar-context";
+import { CANONICAL_ROUTES } from "../src/lib/navigation/canonical-navigation-registry";
 
 describe("Single-Tier Navigation Configuration (sidebar-context.tsx)", () => {
   it("exports SINGLE_TIER_NAV_ITEMS across personal, workspace, and operations sections", () => {
@@ -86,14 +87,18 @@ describe("Single-Tier Navigation Configuration (sidebar-context.tsx)", () => {
   });
 
   it("resolves breadcrumbs accurately for all system routes", () => {
-    assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", "Bàn làm việc"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/tasks"), ["QCET E-Office", "Nhiệm vụ cấp Trường"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/unit-tasks"), ["QCET E-Office", "Công việc Đơn vị"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/calendar"), ["QCET E-Office", "Lịch công tác"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/dashboard"), ["QCET E-Office", "Báo cáo & Thống kê KPI"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/org"), ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/notifications"), ["QCET E-Office", "Thông báo điều hành"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/documents"), ["QCET E-Office", "Văn bản & Công văn"]);
+    // T88: breadcrumb titles are the canonical registry labels.
+    const label = (href: string) =>
+      CANONICAL_ROUTES.find((r) => r.href === href)!.label;
+
+    assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", label("/")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/tasks"), ["QCET E-Office", label("/tasks")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/unit-tasks"), ["QCET E-Office", label("/tasks")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/calendar"), ["QCET E-Office", label("/calendar")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/dashboard"), ["QCET E-Office", label("/")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/org"), ["QCET E-Office", label("/org")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/notifications"), ["QCET E-Office", label("/notifications")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/documents"), ["QCET E-Office", label("/documents")]);
   });
 
   it("anti-slop rule: 0% emojis in navigation item definitions and breadcrumbs", () => {

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { isRouteActive, normalizePath, resolveBreadcrumb } from "../src/lib/navigation/active-matcher";
+import { CANONICAL_ROUTES } from "../src/lib/navigation/canonical-navigation-registry";
 import { NAV_ITEMS } from "../src/lib/navigation/nav-config";
 
 describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
@@ -103,13 +104,18 @@ describe("Navigation Active Matcher & Breadcrumb Resolution Suite", () => {
   });
 
   test("resolveBreadcrumb: maps routes and query states to clean Vietnamese titles", () => {
-    assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", "Bàn làm việc"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/calendar"), ["QCET E-Office", "Lịch công tác"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/notifications"), ["QCET E-Office", "Thông báo điều hành"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/documents"), ["QCET E-Office", "Văn bản & Công văn"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/tasks"), ["QCET E-Office", "Nhiệm vụ cấp Trường"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/org"), ["QCET E-Office", "Cơ cấu tổ chức & Danh bạ"]);
-    assert.deepStrictEqual(resolveBreadcrumb("/settings"), ["QCET E-Office", "Cài đặt hệ thống"]);
+    // T88: the breadcrumb title is the canonical registry label for the route,
+    // read from the registry here so the expectation can never drift again.
+    const label = (href: string) =>
+      CANONICAL_ROUTES.find((r) => r.href === href)!.label;
+
+    assert.deepStrictEqual(resolveBreadcrumb("/"), ["QCET E-Office", label("/")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/calendar"), ["QCET E-Office", label("/calendar")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/notifications"), ["QCET E-Office", label("/notifications")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/documents"), ["QCET E-Office", label("/documents")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/tasks"), ["QCET E-Office", label("/tasks")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/org"), ["QCET E-Office", label("/org")]);
+    assert.deepStrictEqual(resolveBreadcrumb("/settings"), ["QCET E-Office", label("/settings")]);
   });
 
   test("NAV_ITEMS: defines clean canonical items without duplicates", () => {
