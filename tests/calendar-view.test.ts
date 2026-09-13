@@ -29,7 +29,7 @@ describe("CalendarMonthView Helpers", () => {
     assert.equal(grid[0].isCurrentMonth, false);
     // Last day of grid should be a Sunday
     const lastDay = grid[grid.length - 1];
-    const dateObj = new Date(lastDay.dateString);
+    const dateObj = new Date(`${lastDay.dateString}T12:00:00+07:00`);
     assert.equal(dateObj.getDay(), 0); // 0 is Sunday in JS Date
   });
 

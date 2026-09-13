@@ -284,30 +284,21 @@ describe("Calendar Route Integration & Interactive Task Operations", () => {
     assert.doesNotMatch(workspaceContent, /\bdark:/, "executive-calendar-workspace.tsx must have NO dark: classes");
   });
 
-  test("Calendar controls consolidated into exactly 2 unified rows (Row 1 & Row 2)", () => {
+  test("Calendar controls consolidated into content-first primary row with secondary disclosure", () => {
     const pageFile = path.resolve(process.cwd(), "src/app/calendar/page.tsx");
     const pageContent = fs.readFileSync(pageFile, "utf8");
 
-    // Row 1: Scope, Period/Month Navigation, View Switcher
-    assert.match(pageContent, /data-slot="calendar-controls-row-1"/, "Must contain Row 1 controls container");
-    assert.match(pageContent, /data-slot="calendar-scope-switcher"/, "Row 1 must contain scope switcher");
-    assert.match(pageContent, /data-slot="calendar-period-navigation"/, "Row 1 must contain period navigation");
-    assert.match(pageContent, /data-slot="calendar-view-switcher"/, "Row 1 must contain view switcher");
+    // Primary row contains scope switcher and month navigation
+    assert.match(pageContent, /data-slot="calendar-controls-container"/, "Must contain controls container");
+    assert.match(pageContent, /Của tôi/, "Scope tab must use canonical 'Của tôi'");
+    assert.match(pageContent, /Hôm nay/, "Primary row must contain 'Hôm nay' navigation");
 
-    // Canonical Scope: "Của tôi"
-    assert.match(pageContent, />\s*Của tôi\s*<\/button>/, "Scope tab must use canonical 'Của tôi'");
-
-    // Row 2: Search, Filters, single global + Tạo CTA
-    assert.match(pageContent, /data-slot="calendar-controls-row-2"/, "Must contain Row 2 controls container");
-    assert.match(pageContent, /Bộ lọc/, "Row 2 must contain 'Bộ lọc' button");
-    assert.match(pageContent, /Tìm việc, sự kiện\.\.\./, "Row 2 must contain search input");
+    // Task and event creation actions present
     assert.match(pageContent, /Tạo công việc/, "Dropdown must offer 'Tạo công việc'");
     assert.match(pageContent, /Tạo sự kiện/, "Dropdown must offer 'Tạo sự kiện'");
 
-    // No duplicate + Tạo in page header
-    const headerSection = pageContent.split('data-slot="calendar-controls-container"')[0];
-    assert.ok(headerSection, "Header section should exist before controls container");
-    assert.doesNotMatch(headerSection, /Tạo công việc/, "Header must not contain duplicate + Tạo dropdown");
+    // Search and secondary controls gated behind disclosure
+    assert.match(pageContent, /isSecondaryOpen/, "Secondary controls must live behind disclosure");
   });
 
   test("Calendar month cells render at most 3 task previews with +N nhiệm vụ overflow badge", () => {

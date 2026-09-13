@@ -72,7 +72,7 @@ const mockTasks: SchoolTask[] = [
   {
     id: "task-manager-approval",
     code: "NV-004",
-    title: "Đề xuất mua sắm trang thiết bị Lab viễn th��ng",
+    title: "Đề xuất mua sắm trang thiết bị Lab viễn thông",
     description: "Danh mục thiết bị thực hành mạng",
     status: "WAITING_APPROVAL",
     priority: "URGENT",
@@ -332,7 +332,7 @@ describe("Role-Aware Home Workbench & Smart Workbox (Phase 7)", () => {
       );
       assert.ok(staffHtml.includes("Bàn làm việc Cá nhân"), "Staff view must show personal role badge");
       assert.ok(staffHtml.includes("data-slot=\"personal-workbench\""), "Must have personal-workbench slot");
-      assert.ok(staffHtml.includes("Việc cần xử lý ngay"), "Must have attention queue heading");
+      assert.ok(staffHtml.includes("CẦN XỬ LÝ"), "Must have ACTION-first attention queue heading");
 
       // Manager view
       const managerHtml = renderToStaticMarkup(

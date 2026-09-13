@@ -1016,7 +1016,7 @@ function CalendarRouteContent() {
                     className={cn("flex-1 inline-flex items-center justify-center gap-1.5 min-h-8 px-3 rounded text-xs font-semibold transition-all", viewMode === "agenda" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground")}
                   >
                     <List className="size-3.5" strokeWidth={1.5} />
-                    Danh sách
+                    <span>Danh sách</span>
                   </button>
                 </div>
               </div>
