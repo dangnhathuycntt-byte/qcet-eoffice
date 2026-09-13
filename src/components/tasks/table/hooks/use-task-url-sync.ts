@@ -327,6 +327,21 @@ export interface UseTaskUrlSyncReturn {
 /**
  * Hook đồng bộ 2 chiều URL query params với bảng nhiệm vụ trong Next.js App Router
  */
+/**
+ * T19: Resolves whether opening/switching a task detail should push a history entry
+ * or replace in place.
+ * - Opening from the list (`null -> taskId`): PUSH so browser Back returns to the list.
+ * - Switching between tasks (`idA -> idB`): REPLACE so Back doesn't walk every glance.
+ * - Closing (`taskId -> null`): REPLACE to keep the list history entry clean.
+ */
+export function resolveTaskDetailHistoryMode(
+  currentTaskId: string | null | undefined,
+  nextTaskId: string | null | undefined
+): "push" | "replace" {
+  const opensFromList = !currentTaskId && Boolean(nextTaskId);
+  return opensFromList ? "push" : "replace";
+}
+
 export function useTaskUrlSync(
   initialDefaults?: Partial<TaskUrlState>
 ): UseTaskUrlSyncReturn {
@@ -366,7 +381,10 @@ export function useTaskUrlSync(
   const updateUrlParams = React.useCallback(
     (
       updates: Partial<TaskUrlState>,
-      options: { scroll?: boolean } = { scroll: false }
+      options: { scroll?: boolean; historyMode?: "push" | "replace" } = {
+        scroll: false,
+        historyMode: "replace",
+      }
     ) => {
       // Khi thay đổi bộ lọc (tab, dept, category, q), tự động reset page về 1 nếu không chỉ định page
       const hasFilterChange =
@@ -387,10 +405,19 @@ export function useTaskUrlSync(
         preserveOtherParams: true,
       });
 
+      const mode = options.historyMode ?? "replace";
       if (router) {
-        router.replace(newUrl, { scroll: options.scroll ?? false });
+        if (mode === "push") {
+          router.push(newUrl, { scroll: options.scroll ?? false });
+        } else {
+          router.replace(newUrl, { scroll: options.scroll ?? false });
+        }
       } else if (typeof window !== "undefined") {
-        window.history.replaceState(null, "", newUrl);
+        if (mode === "push") {
+          window.history.pushState(null, "", newUrl);
+        } else {
+          window.history.replaceState(null, "", newUrl);
+        }
       }
     },
     [router, pathname, searchParams]
@@ -437,8 +464,11 @@ export function useTaskUrlSync(
   );
 
   const setTaskId = React.useCallback(
-    (taskId: string | null) => updateUrlParams({ taskId }),
-    [updateUrlParams]
+    (taskId: string | null) => {
+      const mode = resolveTaskDetailHistoryMode(urlState.taskId, taskId);
+      updateUrlParams({ taskId }, { historyMode: mode });
+    },
+    [updateUrlParams, urlState.taskId]
   );
 
   const resetFilters = React.useCallback(() => {

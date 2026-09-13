@@ -4,6 +4,7 @@ import {
   parseTaskUrlParams,
   serializeTaskUrlParams,
   buildTaskUrl,
+  resolveTaskDetailHistoryMode,
   DEFAULT_TASK_URL_STATE,
 } from "../src/components/tasks/table/hooks/use-task-url-sync";
 import {
@@ -116,6 +117,24 @@ describe("Task Table Hooks - URL Sync, Keyboard Nav & State Engine", () => {
       assert.equal(params.get("theme"), "light");
       assert.equal(params.get("tab"), "review");
       assert.equal(params.get("q"), "báo cáo");
+    });
+
+    it("T19: resolves historyMode correctly for open, switch, and close", () => {
+      // Opening from list: null -> id => PUSH (so browser Back returns to list)
+      assert.equal(resolveTaskDetailHistoryMode(null, "task-1"), "push");
+      assert.equal(resolveTaskDetailHistoryMode(undefined, "task-1"), "push");
+      assert.equal(resolveTaskDetailHistoryMode("", "task-1"), "push");
+
+      // Switching between tasks: idA -> idB => REPLACE (prevents bloated Back stack)
+      assert.equal(resolveTaskDetailHistoryMode("task-1", "task-2"), "replace");
+
+      // Closing task detail: id -> null => REPLACE
+      assert.equal(resolveTaskDetailHistoryMode("task-1", null), "replace");
+      assert.equal(resolveTaskDetailHistoryMode("task-1", undefined), "replace");
+      assert.equal(resolveTaskDetailHistoryMode("task-1", ""), "replace");
+
+      // No-op: null -> null => REPLACE
+      assert.equal(resolveTaskDetailHistoryMode(null, null), "replace");
     });
   });
 
