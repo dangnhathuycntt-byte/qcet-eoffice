@@ -331,3 +331,46 @@ Every primary workspace page must have **exactly ONE global page-level primary C
 | `view` | Tasks: `'table'`\|`'kanban'`; Cal: `'month'`\|`'agenda'` | Visual layout representation |
 | `q` | string | Search needle (omitted when empty) |
 | `taskId` | string | Deep-link to task details side sheet |
+
+---
+
+## 7. V5.1 Contract Additions (C17–C20)
+
+*Sections 1–6 above are FROZEN v1 (2026-09-10) and unchanged. This section is an
+additive V5.1 registration (2026-09-12); it does not mutate the C1–C16 text.*
+
+The Master Plan V5.1 §38–§41 adds four governance contracts. Full register:
+`docs/agent-work/decisions/ux-contract-freeze.md`.
+
+- **C17 — Rollout & Feature-Flag Contract.** Lifecycle
+  `IMPLEMENT → VERIFY → FLAGGED CANDIDATE → INTERNAL PILOT → LIMITED COHORT →
+  MEASURE → EXPAND → REMOVE LEGACY`. Hard rule **Feature Flag ≠ Permission**:
+  flags gate operational capability/integration availability only and must never
+  replace a server-side RBAC/capability check (`src/features/flags.ts` header
+  invariant). Flag keys follow the repository camelCase convention
+  (`taskWorkspaceV2`, `mobileAgenda`, `newExecutiveDashboard`), env overrides
+  `FEATURE_FLAG_<UPPER_SNAKE>`. A flagged surface keeps a documented rollback path
+  until its legacy path is removed.
+
+- **C18 — Design-System Convergence Contract.** Canonical pattern inventory,
+  search-before-create, no page-local design system, at most one primary visual
+  action per local area. Runs after page lanes, not inside them.
+
+- **C19 — Content & Terminology Contract.** `docs/ux/QCET_UI_VOCABULARY.md` is the
+  single naming authority (FROZEN v1, 2026-09-12). It fixes the user-facing
+  strings for the frozen lifecycle/attention/scope dimensions above and
+  consolidates label drift. Per §0.1 the string `Chờ phê duyệt` is the approved
+  user-facing label for the `WAITING_APPROVAL` concept; the frozen contract's
+  earlier gloss `Chờ duyệt` is superseded as a *string* by that vocabulary, with
+  the orthogonality invariant (attention ≠ status) unchanged.
+
+- **C20 — Migration / Deprecation Ledger.** `docs/agent-work/UX_MIGRATION_LEDGER.md`
+  is the single ledger (statuses `ACTIVE → MIGRATING → REDIRECTED → DEPRECATED →
+  DELETE_READY → REMOVED`, plus `BLOCKED`). A replacement is complete only at zero
+  old consumers with delete-ready proof.
+
+**C3 note (frozen query keys).** The `WorkspaceQueryParams` contract in §2 was
+extended in V5.1 to the full C3 key set: `scope dept period status attention view q
+taskId viewId sort group`. `month` and `date` are documented concrete sub-keys of
+`period`. Parser/serializer support for `sort`/`group` in `src/lib/workspace-query.ts`
+(owned by the F2 lane) is registered as `MIGRATING` in the C20 ledger.

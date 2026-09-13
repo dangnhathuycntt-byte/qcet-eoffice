@@ -1,0 +1,54 @@
+WAVE 0 — SCREENSHOT CAPABILITY PROBE (environment reality check)
+Captured: 2026-09-13
+
+RESULT: CAPABLE — headless Chromium is present and produces valid, authenticated PNGs.
+
+The prior revision of this file declared capture BLOCKED ("no headless screenshot
+browser"). That verdict was WRONG: it was inferred by reading
+scripts/verify-ui-ux-visual-regressions.sh's detection chain instead of running a real
+capture. It is retracted here. Ground truth below is from commands actually executed.
+
+Chromium (measured):
+  command -v chromium -> /usr/bin/chromium
+  chromium --version  -> Chromium 152.0.7977.82 (Debian GNU/Linux 13)
+  Minimal working invocation (used by the canonical driver):
+    chromium --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+      --remote-debugging-port=<port> --remote-allow-origins=* about:blank
+  --no-sandbox is REQUIRED on this host.
+
+Firefox 140 ESR headless: still non-functional for PNG capture (SWGL framebuffer
+failure). Not used.
+
+Playwright / Puppeteer browsers: NOT installed (no ~/.cache/ms-playwright, no
+~/.cache/puppeteer, neither package in node_modules). The driver therefore speaks raw
+Chrome DevTools Protocol over Node 22's global WebSocket + fetch (zero dependencies).
+
+PROOF OF CAPABILITY (this run):
+  `node scripts/capture-baseline.mjs` captured 28 authenticated PNGs across 14 states
+  at 1440x900 and 390x844, exit 0. Examples under artifacts/ux-v5-1/baseline/states/:
+    tasks/table/baseline.1440x900.png   (real data table, 158 tasks)
+    tasks/create-task/baseline.1440x900.png  ("TẠO VIỆC & GIAO NHIỆM VỤ" modal)
+    tasks/bulk-selection/baseline.1440x900.png ("Đã chọn 1/164 nhiệm vụ ...")
+    calendar/create-event/baseline.1440x900.png ("Tạo Sự Kiện Lịch Biểu" modal)
+    shell/command-search/baseline.1440x900.png (Command Palette overlay)
+    shell/offline/baseline.1440x900.png  ("Mất kết nối mạng (Ngoại tuyến)")
+  Each PNG is a real 1440x900 / 390x844 RGB image (verified with `file`).
+
+AUTHENTICATION (same-data precondition):
+  Server Components read the session cookie; a bare headless browser renders the
+  zero-state/login shell. The driver logs in via POST /api/auth/login
+  (seed admin@cdktcnqn.edu.vn, role ADMIN, dept BGH) and injects `qcet_session`
+  through the read-only same-origin proxy (tools/auth-proxy.mjs).
+
+  SECURITY: the session token is never persisted to any artifact.
+
+READ-ONLY GUARANTEE:
+  tools/auth-proxy.mjs forwards only GET/HEAD/OPTIONS and answers every mutating
+  request (POST/PUT/PATCH/DELETE) with 204 locally, so a capture run can never mutate
+  the dataset. First-visit interruption overlays (welcome modal, PWA install prompt)
+  are dismissed through their own client controls; their onboarding PATCH is swallowed
+  by the proxy.
+
+REPRODUCTION:
+  node scripts/capture-baseline.mjs            # all states, both viewports
+  node scripts/capture-baseline.mjs --only=tasks/table,shell/offline

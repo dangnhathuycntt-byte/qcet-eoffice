@@ -1,0 +1,33 @@
+WAVE 0 — DATABASE_URL DISPOSAL PROOF
+Captured: 2026-09-13
+Command: node artifacts/ux-v5-1/baseline/tools/env-probe.mjs
+
+Observed output (verbatim):
+{
+  "repoRoot": "/home/dnhhuy/projects/qcet-eoffice",
+  "databaseUrlSet": true,
+  "devDatabaseUrl": { "host": "localhost", "port": "5432", "dbname": "qcet_eoffice" },
+  "devDbIsDisposable": false,
+  "rewrittenTestDatabaseUrl": { "host": "localhost", "port": "5432", "dbname": "qcet_test", "search": "?schema=public" },
+  "testDbIsDisposable": true,
+  "guards": { "qcetAllowDbTests": null, "nodeEnv": "development",
+    "note": "npm test sets QCET_ALLOW_DB_TESTS=1 and NODE_ENV=test via scripts/run-tests.mjs" },
+  "verdict": "DEV DATABASE_URL points at the working DB (qcet_eoffice, NOT disposable); `npm test` rewrites it to the disposable local DB qcet_test. No test run touches the dev DB."
+}
+
+INTERPRETATION (authoritative; machine-checkable fields above):
+- The persistent DEV database is `qcet_eoffice` (NOT disposable). No lane may run a full
+  `npm test` against it directly.
+- `npm test` (scripts/run-tests.mjs) rewrites DATABASE_URL `/qcet_eoffice(\?.*)?$` ->
+  `/qcet_test$1` and forces TZ=UTC, NODE_ENV=test, QCET_ALLOW_DB_TESTS=1. The actual test
+  run therefore targets the disposable local database `qcet_test` on localhost:5432.
+  This satisfies the W0 mandate: prove a disposable test DB before any full `npm test`.
+- The four-guard check enforced by tests/security/me-context-api.test.ts
+  (QCET_ALLOW_DB_TESTS==='1' AND NODE_ENV==='test' AND host localhost/127.0.0.1
+  AND dbName endsWith '_test'|'test') is satisfied by the rewritten URL
+  (host=localhost, dbname=qcet_test -> testDbIsDisposable=true).
+- The `verdict` string is now accurate; earlier artifacts recorded a mislabeled ternary
+  message. The machine-checkable fields above are the source of truth.
+
+Postgres reachability: `pg_isready -h 127.0.0.1 -p 5432` -> "accepting connections".
+Prisma datasource is postgresql via env("DATABASE_URL") — no sqlite fallback in schema.

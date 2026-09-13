@@ -1,97 +1,213 @@
 {
-  "contractVersion": "1.0.0",
-  "freezeDate": "2026-09-10",
+  "contractVersion": "5.1.0",
+  "freezeDate": "2026-09-12",
   "status": "frozen",
   "gate": "G0",
+  "supersedes": {
+    "contractVersion": "1.0.0",
+    "freezeDate": "2026-09-10",
+    "description": "Gate-G0 F1-F4/P1-P3 lane map, replaced by the V5.1 §7 map (INT, F1, F2, F3, P1-P10)."
+  },
   "frozenContracts": [
-    "src/contracts/workspace-semantic.ts",
+    "src/contracts/**",
+    "docs/ux/QCET_UI_VOCABULARY.md",
+    "docs/agent-work/UX_MIGRATION_LEDGER.md",
     "docs/agent-work/UI_SEMANTIC_CONTRACT.md",
     "docs/agent-work/OWNERSHIP.md",
-    "docs/agent-work/WORKSTREAMS.json"
+    "docs/agent-work/WORKSTREAMS.json",
+    "docs/agent-work/decisions/manager-school-scope.md",
+    "docs/agent-work/decisions/ux-contract-freeze.md"
   ],
+  "governanceLane": {
+    "id": "GOV",
+    "name": "Frozen Contracts & Governance (single-writer)",
+    "owner": "shard-contracts-freeze",
+    "files": [
+      "src/contracts/**",
+      "docs/ux/QCET_UI_VOCABULARY.md",
+      "docs/agent-work/UX_MIGRATION_LEDGER.md",
+      "docs/agent-work/UI_SEMANTIC_CONTRACT.md",
+      "docs/agent-work/OWNERSHIP.md",
+      "docs/agent-work/WORKSTREAMS.json",
+      "docs/agent-work/decisions/manager-school-scope.md",
+      "docs/agent-work/decisions/ux-contract-freeze.md"
+    ],
+    "excludes": []
+  },
   "workstreams": [
     {
-      "id": "F1",
-      "name": "Canonical Task Semantics & Attention Resolver",
-      "owner": "F1",
+      "id": "INT",
+      "name": "Integrator / integration owner",
+      "owner": "shard-int-integration",
       "files": [
-        "src/domain/tasks/canonical-semantics.ts",
+        "src/components/workspace/unified-adaptive-workspace.tsx",
+        "src/components/tasks/task-management-workspace.tsx",
+        "tests/*-integration.test.ts"
+      ],
+      "excludes": [],
+      "reserved": [
+        "src/components/workspace/unified-adaptive-workspace.tsx"
+      ],
+      "notes": "UnifiedAdaptiveWorkspace is reserved to the integration owner. Shared/root/config files are Integrator-only unless explicitly reassigned."
+    },
+    {
+      "id": "F1",
+      "name": "Semantics",
+      "owner": "shard-f1-semantics",
+      "files": [
         "src/domain/tasks/attention-resolver.ts",
-        "src/domain/tasks/mappers.ts",
-        "tests/domain-task-semantics.test.ts"
-      ]
+        "src/domain/tasks/canonical-semantics.ts",
+        "tests/domain-task-semantics.test.ts",
+        "tests/workspace-semantic-invariants.test.ts"
+      ],
+      "excludes": []
     },
     {
       "id": "F2",
-      "name": "Workspace URL/State & Query Engine",
-      "owner": "F2",
+      "name": "Query / scope / loading",
+      "owner": "shard-f2-query",
       "files": [
         "src/lib/workspace-query.ts",
         "src/hooks/use-workspace-query.ts",
+        "src/app/tasks/page.tsx",
+        "src/app/tasks/tasks-page-client.tsx",
         "tests/workspace-query.test.ts"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "F3",
-      "name": "Shared Workspace UI Primitives",
-      "owner": "F3",
+      "name": "Create command",
+      "owner": "shard-f3-create",
       "files": [
-        "src/components/workspace/scope-switcher.tsx",
-        "src/components/workspace/period-selector.tsx",
-        "src/components/workspace/workspace-toolbar.tsx",
-        "src/components/workspace/status-filter.tsx",
-        "src/components/workspace/view-switcher.tsx",
-        "src/components/workspace/metric-strip.tsx",
-        "src/components/workspace/attention-badge.tsx",
-        "src/components/workspace/action-queue-shell.tsx",
-        "tests/workspace-primitives.test.ts"
-      ]
-    },
-    {
-      "id": "F4",
-      "name": "Invariant & Cross-Domain Test Harness",
-      "owner": "F4",
-      "files": [
-        "tests/workspace-semantic-invariants.test.ts",
-        "tests/workspace-count-invariants.test.ts",
-        "tests/workspace-ui-invariants.test.ts"
-      ]
+        "tests/contracts/**",
+        "tests/task-data-contracts.test.ts"
+      ],
+      "excludes": [],
+      "notes": "Owns the canonical create mapper (created within F3 discretion, non-overlapping). Touch API/schema only with proof."
     },
     {
       "id": "P1",
-      "name": "Tasks Page Migration",
-      "owner": "P1",
+      "name": "Tasks presentation",
+      "owner": "shard-p1-tasks",
       "files": [
-        "src/app/tasks/page.tsx",
-        "src/app/tasks/tasks-page-client.tsx",
-        "src/components/tasks/task-kanban-board.tsx",
         "src/components/dashboard/unified-task-toolbar.tsx",
-        "src/components/workspace/unified-adaptive-workspace.tsx"
-      ]
+        "src/components/tasks/table/**",
+        "src/components/tasks/task-kanban-board.tsx",
+        "src/components/tasks/saved-views-selector.tsx"
+      ],
+      "excludes": []
     },
     {
       "id": "P2",
-      "name": "Calendar Migration",
-      "owner": "P2",
+      "name": "Detail",
+      "owner": "shard-p2-detail",
       "files": [
-        "src/app/calendar/page.tsx",
-        "src/components/calendar/calendar-month-grid.tsx",
-        "src/components/calendar/calendar-day-sheet.tsx",
-        "src/lib/academic-calendar.ts"
-      ]
+        "src/components/dashboard/task-detail-side-sheet.tsx"
+      ],
+      "excludes": []
     },
     {
       "id": "P3",
-      "name": "Dashboard Migration",
-      "owner": "P3",
+      "name": "Create form",
+      "owner": "shard-p3-create-form",
+      "files": [
+        "src/components/dashboard/create-task-modal.tsx"
+      ],
+      "excludes": [],
+      "notes": "Optional extracted create subcomponents allowed (F3/P3 boundary respected)."
+    },
+    {
+      "id": "P4",
+      "name": "Calendar",
+      "owner": "shard-p4-calendar",
+      "files": [
+        "src/app/calendar/page.tsx",
+        "src/components/calendar/**"
+      ],
+      "excludes": []
+    },
+    {
+      "id": "P5",
+      "name": "Workbench",
+      "owner": "shard-p5-workbench",
       "files": [
         "src/app/dashboard/page.tsx",
-        "src/components/dashboard/executive-action-center.tsx",
-        "src/components/dashboard/executive-stat-strip.tsx",
-        "src/components/dashboard/workbench-mobile-feed.tsx",
-        "src/components/dashboard/smart-workbox.tsx",
-        "src/lib/executive-matrix-aggregator.ts"
-      ]
+        "src/app/page.tsx",
+        "src/components/dashboard/**"
+      ],
+      "excludes": [
+        "src/components/dashboard/unified-task-toolbar.tsx",
+        "src/components/dashboard/task-detail-side-sheet.tsx",
+        "src/components/dashboard/create-task-modal.tsx"
+      ],
+      "notes": "Active dashboard composition files only; excludes P1/P2/P3-owned dashboard files."
+    },
+    {
+      "id": "P6",
+      "name": "Navigation / global interaction",
+      "owner": "shard-p6-navigation",
+      "files": [
+        "src/lib/navigation/**",
+        "src/components/layout/app-sidebar.tsx",
+        "src/components/navigation/mobile-bottom-nav.tsx",
+        "src/components/layout/mobile-menu-drawer.tsx",
+        "src/components/layout/command-search-modal.tsx"
+      ],
+      "excludes": []
+    },
+    {
+      "id": "P7",
+      "name": "Notifications",
+      "owner": "shard-p7-notifications",
+      "files": [
+        "src/app/notifications/page.tsx",
+        "src/components/notifications/**",
+        "src/lib/notification-triage.ts"
+      ],
+      "excludes": []
+    },
+    {
+      "id": "P8",
+      "name": "Documents",
+      "owner": "shard-p8-documents",
+      "files": [
+        "src/app/documents/page.tsx",
+        "src/components/documents/**"
+      ],
+      "excludes": []
+    },
+    {
+      "id": "P9",
+      "name": "Org",
+      "owner": "shard-p9-org",
+      "files": [
+        "src/app/org/page.tsx",
+        "src/components/org/**"
+      ],
+      "excludes": []
+    },
+    {
+      "id": "P10",
+      "name": "Offline / PWA",
+      "owner": "shard-p10-offline",
+      "files": [
+        "src/components/pwa/**",
+        "src/lib/pwa/**"
+      ],
+      "excludes": []
     }
-  ]
+  ],
+  "laneUniqueness": {
+    "invariant": "No two lanes claim the same literal path. A glob claim is disjoint from any other lane's glob or literal path, after applying that lane's excludes. Every lane owns at least one path.",
+    "owner": "shard-contracts-freeze",
+    "status": "asserted",
+    "manualReview": {
+      "date": "2026-09-12",
+      "method": "Every lane claim inspected; each glob expanded against other lanes' literals after applying excludes.",
+      "result": "No double-claim. P5 glob src/components/dashboard/** is disjoint from the P1/P2/P3 dashboard literals via P5.excludes (unified-task-toolbar.tsx, task-detail-side-sheet.tsx, create-task-modal.tsx). Every lane owns at least one path."
+    },
+    "crossLaneRequest": "Executable enforcement is out of this shard's ownership (tests/** is anti-owned here). Request to the tests lane: expand each lane's glob, apply its excludes, and assert pairwise path disjointness plus at least one path per lane."
+  },
+  "fallbackRule": "Shared/root/config files and any path not listed above are Integrator-only until explicitly reassigned."
 }

@@ -1,0 +1,2526 @@
+{
+  "schemaVersion": "1.0.0",
+  "label": "baseline",
+  "generatedAt": "2026-09-13T03:46:22.364Z",
+  "gitSha": "7363c4309007a776269f57cb3058bb64cf059c2e",
+  "base": "http://127.0.0.1:3000",
+  "runs": 5,
+  "settleMs": 2000,
+  "viewports": [
+    {
+      "key": "desktop",
+      "suffix": "1440x900",
+      "width": 1440,
+      "height": 900,
+      "mobile": false
+    },
+    {
+      "key": "mobile",
+      "suffix": "390x844",
+      "width": 390,
+      "height": 844,
+      "mobile": true
+    }
+  ],
+  "dataset": {
+    "taskId": "cmtwgbysl002xi5nosto6ykr4",
+    "note": "Measured against the live app dataset at capture time; same-data pin = session cookie + canonical route (no legacy ?zone=) + task detail id."
+  },
+  "methodology": {
+    "instrument": "raw CDP + in-page buffered PerformanceObserver",
+    "p75Semantics": "lab p75 = 75th percentile across K repeated lab runs of the same route; NOT the field p75 which is across page loads.",
+    "inputChannel": "Input.dispatchMouseEvent / dispatchKeyEvent (trusted; in-page synthetic clicks excluded from INP)",
+    "interactionLatency": "max Event Timing duration of trusted interactions triggered during the cell (no p98 trimming at lab interaction counts)"
+  },
+  "results": [
+    {
+      "route": "home",
+      "path": "/",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 252,
+          "p75": 268,
+          "min": 248,
+          "max": 272
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.011,
+          "p75": 0.011,
+          "min": 0.011,
+          "max": 0.011
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 109.3,
+          "p75": 110.1,
+          "min": 85.5,
+          "max": 123.6
+        },
+        "FCP": {
+          "n": 5,
+          "median": 248,
+          "p75": 248,
+          "min": 196,
+          "max": 268
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 268,
+          "cls": 0.0113,
+          "ttfb": 85.5,
+          "fcp": 268,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 248,
+          "cls": 0.0113,
+          "ttfb": 123.60000002384186,
+          "fcp": 248,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 252,
+          "cls": 0.0113,
+          "ttfb": 91.2999999821186,
+          "fcp": 196,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 272,
+          "cls": 0.0113,
+          "ttfb": 109.30000001192093,
+          "fcp": 212,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 248,
+          "cls": 0.0113,
+          "ttfb": 110.10000002384186,
+          "fcp": 248,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "tasks-table",
+      "path": "/tasks",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": "filter",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 3276,
+          "p75": 3296,
+          "min": 3140,
+          "max": 3300
+        },
+        "INP": {
+          "n": 5,
+          "median": 72,
+          "p75": 72,
+          "min": 48,
+          "max": 72
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.062,
+          "p75": 0.062,
+          "min": 0.062,
+          "max": 0.062
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 108.3,
+          "p75": 112.2,
+          "min": 24.8,
+          "max": 114.4
+        },
+        "FCP": {
+          "n": 5,
+          "median": 244,
+          "p75": 256,
+          "min": 112,
+          "max": 280
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 3276,
+          "cls": 0.0624,
+          "ttfb": 108.2999999821186,
+          "fcp": 244,
+          "inp": 72,
+          "interactionKind": "filter",
+          "eventEntries": 21,
+          "interactionEntries": 3
+        },
+        {
+          "run": 2,
+          "lcp": 3296,
+          "cls": 0.0624,
+          "ttfb": 114.40000000596046,
+          "fcp": 256,
+          "inp": 72,
+          "interactionKind": "filter",
+          "eventEntries": 21,
+          "interactionEntries": 3
+        },
+        {
+          "run": 3,
+          "lcp": 3300,
+          "cls": 0.0624,
+          "ttfb": 112.2000000178814,
+          "fcp": 280,
+          "inp": 72,
+          "interactionKind": "filter",
+          "eventEntries": 21,
+          "interactionEntries": 3
+        },
+        {
+          "run": 4,
+          "lcp": 3180,
+          "cls": 0.0624,
+          "ttfb": 40.30000001192093,
+          "fcp": 204,
+          "inp": 72,
+          "interactionKind": "filter",
+          "eventEntries": 21,
+          "interactionEntries": 3
+        },
+        {
+          "run": 5,
+          "lcp": 3140,
+          "cls": 0.0624,
+          "ttfb": 24.80000001192093,
+          "fcp": 112,
+          "inp": 48,
+          "interactionKind": "filter",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        }
+      ]
+    },
+    {
+      "route": "tasks-kanban",
+      "path": "/tasks",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 692,
+          "p75": 720,
+          "min": 228,
+          "max": 780
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.062,
+          "p75": 0.102,
+          "min": 0.062,
+          "max": 0.102
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 96.5,
+          "p75": 100.9,
+          "min": 28.9,
+          "max": 188.1
+        },
+        "FCP": {
+          "n": 5,
+          "median": 248,
+          "p75": 252,
+          "min": 136,
+          "max": 340
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 228,
+          "cls": 0.1022,
+          "ttfb": 94,
+          "fcp": 228,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 692,
+          "cls": 0.0624,
+          "ttfb": 100.89999997615814,
+          "fcp": 252,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 668,
+          "cls": 0.0624,
+          "ttfb": 28.899999976158142,
+          "fcp": 136,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 780,
+          "cls": 0.0624,
+          "ttfb": 96.5,
+          "fcp": 248,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 720,
+          "cls": 0.1022,
+          "ttfb": 188.09999999403954,
+          "fcp": 340,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "tasks-detail",
+      "path": "/tasks?taskId=cmtwgbysl002xi5nosto6ykr4",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 728,
+          "p75": 832,
+          "min": 248,
+          "max": 892
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.063,
+          "p75": 0.063,
+          "min": 0.063,
+          "max": 0.102
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 99.9,
+          "p75": 106.8,
+          "min": 32,
+          "max": 109.4
+        },
+        "FCP": {
+          "n": 5,
+          "median": 240,
+          "p75": 240,
+          "min": 132,
+          "max": 248
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 248,
+          "cls": 0.1022,
+          "ttfb": 109.40000000596046,
+          "fcp": 248,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 620,
+          "cls": 0.0625,
+          "ttfb": 32,
+          "fcp": 132,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 728,
+          "cls": 0.0625,
+          "ttfb": 97.59999999403954,
+          "fcp": 240,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 832,
+          "cls": 0.0625,
+          "ttfb": 106.80000001192093,
+          "fcp": 240,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 892,
+          "cls": 0.0625,
+          "ttfb": 99.90000000596046,
+          "fcp": 232,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "tasks-open-detail",
+      "path": "/tasks",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": "detail-open",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 3180,
+          "p75": 3196,
+          "min": 3168,
+          "max": 3268
+        },
+        "INP": {
+          "n": 5,
+          "median": 152,
+          "p75": 152,
+          "min": 96,
+          "max": 160
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.062,
+          "p75": 0.062,
+          "min": 0.062,
+          "max": 0.062
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 29.2,
+          "p75": 30.6,
+          "min": 26.3,
+          "max": 103.2
+        },
+        "FCP": {
+          "n": 5,
+          "median": 224,
+          "p75": 256,
+          "min": 140,
+          "max": 264
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 3268,
+          "cls": 0.0624,
+          "ttfb": 103.19999998807907,
+          "fcp": 256,
+          "inp": 152,
+          "interactionKind": "detail-open",
+          "eventEntries": 94,
+          "interactionEntries": 3
+        },
+        {
+          "run": 2,
+          "lcp": 3180,
+          "cls": 0.0624,
+          "ttfb": 30.599999994039536,
+          "fcp": 148,
+          "inp": 136,
+          "interactionKind": "detail-open",
+          "eventEntries": 94,
+          "interactionEntries": 3
+        },
+        {
+          "run": 3,
+          "lcp": 3172,
+          "cls": 0.0624,
+          "ttfb": 26.30000001192093,
+          "fcp": 140,
+          "inp": 152,
+          "interactionKind": "detail-open",
+          "eventEntries": 94,
+          "interactionEntries": 3
+        },
+        {
+          "run": 4,
+          "lcp": 3168,
+          "cls": 0.0624,
+          "ttfb": 29.200000017881393,
+          "fcp": 264,
+          "inp": 96,
+          "interactionKind": "detail-open",
+          "eventEntries": 94,
+          "interactionEntries": 3
+        },
+        {
+          "run": 5,
+          "lcp": 3196,
+          "cls": 0.0624,
+          "ttfb": 28.400000005960464,
+          "fcp": 224,
+          "inp": 160,
+          "interactionKind": "detail-open",
+          "eventEntries": 94,
+          "interactionEntries": 3
+        }
+      ]
+    },
+    {
+      "route": "tasks-search",
+      "path": "/tasks",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": "search",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 3168,
+          "p75": 3188,
+          "min": 3112,
+          "max": 3196
+        },
+        "INP": {
+          "n": 5,
+          "median": 72,
+          "p75": 72,
+          "min": 64,
+          "max": 80
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.062,
+          "p75": 0.062,
+          "min": 0.062,
+          "max": 0.062
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 27.3,
+          "p75": 28.7,
+          "min": 24.9,
+          "max": 33.2
+        },
+        "FCP": {
+          "n": 5,
+          "median": 184,
+          "p75": 192,
+          "min": 164,
+          "max": 232
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 3112,
+          "cls": 0.0624,
+          "ttfb": 25.5,
+          "fcp": 232,
+          "inp": 80,
+          "interactionKind": "search",
+          "eventEntries": 39,
+          "interactionEntries": 23
+        },
+        {
+          "run": 2,
+          "lcp": 3152,
+          "cls": 0.0624,
+          "ttfb": 33.20000001788139,
+          "fcp": 192,
+          "inp": 64,
+          "interactionKind": "search",
+          "eventEntries": 34,
+          "interactionEntries": 20
+        },
+        {
+          "run": 3,
+          "lcp": 3168,
+          "cls": 0.0624,
+          "ttfb": 24.900000005960464,
+          "fcp": 164,
+          "inp": 72,
+          "interactionKind": "search",
+          "eventEntries": 39,
+          "interactionEntries": 23
+        },
+        {
+          "run": 4,
+          "lcp": 3188,
+          "cls": 0.0624,
+          "ttfb": 28.69999998807907,
+          "fcp": 176,
+          "inp": 64,
+          "interactionKind": "search",
+          "eventEntries": 40,
+          "interactionEntries": 24
+        },
+        {
+          "run": 5,
+          "lcp": 3196,
+          "cls": 0.0624,
+          "ttfb": 27.299999982118607,
+          "fcp": 184,
+          "inp": 72,
+          "interactionKind": "search",
+          "eventEntries": 39,
+          "interactionEntries": 23
+        }
+      ]
+    },
+    {
+      "route": "tasks-bulk",
+      "path": "/tasks",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": "bulk-select",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 3180,
+          "p75": 3188,
+          "min": 3176,
+          "max": 3276
+        },
+        "INP": {
+          "n": 5,
+          "median": 32,
+          "p75": 32,
+          "min": 32,
+          "max": 40
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.062,
+          "p75": 0.062,
+          "min": 0.062,
+          "max": 0.062
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 29.7,
+          "p75": 40.6,
+          "min": 25.4,
+          "max": 119.1
+        },
+        "FCP": {
+          "n": 5,
+          "median": 148,
+          "p75": 216,
+          "min": 120,
+          "max": 244
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 3188,
+          "cls": 0.0624,
+          "ttfb": 29.69999998807907,
+          "fcp": 148,
+          "inp": 32,
+          "interactionKind": "bulk-select",
+          "eventEntries": 28,
+          "interactionEntries": 3
+        },
+        {
+          "run": 2,
+          "lcp": 3180,
+          "cls": 0.0624,
+          "ttfb": 27.80000001192093,
+          "fcp": 148,
+          "inp": 32,
+          "interactionKind": "bulk-select",
+          "eventEntries": 28,
+          "interactionEntries": 3
+        },
+        {
+          "run": 3,
+          "lcp": 3276,
+          "cls": 0.0624,
+          "ttfb": 119.09999999403954,
+          "fcp": 244,
+          "inp": 32,
+          "interactionKind": "bulk-select",
+          "eventEntries": 28,
+          "interactionEntries": 3
+        },
+        {
+          "run": 4,
+          "lcp": 3176,
+          "cls": 0.0624,
+          "ttfb": 40.599999994039536,
+          "fcp": 216,
+          "inp": 40,
+          "interactionKind": "bulk-select",
+          "eventEntries": 28,
+          "interactionEntries": 3
+        },
+        {
+          "run": 5,
+          "lcp": 3180,
+          "cls": 0.0624,
+          "ttfb": 25.400000005960464,
+          "fcp": 120,
+          "inp": 32,
+          "interactionKind": "bulk-select",
+          "eventEntries": 28,
+          "interactionEntries": 3
+        }
+      ]
+    },
+    {
+      "route": "calendar",
+      "path": "/calendar",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": "calendar-nav",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 228,
+          "p75": 232,
+          "min": 220,
+          "max": 232
+        },
+        "INP": {
+          "n": 5,
+          "median": 120,
+          "p75": 120,
+          "min": 112,
+          "max": 136
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.001,
+          "p75": 0.001,
+          "min": 0.001,
+          "max": 0.001
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 6.5,
+          "p75": 7.3,
+          "min": 5.6,
+          "max": 8.9
+        },
+        "FCP": {
+          "n": 5,
+          "median": 96,
+          "p75": 116,
+          "min": 92,
+          "max": 124
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 232,
+          "cls": 0.0013,
+          "ttfb": 8.900000005960464,
+          "fcp": 116,
+          "inp": 136,
+          "interactionKind": "calendar-nav",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        },
+        {
+          "run": 2,
+          "lcp": 224,
+          "cls": 0.0013,
+          "ttfb": 7.299999982118607,
+          "fcp": 96,
+          "inp": 120,
+          "interactionKind": "calendar-nav",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        },
+        {
+          "run": 3,
+          "lcp": 228,
+          "cls": 0.0013,
+          "ttfb": 5.600000023841858,
+          "fcp": 92,
+          "inp": 120,
+          "interactionKind": "calendar-nav",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        },
+        {
+          "run": 4,
+          "lcp": 232,
+          "cls": 0.0013,
+          "ttfb": 6.5,
+          "fcp": 92,
+          "inp": 112,
+          "interactionKind": "calendar-nav",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        },
+        {
+          "run": 5,
+          "lcp": 220,
+          "cls": 0.0013,
+          "ttfb": 5.800000011920929,
+          "fcp": 124,
+          "inp": 120,
+          "interactionKind": "calendar-nav",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        }
+      ]
+    },
+    {
+      "route": "notifications",
+      "path": "/notifications",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 256,
+          "p75": 256,
+          "min": 240,
+          "max": 276
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.001,
+          "p75": 0.001,
+          "min": 0.001,
+          "max": 0.001
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 7.2,
+          "p75": 7.9,
+          "min": 6.7,
+          "max": 8.3
+        },
+        "FCP": {
+          "n": 5,
+          "median": 136,
+          "p75": 140,
+          "min": 100,
+          "max": 148
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 276,
+          "cls": 0.0013,
+          "ttfb": 7.9000000059604645,
+          "fcp": 148,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 256,
+          "cls": 0.0013,
+          "ttfb": 6.699999988079071,
+          "fcp": 100,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 248,
+          "cls": 0.0013,
+          "ttfb": 7.199999988079071,
+          "fcp": 128,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 256,
+          "cls": 0.0013,
+          "ttfb": 7.0999999940395355,
+          "fcp": 140,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 240,
+          "cls": 0.0013,
+          "ttfb": 8.299999982118607,
+          "fcp": 136,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "documents",
+      "path": "/documents",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 132,
+          "p75": 136,
+          "min": 116,
+          "max": 140
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.002,
+          "p75": 0.002,
+          "min": 0.002,
+          "max": 0.002
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 7.5,
+          "p75": 7.5,
+          "min": 6.8,
+          "max": 7.5
+        },
+        "FCP": {
+          "n": 5,
+          "median": 132,
+          "p75": 136,
+          "min": 116,
+          "max": 140
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 116,
+          "cls": 0.0015,
+          "ttfb": 7.4000000059604645,
+          "fcp": 116,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 140,
+          "cls": 0.0015,
+          "ttfb": 6.800000011920929,
+          "fcp": 140,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 132,
+          "cls": 0.0015,
+          "ttfb": 7.5,
+          "fcp": 132,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 136,
+          "cls": 0.0015,
+          "ttfb": 7.5,
+          "fcp": 136,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 132,
+          "cls": 0.0017,
+          "ttfb": 7.5,
+          "fcp": 132,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "org",
+      "path": "/org",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 292,
+          "p75": 300,
+          "min": 288,
+          "max": 308
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.001,
+          "p75": 0.001,
+          "min": 0.001,
+          "max": 0.001
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 7.8,
+          "p75": 8,
+          "min": 7.6,
+          "max": 8.6
+        },
+        "FCP": {
+          "n": 5,
+          "median": 108,
+          "p75": 132,
+          "min": 108,
+          "max": 144
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 308,
+          "cls": 0.0013,
+          "ttfb": 8.599999994039536,
+          "fcp": 108,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 300,
+          "cls": 0.0013,
+          "ttfb": 7.5999999940395355,
+          "fcp": 132,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 288,
+          "cls": 0.0013,
+          "ttfb": 7.799999982118607,
+          "fcp": 144,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 292,
+          "cls": 0.0013,
+          "ttfb": 8,
+          "fcp": 108,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 288,
+          "cls": 0.0013,
+          "ttfb": 7.799999982118607,
+          "fcp": 108,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "command-search",
+      "path": "/",
+      "viewport": "desktop",
+      "viewportPx": "1440x900",
+      "interactionKind": "command-results",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 292,
+          "p75": 324,
+          "min": 260,
+          "max": 348
+        },
+        "INP": {
+          "n": 5,
+          "median": 128,
+          "p75": 136,
+          "min": 112,
+          "max": 144
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0.011,
+          "p75": 0.011,
+          "min": 0.011,
+          "max": 0.011
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 111,
+          "p75": 113.2,
+          "min": 79.4,
+          "max": 120.9
+        },
+        "FCP": {
+          "n": 5,
+          "median": 264,
+          "p75": 288,
+          "min": 256,
+          "max": 292
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 260,
+          "cls": 0.0113,
+          "ttfb": 120.90000000596046,
+          "fcp": 260,
+          "inp": 144,
+          "interactionKind": "command-results",
+          "eventEntries": 63,
+          "interactionEntries": 27
+        },
+        {
+          "run": 2,
+          "lcp": 292,
+          "cls": 0.0113,
+          "ttfb": 79.39999997615814,
+          "fcp": 256,
+          "inp": 128,
+          "interactionKind": "command-results",
+          "eventEntries": 63,
+          "interactionEntries": 27
+        },
+        {
+          "run": 3,
+          "lcp": 264,
+          "cls": 0.0113,
+          "ttfb": 113.19999998807907,
+          "fcp": 264,
+          "inp": 136,
+          "interactionKind": "command-results",
+          "eventEntries": 63,
+          "interactionEntries": 27
+        },
+        {
+          "run": 4,
+          "lcp": 324,
+          "cls": 0.0113,
+          "ttfb": 109,
+          "fcp": 292,
+          "inp": 112,
+          "interactionKind": "command-results",
+          "eventEntries": 62,
+          "interactionEntries": 26
+        },
+        {
+          "run": 5,
+          "lcp": 348,
+          "cls": 0.0113,
+          "ttfb": 111,
+          "fcp": 288,
+          "inp": 128,
+          "interactionKind": "command-results",
+          "eventEntries": 63,
+          "interactionEntries": 27
+        }
+      ]
+    },
+    {
+      "route": "home",
+      "path": "/",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 320,
+          "p75": 324,
+          "min": 288,
+          "max": 336
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 110.4,
+          "p75": 121.1,
+          "min": 105.2,
+          "max": 123.6
+        },
+        "FCP": {
+          "n": 5,
+          "median": 252,
+          "p75": 256,
+          "min": 236,
+          "max": 284
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 288,
+          "cls": 0,
+          "ttfb": 107.7999999821186,
+          "fcp": 236,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 336,
+          "cls": 0,
+          "ttfb": 123.59999999403954,
+          "fcp": 284,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 320,
+          "cls": 0,
+          "ttfb": 110.40000000596046,
+          "fcp": 252,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 324,
+          "cls": 0,
+          "ttfb": 121.10000002384186,
+          "fcp": 256,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 304,
+          "cls": 0,
+          "ttfb": 105.19999998807907,
+          "fcp": 248,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "tasks-table",
+      "path": "/tasks",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": "filter",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 3168,
+          "p75": 3172,
+          "min": 272,
+          "max": 3228
+        },
+        "INP": {
+          "n": 5,
+          "median": 56,
+          "p75": 56,
+          "min": 32,
+          "max": 64
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 44.8,
+          "p75": 95.2,
+          "min": 26.6,
+          "max": 105.7
+        },
+        "FCP": {
+          "n": 5,
+          "median": 188,
+          "p75": 244,
+          "min": 148,
+          "max": 272
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 3228,
+          "cls": 0,
+          "ttfb": 95.2000000178814,
+          "fcp": 244,
+          "inp": 56,
+          "interactionKind": "filter",
+          "eventEntries": 29,
+          "interactionEntries": 3
+        },
+        {
+          "run": 2,
+          "lcp": 3168,
+          "cls": 0,
+          "ttfb": 30.899999976158142,
+          "fcp": 148,
+          "inp": 32,
+          "interactionKind": "filter",
+          "eventEntries": 29,
+          "interactionEntries": 3
+        },
+        {
+          "run": 3,
+          "lcp": 272,
+          "cls": 0,
+          "ttfb": 105.69999998807907,
+          "fcp": 272,
+          "inp": 40,
+          "interactionKind": "filter",
+          "eventEntries": 13,
+          "interactionEntries": 3
+        },
+        {
+          "run": 4,
+          "lcp": 3148,
+          "cls": 0,
+          "ttfb": 44.79999998211861,
+          "fcp": 188,
+          "inp": 56,
+          "interactionKind": "filter",
+          "eventEntries": 13,
+          "interactionEntries": 3
+        },
+        {
+          "run": 5,
+          "lcp": 3172,
+          "cls": 0,
+          "ttfb": 26.599999994039536,
+          "fcp": 148,
+          "inp": 64,
+          "interactionKind": "filter",
+          "eventEntries": 29,
+          "interactionEntries": 3
+        }
+      ]
+    },
+    {
+      "route": "tasks-kanban",
+      "path": "/tasks",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 272,
+          "p75": 692,
+          "min": 244,
+          "max": 784
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 106.2,
+          "p75": 131.4,
+          "min": 38,
+          "max": 134.7
+        },
+        "FCP": {
+          "n": 5,
+          "median": 252,
+          "p75": 272,
+          "min": 160,
+          "max": 300
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 692,
+          "cls": 0,
+          "ttfb": 38,
+          "fcp": 160,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 272,
+          "cls": 0,
+          "ttfb": 134.69999998807907,
+          "fcp": 272,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 252,
+          "cls": 0,
+          "ttfb": 106.2000000178814,
+          "fcp": 252,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 244,
+          "cls": 0,
+          "ttfb": 99.90000000596046,
+          "fcp": 244,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 784,
+          "cls": 0,
+          "ttfb": 131.40000000596046,
+          "fcp": 300,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "tasks-detail",
+      "path": "/tasks?taskId=cmtwgbysl002xi5nosto6ykr4",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 744,
+          "p75": 768,
+          "min": 252,
+          "max": 772
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 101,
+          "p75": 105.4,
+          "min": 96.2,
+          "max": 116.4
+        },
+        "FCP": {
+          "n": 5,
+          "median": 272,
+          "p75": 296,
+          "min": 252,
+          "max": 300
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 252,
+          "cls": 0,
+          "ttfb": 96.19999998807907,
+          "fcp": 252,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 256,
+          "cls": 0,
+          "ttfb": 101,
+          "fcp": 256,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 772,
+          "cls": 0,
+          "ttfb": 116.40000000596046,
+          "fcp": 296,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 768,
+          "cls": 0,
+          "ttfb": 105.40000000596046,
+          "fcp": 300,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 744,
+          "cls": 0,
+          "ttfb": 97,
+          "fcp": 272,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "tasks-open-detail",
+      "path": "/tasks",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": "detail-open",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 3160,
+          "p75": 3164,
+          "min": 3116,
+          "max": 3244
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 30.6,
+          "p75": 36.5,
+          "min": 24.4,
+          "max": 96.8
+        },
+        "FCP": {
+          "n": 5,
+          "median": 156,
+          "p75": 156,
+          "min": 112,
+          "max": 280
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 3244,
+          "cls": 0,
+          "ttfb": 96.80000001192093,
+          "fcp": 280,
+          "inp": null,
+          "interactionKind": "detail-open",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 2,
+          "lcp": 3148,
+          "cls": 0,
+          "ttfb": 27.80000001192093,
+          "fcp": 156,
+          "inp": null,
+          "interactionKind": "detail-open",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 3,
+          "lcp": 3160,
+          "cls": 0,
+          "ttfb": 30.600000023841858,
+          "fcp": 144,
+          "inp": null,
+          "interactionKind": "detail-open",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 4,
+          "lcp": 3116,
+          "cls": 0,
+          "ttfb": 24.400000005960464,
+          "fcp": 112,
+          "inp": null,
+          "interactionKind": "detail-open",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 5,
+          "lcp": 3164,
+          "cls": 0,
+          "ttfb": 36.5,
+          "fcp": 156,
+          "inp": null,
+          "interactionKind": "detail-open",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        }
+      ],
+      "notes": [
+        "detail-open:no-event-timing-entries",
+        "detail-open:selector-not-found:tr[data-task-id] td:nth-child(2)",
+        "detail-open:no-event-timing-entries",
+        "detail-open:selector-not-found:tr[data-task-id] td:nth-child(2)",
+        "detail-open:no-event-timing-entries",
+        "detail-open:selector-not-found:tr[data-task-id] td:nth-child(2)",
+        "detail-open:no-event-timing-entries",
+        "detail-open:selector-not-found:tr[data-task-id] td:nth-child(2)",
+        "detail-open:no-event-timing-entries",
+        "detail-open:selector-not-found:tr[data-task-id] td:nth-child(2)"
+      ]
+    },
+    {
+      "route": "tasks-search",
+      "path": "/tasks",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": "search",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 3156,
+          "p75": 3160,
+          "min": 180,
+          "max": 3160
+        },
+        "INP": {
+          "n": 5,
+          "median": 56,
+          "p75": 56,
+          "min": 48,
+          "max": 56
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 28.1,
+          "p75": 30.8,
+          "min": 26.6,
+          "max": 67.4
+        },
+        "FCP": {
+          "n": 5,
+          "median": 144,
+          "p75": 148,
+          "min": 136,
+          "max": 180
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 180,
+          "cls": 0,
+          "ttfb": 67.40000000596046,
+          "fcp": 180,
+          "inp": 56,
+          "interactionKind": "search",
+          "eventEntries": 40,
+          "interactionEntries": 24
+        },
+        {
+          "run": 2,
+          "lcp": 3148,
+          "cls": 0,
+          "ttfb": 28.099999994039536,
+          "fcp": 136,
+          "inp": 56,
+          "interactionKind": "search",
+          "eventEntries": 40,
+          "interactionEntries": 24
+        },
+        {
+          "run": 3,
+          "lcp": 3160,
+          "cls": 0,
+          "ttfb": 26.599999994039536,
+          "fcp": 144,
+          "inp": 48,
+          "interactionKind": "search",
+          "eventEntries": 39,
+          "interactionEntries": 23
+        },
+        {
+          "run": 4,
+          "lcp": 3156,
+          "cls": 0,
+          "ttfb": 26.80000001192093,
+          "fcp": 148,
+          "inp": 56,
+          "interactionKind": "search",
+          "eventEntries": 40,
+          "interactionEntries": 24
+        },
+        {
+          "run": 5,
+          "lcp": 3160,
+          "cls": 0,
+          "ttfb": 30.799999982118607,
+          "fcp": 144,
+          "inp": 56,
+          "interactionKind": "search",
+          "eventEntries": 40,
+          "interactionEntries": 24
+        }
+      ]
+    },
+    {
+      "route": "tasks-bulk",
+      "path": "/tasks",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": "bulk-select",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 3144,
+          "p75": 3164,
+          "min": 244,
+          "max": 3172
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 40.3,
+          "p75": 99.3,
+          "min": 27.1,
+          "max": 105.5
+        },
+        "FCP": {
+          "n": 5,
+          "median": 176,
+          "p75": 244,
+          "min": 132,
+          "max": 260
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 3172,
+          "cls": 0,
+          "ttfb": 27.099999994039536,
+          "fcp": 148,
+          "inp": null,
+          "interactionKind": "bulk-select",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 2,
+          "lcp": 260,
+          "cls": 0,
+          "ttfb": 105.5,
+          "fcp": 260,
+          "inp": null,
+          "interactionKind": "bulk-select",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 3,
+          "lcp": 3164,
+          "cls": 0,
+          "ttfb": 40.29999998211861,
+          "fcp": 176,
+          "inp": null,
+          "interactionKind": "bulk-select",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 4,
+          "lcp": 3144,
+          "cls": 0,
+          "ttfb": 28.5,
+          "fcp": 132,
+          "inp": null,
+          "interactionKind": "bulk-select",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 5,
+          "lcp": 244,
+          "cls": 0,
+          "ttfb": 99.30000001192093,
+          "fcp": 244,
+          "inp": null,
+          "interactionKind": "bulk-select",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        }
+      ],
+      "notes": [
+        "bulk-select:no-event-timing-entries",
+        "bulk-select:selector-not-found:tr[data-task-id] td",
+        "bulk-select:no-event-timing-entries",
+        "bulk-select:selector-not-found:tr[data-task-id] td",
+        "bulk-select:no-event-timing-entries",
+        "bulk-select:selector-not-found:tr[data-task-id] td",
+        "bulk-select:no-event-timing-entries",
+        "bulk-select:selector-not-found:tr[data-task-id] td",
+        "bulk-select:no-event-timing-entries",
+        "bulk-select:selector-not-found:tr[data-task-id] td"
+      ]
+    },
+    {
+      "route": "calendar",
+      "path": "/calendar",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": "calendar-nav",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 588,
+          "p75": 588,
+          "min": 548,
+          "max": 600
+        },
+        "INP": {
+          "n": 5,
+          "median": 144,
+          "p75": 144,
+          "min": 136,
+          "max": 152
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 7.1,
+          "p75": 7.6,
+          "min": 6.6,
+          "max": 7.8
+        },
+        "FCP": {
+          "n": 5,
+          "median": 124,
+          "p75": 132,
+          "min": 120,
+          "max": 136
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 548,
+          "cls": 0,
+          "ttfb": 6.9000000059604645,
+          "fcp": 132,
+          "inp": 136,
+          "interactionKind": "calendar-nav",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        },
+        {
+          "run": 2,
+          "lcp": 588,
+          "cls": 0,
+          "ttfb": 7.100000023841858,
+          "fcp": 120,
+          "inp": 152,
+          "interactionKind": "calendar-nav",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        },
+        {
+          "run": 3,
+          "lcp": 600,
+          "cls": 0,
+          "ttfb": 7.5999999940395355,
+          "fcp": 136,
+          "inp": 144,
+          "interactionKind": "calendar-nav",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        },
+        {
+          "run": 4,
+          "lcp": 576,
+          "cls": 0,
+          "ttfb": 7.799999982118607,
+          "fcp": 124,
+          "inp": 136,
+          "interactionKind": "calendar-nav",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        },
+        {
+          "run": 5,
+          "lcp": 588,
+          "cls": 0,
+          "ttfb": 6.5999999940395355,
+          "fcp": 124,
+          "inp": 144,
+          "interactionKind": "calendar-nav",
+          "eventEntries": 5,
+          "interactionEntries": 3
+        }
+      ]
+    },
+    {
+      "route": "notifications",
+      "path": "/notifications",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 120,
+          "p75": 124,
+          "min": 92,
+          "max": 124
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 7.2,
+          "p75": 7.6,
+          "min": 6.9,
+          "max": 8.4
+        },
+        "FCP": {
+          "n": 5,
+          "median": 120,
+          "p75": 124,
+          "min": 92,
+          "max": 124
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 124,
+          "cls": 0,
+          "ttfb": 8.399999976158142,
+          "fcp": 124,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 124,
+          "cls": 0,
+          "ttfb": 6.9000000059604645,
+          "fcp": 124,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 92,
+          "cls": 0,
+          "ttfb": 7.5999999940395355,
+          "fcp": 92,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 120,
+          "cls": 0,
+          "ttfb": 7.199999988079071,
+          "fcp": 120,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 116,
+          "cls": 0,
+          "ttfb": 6.9000000059604645,
+          "fcp": 116,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "documents",
+      "path": "/documents",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 140,
+          "p75": 140,
+          "min": 124,
+          "max": 144
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 7.6,
+          "p75": 8,
+          "min": 7.4,
+          "max": 9.7
+        },
+        "FCP": {
+          "n": 5,
+          "median": 140,
+          "p75": 140,
+          "min": 124,
+          "max": 144
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 124,
+          "cls": 0,
+          "ttfb": 7.5999999940395355,
+          "fcp": 124,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 136,
+          "cls": 0,
+          "ttfb": 7.5,
+          "fcp": 136,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 140,
+          "cls": 0,
+          "ttfb": 9.700000017881393,
+          "fcp": 140,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 140,
+          "cls": 0,
+          "ttfb": 8,
+          "fcp": 140,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 144,
+          "cls": 0,
+          "ttfb": 7.4000000059604645,
+          "fcp": 144,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "org",
+      "path": "/org",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": null,
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 156,
+          "p75": 156,
+          "min": 148,
+          "max": 160
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 8.6,
+          "p75": 8.7,
+          "min": 8.2,
+          "max": 11.5
+        },
+        "FCP": {
+          "n": 5,
+          "median": 156,
+          "p75": 156,
+          "min": 148,
+          "max": 160
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 156,
+          "cls": 0,
+          "ttfb": 8.700000017881393,
+          "fcp": 156,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 2,
+          "lcp": 148,
+          "cls": 0,
+          "ttfb": 8.200000017881393,
+          "fcp": 148,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 3,
+          "lcp": 160,
+          "cls": 0,
+          "ttfb": 8.600000023841858,
+          "fcp": 160,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 4,
+          "lcp": 156,
+          "cls": 0,
+          "ttfb": 8.199999988079071,
+          "fcp": 156,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        },
+        {
+          "run": 5,
+          "lcp": 148,
+          "cls": 0,
+          "ttfb": 11.5,
+          "fcp": 148,
+          "inp": null,
+          "interactionKind": null,
+          "eventEntries": null,
+          "interactionEntries": null
+        }
+      ]
+    },
+    {
+      "route": "command-search",
+      "path": "/",
+      "viewport": "mobile",
+      "viewportPx": "390x844",
+      "interactionKind": "command-results",
+      "runs": 5,
+      "metrics": {
+        "LCP": {
+          "n": 5,
+          "median": 332,
+          "p75": 336,
+          "min": 256,
+          "max": 336
+        },
+        "INP": {
+          "n": 0,
+          "median": null,
+          "p75": null,
+          "min": null,
+          "max": null
+        },
+        "CLS": {
+          "n": 5,
+          "median": 0,
+          "p75": 0,
+          "min": 0,
+          "max": 0
+        },
+        "TTFB": {
+          "n": 5,
+          "median": 117.6,
+          "p75": 120.4,
+          "min": 113.3,
+          "max": 128.5
+        },
+        "FCP": {
+          "n": 5,
+          "median": 264,
+          "p75": 268,
+          "min": 256,
+          "max": 268
+        }
+      },
+      "raw": [
+        {
+          "run": 1,
+          "lcp": 256,
+          "cls": 0,
+          "ttfb": 120.39999997615814,
+          "fcp": 256,
+          "inp": null,
+          "interactionKind": "command-results",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 2,
+          "lcp": 336,
+          "cls": 0,
+          "ttfb": 128.5,
+          "fcp": 268,
+          "inp": null,
+          "interactionKind": "command-results",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 3,
+          "lcp": 316,
+          "cls": 0,
+          "ttfb": 117.59999999403954,
+          "fcp": 256,
+          "inp": null,
+          "interactionKind": "command-results",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 4,
+          "lcp": 332,
+          "cls": 0,
+          "ttfb": 115.90000000596046,
+          "fcp": 264,
+          "inp": null,
+          "interactionKind": "command-results",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        },
+        {
+          "run": 5,
+          "lcp": 336,
+          "cls": 0,
+          "ttfb": 113.30000001192093,
+          "fcp": 268,
+          "inp": null,
+          "interactionKind": "command-results",
+          "eventEntries": 0,
+          "interactionEntries": 0
+        }
+      ],
+      "notes": [
+        "command-results:no-event-timing-entries",
+        "command-results:palette-input-not-found",
+        "command-results:no-event-timing-entries",
+        "command-results:palette-input-not-found",
+        "command-results:no-event-timing-entries",
+        "command-results:palette-input-not-found",
+        "command-results:no-event-timing-entries",
+        "command-results:palette-input-not-found",
+        "command-results:no-event-timing-entries",
+        "command-results:palette-input-not-found"
+      ]
+    }
+  ],
+  "problems": [
+    "tasks-open-detail@mobile: interaction 'detail-open' produced no latency samples",
+    "tasks-bulk@mobile: interaction 'bulk-select' produced no latency samples",
+    "command-search@mobile: interaction 'command-results' produced no latency samples"
+  ]
+}

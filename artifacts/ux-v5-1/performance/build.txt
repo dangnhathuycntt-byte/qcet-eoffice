@@ -1,0 +1,153 @@
+# S-PERF R-092 production build evidence
+# command: npm run build  (next build)
+# cwd: /home/dnhhuy/projects/qcet-eoffice
+# capturedAt: 2026-09-13T03:23:51.980Z
+
+
+> qcet-eoffice@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.25
+   - Environments: .env
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ⚠ Next.js can't recognize the exported `runtime` field in "/api/push/subscribe/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `dynamic` field in "/api/push/subscribe/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `runtime` field in "/api/push/test/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `dynamic` field in "/api/push/test/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `runtime` field in "/api/push/subscribe/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `dynamic` field in "/api/push/subscribe/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `runtime` field in "/api/push/test/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `dynamic` field in "/api/push/test/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `runtime` field in "/api/push/subscribe/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `dynamic` field in "/api/push/subscribe/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `runtime` field in "/api/push/test/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `dynamic` field in "/api/push/test/route", it may be re-exported from another file. The default config will be used instead.
+ ✓ Compiled successfully in 14.7s
+   Linting and checking validity of types ...
+   Collecting page data ...
+ ⚠ Next.js can't recognize the exported `runtime` field in "/api/push/test/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `dynamic` field in "/api/push/test/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `runtime` field in "/api/push/subscribe/route", it may be re-exported from another file. The default config will be used instead.
+ ⚠ Next.js can't recognize the exported `dynamic` field in "/api/push/subscribe/route", it may be re-exported from another file. The default config will be used instead.
+   Generating static pages (0/38) ...
+   Generating static pages (9/38) 
+   Generating static pages (18/38) 
+   Generating static pages (28/38) 
+ ✓ Generating static pages (38/38)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                               Size  First Load JS
+┌ ƒ /                                                  43.8 kB         357 kB
+├ ○ /_not-found                                           1 kB         104 kB
+├ ƒ /api/auth/callback/google                            352 B         103 kB
+├ ƒ /api/auth/google                                     352 B         103 kB
+├ ƒ /api/auth/login                                      352 B         103 kB
+├ ƒ /api/auth/logout                                     352 B         103 kB
+├ ƒ /api/auth/me                                         352 B         103 kB
+├ ƒ /api/auth/register                                   352 B         103 kB
+├ ƒ /api/csp-report                                      352 B         103 kB
+├ ƒ /api/dashboard/overview                              352 B         103 kB
+├ ƒ /api/delegations                                     352 B         103 kB
+├ ƒ /api/delegations/[id]/revoke                         352 B         103 kB
+├ ƒ /api/documents                                       352 B         103 kB
+├ ƒ /api/documents/[id]                                  352 B         103 kB
+├ ƒ /api/documents/[id]/actions/approve-content          352 B         103 kB
+├ ƒ /api/documents/[id]/actions/approve-format           352 B         103 kB
+├ ƒ /api/documents/[id]/actions/assign-number            352 B         103 kB
+├ ƒ /api/documents/[id]/actions/assign-unit              352 B         103 kB
+├ ƒ /api/documents/[id]/actions/direct                   352 B         103 kB
+├ ƒ /api/documents/[id]/actions/file                     352 B         103 kB
+├ ƒ /api/documents/[id]/actions/issue                    352 B         103 kB
+├ ƒ /api/documents/[id]/actions/organization-sign        352 B         103 kB
+├ ƒ /api/documents/[id]/actions/present                  352 B         103 kB
+├ ƒ /api/documents/[id]/actions/resolve                  352 B         103 kB
+├ ƒ /api/documents/[id]/actions/revision                 352 B         103 kB
+├ ƒ /api/documents/[id]/actions/sign                     352 B         103 kB
+├ ƒ /api/documents/[id]/actions/submit-content-review    352 B         103 kB
+├ ƒ /api/documents/[id]/actions/submit-format-check      352 B         103 kB
+├ ƒ /api/documents/[id]/directives                       352 B         103 kB
+├ ƒ /api/documents/[id]/workflow                         352 B         103 kB
+├ ƒ /api/documents/download                              352 B         103 kB
+├ ƒ /api/documents/export-excel                          352 B         103 kB
+├ ƒ /api/documents/incoming                              352 B         103 kB
+├ ƒ /api/documents/incoming/[id]                         352 B         103 kB
+├ ƒ /api/documents/outgoing                              352 B         103 kB
+├ ƒ /api/documents/stats                                 352 B         103 kB
+├ ƒ /api/dossiers                                        352 B         103 kB
+├ ƒ /api/dossiers/[id]                                   352 B         103 kB
+├ ƒ /api/dossiers/[id]/actions/accept-archive            352 B         103 kB
+├ ƒ /api/dossiers/[id]/actions/close                     352 B         103 kB
+├ ƒ /api/dossiers/[id]/actions/submit-archive            352 B         103 kB
+├ ƒ /api/dossiers/[id]/items                             352 B         103 kB
+├ ƒ /api/executive/resolutions                           352 B         103 kB
+├ ƒ /api/files/[...path]                                 352 B         103 kB
+├ ƒ /api/health                                          352 B         103 kB
+├ ƒ /api/health/live                                     352 B         103 kB
+├ ƒ /api/health/ready                                    352 B         103 kB
+├ ƒ /api/me/context                                      352 B         103 kB
+├ ƒ /api/me/inbox                                        352 B         103 kB
+├ ƒ /api/meetings                                        352 B         103 kB
+├ ƒ /api/meetings/[id]                                   352 B         103 kB
+├ ƒ /api/meetings/[id]/actions/confirm-minutes           352 B         103 kB
+├ ƒ /api/meetings/[id]/actions/draft-minutes             352 B         103 kB
+├ ƒ /api/meetings/[id]/actions/hold                      352 B         103 kB
+├ ƒ /api/meetings/[id]/participants                      352 B         103 kB
+├ ƒ /api/meetings/[id]/resolutions                       352 B         103 kB
+├ ƒ /api/notifications                                   352 B         103 kB
+├ ƒ /api/notifications/[id]/read                         352 B         103 kB
+├ ƒ /api/notifications/push                              352 B         103 kB
+├ ƒ /api/notifications/push/key                          352 B         103 kB
+├ ƒ /api/notifications/push/subscribe                    352 B         103 kB
+├ ƒ /api/notifications/push/test                         352 B         103 kB
+├ ƒ /api/notifications/read-all                          352 B         103 kB
+├ ƒ /api/organization/bodies                             352 B         103 kB
+├ ƒ /api/organization/bodies/[id]                        352 B         103 kB
+├ ƒ /api/push/subscribe                                  352 B         103 kB
+├ ƒ /api/push/test                                       352 B         103 kB
+├ ƒ /api/runtime-config                                  352 B         103 kB
+├ ƒ /api/search                                          352 B         103 kB
+├ ƒ /api/system/network-info                             352 B         103 kB
+├ ƒ /api/tasks                                           352 B         103 kB
+├ ƒ /api/tasks/[id]                                      352 B         103 kB
+├ ƒ /api/tasks/[id]/actions/approve                      352 B         103 kB
+├ ƒ /api/tasks/[id]/actions/cancel                       352 B         103 kB
+├ ƒ /api/tasks/[id]/actions/reassign                     352 B         103 kB
+├ ƒ /api/tasks/[id]/actions/remind                       352 B         103 kB
+├ ƒ /api/tasks/[id]/actions/request-revision             352 B         103 kB
+├ ƒ /api/tasks/[id]/actions/review                       352 B         103 kB
+├ ƒ /api/tasks/[id]/actions/start                        352 B         103 kB
+├ ƒ /api/tasks/[id]/actions/submit-result                352 B         103 kB
+├ ƒ /api/tasks/[id]/actions/update-progress              352 B         103 kB
+├ ƒ /api/tasks/[id]/deliverables                         352 B         103 kB
+├ ƒ /api/telemetry                                       352 B         103 kB
+├ ƒ /api/users                                           352 B         103 kB
+├ ƒ /api/users/onboarding                                352 B         103 kB
+├ ○ /calendar                                          14.3 kB         299 kB
+├ ○ /dashboard                                           352 B         103 kB
+├ ○ /documents                                         17.7 kB         133 kB
+├ ○ /login                                             7.13 kB         154 kB
+├ ○ /maintenance                                       1.76 kB         120 kB
+├ ○ /manifest.webmanifest                                352 B         103 kB
+├ ○ /notifications                                     7.38 kB         127 kB
+├ ○ /org                                               3.47 kB         133 kB
+├ ○ /portal                                            4.61 kB         121 kB
+├ ○ /settings                                          6.61 kB         173 kB
+├ ƒ /tasks                                             2.57 kB         270 kB
+└ ƒ /unit-tasks                                          352 B         103 kB
++ First Load JS shared by all                           103 kB
+  ├ chunks/1255-623a1bc706ecd6cc.js                    46.1 kB
+  ├ chunks/4bd1b696-100b9d70ed4e49c1.js                54.2 kB
+  └ other shared chunks (total)                        2.37 kB
+
+
+ƒ Middleware                                           34.5 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+# exit code: 0
