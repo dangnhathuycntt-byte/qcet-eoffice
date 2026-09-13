@@ -206,7 +206,7 @@ describe("Task Table Presentation Components - Unit & Behavior Suite", () => {
       const sla = getSlaBadgeStatus("2026-09-01", "IN_PROGRESS", "2026-09-09");
       assert.equal(sla.isOverdue, true);
       assert.equal(sla.isToday, false);
-      assert.ok(sla.label.includes("Quá hạn"));
+      assert.ok(sla.label?.includes("Quá hạn"));
     });
 
     it("evaluates due today SLA status accurately", () => {

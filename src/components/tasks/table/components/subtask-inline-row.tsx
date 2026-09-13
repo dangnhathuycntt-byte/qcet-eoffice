@@ -284,7 +284,7 @@ export const SubtaskInlineRow = React.memo(function SubtaskInlineRow({
             "text-xs tabular-nums font-mono font-semibold px-1.5 py-0.5 rounded border",
             slaStatus.colorClass
           )}
-          title={slaStatus.label}
+          title={slaStatus.label ?? undefined}
         >
           {formatTableDate(subTask.dueDate)}
         </span>
