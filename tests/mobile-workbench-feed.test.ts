@@ -318,4 +318,40 @@ describe("Mobile Workbench Attention-First Feed (/)", () => {
       "Tabular numerals must be applied to counts and dates"
     );
   });
+
+  test("5. P0-03 regression: progress 100 is not completion", () => {
+    // Plan P0-03 / T03: "canonical completion must be lifecycle completion, not
+    // percent". Before the fix the progress bar turned emerald at progress >= 100,
+    // so a task still WAITING_APPROVAL rendered as if it were done.
+    const atFullProgressNotCompleted: SchoolTask[] = [
+      {
+        ...mockTasks[0],
+        id: "task-p0-03",
+        title: "Việc đã đủ 100% nhưng còn chờ phê duyệt",
+        status: "WAITING_APPROVAL",
+        progressPercent: 100,
+        dueDate: "2026-09-09",
+      } as SchoolTask,
+    ];
+
+    const html = renderToStaticMarkup(
+      React.createElement(WorkbenchMobileFeed, {
+        isExecutive: true,
+        stats: mockStats,
+        tasks: atFullProgressNotCompleted,
+        referenceDate: "2026-09-09",
+      })
+    );
+
+    // Guard against a vacuous pass: the fixture must actually render.
+    assert.ok(
+      html.includes("Việc đã đủ 100% nhưng còn chờ phê duyệt"),
+      "fixture task must render, otherwise this regression test proves nothing"
+    );
+    assert.equal(
+      /bg-emerald-500(?![\/\w-])/.test(html),
+      false,
+      "a task at progress 100 that is NOT lifecycle-COMPLETED must not render the completed (emerald) progress bar"
+    );
+  });
 });

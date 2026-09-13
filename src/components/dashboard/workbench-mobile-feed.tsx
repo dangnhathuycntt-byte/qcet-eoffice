@@ -510,6 +510,10 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
           {keyTasksList.map((task) => {
             const dueInfo = formatShortDueDate(task.dueDate, referenceDate);
             const progress = task.progressPercent ?? 0;
+            // P0-03 / T03: completion is LIFECYCLE state, never percent. A task at
+            // progress 100 that is still WAITING_APPROVAL or NEEDS_REVIEW must not
+            // render as done.
+            const isCompleted = task.status === "COMPLETED";
 
             return (
               <div
@@ -564,7 +568,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-300",
-                        progress >= 100
+                        isCompleted
                           ? "bg-emerald-500"
                           : progress >= 50
                           ? "bg-primary"
