@@ -1,3 +1,8 @@
+---
+status: historical-reference
+note: QCET Plan Executor retired 2026-09-13. Runtime contract kept for history only; recoverable code at git tag backup/plan-executor-before-removal.
+---
+
 # QCET Plan Executor - Runtime Contract & Baseline Verification (T00)
 
 **Date**: 2026-09-10  

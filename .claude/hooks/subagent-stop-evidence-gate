@@ -3,7 +3,7 @@
 /**
  * QCET SubagentStop Evidence Gate Hook
  *
- * Enforces architectural lifecycle invariants:
+ * Enforces direct-work evidence invariants:
  * 1. Verifies mandatory structured execution evidence for builder subagents:
  *    - status (string)
  *    - changedFiles (array)
@@ -121,7 +121,7 @@ function recordGateEvent({ type, agentKey }) {
 // BUILDER AGENT IDENTIFICATION
 // -----------------------------------------------------------------------------
 function isBuilderAgent(agentType, agentId, agentRole, label, phase) {
-  // Utility agents (such as telemetry recorder or state synchronizer) are strictly exempted
+  // Utility agents (such as state synchronizers) are strictly exempted
   const labelStr = String(label || '').toLowerCase();
   const phaseStr = String(phase || '').toLowerCase();
   if (
@@ -397,7 +397,7 @@ function main() {
   const phase = data.phase || '';
   const shardId = data.shard_id || data.shardId || '';
 
-  // Fail-Safe: non-builder agents and utility/telemetry agents immediately exit 0
+  // Fail-Safe: non-builder agents and utility agents immediately exit 0
   if (!isBuilderAgent(agentType, agentId, agentRole, subagentLabel, phase)) {
     process.exit(EXIT_ALLOW);
   }

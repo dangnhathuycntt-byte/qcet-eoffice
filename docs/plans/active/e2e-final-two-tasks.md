@@ -1,3 +1,12 @@
+# E2E Final Two Tasks — RETIRED (2026-09-13)
+
+> The QCET Plan Executor was retired. This task list targeted
+> `tests/executor/live-benchmark-harness.test.ts` and
+> `.claude/workflows/qcet-plan-executor.js`, both removed.
+> Executor code is recoverable from git tag `backup/plan-executor-before-removal`.
+> Do not action the tasks below; kept for history only.
+
+---
 # E2E Final Two Tasks
 
 ## Task 1: Fix test 61 (verifyTreatmentFidelity Arm B/C transcript requirement)
