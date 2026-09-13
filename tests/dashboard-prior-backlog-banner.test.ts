@@ -139,9 +139,11 @@ describe("PriorOverdueBacklogBanner & DashboardZone Monthly Scoping", () => {
     );
     assert.match(taskTable, /priorOverdueBacklog/);
 
-    // DashboardZone keeps the macro month partition wiring only.
+    // DashboardZone keeps the macro month partition wiring only. The period control
+    // is GlobalMonthSelector (which owns selectedAcademicMonth); the zone itself
+    // renders the summary from displayedStats.
     const content = fs.readFileSync(zonePath, "utf8");
-    assert.match(content, /selectedAcademicMonth/);
+    assert.match(content, /GlobalMonthSelector/);
     assert.match(content, /displayedStats/);
     assert.match(content, /KỲ VẬN HÀNH THÁNG/);
 

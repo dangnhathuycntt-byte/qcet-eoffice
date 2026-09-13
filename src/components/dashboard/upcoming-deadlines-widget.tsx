@@ -15,6 +15,12 @@ export interface UpcomingDeadlinesWidgetProps {
   className?: string;
   initialLimit?: number;
   viewAllHref?: string;
+  /**
+   * Size of the full deadline window. Defaults to `items.length`. Carried
+   * explicitly so a caller can never mistake the preview slice for the total
+   * (plan T07.4).
+   */
+  total?: number;
 }
 
 export function parseDateOnly(input: string | Date): { year: number; month: number; day: number } {
@@ -94,9 +100,13 @@ export function UpcomingDeadlinesWidget({
   onSelectTask,
   className,
   initialLimit = 5,
-  viewAllHref = "/tasks?filter=upcoming",
+  // `view=table` is a value the /tasks query parser really consumes; `filter` was
+  // silently ignored and led to a dead drill-down (plan T07.7 / T08.1).
+  viewAllHref = "/tasks?view=table",
+  total,
 }: UpcomingDeadlinesWidgetProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const windowTotal = total ?? items.length;
   const displayedItems = initialLimit && !isExpanded ? items.slice(0, initialLimit) : items;
 
   return (
@@ -117,16 +127,16 @@ export function UpcomingDeadlinesWidget({
               Hạn chót 7 ngày tới
             </h3>
             <p className="text-xs text-muted-foreground">
-              {items.length > initialLimit && !isExpanded
-                ? `Hiển thị ${displayedItems.length} nhiệm vụ sát hạn nhất`
+              {windowTotal > initialLimit && !isExpanded
+                ? `Hiển thị ${displayedItems.length} nhiệm vụ sát hạn nhất trong ${windowTotal}`
                 : "Nhiệm vụ cần ưu tiên hoàn tất theo tiến độ"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {items.length > initialLimit && !isExpanded && (
+          {windowTotal > initialLimit && !isExpanded && (
             <span className="text-xs font-mono text-muted-foreground hidden sm:inline">
-              Top 5 / {items.length}
+              Top {displayedItems.length} / {windowTotal}
             </span>
           )}
           <Link
@@ -139,7 +149,7 @@ export function UpcomingDeadlinesWidget({
             <ChevronRight className="size-3" strokeWidth={1.5} />
           </Link>
           <Badge variant="secondary" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full">
-            {items.length}
+            {windowTotal}
           </Badge>
         </div>
       </div>
@@ -267,7 +277,7 @@ export function UpcomingDeadlinesWidget({
       </div>
 
       {/* Expand / Collapse Footer */}
-      {items.length > initialLimit && (
+      {windowTotal > initialLimit && (
         <div className="pt-3 mt-1 border-t border-border/40 flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
@@ -282,7 +292,7 @@ export function UpcomingDeadlinesWidget({
               </>
             ) : (
               <>
-                <span>Xem tất cả {items.length} nhiệm vụ hạn chót</span>
+                <span>Xem tất cả {windowTotal} nhiệm vụ hạn chót</span>
                 <ChevronDown className="size-3.5" strokeWidth={1.5} />
               </>
             )}

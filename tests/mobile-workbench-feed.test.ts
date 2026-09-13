@@ -125,7 +125,7 @@ describe("Mobile Workbench Attention-First Feed (/)", () => {
     // Section 1: Cần xử lý ngay
     assert.ok(html.includes('data-section="needs-attention"'));
     assert.ok(html.includes("Cần xử lý ngay"));
-    assert.ok(html.includes("Chờ phê duyệt"));
+    assert.ok(html.includes("Hồ sơ chờ xem xét"));
     assert.ok(html.includes("Quá hạn toàn trường"));
 
     // Section 2: Nhiệm vụ trọng tâm
@@ -172,13 +172,15 @@ describe("Mobile Workbench Attention-First Feed (/)", () => {
       "Desktop container must have hidden sm:block"
     );
 
-    // ExecutiveStatStrip is inside the desktop container
+    // The compact summary strip is inside the desktop container. (The dashboard uses
+    // DashboardSituationStrip; ExecutiveStatStrip's KPI grid is not mounted here.)
     const desktopIndex = content.indexOf('data-slot="desktop-workbench-container"');
-    const statStripIndex = content.indexOf("<ExecutiveStatStrip", desktopIndex);
+    const statStripIndex = content.indexOf("<DashboardSituationStrip", desktopIndex);
     assert.ok(
       desktopIndex !== -1 && statStripIndex > desktopIndex,
-      "ExecutiveStatStrip must be rendered inside the desktop container"
+      "DashboardSituationStrip must be rendered inside the desktop container"
     );
+    assert.equal(content.includes("<ExecutiveStatStrip"), false, "KPI grid must not be mounted");
   });
 
   test("4. Role-aware sections: BGH vs Manager vs Staff", () => {
@@ -195,7 +197,7 @@ describe("Mobile Workbench Attention-First Feed (/)", () => {
     );
     assert.ok(bghHtml.includes("Ban Giám hiệu"));
     assert.ok(bghHtml.includes("Quá hạn toàn trường"));
-    assert.ok(bghHtml.includes("Chờ phê duyệt"));
+    assert.ok(bghHtml.includes("Hồ sơ chờ xem xét"));
     assert.ok(bghHtml.includes("/tasks?scope=school"));
 
     // Manager
@@ -212,7 +214,7 @@ describe("Mobile Workbench Attention-First Feed (/)", () => {
     );
     assert.ok(managerHtml.includes("Lãnh đạo Khoa Cơ khí"));
     assert.ok(managerHtml.includes("Quá hạn đơn vị"));
-    assert.ok(managerHtml.includes("Chờ phê duyệt"));
+    assert.ok(managerHtml.includes("Hồ sơ chờ xem xét"));
     assert.ok(managerHtml.includes("/tasks?scope=unit"));
 
     // Staff

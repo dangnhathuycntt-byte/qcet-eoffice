@@ -7,11 +7,17 @@ import type { ActivityEvent } from "@/types/dashboard";
 export type { ActivityEvent };
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { formatDateTime } from "@/lib/format/date";
 
 export interface ActivityFeedWidgetProps {
   activities?: ActivityEvent[];
   className?: string;
   initialLimit?: number;
+  /**
+   * Optional audit-log destination. There is NO audit route under `src/app`, and
+   * `view=audit` is not a valid view mode, so this is intentionally unset by
+   * default — the link is hidden rather than navigating to a dead query (plan T07.7).
+   */
   auditLogHref?: string;
 }
 
@@ -97,7 +103,7 @@ export function ActivityFeedWidget({
   activities = [],
   className,
   initialLimit = 5,
-  auditLogHref = "/tasks?view=audit",
+  auditLogHref,
 }: ActivityFeedWidgetProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const displayedActivities = initialLimit && !isExpanded ? activities.slice(0, initialLimit) : activities;
@@ -122,29 +128,28 @@ export function ActivityFeedWidget({
             <p className="text-xs text-muted-foreground">
               {activities.length > initialLimit && !isExpanded
                 ? `Hiển thị ${displayedActivities.length} hoạt động gần nhất`
-                : "Dòng nhật ký tương tác và tiến độ thời gian thực"}
+                : "Dòng nhật ký tương tác và tiến độ gần nhất"}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {activities.length > initialLimit && !isExpanded && (
             <span className="text-xs font-mono text-muted-foreground hidden sm:inline">
-              Top 5 / {activities.length}
+              Top {displayedActivities.length} / {activities.length}
             </span>
           )}
-          <Link
-            href={auditLogHref}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-            data-slot="activity-audit-link"
-            title="Xem nhật ký kiểm toán hệ thống"
-          >
-            <span className="hidden sm:inline">Nhật ký</span>
-            <ExternalLink className="size-3" strokeWidth={1.5} />
-          </Link>
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-xs font-semibold">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
-            <span>Live</span>
-          </div>
+          {/* No audit destination exists; the link is hidden until one is built. */}
+          {auditLogHref && (
+            <Link
+              href={auditLogHref}
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              data-slot="activity-audit-link"
+              title="Xem nhật ký hệ thống"
+            >
+              <span className="hidden sm:inline">Nhật ký</span>
+              <ExternalLink className="size-3" strokeWidth={1.5} />
+            </Link>
+          )}
         </div>
       </div>
 
@@ -200,7 +205,7 @@ export function ActivityFeedWidget({
                   {/* Timestamp */}
                   <div className="flex items-center gap-1 pt-0.5 text-xs text-muted-foreground font-mono">
                     <Clock className="size-2.5 opacity-70" strokeWidth={1.5} />
-                    <span>{item.timestamp}</span>
+                    <span>{formatDateTime(item.timestamp)}</span>
                   </div>
                 </div>
               </div>

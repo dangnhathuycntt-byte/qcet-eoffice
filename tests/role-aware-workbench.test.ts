@@ -15,9 +15,13 @@ import {
 import type { SchoolTask } from "../src/types/dashboard";
 import type { AuthUser } from "../src/types/auth";
 import { getSystemReferenceDateStr } from "../src/lib/unified-task-hub";
+import { addCalendarDays } from "../src/lib/academic-calendar";
 
-// Mock reference date (2026-09-06 is standard QCET reference date)
-const REF_DATE = getSystemReferenceDateStr(); // "2026-09-06"
+// The single system reference date (unified in plan T03 onto the canonical module).
+// Fixture dates are expressed RELATIVE to it so the expectations below stay true
+// whatever value production pins.
+const REF_DATE = getSystemReferenceDateStr();
+const D = (offset: number): string => addCalendarDays(REF_DATE, offset) as string;
 
 // Sample Mock Tasks
 const mockTasks: SchoolTask[] = [
@@ -28,7 +32,7 @@ const mockTasks: SchoolTask[] = [
     description: "Rà soát đề cương chi tiết môn học",
     status: "IN_PROGRESS",
     priority: "URGENT",
-    dueDate: "2026-09-04", // Past due relative to 2026-09-06
+    dueDate: D(-2), // Past due relative to the reference date
     leadAssigneeName: "Trần Thị Lan",
     assignedTo: "Trần Thị Lan",
     department: "Khoa CNTT",
@@ -44,7 +48,7 @@ const mockTasks: SchoolTask[] = [
     description: "Tải bài giảng lên hệ thống LMS",
     status: "IN_PROGRESS",
     priority: "HIGH",
-    dueDate: "2026-09-06", // Due today
+    dueDate: D(0), // Due today
     leadAssigneeName: "Trần Thị Lan",
     assignedTo: "Trần Thị Lan",
     department: "Khoa CNTT",
@@ -60,7 +64,7 @@ const mockTasks: SchoolTask[] = [
     description: "Hồ sơ thanh quyết toán và biên bản hội thảo",
     status: "WAITING_APPROVAL",
     priority: "NORMAL",
-    dueDate: "2026-09-10",
+    dueDate: D(4),
     leadAssigneeName: "Trần Thị Lan",
     assignedTo: "Trần Thị Lan",
     department: "Khoa CNTT",
@@ -76,7 +80,7 @@ const mockTasks: SchoolTask[] = [
     description: "Danh mục thiết bị thực hành mạng",
     status: "WAITING_APPROVAL",
     priority: "URGENT",
-    dueDate: "2026-09-08",
+    dueDate: D(2),
     leadAssigneeName: "Nguyễn Văn Hùng",
     assignedTo: "Nguyễn Văn Hùng",
     department: "Khoa CNTT",
@@ -92,7 +96,7 @@ const mockTasks: SchoolTask[] = [
     description: "Tờ trình phê duyệt đề án số hóa đào tạo",
     status: "PENDING_EXECUTIVE_APPROVAL",
     priority: "URGENT",
-    dueDate: "2026-09-15",
+    dueDate: D(9),
     leadAssigneeName: "Lê Hoàng Nam",
     assignedTo: "Lê Hoàng Nam",
     department: "Trung tâm CNTT & TT",
@@ -108,7 +112,7 @@ const mockTasks: SchoolTask[] = [
     description: "Báo cáo số liệu trúng tuyển",
     status: "COMPLETED",
     priority: "NORMAL",
-    dueDate: "2026-09-02",
+    dueDate: D(-4),
     leadAssigneeName: "Trần Thị Lan",
     assignedTo: "Trần Thị Lan",
     department: "Khoa CNTT",

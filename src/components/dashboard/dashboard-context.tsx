@@ -81,6 +81,10 @@ export interface DashboardDataContextValue {
   delegations: DelegationRule[];
   delegationDeptCode: string;
   isRefreshing: boolean;
+  /** True only while the FIRST dashboard load is in flight (no data yet). */
+  isLoading: boolean;
+  /** Server/network load error, sourced from the canonical mutation layer. */
+  errorMessage: string | null;
 }
 
 export const DashboardDataContext = React.createContext<DashboardDataContextValue | null>(null);
@@ -141,7 +145,12 @@ export interface DashboardModalContextValue {
   initialTitle?: string;
   isDelegationModalOpen: boolean;
   delegationDeptCode: string;
+  /** Message shown when a requested task cannot be opened (never silent). */
+  taskDetailNotice: string | null;
+  dismissTaskDetailNotice: () => void;
   openTaskDetail: (task: SchoolTask | StaffTask) => void;
+  /** Open a task by id, searching the loaded set (and subtasks); reports if missing. */
+  openTaskDetailById: (taskId: string) => void;
   closeTaskDetail: () => void;
   openCreateModal: (
     level?: "TRUONG" | "DON_VI",
@@ -243,31 +252,46 @@ export function DashboardStateProvider({
     return parent?.title;
   }, [modalState.selectedTask, dashboardState.tasks]);
 
+  /**
+   * Open a task by id. Searches the loaded tasks and their subtasks; when the id
+   * resolves to nothing (missing or not accessible), it surfaces a clear message
+   * instead of returning silently (plan T08.3).
+   */
+  const openTaskDetailById = React.useCallback(
+    (taskId: string) => {
+      if (!taskId) return;
+      const found = dashboardState.tasks.find((t) => t.id === taskId);
+      if (found) {
+        modalState.openTaskDetail(found);
+        return;
+      }
+      for (const parent of dashboardState.tasks) {
+        const sub = parent.subTasks?.find((s) => s.id === taskId);
+        if (sub) {
+          modalState.openTaskDetail(sub);
+          return;
+        }
+      }
+      modalState.setTaskDetailNotice(
+        "Không tìm thấy nhiệm vụ này hoặc bạn không có quyền truy cập."
+      );
+    },
+    [dashboardState.tasks, modalState.openTaskDetail, modalState.setTaskDetailNotice]
+  );
+
   // Global listener for opening task detail from external triggers (e.g. CommandSearchModal)
   React.useEffect(() => {
     const handleOpenTaskDetail = (e: Event) => {
       const customEvent = e as CustomEvent<{ task?: SchoolTask | StaffTask; taskId?: string }>;
       if (customEvent.detail?.task) {
         modalState.openTaskDetail(customEvent.detail.task);
-      } else if (customEvent.detail?.taskId && dashboardState.tasks) {
-        const id = customEvent.detail.taskId;
-        const found = dashboardState.tasks.find((t) => t.id === id);
-        if (found) {
-          modalState.openTaskDetail(found);
-        } else {
-          for (const parent of dashboardState.tasks) {
-            const sub = parent.subTasks?.find((s) => s.id === id);
-            if (sub) {
-              modalState.openTaskDetail(sub);
-              break;
-            }
-          }
-        }
+      } else if (customEvent.detail?.taskId) {
+        openTaskDetailById(customEvent.detail.taskId);
       }
     };
     window.addEventListener("qcet:open-task-detail", handleOpenTaskDetail);
     return () => window.removeEventListener("qcet:open-task-detail", handleOpenTaskDetail);
-  }, [modalState.openTaskDetail, dashboardState.tasks]);
+  }, [modalState.openTaskDetail, openTaskDetailById]);
 
   // 1. Nav value: Stable unless activeZone, scope, viewMode, or view toggles change
   const navValue = React.useMemo<DashboardNavContextValue>(
@@ -335,6 +359,8 @@ export function DashboardStateProvider({
       delegations: dashboardState.delegations,
       delegationDeptCode: dashboardState.delegationDeptCode,
       isRefreshing: dashboardState.isRefreshing,
+      isLoading: dashboardState.isLoading,
+      errorMessage: dashboardState.errorMessage,
     }),
     [
       dashboardState.tasks,
@@ -370,6 +396,8 @@ export function DashboardStateProvider({
       dashboardState.delegations,
       dashboardState.delegationDeptCode,
       dashboardState.isRefreshing,
+      dashboardState.isLoading,
+      dashboardState.errorMessage,
     ]
   );
 
@@ -424,7 +452,10 @@ export function DashboardStateProvider({
       initialTitle: modalState.initialTitle,
       isDelegationModalOpen: modalState.isDelegationModalOpen,
       delegationDeptCode: modalState.delegationDeptCode,
+      taskDetailNotice: modalState.taskDetailNotice,
+      dismissTaskDetailNotice: modalState.dismissTaskDetailNotice,
       openTaskDetail: modalState.openTaskDetail,
+      openTaskDetailById,
       closeTaskDetail: modalState.closeTaskDetail,
       openCreateModal: modalState.openCreateModal,
       closeCreateModal: modalState.closeCreateModal,
@@ -440,7 +471,10 @@ export function DashboardStateProvider({
       modalState.initialTitle,
       modalState.isDelegationModalOpen,
       modalState.delegationDeptCode,
+      modalState.taskDetailNotice,
+      modalState.dismissTaskDetailNotice,
       modalState.openTaskDetail,
+      openTaskDetailById,
       modalState.closeTaskDetail,
       modalState.openCreateModal,
       modalState.closeCreateModal,

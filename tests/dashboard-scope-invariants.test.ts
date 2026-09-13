@@ -1,254 +1,88 @@
 /**
- * Dashboard Scope Invariants Test Suite (Phase 0 / Regression Lock)
- * Target: Workspace & Dashboard Scope Resolution
- * Invariants: DASH-03 (Role Is Not Scope), DASH-09 (Server Truth Wins)
- * Rule 05-domain-freeze: TaskScope is visual display only, never permission model
+ * Dashboard scope invariants — "Role Is Not Scope" (plan T10.2 / T10.6).
  *
- * Requirements:
- * 1. Prohibit role directly deciding active scope (Role Is Not Scope invariant)
- * 2. Disallow school scope for users whose server viewScopes does not include SCHOOL
- * 3. Assert scope resolution relies on allowedScopes/viewScopes from server context
+ * REPLACED: the previous file defined a local `resolveCanonicalDashboardScope` fake and
+ * imported NO production code. This version exercises the real scope filter that the
+ * dashboard and /tasks actually run (`filterTasksByScope`), asserting exact IDs.
+ *
+ * Requirement now covered: selecting a scope changes WHICH tasks are visible, and a
+ * role label does not grant a wider dataset on its own. TaskScope stays a display/
+ * aggregation filter, never a permission (05-domain-freeze §3).
  */
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { filterTasksByScope } from "../src/components/dashboard/unified-task-toolbar";
+import type { AuthUser } from "../src/types/auth";
+import type { SchoolTask } from "../src/types/dashboard";
 
-export type ServerViewScope = "PERSONAL" | "UNIT" | "SCHOOL";
-export type NormalizedScope = "personal" | "unit" | "school";
-
-export interface ServerAuthScopeContext {
-  userId: string;
-  role?: string;
-  viewScopes: readonly ServerViewScope[];
-  primaryUnitId?: string | null;
-}
-
-export interface ScopeResolutionResult {
-  effectiveScope: NormalizedScope;
-  isDowngraded: boolean;
-  reason?: string;
-}
-
-/**
- * Canonical scope resolution function adhering unconditionally to "Role Is Not Scope".
- * Server viewScopes is authoritative. Role cannot bypass or dictate dataset scope.
- */
-export function resolveCanonicalDashboardScope(params: {
-  requestedScope?: string | null;
-  serverContext: ServerAuthScopeContext;
-  defaultScope?: NormalizedScope;
-}): ScopeResolutionResult {
-  const { requestedScope, serverContext, defaultScope = "personal" } = params;
-  const allowed = new Set<ServerViewScope>(serverContext.viewScopes || ["PERSONAL"]);
-
-  // Normalize requested scope input
-  let normalizedRequested: NormalizedScope | null = null;
-  if (requestedScope) {
-    const lower = requestedScope.toLowerCase().trim();
-    if (lower === "school" || lower === "school_tasks") {
-      normalizedRequested = "school";
-    } else if (lower === "unit" || lower === "unit_tasks" || lower === "department") {
-      normalizedRequested = "unit";
-    } else if (lower === "personal" || lower === "my" || lower === "my_tasks") {
-      normalizedRequested = "personal";
-    }
-  }
-
-  // If no scope requested, determine best authorized default based strictly on viewScopes (NOT role)
-  if (!normalizedRequested) {
-    if (defaultScope === "school" && allowed.has("SCHOOL")) {
-      return { effectiveScope: "school", isDowngraded: false };
-    }
-    if (defaultScope === "unit" && allowed.has("UNIT")) {
-      return { effectiveScope: "unit", isDowngraded: false };
-    }
-    // Highest authorized scope available, or fallback to personal
-    if (allowed.has("SCHOOL")) return { effectiveScope: "school", isDowngraded: false };
-    if (allowed.has("UNIT")) return { effectiveScope: "unit", isDowngraded: false };
-    return { effectiveScope: "personal", isDowngraded: false };
-  }
-
-  // Map normalized requested scope to ServerViewScope
-  const scopeMap: Record<NormalizedScope, ServerViewScope> = {
-    school: "SCHOOL",
-    unit: "UNIT",
-    personal: "PERSONAL",
-  };
-
-  const requiredViewScope = scopeMap[normalizedRequested];
-
-  // Verify against server truth
-  if (allowed.has(requiredViewScope)) {
-    return { effectiveScope: normalizedRequested, isDowngraded: false };
-  }
-
-  // Downgrade to highest allowed scope
-  let fallback: NormalizedScope = "personal";
-  if (allowed.has("UNIT")) {
-    fallback = "unit";
-  }
-
+function task(id: string, leadAssigneeName: string, leadDepartmentCode: string): SchoolTask {
   return {
-    effectiveScope: fallback,
-    isDowngraded: true,
-    reason: `Requested scope "${normalizedRequested}" disallowed: server viewScopes does not include ${requiredViewScope}`,
+    id,
+    title: `${id} — nhiệm vụ`,
+    category: "KHAC",
+    categoryLabel: "Khác",
+    status: "IN_PROGRESS",
+    dueDate: "2026-09-20",
+    progressPercent: 40,
+    totalSubTasks: 0,
+    completedSubTasks: 0,
+    leadAssigneeName,
+    coAssignees: [],
+    assignedDate: "2026-09-01",
+    subTasks: [],
+    leadDepartmentCode,
   };
 }
 
-describe("Dashboard Scope Invariants (Role Is Not Scope)", () => {
-  test("1. Prohibit role directly deciding active scope (Role Is Not Scope invariant)", () => {
-    // Case A: User has role ADMIN/RECTOR, but server viewScopes only includes PERSONAL
-    // (e.g. personal inbox view mode or restricted session)
-    const executiveWithPersonalOnly: ServerAuthScopeContext = {
-      userId: "usr-rector-01",
-      role: "RECTOR", // Authority role
-      viewScopes: ["PERSONAL"], // Server dataset filter constraint
-    };
+function user(over: Partial<AuthUser> & { name: string; role: AuthUser["role"] }): AuthUser {
+  return {
+    id: "u1",
+    email: "u1@qcet.edu.vn",
+    roleLabel: over.role,
+    department: "Khoa CNTT",
+    departmentCode: "K_CNTT",
+    ...over,
+  };
+}
 
-    const resultA = resolveCanonicalDashboardScope({
-      requestedScope: "school",
-      serverContext: executiveWithPersonalOnly,
-    });
+const TASKS: SchoolTask[] = [
+  task("s1", "Nguyễn Văn A", "K_CNTT"),
+  task("s2", "Trần Văn B", "K_CNTT"),
+  task("s3", "Nguyễn Văn A", "P_HCQT"),
+];
 
-    assert.equal(
-      resultA.effectiveScope,
-      "personal",
-      "Role RECTOR must NOT bypass server viewScopes: active scope must be downgraded to personal"
-    );
-    assert.equal(resultA.isDowngraded, true);
+const ids = (list: SchoolTask[]) => list.map((t) => t.id).sort();
 
-    // Case B: User has role STAFF/SPECIALIST, but has been granted delegated access with SCHOOL in viewScopes
-    const specialistWithDelegation: ServerAuthScopeContext = {
-      userId: "usr-staff-01",
-      role: "STAFF",
-      viewScopes: ["PERSONAL", "UNIT", "SCHOOL"],
-    };
-
-    const resultB = resolveCanonicalDashboardScope({
-      requestedScope: "school",
-      serverContext: specialistWithDelegation,
-    });
-
-    assert.equal(
-      resultB.effectiveScope,
-      "school",
-      "User with STAFF role but authorized SCHOOL viewScopes must be granted school scope"
-    );
-    assert.equal(resultB.isDowngraded, false);
-
-    // Case C: Role string alone without viewScopes cannot grant SCHOOL scope
-    const arbitraryRoleUser: ServerAuthScopeContext = {
-      userId: "usr-custom-01",
-      role: "SYSTEM_ADMIN",
-      viewScopes: ["PERSONAL", "UNIT"], // Missing SCHOOL
-    };
-
-    const resultC = resolveCanonicalDashboardScope({
-      requestedScope: "school",
-      serverContext: arbitraryRoleUser,
-    });
-
-    assert.equal(
-      resultC.effectiveScope,
-      "unit",
-      "SYSTEM_ADMIN without SCHOOL in viewScopes cannot access school dataset filter"
-    );
+describe("Dashboard scope invariants (production filterTasksByScope)", () => {
+  test("school scope exposes the whole permitted set", () => {
+    const result = filterTasksByScope(TASKS, "SCHOOL_TASKS", user({ name: "Quản trị", role: "ADMIN" }));
+    assert.deepEqual(ids(result), ["s1", "s2", "s3"]);
   });
 
-  test("2. Disallow school scope for users whose server viewScopes does not include SCHOOL", () => {
-    // Department Dean (Trưởng phòng / Trưởng khoa)
-    const deanContext: ServerAuthScopeContext = {
-      userId: "usr-dean-it",
-      role: "DEAN",
-      viewScopes: ["PERSONAL", "UNIT"],
-      primaryUnitId: "DEPT_CNTT",
-    };
-
-    // Dean attempts to select school scope (?scope=school)
-    const deanSchoolRequest = resolveCanonicalDashboardScope({
-      requestedScope: "school",
-      serverContext: deanContext,
-    });
-
-    assert.equal(
-      deanSchoolRequest.effectiveScope,
-      "unit",
-      "Dean without SCHOOL viewScopes must be downgraded to unit scope"
+  test("unit scope is confined to the department", () => {
+    const result = filterTasksByScope(
+      TASKS,
+      "UNIT_TASKS",
+      user({ name: "Trưởng đơn vị", role: "MANAGER" }),
+      "K_CNTT"
     );
-    assert.equal(deanSchoolRequest.isDowngraded, true);
-    assert.match(deanSchoolRequest.reason || "", /server viewScopes does not include SCHOOL/);
-
-    // Specialist / Faculty Lecturer
-    const lecturerContext: ServerAuthScopeContext = {
-      userId: "usr-lecturer-01",
-      role: "LECTURER",
-      viewScopes: ["PERSONAL"],
-    };
-
-    const lecturerSchoolRequest = resolveCanonicalDashboardScope({
-      requestedScope: "school",
-      serverContext: lecturerContext,
-    });
-
-    assert.equal(
-      lecturerSchoolRequest.effectiveScope,
-      "personal",
-      "Lecturer requesting school scope must be downgraded to personal"
-    );
-    assert.equal(lecturerSchoolRequest.isDowngraded, true);
+    assert.deepEqual(ids(result), ["s1", "s2"]);
+    assert.equal(result.some((t) => t.id === "s3"), false, "another unit's task must not leak");
   });
 
-  test("3. Assert scope resolution relies on allowedScopes/viewScopes from server context", () => {
-    const fullAccessContext: ServerAuthScopeContext = {
-      userId: "usr-bgh-01",
-      viewScopes: ["PERSONAL", "UNIT", "SCHOOL"],
-    };
+  test("my scope is confined to the actor's own tasks", () => {
+    const result = filterTasksByScope(TASKS, "MY_TASKS", user({ name: "Nguyễn Văn A", role: "STAFF" }));
+    assert.deepEqual(ids(result), ["s1", "s3"]);
+  });
 
-    // Valid requests match server viewScopes exactly
-    assert.equal(
-      resolveCanonicalDashboardScope({ requestedScope: "school", serverContext: fullAccessContext }).effectiveScope,
-      "school"
+  test("a manager role does not widen MY scope into the unit dataset", () => {
+    const asManager = filterTasksByScope(
+      TASKS,
+      "MY_TASKS",
+      user({ name: "Nguyễn Văn A", role: "MANAGER" })
     );
-    assert.equal(
-      resolveCanonicalDashboardScope({ requestedScope: "unit", serverContext: fullAccessContext }).effectiveScope,
-      "unit"
-    );
-    assert.equal(
-      resolveCanonicalDashboardScope({ requestedScope: "personal", serverContext: fullAccessContext }).effectiveScope,
-      "personal"
-    );
-    assert.equal(
-      resolveCanonicalDashboardScope({ requestedScope: "my", serverContext: fullAccessContext }).effectiveScope,
-      "personal"
-    );
-
-    // Default scope without explicit request uses highest authorized from server viewScopes
-    const defaultResolution = resolveCanonicalDashboardScope({
-      requestedScope: undefined,
-      serverContext: fullAccessContext,
-    });
-    assert.equal(defaultResolution.effectiveScope, "school");
-
-    // Unit-only user default scope is unit
-    const unitOnlyContext: ServerAuthScopeContext = {
-      userId: "usr-unit-mgr",
-      viewScopes: ["PERSONAL", "UNIT"],
-    };
-    const unitDefault = resolveCanonicalDashboardScope({
-      requestedScope: undefined,
-      serverContext: unitOnlyContext,
-    });
-    assert.equal(unitDefault.effectiveScope, "unit");
-
-    // Personal-only user default scope is personal
-    const personalOnlyContext: ServerAuthScopeContext = {
-      userId: "usr-individual",
-      viewScopes: ["PERSONAL"],
-    };
-    const personalDefault = resolveCanonicalDashboardScope({
-      requestedScope: undefined,
-      serverContext: personalOnlyContext,
-    });
-    assert.equal(personalDefault.effectiveScope, "personal");
+    // Same dataset as the STAFF case: role did not grant the unit's other tasks.
+    assert.deepEqual(ids(asManager), ["s1", "s3"]);
   });
 });

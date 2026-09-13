@@ -187,6 +187,24 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
   const tasks = props.tasks ?? contextData?.filteredTasks ?? contextData?.tasks ?? [];
   const referenceDate = props.referenceDate ?? getSystemReferenceDate();
 
+  // Load states come from the canonical dashboard context (plan T09.4). A caller that
+  // supplies its own data (standalone usage) owns its own state and is not gated.
+  const suppliedByProps =
+    props.stats !== undefined ||
+    props.tasks !== undefined ||
+    props.urgentTasks !== undefined ||
+    props.keyTasks !== undefined;
+  const contextError = suppliedByProps ? null : (contextData?.errorMessage ?? null);
+  const contextLoading = !suppliedByProps && (contextData?.isLoading ?? false);
+  const isRefreshing = !suppliedByProps && (contextData?.isRefreshing ?? false);
+
+  // Four distinct states: error / loading / stale(ready+refreshing) / ready.
+  const dataState: "error" | "loading" | "ready" = contextError
+    ? "error"
+    : contextLoading
+    ? "loading"
+    : "ready";
+
   const handleSelectTask = (task: SchoolTask | StaffTask) => {
     if (props.onSelectTask) {
       props.onSelectTask(task);
@@ -204,21 +222,40 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
     ? (executiveStats?.overdueTasksCount ?? stats?.overdueTasksCount ?? 0)
     : (stats?.overdueTasksCount ?? 0);
 
-  // Danh sách công việc cần chú ý ngay
+  // Danh sách công việc cần chú ý ngay.
+  //
+  // For executives/managers this consumes the SAME sorted selector as the desktop
+  // queue (`executiveActionItems`), so the top 3 mobile rows equal the top 3 desktop
+  // rows for the same role/scope (plan T09.1). The mobile feed must NOT re-filter
+  // by status — that produced a different order from desktop.
   const urgentTasksList = React.useMemo(() => {
     if (props.urgentTasks && props.urgentTasks.length > 0) {
       return props.urgentTasks.slice(0, 3);
     }
 
     if (isExecutive || isManager) {
-      // Ưu tiên task chờ duyệt (NEEDS_REVIEW) hoặc quá hạn
-      return tasks
-        .filter((t) => {
-          const isReview = t.status === "NEEDS_REVIEW";
-          const isPastDue = t.dueDate && t.dueDate.split("T")[0] < String(referenceDate).split("T")[0] && t.status !== "COMPLETED";
-          return isReview || isPastDue;
-        })
-        .slice(0, 3);
+      const queue = contextData?.executiveActionItems ?? [];
+      const byId = new Map(tasks.map((t) => [t.id, t]));
+      return queue.slice(0, 3).map((item): SchoolTask | StaffTask => {
+        const loaded = byId.get(item.taskId);
+        if (loaded) return loaded;
+        // The row is outside the loaded task set: render it from the queue item so
+        // the mobile top-3 still matches desktop instead of silently dropping it.
+        const status: SchoolTask["status"] =
+          item.primaryReason === "REVIEW"
+            ? "PENDING_EXECUTIVE_APPROVAL"
+            : item.primaryReason === "BLOCKED"
+              ? "BLOCKED"
+              : "OVERDUE";
+        return {
+          id: item.taskId,
+          title: item.title,
+          assigneeName: item.leadName || "Chưa phân công",
+          status,
+          dueDate: item.dueDate,
+          updatedAt: item.waitingSince ?? item.dueDate,
+        };
+      });
     }
 
     // Staff: việc có deadline hôm nay, việc quá hạn hoặc đang làm
@@ -232,7 +269,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
         return isDueSoon || isUrgent || t.status === "IN_PROGRESS";
       })
       .slice(0, 3);
-  }, [props.urgentTasks, isExecutive, isManager, tasks, referenceDate]);
+  }, [props.urgentTasks, isExecutive, isManager, tasks, referenceDate, contextData?.executiveActionItems]);
 
   // 2. Danh sách nhiệm vụ trọng tâm (Key Tasks: max 3-5 items)
   const keyTasksList = React.useMemo(() => {
@@ -299,6 +336,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
     <div
       className={cn("w-full space-y-5 pb-6", props.className)}
       data-slot="mobile-workbench-feed"
+      data-state={dataState}
     >
       {/* HEADER: Chào hỏi ân cần & Ngày tháng & Chip vai trò */}
       <header
@@ -331,6 +369,55 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
         </div>
       </header>
 
+      {/* STALE: a background refresh is in flight over already-loaded data */}
+      {isRefreshing && dataState === "ready" && (
+        <p
+          className="px-1 text-xs text-muted-foreground"
+          data-slot="mobile-workbench-refreshing"
+          data-state="stale"
+          aria-live="polite"
+        >
+          Đang cập nhật dữ liệu…
+        </p>
+      )}
+
+      {/* ERROR / LOADING are DISTINCT from empty — never render zeros or claim health first. */}
+      {contextError ? (
+        <div
+          className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4"
+          data-slot="mobile-workbench-error"
+          data-state="error"
+          role="alert"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle
+              size={18}
+              strokeWidth={1.5}
+              className="text-rose-600 shrink-0 mt-0.5"
+            />
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-sm font-semibold text-rose-900">
+                Không thể tải dữ liệu bàn làm việc
+              </p>
+              <p className="text-xs text-rose-800/90">{contextError}</p>
+            </div>
+          </div>
+        </div>
+      ) : contextLoading ? (
+        <div
+          className="space-y-3"
+          data-slot="mobile-workbench-loading"
+          data-state="loading"
+          aria-busy="true"
+          aria-live="polite"
+        >
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 animate-pulse rounded-2xl bg-muted/40" />
+          ))}
+          <span className="sr-only">Đang tải dữ liệu bàn làm việc</span>
+        </div>
+      ) : (
+        <>
       {/* PHẦN 1: CẦN XỬ LÝ NGAY (Needs Attention) */}
       <section
         className="space-y-3"
@@ -356,7 +443,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
           <div className="grid grid-cols-2 gap-2.5">
             <div className="p-3 rounded-xl border border-amber-500/25 bg-amber-500/5 flex flex-col justify-between min-h-[64px]">
               <span className="text-xs font-medium text-amber-900">
-                Chờ phê duyệt
+                Hồ sơ chờ xem xét
               </span>
               <div className="flex items-baseline justify-between mt-1">
                 <span className="font-mono tabular-nums text-xl font-extrabold text-amber-900">
@@ -710,6 +797,8 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
           )}
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }

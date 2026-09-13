@@ -20,7 +20,9 @@ describe("DashboardZone Contract & Structure Verification", () => {
     assert.ok(content.includes("ActivityFeedWidget"));
   });
 
-  test("DashboardZone enforces ACTION -> SITUATION -> CONTEXT section order", () => {
+  // Requirement (plan T06.2 / F01): the compact summary must be visible BEFORE the
+  // queue. The old ACTION→SITUATION order pushed the summary below the queue.
+  test("DashboardZone enforces SITUATION -> ACTION -> CONTEXT section order", () => {
     const filePath = path.resolve(__dirname, "../src/components/dashboard/zones/dashboard-zone.tsx");
     const content = fs.readFileSync(filePath, "utf-8");
 
@@ -31,8 +33,20 @@ describe("DashboardZone Contract & Structure Verification", () => {
     assert.ok(actionPos > -1, 'Must have data-slot="section-action"');
     assert.ok(situationPos > -1, 'Must have data-slot="section-situation"');
     assert.ok(contextPos > -1, 'Must have data-slot="section-context"');
-    assert.ok(actionPos < situationPos, "ACTION section must appear before SITUATION section");
-    assert.ok(situationPos < contextPos, "SITUATION section must appear before CONTEXT section");
+    assert.ok(situationPos < actionPos, "SUMMARY (situation) must appear before the queue");
+    assert.ok(actionPos < contextPos, "ACTION section must appear before CONTEXT section");
+  });
+
+  // Requirement (plan T06.1 / F01): one H1 "Bàn làm việc"; no role badge, no duplicated
+  // role subtitle, no hardcoded unit count.
+  test("DashboardZone header is a single clean H1 with no role badge or hardcoded unit count", () => {
+    const filePath = path.resolve(__dirname, "../src/components/dashboard/zones/dashboard-zone.tsx");
+    const content = fs.readFileSync(filePath, "utf-8");
+    assert.ok(content.includes(">Bàn làm việc<") || content.includes("Bàn làm việc\n"), "H1 must read 'Bàn làm việc'");
+    assert.equal(content.includes("roleBadge"), false, "role badge must be removed");
+    assert.equal(content.includes("roleSubtitle"), false, "duplicated role subtitle must be removed");
+    assert.equal(/đơn vị trực thuộc/.test(content), false, "hardcoded unit count must be removed");
+    assert.equal(content.includes("QCET_DEPARTMENTS"), false, "no hardcoded department count import");
   });
 
   test("DashboardZone does not render ExecutiveStatStrip (replaced by DashboardSituationStrip)", () => {

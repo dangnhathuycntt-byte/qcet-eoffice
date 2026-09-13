@@ -22,7 +22,9 @@
  *
  * Env overrides:
  *   QCET_BASE_URL (default http://127.0.0.1:3000), QCET_PROXY_PORT (3399),
- *   QCET_CDP_PORT (9222), QCET_SEED_EMAIL, QCET_SEED_PASSWORD, QCET_TASK_ID.
+ *   QCET_CDP_PORT (9222), QCET_SEED_EMAIL, QCET_SEED_PASSWORD, QCET_TASK_ID,
+ *   QCET_CAPTURE_OUT (output root, default artifacts/ux-v5-1/baseline/states),
+ *   QCET_CAPTURE_VIEWPORTS (comma-separated WxH list, default 1440x900,390x844).
  *
  * Honest limits (recorded, never faked):
  *   - Server Components read the session cookie; without it the shell renders
@@ -43,7 +45,12 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
-const OUT_ROOT = path.join(REPO_ROOT, "artifacts/ux-v5-1/baseline/states");
+// The default stays the immutable UX V5.1 before-image. Later workstreams that must
+// capture their own before/after frames point QCET_CAPTURE_OUT at their own evidence
+// directory so this canonical baseline is never overwritten (see artifact README).
+const OUT_ROOT = process.env.QCET_CAPTURE_OUT
+  ? path.resolve(REPO_ROOT, process.env.QCET_CAPTURE_OUT)
+  : path.join(REPO_ROOT, "artifacts/ux-v5-1/baseline/states");
 const AUTH_PROXY = path.join(REPO_ROOT, "artifacts/ux-v5-1/baseline/tools/auth-proxy.mjs");
 
 const BASE = process.env.QCET_BASE_URL || "http://127.0.0.1:3000";
@@ -54,10 +61,18 @@ const LOGIN_PASSWORD = process.env.QCET_SEED_PASSWORD || "Qcet@123456";
 const TASK_ID_FALLBACK = process.env.QCET_TASK_ID || "cmtwgbysl002xi5nosto6ykr4";
 const PROXY_BASE = `http://127.0.0.1:${PROXY_PORT}`;
 
-const VIEWPORTS = [
-  { suffix: "1440x900", width: 1440, height: 900, mobile: false },
-  { suffix: "390x844", width: 390, height: 844, mobile: true },
-];
+// Viewport set is env-overridable so a workstream can capture the extra breakpoints
+// its own acceptance criteria name, without maintaining a second capture engine.
+const VIEWPORTS = process.env.QCET_CAPTURE_VIEWPORTS
+  ? process.env.QCET_CAPTURE_VIEWPORTS.split(",").map((token) => {
+      const [w, h] = token.trim().split("x").map(Number);
+      if (!w || !h) throw new Error(`Bad QCET_CAPTURE_VIEWPORTS token: ${token}`);
+      return { suffix: `${w}x${h}`, width: w, height: h, mobile: w < 640 };
+    })
+  : [
+      { suffix: "1440x900", width: 1440, height: 900, mobile: false },
+      { suffix: "390x844", width: 390, height: 844, mobile: true },
+    ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

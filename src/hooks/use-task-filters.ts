@@ -40,6 +40,7 @@ import {
 import {
   getAcademicMonthsForYear,
   getAcademicYear,
+  getSystemReferenceDate,
   filterTasksByAcademicMonthStrict,
   computePriorOverdueBacklog,
   type AcademicMonthInfo,
@@ -344,6 +345,75 @@ export function syncTaskUrlParams(
   return queryString;
 }
 
+// ============================================================================
+// Canonical scope + period slices (plan T03)
+// ============================================================================
+
+export interface DashboardSliceInput {
+  tasks: SchoolTask[];
+  effectiveScope: TaskScope;
+  user: AuthUser | null;
+  selectedDepartment: string;
+  selectedAcademicMonth: number | "ALL";
+  academicYear: string;
+  /** Normalized business reference date (YYYY-MM-DD). */
+  referenceDate: string;
+  isExecutive: boolean;
+  activeZone: WorkspaceZone;
+}
+
+export interface DashboardSlices {
+  scopedBaseTasks: SchoolTask[];
+  monthScopedBaseTasks: SchoolTask[];
+  displayedStats: DashboardStats;
+  executiveStats: ExecutiveActionStats | null;
+  departmentHealth: DepartmentHealthSummary[];
+  executiveActionItems: ExecutiveActionItem[];
+}
+
+/**
+ * Derives every dashboard surface from ONE scope + period task set.
+ *
+ * `displayedStats`, the executive queue, department health and the action items
+ * all read `monthScopedBaseTasks` (scope AND academic-month filtered). An empty
+ * scope stays empty — the summary never widens back to the raw school-wide task
+ * list (plan T03.3 / T03 "tập rỗng không quay về school-wide").
+ */
+export function computeDashboardSlices(input: DashboardSliceInput): DashboardSlices {
+  const scopedBaseTasks = filterTasksByScope(
+    input.tasks,
+    input.effectiveScope,
+    input.user,
+    input.selectedDepartment
+  );
+
+  const monthScopedBaseTasks =
+    input.selectedAcademicMonth === "ALL"
+      ? scopedBaseTasks
+      : filterTasksByAcademicMonthStrict(
+          scopedBaseTasks,
+          input.selectedAcademicMonth,
+          input.academicYear
+        );
+
+  const onDashboard = input.isExecutive && input.activeZone === "dashboard";
+
+  return {
+    scopedBaseTasks,
+    monthScopedBaseTasks,
+    displayedStats: computeDashboardStats(monthScopedBaseTasks),
+    executiveStats: onDashboard
+      ? computeExecutiveActionStats(monthScopedBaseTasks, input.referenceDate)
+      : null,
+    departmentHealth: onDashboard
+      ? computeDepartmentHealthMatrix(monthScopedBaseTasks, input.referenceDate)
+      : [],
+    executiveActionItems: input.isExecutive
+      ? extractExecutiveActionItems(monthScopedBaseTasks, input.referenceDate)
+      : [],
+  };
+}
+
 export function useTaskFilters({
   tasks,
   upcoming,
@@ -436,19 +506,39 @@ export function useTaskFilters({
 
   const currentAcademicYear = React.useMemo(() => getAcademicYear(new Date()), []);
 
-  const scopedBaseTasks = React.useMemo(
-    () => filterTasksByScope(tasks, effectiveScope, user, selectedDepartment),
-    [tasks, effectiveScope, user, selectedDepartment]
+  // Normalize the business reference date ONCE for every dashboard surface, so no
+  // widget defaults independently (plan T03.5). The canonical source is the date
+  // module; callers may pass an explicit value.
+  const normalizedReferenceDate = referenceDate ?? getSystemReferenceDate();
+
+  const slices = React.useMemo(
+    () =>
+      computeDashboardSlices({
+        tasks,
+        effectiveScope,
+        user,
+        selectedDepartment,
+        selectedAcademicMonth,
+        academicYear: currentAcademicYear,
+        referenceDate: normalizedReferenceDate,
+        isExecutive,
+        activeZone,
+      }),
+    [
+      tasks,
+      effectiveScope,
+      user,
+      selectedDepartment,
+      selectedAcademicMonth,
+      currentAcademicYear,
+      normalizedReferenceDate,
+      isExecutive,
+      activeZone,
+    ]
   );
 
-  const monthScopedBaseTasks = React.useMemo(() => {
-    if (selectedAcademicMonth === "ALL") return scopedBaseTasks;
-    return filterTasksByAcademicMonthStrict(
-      scopedBaseTasks,
-      selectedAcademicMonth,
-      currentAcademicYear
-    );
-  }, [scopedBaseTasks, selectedAcademicMonth, currentAcademicYear]);
+  const scopedBaseTasks = slices.scopedBaseTasks;
+  const monthScopedBaseTasks = slices.monthScopedBaseTasks;
 
   const priorOverdueBacklog = React.useMemo(() => {
     if (selectedAcademicMonth === "ALL") return [];
@@ -471,41 +561,11 @@ export function useTaskFilters({
     return months.find((m) => m.monthNumber === selectedAcademicMonth) ?? null;
   }, [selectedAcademicMonth, currentAcademicYear]);
 
-  const displayedStats = React.useMemo(() => {
-    if (selectedAcademicMonth !== "ALL") {
-      return computeDashboardStats(monthScopedBaseTasks);
-    }
-    if (scopedBaseTasks.length > 0) return computeDashboardStats(scopedBaseTasks);
-    if (selectedDepartment && selectedDepartment !== "ALL") return computeDashboardStats([]);
-    if (!isExecutive && effectiveScope === "MY_TASKS") return computeDashboardStats([]);
-    return computeDashboardStats(tasks);
-  }, [monthScopedBaseTasks, scopedBaseTasks, tasks, isExecutive, selectedDepartment, effectiveScope, selectedAcademicMonth]);
-
-  const monthFilteredSchoolTasks = React.useMemo(() => {
-    if (selectedAcademicMonth === "ALL") return tasks;
-    return filterTasksByAcademicMonthStrict(tasks, selectedAcademicMonth, currentAcademicYear);
-  }, [tasks, selectedAcademicMonth, currentAcademicYear]);
-
-  const executiveStats = React.useMemo(
-    () =>
-      isExecutive && activeZone === "dashboard"
-        ? computeExecutiveActionStats(monthFilteredSchoolTasks)
-        : null,
-    [monthFilteredSchoolTasks, isExecutive, activeZone]
-  );
-
-  const departmentHealth = React.useMemo(
-    () =>
-      isExecutive && activeZone === "dashboard"
-        ? computeDepartmentHealthMatrix(monthFilteredSchoolTasks, referenceDate)
-        : [],
-    [monthFilteredSchoolTasks, isExecutive, activeZone, referenceDate]
-  );
-
-  const executiveActionItems = React.useMemo(
-    () => (isExecutive ? extractExecutiveActionItems(monthFilteredSchoolTasks, referenceDate) : []),
-    [isExecutive, monthFilteredSchoolTasks, referenceDate]
-  );
+  // Every dashboard surface below shares the ONE scope + period set from `slices`.
+  const displayedStats = slices.displayedStats;
+  const executiveStats = slices.executiveStats;
+  const departmentHealth = slices.departmentHealth;
+  const executiveActionItems = slices.executiveActionItems;
 
   const filteredTasks = React.useMemo(() => {
     if (activeZone === "portal" || activeZone === "org") return [];

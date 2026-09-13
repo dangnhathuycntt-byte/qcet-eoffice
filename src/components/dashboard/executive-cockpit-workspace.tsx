@@ -262,12 +262,14 @@ export function ExecutiveAttentionQueue({
             </p>
           </div>
         </div>
+        {/* `status` is a query key the /tasks parser really consumes; the previous
+            `filter=pending` was silently ignored and led nowhere (plan T08.1). */}
         <Link
-          href="/tasks?scope=school&filter=pending"
+          href="/tasks?scope=school&status=PENDING_EXECUTIVE_APPROVAL"
           className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1 shrink-0"
         >
           <span>Xem tất cả</span>
-          <ArrowRight size={12} />
+          <ArrowRight size={12} strokeWidth={1.5} />
         </Link>
       </div>
 

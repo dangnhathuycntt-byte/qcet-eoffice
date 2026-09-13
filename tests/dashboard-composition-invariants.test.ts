@@ -1,34 +1,37 @@
 /**
- * Dashboard Composition Invariants Test Suite (Phase 0 / Regression Lock)
- * Target: Canonical Dashboard (src/components/dashboard/zones/dashboard-zone.tsx, src/app/page.tsx)
- * Invariants: DASH-01, DASH-02, DASH-04, DASH-06, DASH-07, DASH-09 (ACTION→SITUATION→CONTEXT order)
+ * Dashboard composition invariants.
  *
- * Requirements:
- * 1. Enforce exactly ONE situation summary on canonical dashboard (DashboardSituationStrip)
- * 2. Enforce exactly ONE primary action queue
- * 3. Prohibit SmartWorkbox on dashboard
- * 4. Prohibit ExecutiveActionCenter metric cards on dashboard
- * 5. Prohibit literal markers: "Verified Clear", "Hàng đợi điều hành thông suốt", "Operational Clear", "Ổn định tuyệt đối"
- * 6. Enforce department dashboard summary has at most 5 rows
- * 7. (DASH-09) Enforce ACTION section appears before SITUATION, SITUATION before CONTEXT
+ * REPLACED (plan T10.1 / T10.2 / T10.5):
+ *  - The old file defined a test-only `getDepartmentDashboardSummary` top-5 helper that
+ *    never called production. It is replaced by the real production helper
+ *    `summarizeDepartmentAttention` plus a real SSR render.
+ *  - Empty-state claims are now asserted against rendered output, so this file and
+ *    `executive-action-center-ui.test.ts` agree: deceptive health markers are FORBIDDEN
+ *    everywhere, and the assertion actually covers the components that render them.
+ *  - Section order follows the new SUMMARY → ACTION → CONTEXT structure (plan T06.2).
  */
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ExecutiveActionCenter } from "../src/components/dashboard/executive-action-center";
+import { DepartmentAttentionPreview } from "../src/components/dashboard/department-attention-preview";
+import { summarizeDepartmentAttention } from "../src/lib/executive-matrix-aggregator";
 import { deriveSituationState } from "../src/components/dashboard/dashboard-situation-strip";
+import {
+  FIXTURE_DEPARTMENTS,
+  EXPECTED_DEPARTMENT_TOTALS,
+  EXPECTED_ATTENTION_ORDER,
+  EXPECTED_NOT_ATTENTION,
+} from "./fixtures/workbench-queue-fixture";
 
-const DASHBOARD_ZONE_PATH = path.join(
-  process.cwd(),
-  "src/components/dashboard/zones/dashboard-zone.tsx"
-);
-const ACTION_CENTER_PATH = path.join(
-  process.cwd(),
-  "src/components/dashboard/executive-action-center.tsx"
-);
+const DASHBOARD_ZONE_PATH = path.join(process.cwd(), "src/components/dashboard/zones/dashboard-zone.tsx");
+const ACTION_CENTER_PATH = path.join(process.cwd(), "src/components/dashboard/executive-action-center.tsx");
 
-// Prohibited pseudo-healthy and deceptive literal markers (DASH-06)
+/** Deceptive pseudo-healthy markers (DASH-06). */
 export const PROHIBITED_DASHBOARD_MARKERS = [
   "Verified Clear",
   "Hàng đợi điều hành thông suốt",
@@ -36,222 +39,113 @@ export const PROHIBITED_DASHBOARD_MARKERS = [
   "Ổn định tuyệt đối",
 ] as const;
 
-/**
- * Validates that text content contains zero prohibited dashboard markers
- */
-export function assertNoProhibitedDashboardMarkers(content: string, contextName = "content"): void {
+function assertNoProhibitedMarkers(content: string, contextName = "content"): void {
   for (const marker of PROHIBITED_DASHBOARD_MARKERS) {
     assert.equal(
       content.includes(marker),
       false,
-      `Prohibited literal marker detected in ${contextName}: "${marker}" violates DASH-06 (Empty data != healthy state)`
+      `Prohibited marker "${marker}" in ${contextName} (empty data != healthy state)`
     );
   }
 }
 
-/**
- * Limits department health summaries to at most 5 rows for canonical dashboard display (DASH-07)
- */
-export function getDepartmentDashboardSummary<T>(departments: readonly T[], maxRows = 5): T[] {
-  if (maxRows > 5) {
-    throw new Error(`DASH-07 violation: Dashboard context list must not exceed 5 items (requested ${maxRows})`);
-  }
-  return departments.slice(0, maxRows);
-}
-
-describe("Dashboard Composition Invariants (Phase 0)", () => {
+describe("Dashboard composition invariants", () => {
   const dashboardSource = fs.readFileSync(DASHBOARD_ZONE_PATH, "utf8");
   const actionCenterSource = fs.readFileSync(ACTION_CENTER_PATH, "utf8");
 
-  test("1. Enforce exactly ONE situation summary on canonical dashboard (DASH-01)", () => {
-    // Situation summary component: DashboardSituationStrip (replaces legacy ExecutiveStatStrip on dashboard)
+  test("1. Exactly one situation summary on the dashboard", () => {
     const situationStripMatches = dashboardSource.match(/<DashboardSituationStrip\b/g) || [];
     const adaptiveMetricStripMatches = dashboardSource.match(/<AdaptiveMetricStrip\b/g) || [];
-    const totalSituationSurfaces = situationStripMatches.length + adaptiveMetricStripMatches.length;
-
-    assert.equal(
-      totalSituationSurfaces,
-      1,
-      `Canonical dashboard must contain exactly ONE situation summary (found ${totalSituationSurfaces}: ${situationStripMatches.length} DashboardSituationStrip, ${adaptiveMetricStripMatches.length} AdaptiveMetricStrip)`
-    );
-
-    // ExecutiveStatStrip must not appear in dashboard-zone (it's a KPI card grid — too heavy for dashboard SITUATION)
-    assert.equal(
-      dashboardSource.includes("<ExecutiveStatStrip"),
-      false,
-      "dashboard-zone.tsx must NOT render <ExecutiveStatStrip /> — use DashboardSituationStrip for the compact SITUATION section"
-    );
-
-    // Ensure no secondary metric strip container exists
-    assert.equal(
-      dashboardSource.includes("<SecondaryStatStrip"),
-      false,
-      "Canonical dashboard must not mount secondary stat strips"
-    );
+    assert.equal(situationStripMatches.length + adaptiveMetricStripMatches.length, 1);
+    assert.equal(dashboardSource.includes("<ExecutiveStatStrip"), false);
+    assert.equal(dashboardSource.includes("<SecondaryStatStrip"), false);
   });
 
-  test("2. Enforce exactly ONE primary action queue on canonical dashboard (DASH-02)", () => {
-    // Action queue components: ExecutiveActionCenter (for execs) or PersonalWorkbench with attentionOnly (for others)
+  test("2. Exactly one action queue per audience on the dashboard", () => {
     const actionCenterMatches = dashboardSource.match(/<ExecutiveActionCenter\b/g) || [];
-    const actionInboxMatches = dashboardSource.match(/<ActionInboxQueue\b/g) || [];
-    // PersonalWorkbench rendered with attentionOnly in section-action is the non-exec action surface
     const personalWorkbenchMatches = dashboardSource.match(/<PersonalWorkbench\b/g) || [];
-    const totalActionQueues = actionCenterMatches.length + actionInboxMatches.length + personalWorkbenchMatches.length;
-
-    assert.equal(
-      totalActionQueues,
-      2,
-      `Canonical dashboard must contain exactly ONE executive action queue + ONE non-exec action queue (PersonalWorkbench), found ${totalActionQueues} (ExecCenter: ${actionCenterMatches.length}, ActionInbox: ${actionInboxMatches.length}, PersonalWorkbench: ${personalWorkbenchMatches.length}). They render exclusively based on isExecutive.`
-    );
-
-    // Both must live inside section-action, not duplicated outside
-    const sectionActionContent = dashboardSource.slice(
-      dashboardSource.indexOf('data-slot="section-action"'),
-      dashboardSource.indexOf('data-slot="section-situation"')
-    );
-    assert.ok(
-      sectionActionContent.includes("<ExecutiveActionCenter"),
-      "ExecutiveActionCenter must be inside section-action"
-    );
-    assert.ok(
-      sectionActionContent.includes("<PersonalWorkbench"),
-      "PersonalWorkbench (non-exec action surface) must be inside section-action"
-    );
+    assert.equal(actionCenterMatches.length, 1, "one executive queue");
+    assert.equal(personalWorkbenchMatches.length, 1, "one non-exec queue");
+    assert.equal(dashboardSource.includes("<ActionInboxQueue"), false);
   });
 
-  test("3. Prohibit SmartWorkbox on canonical dashboard (DASH-08)", () => {
-    // SmartWorkbox belongs strictly to operational task view (/tasks), never on dashboard
-    assert.equal(
-      dashboardSource.includes("<SmartWorkbox"),
-      false,
-      "dashboard-zone.tsx must NOT render <SmartWorkbox />"
-    );
-    assert.equal(
-      dashboardSource.includes("SmartWorkbox"),
-      false,
-      "dashboard-zone.tsx must NOT import or reference SmartWorkbox"
-    );
+  test("3. No SmartWorkbox on the dashboard", () => {
+    assert.equal(dashboardSource.includes("SmartWorkbox"), false);
   });
 
-  test("4. Prohibit ExecutiveActionCenter metric cards on dashboard (DASH-04)", () => {
-    // Metric cards duplicate the macro metric strip; they must be suppressed on dashboard
-    // In ExecutiveActionCenter, hideCards must default to true
-    assert.match(
-      actionCenterSource,
-      /hideCards\s*=\s*true/,
-      "ExecutiveActionCenter must default hideCards to true to avoid duplicate cards on dashboard"
-    );
-
-    // In dashboard-zone.tsx, ExecutiveActionCenter must not explicitly enable metric cards
-    assert.equal(
-      dashboardSource.includes("hideCards={false}"),
-      false,
-      "dashboard-zone.tsx must not pass hideCards={false} to ExecutiveActionCenter"
-    );
+  test("4. Dashboard hides the large action KPI cards", () => {
+    assert.match(actionCenterSource, /hideCards\s*=\s*true/);
+    assert.equal(dashboardSource.includes("hideCards={false}"), false);
   });
 
-  test("5. Prohibit literal markers: Verified Clear, Hàng đợi điều hành thông suốt, Operational Clear, Ổn định tuyệt đối (DASH-06)", () => {
-    // Canonical dashboard must not display deceptive or pseudo-healthy literal markers
-    assertNoProhibitedDashboardMarkers(dashboardSource, "dashboard-zone.tsx");
+  test("5. Prohibited health markers are forbidden and absent from rendered output", () => {
+    assertNoProhibitedMarkers(dashboardSource, "dashboard-zone.tsx");
+    assertNoProhibitedMarkers(actionCenterSource, "executive-action-center.tsx");
 
-    // The invariant validator itself must strictly reject any of the prohibited markers
+    // The contract is enforced on what actually renders, not only on source text.
+    const emptyHtml = renderToStaticMarkup(
+      React.createElement(ExecutiveActionCenter, {
+        stats: {
+          pendingSchoolApprovalCount: 0,
+          blockedTasksCount: 0,
+          overdueTasksCount: 0,
+          strategicActiveCount: 0,
+        },
+        activeFilter: "ALL",
+        onFilterChange: () => {},
+        items: [],
+      })
+    );
+    assertNoProhibitedMarkers(emptyHtml, "rendered empty queue");
+
     for (const marker of PROHIBITED_DASHBOARD_MARKERS) {
-      assert.throws(
-        () => assertNoProhibitedDashboardMarkers(`Tình trạng: ${marker}`, "test-string"),
-        /Prohibited literal marker detected/,
-        `Validator must throw when prohibited marker "${marker}" is detected`
-      );
+      assert.throws(() => assertNoProhibitedMarkers(`x ${marker}`, "self-test"), /Prohibited marker/);
     }
   });
 
-  test("6. Enforce department dashboard summary has at most 5 rows (DASH-07)", () => {
-    // Canonical 17 departments in QCET
-    const mock17Departments = Array.from({ length: 17 }, (_, i) => ({
-      departmentId: `DEPT_${i + 1}`,
-      departmentName: `Đơn vị ${i + 1}`,
-      overdueTasksCount: 17 - i,
-      averageProgressPercent: i * 5,
-    }));
+  test("6. Department preview uses the production helper and caps at 5 rows", () => {
+    const summary = summarizeDepartmentAttention(FIXTURE_DEPARTMENTS);
+    assert.equal(summary.all.length, EXPECTED_DEPARTMENT_TOTALS.all);
+    assert.equal(summary.attentionCount, EXPECTED_DEPARTMENT_TOTALS.attention);
+    assert.deepEqual(summary.attention.map((d) => d.departmentId), EXPECTED_ATTENTION_ORDER);
+    for (const id of EXPECTED_NOT_ATTENTION) {
+      assert.equal(summary.attention.some((d) => d.departmentId === id), false, id);
+    }
 
-    const dashboardSummary = getDepartmentDashboardSummary(mock17Departments);
-    assert.ok(
-      dashboardSummary.length <= 5,
-      `Department summary on dashboard must have at most 5 rows (got ${dashboardSummary.length})`
+    const html = renderToStaticMarkup(
+      React.createElement(DepartmentAttentionPreview, { departments: FIXTURE_DEPARTMENTS })
     );
-    assert.equal(dashboardSummary.length, 5, "Should cap 17 departments to top 5 items");
-
-    // Enforce that requesting > 5 items throws DASH-07 violation
-    assert.throws(
-      () => getDepartmentDashboardSummary(mock17Departments, 10),
-      /DASH-07 violation/
-    );
-
-    // Small list (e.g. 3 departments) is preserved without expansion
-    const smallList = mock17Departments.slice(0, 3);
-    assert.equal(getDepartmentDashboardSummary(smallList).length, 3);
+    const rowCount = (html.match(/data-slot="department-attention-row"/g) || []).length;
+    assert.equal(rowCount, EXPECTED_DEPARTMENT_TOTALS.preview, "preview renders exactly 5 rows");
   });
 
-  test("7. Enforce ACTION → SITUATION → CONTEXT section order on canonical dashboard (DASH-09)", () => {
-    const actionPos = dashboardSource.indexOf('data-slot="section-action"');
+  test("7. Department preview empty state is scoped, not a system-wide health claim", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(DepartmentAttentionPreview, { departments: [] })
+    );
+    assert.ok(
+      html.includes("Không có đơn vị có việc quá hạn hoặc bị chặn trong phạm vi này"),
+      "empty preview must describe only its own scope"
+    );
+  });
+
+  test("8. Section order is SUMMARY → ACTION → CONTEXT", () => {
     const situationPos = dashboardSource.indexOf('data-slot="section-situation"');
+    const actionPos = dashboardSource.indexOf('data-slot="section-action"');
     const contextPos = dashboardSource.indexOf('data-slot="section-context"');
 
-    assert.ok(actionPos > -1, 'dashboard-zone.tsx must have data-slot="section-action"');
-    assert.ok(situationPos > -1, 'dashboard-zone.tsx must have data-slot="section-situation"');
-    assert.ok(contextPos > -1, 'dashboard-zone.tsx must have data-slot="section-context"');
-    assert.ok(
-      actionPos < situationPos,
-      `DASH-09: ACTION section (pos ${actionPos}) must appear before SITUATION section (pos ${situationPos})`
-    );
-    assert.ok(
-      situationPos < contextPos,
-      `DASH-09: SITUATION section (pos ${situationPos}) must appear before CONTEXT section (pos ${contextPos})`
-    );
-
-    // DashboardSituationStrip must be inside section-situation
-    const situationSectionStart = dashboardSource.indexOf('data-slot="section-situation"');
-    const contextSectionStart = dashboardSource.indexOf('data-slot="section-context"');
-    const situationSectionContent = dashboardSource.slice(situationSectionStart, contextSectionStart);
-    assert.ok(
-      situationSectionContent.includes("<DashboardSituationStrip"),
-      "DashboardSituationStrip must reside inside section-situation"
-    );
+    assert.ok(situationPos > -1 && actionPos > -1 && contextPos > -1);
+    assert.ok(situationPos < actionPos, "the summary must sit BEFORE the queue");
+    assert.ok(actionPos < contextPos, "the queue must sit BEFORE the context section");
   });
 
-  test("8. Executive overdue display: HAS_ISSUES when stats.overdueTasksCount=0 but executiveStats.overdueTasksCount>0 (DASH-Task5)", () => {
-    // stats has no personal overdue tasks
-    const stats = {
-      totalSchoolTasks: 10,
-      totalStaffTasks: 0,
-      overdueTasksCount: 0,
-      averageSchoolProgressPercent: 80,
-    } as import("@/types/dashboard").DashboardStats;
-
-    // executive layer has overdue tasks that must surface
-    const executiveStats = {
-      overdueTasksCount: 3,
-      blockedTasksCount: 0,
-      pendingSchoolApprovalCount: 0,
-      strategicActiveCount: 0,
-    } as import("@/lib/executive-matrix-aggregator").ExecutiveActionStats;
-
-    const state = deriveSituationState(stats, executiveStats);
+  test("9. Executive overdue surfaces even when personal stats show none", () => {
+    const stats = { totalSchoolTasks: 10, totalStaffTasks: 0, overdueTasksCount: 0, averageSchoolProgressPercent: 80 } as import("@/types/dashboard").DashboardStats;
+    const executiveStats = { overdueTasksCount: 3, blockedTasksCount: 0, pendingSchoolApprovalCount: 0, strategicActiveCount: 0 } as import("@/lib/executive-matrix-aggregator").ExecutiveActionStats;
+    assert.equal(deriveSituationState(stats, executiveStats), "HAS_ISSUES");
     assert.equal(
-      state,
-      "HAS_ISSUES",
-      "deriveSituationState must return HAS_ISSUES when executiveStats.overdueTasksCount>0 even if stats.overdueTasksCount===0"
-    );
-
-    // Also verify that zero executiveStats yields HEALTHY (baseline sanity)
-    const healthyState = deriveSituationState(stats, {
-      ...executiveStats,
-      overdueTasksCount: 0,
-      blockedTasksCount: 0,
-    });
-    assert.equal(
-      healthyState,
-      "HEALTHY",
-      "deriveSituationState must return HEALTHY when both overdue counts are 0"
+      deriveSituationState(stats, { ...executiveStats, overdueTasksCount: 0, blockedTasksCount: 0 }),
+      "HEALTHY"
     );
   });
 });

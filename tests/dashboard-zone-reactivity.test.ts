@@ -37,11 +37,15 @@ describe("DashboardZone Reactivity and Reactive Filtering", () => {
       content.includes("filteredTasks"),
       "DashboardZone must consume filteredTasks from useDashboardData"
     );
+    // The zone passes the scope+period set as `tasks` and the reactive filter output
+    // as `filteredTasks` to PersonalWorkbench.
     assert.ok(
-      content.includes("tasks={reactiveTasks}") ||
-        content.includes("tasks={filteredTasks}") ||
-        content.includes("filteredTasks={reactiveTasks}"),
-      "DashboardZone must pass filtered tasks to CascadingTaskTable or PersonalWorkbench"
+      content.includes("tasks={baseTasks}") || content.includes("tasks={filteredTasks}"),
+      "DashboardZone must pass the task set to PersonalWorkbench"
+    );
+    assert.ok(
+      content.includes("filteredTasks={filteredTasks}"),
+      "DashboardZone must pass the reactive filtered tasks to PersonalWorkbench"
     );
   });
 });

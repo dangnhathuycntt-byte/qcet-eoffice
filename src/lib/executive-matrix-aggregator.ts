@@ -1,5 +1,5 @@
 import type { SchoolTask, TaskCategory } from "@/types/dashboard";
-import { isTaskPastDue, getSystemReferenceDate } from "./academic-calendar";
+import { isTaskPastDue, getSystemReferenceDate, parseStrictDateOnly } from "./academic-calendar";
 
 export const TODAY_ISO = getSystemReferenceDate();
 
@@ -16,9 +16,17 @@ export interface ExecutiveActionStats {
   strategicActiveCount: number;
 }
 
+/**
+ * Why a task sits in the workbench action queue. A single task may carry more
+ * than one reason (e.g. a review file that is also overdue) — the queue shows
+ * ONE row per task with every reason, not one row per reason.
+ */
+export type ExecutiveActionReason = "REVIEW" | "BLOCKED" | "OVERDUE";
+
 export interface ExecutiveActionItem {
   id: string;
-  taskId?: string;
+  /** The real task id. Rows are keyed by this, so it is always present. */
+  taskId: string;
   title: string;
   departmentName?: string;
   departmentCode?: string;
@@ -27,12 +35,31 @@ export interface ExecutiveActionItem {
   assignee?: string;
   leadAvatar?: string;
   dueDate: string;
+  /** Primary group, kept for consumers that only understand the 3-way lens. */
   filterType: Exclude<ExecutiveFilter, "ALL">;
+  /** Every reason this row is actionable. Order: REVIEW, BLOCKED, OVERDUE. */
+  reasons: ExecutiveActionReason[];
+  /** Headline reason: REVIEW, else BLOCKED, else OVERDUE. */
+  primaryReason: ExecutiveActionReason;
+  /** ISO date the task entered its current waiting state (sort tie-break). */
+  waitingSince?: string;
   badgeLabel?: string;
   badgeVariant?: "warning" | "rose" | "default" | string;
-  actionType?: "APPROVE" | "URGE" | "MONITOR" | "DIRECT" | string;
+  actionType?: "REVIEW" | "DETAIL" | "APPROVE" | "URGE" | "MONITOR" | "DIRECT" | string;
   actionLabel?: string;
   priority?: "KHAN_CAP" | "CAO" | "TRUNG_BINH";
+}
+
+/** Counts for each workbench queue lens, computed from the same item set. */
+export type ExecutiveActionCounts = Record<Exclude<ExecutiveFilter, "ALL">, number>;
+
+export interface ExecutiveActionQueueSelection {
+  /** Size of the filtered set BEFORE the preview slice — never the preview length. */
+  filteredTotal: number;
+  /** First `previewLimit` rows of the sorted, filtered set. */
+  previewItems: ExecutiveActionItem[];
+  /** Predicate-matching counts for every lens. */
+  counts: ExecutiveActionCounts;
 }
 
 export interface DepartmentHealthSummary {
@@ -369,10 +396,11 @@ export function computeExecutiveActionStats(
     if ((task.status as string) === "CANCELLED") continue;
 
     if (task.status !== "COMPLETED") {
+      // A real pending-review request only. `progressPercent === 100` is NOT a
+      // review request — it only means the owner filled the bar (plan T04.2).
       const isWaiting =
         (task.status as string) === "WAITING_APPROVAL" ||
-        task.status === "PENDING_EXECUTIVE_APPROVAL" ||
-        task.progressPercent === 100;
+        task.status === "PENDING_EXECUTIVE_APPROVAL";
       const hasSubtaskNeedingReview = (task.subTasks || []).some(
         (st) =>
           (st.status as string) !== "CANCELLED" &&
@@ -595,7 +623,172 @@ export function computeDepartmentHealthMatrix(
 }
 
 /**
- * Extracts dynamic ExecutiveActionItem[] directly from real tasks for BGH leaders.
+ * Strict overdue check. `isTaskPastDue` compares ISO strings, so an impossible
+ * calendar date like "2026-02-30" would read as past due. A row is only overdue
+ * when its due date is a REAL calendar date strictly before the reference date;
+ * an invalid date stays missing and is never coerced (plan T05 "Deadline").
+ */
+function isStrictlyOverdue(
+  dueDate: string | Date | null | undefined,
+  referenceDate: string
+): boolean {
+  const due = parseStrictDateOnly(dueDate);
+  const ref = parseStrictDateOnly(referenceDate);
+  if (!due || !ref) return false;
+  return due < ref;
+}
+
+/** Display-priority ranking for queue rows. */
+const ACTION_PRIORITY_WEIGHT: Record<string, number> = {
+  KHAN_CAP: 3,
+  CAO: 2,
+  TRUNG_BINH: 1,
+};
+
+function actionPriorityWeight(priority?: string): number {
+  return ACTION_PRIORITY_WEIGHT[String(priority ?? "").toUpperCase()] ?? 1;
+}
+
+/**
+ * Canonical workbench queue order (plan T04.6):
+ * priority desc -> overdue first -> due asc -> waitingSince asc -> taskId asc.
+ * A row with no usable due date sorts last and is never coerced to "today".
+ */
+export function compareExecutiveActionItems(
+  a: ExecutiveActionItem,
+  b: ExecutiveActionItem
+): number {
+  const byPriority = actionPriorityWeight(b.priority) - actionPriorityWeight(a.priority);
+  if (byPriority !== 0) return byPriority;
+
+  const overdueA = a.reasons.includes("OVERDUE") ? 1 : 0;
+  const overdueB = b.reasons.includes("OVERDUE") ? 1 : 0;
+  if (overdueA !== overdueB) return overdueB - overdueA;
+
+  const dueA = parseStrictDateOnly(a.dueDate);
+  const dueB = parseStrictDateOnly(b.dueDate);
+  if (dueA !== dueB) {
+    if (dueA === null) return 1;
+    if (dueB === null) return -1;
+    return dueA < dueB ? -1 : 1;
+  }
+
+  const waitA = a.waitingSince ?? "";
+  const waitB = b.waitingSince ?? "";
+  if (waitA !== waitB) {
+    if (!waitA) return 1;
+    if (!waitB) return -1;
+    return waitA < waitB ? -1 : 1;
+  }
+
+  return a.taskId < b.taskId ? -1 : a.taskId > b.taskId ? 1 : 0;
+}
+
+/** Does this row belong to the given workbench lens? Predicate, not primaryReason. */
+export function matchesExecutiveFilter(
+  item: ExecutiveActionItem,
+  filter: ExecutiveFilter
+): boolean {
+  switch (filter) {
+    case "ALL":
+      return true;
+    case "PENDING_APPROVAL":
+      return item.reasons.includes("REVIEW");
+    case "BLOCKED_OVERDUE":
+      return item.reasons.includes("BLOCKED") || item.reasons.includes("OVERDUE");
+    case "STRATEGIC":
+      return item.filterType === "STRATEGIC";
+    default:
+      return true;
+  }
+}
+
+/**
+ * Selects the visible rows for a lens. The filter and the sort are applied
+ * BEFORE the preview slice, and `filteredTotal` is the size of the filtered set
+ * — a caller must never read `previewItems.length` as the total.
+ */
+export function selectExecutiveActionQueue(
+  items: ExecutiveActionItem[],
+  filter: ExecutiveFilter = "ALL",
+  previewLimit = 5
+): ExecutiveActionQueueSelection {
+  const filtered = items
+    .filter((item) => matchesExecutiveFilter(item, filter))
+    .sort(compareExecutiveActionItems);
+
+  return {
+    filteredTotal: filtered.length,
+    previewItems: filtered.slice(0, previewLimit),
+    counts: {
+      PENDING_APPROVAL: items.filter((i) => matchesExecutiveFilter(i, "PENDING_APPROVAL")).length,
+      BLOCKED_OVERDUE: items.filter((i) => matchesExecutiveFilter(i, "BLOCKED_OVERDUE")).length,
+      STRATEGIC: items.filter((i) => matchesExecutiveFilter(i, "STRATEGIC")).length,
+    },
+  };
+}
+
+/** Minimal shape `summarizeDepartmentAttention` needs from a department row. */
+export interface DepartmentAttentionInput {
+  departmentId: string;
+  departmentCode?: string;
+  departmentName?: string;
+  totalTasksCount?: number;
+  completedTasksCount?: number;
+  overdueTasksCount?: number;
+  overdueTasks?: number;
+  blockedTasksCount?: number;
+}
+
+export interface DepartmentAttentionSummary<T> {
+  /** Every department in scope. */
+  all: T[];
+  /** Departments needing attention, sorted. */
+  attention: T[];
+  /** Size of `attention` — never the preview length. */
+  attentionCount: number;
+  /** First `previewLimit` rows of `attention`. */
+  preview: T[];
+}
+
+/**
+ * Splits departments into "all" and "needs attention".
+ *
+ * Attention is a real risk signal only: overdue tasks > 0 OR blocked tasks > 0.
+ * A low average progress percentage is deliberately NOT a reason — that was the
+ * old `<60%` threshold that reported problems on an empty dataset (plan T05.1).
+ */
+export function summarizeDepartmentAttention<T extends DepartmentAttentionInput>(
+  departments: T[],
+  previewLimit = 5
+): DepartmentAttentionSummary<T> {
+  const overdueOf = (d: DepartmentAttentionInput) => d.overdueTasksCount ?? d.overdueTasks ?? 0;
+  const blockedOf = (d: DepartmentAttentionInput) => d.blockedTasksCount ?? 0;
+
+  const attention = departments
+    .filter((d) => overdueOf(d) > 0 || blockedOf(d) > 0)
+    .sort((a, b) => {
+      const byOverdue = overdueOf(b) - overdueOf(a);
+      if (byOverdue !== 0) return byOverdue;
+      const byBlocked = blockedOf(b) - blockedOf(a);
+      if (byBlocked !== 0) return byBlocked;
+      return a.departmentId < b.departmentId ? -1 : a.departmentId > b.departmentId ? 1 : 0;
+    });
+
+  return {
+    all: departments,
+    attention,
+    attentionCount: attention.length,
+    preview: attention.slice(0, previewLimit),
+  };
+}
+
+/**
+ * Extracts the workbench action queue from real tasks.
+ *
+ * One row per task (keyed by `taskId`), carrying every reason it is actionable.
+ * Only real signals count: a pending review request, a blocker, or an overdue
+ * deadline. A plain IN_PROGRESS task is NOT a workbench action row.
  */
 export function extractExecutiveActionItems(
   tasks: SchoolTask[],
@@ -604,48 +797,78 @@ export function extractExecutiveActionItems(
   const items: ExecutiveActionItem[] = [];
 
   for (const t of tasks) {
-    if ((t.status as string) === "CANCELLED") continue;
+    const status = String(t.status ?? "");
+    if (status === "CANCELLED") continue;
 
-    const isWaiting =
-      t.status !== "COMPLETED" &&
-      ((t.status as string) === "WAITING_APPROVAL" ||
-        t.status === "PENDING_EXECUTIVE_APPROVAL" ||
-        t.progressPercent === 100 ||
-        (t.subTasks || []).some(
-          (s) =>
-            (s.status as string) !== "CANCELLED" &&
-            (s.status === "NEEDS_REVIEW" || s.requiresReview)
-        ));
+    const isTerminal = status === "COMPLETED" || status === "CANCELLED";
+    const subTasks = t.subTasks || [];
+    const isSubActive = (s: { status?: string }) => String(s.status ?? "") !== "CANCELLED";
 
-    const isOverdueOrBlocked =
-      (t.status as string) === "OVERDUE" ||
-      (t.status as string) === "BLOCKED" ||
-      (t.status !== "COMPLETED" && isTaskPastDue(t.dueDate, referenceDate)) ||
-      (t.subTasks || []).some(
-        (s) =>
-          (s.status as string) !== "CANCELLED" &&
-          (s.status === "BLOCKED" ||
-            (s.status !== "COMPLETED" && isTaskPastDue(s.dueDate, referenceDate)))
-      );
+    const reasons: ExecutiveActionReason[] = [];
 
-    const deptCode =
-      t.leadDepartmentCode ||
-      t.departmentCode ||
+    // REVIEW — a real pending-review request, never `progressPercent === 100`.
+    const taskWaitingForReview =
+      status === "WAITING_APPROVAL" || status === "PENDING_EXECUTIVE_APPROVAL";
+    const subtaskAwaitingReview = subTasks.some(
+      (s) =>
+        isSubActive(s) &&
+        (String(s.status) === "NEEDS_REVIEW" || s.requiresReview === true)
+    );
+    if (taskWaitingForReview || subtaskAwaitingReview) {
+      reasons.push("REVIEW");
+    }
+
+    // BLOCKED — task or one of its subtasks is blocked.
+    const taskBlocked = status === "BLOCKED";
+    const subtaskBlocked = subTasks.some(
+      (s) => isSubActive(s) && String(s.status) === "BLOCKED"
+    );
+    if (taskBlocked || subtaskBlocked) {
+      reasons.push("BLOCKED");
+    }
+
+    // OVERDUE — the task itself or one of its open subtasks is past due.
+    const taskOverdue =
+      status === "OVERDUE" || (!isTerminal && isStrictlyOverdue(t.dueDate, referenceDate));
+    const subtaskOverdue = subTasks.some(
+      (s) =>
+        isSubActive(s) &&
+        String(s.status) !== "COMPLETED" &&
+        isStrictlyOverdue(s.dueDate, referenceDate)
+    );
+    if (taskOverdue || subtaskOverdue) {
+      reasons.push("OVERDUE");
+    }
+
+    if (reasons.length === 0) continue;
+
+    const primaryReason: ExecutiveActionReason = reasons.includes("REVIEW")
+      ? "REVIEW"
+      : reasons.includes("BLOCKED")
+        ? "BLOCKED"
+        : "OVERDUE";
+
+    const resolvedDeptId =
+      resolveDepartmentId(t.leadDepartmentCode) ||
+      resolveDepartmentId(t.departmentCode) ||
       resolveDepartmentId(t.leadDepartment) ||
       resolveDepartmentId(t.department) ||
+      resolveDepartmentId(t.departmentId) ||
+      resolveDepartmentId(t.departmentName) ||
       resolveDepartmentId(undefined, t.leadAssigneeName) ||
-      "BGH";
+      null;
+    const deptDef = resolvedDeptId
+      ? QCET_DEPARTMENT_DEFINITIONS.find((d) => d.id === resolvedDeptId)
+      : undefined;
 
-    const deptDef = QCET_DEPARTMENT_DEFINITIONS.find(
-      (d) => d.id === deptCode || d.code === deptCode
-    );
-
-    const deptName =
+    // No department resolved -> never silently fall back to "BGH" (plan T04.8).
+    const departmentCode = deptDef?.id ?? resolvedDeptId ?? undefined;
+    const departmentName =
       t.leadDepartment ||
       t.department ||
       t.departmentName ||
       deptDef?.name ||
-      "QCET";
+      "Chưa xác định đơn vị";
 
     const leadName = t.leadAssigneeName || t.assignedTo || "Chưa phân công";
 
@@ -656,74 +879,39 @@ export function extractExecutiveActionItems(
           ? "CAO"
           : "TRUNG_BINH";
 
-    if (isWaiting) {
-      items.push({
-        id: `act-wait-${t.id}`,
-        taskId: t.id,
-        title: t.title,
-        departmentName: deptName,
-        departmentCode: deptCode,
-        department: deptName,
-        leadName,
-        assignee: leadName,
-        leadAvatar: t.leadAssigneeAvatar,
-        dueDate: t.dueDate,
-        filterType: "PENDING_APPROVAL",
-        badgeLabel: "Chờ phê duyệt",
-        badgeVariant: "warning",
-        actionType: "APPROVE",
-        actionLabel: "Phê duyệt ngay",
-        priority,
-      });
-    } else if (isOverdueOrBlocked) {
-      items.push({
-        id: `act-overdue-${t.id}`,
-        taskId: t.id,
-        title: t.title,
-        departmentName: deptName,
-        departmentCode: deptCode,
-        department: deptName,
-        leadName,
-        assignee: leadName,
-        leadAvatar: t.leadAssigneeAvatar,
-        dueDate: t.dueDate,
-        filterType: "BLOCKED_OVERDUE",
-        badgeLabel: (t.status as string) === "BLOCKED" ? "Tắc nghẽn" : "Trễ hạn tiến độ",
-        badgeVariant: "rose",
-        actionType: "URGE",
-        actionLabel: "Đôn đốc",
-        priority,
-      });
-    } else if (t.status === "IN_PROGRESS") {
-      items.push({
-        id: `act-strat-${t.id}`,
-        taskId: t.id,
-        title: t.title,
-        departmentName: deptName,
-        departmentCode: deptCode,
-        department: deptName,
-        leadName,
-        assignee: leadName,
-        leadAvatar: t.leadAssigneeAvatar,
-        dueDate: t.dueDate,
-        filterType: "STRATEGIC",
-        badgeLabel: "Nhiệm vụ trọng tâm",
-        badgeVariant: "default",
-        actionType: "MONITOR",
-        actionLabel: "Theo dõi",
-        priority,
-      });
-    }
+    const isReview = primaryReason === "REVIEW";
+    const isBlocked = primaryReason === "BLOCKED";
+
+    items.push({
+      id: `act-${t.id}`,
+      taskId: t.id,
+      title: t.title,
+      departmentName,
+      departmentCode,
+      department: departmentName,
+      leadName,
+      assignee: leadName,
+      leadAvatar: t.leadAssigneeAvatar,
+      dueDate: t.dueDate,
+      filterType: isReview ? "PENDING_APPROVAL" : "BLOCKED_OVERDUE",
+      reasons,
+      primaryReason,
+      waitingSince: t.assignedDate,
+      badgeLabel: isReview
+        ? "Hồ sơ chờ xem xét"
+        : isBlocked
+          ? "Tắc nghẽn"
+          : "Trễ hạn tiến độ",
+      badgeVariant: isReview ? "warning" : "rose",
+      // Opening a review file is "Xem xét"; opening anything else is "Xem chi tiết".
+      // Neither sends an approval mutation from the queue (plan T04.7).
+      actionType: isReview ? "REVIEW" : "DETAIL",
+      actionLabel: isReview ? "Xem xét" : "Xem chi tiết",
+      priority,
+    });
   }
 
-  return items.sort((a, b) => {
-    const weights: Record<string, number> = {
-      PENDING_APPROVAL: 0,
-      BLOCKED_OVERDUE: 1,
-      STRATEGIC: 2,
-    };
-    return (weights[a.filterType] ?? 9) - (weights[b.filterType] ?? 9);
-  });
+  return items.sort(compareExecutiveActionItems);
 }
 
 /**
@@ -741,8 +929,9 @@ export function filterTasksByExecutive(
     case "PENDING_APPROVAL":
       return tasks.filter((t) => {
         if ((t.status as string) === "CANCELLED" || t.status === "COMPLETED") return false;
+        // A real pending-review request only — `progressPercent === 100` alone is
+        // not a review request (plan T04.2). Same predicate as the queue.
         return (
-          t.progressPercent === 100 ||
           (t.status as string) === "WAITING_APPROVAL" ||
           t.status === "PENDING_EXECUTIVE_APPROVAL" ||
           (t.subTasks || []).some(

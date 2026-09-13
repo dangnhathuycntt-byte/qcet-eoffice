@@ -2,6 +2,9 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import * as React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ExecutiveActionCenter } from "../src/components/dashboard/executive-action-center";
 
 describe("Executive Cockpit Ergonomics Test", () => {
   const statStripPath = path.join(
@@ -43,47 +46,44 @@ describe("Executive Cockpit Ergonomics Test", () => {
     );
   });
 
-  test("ExecutiveActionCenter action cards have comfortable height and accessible buttons", () => {
+  // Requirement (plan T10.3 / T06.4): assert the RENDERED row ergonomics — the action
+  // button keeps its 44px touch target and the row uses aligned columns — instead of
+  // locking individual spacing class strings.
+  test("ExecutiveActionCenter rows keep an accessible action button and >=12px text", () => {
     const content = fs.readFileSync(actionCenterPath, "utf-8");
-    assert.match(
-      content,
-      /min-h-\[64px\]/,
-      "Action cards must have min-h-[64px]"
-    );
-    assert.match(
-      content,
-      /p-3\.5/,
-      "Action cards must have padding p-3.5"
-    );
-    assert.match(
-      content,
-      /text-sm font-semibold text-foreground/,
-      "Action card title must be text-sm font-semibold text-foreground"
-    );
-    assert.match(
-      content,
-      /text-xs sm:text-\[13px\] text-muted-foreground/,
-      "Action card metadata must be text-xs sm:text-[13px] text-muted-foreground"
-    );
-    assert.match(
-      content,
-      /h-8\.5|h-9/,
-      "Action center buttons must be at least h-8.5 or h-9"
-    );
-    assert.match(
-      content,
-      /size="sm"/,
-      "Action center buttons must use size='sm'"
-    );
-    assert.match(
-      content,
-      /px-3 text-xs font-semibold/,
-      "Action center buttons must use px-3 text-xs font-semibold"
-    );
     assert.doesNotMatch(
       content,
       /text-\[8px\]|text-\[9px\]|text-\[10px\]|text-\[11px\]/,
       "Action center must not contain text below 12px"
     );
+
+    const html = renderToStaticMarkup(
+      React.createElement(ExecutiveActionCenter, {
+        stats: { pendingSchoolApprovalCount: 0, blockedTasksCount: 0, overdueTasksCount: 0, strategicActiveCount: 0 },
+        activeFilter: "ALL",
+        onFilterChange: () => {},
+        items: [
+          {
+            id: "act-1",
+            taskId: "task-1",
+            title: "Nhiệm vụ quá hạn cần xử lý",
+            dueDate: "2026-09-10",
+            filterType: "BLOCKED_OVERDUE",
+            reasons: ["OVERDUE"],
+            primaryReason: "OVERDUE",
+            actionLabel: "Xem chi tiết",
+          },
+        ],
+      })
+    );
+
+    assert.ok(html.includes('data-slot="action-item-row"'), "row must render");
+    assert.match(
+      html,
+      /min-h-\[44px\] sm:min-h-\[36px\]/,
+      "the row action button must meet the touch target"
+    );
+    // Overdue rows use a neutral action to open the file, never a destructive button.
+    assert.equal(/variant="destructive"/.test(html), false, "no destructive button on a row");
   });
 });

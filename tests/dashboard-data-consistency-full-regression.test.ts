@@ -116,8 +116,10 @@ describe("Full System Regression Suite - Dashboard Data Consistency & Aggregatio
     assert.ok(card1.subtext.includes("85 đang làm"), "Card 1 must state 85 in progress");
   });
 
-  // TC-03: Approval queue displays real tasks or verified empty state with [Phê duyệt ngay]
-  test("TC-03: Approval queue extracts real WAITING_APPROVAL tasks with [Phê duyệt ngay] action", () => {
+  // TC-03: Approval queue extracts real WAITING_APPROVAL tasks as a review file.
+  // Requirement (plan T04.7 / F02): the list action OPENS the file — it is labelled
+  // "Xem xét" and never sends an approval mutation from the queue.
+  test("TC-03: Approval queue extracts real WAITING_APPROVAL tasks opening to review", () => {
     const taskWaiting: SchoolTask = createSampleSchoolTask(
       "task-waiting-1",
       "WAITING_APPROVAL",
@@ -130,12 +132,16 @@ describe("Full System Regression Suite - Dashboard Data Consistency & Aggregatio
     const items = extractExecutiveActionItems([taskWaiting], "2026-09-09");
     assert.equal(items.length, 1);
     assert.equal(items[0].taskId, "task-waiting-1");
-    assert.equal(items[0].actionType, "APPROVE");
-    assert.equal(items[0].actionLabel, "Phê duyệt ngay");
+    // Opening, not approving: the mutation lives inside the detail sheet only.
+    assert.equal(items[0].actionType, "REVIEW");
+    assert.equal(items[0].actionLabel, "Xem xét");
+    assert.deepEqual(items[0].reasons, ["REVIEW"]);
   });
 
-  // TC-04: Zero hardcoded mock data (DEFAULT_ACTION_ITEMS eradicated)
-  test("TC-04: Zero occurrences of DEFAULT_ACTION_ITEMS and Verified Clear Horizon present", () => {
+  // TC-04: Zero hardcoded mock data and an HONEST empty state.
+  // Requirement (plan T10.2, F13): the empty queue must describe emptiness and must NOT
+  // claim health ("Verified Clear" / "thông suốt" / "ổn định"). Asserted on the render.
+  test("TC-04: no DEFAULT_ACTION_ITEMS and no false-healthy empty-state claim", () => {
     const actionCenterPath = path.resolve(
       __dirname,
       "../src/components/dashboard/executive-action-center.tsx"
@@ -147,14 +153,13 @@ describe("Full System Regression Suite - Dashboard Data Consistency & Aggregatio
       false,
       "executive-action-center.tsx must not contain DEFAULT_ACTION_ITEMS"
     );
-    assert.ok(
-      actionCenterCode.includes("ShieldCheck"),
-      "Must display ShieldCheck in verified clear state"
-    );
-    assert.ok(
-      actionCenterCode.includes("Hàng đợi điều hành thông suốt"),
-      "Must display confident clear state message"
-    );
+    for (const claim of ["Verified Clear", "Hàng đợi điều hành thông suốt", "Ổn định tuyệt đối"]) {
+      assert.equal(
+        actionCenterCode.includes(claim),
+        false,
+        `executive-action-center.tsx must not claim "${claim}" (DASH-06)`
+      );
+    }
   });
 
   // TC-05: Card 4 displays 'Tiến độ trung bình toàn trường' with average progress % and transparent completion rate subtext

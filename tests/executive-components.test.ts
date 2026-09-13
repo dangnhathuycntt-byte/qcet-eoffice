@@ -76,7 +76,9 @@ describe("ExecutiveActionCenter", () => {
 
   test("getActionCardData returns correct titles", () => {
     const cards = getActionCardData(mockStats);
-    assert.equal(cards[0].title, "Chờ BGH Phê duyệt");
+    // Requirement (plan T04.7 / D2): the review card names the file set, not an
+    // approver claim ("Chờ bạn/BGH duyệt") the payload cannot prove.
+    assert.equal(cards[0].title, "Hồ sơ chờ xem xét");
     assert.equal(cards[1].title, "Vướng mắc & Trễ hạn");
     assert.equal(cards[2].title, "Nhiệm vụ Chiến lược");
   });

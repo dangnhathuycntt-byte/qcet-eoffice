@@ -49,10 +49,18 @@ test("extractExecutiveActionItems extracts real tasks and prioritizes pending ap
 
   const items = extractExecutiveActionItems(tasks, ref);
   assert.equal(items.length, 2);
-  assert.equal(items[0].filterType, "PENDING_APPROVAL");
-  assert.equal(items[0].actionLabel, "Phê duyệt ngay");
-  assert.equal(items[1].filterType, "BLOCKED_OVERDUE");
-  assert.equal(items[1].actionLabel, "Đôn đốc");
+  // Plan T04.6: at equal priority, an overdue row leads. t2 is overdue (due 01/09),
+  // t1 is a review file not yet due, so t2 sorts first.
+  assert.equal(items[0].taskId, "t2");
+  assert.equal(items[0].filterType, "BLOCKED_OVERDUE");
+  assert.equal(items[0].primaryReason, "OVERDUE");
+  assert.equal(items[0].actionLabel, "Xem chi tiết");
+  // Plan T04.7: a review file's list action is "Xem xét" (it opens the file);
+  // the queue never offers a "Phê duyệt" mutation.
+  assert.equal(items[1].taskId, "t1");
+  assert.equal(items[1].filterType, "PENDING_APPROVAL");
+  assert.equal(items[1].primaryReason, "REVIEW");
+  assert.equal(items[1].actionLabel, "Xem xét");
 
   const stats = computeExecutiveActionStats(tasks, ref);
   assert.equal(stats.pendingSchoolApprovalCount, 1);
@@ -142,23 +150,22 @@ test("extractExecutiveActionItems handles BLOCKED, STRATEGIC, CANCELLED, and sub
   ];
 
   const items = extractExecutiveActionItems(tasks, ref);
-  // t-cancelled should be skipped
-  assert.equal(items.length, 3);
+  // t-cancelled is skipped, and plan T04.3 removes the IN_PROGRESS -> STRATEGIC
+  // rule from the workbench queue, so t-strategic (healthy IN_PROGRESS) is gone.
+  assert.equal(items.length, 2);
 
-  // Sorting order: PENDING_APPROVAL -> BLOCKED_OVERDUE -> STRATEGIC
-  assert.equal(items[0].id, "act-wait-t-sub-review");
+  // One row per task, ordered priority desc -> overdue -> due asc -> id.
+  assert.equal(items[0].id, "act-t-sub-review");
+  assert.equal(items[0].taskId, "t-sub-review");
   assert.equal(items[0].filterType, "PENDING_APPROVAL");
-  assert.equal(items[0].actionLabel, "Phê duyệt ngay");
+  assert.equal(items[0].actionLabel, "Xem xét");
   assert.equal(items[0].department, "Khoa CNTT");
   assert.equal(items[0].departmentCode, "CNTT");
 
-  assert.equal(items[1].id, "act-overdue-t-blocked");
+  assert.equal(items[1].id, "act-t-blocked");
   assert.equal(items[1].filterType, "BLOCKED_OVERDUE");
-  assert.equal(items[1].actionLabel, "Đôn đốc");
-
-  assert.equal(items[2].id, "act-strat-t-strategic");
-  assert.equal(items[2].filterType, "STRATEGIC");
-  assert.equal(items[2].actionLabel, "Theo dõi");
+  assert.equal(items[1].primaryReason, "BLOCKED");
+  assert.equal(items[1].actionLabel, "Xem chi tiết");
 });
 
 test("computeDepartmentHealthMatrix computes completionRate independently from averageProgressPercent", () => {

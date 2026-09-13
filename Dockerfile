@@ -13,6 +13,14 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 # ==============================================================================
+# GIAI ĐOẠN 2b: PROD DEPS (chỉ production dependencies, đủ closure cho Prisma CLI)
+# ==============================================================================
+FROM base AS proddeps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev
+
+# ==============================================================================
 # GIAI ĐOẠN 3: BUILDER
 # ==============================================================================
 FROM base AS builder
@@ -48,10 +56,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Sao chép Prisma CLI và các module liên quan phục vụ chạy migrate offline / airgapped
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/.bin ./node_modules/.bin
+# Sao chép toàn bộ production node_modules phục vụ chạy migrate offline / airgapped.
+# Prisma CLI cần đầy đủ dependency closure (@prisma/config -> effect -> fast-check, c12, ...),
+# nên không thể cherry-pick từng package riêng lẻ.
+COPY --from=proddeps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
 

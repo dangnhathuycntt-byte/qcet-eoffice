@@ -6,6 +6,7 @@ import {
   useDashboardData,
   useDashboardActions,
 } from "@/components/dashboard/dashboard-context";
+import { AlertTriangle } from "lucide-react";
 import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
 import { CreateTaskModal } from "@/components/dashboard/create-task-modal";
 import { DelegationManagementModal } from "@/components/dashboard/delegation-management-modal";
@@ -20,6 +21,8 @@ function DashboardModalsHostComponent() {
     initialTitle,
     isDelegationModalOpen,
     delegationDeptCode,
+    taskDetailNotice,
+    dismissTaskDetailNotice,
     openTaskDetail,
     openCreateModal,
     closeTaskDetail,
@@ -53,6 +56,14 @@ function DashboardModalsHostComponent() {
 
   return (
     <div data-slot="dashboard-modals-host">
+      {taskDetailNotice && (
+        <div role="status" data-slot="task-detail-notice" className="fixed bottom-4 left-1/2 z-50 flex max-w-sm -translate-x-1/2 items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 shadow-lg">
+          <AlertTriangle className="size-4 shrink-0" strokeWidth={1.5} />
+          <span className="flex-1">{taskDetailNotice}</span>
+          <button type="button" onClick={dismissTaskDetailNotice} className="shrink-0 rounded-md px-2 py-1 font-medium hover:bg-amber-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600" aria-label="Đóng thông báo">Đóng</button>
+        </div>
+      )}
+
       {selectedTask && (
         <TaskDetailSideSheet
           task={selectedTask}

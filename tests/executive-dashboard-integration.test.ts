@@ -51,11 +51,18 @@ const REF_DATE = "2026-09-04";
 
 describe("filterTasksByExecutive", () => {
   const tasks: SchoolTask[] = [
-    // PENDING_APPROVAL: progressPercent === 100, status !== COMPLETED
+    // NOT PENDING_APPROVAL: 100% progress on a healthy IN_PROGRESS task is not a
+    // review request (plan T04.2).
     makeSchoolTask({
       id: "pending-1",
       progressPercent: 100,
       status: "IN_PROGRESS",
+    }),
+    // PENDING_APPROVAL: a real WAITING_APPROVAL request.
+    makeSchoolTask({
+      id: "review-1",
+      progressPercent: 80,
+      status: "WAITING_APPROVAL" as SchoolTask["status"],
     }),
     // COMPLETED task with 100% -- should NOT show as pending approval
     makeSchoolTask({
@@ -118,17 +125,17 @@ describe("filterTasksByExecutive", () => {
     assert.strictEqual(result.length, tasks.length);
   });
 
-  test("PENDING_APPROVAL returns only tasks with 100% progress and not completed", () => {
+  // Requirement (plan T04.2): the review lens is driven by a real pending-review
+  // request, never by progressPercent === 100.
+  test("PENDING_APPROVAL returns real review requests, not 100%-progress tasks", () => {
     const result = filterTasksByExecutive(tasks, "PENDING_APPROVAL", REF_DATE);
-    assert.ok(result.length > 0, "Should find at least one pending approval task");
+    const ids = result.map((t) => t.id);
+    assert.ok(ids.includes("review-1"), "a WAITING_APPROVAL task must match");
+    assert.ok(!ids.includes("pending-1"), "100% progress on an IN_PROGRESS task must NOT match");
+    assert.ok(!ids.includes("completed-100"));
     for (const t of result) {
-      assert.strictEqual(t.progressPercent, 100);
       assert.notStrictEqual(t.status, "COMPLETED");
     }
-    // pending-1 matches, completed-100 does not
-    const ids = result.map((t) => t.id);
-    assert.ok(ids.includes("pending-1"));
-    assert.ok(!ids.includes("completed-100"));
   });
 
   test("BLOCKED_OVERDUE returns tasks that are blocked, overdue, or have blocked/overdue subtasks", () => {

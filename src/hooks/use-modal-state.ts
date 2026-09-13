@@ -12,6 +12,10 @@ export interface ModalStateReturn {
   initialTitle?: string;
   isDelegationModalOpen: boolean;
   delegationDeptCode: string;
+  /** A user-visible message shown when a requested task cannot be opened. */
+  taskDetailNotice: string | null;
+  setTaskDetailNotice: React.Dispatch<React.SetStateAction<string | null>>;
+  dismissTaskDetailNotice: () => void;
   setSelectedTask: React.Dispatch<React.SetStateAction<SchoolTask | StaffTask | null>>;
   openTaskDetail: (task: SchoolTask | StaffTask) => void;
   closeTaskDetail: () => void;
@@ -35,13 +39,19 @@ export function useModalState(): ModalStateReturn {
   const [initialTitle, setInitialTitle] = React.useState<string | undefined>(undefined);
   const [isDelegationModalOpen, setIsDelegationModalOpen] = React.useState(false);
   const [delegationDeptCode, setDelegationDeptCode] = React.useState("K_CNTT");
+  const [taskDetailNotice, setTaskDetailNotice] = React.useState<string | null>(null);
 
   const openTaskDetail = React.useCallback((task: SchoolTask | StaffTask) => {
+    setTaskDetailNotice(null);
     setSelectedTask(task);
   }, []);
 
   const closeTaskDetail = React.useCallback(() => {
     setSelectedTask(null);
+  }, []);
+
+  const dismissTaskDetailNotice = React.useCallback(() => {
+    setTaskDetailNotice(null);
   }, []);
 
   const openCreateModal = React.useCallback(
@@ -88,6 +98,9 @@ export function useModalState(): ModalStateReturn {
     initialAssigneeName,
     isDelegationModalOpen,
     delegationDeptCode,
+    taskDetailNotice,
+    setTaskDetailNotice,
+    dismissTaskDetailNotice,
     setSelectedTask,
     openTaskDetail,
     closeTaskDetail,

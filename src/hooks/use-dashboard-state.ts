@@ -31,6 +31,9 @@ export function useDashboardState(
 
   const urlSync = useUrlParamsSync(user?.role);
   const mutations = useTaskMutations(user, onOpenCreateModal, initialData);
+  // Normalize the business reference date once and thread it into the filter hook,
+  // so no dashboard surface defaults independently (plan T03.5).
+  const referenceDate = getSystemReferenceDateStr();
   const filters = useTaskFilters({
     tasks: mutations.dashboardData.tasks,
     upcoming: mutations.dashboardData.upcoming,
@@ -38,6 +41,7 @@ export function useDashboardState(
     activeZone: urlSync.activeZone,
     selectedDepartment: urlSync.selectedDepartment,
     selectedAcademicMonth: urlSync.selectedAcademicMonth,
+    referenceDate,
     user,
     onSelectTask,
     onResetDepartment: () => urlSync.handleDepartmentChange("ALL"),

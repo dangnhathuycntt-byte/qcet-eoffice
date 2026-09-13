@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import type { DashboardStats } from "@/types/dashboard";
-import type {
-  ExecutiveActionStats,
-  DepartmentHealthSummary,
+import {
+  summarizeDepartmentAttention,
+  type ExecutiveActionStats,
+  type DepartmentHealthSummary,
 } from "@/lib/executive-matrix-aggregator";
 import { cn } from "@/lib/utils";
 
@@ -32,14 +33,6 @@ export function deriveSituationState(
     (executiveStats?.overdueTasksCount ?? 0) +
     (executiveStats?.blockedTasksCount ?? 0);
   return overdueCount > 0 ? "HAS_ISSUES" : "HEALTHY";
-}
-
-function countUnitsNeedingAttention(departments: DepartmentHealthSummary[]): number {
-  return departments.filter(
-    (d) =>
-      (d.overdueTasksCount ?? d.overdueTasks ?? 0) > 0 ||
-      (d.averageProgressPercent ?? d.completionRate ?? 0) < 60
-  ).length;
 }
 
 export function DashboardSituationStrip({
@@ -75,8 +68,11 @@ export function DashboardSituationStrip({
     ? (stats.overdueTasksCount ?? 0) + (executiveStats?.overdueTasksCount ?? 0)
     : (stats.overdueTasksCount ?? 0);
   const blockedCount = isExecutive ? (executiveStats?.blockedTasksCount ?? 0) : 0;
+  // Overdue/blocked only — never a progress threshold (plan T05.1).
   const unitsNeedingAttention =
-    departmentHealth.length > 0 ? countUnitsNeedingAttention(departmentHealth) : null;
+    departmentHealth.length > 0
+      ? summarizeDepartmentAttention(departmentHealth).attentionCount
+      : null;
 
   const ariaLabel = [
     `${progressPercent}% tiến độ`,

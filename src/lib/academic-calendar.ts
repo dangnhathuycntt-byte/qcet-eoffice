@@ -591,6 +591,166 @@ export function computePriorOverdueBacklog<
 }
 
 /**
+ * Nghiêm ngặt xác thực một chuỗi date-only `YYYY-MM-DD`.
+ *
+ * Khác với {@link parseDateParts} (vốn chỉ khớp regex và chấp nhận cả ngày không
+ * tồn tại như `2026-02-30`), hàm này kiểm tra ngày đó có thật trên lịch hay không
+ * bằng cách dựng lại qua `Date.UTC` rồi đối chiếu từng thành phần.
+ *
+ * Trả về chuỗi `YYYY-MM-DD` đã chuẩn hoá, hoặc `null` nếu không hợp lệ.
+ * KHÔNG bao giờ fallback về "hôm nay" — ngày lỗi phải được giữ nguyên là missing.
+ */
+export function parseStrictDateOnly(input: unknown): string | null {
+  if (input == null) return null;
+
+  let candidate: string;
+  if (typeof input === "string") {
+    candidate = input.trim().slice(0, 10);
+  } else if (input instanceof Date) {
+    if (isNaN(input.getTime())) return null;
+    candidate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(input);
+  } else {
+    return null;
+  }
+
+  const match = candidate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+
+  if (month < 1 || month > 12) return null;
+  if (day < 1 || day > 31) return null;
+
+  // Round-trip through UTC: an impossible date like 2026-02-30 normalises to
+  // 2026-03-02, so the component comparison catches it.
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  if (
+    probe.getUTCFullYear() !== year ||
+    probe.getUTCMonth() !== month - 1 ||
+    probe.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+/** Số ngày của cửa sổ "hạn chót sắp tới" — bao gồm D và D+6 (7 ngày lịch). */
+export const UPCOMING_WINDOW_DAYS = 6;
+
+/**
+ * Cộng thêm `days` ngày lịch vào một chuỗi date-only, theo phép tính ngày lịch
+ * (không cộng mili-giây vào timestamp), nên an toàn qua ranh giới tháng/năm.
+ */
+export function addCalendarDays(dateOnly: string, days: number): string | null {
+  const strict = parseStrictDateOnly(dateOnly);
+  if (!strict) return null;
+  const [y, m, d] = strict.split("-").map(Number);
+  const shifted = new Date(Date.UTC(y, m - 1, d + days));
+  if (isNaN(shifted.getTime())) return null;
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;
+}
+
+export interface UpcomingDeadlineCandidate {
+  /** The real task/subtask id, so the caller can open the correct detail. */
+  taskId: string;
+  title: string;
+  dueDate: string;
+  assigneeName: string;
+  level: "Trường" | "Đơn vị";
+  isOverdue: false;
+}
+
+export interface UpcomingDeadlineSelection<T> {
+  /** Every task inside the window, sorted. The full set — not a preview. */
+  items: T[];
+  /** Total size of the window. Equal to `items.length`; carried explicitly so a
+   *  caller can never mistake a preview slice's length for the full total. */
+  total: number;
+  /** First `previewLimit` rows of the sorted full set. */
+  preview: T[];
+}
+
+/**
+ * Chọn các nhiệm vụ còn hiệu lực có hạn trong cửa sổ [referenceDate, +windowDays].
+ *
+ * Quy tắc (plan T05 "Deadline"):
+ *  - Chỉ nhận ngày date-only hợp lệ theo lịch; ngày lỗi/không tồn tại bị loại,
+ *    KHÔNG được quy về hôm nay.
+ *  - Nhiệm vụ đã hoàn thành hoặc đã huỷ bị loại.
+ *  - Việc quá hạn KHÔNG bao giờ xuất hiện ở đây.
+ *  - Sắp xếp: hạn tăng dần → ưu tiên giảm dần → id tăng dần.
+ */
+export function selectUpcomingDeadlines<
+  T extends {
+    id: string;
+    title?: string;
+    dueDate?: string | Date | null;
+    status?: string;
+    priority?: string;
+    leadAssigneeName?: string;
+    assigneeName?: string;
+  } = SchoolTask,
+>(
+  tasks: T[],
+  referenceDate: string,
+  options: { windowDays?: number; previewLimit?: number } = {}
+): UpcomingDeadlineSelection<T> {
+  const windowDays = options.windowDays ?? UPCOMING_WINDOW_DAYS;
+  const previewLimit = options.previewLimit ?? 5;
+
+  const ref = parseStrictDateOnly(referenceDate);
+  if (!ref) {
+    return { items: [], total: 0, preview: [] };
+  }
+  const windowEnd = addCalendarDays(ref, windowDays);
+  if (!windowEnd) {
+    return { items: [], total: 0, preview: [] };
+  }
+
+  const priorityWeight: Record<string, number> = {
+    URGENT: 3,
+    HIGH: 2,
+    NORMAL: 1,
+    MEDIUM: 1,
+    LOW: 0,
+  };
+
+  const items = tasks
+    .filter((t) => {
+      const status = String(t.status ?? "").toUpperCase();
+      if (status === "COMPLETED" || status === "CANCELLED") return false;
+      const due = parseStrictDateOnly(t.dueDate);
+      if (!due) return false;
+      // Window is inclusive on both ends: D <= due <= D+windowDays.
+      // Anything before D is overdue and must not appear here.
+      return due >= ref && due <= windowEnd;
+    })
+    .sort((a, b) => {
+      const dueA = parseStrictDateOnly(a.dueDate)!;
+      const dueB = parseStrictDateOnly(b.dueDate)!;
+      if (dueA !== dueB) return dueA < dueB ? -1 : 1;
+      const prA = priorityWeight[String(a.priority ?? "").toUpperCase()] ?? 1;
+      const prB = priorityWeight[String(b.priority ?? "").toUpperCase()] ?? 1;
+      if (prA !== prB) return prB - prA;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
+
+  return {
+    items,
+    total: items.length,
+    preview: items.slice(0, previewLimit),
+  };
+}
+
+/**
  * Phân vùng dữ liệu nhiệm vụ cho một tháng học thuật cụ thể cùng với backlog từ trước và thống kê hoàn chỉnh.
  */
 export function computeMonthPartitionBucket<

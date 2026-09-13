@@ -18,6 +18,7 @@ import type { DelegationRule } from "@/types/delegation";
 import type { AuthUser } from "@/types/auth";
 import { isOnline, enqueueOfflineMutation } from "@/lib/offline-sync";
 import { getSystemReferenceDateStr } from "@/lib/unified-task-hub";
+import { createLatestRequestGuard } from "@/lib/latest-request-guard";
 
 export const EMPTY_DASHBOARD_PAYLOAD: DashboardPayload = {
   stats: {
@@ -96,6 +97,10 @@ export function useTaskMutations(
   const [delegations, setDelegations] = React.useState<DelegationRule[]>(INITIAL_QCET_DELEGATIONS);
   const [delegationDeptCode] = React.useState("K_CNTT");
 
+  // Latest-request-wins guard: a slow earlier fetch must not overwrite a newer
+  // one (plan T03.6). One guard instance per hook, shared by every overview fetch.
+  const overviewRequestGuard = React.useRef(createLatestRequestGuard());
+
   // Initial background sync: Skip when server-provided initial data is present
   React.useEffect(() => {
     if (hasInitialData) {
@@ -103,10 +108,14 @@ export function useTaskMutations(
     }
     let isMounted = true;
     async function syncDashboardOverview() {
+      const requestToken = overviewRequestGuard.current.begin();
       setIsLoading(true);
       setErrorMessage(null);
       try {
         const response = await fetch("/api/dashboard/overview");
+        if (isMounted && !overviewRequestGuard.current.isCurrent(requestToken)) {
+          return; // a newer request has started; this response is stale
+        }
         if (response.ok && isMounted) {
           const liveData: DashboardPayload = await response.json();
           if (liveData && liveData.tasks && liveData.stats) {
@@ -133,10 +142,14 @@ export function useTaskMutations(
   }, [hasInitialData]);
 
   const handleManualRefresh = React.useCallback(async () => {
+    const requestToken = overviewRequestGuard.current.begin();
     setIsRefreshing(true);
     setErrorMessage(null);
     try {
       const response = await fetch("/api/dashboard/overview");
+      if (!overviewRequestGuard.current.isCurrent(requestToken)) {
+        return; // a newer request has started; this response is stale
+      }
       if (response.ok) {
         const liveData: DashboardPayload = await response.json();
         if (liveData && liveData.tasks && liveData.stats) {

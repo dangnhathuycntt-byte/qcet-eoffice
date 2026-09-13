@@ -8,10 +8,12 @@ describe("DashboardZone Monthly Partitioning", () => {
 
   test("dashboard-zone.tsx drives the monthly partition from the canonical academic month", () => {
     const content = fs.readFileSync(zonePath, "utf8");
-    // The zone reads the active academic month from the workspace metrics hook and
-    // gates its KPI/attention surfaces on it. The prior-overdue backlog is a
-    // per-cycle concern owned by the calendar and task-table surfaces, not the zone.
-    assert.match(content, /selectedAcademicMonth/);
+    // The active academic month is surfaced through the GlobalMonthSelector control
+    // and every summary the zone renders derives from the shared scope+period slice
+    // (plan T03). The prior-overdue backlog is a per-cycle concern owned by the
+    // calendar and task-table surfaces, not the zone.
+    assert.match(content, /GlobalMonthSelector/);
+    assert.match(content, /displayedStats/);
     assert.match(content, /KỲ VẬN HÀNH THÁNG/);
   });
 });

@@ -10,9 +10,14 @@ export type { TaskScope, TaskViewMode };
 import type { WorkboxFilter } from "@/components/dashboard/executive-stat-strip";
 import { matchesUser } from "@/lib/role-task-filter";
 import { filterTasksForTable } from "@/components/tasks/cascading-task-table";
-import { isDateInAcademicMonth } from "@/lib/academic-calendar";
+import {
+  isDateInAcademicMonth,
+  getSystemReferenceDate as getCanonicalReferenceDateStr,
+} from "@/lib/academic-calendar";
 
-export const TODAY_ISO = "2026-09-06";
+// One reference-date source for the whole app: delegate to the canonical date
+// module instead of keeping a second drifting constant (plan T03.5, contract-map D4).
+export const TODAY_ISO = getCanonicalReferenceDateStr();
 
 /**
  * Converts TaskScope ("SCHOOL_TASKS" | "UNIT_TASKS" | "MY_TASKS") to WorkspaceScope ("school" | "unit" | "my").
@@ -75,11 +80,13 @@ export function urlParamToWorkspaceScope(
 }
 
 /**
- * Returns system reference date as Date object.
+ * Returns system reference date as a local Date object.
+ *
+ * Delegates to the canonical date module so this helper can never drift to a
+ * second "today" (plan T03.5).
  */
 export function getSystemReferenceDate(): Date {
-  const envDate = typeof process !== "undefined" && process.env?.NEXT_PUBLIC_REFERENCE_DATE;
-  const raw = envDate || "2026-09-06";
+  const raw = getCanonicalReferenceDateStr();
   const [y, m, d] = raw.split("-").map(Number);
   return new Date(y, (m || 1) - 1, d || 1);
 }
