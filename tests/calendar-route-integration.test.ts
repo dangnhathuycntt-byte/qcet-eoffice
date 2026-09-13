@@ -290,12 +290,34 @@ describe("Calendar Route Integration & Interactive Task Operations", () => {
 
     // Primary row contains scope switcher and month navigation
     assert.match(pageContent, /data-slot="calendar-controls-container"/, "Must contain controls container");
-    assert.match(pageContent, /Của tôi/, "Scope tab must use canonical 'Của tôi'");
+    // Canonical scope tab, as an entry of the scope selector's option list — not a bare
+    // substring, so a stray mention of the words cannot satisfy this.
+    assert.match(
+      pageContent,
+      /\["my",\s*"Của tôi"\]/,
+      "Scope selector must offer canonical 'Của tôi' as a selectable option"
+    );
     assert.match(pageContent, /Hôm nay/, "Primary row must contain 'Hôm nay' navigation");
 
-    // Task and event creation actions present
+    // Task and event creation actions present, in exactly ONE consolidated dropdown
     assert.match(pageContent, /Tạo công việc/, "Dropdown must offer 'Tạo công việc'");
     assert.match(pageContent, /Tạo sự kiện/, "Dropdown must offer 'Tạo sự kiện'");
+    const createMenuItems = pageContent.match(/Tạo công việc/g) || [];
+    assert.equal(
+      createMenuItems.length,
+      1,
+      "There must be exactly one 'Tạo công việc' entry — no duplicate creation control"
+    );
+
+    // No duplicate + Tạo CTA: the page defines a single create-dropdown trigger. Count the
+    // trigger itself rather than assuming which region it lives in (T10 moved it into the
+    // page header), so a second one anywhere on the page fails this.
+    const createTriggers = pageContent.match(/setIsCreateDropdownOpen\(\(previous\) => !previous\)/g) || [];
+    assert.equal(
+      createTriggers.length,
+      1,
+      "Calendar page must define exactly one create-dropdown trigger"
+    );
 
     // Search and secondary controls gated behind disclosure
     assert.match(pageContent, /isSecondaryOpen/, "Secondary controls must live behind disclosure");

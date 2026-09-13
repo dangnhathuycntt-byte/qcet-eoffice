@@ -145,17 +145,21 @@ describe("P0-3 & P0-4: Academic Period & Month Selector Unification", () => {
         "Month changes must funnel through a single `activeOnMonthChange` handler"
       );
 
-      // The unified control must offer all 12 academic months.
-      for (const m of ACADEMIC_MONTH_ORDER) {
-        assert.ok(
-          toolbarSource.includes("ACADEMIC_MONTH_ORDER.map"),
-          "Unified control must be driven by ACADEMIC_MONTH_ORDER"
-        );
-        assert.ok(
-          Number.isInteger(m),
-          `Academic month ${m} must be a numeric operational month`
-        );
-      }
+      // The unified control must offer all 12 academic months, driven by the
+      // canonical ordering rather than a hand-written option list.
+      assert.ok(
+        /ACADEMIC_MONTH_ORDER\.map\(\s*\(m\)/.test(toolbarSource),
+        "Unified control must map ACADEMIC_MONTH_ORDER into its options"
+      );
+      assert.match(
+        toolbarSource,
+        /<option key=\{`academic-month[^`]*`\} value=\{m\}>/,
+        "Each academic month must render as an <option> carrying its value"
+      );
+      assert.ok(
+        ACADEMIC_MONTH_ORDER.length === 12,
+        `ACADEMIC_MONTH_ORDER must define 12 operational months, got ${ACADEMIC_MONTH_ORDER.length}`
+      );
     }
 
     it("unifies the month control when both onMonthChange and onAcademicMonthChange are passed", () => {

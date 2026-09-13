@@ -78,8 +78,11 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
 
   describe('1. Task State Machine Enforcement in taskCommandService', () => {
     it('rejects illegal status transition: NOT_STARTED -> COMPLETED with ValidationError (400)', async () => {
+      // P0-06 gates DEPARTMENT-scope creation to a unit leader or a privileged
+      // actor, so the fixture must create the unit task as one. The transitions
+      // under test are still exercised by staffUser below.
       const task = await taskCommandService.createTask(
-        { user: staffUser },
+        { user: adminUser },
         {
           title: 'Task FSM Illegal Transition Test',
           scope: TaskScope.DEPARTMENT,
@@ -153,8 +156,9 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
     });
 
     it('allows legal status transition: NOT_STARTED -> IN_PROGRESS -> WAITING_APPROVAL', async () => {
+      // Same P0-06 fixture requirement as the illegal-transition test above.
       const task = await taskCommandService.createTask(
-        { user: staffUser },
+        { user: adminUser },
         {
           title: 'Task FSM Legal Transition Test',
           scope: TaskScope.DEPARTMENT,
@@ -334,8 +338,9 @@ describe('Task State Machine Integration & Executive OCC Tests', () => {
     });
 
     it('taskQueryService applies reconciled overdue status on tasks with past due dates', async () => {
+      // Same P0-06 fixture requirement: unit-scope creation needs unit authority.
       const task = await taskCommandService.createTask(
-        { user: staffUser },
+        { user: adminUser },
         {
           title: 'Task Overdue Query Reconciliation Test',
           scope: TaskScope.DEPARTMENT,
