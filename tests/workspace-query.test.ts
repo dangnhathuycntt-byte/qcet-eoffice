@@ -1,5 +1,7 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
@@ -1138,6 +1140,53 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
       assert.deepEqual(auth1, auth2);
       assert.deepEqual(auth2, auth3);
       assert.deepEqual(auth1.OR![2].departmentId, "KHOA_CNTT");
+    });
+  });
+
+  describe("14. View mode defaults and TaskManagementWorkspace canonical table view", () => {
+    test("URL without view param defaults to table view", () => {
+      const state = parseWorkspaceQuery("/tasks");
+      assert.equal(state.view, "table");
+    });
+
+    test("URL with ?view=kanban respects kanban view mode", () => {
+      const state = parseWorkspaceQuery("/tasks?view=kanban");
+      assert.equal(state.view, "kanban");
+    });
+
+    test("URL with ?view=table respects table view mode", () => {
+      const state = parseWorkspaceQuery("/tasks?view=table");
+      assert.equal(state.view, "table");
+    });
+
+    test("TaskManagementWorkspace uses props.initialViewMode ?? 'table' instead of hardcoding kanban", () => {
+      const content = fs.readFileSync(
+        path.resolve(process.cwd(), "src/components/tasks/task-management-workspace.tsx"),
+        "utf-8"
+      );
+      assert.ok(
+        content.includes('initialViewMode={props.initialViewMode ?? "table"}'),
+        "TaskManagementWorkspace must pass initialViewMode={props.initialViewMode ?? 'table'}"
+      );
+      assert.ok(
+        !content.includes('initialViewMode="kanban"'),
+        "TaskManagementWorkspace must not hardcode initialViewMode='kanban'"
+      );
+    });
+
+    test("UnifiedAdaptiveWorkspace respects queryState.view when present in URL", () => {
+      const content = fs.readFileSync(
+        path.resolve(process.cwd(), "src/components/workspace/unified-adaptive-workspace.tsx"),
+        "utf-8"
+      );
+      assert.ok(
+        content.includes("workspaceQuery?.queryState.view"),
+        "UnifiedAdaptiveWorkspace must check workspaceQuery?.queryState.view"
+      );
+      assert.ok(
+        content.includes('return initialViewMode || "table"'),
+        "UnifiedAdaptiveWorkspace must default to table when no view query is present"
+      );
     });
   });
 });

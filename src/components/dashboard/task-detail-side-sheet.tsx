@@ -79,6 +79,11 @@ import {
 const EMPTY_DELEGATIONS: DelegationRule[] = [];
 
 /**
+ * Consolidated canonical label for child-task creation (T17).
+ */
+const ADD_SUBTASK_LABEL = "Thêm việc con";
+
+/**
  * Restores logical focus (C12 / T19 / D9) to the element that opened the sheet.
  * Best-effort: never throws on close and never targets a detached node.
  */
@@ -803,6 +808,10 @@ export function TaskDetailSideSheet({
   const isOverdue = isTaskOverdue(task.status, task.dueDate);
   const derivedMilestones = getTaskAuditTimeline(task);
   const requiresReview = !isSchool && Boolean((task as StaffTask).requiresReview);
+  const taskCode =
+    (task as any).code ||
+    (task as any).taskCode ||
+    (task.id.startsWith("NV-") ? task.id : `NV-${task.id.slice(0, 8).toUpperCase()}`);
 
   // C2: submit is capability-driven (canonical matrix = lifecycle + actor
   // identity + server policy), never from the display-name/status helper. The
@@ -972,7 +981,7 @@ export function TaskDetailSideSheet({
         aria-modal="true"
         aria-labelledby="task-detail-title"
       >
-        {/* Sticky Header Bar: Status, Mobile Back & Quick Actions */}
+        {/* Sticky Header Bar: Task Code, Compact Status, Mobile Back & Close */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-card/90 backdrop-blur-xl gap-2">
           {/* Mobile Back Button (< 768px) */}
           <button
@@ -984,8 +993,12 @@ export function TaskDetailSideSheet({
             <ArrowLeft className="size-5" strokeWidth={1.5} />
           </button>
 
-          {/* Status Indicator Pill */}
+          {/* Task Code & Compact Status Indicator Pill */}
           <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted/60 border border-border/50 px-2 py-0.5 rounded-md tabular-nums shrink-0">
+              {taskCode}
+            </span>
+
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0",
@@ -1008,30 +1021,6 @@ export function TaskDetailSideSheet({
                 {isOverdue ? "Quá hạn" : statusConfig.label}
               </span>
             </span>
-
-            {relativeTime && !isOverdue && (
-              <span
-                className={cn(
-                  "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden md:inline font-mono",
-                  relativeTime.color
-                )}
-              >
-                {relativeTime.text}
-              </span>
-            )}
-
-            {!isSchool && (
-              <span
-                className={cn(
-                  "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 hidden md:inline font-medium",
-                  (task as StaffTask).requiresReview
-                    ? "border-amber-500/20 bg-amber-500/10 text-amber-600"
-                    : "border-blue-500/20 bg-blue-500/10 text-blue-600"
-                )}
-              >
-                {(task as StaffTask).requiresReview ? "Trọng điểm (DACUM)" : "Thường quy (Tự nghiệm thu)"}
-              </span>
-            )}
           </div>
 
           {/* Close Button (lifecycle changes flow only through capability-driven actions) */}
@@ -1075,12 +1064,9 @@ export function TaskDetailSideSheet({
             </div>
           )}
 
-          {/* Header Block: Code + Level Badge + Title */}
+          {/* Header Block: Level Badge + Title */}
           <div data-slot="detail-title">
             <div className="flex items-center gap-2 mb-2">
-              <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted/60 border border-border/50 px-2 py-0.5 rounded-md tabular-nums">
-                {(task as any).code || (task as any).taskCode || (task.id.startsWith("NV-") ? task.id : `NV-${task.id.slice(0, 8).toUpperCase()}`)}
-              </span>
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-md border text-xs font-semibold px-2 py-0.5 shadow-2xs",
@@ -1094,6 +1080,18 @@ export function TaskDetailSideSheet({
                 )}
                 <span>{levelBadge.label}</span>
               </span>
+              {!isSchool && (
+                <span
+                  className={cn(
+                    "text-xs px-2.5 py-0.5 rounded-full border tabular-nums shrink-0 font-medium",
+                    (task as StaffTask).requiresReview
+                      ? "border-amber-500/20 bg-amber-500/10 text-amber-600"
+                      : "border-blue-500/20 bg-blue-500/10 text-blue-600"
+                  )}
+                >
+                  {(task as StaffTask).requiresReview ? "Trọng điểm (DACUM)" : "Thường quy (Tự nghiệm thu)"}
+                </span>
+              )}
             </div>
 
             <h2
@@ -1119,28 +1117,9 @@ export function TaskDetailSideSheet({
               data-slot="detail-status-deadline"
               className="mt-3.5 flex flex-wrap items-center gap-2"
             >
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border",
-                  isOverdue
-                    ? "border-rose-500/20 bg-rose-500/10 text-rose-600"
-                    : statusConfig.className
-                )}
-              >
-                <span
-                  className={cn(
-                    "size-1.5 rounded-full shrink-0",
-                    isDone
-                      ? "bg-emerald-500"
-                      : isOverdue
-                      ? "bg-rose-500"
-                      : "bg-primary"
-                  )}
-                />
-                <span>{isOverdue ? "Quá hạn" : statusConfig.label}</span>
-              </span>
               <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Calendar className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                <span>Hạn nộp:</span>
                 <span className="font-mono font-semibold text-foreground tabular-nums">
                   {formatDetailDate(task.dueDate)}
                 </span>
@@ -1924,7 +1903,7 @@ export function TaskDetailSideSheet({
                     title="Tạo việc con trực thuộc nhiệm vụ này"
                   >
                     <Plus className="size-3.5" strokeWidth={1.5} />
-                    <span>Thêm việc con</span>
+                    <span>{ADD_SUBTASK_LABEL}</span>
                   </Button>
                 )}
               </div>
@@ -1933,8 +1912,21 @@ export function TaskDetailSideSheet({
               <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden shadow-xs">
                 {task.subTasks.length === 0 ? (
                   <div className="py-6 flex flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
-                    <ListTodo className="size-6 text-muted-foreground/50" strokeWidth={1.5} />
+                    <ListTodo className="size-5 text-muted-foreground/50" strokeWidth={1.5} />
                     <p>Chưa có nhiệm vụ con trực thuộc</p>
+                    {effectiveOnAddSubTask && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => effectiveOnAddSubTask(task.id)}
+                        className="mt-1 h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg cursor-pointer"
+                        title="Tạo việc con trực thuộc nhiệm vụ này"
+                      >
+                        <Plus className="size-3.5" strokeWidth={1.5} />
+                        <span>{ADD_SUBTASK_LABEL}</span>
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   task.subTasks.map((sub) => {

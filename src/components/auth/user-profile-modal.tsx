@@ -13,6 +13,8 @@ import {
   Save,
   Sparkles,
   Lock,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
@@ -26,6 +28,8 @@ export function UserProfileModal() {
   const [title, setTitle] = React.useState(user?.title || "Viên chức");
   const [phone, setPhone] = React.useState(user?.phone || "");
   const [savedSuccess, setSavedSuccess] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -41,6 +45,8 @@ export function UserProfileModal() {
       setTitle(user.title || "Viên chức");
       setPhone(user.phone || "");
       setSavedSuccess(false);
+      setErrorMessage(null);
+      setIsSaving(false);
     }
   }, [isProfileModalOpen, user]);
 
@@ -56,19 +62,23 @@ export function UserProfileModal() {
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
+    setErrorMessage(null);
 
-    // Preserve authoritative server role and label
-    updateProfile({
+    const result = await updateProfile({
       name: name.trim() || user.name,
-      department: isDepartmentAuthoritative ? user.department : department || "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
-      departmentCode: isDepartmentAuthoritative ? user.departmentCode : departmentCode || "QCET",
       title: title.trim() || "Viên chức",
       phone: phone.trim(),
-      role: user.role,
-      roleLabel: user.roleLabel,
     });
+
+    setIsSaving(false);
+
+    if (result && !result.success) {
+      setErrorMessage(result.error || "Không thể cập nhật hồ sơ trên máy chủ");
+      return;
+    }
 
     setSavedSuccess(true);
     setTimeout(() => {
@@ -153,6 +163,14 @@ export function UserProfileModal() {
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-700 animate-in fade-in">
             <CheckCircle2 className="size-4 shrink-0" strokeWidth={1.5} />
             <span>Cập nhật thông tin cán bộ thành công!</span>
+          </div>
+        )}
+
+        {/* Error Alert */}
+        {errorMessage && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs font-semibold text-destructive animate-in fade-in">
+            <AlertCircle className="size-4 shrink-0" strokeWidth={1.5} />
+            <span>{errorMessage}</span>
           </div>
         )}
 
@@ -299,10 +317,15 @@ export function UserProfileModal() {
           <div className="sticky bottom-0 z-10 mt-6 flex items-center justify-end border-t border-border/60 bg-card/95 backdrop-blur-md pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <button
               type="submit"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all active:scale-[0.99] cursor-pointer w-full sm:w-auto"
+              disabled={isSaving}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.99] cursor-pointer w-full sm:w-auto"
             >
-              <Save className="size-3.5" strokeWidth={1.5} />
-              <span>Lưu thay đổi</span>
+              {isSaving ? (
+                <Loader2 className="size-3.5 animate-spin" strokeWidth={1.5} />
+              ) : (
+                <Save className="size-3.5" strokeWidth={1.5} />
+              )}
+              <span>{isSaving ? "Đang lưu..." : "Lưu thay đổi"}</span>
             </button>
           </div>
         </form>

@@ -35,16 +35,36 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-qcet_admin}:${POSTGRES_PASSWORD}@qcet-db:5432/${POSTGRES_DB:-qcet_eoffice}?schema=public}
+      DATABASE_URL: ${APP_DATABASE_URL:-postgresql://${POSTGRES_USER:-qcet_admin}:${POSTGRES_PASSWORD}@qcet-db:5432/${POSTGRES_DB:-qcet_eoffice}?schema=public}
       JWT_SECRET: ${JWT_SECRET:?Vui long cung cap JWT_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://e-office.cdktcnqn.edu.vn}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://e-office.cdktcnqn.edu.vn}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+      FEATURE_EXTERNAL_GOOGLE_LOGIN: ${FEATURE_EXTERNAL_GOOGLE_LOGIN:-true}
+      FEATURE_FLAG_TASK_WORKSPACE_V2: ${FEATURE_FLAG_TASK_WORKSPACE_V2:-true}
+      FEATURE_FLAG_PUSH_NOTIFICATIONS: ${FEATURE_FLAG_PUSH_NOTIFICATIONS:-true}
+      NEXT_PUBLIC_FEATURE_FLAG_MOBILE_AGENDA: ${NEXT_PUBLIC_FEATURE_FLAG_MOBILE_AGENDA:-true}
       UPLOADS_DIR: /app/uploads
       TZ: Asia/Ho_Chi_Minh
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${PORT:-3001}:3000"
     volumes:
       - ${UPLOADS_HOST_PATH:?Vui long cung cap UPLOADS_HOST_PATH trong .env.production}:/app/uploads
+    networks:
+      - qcet-internal
+
+  qcet-tunnel:
+    container_name: qcet-eoffice-tunnel
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --config /etc/cloudflared/config.yml run qcet-tunnel
+    volumes:
+      - /home/dnhhuy/.cloudflared/514f4f82-5355-4eaa-840e-dfa3f548b61c.json:/etc/cloudflared/credentials.json:ro
+      - ./cloudflared.yml:/etc/cloudflared/config.yml:ro
+    depends_on:
+      - qcet-app
     networks:
       - qcet-internal
 

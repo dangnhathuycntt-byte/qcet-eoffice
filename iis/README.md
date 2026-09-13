@@ -1,6 +1,6 @@
 # Hướng Dẫn Cấu Hình IIS Reverse Proxy Cho QCET E-Office
 
-Tài liệu hướng dẫn quản trị viên hệ thống triển khai cổng Reverse Proxy trên IIS (Internet Information Services) 10.0+ (Windows Server 2019 / 2022) chuyển tiếp lưu lượng an toàn vào cụm Docker container Next.js (`127.0.0.1:3000`).
+Tài liệu hướng dẫn quản trị viên hệ thống triển khai cổng Reverse Proxy trên IIS (Internet Information Services) 10.0+ (Windows Server 2019 / 2022) chuyển tiếp lưu lượng an toàn vào cụm Docker container Next.js (`127.0.0.1:3001`).
 
 ---
 
@@ -10,7 +10,7 @@ Tài liệu hướng dẫn quản trị viên hệ thống triển khai cổng R
 2. **IIS URL Rewrite Module 2.1**: Tải và cài đặt từ Microsoft Web Platform Installer hoặc trang chủ Microsoft.
 3. **Application Request Routing (ARR) 3.0**: Tải và cài đặt ARR 3.0 trên IIS.
 4. **Chứng chỉ số SSL**: Chứng chỉ hợp lệ cấp cho tên miền `e-office.cdktcnqn.edu.vn` (đã import vào *Server Certificates* trong IIS Manager).
-5. **Docker Engine & Docker Compose**: Cụm ứng dụng QCET E-Office đang chạy với container lắng nghe tại cổng nội bộ `127.0.0.1:3000`.
+5. **Docker Engine & Docker Compose**: Cụm ứng dụng QCET E-Office đang chạy với container lắng nghe tại cổng nội bộ `127.0.0.1:3001`.
 
 ---
 
@@ -74,7 +74,7 @@ Tệp `iis/web.config` được chuẩn hóa với các thông số:
   - `httpErrors existingResponse="PassThrough"`: Đảm bảo IIS không can thiệp hoặc thay thế các phản hồi lỗi chi tiết từ Next.js App.
 - **URL Rewrite & Proxy**:
   - Quy tắc `Redirect to HTTPS`: Chuyển hướng mã 301 Permanent toàn bộ truy vấn HTTP sang HTTPS.
-  - Quy tắc `ReverseProxyToNextjs`: Chuyển tiếp toàn bộ truy vấn tới `http://127.0.0.1:3000/{R:1}` kèm query string và header `X-Forwarded-Proto`, `X-Forwarded-For`.
+  - Quy tắc `ReverseProxyToNextjs`: Chuyển tiếp toàn bộ truy vấn tới `http://127.0.0.1:3001/{R:1}` kèm query string và header `X-Forwarded-Proto`, `X-Forwarded-For`.
 - **Tiêu đề bảo mật HTTP (Security Headers)**:
   - `X-Content-Type-Options: nosniff`
   - `X-Frame-Options: SAMEORIGIN`

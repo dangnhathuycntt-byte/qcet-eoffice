@@ -34,7 +34,7 @@ function createMockAuthContext(overrides: Partial<AuthContextType> = {}): AuthCo
       department: "Ban Giám hiệu",
       departmentCode: "BGH",
     }),
-    updateProfile: () => {},
+    updateProfile: async () => ({ success: true }),
     logout: async () => {},
     isProfileModalOpen: false,
     setIsProfileModalOpen: () => {},

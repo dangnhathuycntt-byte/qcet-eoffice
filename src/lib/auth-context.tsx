@@ -41,7 +41,9 @@ export interface AuthContextType {
     name?: string;
     avatar?: string;
   }) => AuthUser;
-  updateProfile: (updates: Partial<AuthUser>) => void;
+  updateProfile: (
+    updates: Partial<AuthUser>
+  ) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
   logout: () => Promise<void>;
   isProfileModalOpen: boolean;
   setIsProfileModalOpen: (open: boolean) => void;
@@ -174,7 +176,7 @@ export const AuthContext = createContext<AuthContextType>({
   loginWithGoogle: () => {
     throw new Error("Google login is handled via server OAuth at /api/auth/google");
   },
-  updateProfile: () => {},
+  updateProfile: async () => ({ success: false, error: "Not initialized" }),
   logout: async () => {},
   isProfileModalOpen: false,
   setIsProfileModalOpen: () => {},
@@ -610,52 +612,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const updateProfile = useCallback(
-    (updates: Partial<AuthUser>) => {
+    async (updates: Partial<AuthUser>): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {
       assertCanMutate(canMutate, authState);
 
-      setUser((prev) => {
-        if (!prev) return null;
-        const updated: AuthUser = {
-          ...(prev as AuthUser),
-          ...updates,
-          isFirstLogin: false,
-        };
+      const payload: { name?: string; phone?: string | null; title?: string | null } = {};
+      if (updates.name !== undefined) payload.name = updates.name.trim();
+      if (updates.phone !== undefined) payload.phone = updates.phone.trim() || null;
+      if (updates.title !== undefined) payload.title = updates.title.trim() || null;
 
-        if (typeof window !== "undefined") {
-          try {
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+      try {
+        const res = await fetch("/api/auth/me", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-            const registered = getRegisteredUsers();
-            const index = registered.findIndex((u) => u.id === updated.id || u.email === updated.email);
-            if (index >= 0) {
-              registered[index] = updated;
-              saveRegisteredUsers(registered);
-            } else {
-              saveRegisteredUsers([...registered, updated]);
-            }
-          } catch {
-            // ignore
-          }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          const errorMsg = data.error || "Không thể cập nhật thông tin hồ sơ trên máy chủ";
+          return { success: false, error: errorMsg };
         }
 
-        return updated;
-      });
+        const serverUser = data.user;
+        const mappedUser = mapDbUserToAuthUser(serverUser);
 
-      setAuthState((prev) => {
-        if (prev.status === "authenticated") {
-          return {
-            status: "authenticated",
-            user: {
-              ...prev.user,
-              ...updates,
-              isFirstLogin: false,
-            },
+        setUser((prev) => {
+          if (!prev) return mappedUser;
+          const updated: AuthUser = {
+            ...(prev as AuthUser),
+            ...mappedUser,
+            isFirstLogin: false,
           };
-        }
-        return prev;
-      });
+
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+
+              const registered = getRegisteredUsers();
+              const index = registered.findIndex((u) => u.id === updated.id || u.email === updated.email);
+              if (index >= 0) {
+                registered[index] = updated;
+                saveRegisteredUsers(registered);
+              } else {
+                saveRegisteredUsers([...registered, updated]);
+              }
+            } catch {
+              // ignore
+            }
+          }
+
+          return updated;
+        });
+
+        setAuthState((prev) => {
+          if (prev.status === "authenticated") {
+            return {
+              status: "authenticated",
+              user: {
+                ...prev.user,
+                ...mappedUser,
+                isFirstLogin: false,
+              },
+            };
+          }
+          return prev;
+        });
+
+        return { success: true, user: mappedUser };
+      } catch (err: any) {
+        return { success: false, error: err?.message || "Lỗi kết nối khi cập nhật hồ sơ" };
+      }
     },
-    [canMutate, authState.status]
+    [canMutate, authState]
   );
 
   return (

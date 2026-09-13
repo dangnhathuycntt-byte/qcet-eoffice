@@ -68,3 +68,17 @@ export type OnboardingInput = z.infer<typeof OnboardingInputSchema>;
 
 export const UpdateOnboardingSchema = OnboardingInputSchema;
 export type UpdateOnboardingInput = OnboardingInput;
+
+/**
+ * User profile update command contract.
+ * Strictly prevents modification of role, departmentId, isActive, or arbitrary system fields.
+ */
+export const UpdateUserProfileSchema = z
+  .object({
+    name: z.string().trim().min(2, "Họ tên phải có ít nhất 2 ký tự").max(100, "Họ tên không quá 100 ký tự").optional(),
+    phone: z.string().trim().max(20, "Số điện thoại không quá 20 ký tự").nullable().optional(),
+    title: z.string().trim().max(100, "Chức danh không quá 100 ký tự").nullable().optional(),
+  })
+  .strict();
+
+export type UpdateUserProfileInput = z.infer<typeof UpdateUserProfileSchema>;

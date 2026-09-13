@@ -34,7 +34,7 @@ const mockAuthContextValue = (user: AuthUser | null): AuthContextType => ({
   login: async () => ({ success: true }),
   register: async () => ({ success: true }),
   loginWithGoogle: () => user!,
-  updateProfile: () => {},
+  updateProfile: async () => ({ success: true }),
   logout: async () => {},
   isProfileModalOpen: false,
   setIsProfileModalOpen: () => {},

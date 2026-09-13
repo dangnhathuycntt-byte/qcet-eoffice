@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionFromRequest } from "@/lib/jwt-session";
-import { getApiContext } from "@/server/api/request-context";
+import { getApiContext, requireAuthenticated } from "@/server/api/request-context";
 import { toUserPublicDTO } from "@/server/dto";
 import { apiError, apiSuccess } from "@/server/api/response";
-import { AuthenticationError } from "@/server/api/errors";
+import { AuthenticationError, ValidationError } from "@/server/api/errors";
+import { assertCsrf } from "@/server/security/csrf";
+import { assertJsonContentType, assertRequestBodySize } from "@/server/api/validation";
+import { UpdateUserProfileSchema } from "@/contracts/users";
 
 export async function GET(req: Request) {
   let requestId = crypto.randomUUID();
@@ -77,3 +80,80 @@ export async function GET(req: Request) {
     return apiError(error, requestId, { "Cache-Control": "private, no-store" });
   }
 }
+
+export async function PATCH(req: Request) {
+  let requestId = crypto.randomUUID();
+  try {
+    assertCsrf(req);
+    assertJsonContentType(req);
+    assertRequestBodySize(req, 16 * 1024);
+
+    const context = await getApiContext(req);
+    requestId = context.requestId;
+
+    const authUser = requireAuthenticated(context);
+
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      throw new ValidationError('Payload JSON không hợp lệ', undefined, 'INVALID_JSON');
+    }
+
+    const parseResult = UpdateUserProfileSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      const issue = parseResult.error.issues[0];
+      const field = issue.path.join('.');
+      throw new ValidationError(
+        issue.message || `Dữ liệu hồ sơ không hợp lệ: ${field}`,
+        field ? { [field]: [issue.message] } : undefined,
+        'VALIDATION_FAILED'
+      );
+    }
+
+    const { name, phone, title } = parseResult.data;
+
+    if (name === undefined && phone === undefined && title === undefined) {
+      throw new ValidationError('Cần cung cấp ít nhất một trường thông tin để cập nhật', undefined, 'EMPTY_UPDATE');
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: authUser.id },
+      data: {
+        ...(name !== undefined ? { name } : {}),
+        ...(phone !== undefined ? { phone } : {}),
+        ...(title !== undefined ? { title } : {}),
+      },
+      include: {
+        department: {
+          select: { id: true, name: true, shortName: true },
+        },
+      },
+    });
+
+    const publicUser = toUserPublicDTO(updatedUser);
+    const userResult = {
+      ...publicUser,
+      title: updatedUser.title,
+      phone: updatedUser.phone,
+      avatarUrl: updatedUser.avatarUrl,
+      isActive: updatedUser.isActive,
+      onboardedAt: updatedUser.onboardedAt ? updatedUser.onboardedAt.toISOString() : null,
+      onboardingData: updatedUser.onboardingData || null,
+    };
+
+    return apiSuccess(
+      {
+        success: true,
+        user: userResult,
+      },
+      {
+        headers: { 'Cache-Control': 'private, no-store' },
+        requestId,
+      }
+    );
+  } catch (error) {
+    return apiError(error, requestId, { 'Cache-Control': 'private, no-store' });
+  }
+}
+

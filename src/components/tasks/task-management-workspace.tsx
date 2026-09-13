@@ -51,16 +51,16 @@ export interface TaskManagementWorkspaceProps extends Partial<UnifiedAdaptiveWor
  * - Live Sync: /api/dashboard/overview
  * - Urge Delivery: /api/notifications/push/test
  */
-export function TaskManagementWorkspace({
-  scope,
-  initialScope,
-  forcedScope,
-  onScopeChange,
-  className,
-  initialViewMode = "kanban",
-  initialTasks,
-  ...rest
-}: TaskManagementWorkspaceProps) {
+export function TaskManagementWorkspace(props: TaskManagementWorkspaceProps) {
+  const {
+    scope,
+    initialScope,
+    forcedScope,
+    onScopeChange,
+    className,
+    initialTasks,
+    ...rest
+  } = props;
   const { setIsProfileModalOpen } = useAuth();
   const effectiveScope = scope || forcedScope;
 
@@ -70,7 +70,7 @@ export function TaskManagementWorkspace({
       forcedScope={effectiveScope}
       onScopeChange={onScopeChange}
       className={className}
-      initialViewMode={initialViewMode}
+      initialViewMode={props.initialViewMode ?? "table"}
       initialTasks={initialTasks}
       {...rest}
     />

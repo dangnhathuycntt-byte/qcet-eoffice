@@ -89,9 +89,9 @@ Hệ thống được thiết kế theo mô hình 3 tầng phân tách rõ ràng
 │  - URL Rewrite 2.1 & Application Request Routing (ARR 3.0)   │
 │  - maxAllowedContentLength = 104857600 (100MB)               │
 │  - responseBufferLimit = 0 (Next.js Streaming)               │
-│  - Chuyển tiếp lưu lượng n��i bộ -> http://127.0.0.1:3000     │
+│  - Chuyển tiếp lưu lượng n��i bộ -> http://127.0.0.1:3001     │
 └──────────────────────────────┬───────────────────────────────┘
-                               │ (HTTP 127.0.0.1:3000)
+                               │ (HTTP 127.0.0.1:3001)
 ┌──────────────────────────────▼───────────────────────────────┐
 │  TẦNG 2: DOCKER COMPOSE RUNTIME (WSL2 / Engine)              │
 │  - qcet-app (Next.js 15 Standalone, non-root user)           │

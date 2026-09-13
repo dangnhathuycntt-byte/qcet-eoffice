@@ -404,9 +404,16 @@ export function UnifiedAdaptiveWorkspace({
   );
 
   // View mode management (Table vs Kanban)
-  const [internalViewMode, setInternalViewMode] = React.useState<ViewMode>(
-    initialViewMode || controlledViewMode || "table"
-  );
+  const [internalViewMode, setInternalViewMode] = React.useState<ViewMode>(() => {
+    if (controlledViewMode) return controlledViewMode;
+    if (
+      workspaceQuery?.queryState.view &&
+      (workspaceQuery.queryState.view === "table" || workspaceQuery.queryState.view === "kanban")
+    ) {
+      return workspaceQuery.queryState.view;
+    }
+    return initialViewMode || "table";
+  });
 
   React.useEffect(() => {
     if (controlledViewMode) {
@@ -532,7 +539,7 @@ export function UnifiedAdaptiveWorkspace({
     if (queryState.month !== undefined) {
       setCurrentMonth(queryState.month);
     }
-    if (!initialViewMode && queryState.view && (queryState.view === "table" || queryState.view === "kanban")) {
+    if (queryState.view && (queryState.view === "table" || queryState.view === "kanban")) {
       setInternalViewMode(queryState.view);
     }
   }, [

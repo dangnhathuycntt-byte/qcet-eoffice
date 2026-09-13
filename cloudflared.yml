@@ -1,0 +1,20 @@
+tunnel: 514f4f82-5355-4eaa-840e-dfa3f548b61c
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: qcet.dixxie.store
+    service: http://qcet-app:3000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+  - hostname: qcet.dixxi.store
+    service: http://qcet-app:3000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+  - hostname: qcet.dixxi.store.dixxie.store
+    service: http://qcet-app:3000
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+  - service: http_status:404
