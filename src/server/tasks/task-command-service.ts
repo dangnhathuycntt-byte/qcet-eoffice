@@ -341,6 +341,9 @@ export class TaskCommandService {
     const createCheck = canUserCreateTask(user, {
       scope: taskScope,
       departmentId: effectiveDepartmentId,
+      // A subtask inherits its parent's scope; only an explicitly chosen scope
+      // is subject to the scope-authority gate (P0-06).
+      scopeExplicit: Boolean(scope) || !parentTaskId,
     });
     if (!createCheck.allowed) {
       throw new AuthorizationError(

@@ -130,12 +130,40 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       assert.strictEqual(staffCanCreateSchool.allowed, false);
       assert.match(staffCanCreateSchool.reason || '', /Ban Giám hiệu hoặc Quản trị viên/i);
 
-      // DEPARTMENT and INDIVIDUAL scope can be created by department members
+      // DEPARTMENT scope requires authority over that unit (P0-06): a leader of
+      // it, or a privileged actor. INDIVIDUAL remains open to any authenticated user.
       const managerCanCreateDept = canUserCreateTask(managerUser, { scope: TaskScope.DEPARTMENT, departmentId: testDept1Id });
       assert.strictEqual(managerCanCreateDept.allowed, true);
 
       const staffCanCreateIndiv = canUserCreateTask(staffUser1, { scope: TaskScope.INDIVIDUAL, departmentId: testDept1Id });
       assert.strictEqual(staffCanCreateIndiv.allowed, true);
+
+      // P0-06 regression: an actor without unit authority creates PERSONAL tasks
+      // only. Previously DEPARTMENT scope was ungated here, so a staff account
+      // could create a unit task by calling the API directly.
+      const staffCanCreateDept = canUserCreateTask(staffUser1, {
+        scope: TaskScope.DEPARTMENT,
+        departmentId: testDept1Id,
+      });
+      assert.strictEqual(staffCanCreateDept.allowed, false);
+      assert.match(staffCanCreateDept.reason || '', /cá nhân/i);
+
+      // A leader of a DIFFERENT unit must not create in this one.
+      const foreignLeader = { ...managerUser, departmentId: 'dept-not-theirs' };
+      const foreignLeaderDept = canUserCreateTask(foreignLeader, {
+        scope: TaskScope.DEPARTMENT,
+        departmentId: testDept1Id,
+      });
+      assert.strictEqual(foreignLeaderDept.allowed, false);
+
+      // Subtask exception: an INHERITED scope is not re-adjudicated, so a staff
+      // member can still add a subtask to a unit task they work on.
+      const staffSubtask = canUserCreateTask(staffUser1, {
+        scope: TaskScope.DEPARTMENT,
+        departmentId: testDept1Id,
+        scopeExplicit: false,
+      });
+      assert.strictEqual(staffSubtask.allowed, true);
     });
 
     test('canUserUpdateTask: verifies update permissions across roles', () => {
@@ -298,9 +326,12 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
     });
 
     test('createTask: prevents actor spoofing for non-privileged user and allows for privileged user', async () => {
-      // 1. Non-privileged user attempts to spoof creatorId
+      // 1. Non-privileged user attempts to spoof creatorId.
+      // Actor is a unit leader (still NOT privileged — isPrivilegedUser is
+      // ADMIN-only) because P0-06 restricts an explicit DEPARTMENT scope to a
+      // leader of that unit; the anti-spoofing intent is unchanged.
       const staffCreatedTask = await taskCommandService.createTask(
-        { user: staffUser1 },
+        { user: managerUser },
         {
           title: 'Nhiệm vụ kiểm thử chống mạo danh creatorId',
           departmentId: testDept1Id,
@@ -313,7 +344,7 @@ describe('Task Domain Services & Policy Layer Tests (Phase 4 & Phase 5)', () => 
       createdTaskIds.push(staffCreatedTask.id);
       assert.strictEqual(
         staffCreatedTask.createdById,
-        staffUser1.id,
+        managerUser.id,
         'Non-privileged user cannot spoof creatorId; must be user.id'
       );
 

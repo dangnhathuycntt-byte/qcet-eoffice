@@ -83,16 +83,51 @@ export async function checkActiveDelegation(
 
 export function canUserCreateTask(
   user: AuthenticatedUser,
-  input: { scope?: string | TaskScope; departmentId?: string | null }
+  input: {
+    scope?: string | TaskScope;
+    departmentId?: string | null;
+    /**
+     * False when the scope was INHERITED from a parent task rather than chosen
+     * by the caller. A subtask inherits its parent's scope, so the scope-authority
+     * gates below must not re-adjudicate it — otherwise a staff member could not
+     * add a subtask to a unit task they legitimately work on. Defaults to true
+     * (treat as explicitly chosen), so a caller that omits this cannot widen
+     * its own authority by accident.
+     */
+    scopeExplicit?: boolean;
+  }
 ): { allowed: boolean; reason?: string } {
   const isPrivileged = isPrivilegedUser(user);
   const scopeStr = (input.scope || 'SCHOOL').toString().toUpperCase();
+  const scopeExplicit = input.scopeExplicit !== false;
 
   // Nhiệm vụ cấp trường (TaskScope.SCHOOL): Chỉ Ban Giám hiệu hoặc Quản trị viên mới được tạo
   if (scopeStr === 'SCHOOL' && !isPrivileged) {
     return {
       allowed: false,
       reason: 'Chỉ Ban Giám hiệu hoặc Quản trị viên mới có quyền tạo nhiệm vụ cấp trường.',
+    };
+  }
+
+  // Nhiệm vụ cấp đơn vị (TaskScope.DEPARTMENT): requires authority over that
+  // unit — its leader, or a privileged actor.
+  //
+  // P0-06 product policy: an actor without institutional authority creates
+  // PERSONAL tasks only. This gate aligns the submit-level rule with the UI's
+  // documented intent (create-task-modal.tsx resolveCreateTaskPolicy, PERSONAL
+  // mode); previously DEPARTMENT scope was ungated here, so a staff account
+  // could create a unit task by calling the API directly even though the form
+  // never offers it.
+  if (
+    scopeStr === 'DEPARTMENT' &&
+    scopeExplicit &&
+    !isPrivileged &&
+    !isDepartmentLeader(user, input.departmentId)
+  ) {
+    return {
+      allowed: false,
+      reason:
+        'Chỉ Trưởng đơn vị hoặc Ban Giám hiệu mới có quyền tạo nhiệm vụ cấp đơn vị. Bạn chỉ có thể tạo nhiệm vụ cá nhân.',
     };
   }
 
