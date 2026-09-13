@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import {
   AlertTriangle,
   Check,
@@ -10,6 +12,7 @@ import {
   ExternalLink,
   RefreshCw,
 } from "lucide-react";
+import { popoverVariants } from "@/lib/motion/variants";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import {
@@ -173,15 +176,20 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
     return filteredNotifications.filter((n) => n.timeGroup === "earlier");
   }, [filteredNotifications]);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      ref={popoverRef}
-      role="dialog"
-      aria-label="Trung tâm thông báo"
-      className="fixed inset-x-2 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-[420px] max-h-[85vh] sm:max-h-[580px] bg-card rounded-2xl border border-border/80 shadow-2xl z-50 flex flex-col overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150 select-none"
-    >
+    <AnimatePresence>
+      {isOpen && (
+        <m.div
+          key="notification-popover"
+          ref={popoverRef}
+          role="dialog"
+          aria-label="Trung tâm thông báo"
+          variants={popoverVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="fixed inset-x-2 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-[420px] max-h-[85vh] sm:max-h-[580px] bg-card rounded-2xl border border-border/80 shadow-2xl z-50 flex flex-col overflow-hidden select-none"
+        >
       {/* Header Container */}
       <div className="p-3.5 pb-2.5 border-b border-border/50 bg-muted/20 shrink-0">
         <div className="flex items-center justify-between gap-2">
@@ -355,7 +363,9 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
           <ExternalLink size={12} strokeWidth={1.5} />
         </Link>
       </div>
-    </div>
+    </m.div>
+    )}
+  </AnimatePresence>
   );
 }
 

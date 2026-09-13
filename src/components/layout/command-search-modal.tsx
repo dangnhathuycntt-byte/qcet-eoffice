@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import {
   Search,
   X,
@@ -36,6 +38,24 @@ import type {
   SearchUserResult,
   SearchDocumentResult,
 } from "@/app/api/search/route";
+import { fadeVariants } from "@/lib/motion/variants";
+import { motionTransition } from "@/lib/motion/tokens";
+
+const commandPanelVariants = {
+  initial: { opacity: 0, y: -6, scale: 0.985 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: motionTransition.enter,
+  },
+  exit: {
+    opacity: 0,
+    y: -6,
+    scale: 0.985,
+    transition: motionTransition.exit,
+  },
+};
 
 export interface QuickAction {
   id: string;
@@ -786,29 +806,39 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     }
   }, [selectedIndex]);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Tìm kiếm nhanh hệ thống (Command Palette)"
-      data-slot="command-palette"
-      className={cn(
-        "fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150",
-        className
-      )}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleClose();
-        }
-      }}
-    >
-      <div
-        ref={dialogRef}
-        className="w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-98 duration-150"
-        onKeyDown={handleKeyDownInList}
-      >
+    <AnimatePresence>
+      {isOpen && (
+        <m.div
+          key="command-palette-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Tìm kiếm nhanh hệ thống (Command Palette)"
+          data-slot="command-palette"
+          variants={fadeVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className={cn(
+            "fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-xs",
+            className
+          )}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleClose();
+            }
+          }}
+        >
+          <m.div
+            key="command-palette-panel"
+            ref={dialogRef}
+            variants={commandPanelVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col max-h-[85vh]"
+            onKeyDown={handleKeyDownInList}
+          >
         {/* Search Header Input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-200 bg-white">
           <Search className="w-5 h-5 text-neutral-400 shrink-0" />
@@ -1387,8 +1417,10 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             <span>Đóng</span>
           </div>
         </div>
-      </div>
-    </div>
+      </m.div>
+    </m.div>
+  )}
+</AnimatePresence>
   );
 }
 

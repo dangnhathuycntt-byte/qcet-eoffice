@@ -2,8 +2,11 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { fadeVariants, sideSheetVariants } from "@/lib/motion/variants";
 
 export interface DrawerProps {
   isOpen: boolean;
@@ -30,7 +33,6 @@ export function Drawer({
   children,
 }: DrawerProps) {
   const [mounted, setMounted] = React.useState(false);
-  const [visible, setVisible] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
@@ -38,12 +40,9 @@ export function Drawer({
 
   React.useEffect(() => {
     if (isOpen) {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setVisible(true));
-      });
       document.body.style.overflow = "hidden";
     } else {
-      setVisible(false);
+      document.body.style.overflow = "unset";
     }
     return () => {
       document.body.style.overflow = "unset";
@@ -51,91 +50,108 @@ export function Drawer({
   }, [isOpen]);
 
   React.useEffect(() => {
+    if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
-  if (!mounted || !isOpen) return null;
+  if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div
-        className={`fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ease-out ${
-          visible ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={onClose}
-      />
-      <div
-        className={`relative z-50 flex h-full w-full sm:max-w-3xl flex-col bg-card border-l border-border/60 shadow-[0_0_50px_rgba(0,0,0,0.18)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          visible ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex flex-col border-b border-border/60 px-4 sm:px-6 py-4 gap-3.5 shrink-0 bg-card/95 backdrop-blur-md">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1 min-w-0 flex-1">
-              <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground leading-snug font-heading">
-                {title}
-              </h2>
-              {subtitle && (
-                <p className="text-xs font-medium text-muted-foreground">
-                  {subtitle}
-                </p>
+    <AnimatePresence>
+      {isOpen && (
+        <m.div
+          key="drawer-container"
+          className="fixed inset-0 z-50 flex justify-end"
+        >
+          <m.div
+            key="drawer-backdrop"
+            variants={fadeVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <m.aside
+            key="drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            variants={sideSheetVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="relative z-50 flex h-full w-full sm:max-w-3xl flex-col bg-card border-l border-border/60 shadow-[0_0_50px_rgba(0,0,0,0.18)]"
+          >
+            <div className="flex flex-col border-b border-border/60 px-4 sm:px-6 py-4 gap-3.5 shrink-0 bg-card/95 backdrop-blur-md">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1 min-w-0 flex-1">
+                  <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground leading-snug font-heading">
+                    {title}
+                  </h2>
+                  {subtitle && (
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {subtitle}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={onClose}
+                  className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 border border-transparent hover:border-border/60 transition-all duration-200 active:scale-95 shrink-0 cursor-pointer"
+                  aria-label="Đóng"
+                >
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </div>
+
+              {stats && (
+                <div className="rounded-2xl px-4 py-3 bg-muted/40 border border-border/50 space-y-2.5 shadow-xs">
+                  <div className="flex items-center justify-between text-xs sm:text-[13px] font-bold">
+                    <span className="text-foreground">
+                      Tiến độ hoàn thành:{" "}
+                      <span className="tabular-nums text-primary">
+                        {stats.completed}/{stats.total}
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground font-medium text-xs tabular-nums">
+                      {stats.total} nhiệm vụ
+                    </span>
+                  </div>
+                  <Progress
+                    value={stats.completionRate}
+                    className="[&_[data-slot=progress-track]]:h-2.5 [&_[data-slot=progress-indicator]]:bg-emerald-500 rounded-full"
+                  />
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium pt-0.5">
+                    <span className="text-emerald-600 font-bold tabular-nums">
+                      {stats.completed} hoàn thành
+                    </span>
+                    <span>·</span>
+                    <span className="text-blue-600 font-semibold tabular-nums">
+                      {stats.inProgress} đang làm
+                    </span>
+                    {stats.overdue > 0 && (
+                      <>
+                        <span>·</span>
+                        <span className="text-rose-600 font-bold tabular-nums animate-pulse">
+                          {stats.overdue} quá hạn
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
-            <button
-              onClick={onClose}
-              className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 border border-transparent hover:border-border/60 transition-all duration-200 active:scale-95 shrink-0 cursor-pointer"
-              aria-label="Đóng"
-            >
-              <X size={18} strokeWidth={1.5} />
-            </button>
-          </div>
-
-          {stats && (
-            <div className="rounded-2xl px-4 py-3 bg-muted/40 border border-border/50 space-y-2.5 shadow-xs">
-              <div className="flex items-center justify-between text-xs sm:text-[13px] font-bold">
-                <span className="text-foreground">
-                  Tiến độ hoàn thành:{" "}
-                  <span className="tabular-nums text-primary">
-                    {stats.completed}/{stats.total}
-                  </span>
-                </span>
-                <span className="text-muted-foreground font-medium text-xs tabular-nums">
-                  {stats.total} nhiệm vụ
-                </span>
-              </div>
-              <Progress
-                value={stats.completionRate}
-                className="[&_[data-slot=progress-track]]:h-2.5 [&_[data-slot=progress-indicator]]:bg-emerald-500 rounded-full"
-              />
-              <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium pt-0.5">
-                <span className="text-emerald-600 font-bold tabular-nums">
-                  {stats.completed} hoàn thành
-                </span>
-                <span>·</span>
-                <span className="text-blue-600 font-semibold tabular-nums">
-                  {stats.inProgress} đang làm
-                </span>
-                {stats.overdue > 0 && (
-                  <>
-                    <span>·</span>
-                    <span className="text-rose-600 font-bold tabular-nums animate-pulse">
-                      {stats.overdue} quá hạn
-                    </span>
-                  </>
-                )}
-              </div>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-background/50 thin-scrollbar">
+              {children}
             </div>
-          )}
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-background/50 thin-scrollbar">
-          {children}
-        </div>
-      </div>
-    </div>,
+          </m.aside>
+        </m.div>
+      )}
+    </AnimatePresence>,
     document.body
   );
 }
