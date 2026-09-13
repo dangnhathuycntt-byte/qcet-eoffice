@@ -282,6 +282,12 @@ export function TaskTableToolbar({
   }, [onSearchChange]);
 
   const [isMobileFilterOpen, setIsMobileFilterOpen] = React.useState(false);
+  // Plan T10: the desktop first row is the north star
+  //   [Scope] [Search........] [Filter] [Display] [Giao việc]
+  // Period, unit, category, density, sort and export live on secondary
+  // surfaces, so the bar does not dominate the viewport (R-D1).
+  const [isDesktopFilterOpen, setIsDesktopFilterOpen] = React.useState(false);
+  const [isDesktopDisplayOpen, setIsDesktopDisplayOpen] = React.useState(false);
 
   // Tính toán số lượng thẻ lọc nếu không được truyền trực tiếp
   const computedPillCounts = React.useMemo(() => {
@@ -765,6 +771,35 @@ export function TaskTableToolbar({
             </div>
           </div>
 
+          {/* Plan T10: Filter is one first-row control; period, unit and category
+              are disclosed on this secondary surface instead of standing open. */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={isDesktopFilterOpen}
+            onClick={() => {
+              setIsDesktopFilterOpen((v) => !v);
+              setIsDesktopDisplayOpen(false);
+            }}
+            className="h-9 gap-1.5 text-xs font-medium cursor-pointer"
+          >
+            <Filter className="size-4" strokeWidth={1.5} />
+            <span>Lọc</span>
+            <ChevronDown
+              className={cn(
+                "size-3.5 transition-transform",
+                isDesktopFilterOpen && "rotate-180"
+              )}
+              strokeWidth={1.5}
+            />
+          </Button>
+
+          {isDesktopFilterOpen && (
+            <div
+              data-slot="desktop-filter-panel"
+              className="flex flex-1 flex-wrap items-center gap-2 min-w-0"
+            >
           {/* Dropdown Bộ lọc Tháng (Academic Month) */}
           {hasMonthHandler && (
             <div className="relative inline-flex items-center">
@@ -852,10 +887,41 @@ export function TaskTableToolbar({
               />
             </div>
           )}
+            </div>
+          )}
         </div>
 
         {/* Nhóm bên phải: Mật độ + Chế độ xem + Xuất Excel + Thêm công việc */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Plan T10: Display is one first-row control; density, view mode and
+              export are disclosed here rather than standing open. */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={isDesktopDisplayOpen}
+            onClick={() => {
+              setIsDesktopDisplayOpen((v) => !v);
+              setIsDesktopFilterOpen(false);
+            }}
+            className="h-9 gap-1.5 text-xs font-medium cursor-pointer"
+          >
+            <SlidersHorizontal className="size-4" strokeWidth={1.5} />
+            <span>Hiển thị</span>
+            <ChevronDown
+              className={cn(
+                "size-3.5 transition-transform",
+                isDesktopDisplayOpen && "rotate-180"
+              )}
+              strokeWidth={1.5}
+            />
+          </Button>
+
+          {isDesktopDisplayOpen && (
+            <div
+              data-slot="desktop-display-panel"
+              className="flex items-center gap-2"
+            >
           {/* Điều khiển mật độ hiển thị hàng (Compact / Comfortable) */}
           {onDensityChange && (
             <div
@@ -952,6 +1018,8 @@ export function TaskTableToolbar({
               />
               <span className="hidden md:inline">Xuất Excel</span>
             </Button>
+          )}
+            </div>
           )}
 
           {/* Nút Thêm công việc mới */}
