@@ -132,6 +132,29 @@ describe("Task 5: Task Row Simplification & Bulk Action Floating Bar", () => {
 
       // 8. Actions (Overflow menu button)
       assert.ok(html.includes('aria-label="Thao tác khác"'), "Should render overflow menu button");
+
+      // Assert the ACTUAL cell order the test name promises (plan T12:
+      // Task | Owner | Unit | Due | Status | Progress | Actions). The presence
+      // checks above would pass in any order, so a T12 regression needs this.
+      const orderedMarkers = [
+        "NV-01",              // Task
+        "Nguyễn Tiến Phong",  // Owner / DRI
+        "Khoa CNTT",          // Unit
+        "30/09/2026",         // Due
+        "Đang thực hiện",     // Status
+        "65%",                // Progress
+        "Thao tác khác",      // Actions
+      ];
+      const positions = orderedMarkers.map((marker) => html.indexOf(marker));
+      assert.ok(
+        positions.every((p) => p >= 0),
+        "every prioritised column must render"
+      );
+      assert.deepEqual(
+        [...positions].sort((a, b) => a - b),
+        positions,
+        "columns must appear in T12 order: Task | Owner | Unit | Due | Status | Progress | Actions"
+      );
     });
 
     it("renders initials placeholder when DRI avatar is not provided", () => {

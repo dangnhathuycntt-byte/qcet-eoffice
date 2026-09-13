@@ -335,27 +335,7 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* 3. Đơn vị (Department tag) */}
-      <td className={cn("w-36 sm:w-40 align-middle whitespace-nowrap", paddingClass)}>
-        <div className="flex flex-col gap-0.5 justify-center">
-          <span
-            className="text-xs font-medium text-foreground truncate max-w-[150px]"
-            title={task.department || "Toàn trường"}
-          >
-            {task.department || "Toàn trường"}
-          </span>
-          {!shouldSuppressCategory && categoryConfig && (
-            <span
-              className="text-xs text-muted-foreground truncate max-w-[150px]"
-              title={categoryConfig.label}
-            >
-              {categoryConfig.label}
-            </span>
-          )}
-        </div>
-      </td>
-
-      {/* 4. DRI (single clean avatar / initials + name) */}
+      {/* 3. DRI (single clean avatar / initials + name) */}
       <td className={cn("w-36 align-middle whitespace-nowrap", paddingClass)}>
         <div
           className="flex items-center gap-1.5 min-w-0"
@@ -382,24 +362,27 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* 5. Tiến độ (compact progress bar + percentage with tabular-nums) */}
-      <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
-        <div className="flex items-center gap-2">
-          <div className="relative flex h-1.5 w-14 overflow-hidden rounded-full bg-slate-200/80">
-            <div
-              className="h-full bg-emerald-500 transition-all duration-300 ease-out"
-              style={{
-                width: `${Math.min(100, Math.max(0, task.progressPercent))}%`,
-              }}
-            />
-          </div>
-          <span className="font-mono text-xs font-semibold tabular-nums text-slate-700">
-            {task.progressPercent}%
+      {/* 4. Đơn vị (Department tag) */}
+      <td className={cn("w-36 sm:w-40 align-middle whitespace-nowrap", paddingClass)}>
+        <div className="flex flex-col gap-0.5 justify-center">
+          <span
+            className="text-xs font-medium text-foreground truncate max-w-[150px]"
+            title={task.department || "Toàn trường"}
+          >
+            {task.department || "Toàn trường"}
           </span>
+          {!shouldSuppressCategory && categoryConfig && (
+            <span
+              className="text-xs text-muted-foreground truncate max-w-[150px]"
+              title={categoryConfig.label}
+            >
+              {categoryConfig.label}
+            </span>
+          )}
         </div>
       </td>
 
-      {/* 6. Hạn (SLA formatted date, highlighted if overdue) */}
+      {/* 5. Hạn (SLA formatted date, highlighted if overdue) */}
       <td className={cn("w-32 align-middle whitespace-nowrap", paddingClass)}>
         <div className="flex items-center gap-1.5">
           <span
@@ -423,7 +406,7 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* 7. Trạng thái (single clear scanning status badge) */}
+      {/* 6. Trạng thái (single clear scanning status badge) */}
       <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
         <Badge
           variant={statusConfig.variant}
@@ -434,6 +417,23 @@ export const TaskRow = React.memo(function TaskRow({
         >
           {statusConfig.label}
         </Badge>
+      </td>
+
+      {/* 7. Tiến độ (compact progress bar + percentage with tabular-nums) */}
+      <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
+        <div className="flex items-center gap-2">
+          <div className="relative flex h-1.5 w-14 overflow-hidden rounded-full bg-slate-200/80">
+            <div
+              className="h-full bg-emerald-500 transition-all duration-300 ease-out"
+              style={{
+                width: `${Math.min(100, Math.max(0, task.progressPercent))}%`,
+              }}
+            />
+          </div>
+          <span className="font-mono text-xs font-semibold tabular-nums text-slate-700">
+            {task.progressPercent}%
+          </span>
+        </div>
       </td>
 
       {/* 8. Actions (maximum 1 contextual CTA if required + ... overflow dropdown menu) */}
