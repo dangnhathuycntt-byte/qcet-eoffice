@@ -124,11 +124,24 @@ describe("PriorOverdueBacklogBanner & DashboardZone Monthly Scoping", () => {
     assert.ok(markup.includes("Tháng 9"));
   });
 
-  test("DashboardZone imports PriorOverdueBacklogBanner and connects monthly partitioned states", () => {
+  test("PriorOverdueBacklogBanner is mounted on its canonical cycle surfaces with partitioned month state", () => {
+    // The banner belongs to the per-cycle surfaces (calendar workspace + task table),
+    // not to DashboardZone, which owns only the macro month indicator.
+    const calendarWorkspace = fs.readFileSync(
+      path.resolve(process.cwd(), "src/components/calendar/calendar-workspace.tsx"),
+      "utf8"
+    );
+    assert.match(calendarWorkspace, /PriorOverdueBacklogBanner/);
+
+    const taskTable = fs.readFileSync(
+      path.resolve(process.cwd(), "src/components/tasks/table/modular-cascading-task-table.tsx"),
+      "utf8"
+    );
+    assert.match(taskTable, /priorOverdueBacklog/);
+
+    // DashboardZone keeps the macro month partition wiring only.
     const content = fs.readFileSync(zonePath, "utf8");
-    assert.match(content, /PriorOverdueBacklogBanner/);
     assert.match(content, /selectedAcademicMonth/);
-    assert.match(content, /priorOverdueBacklog/);
     assert.match(content, /displayedStats/);
     assert.match(content, /KỲ VẬN HÀNH THÁNG/);
 

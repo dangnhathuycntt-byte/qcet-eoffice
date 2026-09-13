@@ -14,11 +14,8 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
   const cookieStore = await cookies();
   const session = verifySessionToken(cookieStore.get(SESSION_COOKIE_NAME)?.value || "");
   const isExec = session ? isUserExecutive(session as any) : false;
-  // P0-05 / T01: a task load FAILURE must not degrade into empty task data —
-  // "error is not empty". This call used to swallow its rejection and resolve to
-  // an empty task list, rendering a fabricated empty workspace on any read
-  // failure and hiding real outages. Letting the error propagate hands it to
-  // src/app/tasks/error.tsx, which renders an explicit error state with retry.
+  // P0-05 / T01: never swallow a read failure into empty task data. The rejection
+  // propagates to src/app/tasks/error.tsx, which renders an explicit error + retry.
   const { tasks } = session
     ? await getLiveDashboardData({ userId: session.id, departmentId: isExec ? undefined : session.departmentId || undefined })
     : { tasks: [] };

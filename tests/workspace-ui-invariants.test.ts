@@ -181,37 +181,36 @@ describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () =
       );
     });
 
-    test("calendar page (/calendar): exactly 1 global primary action (+ Tạo dropdown) in control row 2", () => {
+    test("calendar page (/calendar): exactly 1 global primary action (+ Tạo dropdown)", () => {
       const calendarPagePath = path.resolve(process.cwd(), "src/app/calendar/page.tsx");
       const calendarContent = fs.readFileSync(calendarPagePath, "utf-8");
 
-      // 1. In top page header (Section 1), the actions bar contains ONLY Refresh ("Làm mới") and no create buttons
-      const headerStart = calendarContent.indexOf("Global Actions: Refresh");
-      const headerEnd = calendarContent.indexOf("Unified Calendar Chrome");
-      assert.ok(headerStart > 0 && headerEnd > headerStart, "Calendar header section must be present");
+      // The chrome collapsed to a single primary row, so the page header carries the
+      // one + Tạo dropdown and the chrome row carries navigation only. Anchor on the
+      // data-slot / comment markers that the current layout actually defines.
+      const headerStart = calendarContent.indexOf("Page header: title + primary action");
+      const headerEnd = calendarContent.indexOf("Primary calendar chrome");
+      assert.ok(
+        headerStart > 0 && headerEnd > headerStart,
+        "Calendar header section must be present"
+      );
       const headerSection = calendarContent.slice(headerStart, headerEnd);
 
+      // 1. The header's single creation control is the consolidated + Tạo dropdown.
       assert.ok(
-        headerSection.includes("Làm mới dữ liệu lịch") || headerSection.includes("Làm mới"),
-        "Calendar header must include the Refresh action"
-      );
-      assert.ok(
-        !headerSection.includes("handleOpenAddTask") && !headerSection.includes("handleOpenAddEvent"),
-        "Calendar header must NOT contain creation handlers (no redundant header create button)"
+        headerSection.includes("handleOpenAddTask") && headerSection.includes("handleOpenAddEvent"),
+        "Single + Tạo dropdown must consolidate both 'Tạo công việc' and 'Tạo sự kiện'"
       );
 
-      // 2. Control Row 2 contains the single canonical '+ Tạo' primary action dropdown
-      const controlsRow2 = calendarContent.slice(
-        calendarContent.indexOf('data-slot="calendar-controls-row-2"'),
-        calendarContent.indexOf("Calendar Content: Month Grid or Agenda List")
-      );
+      // 2. Exactly one such control exists anywhere on the page: every handleOpenAddTask
+      //    call site outside its own definition is inside that dropdown.
+      const chromeStart = calendarContent.indexOf("Primary calendar chrome");
+      const chromeEnd = calendarContent.indexOf("Calendar Content: Month Grid or Agenda List");
+      assert.ok(chromeStart > 0 && chromeEnd > chromeStart, "Calendar chrome section must be present");
+      const chromeSection = calendarContent.slice(chromeStart, chromeEnd);
       assert.ok(
-        controlsRow2.includes("Single Global Primary Action (+ Tạo Dropdown)"),
-        "Calendar Control Row 2 must house the single global + Tạo CTA"
-      );
-      assert.ok(
-        controlsRow2.includes("handleOpenAddTask") && controlsRow2.includes("handleOpenAddEvent"),
-        "Single + Tạo dropdown must consolidate both 'Tạo công việc' and 'Tạo sự kiện'"
+        !chromeSection.includes("handleOpenAddTask") && !chromeSection.includes("handleOpenAddEvent"),
+        "Calendar chrome must NOT contain a second creation control"
       );
     });
 
@@ -222,9 +221,9 @@ describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () =
       );
       const dashboardContent = fs.readFileSync(dashboardZonePath, "utf-8");
 
-      // Contextual action bar in dashboard-zone contains only Scope, Month, and Refresh
-      const barStart = dashboardContent.indexOf("Contextual Action Bar");
-      const barEnd = dashboardContent.indexOf("<ExecutiveStatStrip", barStart);
+      // The desktop header's contextual action bar contains only Scope, Month, and Refresh.
+      const barStart = dashboardContent.indexOf('data-slot="dashboard-header"');
+      const barEnd = dashboardContent.indexOf('data-slot="section-action"', barStart);
       assert.ok(barStart > 0 && barEnd > barStart, "Dashboard action bar section must be present");
       const contextBar = dashboardContent.slice(barStart, barEnd);
 

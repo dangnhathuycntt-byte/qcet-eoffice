@@ -436,7 +436,7 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
   });
 
   describe("5. TaskTableToolbar Presentation Controls", () => {
-    it("renders search input, department dropdown, category dropdown, density controls, and action buttons", () => {
+    it("renders the T10 first row and offers department, category, density and view controls on the disclosed panels", () => {
       const html = renderToStaticMarkup(
         React.createElement(TaskTableToolbar, {
           searchQuery: "Nhiệm vụ số",
@@ -456,29 +456,49 @@ describe("Task 4: Interactive Toolbars - Filter Pills & Floating Bulk Action Doc
         })
       );
 
-      // Search input
+      // Plan T10 desktop north star, standing open:
+      // [Scope] [Search] [Filter] [Display] [Giao việc]
       assert.ok(html.includes('aria-label="Tìm kiếm nhiệm vụ"'));
       assert.ok(html.includes('value="Nhiệm vụ số"'));
       assert.ok(html.includes('aria-label="Xóa từ khóa tìm kiếm"'));
-
-      // Department dropdown
-      assert.ok(html.includes('aria-label="Lọc theo đơn vị phòng ban"'));
-
-      // Category dropdown
-      assert.ok(html.includes('aria-label="Lọc theo danh mục DACUM"'));
-
-      // Density control
-      assert.ok(html.includes('aria-label="Mật độ hiển thị bảng"'));
-      assert.ok(html.includes('aria-label="Chế độ hiển thị gọn"'));
-
-      // View mode control
-      assert.ok(html.includes('aria-label="Chế độ xem không gian làm việc"'));
-      assert.ok(html.includes("Kanban"));
-      assert.ok(html.includes("Bảng"));
-
-      // Action buttons
       assert.ok(html.includes("Thêm công việc"));
-      assert.ok(html.includes("Xuất Excel"));
+      assert.ok(html.includes(">Lọc<"));
+      assert.ok(html.includes("Hiển thị"));
+
+      // T10: the rest live on secondary surfaces, so they must NOT stand open.
+      for (const disclosed of [
+        'aria-label="Lọc theo đơn vị phòng ban"',
+        'aria-label="Lọc theo danh mục DACUM"',
+        'aria-label="Mật độ hiển thị bảng"',
+        'aria-label="Chế độ hiển thị gọn"',
+        'aria-label="Chế độ xem không gian làm việc"',
+      ]) {
+        assert.ok(
+          !html.includes(disclosed),
+          `${disclosed} must be disclosed, not standing open on the first row`
+        );
+      }
+
+      // …but every one of them must still be offered by the toolbar.
+      const toolbarSrc = fs.readFileSync(
+        path.resolve(
+          process.cwd(),
+          "src/components/tasks/table/components/task-table-toolbar.tsx"
+        ),
+        "utf-8"
+      );
+      assert.ok(toolbarSrc.includes('data-slot="desktop-filter-panel"'), "Filter panel must exist");
+      assert.ok(toolbarSrc.includes('data-slot="desktop-display-panel"'), "Display panel must exist");
+      for (const offered of [
+        'aria-label="Lọc theo đơn vị phòng ban"',
+        'aria-label="Lọc theo danh mục DACUM"',
+        'aria-label="Mật độ hiển thị bảng"',
+        'aria-label="Chế độ hiển thị gọn"',
+        'aria-label="Chế độ xem không gian làm việc"',
+        "Xuất Excel",
+      ]) {
+        assert.ok(toolbarSrc.includes(offered), `Toolbar must still offer ${offered}`);
+      }
     });
 
     it("renders loading spinner in search input when loading prop is true", () => {
