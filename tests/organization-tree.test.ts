@@ -90,7 +90,8 @@ describe("OrganizationTree Helpers", () => {
       assert.ok(member.email, "Staff should have email");
       assert.ok(member.departmentName, "Staff should have departmentName");
       assert.ok(member.avatar, "Staff should have avatar");
-      assert.ok(typeof member.activeTaskCount === "number", "Staff should have activeTaskCount");
+      // T61: the directory carries no fabricated per-person task counts — only
+      // counts the payload actually holds may be asserted here.
 
       // Verify academic titles if present are authentic QCET standards without emojis
       if (member.titlePrefix) {

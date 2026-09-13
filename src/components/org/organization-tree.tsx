@@ -47,7 +47,6 @@ export interface StaffMember {
   avatar?: string;
   departmentId: string;
   departmentName: string;
-  activeTaskCount: number;
   status: "ACTIVE" | "ON_LEAVE" | "BUSY";
   room?: string;
   responsibilities?: string[];
@@ -67,8 +66,6 @@ export interface DepartmentNode {
   leaderName: string;
   leaderRole: string;
   members: StaffMember[];
-  headcount?: number;
-  activeTasksCount?: number;
   groupField?: "Nhóm" | "Nhóm công tác";
   notionDbKey?: string;
 }
@@ -95,8 +92,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "bgh@cdktcnqn.edu.vn",
     leaderName: "ThS. Phạm Văn Tường",
     leaderRole: "Hiệu trưởng",
-    headcount: 5,
-    activeTasksCount: 8,
     groupField: "Nhóm",
     members: [
       {
@@ -110,7 +105,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-bgh",
         departmentName: "Ban Giám hiệu",
-        activeTaskCount: 4,
         status: "ACTIVE",
         room: "P.301",
         responsibilities: [
@@ -130,7 +124,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-bgh",
         departmentName: "Ban Giám hiệu",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "P.302",
         responsibilities: [
@@ -149,7 +142,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-bgh",
         departmentName: "Ban Giám hiệu",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "P.303",
         responsibilities: [
@@ -177,8 +169,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "hanhchinh@cdktcnqn.edu.vn",
     leaderName: "ThS. Phan Văn Thanh",
     leaderRole: "Trưởng phòng",
-    headcount: 14,
-    activeTasksCount: 5,
     groupField: "Nhóm",
     notionDbKey: "hanh_chinh_quan_tri",
     members: [
@@ -193,7 +183,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-hcqt",
         departmentName: "Phòng Hành chính - Quản trị",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "P.101",
         responsibilities: [
@@ -212,7 +201,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-hcqt",
         departmentName: "Phòng Hành chính - Quản trị",
-        activeTaskCount: 4,
         status: "ACTIVE",
         room: "P.101",
         responsibilities: [
@@ -231,7 +219,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-hcqt",
         departmentName: "Phòng Hành chính - Quản trị",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "P.101",
         responsibilities: [
@@ -255,8 +242,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "tochuc@cdktcnqn.edu.vn",
     leaderName: "ThS. Nguyễn Tiến Phong",
     leaderRole: "Trưởng phòng",
-    headcount: 11,
-    activeTasksCount: 4,
     groupField: "Nhóm",
     notionDbKey: "to_chuc_dbcl",
     members: [
@@ -271,7 +256,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-tcdbcl",
         departmentName: "Phòng Tổ chức - Đảm bảo chất lượng",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "P.202",
         responsibilities: [
@@ -290,7 +274,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-tcdbcl",
         departmentName: "Phòng Tổ chức - Đảm bảo chất lượng",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "P.202",
         responsibilities: [
@@ -309,7 +292,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-tcdbcl",
         departmentName: "Phòng Tổ chức - Đảm bảo chất lượng",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "P.202",
         responsibilities: [
@@ -333,8 +315,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "daotao@cdktcnqn.edu.vn",
     leaderName: "ThS. Lê Văn Thí",
     leaderRole: "Trưởng phòng",
-    headcount: 16,
-    activeTasksCount: 6,
     groupField: "Nhóm",
     notionDbKey: "quan_ly_dao_tao",
     members: [
@@ -349,7 +329,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-qldt",
         departmentName: "Phòng Quản lý Đào tạo",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "P.102",
         responsibilities: [
@@ -368,7 +347,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-qldt",
         departmentName: "Phòng Quản lý Đào tạo",
-        activeTaskCount: 4,
         status: "ACTIVE",
         room: "P.102",
         responsibilities: [
@@ -387,7 +365,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-qldt",
         departmentName: "Phòng Quản lý Đào tạo",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "P.102",
         responsibilities: [
@@ -411,8 +388,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "tuyensinh@cdktcnqn.edu.vn",
     leaderName: "ThS. Nguyễn Quốc Vỹ",
     leaderRole: "Trưởng phòng",
-    headcount: 12,
-    activeTasksCount: 4,
     groupField: "Nhóm",
     notionDbKey: "tuyen_sinh_htqt",
     members: [
@@ -427,7 +402,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-tshtqt",
         departmentName: "Phòng Tuyển sinh - Hợp tác quốc tế",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "P.103",
         responsibilities: [
@@ -446,7 +420,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-tshtqt",
         departmentName: "Phòng Tuyển sinh - Hợp tác quốc tế",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "P.103",
         responsibilities: [
@@ -470,8 +443,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "taichinh@cdktcnqn.edu.vn",
     leaderName: "ThS. Lê Phương Thúy Oanh",
     leaderRole: "Trưởng phòng / Kế toán trưởng",
-    headcount: 9,
-    activeTasksCount: 4,
     groupField: "Nhóm",
     notionDbKey: "tai_chinh",
     members: [
@@ -486,7 +457,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-tc",
         departmentName: "Phòng Tài chính",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "P.104",
         responsibilities: [
@@ -505,7 +475,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-p-tc",
         departmentName: "Phòng Tài chính",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "P.104",
         responsibilities: [
@@ -529,8 +498,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "quantrimang@cdktcnqn.edu.vn",
     leaderName: "ThS. Mai Đinh Thị Xuân",
     leaderRole: "Giám đốc Trung tâm",
-    headcount: 8,
-    activeTasksCount: 4,
     groupField: "Nhóm",
     notionDbKey: "so_truyen_thong",
     members: [
@@ -545,7 +512,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-tt-stt",
         departmentName: "Trung tâm Số - Truyền thông",
-        activeTaskCount: 4,
         status: "ACTIVE",
         room: "P.204",
         responsibilities: [
@@ -565,7 +531,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-tt-stt",
         departmentName: "Trung tâm Số - Truyền thông",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "P.204",
         responsibilities: [
@@ -589,8 +554,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "nnth@cdktcnqn.edu.vn",
     leaderName: "ThS. Chu Đình Thắng",
     leaderRole: "Giám đốc Trung tâm",
-    headcount: 7,
-    activeTasksCount: 3,
     groupField: "Nhóm",
     members: [
       {
@@ -604,7 +567,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-tt-nnth",
         departmentName: "Trung tâm Ngoại ngữ - Tin học",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "P.105",
         responsibilities: [
@@ -623,7 +585,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-tt-nnth",
         departmentName: "Trung tâm Ngoại ngữ - Tin học",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "P.105",
         responsibilities: [
@@ -651,8 +612,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "khoadientutinhoc@cdktcnqn.edu.vn",
     leaderName: "TS. Nguyễn Ngọc Vinh",
     leaderRole: "Trưởng khoa",
-    headcount: 24,
-    activeTasksCount: 5,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_dien_tu_tin_hoc",
     members: [
@@ -667,7 +626,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-dtth",
         departmentName: "Khoa Công nghệ thông tin",
-        activeTaskCount: 5,
         status: "ACTIVE",
         room: "C.302",
         responsibilities: [
@@ -687,7 +645,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-dtth",
         departmentName: "Khoa Công nghệ thông tin",
-        activeTaskCount: 4,
         status: "ACTIVE",
         room: "C.303",
         responsibilities: [
@@ -706,7 +663,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-dtth",
         departmentName: "Khoa Công nghệ thông tin",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "C.304",
         responsibilities: [
@@ -730,8 +686,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "khoacokhi@cdktcnqn.edu.vn",
     leaderName: "TS. Đinh Quốc Cường",
     leaderRole: "Trưởng khoa",
-    headcount: 22,
-    activeTasksCount: 4,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_co_khi",
     members: [
@@ -746,7 +700,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-ck",
         departmentName: "Khoa Cơ khí",
-        activeTaskCount: 4,
         status: "ACTIVE",
         room: "Xưởng A - P.101",
         responsibilities: [
@@ -765,7 +718,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-ck",
         departmentName: "Khoa Cơ khí",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "Xưởng A - P.102",
         responsibilities: [
@@ -789,8 +741,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "khoaoto@cdktcnqn.edu.vn",
     leaderName: "KS. Vũ Mạnh Hùng",
     leaderRole: "Phó Trưởng khoa phụ trách",
-    headcount: 26,
-    activeTasksCount: 5,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_cong_nghe_o_to",
     members: [
@@ -805,7 +755,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-cnoto",
         departmentName: "Khoa Công nghệ ô tô",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "Xưởng D - P.102",
         responsibilities: [
@@ -824,7 +773,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-cnoto",
         departmentName: "Khoa Công nghệ ô tô",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "Xưởng D - P.103",
         responsibilities: [
@@ -848,8 +796,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "khoadien@cdktcnqn.edu.vn",
     leaderName: "ThS. Nguyễn Văn Thắng",
     leaderRole: "Trưởng khoa",
-    headcount: 19,
-    activeTasksCount: 3,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_dien",
     members: [
@@ -864,7 +810,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-dien",
         departmentName: "Khoa Điện",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "B.108",
         responsibilities: [
@@ -883,7 +828,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-dien",
         departmentName: "Khoa Điện",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "B.109",
         responsibilities: [
@@ -907,8 +851,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "khoadulich@cdktcnqn.edu.vn",
     leaderName: "ThS. Phan Thị Phương Thảo",
     leaderRole: "Trưởng khoa",
-    headcount: 15,
-    activeTasksCount: 4,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_du_lich",
     members: [
@@ -923,7 +865,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-dulich",
         departmentName: "Khoa Du lịch",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "D.201",
         responsibilities: [
@@ -942,7 +883,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-dulich",
         departmentName: "Khoa Du lịch",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "D.202",
         responsibilities: [
@@ -966,8 +906,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "khoaktth@cdktcnqn.edu.vn",
     leaderName: "TS. Lê Thị Ánh Tuyết",
     leaderRole: "Trưởng khoa",
-    headcount: 21,
-    activeTasksCount: 4,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_kinh_te_tong_hop",
     members: [
@@ -982,7 +920,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-ktth",
         departmentName: "Khoa Kinh tế - Tổng hợp",
-        activeTaskCount: 4,
         status: "ACTIVE",
         room: "B.205",
         responsibilities: [
@@ -1001,7 +938,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-ktth",
         departmentName: "Khoa Kinh tế - Tổng hợp",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "B.206",
         responsibilities: [
@@ -1025,8 +961,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "khoann@cdktcnqn.edu.vn",
     leaderName: "ThS. Nguyễn Hữu Dũng",
     leaderRole: "Trưởng khoa",
-    headcount: 13,
-    activeTasksCount: 2,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_ky_thuat_nong_nghiep",
     members: [
@@ -1041,7 +975,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-ktnn",
         departmentName: "Khoa Kỹ thuật nông nghiệp",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "NN.101",
         responsibilities: [
@@ -1060,7 +993,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-ktnn",
         departmentName: "Khoa Kỹ thuật nông nghiệp",
-        activeTaskCount: 1,
         status: "ACTIVE",
         room: "NN.102",
         responsibilities: [
@@ -1084,8 +1016,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "khoavhnt@cdktcnqn.edu.vn",
     leaderName: "ThS. Đặng Thị Bích Hạnh",
     leaderRole: "Trưởng khoa",
-    headcount: 14,
-    activeTasksCount: 3,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_van_hoa_nghe_thuat",
     members: [
@@ -1100,7 +1030,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-vhnt",
         departmentName: "Khoa Văn hóa nghệ thuật",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "E.101",
         responsibilities: [
@@ -1119,7 +1048,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-vhnt",
         departmentName: "Khoa Văn hóa nghệ thuật",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "E.102",
         responsibilities: [
@@ -1143,8 +1071,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     email: "khoadaicuong@cdktcnqn.edu.vn",
     leaderName: "ThS. Trịnh Văn Minh",
     leaderRole: "Trưởng khoa",
-    headcount: 18,
-    activeTasksCount: 3,
     groupField: "Nhóm công tác",
     notionDbKey: "khoa_dai_cuong",
     members: [
@@ -1159,7 +1085,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-daicuong",
         departmentName: "Khoa Đại cương",
-        activeTaskCount: 3,
         status: "ACTIVE",
         room: "B.305",
         responsibilities: [
@@ -1178,7 +1103,6 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-k-daicuong",
         departmentName: "Khoa Đại cương",
-        activeTaskCount: 2,
         status: "ACTIVE",
         room: "B.306",
         responsibilities: [
@@ -1464,9 +1388,9 @@ export function OrganizationTree({
       LEGACY_CODE_MAP[selectedDeptCode || ""] === d.code
   );
 
-  // Total school staff count
+  // Total school staff count — derived from the directory's own members (T61).
   const totalHeadcount = React.useMemo(() => {
-    return QCET_DEPARTMENTS.reduce((acc, d) => acc + (d.headcount ?? d.members.length), 0);
+    return QCET_DEPARTMENTS.reduce((acc, d) => acc + d.members.length, 0);
   }, []);
 
 
@@ -1727,7 +1651,9 @@ export function OrganizationTree({
                     {/* Footer Badges */}
                     <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs">
                       <span className="text-muted-foreground text-2xs">
-                        {dept.activeTasksCount ?? 0} nhiệm vụ đang mở
+                        {/* T61: no per-unit open-task total is available from the directory
+                            payload, so the card states the counts it actually holds. */}
+                        {dept.members.length} nhân sự
                       </span>
                       <span className="font-semibold text-primary group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
                         Xem danh bạ <ChevronRight className="size-3" strokeWidth={2} />
@@ -1920,7 +1846,7 @@ export function OrganizationTree({
                     const Icon = catGroup.icon;
                     const isExpanded = expandedCategories[catGroup.category];
                     const catHeadcount = catGroup.departments.reduce(
-                      (acc, d) => acc + (d.headcount ?? d.members.length),
+                      (acc, d) => acc + d.members.length,
                       0
                     );
 
