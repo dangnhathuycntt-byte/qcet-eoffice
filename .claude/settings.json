@@ -44,7 +44,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/protect-sensitive-files",
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/protect-sensitive-files\"",
             "statusMessage": "Verifying file safety..."
           }
         ]
@@ -54,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use-ownership-guard",
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool-use-ownership-guard\"",
             "statusMessage": "Enforcing shard ownership invariants..."
           }
         ]
@@ -64,12 +64,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-next-build",
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-next-build\"",
             "statusMessage": "Checking dev server port 3001 cache safety..."
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/protect-sensitive-files",
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/protect-sensitive-files\"",
             "statusMessage": "Verifying command safety..."
           }
         ]
@@ -81,7 +81,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/fast-changed-file-check",
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/fast-changed-file-check\"",
             "statusMessage": "Linting changed files for QCET architectural invariants..."
           }
         ]
@@ -92,7 +92,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/subagent-stop-evidence-gate",
+            "command": "\"${CLAUDE_PROJECT_DIR}/.claude/hooks/subagent-stop-evidence-gate\"",
             "statusMessage": "Verifying subagent execution evidence..."
           }
         ]

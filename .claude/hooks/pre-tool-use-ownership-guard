@@ -3,12 +3,12 @@
 /**
  * QCET PreToolUse Ownership Guard
  *
- * Enforces architectural lifecycle invariants:
+ * Enforces direct-work safety invariants:
  * 1. Intercepts Write and Edit tool invocations.
  * 2. Prohibits read-only agents (recon, skeptic, researcher, verifiers, reviewers) from modifying files.
- * 3. Resolves active shard ownership (owns, antiOwns) from state files or environment variables.
+ * 3. Resolves active task ownership (owns, antiOwns) from state files or environment variables.
  * 4. Blocks out-of-scope modifications and antiOwns violations with actionable remediation reasons.
- * 5. Fail-safes to exit 0 outside executor workflows (interactive sessions, unmapped agents, non-Write tools).
+ * 5. Fail-safes to exit 0 outside scoped task runs (interactive sessions, unmapped agents, non-Write tools).
  */
 
 const fs = require('fs');
@@ -100,11 +100,6 @@ const {
   toRepoRelativePath,
 } = require('./path-matcher.cjs');
 
-const {
-  getRunDir,
-  readJson,
-  claimFile,
-} = require('./qcet-run-state.cjs');
 const { spawnSync } = require('child_process');
 
 // -----------------------------------------------------------------------------
@@ -197,7 +192,7 @@ function resolveActiveShard(agentId, agentType, subagentLabel) {
         return envShardId.startsWith(item + ':') || item.startsWith(envShardId + ':');
       });
 
-    if (matchesEnv && (candidateIds.length !== 0 || process.env.QCET_RUN_ID)) {
+    if (matchesEnv && candidateIds.length !== 0) {
       let owns = [];
       try {
         owns = JSON.parse(process.env.QCET_SHARD_OWNS);
@@ -328,58 +323,6 @@ function findShardInState(stateData, candidateIds, matchesShard, isScoped) {
   }
 
   return null;
-}
-
-function verifyWorktreeIdentity(runDir, shard, explicitCwd) {
-  const shardId = (shard && (shard.id || shard.shardId || shard.agentId)) || process.env.QCET_SHARD_ID || '';
-  if (!shardId) {
-    block('WORKTREE_INVALID: missing required shard identity during executor run');
-  }
-
-  const witnessPath = path.join(runDir, 'shards', shardId, 'worktree.json');
-  if (!fs.existsSync(witnessPath)) {
-    block(`WORKTREE_INVALID: missing required worktree witness for shard '${shardId}'`);
-  }
-
-  const witness = readJson(witnessPath);
-  if (!witness || !witness.root) {
-    block(`WORKTREE_INVALID: invalid worktree witness for shard '${shardId}'`);
-  }
-
-  const effectiveCwd = explicitCwd || process.cwd();
-  const gitRootRes = spawnSync('git', ['rev-parse', '--show-toplevel'], {
-    cwd: effectiveCwd,
-    encoding: 'utf8',
-  });
-  if (gitRootRes.status !== 0 || !gitRootRes.stdout) {
-    block(`WORKTREE_INVALID: unable to resolve git root for '${effectiveCwd}'`);
-  }
-  const actualGitRoot = gitRootRes.stdout.trim();
-
-  function resolveReal(p) {
-    try {
-      return fs.realpathSync(path.resolve(p));
-    } catch (_) {
-      return path.resolve(p);
-    }
-  }
-
-  if (resolveReal(actualGitRoot) !== resolveReal(witness.root)) {
-    block(`WORKTREE_INVALID: cwd root mismatch (expected '${witness.root}', got '${actualGitRoot}')`);
-  }
-
-  if (witness.baseCommit || witness.baseRef) {
-    const base = witness.baseCommit || witness.baseRef;
-    const ancestorRes = spawnSync('git', ['merge-base', '--is-ancestor', base, 'HEAD'], {
-      cwd: effectiveCwd,
-      encoding: 'utf8',
-    });
-    if (ancestorRes.status !== 0) {
-      block(`WORKTREE_INVALID: base commit ancestry mismatch for shard '${shardId}'`);
-    }
-  }
-
-  return { shardId, witness };
 }
 
 // -----------------------------------------------------------------------------
@@ -516,12 +459,6 @@ function main() {
       allow();
     }
     if (builder && isMutatingShellCommand(command)) {
-      if (process.env.QCET_RUN_ID) {
-        const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-        const runDir = getRunDir(projectDir, process.env.QCET_RUN_ID);
-        const shard = resolveActiveShard(agentId, agentType, subagentLabel);
-        verifyWorktreeIdentity(runDir, shard, explicitCwd);
-      }
       block(
         `Agent '${agentType || agentId || subagentLabel}' attempted shell file mutation. Use Write/Edit so shard ownership can be enforced deterministically.`
       );
@@ -552,31 +489,20 @@ function main() {
   }
   const shard = resolveActiveShard(agentId, agentType, subagentLabel);
 
-  // 3. Executor run worktree and identity enforcement
-  let runDir = null;
-  let activeShardId = '';
-
-  if (process.env.QCET_RUN_ID) {
-    const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-    runDir = getRunDir(projectDir, process.env.QCET_RUN_ID);
-    const verified = verifyWorktreeIdentity(runDir, shard, explicitCwd);
-    activeShardId = verified.shardId;
-  }
-
-  // Fail-closed invariant: builder agents MUST have an active shard ownership context
+  // 3. Fail-closed invariant: builder agents MUST have an active shard ownership context
   if (!shard) {
     if (
       agentType === 'qcet-builder' ||
       agentRole === 'qcet-builder' ||
       String(agentType).toLowerCase().includes('builder')
     ) {
-      if (process.env.QCET_RUN_ID || subagentLabel || (agentId && agentId.includes(':'))) {
+      if (subagentLabel || (agentId && agentId.includes(':'))) {
         block(
           `Builder agent '${agentType || agentId || subagentLabel}' attempted file modification without an active shard ownership context (fail-closed boundary invariant).`
         );
       }
     }
-    // Fail-safe: if no active shard is mapped and not in an active executor run, allow (manual/interactive session)
+    // Fail-safe: if no active shard is mapped and not in an active scoped run, allow (manual/interactive session)
     allow();
   }
 
@@ -615,16 +541,6 @@ function main() {
     block(
       `Modification of '${targetFile}' is blocked. File is outside assigned ownership scope for shard '${shard.id || 'current'}'. Allowed paths: [${owns.join(', ')}].`
     );
-  }
-
-  // 6. Atomic file claim lock in executor run
-  if (runDir && activeShardId) {
-    const claimRes = claimFile(runDir, activeShardId, targetFile);
-    if (!claimRes.success) {
-      block(
-        `Modification of '${targetFile}' blocked: file is already claimed by shard '${claimRes.ownerShardId}'.`
-      );
-    }
   }
 
   // All ownership and lifecycle constraints satisfied

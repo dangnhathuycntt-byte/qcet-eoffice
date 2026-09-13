@@ -3,7 +3,7 @@
 **Repository:** `dangnhathuycntt-byte/qcet-eoffice`  
 **Target branch:** `main`  
 **Verified baseline SHA (2026-09-11):** `5abd205e91d327b331808bae44cf6a5727b1eefe`  
-**Execution mode:** Claude Code + existing QCET plan executor when appropriate  
+**Execution mode:** Claude Code (direct)
 **Primary objective:** Reconstruct the visible information architecture and interaction hierarchy of QCET's core workspaces while preserving the existing domain engine, authorization, APIs, query state, and task/calendar semantics.
 
 ---
@@ -146,7 +146,6 @@ npm run build
 npm run test:gate0
 npm run test:sprint2
 npm run test:sprint3
-npm run test:executor
 ```
 
 Minimum final verification:
@@ -943,25 +942,25 @@ visual + functional gates
 main
 ```
 
-Use repository-native worktree/shard facilities if the QCET executor already provides them.
-
-Do not manually invent a second orchestration system if `.claude/workflows/qcet-plan-executor.js` already solves branch/worktree ownership.
+Use plain git branches for isolation. Do not invent an orchestration system or shard framework.
 
 ---
 
-# 15. Using the existing QCET plan executor
+# 15. Working directly (executor retired)
+
+> Historical note (2026-09-13): the QCET Plan Executor (`.claude/workflows/qcet-plan-executor.js`)
+> was retired. Work proceeds directly in Claude Code. The executor code remains
+> recoverable from git tag `backup/plan-executor-before-removal`. Do not build a
+> replacement orchestrator; use the repository commands below.
 
 Before execution:
 
-1. inspect `.claude/workflows/qcet-plan-executor.js`;
-2. inspect any corresponding skill/docs/help;
-3. use its actual supported invocation;
-4. do not guess CLI flags;
-5. do not refactor the executor as part of this UX sprint.
+1. inspect the task scope and assigned files;
+2. use direct `Read`/`Edit`/`Write` and `npx tsx --test <path>` for targeted checks;
+3. do not guess CLI flags;
+4. keep changes confined to the task scope.
 
-The executor is infrastructure, not the sprint target.
-
-If a visual-capture step cannot run inside executor isolation, the coordinator may perform Phase 0 and final visual review outside shard execution, while keeping production edits inside owned shards.
+Direct work is the method, not a sprint target.
 
 ---
 

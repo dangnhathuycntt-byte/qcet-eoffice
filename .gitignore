@@ -56,11 +56,11 @@ qcet-backend-api/
 /test_storage_*/
 /test_uploads_*/
 
-# E2E harness — raw transcripts are too large for git
+# Historical: QCET Plan Executor retired 2026-09-13 (recoverable from
+# git tag backup/plan-executor-before-removal). Entries below kept so old
+# checkouts stay quiet; safe to drop once no checkout predates the tag.
 benchmarks/e2e/results/**/transcript.jsonl
 benchmarks/e2e/results/**/probe-transcript.jsonl
 benchmarks/e2e/results/
-
-# Executor runtime verdict artifacts (non-sensitive path, outside .claude/)
 qcet-executor-runs/
 .gstack/
