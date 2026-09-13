@@ -404,9 +404,12 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       html.includes("395 / 395 công việc"),
       "Notice must explicitly state '395 / 395 công việc'"
     );
+    // Plan T13 (quiet Kanban) + R-D15 (system language is bounded): the board
+    // must not make an unconditional "everything is accounted for" claim. The
+    // explicit counts above are the guarantee; a universal success badge is not.
     assert.ok(
-      html.includes("Đầy đủ 100% công việc"),
-      "Notice must indicate full 100% accounting"
+      !html.includes("Đầy đủ 100% công việc"),
+      "Kanban must not assert a universal completeness claim"
     );
   });
 

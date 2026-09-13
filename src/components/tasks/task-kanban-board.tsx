@@ -723,13 +723,9 @@ export function TaskKanbanBoard({
           <span className="font-mono tabular-nums font-semibold text-foreground">
             {totalVisibleCount} / {totalExtractedCount} công việc
           </span>
-          {excludedCount > 0 ? (
+          {excludedCount > 0 && (
             <span className="text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 font-medium">
               ({excludedCount} công việc bị huỷ / lưu trữ không hiển thị trên bảng)
-            </span>
-          ) : (
-            <span className="text-emerald-700 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 font-medium">
-              Đầy đủ 100% công việc
             </span>
           )}
         </div>
