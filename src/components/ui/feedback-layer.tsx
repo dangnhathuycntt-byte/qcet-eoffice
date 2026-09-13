@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -10,6 +12,7 @@ import {
   AlertOctagon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toastVariants } from "@/lib/motion/variants";
 
 // ============================================================================
 // Types & Interfaces
@@ -268,12 +271,17 @@ export function FeedbackToast({ toast, onDismiss }: FeedbackToastProps) {
   const styles = VARIANT_STYLES[toast.variant];
 
   return (
-    <div
+    <m.div
+      layout
+      variants={toastVariants}
+      initial="initial"
+      animate="animate"
+      exit={{ opacity: 0, y: 4, transition: { duration: 0.14 } }}
       role="status"
       aria-live="polite"
       data-slot="feedback-toast"
       className={cn(
-        "group pointer-events-auto flex w-full max-w-sm items-center justify-between gap-3 rounded-xl border p-3 shadow-lg transition-all animate-in slide-in-from-bottom-2 duration-200 min-h-[44px]",
+        "group pointer-events-auto flex w-full max-w-sm items-center justify-between gap-3 rounded-xl border p-3 shadow-lg transition-colors min-h-[44px]",
         styles.container
       )}
     >
@@ -316,7 +324,7 @@ export function FeedbackToast({ toast, onDismiss }: FeedbackToastProps) {
           <X className="size-3.5" strokeWidth={1.75} />
         </button>
       </div>
-    </div>
+    </m.div>
   );
 }
 
@@ -329,8 +337,6 @@ export function ToastContainer({
   onDismiss: (id: string) => void;
   className?: string;
 }) {
-  if (toasts.length === 0) return null;
-
   return (
     <div
       aria-label="Thông báo hệ thống"
@@ -339,9 +345,11 @@ export function ToastContainer({
         className
       )}
     >
-      {toasts.map((toast) => (
-        <FeedbackToast key={toast.id} toast={toast} onDismiss={onDismiss} />
-      ))}
+      <AnimatePresence initial={false} mode="popLayout">
+        {toasts.map((toast) => (
+          <FeedbackToast key={toast.id} toast={toast} onDismiss={onDismiss} />
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
