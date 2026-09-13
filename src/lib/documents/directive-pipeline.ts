@@ -1,5 +1,6 @@
 import type { DocumentItem, DocumentDirectiveItem, DocumentUrgency } from "@/types/document";
 import type { TaskPriority } from "@/types/workspace";
+import { formatIsoDate } from "@/lib/format";
 
 /**
  * Maps Decree 30 document urgency levels to TaskPriority.
@@ -88,7 +89,7 @@ export function mapDirectiveToSchoolTask(
   const descriptionLines = [
     `TRÍCH YẾU VĂN BẢN: ${doc.summary}`,
     `CƠ QUAN BAN HÀNH: ${doc.issuingAuthority}`,
-    `SỐ KÝ HIỆU GỐC: ${doc.originalNumber} (Ngày ký: ${doc.issuedDate.slice(0, 10)})`,
+    `SỐ KÝ HIỆU GỐC: ${doc.originalNumber} (Ngày ký: ${formatIsoDate(doc.issuedDate)})`,
   ];
 
   if (collaboratorIds.length > 0) {
@@ -100,7 +101,7 @@ export function mapDirectiveToSchoolTask(
     `=== Ý KIẾN CHỈ ĐẠO BÚT PHÊ CỦA LÃNH ĐẠO TRƯỜNG ===`,
     `Người chỉ đạo: ${directive.leaderName || "Ban Giám hiệu"}`,
     `Nội dung: ${directive.instruction}`,
-    `Hạn hoàn thành báo cáo: ${dueDate.slice(0, 10)}`
+    `Hạn hoàn thành báo cáo: ${formatIsoDate(dueDate)}`
   );
 
   return {

@@ -36,6 +36,7 @@ import {
 } from "@/types/document";
 import { Button } from "@/components/ui/button";
 import { DensityToggle } from "@/components/ui/density-toggle";
+import { getRegistryStateKind } from "@/lib/documents/registry-state";
 import {
   DocumentDetailDialog,
   getUrgencyBadgeConfig,
@@ -190,6 +191,7 @@ export function DocumentRegistryView() {
 
   // Data state initialized as empty list from real database
   const [documents, setDocuments] = React.useState<OfficialDocument[]>([]);
+  const [fetchError, setFetchError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [stats, setStats] = React.useState<DocumentStats>({
     totalInbox: 0,
@@ -264,6 +266,7 @@ export function DocumentRegistryView() {
   const fetchDocuments = React.useCallback(
     async (signal?: AbortSignal) => {
       setIsLoading(true);
+      setFetchError(null);
       try {
         const params = new URLSearchParams();
         if (activeTab === "inbox") params.set("type", "VAN_BAN_DEN");
@@ -315,10 +318,13 @@ export function DocumentRegistryView() {
             ...prev,
             linkedTaskCount: mapped.filter((d: OfficialDocument) => Boolean(d.linkedTaskId)).length,
           }));
+        } else {
+          setFetchError("Không thể tải danh sách văn bản từ máy chủ");
         }
       } catch (err: any) {
         if (err?.name !== "AbortError") {
           console.error("Error fetching documents:", err);
+          setFetchError("Lỗi kết nối máy chủ khi tải danh sách văn bản");
         }
       } finally {
         if (!signal?.aborted) {
@@ -496,6 +502,14 @@ export function DocumentRegistryView() {
       return true;
     });
   }, [documents, activeTab, urgencyFilter, statusFilter, debouncedSearchQuery]);
+
+  // T50/T51: one derived state kind for both render trees, so a failed fetch can
+  // never fall through to the "no documents" empty state.
+  const registryState = getRegistryStateKind({
+    isLoading,
+    hasError: Boolean(fetchError),
+    itemCount: filteredDocuments.length,
+  });
 
   const computedStats = React.useMemo(() => {
     const totalInbox =
@@ -930,7 +944,7 @@ export function DocumentRegistryView() {
 
         {/* Desktop Table View (>= 640px / sm:block) */}
         <div className="hidden sm:block">
-          {isLoading ? (
+          {registryState === "loading" ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse table-row-dense">
               <thead>
@@ -992,7 +1006,24 @@ export function DocumentRegistryView() {
               </tbody>
             </table>
           </div>
-        ) : filteredDocuments.length === 0 ? (
+        ) : registryState === "error" ? (
+          <div className="p-12 text-center space-y-3">
+            <AlertTriangle className="size-8 mx-auto text-amber-500 opacity-80" strokeWidth={1.5} />
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">Không thể tải dữ liệu văn bản</p>
+              <p className="text-xs text-muted-foreground">{fetchError}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchDocuments()}
+              className="gap-1.5 text-xs rounded-xl"
+            >
+              <RefreshCw className="size-3.5" />
+              Thử lại
+            </Button>
+          </div>
+        ) : registryState === "empty" ? (
           <div className="p-12 text-center text-muted-foreground">
             <FileText className="size-8 mx-auto mb-2 opacity-50" strokeWidth={1.5} />
             <p className="text-sm font-medium text-foreground">Không tìm thấy văn bản phù hợp</p>
@@ -1152,7 +1183,7 @@ export function DocumentRegistryView() {
 
         {/* Mobile Document Feed (< 640px / sm:hidden) */}
         <div className="block sm:hidden p-3 space-y-3" data-slot="mobile-document-feed">
-          {isLoading ? (
+          {registryState === "loading" ? (
             Array.from({ length: 4 }).map((_, idx) => (
               <div
                 key={`mob-skel-${idx}`}
@@ -1166,7 +1197,22 @@ export function DocumentRegistryView() {
                 <div className="h-3 w-1/2 bg-muted/60 rounded" />
               </div>
             ))
-          ) : filteredDocuments.length === 0 ? (
+          ) : registryState === "error" ? (
+            <div className="py-8 px-4 text-center space-y-2 border border-dashed border-destructive/40 rounded-2xl bg-destructive/5">
+              <AlertTriangle className="size-7 mx-auto text-amber-500 opacity-80" strokeWidth={1.5} />
+              <p className="text-xs font-semibold text-foreground">Không thể tải dữ liệu văn bản</p>
+              <p className="text-xs text-muted-foreground">{fetchError}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchDocuments()}
+                className="gap-1.5 text-xs rounded-xl mt-1"
+              >
+                <RefreshCw className="size-3" />
+                Thử lại
+              </Button>
+            </div>
+          ) : registryState === "empty" ? (
             <div className="py-10 px-4 text-center space-y-1.5 border border-dashed border-border/70 rounded-2xl bg-muted/10">
               <FileText className="size-8 mx-auto mb-2 opacity-50 text-muted-foreground" strokeWidth={1.5} />
               <p className="text-xs font-semibold text-foreground">Không tìm thấy văn bản phù hợp</p>
