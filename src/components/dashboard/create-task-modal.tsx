@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
+import { fadeVariants, dialogVariants } from "@/lib/motion/variants";
 import {
   X,
   User,
@@ -1026,32 +1029,44 @@ export function CreateTaskModal({
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !mounted) return null;
 
   const modalContent = (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 overflow-hidden animate-in fade-in duration-200 !m-0"
-    >
-      {/* Full-screen Backdrop */}
-      <div
-        onClick={onClose}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity !m-0"
-        aria-hidden="true"
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 overflow-hidden !m-0"
+        >
+          {/* Full-screen Backdrop */}
+          <m.div
+            key="create-task-backdrop"
+            variants={fadeVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm !m-0"
+            aria-hidden="true"
+          />
 
-      {/* Modal Card Container: Full-screen on mobile (duoi 640px) or high-coverage modal on tablet/desktop */}
-      <div
-        style={
-          isKeyboardOpen && (keyboardHeight > 0)
-            ? { height: `calc(100dvh - ${keyboardHeight}px)`, maxHeight: `calc(100dvh - ${keyboardHeight}px)` }
-            : undefined
-        }
-        className="relative z-10 w-full h-[100dvh] sm:h-auto max-w-none sm:max-w-3xl max-h-[100dvh] sm:max-h-[94dvh] flex flex-col rounded-none sm:rounded-2xl border-0 sm:border border-border/70 bg-card backdrop-blur-xl shadow-2xl overflow-hidden animate-in sm:zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
+          {/* Modal Card Container: Full-screen on mobile (duoi 640px) or high-coverage modal on tablet/desktop */}
+          <m.div
+            key="create-task-dialog"
+            variants={dialogVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            style={
+              isKeyboardOpen && (keyboardHeight > 0)
+                ? { height: `calc(100dvh - ${keyboardHeight}px)`, maxHeight: `calc(100dvh - ${keyboardHeight}px)` }
+                : undefined
+            }
+            className="relative z-10 w-full h-[100dvh] sm:h-auto max-w-none sm:max-w-3xl max-h-[100dvh] sm:max-h-[94dvh] flex flex-col rounded-none sm:rounded-2xl border-0 sm:border border-border/70 bg-card backdrop-blur-xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
         {/* Top Header Bar */}
         <div className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 border-b border-border/60 bg-card/95 backdrop-blur-md gap-3 shrink-0">
           <div className="flex items-center gap-3">
@@ -1937,8 +1952,10 @@ export function CreateTaskModal({
             </div>
           </div>
         </form>
-      </div>
-    </div>
+          </m.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 
   if (mounted && typeof document !== "undefined") {

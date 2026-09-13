@@ -2,7 +2,10 @@
 
 import * as React from "react";
 import { X, RotateCcw, Check } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { Button } from "@/components/ui/button";
+import { fadeVariants, bottomSheetVariants } from "@/lib/motion/variants";
 
 export interface MobileTaskFilterSheetProps {
   isOpen: boolean;
@@ -31,34 +34,61 @@ export function MobileTaskFilterSheet({
   onReset,
   activeFilterCount,
 }: MobileTaskFilterSheetProps) {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen && !mounted) return null;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Bộ lọc công việc"
-      className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40 backdrop-blur-xs sm:hidden"
-    >
-      <div className="bg-background rounded-t-xl border-t border-border p-4 max-h-[85vh] flex flex-col shadow-lg overflow-y-auto">
-        <div className="flex items-center justify-between pb-3 border-b border-border">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold text-foreground">Bộ lọc công việc</h2>
-            {activeFilterCount > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                {activeFilterCount}
-              </span>
-            )}
-          </div>
-          <button
-            type="button"
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Bộ lọc công việc"
+          className="fixed inset-0 z-50 flex flex-col justify-end sm:hidden !m-0"
+        >
+          {/* Backdrop */}
+          <m.div
+            key="mobile-filter-backdrop"
+            variants={fadeVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs !m-0"
             onClick={onClose}
-            aria-label="Đóng"
-            className="p-2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-hidden="true"
+          />
+
+          <m.div
+            key="mobile-filter-panel"
+            variants={bottomSheetVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="relative z-10 bg-background rounded-t-xl border-t border-border p-4 max-h-[85vh] flex flex-col shadow-lg overflow-y-auto"
           >
-            <X className="h-5 w-5" strokeWidth={1.5} />
-          </button>
-        </div>
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-foreground">Bộ lọc công việc</h2>
+                {activeFilterCount > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Đóng"
+                className="p-2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+              >
+                <X className="h-5 w-5" strokeWidth={1.5} />
+              </button>
+            </div>
 
         <div className="py-4 space-y-4 flex-1">
           <div>
@@ -113,7 +143,9 @@ export function MobileTaskFilterSheet({
             Áp dụng
           </Button>
         </div>
-      </div>
-    </div>
+          </m.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

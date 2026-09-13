@@ -33,6 +33,9 @@ import {
   Copy,
 } from "lucide-react";
 import { DashboardModalContext } from "@/components/dashboard/dashboard-context";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
+import { fadeVariants, sideSheetVariants } from "@/lib/motion/variants";
 import {
   type SchoolTask,
   type StaffTask,
@@ -548,15 +551,15 @@ export function getTaskAuditTimeline(
     id: "event-init",
     label: isSchool ? "Giao nhiệm vụ cấp Trường" : "Khởi tạo công việc đơn vị",
     timestamp: formatDetailDate(assignedDate),
-    actor: isSchool ? "Ban Giám hiệu QCET" : (task.assigneeName || "Trưởng đơn vị"),
-    description: isSchool
+    actor: isSchoolTask(task) ? "Ban Giám hiệu QCET" : (task.assigneeName || "Trưởng đơn vị"),
+    description: isSchoolTask(task)
       ? `Giao cho cán bộ chủ trì: ${task.leadAssigneeName}`
       : `Phân công thực hiện: ${task.assigneeName}`,
     type: "assigned",
   });
 
   // 2. Progress milestone (for SchoolTask with subtasks)
-  if (isSchool && task.totalSubTasks > 0) {
+  if (isSchoolTask(task) && task.totalSubTasks > 0) {
     events.push({
       id: "event-progress",
       label: "Tiến độ nhiệm vụ thành phần",
@@ -572,8 +575,8 @@ export function getTaskAuditTimeline(
   events.push({
     id: "event-status",
     label: `Trạng thái: ${statusCfg.label}`,
-    timestamp: formatDetailDate(isSchool ? task.dueDate : task.updatedAt),
-    actor: isSchool ? task.leadAssigneeName : task.assigneeName,
+    timestamp: formatDetailDate(isSchoolTask(task) ? task.dueDate : task.updatedAt),
+    actor: isSchoolTask(task) ? task.leadAssigneeName : task.assigneeName,
     description:
       task.status === "COMPLETED"
         ? "Nhiệm vụ đã được nghiệm thu hoàn thành"
@@ -630,7 +633,7 @@ export interface TaskDetailSideSheetProps {
 }
 
 export function TaskDetailSideSheet({
-  task,
+  task: rawTask,
   isOpen,
   onClose,
   onStatusChange,
@@ -646,8 +649,15 @@ export function TaskDetailSideSheet({
 }: TaskDetailSideSheetProps) {
   const auth = useAuth();
   const user = currentUser ?? auth.user;
-  const visible = isOpen !== undefined ? isOpen : task !== null;
+  const visible = isOpen !== undefined ? isOpen : rawTask !== null;
   const [mounted, setMounted] = React.useState(false);
+  const lastTaskRef = React.useRef<SchoolTask | StaffTask | null>(rawTask);
+  if (rawTask) {
+    lastTaskRef.current = rawTask;
+  }
+  const task = rawTask || (visible ? null : lastTaskRef.current);
+  const displayTask = task;
+  const showContent = Boolean(visible && task);
 
   const dashboardModal = React.useContext(DashboardModalContext);
 
@@ -725,27 +735,27 @@ export function TaskDetailSideSheet({
 
   // AI Screening for NEEDS_REVIEW tasks (must be above early return to respect Rules of Hooks)
   const aiReview = React.useMemo(() => {
-    if (!task || isSchoolTask(task) || task.status !== "NEEDS_REVIEW") return null;
-    return screenDeliverablesWithAI(task as StaffTask);
-  }, [task]);
+    if (!displayTask || isSchoolTask(displayTask) || displayTask.status !== "NEEDS_REVIEW") return null;
+    return screenDeliverablesWithAI(displayTask as StaffTask);
+  }, [displayTask]);
 
   // Permission evaluations & Stanford Authority Delegation Engine (must be above early return to respect Rules of Hooks)
-  const isSchoolForPermission = task ? isSchoolTask(task) : false;
+  const isSchoolForPermission = displayTask ? isSchoolTask(displayTask) : false;
   const taskDepartmentCode =
-    (!isSchoolForPermission && task && (task as StaffTask).departmentCode) ||
-    (isSchoolForPermission && task && (task as SchoolTask).leadDepartmentCode) ||
+    (!isSchoolForPermission && displayTask && (displayTask as StaffTask).departmentCode) ||
+    (isSchoolForPermission && displayTask && (displayTask as SchoolTask).leadDepartmentCode) ||
     user?.departmentCode ||
     "";
 
   const taskAssigneeId =
     !isSchoolForPermission
-      ? (task && (task as StaffTask).assigneeId) ||
-        (user && task && (task as StaffTask).assigneeName === user.name ? user.id : undefined)
-      : (task && (task as SchoolTask).leadAssigneeId) ||
-        (user && task && (task as SchoolTask).leadAssigneeName === user.name ? user.id : undefined);
+      ? (displayTask && (displayTask as StaffTask).assigneeId) ||
+        (user && displayTask && (displayTask as StaffTask).assigneeName === user.name ? user.id : undefined)
+      : (displayTask && (displayTask as SchoolTask).leadAssigneeId) ||
+        (user && displayTask && (displayTask as SchoolTask).leadAssigneeName === user.name ? user.id : undefined);
 
   const approvalResult = React.useMemo(() => {
-    if (!user || !task) {
+    if (!user || !displayTask) {
       return { allowed: false, reason: "Chưa xác thực người dùng hoặc thiếu thông tin nhiệm vụ." };
     }
     return canUserApproveTask({
@@ -756,17 +766,17 @@ export function TaskDetailSideSheet({
         departmentCode: user.departmentCode,
       },
       task: {
-        id: task.id,
+        id: displayTask.id,
         departmentCode: taskDepartmentCode,
         assigneeId: taskAssigneeId,
       },
       activeDelegations: delegations,
     });
-  }, [user, task, taskDepartmentCode, taskAssigneeId, delegations]);
+  }, [user, displayTask, taskDepartmentCode, taskAssigneeId, delegations]);
 
   const capabilities = React.useMemo(
-    () => deriveTaskDetailCapabilities(task, user, delegations),
-    [task, user, delegations]
+    () => deriveTaskDetailCapabilities(displayTask, user, delegations),
+    [displayTask, user, delegations]
   );
 
   // C12 / T19 / D9 — capture the launcher element when the sheet OPENS and
@@ -795,11 +805,16 @@ export function TaskDetailSideSheet({
     };
   }, [visible]);
 
-  if (!visible || !task) {
+  if (!mounted && !showContent) {
+    return null;
+  }
+
+  if (!task) {
     return null;
   }
 
   const isSchool = isSchoolTask(task);
+  const schoolTask = isSchool ? (task as SchoolTask) : null;
   const isDone = isTaskCompletedLifecycle(task);
   const levelBadge = getTaskLevelBadge(isSchool);
   const statusConfig = getDetailStatusConfig(task.status);
@@ -827,18 +842,18 @@ export function TaskDetailSideSheet({
   // matrix yields no review CTA; SoD blocks the submitter/maker.
   const canReview = !isSchool && capabilities.canApprove;
   const canRejectReview = !isSchool && capabilities.canReject;
-  const actorIsAssignee = Boolean(user && resolveTaskAssigneeId(task, user) === user.id);
+  const actorIsAssignee = Boolean(user && resolveTaskAssigneeId(displayTask, user) === user.id);
   const isSeparationOfDutiesBlocked =
     !isSchool &&
     !approvalResult.allowed &&
     Boolean(
       (user?.id && taskAssigneeId && user.id === taskAssigneeId) ||
-      (user && (task as StaffTask).assigneeName === user.name)
+      (user && (displayTask as StaffTask).assigneeName === user.name)
     );
   const actorHasApprovalAuthority =
     !isSchool && !isSeparationOfDutiesBlocked && approvalResult.allowed;
   const canCloseSchool =
-    isSchool && canUserCloseSchoolTask(task as SchoolTask, user);
+    isSchool && canUserCloseSchoolTask(displayTask as SchoolTask, user);
 
   // Deliverable submission handler (Staff)
   const handleSubmitDeliverable = (e: React.FormEvent) => {
@@ -955,32 +970,43 @@ export function TaskDetailSideSheet({
   };
 
   const sheetContent = (
-    <>
-      {/* Backdrop overlay */}
-      <div
-        data-slot="side-sheet-backdrop"
-        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs sm:backdrop-blur-sm transition-opacity duration-300 animate-in fade-in !m-0"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <AnimatePresence>
+      {showContent && (
+        <m.div
+          key="task-detail-backdrop"
+          data-slot="side-sheet-backdrop"
+          variants={fadeVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs sm:backdrop-blur-sm !m-0"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Slide-over Drawer Panel */}
-      <aside
-        data-slot="task-detail-side-sheet"
-        className={cn(
-          "fixed inset-0 md:inset-y-0 md:right-0 md:left-auto z-50 flex h-full flex-col border-l border-border/50 bg-card shadow-2xl animate-in slide-in-from-right duration-300 !m-0",
-          // Mobile (< 768px): Full-screen detail surface
-          "w-full max-w-none rounded-none",
-          // Tablet & Desktop (768-1439px): 520px side sheet overlay
-          "md:w-[520px] md:max-w-[520px] md:rounded-l-2xl",
-          // Large Desktop (>= 1440px): 560px side sheet overlay
-          "2xl:w-[560px] 2xl:max-w-[560px]",
-          className
-        )}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="task-detail-title"
-      >
+      {showContent && (
+        <m.aside
+          key="task-detail-side-sheet"
+          data-slot="task-detail-side-sheet"
+          variants={sideSheetVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className={cn(
+            "fixed inset-0 md:inset-y-0 md:right-0 md:left-auto z-50 flex h-full flex-col border-l border-border/50 bg-card shadow-2xl !m-0",
+            // Mobile (< 768px): Full-screen detail surface
+            "w-full max-w-none rounded-none",
+            // Tablet & Desktop (768-1439px): 520px side sheet overlay
+            "md:w-[520px] md:max-w-[520px] md:rounded-l-2xl",
+            // Large Desktop (>= 1440px): 560px side sheet overlay
+            "2xl:w-[560px] 2xl:max-w-[560px]",
+            className
+          )}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="task-detail-title"
+        >
         {/* Sticky Header Bar: Task Code, Compact Status, Mobile Back & Close */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-card/90 backdrop-blur-xl gap-2">
           {/* Mobile Back Button (< 768px) */}
@@ -1181,9 +1207,9 @@ export function TaskDetailSideSheet({
                 )}
                 {isSchool ? "Tiến độ thực hiện" : "Cập nhật lần cuối"}
               </span>
-              {isSchool ? (
+              {schoolTask ? (
                 <span className="font-mono font-semibold text-foreground tabular-nums">
-                  {task.completedSubTasks}/{task.totalSubTasks} nhiệm vụ ({task.progressPercent}%)
+                  {schoolTask.completedSubTasks}/{schoolTask.totalSubTasks} nhiệm vụ ({schoolTask.progressPercent}%)
                 </span>
               ) : (
                 <span className="font-mono font-semibold text-foreground tabular-nums">
@@ -1193,7 +1219,7 @@ export function TaskDetailSideSheet({
             </div>
 
             {/* Cell 5: Category (SchoolTask only) */}
-            {isSchool && (
+            {schoolTask && (
               <div className="flex flex-col gap-1 col-span-1 sm:col-span-2 pt-2 border-t border-border/30">
                 <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                   <Tag className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
@@ -1203,25 +1229,25 @@ export function TaskDetailSideSheet({
                   <span
                     className={cn(
                       "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium",
-                      getCategoryBadgeConfig(task.category).className
+                      getCategoryBadgeConfig(schoolTask.category).className
                     )}
                   >
-                    {task.categoryLabel ||
-                      getCategoryBadgeConfig(task.category).label}
+                    {schoolTask.categoryLabel ||
+                      getCategoryBadgeConfig(schoolTask.category).label}
                   </span>
                 </div>
               </div>
             )}
 
             {/* Cell 6: Co-assignees (SchoolTask only) */}
-            {isSchool && task.coAssignees && task.coAssignees.length > 0 && (
+            {schoolTask && schoolTask.coAssignees && schoolTask.coAssignees.length > 0 && (
               <div className="flex flex-col gap-1 col-span-1 sm:col-span-2 pt-2 border-t border-border/30">
                 <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                   <Users className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                   Đơn vị phối hợp
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {task.coAssignees.map((partner) => (
+                  {schoolTask.coAssignees.map((partner) => (
                     <span
                       key={partner}
                       className="inline-flex items-center rounded-md bg-secondary/80 px-2 py-0.5 text-xs font-medium text-foreground border border-border/40"
@@ -1836,7 +1862,7 @@ export function TaskDetailSideSheet({
             )}
 
             {/* SchoolTask Executive Approval (Hiệu trưởng nghiệm thu cấp 2) */}
-            {isSchool && task.status === "PENDING_EXECUTIVE_APPROVAL" && (
+            {schoolTask && task.status === "PENDING_EXECUTIVE_APPROVAL" && (
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-xs space-y-3">
                 <div className="flex items-start gap-2.5">
                   <CheckCircle2 className="size-4 shrink-0 text-purple-600 mt-0.5" strokeWidth={1.5} />
@@ -1845,7 +1871,7 @@ export function TaskDetailSideSheet({
                       Nghiệm thu cấp 2: Chờ Ban Giám hiệu phê duyệt
                     </h4>
                     <p className="text-purple-600/90 leading-relaxed">
-                      Tất cả nhiệm vụ thành phần trực thuộc ({task.completedSubTasks}/{task.totalSubTasks}) đã hoàn thành 100%. Nhiệm vụ cấp Trường sẵn sàng để Ban Giám hiệu nghiệm thu và đóng nhiệm vụ.
+                      Tất cả nhiệm vụ thành phần trực thuộc ({schoolTask.completedSubTasks}/{schoolTask.totalSubTasks}) đã hoàn thành 100%. Nhiệm vụ cấp Trường sẵn sàng để Ban Giám hiệu nghiệm thu và đóng nhiệm vụ.
                     </p>
                   </div>
                 </div>
@@ -1875,7 +1901,7 @@ export function TaskDetailSideSheet({
           </div>
 
           {/* Subtasks Section (SchoolTask only) */}
-          {isSchool && (
+          {schoolTask && (
             <div data-slot="detail-child-tasks" className="space-y-3.5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
@@ -1884,7 +1910,7 @@ export function TaskDetailSideSheet({
                       Nhiệm vụ con
                     </h3>
                     <Badge variant="outline" className="text-xs font-mono font-semibold">
-                      {task.subTasks.length} việc
+                      {schoolTask.subTasks.length} việc
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -1910,7 +1936,7 @@ export function TaskDetailSideSheet({
 
               {/* Subtask Clean List */}
               <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden shadow-xs">
-                {task.subTasks.length === 0 ? (
+                {schoolTask.subTasks.length === 0 ? (
                   <div className="py-6 flex flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
                     <ListTodo className="size-5 text-muted-foreground/50" strokeWidth={1.5} />
                     <p>Chưa có nhiệm vụ con trực thuộc</p>
@@ -1929,7 +1955,7 @@ export function TaskDetailSideSheet({
                     )}
                   </div>
                 ) : (
-                  task.subTasks.map((sub) => {
+                  schoolTask.subTasks.map((sub) => {
                     const subStatus = getDetailStatusConfig(sub.status);
                     const subDone = sub.status === "COMPLETED";
 
@@ -2261,94 +2287,101 @@ export function TaskDetailSideSheet({
             </div>
           </div>
         </div>
-      </aside>
+        {/* In-Sheet Rejection Review Panel: Strictly inside the SideSheet, no nested modal dialogs */}
+        <AnimatePresence>
+          {isRejectionModalOpen && (
+            <m.div
+              key="in-sheet-rejection-panel"
+              variants={fadeVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-xs p-4 sm:p-6 !m-0"
+              data-slot="in-sheet-rejection-panel"
+            >
+              <div className="w-full max-w-md rounded-xl border border-border/60 bg-card p-5 shadow-xl space-y-4">
+                <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="size-4 text-amber-600" strokeWidth={1.5} />
+                    <h3 id="rejection-dialog-title" className="text-sm font-semibold text-foreground">
+                      Trả lại yêu cầu chỉnh sửa minh chứng
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRejectionModalOpen(false);
+                      setRejectionError(null);
+                    }}
+                    className="size-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
+                    aria-label="Đóng hộp thoại"
+                  >
+                    <X className="size-4" strokeWidth={1.5} />
+                  </button>
+                </div>
 
-      {/* In-Sheet Rejection Review Panel: Strictly inside the SideSheet, no nested modal dialogs */}
-      {isRejectionModalOpen && (
-        <div
-          className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-xs p-4 sm:p-6 animate-in fade-in duration-150"
-          data-slot="in-sheet-rejection-panel"
-        >
-          <div className="w-full max-w-md rounded-xl border border-border/60 bg-card p-5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border/50 pb-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="size-4 text-amber-600" strokeWidth={1.5} />
-                <h3 id="rejection-dialog-title" className="text-sm font-semibold text-foreground">
-                  Trả lại yêu cầu chỉnh sửa minh chứng
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRejectionModalOpen(false);
-                  setRejectionError(null);
-                }}
-                className="size-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
-                aria-label="Đóng hộp thoại"
-              >
-                <X className="size-4" strokeWidth={1.5} />
-              </button>
-            </div>
-
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Theo quy định phân quyền DACUM và Nghị định 232, Trưởng đơn vị bắt buộc phải ghi rõ lý do và nội dung cần khắc phục khi trả lại công việc.
-            </p>
-
-            <form onSubmit={handleManagerReject} className="space-y-3">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="rejection-reason"
-                  className="text-xs font-semibold text-foreground"
-                >
-                  Lý do yêu cầu sửa đổi (bắt buộc)
-                </label>
-                <textarea
-                  id="rejection-reason"
-                  rows={3}
-                  value={rejectionReasonInput}
-                  onChange={(e) => {
-                    setRejectionReasonInput(e.target.value);
-                    if (rejectionError) setRejectionError(null);
-                  }}
-                  placeholder="Ví dụ: Thiếu số liệu khảo sát phụ lục 2, cần bổ sung chữ ký số của trưởng bộ môn..."
-                  className="w-full rounded-lg border border-border/60 bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring resize-none"
-                  autoFocus
-                />
-              </div>
-
-              {rejectionError && (
-                <p className="text-xs font-medium text-rose-600">
-                  {rejectionError}
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Theo quy định phân quyền DACUM và Nghị định 232, Trưởng đơn vị bắt buộc phải ghi rõ lý do và nội dung cần khắc phục khi trả lại công việc.
                 </p>
-              )}
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setIsRejectionModalOpen(false);
-                    setRejectionError(null);
-                  }}
-                  className="h-8 text-xs cursor-pointer"
-                >
-                  Hủy
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={!rejectionReasonInput.trim()}
-                  className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white cursor-pointer disabled:opacity-50"
-                >
-                  Xác nhận trả lại
-                </Button>
+                <form onSubmit={handleManagerReject} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="rejection-reason"
+                      className="text-xs font-semibold text-foreground"
+                    >
+                      Lý do yêu cầu sửa đổi (bắt buộc)
+                    </label>
+                    <textarea
+                      id="rejection-reason"
+                      rows={3}
+                      value={rejectionReasonInput}
+                      onChange={(e) => {
+                        setRejectionReasonInput(e.target.value);
+                        if (rejectionError) setRejectionError(null);
+                      }}
+                      placeholder="Ví dụ: Thiếu số liệu khảo sát phụ lục 2, cần bổ sung chữ ký số của trưởng bộ môn..."
+                      className="w-full rounded-lg border border-border/60 bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring resize-none"
+                      autoFocus
+                    />
+                  </div>
+
+                  {rejectionError && (
+                    <p className="text-xs font-medium text-rose-600">
+                      {rejectionError}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsRejectionModalOpen(false);
+                        setRejectionError(null);
+                      }}
+                      className="h-8 text-xs cursor-pointer"
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={!rejectionReasonInput.trim()}
+                      className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white cursor-pointer disabled:opacity-50"
+                    >
+                      Xác nhận trả lại
+                    </Button>
+                  </div>
+                </form>
               </div>
-            </form>
-          </div>
-        </div>
+            </m.div>
+          )}
+        </AnimatePresence>
+      </m.aside>
       )}
-    </>
+    </AnimatePresence>
   );
 
   if (mounted && typeof document !== "undefined") {
