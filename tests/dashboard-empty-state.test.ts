@@ -34,7 +34,7 @@ export const CANONICAL_EMPTY_STATES: Record<EmptyStateType, DashboardEmptyStateC
   NO_ACTION_REQUIRED: {
     type: "NO_ACTION_REQUIRED",
     title: "Không có việc cần xử lý ngay",
-    description: "Tất cả nhiệm vụ đang diễn ra đúng tiến độ và không có hạng mục nào cần phê duyệt hoặc giải quyết kh��n cấp.",
+    description: "Tất cả nhiệm vụ đang diễn ra đúng tiến độ và không có hạng mục nào cần phê duyệt hoặc giải quyết khẩn cấp.",
     badgeText: "Tiến độ ổn định",
   },
   LOAD_ERROR: {

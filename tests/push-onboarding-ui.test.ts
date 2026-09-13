@@ -160,7 +160,7 @@ describe('Task 7: Push Onboarding & Mobile Settings UI', () => {
 
       // 3-step guide for Chrome Desktop
       assert.ok(
-        html.includes('Ổ khóa') || html.includes('Khóa') || html.includes('bi���u tượng'),
+        html.includes('Ổ khóa') || html.includes('Khóa') || html.includes('biểu tượng'),
         'Chrome Step 1 must mention lock icon / site settings'
       );
       assert.ok(

@@ -527,7 +527,7 @@ describe("Adversarial Task ReBAC & Invariant Penetration Test Suite", () => {
             reviewerUserId: staffFacultyA.id, // Maliciously configured or attempted by DRI
           },
           {
-            title: "Ban Giám Hiệu Phê chuẩn Nghi��m thu",
+            title: "Ban Giám Hiệu Phê chuẩn Nghiệm thu",
             reviewerUserId: executiveUser.id,
           },
         ]

@@ -453,7 +453,7 @@ describe('Phase 1 & Phase 2 Security, Delegation API & Canonical Contract Verifi
           resourceScope: 'UNIT',
           validFrom: now.toISOString(),
           validUntil: validUntil.toISOString(),
-          sourceDocumentNumber: '125/GUQ-C��KTCN',
+          sourceDocumentNumber: '125/GUQ-CĐKTCN',
         },
         staffToken // staff user trying to delegate rector's assignment!
       );

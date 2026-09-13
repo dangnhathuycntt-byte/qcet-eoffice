@@ -30,7 +30,7 @@ describe("QCET Organization Structure & Administrative Directory", () => {
     assert.ok(codes.includes("K_DIEN"), "Must have Khoa Điện");
     assert.ok(codes.includes("K_DULICH"), "Must have Khoa Du lịch");
     assert.ok(codes.includes("K_KTTH") || codes.includes("K_KTQT"), "Must have Khoa Kinh tế - Tổng hợp");
-    assert.ok(codes.includes("K_KTNN"), "Must have Khoa Kỹ thuật n��ng nghiệp");
+    assert.ok(codes.includes("K_KTNN"), "Must have Khoa Kỹ thuật nông nghiệp");
     assert.ok(codes.includes("K_VHNT"), "Must have Khoa Văn hóa nghệ thuật");
     assert.ok(codes.includes("K_DAICUONG"), "Must have Khoa Đại cương");
   });

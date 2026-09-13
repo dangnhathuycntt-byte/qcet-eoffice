@@ -1770,7 +1770,7 @@ describe("Strategic Tasks Filtering", () => {
     },
     {
       id: "st-2",
-      title: "Khảo sát th��� trường việc làm 2026",
+      title: "Khảo sát thị trường việc làm 2026",
       category: "BAO_CAO",
       categoryLabel: "Đào tạo",
       leadAssigneeName: "ThS. Đỗ Quang Trung",

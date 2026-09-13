@@ -166,7 +166,7 @@ describe('Sprint 2: Task 2 - AuthorizationContext V2 & Authority Resolution', ()
         {
           id: respAreaTrainingId,
           code: `TRAINING_${testRunId}`,
-          name: 'Đào tạo & Qu��n lý người học',
+          name: 'Đào tạo & Quản lý người học',
           category: ResponsibilityCategory.ACADEMIC,
         },
         {

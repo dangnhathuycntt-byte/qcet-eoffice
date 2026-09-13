@@ -88,7 +88,7 @@ describe("Push Notification Copywriting & Truncation Suite", () => {
 
     const directivePayload = formatTaskPushPayload({
       event: "EXECUTIVE_DIRECTIVE",
-      taskTitle: "Chỉ đ��o phòng Đào tạo",
+      taskTitle: "Chỉ đạo phòng Đào tạo",
       actorName: "Hiệu trưởng",
       directiveNote: "Hoàn tất kiểm tra trước thứ Sáu",
       taskId: "t-106",

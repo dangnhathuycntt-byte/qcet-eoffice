@@ -70,7 +70,7 @@ describe("Task Ownership Logic - Workload and Grouping", () => {
       category: "TRUYEN_THONG",
       categoryLabel: "Truyền thông",
       leadAssigneeName: "Trần Hùng",
-      coAssignees: ["Đặng Nhật Huy", "Mai Th��� Xuân", "Lê Văn Anh"],
+      coAssignees: ["Đặng Nhật Huy", "Mai Thị Xuân", "Lê Văn Anh"],
       assignedDate: "2026-09-01",
       dueDate: "2026-09-07",
       status: "IN_PROGRESS",

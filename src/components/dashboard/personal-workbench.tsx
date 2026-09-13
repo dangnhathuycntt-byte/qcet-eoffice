@@ -634,7 +634,7 @@ export function PersonalWorkbench({
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
                   {effectiveRole === "EXECUTIVE"
-                    ? "Hồ sơ chờ phê duyệt L2, điểm nghẽn chi���n lược và tiến độ toàn trường"
+                    ? "Hồ sơ chờ phê duyệt L2, điểm nghẽn chiến lược và tiến độ toàn trường"
                     : effectiveRole === "MANAGER"
                     ? "Hồ sơ chờ duyệt cấp đơn vị L1, công việc trễ hạn và các nhiệm vụ trọng tâm"
                     : "Nhiệm vụ cá nhân hôm nay, việc chờ nộp minh chứng và hạn chót gần nhất"}

@@ -153,7 +153,7 @@ describe('Phase 8: Institutional Meetings, Organizational Bodies & Resolutions D
         unitId: testUnit.id,
         startTime: '2026-09-15T08:30:00.000Z',
         location: 'Phòng họp A - Nhà hiệu bộ',
-        agenda: '1. Đánh giá kế hoạch nghiên cứu khoa học năm học 2026-2027\n2. Phê duyệt đề tài c��p trường',
+        agenda: '1. Đánh giá kế hoạch nghiên cứu khoa học năm học 2026-2027\n2. Phê duyệt đề tài cấp trường',
         initialParticipants: [
           { userId: participantUser1.id, role: MeetingParticipantRole.ATTENDEE },
         ],
