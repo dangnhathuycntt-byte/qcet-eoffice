@@ -60,6 +60,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # Prisma CLI cần đầy đủ dependency closure (@prisma/config -> effect -> fast-check, c12, ...),
 # nên không thể cherry-pick từng package riêng lẻ.
 COPY --from=proddeps --chown=nextjs:nodejs /app/node_modules ./node_modules
+# Sao chép Prisma Client đã sinh từ stage builder đè vào node_modules của runner
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
 
