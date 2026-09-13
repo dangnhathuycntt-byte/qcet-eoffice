@@ -2,11 +2,15 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import {
   AlertTriangle,
   ArrowLeft,
   Calendar as CalendarIcon,
   CheckCircle2,
+  CheckSquare,
+  ChevronDown,
   CircleDot,
   Clock,
   Layers,
@@ -27,6 +31,7 @@ import {
   type CalendarAttentionState,
   type CalendarDayFilter,
 } from "@/lib/calendar/calendar-presentation";
+import { fadeVariants, sideSheetVariants } from "@/lib/motion/variants";
 
 export interface DayTaskItem {
   id: string;
@@ -56,6 +61,7 @@ export interface CalendarDaySheetProps {
   tasks: DayTaskItem[];
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onAddTaskOnDate?: (dateStr: string) => void;
+  onAddEventOnDate?: (dateStr: string) => void;
   className?: string;
 }
 
@@ -113,21 +119,42 @@ export function CalendarDaySheet({
   tasks = [],
   onSelectTask,
   onAddTaskOnDate,
+  onAddEventOnDate,
   className,
 }: CalendarDaySheetProps) {
   const [mounted, setMounted] = React.useState(false);
   const [filter, setFilter] = React.useState<CalendarDayFilter>("all");
   const [query, setQuery] = React.useState("");
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = React.useState(false);
+  const createMenuRef = React.useRef<HTMLDivElement>(null);
   const referenceDate = getSystemReferenceDate();
 
   React.useEffect(() => setMounted(true), []);
 
   React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (createMenuRef.current && !createMenuRef.current.contains(event.target as Node)) {
+        setIsCreateMenuOpen(false);
+      }
+    };
+    if (isCreateMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isCreateMenuOpen]);
+
+  React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
-    if (isOpen) window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "unset";
+    };
   }, [isOpen, onClose]);
 
   React.useEffect(() => {
@@ -151,7 +178,7 @@ export function CalendarDaySheet({
     );
   }, [filter, query, referenceDate, tasks]);
 
-  if (!mounted || !isOpen) return null;
+  if (!mounted) return null;
 
   const formattedDate = selectedDate ? formatDateVi(selectedDate) : "Chưa chọn ngày";
   const isDateSelected = Boolean(selectedDate);
@@ -165,22 +192,38 @@ export function CalendarDaySheet({
   ];
 
   const content = (
-    <div role="dialog" aria-modal="true" aria-labelledby="calendar-day-sheet-title" className="fixed inset-0 z-50 overflow-hidden">
-      <div
-        data-slot="calendar-day-sheet-backdrop"
-        className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <m.div
+          key="calendar-day-sheet-backdrop"
+          data-slot="calendar-day-sheet-backdrop"
+          variants={fadeVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
-      <aside
-        data-slot="calendar-day-sheet-panel"
-        className={cn(
-          "fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto z-50 flex h-full flex-col bg-card border-l border-border/70 shadow-2xl transition-all duration-300 animate-in slide-in-from-right",
-          "w-full sm:w-[500px] md:w-[540px]",
-          className
-        )}
-      >
+      {isOpen && (
+        <m.aside
+          key="calendar-day-sheet-panel"
+          data-slot="calendar-day-sheet-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="calendar-day-sheet-title"
+          variants={sideSheetVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className={cn(
+            "fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto z-50 flex h-full flex-col bg-card border-l border-border/70 shadow-2xl",
+            "w-full sm:w-[500px] md:w-[540px]",
+            className
+          )}
+        >
         <header className="sticky top-0 z-10 border-b border-border/60 bg-card/95 backdrop-blur-md">
           <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3.5">
             <div className="flex items-center gap-2 min-w-0">
@@ -264,16 +307,52 @@ export function CalendarDaySheet({
             )}
           </div>
           {selectedDate && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onAddTaskOnDate?.(selectedDate)}
-              className="h-8 min-h-[32px] sm:min-h-0 shrink-0 text-xs font-medium gap-1.5 border-dashed border-border hover:border-primary/50 rounded-lg px-2.5"
-            >
-              <Plus className="size-3.5" strokeWidth={1.5} />
-              <span>+ Thêm việc ngày này</span>
-            </Button>
+            <div className="relative shrink-0" ref={createMenuRef}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCreateMenuOpen((prev) => !prev)}
+                className="h-8 min-h-[44px] sm:min-h-8 shrink-0 text-xs font-medium gap-1.5 border-dashed border-border hover:border-primary/50 rounded-lg px-2.5"
+                aria-expanded={isCreateMenuOpen}
+                aria-haspopup="true"
+              >
+                <Plus className="size-3.5" strokeWidth={1.5} />
+                <span>+ Tạo</span>
+                <ChevronDown className="size-3 text-muted-foreground" />
+              </Button>
+              {isCreateMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border/70 bg-card p-1 shadow-lg z-20 space-y-0.5 animate-in fade-in zoom-in-95 duration-100"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsCreateMenuOpen(false);
+                      onAddTaskOnDate?.(selectedDate);
+                    }}
+                    className="w-full min-h-[44px] sm:min-h-9 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-secondary transition-colors text-left font-medium"
+                  >
+                    <CheckSquare className="size-3.5 text-primary shrink-0" />
+                    <span>Tạo công việc ngày này</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsCreateMenuOpen(false);
+                      onAddEventOnDate?.(selectedDate);
+                    }}
+                    className="w-full min-h-[44px] sm:min-h-9 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-secondary transition-colors text-left font-medium"
+                  >
+                    <CalendarIcon className="size-3.5 text-sky-600 shrink-0" />
+                    <span>Tạo sự kiện ngày này</span>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -289,21 +368,33 @@ export function CalendarDaySheet({
                 </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {isDateSelected
-                    ? "Không có sự kiện, hạn chót hoặc nhiệm vụ nào trong ngày này. Bạn có thể thêm việc mới."
+                    ? "Không có sự kiện, hạn chót hoặc nhiệm vụ nào trong ngày này. Bạn có thể thêm việc mới hoặc sự kiện."
                     : "Chọn một ngày trên lịch hoặc danh sách để xem chi tiết."}
                 </p>
               </div>
               {selectedDate && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onAddTaskOnDate?.(selectedDate)}
-                  className="min-h-[44px] sm:min-h-9 h-9 px-4 text-xs font-semibold gap-1.5 rounded-xl border-dashed border-border/80 hover:border-primary/50 text-foreground hover:bg-secondary cursor-pointer"
-                >
-                  <Plus className="size-4" strokeWidth={1.5} />
-                  <span>+ Thêm việc ngày này</span>
-                </Button>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onAddTaskOnDate?.(selectedDate)}
+                    className="min-h-[44px] sm:min-h-9 h-9 px-3 text-xs font-semibold gap-1.5 rounded-xl border-dashed border-border/80 hover:border-primary/50 text-foreground hover:bg-secondary cursor-pointer"
+                  >
+                    <CheckSquare className="size-3.5 text-primary" strokeWidth={1.5} />
+                    <span>+ Thêm việc ngày này</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onAddEventOnDate?.(selectedDate)}
+                    className="min-h-[44px] sm:min-h-9 h-9 px-3 text-xs font-semibold gap-1.5 rounded-xl border-dashed border-border/80 hover:border-primary/50 text-foreground hover:bg-secondary cursor-pointer"
+                  >
+                    <CalendarIcon className="size-3.5 text-sky-600" strokeWidth={1.5} />
+                    <span>Tạo sự kiện</span>
+                  </Button>
+                </div>
               )}
             </div>
           ) : visibleTasks.length === 0 ? (
@@ -314,89 +405,190 @@ export function CalendarDaySheet({
               </button>
             </div>
           ) : (
-            <div className="space-y-2.5">
-              {visibleTasks.map((item) => {
-                const state = getCalendarAttentionState(item, referenceDate);
-                const isCompleted = state === "completed";
+            <div className="space-y-4">
+              {/* Mục Sự kiện lịch biểu */}
+              {(() => {
+                const eventItems = visibleTasks.filter((item) => item.isEvent);
+                if (eventItems.length === 0) return null;
                 return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => item.originalTask && onSelectTask?.(item.originalTask)}
-                    className={cn(
-                      "group w-full flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
-                      item.originalTask ? "hover:border-primary/40 hover:shadow-card" : "cursor-default",
-                      isCompleted && "opacity-70 bg-muted/20"
-                    )}
-                    aria-label={item.originalTask ? `Xem chi tiết ${item.title}` : item.title}
-                  >
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-xs font-semibold text-foreground">
-                          {item.isEvent ? "Lịch" : item.level === "Trường" ? "Cấp Trường" : "Đơn vị"}
-                        </span>
-                        {item.categoryLabel && (
-                          <span className="rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
-                            {item.categoryLabel}
-                          </span>
-                        )}
-                      </div>
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                        <StateIcon state={state} isEvent={item.isEvent} />
-                        {stateLabel(state, item.isEvent)}
+                  <section aria-label="Sự kiện lịch biểu" className="space-y-2">
+                    <div className="flex items-center justify-between pb-1 border-b border-border/40">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <CalendarIcon className="size-3.5 text-sky-600" strokeWidth={1.5} aria-hidden="true" />
+                        <span>Sự kiện lịch biểu</span>
+                      </h3>
+                      <span className="text-xs font-mono font-bold text-muted-foreground tabular-nums">
+                        {eventItems.length}
                       </span>
                     </div>
-
-                    <h4 className={cn("text-xs sm:text-sm font-semibold text-foreground leading-snug", isCompleted && "line-through text-muted-foreground")}>{item.title}</h4>
-
-                    {!item.isEvent && item.level === "Đơn vị" && item.parentSchoolTaskTitle && (
-                      <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                        <Layers className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                        <span className="truncate">Thuộc: {item.parentSchoolTaskTitle}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground pt-1 border-t border-border/40 flex-wrap">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <User className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                        <span className="truncate">{item.assigneeName || item.host || "Chưa gán phụ trách"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 font-mono tabular-nums shrink-0">
-                        {item.time && (
-                          <span className="inline-flex items-center gap-1 text-primary">
-                            <Clock className="size-3" strokeWidth={1.5} aria-hidden="true" />
-                            {item.time}
-                          </span>
-                        )}
-                        {item.location && (
-                          <span className="inline-flex items-center gap-1 max-w-[150px]">
-                            <MapPin className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                            <span className="truncate">{item.location}</span>
-                          </span>
-                        )}
-                      </div>
+                    <div className="space-y-2">
+                      {eventItems.map((item) => {
+                        const state = getCalendarAttentionState(item, referenceDate);
+                        const isCompleted = state === "completed";
+                        return (
+                          <div
+                            key={item.id}
+                            className={cn(
+                              "w-full flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all",
+                              item.originalTask && "hover:border-primary/40 hover:shadow-card cursor-pointer",
+                              isCompleted && "opacity-70 bg-muted/20"
+                            )}
+                            onClick={() => item.originalTask && onSelectTask?.(item.originalTask)}
+                          >
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 px-2 py-0.5 text-xs font-semibold">
+                                Sự kiện
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                                <StateIcon state={state} isEvent={true} />
+                                {stateLabel(state, true)}
+                              </span>
+                            </div>
+                            <h4 className={cn("text-xs sm:text-sm font-semibold text-foreground leading-snug", isCompleted && "line-through text-muted-foreground")}>
+                              {item.title}
+                            </h4>
+                            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground pt-1 border-t border-border/40 flex-wrap">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <User className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                                <span className="truncate">Chủ trì: {item.host || item.assigneeName || "Ban Giám hiệu"}</span>
+                              </div>
+                              <div className="flex items-center gap-2 font-mono tabular-nums shrink-0">
+                                {item.time && (
+                                  <span className="inline-flex items-center gap-1 text-primary font-semibold">
+                                    <Clock className="size-3" strokeWidth={1.5} aria-hidden="true" />
+                                    {item.time}
+                                  </span>
+                                )}
+                                {item.location && (
+                                  <span className="inline-flex items-center gap-1 max-w-[150px]">
+                                    <MapPin className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                                    <span className="truncate">{item.location}</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </button>
+                  </section>
                 );
-              })}
+              })()}
+
+              {/* Mục Nhiệm vụ đến hạn */}
+              {(() => {
+                const deadlineItems = visibleTasks.filter((item) => !item.isEvent);
+                if (deadlineItems.length === 0) return null;
+                return (
+                  <section aria-label="Nhiệm vụ đến hạn" className="space-y-2">
+                    <div className="flex items-center justify-between pb-1 border-b border-border/40">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <CheckSquare className="size-3.5 text-primary" strokeWidth={1.5} aria-hidden="true" />
+                        <span>Nhiệm vụ đến hạn</span>
+                      </h3>
+                      <span className="text-xs font-mono font-bold text-muted-foreground tabular-nums">
+                        {deadlineItems.length}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {deadlineItems.map((item) => {
+                        const state = getCalendarAttentionState(item, referenceDate);
+                        const isCompleted = state === "completed";
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => item.originalTask && onSelectTask?.(item.originalTask)}
+                            className={cn(
+                              "group w-full flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary min-h-[44px]",
+                              item.originalTask ? "hover:border-primary/40 hover:shadow-card cursor-pointer" : "cursor-default",
+                              isCompleted && "opacity-70 bg-muted/20"
+                            )}
+                            aria-label={item.originalTask ? `Xem chi tiết ${item.title}` : item.title}
+                          >
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-xs font-semibold text-foreground">
+                                  {item.level === "Trường" ? "Cấp Trường" : "Đơn vị"}
+                                </span>
+                                {item.categoryLabel && (
+                                  <span className="rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
+                                    {item.categoryLabel}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                                <StateIcon state={state} isEvent={false} />
+                                {stateLabel(state, false)}
+                              </span>
+                            </div>
+
+                            <h4 className={cn("text-xs sm:text-sm font-semibold text-foreground leading-snug", isCompleted && "line-through text-muted-foreground")}>
+                              {item.title}
+                            </h4>
+
+                            {item.level === "Đơn vị" && item.parentSchoolTaskTitle && (
+                              <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                                <Layers className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                                <span className="truncate">Thuộc: {item.parentSchoolTaskTitle}</span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground pt-1 border-t border-border/40 flex-wrap">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <User className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                                <span className="truncate">{item.assigneeName || "Chưa gán phụ trách"}</span>
+                              </div>
+                              {typeof item.progressPercent === "number" && (
+                                <span className="font-mono tabular-nums text-xs font-semibold text-foreground">
+                                  Tiến độ: {item.progressPercent}%
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })()}
             </div>
           )}
         </div>
 
         <footer className="border-t border-border/60 px-4 sm:px-5 py-3 bg-card/90 flex items-center justify-between gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} className="text-xs min-h-9 rounded-lg px-4">
+          <Button type="button" variant="outline" size="sm" onClick={onClose} className="text-xs min-h-[44px] sm:min-h-9 rounded-lg px-4">
             Đóng
           </Button>
           {selectedDate && (
-            <Button type="button" variant="outline" size="sm" onClick={() => onAddTaskOnDate?.(selectedDate)} className="text-xs min-h-9 rounded-lg px-3.5 border-dashed">
-              <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
-              Thêm việc
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onAddTaskOnDate?.(selectedDate)}
+                className="text-xs min-h-[44px] sm:min-h-9 rounded-lg px-3 border-dashed"
+              >
+                <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
+                Thêm việc
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onAddEventOnDate?.(selectedDate)}
+                className="text-xs min-h-[44px] sm:min-h-9 rounded-lg px-3 border-dashed"
+              >
+                <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
+                Thêm sự kiện
+              </Button>
+            </div>
           )}
         </footer>
-      </aside>
-    </div>
-  );
+      </m.aside>
+    )}
+  </AnimatePresence>
+);
 
   return createPortal(content, document.body);
 }

@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import {
   School,
   Building2,
@@ -23,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { QCET_DEPARTMENTS, type DepartmentNode } from "@/components/org/organization-tree";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
+import { popoverVariants } from "@/lib/motion/variants";
 
 export type ScopeType = "school" | "unit" | "my";
 
@@ -189,6 +192,7 @@ export function isManagerUser(
 
 /**
  * Resolves scope metadata (label, icon, trigger label, resolved department).
+ * Invariant: Role Is Not Scope. Scope represents visual dataset filter, not operational authority.
  */
 export function resolveScopeDetails(
   scopeParam?: string | null,
@@ -611,12 +615,18 @@ export function ScopeSwitcher({ className }: { className?: string }) {
       </button>
 
       {/* Desktop Dropdown Popover (>= md) */}
-      {isOpen && !isMobile && (
-        <div
-          role="menu"
-          aria-orientation="vertical"
-          className="absolute left-0 top-full mt-1.5 w-80 max-w-[calc(100vw-32px)] rounded-xl border border-border/70 bg-card/95 p-1.5 text-popover-foreground shadow-xl backdrop-blur-md z-50 animate-in fade-in-0 zoom-in-95 focus:outline-none"
-        >
+      <AnimatePresence>
+        {isOpen && !isMobile && (
+          <m.div
+            key="scope-switcher-popover"
+            role="menu"
+            aria-orientation="vertical"
+            variants={popoverVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="absolute left-0 top-full mt-1.5 w-80 max-w-[calc(100vw-32px)] rounded-xl border border-border/70 bg-card/95 p-1.5 text-popover-foreground shadow-xl backdrop-blur-md z-50 focus:outline-none"
+          >
           {/* Section 1: Primary Scopes */}
           <div className="px-3 pt-2 pb-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
             Phạm vi chính
@@ -815,8 +825,9 @@ export function ScopeSwitcher({ className }: { className?: string }) {
               <span className="size-2 rounded-full bg-emerald-500 shrink-0" title="Đang hiệu lực" />
             </button>
           </div>
-        </div>
+        </m.div>
       )}
+      </AnimatePresence>
 
       {/* Mobile BottomSheet (< md) */}
       <BottomSheet open={isOpen && isMobile} onOpenChange={setIsOpen}>
