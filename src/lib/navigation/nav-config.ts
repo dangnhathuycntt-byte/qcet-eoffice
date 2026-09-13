@@ -36,14 +36,14 @@ export const NAV_ITEMS: NavItemConfig[] = [
   },
   {
     id: "notifications",
-    label: "Thông báo",
+    label: "Thông báo & Nhắc việc",
     href: "/notifications",
     icon: Bell,
     badgeKey: "notifications",
   },
   {
     id: "tasks",
-    label: "Kho nhiệm vụ",
+    label: "Quản lý nhiệm vụ",
     href: "/tasks",
     icon: CheckSquare,
     aliases: ["/unit-tasks"],

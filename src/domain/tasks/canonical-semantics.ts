@@ -78,6 +78,61 @@ export function mapDbStatusToLifecycle(dbStatus: string): TaskLifecycleStatus {
 }
 
 /**
+ * Lifecycle-only completion invariant.
+ *
+ * Completion is a lifecycle property derived SOLELY from the canonical
+ * terminal status COMPLETED. Progress is never a completion signal: a task in
+ * WAITING_APPROVAL that has reached progressPercent = 100 is still awaiting
+ * review and is therefore NOT completed.
+ */
+export interface TaskCompletionDerivation {
+  lifecycle: TaskLifecycleStatus;
+  completed: boolean;
+}
+
+/**
+ * The single completion rule for the codebase. Completion is a property of the
+ * canonical lifecycle and nothing else: only the terminal COMPLETED lifecycle is
+ * complete. Kept private so there is exactly one definition of "completed"; every
+ * public predicate routes through it (One Capability, One Implementation).
+ */
+function isCompletedLifecycle(lifecycle: TaskLifecycleStatus): boolean {
+  return lifecycle === 'COMPLETED';
+}
+
+/**
+ * Returns true if and only if the raw status maps to the terminal COMPLETED
+ * lifecycle. No progress input is accepted, so a percentage can never be
+ * mistaken for completion.
+ *
+ * Canonical surfaces (workspace 'completed' filter, unified task hub, task
+ * detail side sheet) must route completion through this helper or
+ * deriveTaskCompletion rather than re-deriving it from `progressPercent`.
+ */
+export function isTaskLifecycleComplete(dbStatus: string | null | undefined): boolean {
+  return isCompletedLifecycle(mapDbStatusToLifecycle(dbStatus ?? ''));
+}
+
+/**
+ * Derives the canonical completion projection for a task-like record.
+ *
+ * Invariant (T03 - completion is lifecycle-only):
+ * - status COMPLETED / DONE -> { lifecycle: 'COMPLETED', completed: true }
+ * - status WAITING_APPROVAL with progressPercent = 100 -> { completed: false }
+ * - progressPercent is accepted only for record-shape compatibility and is
+ *   intentionally ignored; completion is never derived from progress.
+ */
+export function deriveTaskCompletion(
+  task: { status?: string | null; progressPercent?: number | null } | null | undefined
+): TaskCompletionDerivation {
+  const lifecycle = mapDbStatusToLifecycle(task?.status ?? '');
+  return {
+    lifecycle,
+    completed: isCompletedLifecycle(lifecycle),
+  };
+}
+
+/**
  * Projects a TaskLifecycleStatus into a Kanban column.
  *
  * Mapping rules:

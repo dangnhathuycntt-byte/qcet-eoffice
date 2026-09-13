@@ -40,7 +40,42 @@ import {
 import { cn } from "@/lib/utils";
 
 const SNOOZE_KEY = "qcet-push-onboarding-dismissed";
-const SNOOZE_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const SNOOZE_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
+/**
+ * User-scoped snooze key (T63): a dismissed push/install prompt must not
+ * suppress the prompt for a different account signing in on a shared device.
+ */
+export function pushSnoozeStorageKey(userId?: string | null): string {
+  return `${SNOOZE_KEY}:${userId || "guest"}`;
+}
+
+/**
+ * Reads the account-scoped push-onboarding snooze. Returns true while this
+ * account's dismissal is still inside the snooze window, so the sheet never
+ * re-prompts the same account — and never suppresses a different account.
+ */
+export function isPushOnboardingSnoozed(userId?: string | null): boolean {
+  if (typeof localStorage === "undefined") return false;
+  try {
+    const raw = localStorage.getItem(pushSnoozeStorageKey(userId));
+    if (!raw) return false;
+    const snoozedAt = Number(raw);
+    return Number.isFinite(snoozedAt) && Date.now() - snoozedAt < SNOOZE_DAYS_MS;
+  } catch {
+    return false;
+  }
+}
+
+/** Persists the account-scoped push-onboarding dismissal timestamp. */
+export function recordPushOnboardingSnooze(userId?: string | null): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(pushSnoozeStorageKey(userId), Date.now().toString());
+  } catch {
+    // Ignore storage write errors
+  }
+}
 
 export interface PermissionRecoveryGuideProps {
   initialPlatform?: "chrome" | "safari";
@@ -315,12 +350,13 @@ export function PushOnboardingSheet({
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // The sheet only opens if coordinator allows it (never cold-prompts on initial load)
-    if (canShowPushPrompt && !isControlled && !isSubscribed) {
+    // The sheet only opens if the coordinator allows it (never cold-prompts on
+    // initial load) and this account has not dismissed it within the window.
+    if (canShowPushPrompt && !isControlled && !isSubscribed && !isPushOnboardingSnoozed(userId)) {
       recordInterruptionShown("PUSH");
       setInternalOpen(true);
     }
-  }, [canShowPushPrompt, isControlled, isSubscribed, recordInterruptionShown]);
+  }, [canShowPushPrompt, isControlled, isSubscribed, userId, recordInterruptionShown]);
 
   // Listen for manual trigger via custom event
   React.useEffect(() => {
@@ -337,11 +373,7 @@ export function PushOnboardingSheet({
   }, [handleOpenChange]);
 
   const handleDismiss = () => {
-    try {
-      localStorage.setItem(SNOOZE_KEY, Date.now().toString());
-    } catch {
-      // Ignore
-    }
+    recordPushOnboardingSnooze(userId);
     snoozePush(14);
     handleOpenChange(false);
   };

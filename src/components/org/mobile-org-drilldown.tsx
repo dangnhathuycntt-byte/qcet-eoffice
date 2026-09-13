@@ -13,10 +13,6 @@ import {
   MapPin,
   Search,
   X,
-  UserCheck,
-  Shield,
-  Clock,
-  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -41,12 +37,25 @@ export interface MobileOrgDrillDownProps {
   initialDepartmentCode?: string;
   onSelectStaff?: (staff: StaffMember) => void;
   className?: string;
+  /** T59: persist drill position across reloads (full-page /org surface only). */
+  persistContext?: boolean;
+}
+
+// T59: session-scoped logical context so mobile drill-down (root -> group ->
+// dept) survives reloads and re-entry instead of snapping back to the root.
+const MOBILE_ORG_STATE_KEY = "qcet:org:mobile-state";
+
+interface PersistedMobileOrgState {
+  level?: MobileOrgLevel;
+  group?: DepartmentCategory | null;
+  deptCode?: string | null;
 }
 
 export function MobileOrgDrillDown({
   initialDepartmentCode,
   onSelectStaff,
   className,
+  persistContext = false,
 }: MobileOrgDrillDownProps) {
   // Find initial department if provided
   const initialDept = React.useMemo(() => {
@@ -74,6 +83,55 @@ export function MobileOrgDrillDown({
 
   // Selected staff profile modal for mobile detail
   const [activeStaffModal, setActiveStaffModal] = React.useState<StaffMember | null>(null);
+
+  // T59: persist drill-down position. Declared before hydration so the first
+  // commit never overwrites an already-stored position.
+  const mobileContextHydratedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!persistContext || !mobileContextHydratedRef.current || typeof window === "undefined") return;
+    if (initialDepartmentCode) return;
+    const payload: PersistedMobileOrgState = {
+      level: currentLevel,
+      group: selectedGroup,
+      deptCode: selectedDept?.code ?? null,
+    };
+    try {
+      window.sessionStorage.setItem(MOBILE_ORG_STATE_KEY, JSON.stringify(payload));
+    } catch {
+      // Storage unavailable: context is simply not persisted.
+    }
+  }, [persistContext, currentLevel, selectedGroup, selectedDept, initialDepartmentCode]);
+
+  React.useEffect(() => {
+    if (persistContext && !initialDepartmentCode && typeof window !== "undefined") {
+      try {
+        const raw = window.sessionStorage.getItem(MOBILE_ORG_STATE_KEY);
+        if (raw) {
+          const persisted = JSON.parse(raw) as PersistedMobileOrgState;
+          const dept = persisted.deptCode
+            ? (QCET_DEPARTMENTS.find((d) => d.code === persisted.deptCode) ?? null)
+            : null;
+          if (persisted.level === "dept" && dept) {
+            setSelectedDept(dept);
+            setSelectedGroup(dept.category);
+            setCurrentLevel("dept");
+          } else if (persisted.level === "group" && persisted.group) {
+            setSelectedDept(null);
+            setSelectedGroup(persisted.group);
+            setCurrentLevel("group");
+          } else if (persisted.level === "root") {
+            setSelectedDept(null);
+            setSelectedGroup(null);
+            setCurrentLevel("root");
+          }
+        }
+      } catch {
+        // Ignore malformed persisted state.
+      }
+    }
+    mobileContextHydratedRef.current = true;
+  }, [persistContext, initialDepartmentCode]);
 
   // Metrics for groups
   const bghDept = QCET_DEPARTMENTS.find((d) => d.category === "BGH");

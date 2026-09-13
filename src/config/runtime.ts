@@ -17,6 +17,11 @@ export interface PublicRuntimeFeatures {
   taskWorkspaceV2: boolean;
   mobileAgenda: boolean;
   newExecutiveDashboard: boolean;
+  uxTasksV5: boolean;
+  uxCalendarV5: boolean;
+  uxNotificationsV5: boolean;
+  uxDocumentsV5: boolean;
+  uxOrgV5: boolean;
   [key: string]: boolean;
 }
 

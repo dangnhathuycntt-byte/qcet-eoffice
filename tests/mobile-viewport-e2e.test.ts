@@ -114,7 +114,7 @@ describe("Mobile Viewport & PWA Standards Verification", () => {
   });
 
   test("MobileBottomNav complies with 4 touch points and safe area handling", () => {
-    const navPath = path.resolve(__dirname, "../src/components/layout/mobile-bottom-nav.tsx");
+    const navPath = path.resolve(__dirname, "../src/components/navigation/mobile-bottom-nav.tsx");
     const content = fs.readFileSync(navPath, "utf-8");
 
     assert.ok(

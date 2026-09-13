@@ -2,11 +2,11 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { MobileBottomNav } from "../src/components/layout/mobile-bottom-nav";
+import { MobileBottomNav } from "../src/components/navigation/mobile-bottom-nav";
 import { getMobileBottomBarItems } from "../src/lib/navigation/canonical-navigation-registry";
 
 describe("MobileBottomNav Component (4-Destination Architecture)", () => {
-  const navPath = path.join(process.cwd(), "src/components/layout/mobile-bottom-nav.tsx");
+  const navPath = path.join(process.cwd(), "src/components/navigation/mobile-bottom-nav.tsx");
 
   test("MobileBottomNav is defined and exports correctly", () => {
     assert.equal(typeof MobileBottomNav, "function");

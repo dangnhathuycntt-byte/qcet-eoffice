@@ -25,6 +25,8 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import { getRouteByPath } from "@/lib/navigation/canonical-navigation-registry";
 import {
   highlightMatchSegments,
   scoreVietnameseSearch,
@@ -59,8 +61,72 @@ export interface CommandSearchModalProps {
   className?: string;
 }
 
+/**
+ * C5 / T38: explicit classification of everything the palette can surface.
+ * The Command Palette composes distinct intents that must never be conflated
+ * with the current-view search or filters that live inside /tasks:
+ * - "navigation" -> Đi tới (move to a canonical destination)
+ * - "command"    -> Hành động (run an operational command)
+ * - "task" | "document" | "user" -> global search result intents
+ * - "recent"     -> account-scoped recently viewed entities
+ */
+export type CommandPaletteItemKind =
+  | "navigation"
+  | "command"
+  | "task"
+  | "document"
+  | "user"
+  | "recent";
+
+export type CommandPaletteTab =
+  | "all"
+  | "navigation"
+  | "tasks"
+  | "documents"
+  | "people"
+  | "commands";
+
+// T39: one label per intent group, rendered as visually separated sections.
+export const COMMAND_INTENT_LABELS: Record<CommandPaletteItemKind, string> = {
+  navigation: "Đi tới",
+  task: "Nhiệm vụ",
+  document: "Văn bản",
+  user: "Cán bộ",
+  command: "Hành động",
+  recent: "Gần đây",
+};
+
 const RECENT_SEARCHES_STORAGE_KEY = "qcet_recent_searches";
 const MAX_RECENT_ITEMS = 5;
+
+/**
+ * T41: Account-safe recents. The storage namespace is derived from the
+ * authenticated user id so entities saved by a previous account can never be
+ * read back after an account switch on a shared device.
+ */
+export function scopedRecentSearchesKey(userId?: string | null): string {
+  return `${RECENT_SEARCHES_STORAGE_KEY}:${userId || "anonymous"}`;
+}
+
+/**
+ * T41 / Server Truth: the in-memory result cache is namespaced by the
+ * authenticated account so a client-side account switch (without a full reload)
+ * can never surface the previous account's cached tasks/documents/users.
+ */
+export function scopedSearchCacheKey(
+  userId: string | null | undefined,
+  query: string
+): string {
+  return `${userId || "anonymous"}::${query.trim()}`;
+}
+
+/**
+ * T88: command palette navigation labels are sourced from the canonical
+ * registry so sidebar / mobile / command surfaces share one naming system.
+ */
+export function canonicalNavLabel(href: string, fallback: string): string {
+  return getRouteByPath(href)?.label || fallback;
+}
 
 function HighlightedText({
   text,
@@ -96,11 +162,14 @@ function HighlightedText({
 
 export function CommandSearchModal({ className }: CommandSearchModalProps = {}) {
   const router = useRouter();
+  const { user } = useAuth();
+  const recentStorageKey = React.useMemo(
+    () => scopedRecentSearchesKey(user?.id),
+    [user?.id]
+  );
   const [isOpen, setIsOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
-  const [activeTab, setActiveTab] = React.useState<
-    "all" | "tasks" | "documents" | "actions" | "users"
-  >("all");
+  const [activeTab, setActiveTab] = React.useState<CommandPaletteTab>("all");
   const [isLoading, setIsLoading] = React.useState(false);
   const [tasks, setTasks] = React.useState<SearchTaskResult[]>([]);
   const [documents, setDocuments] = React.useState<SearchDocumentResult[]>([]);
@@ -110,6 +179,8 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+  const tabsRef = React.useRef<HTMLDivElement>(null);
   const searchCacheRef = React.useRef<
     Map<
       string,
@@ -121,47 +192,58 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     >
   >(new Map());
 
-  // Load recent searches from localStorage on mount
+  // Load account-scoped recent searches whenever the modal opens or the
+  // authenticated account changes. Switching accounts swaps the namespace so a
+  // previous user's entities can never resurface (T41).
   React.useEffect(() => {
     try {
-      const stored = localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY);
+      const stored = localStorage.getItem(recentStorageKey);
       if (stored) {
         const parsed = JSON.parse(stored) as RecentSearchItem[];
         if (Array.isArray(parsed)) {
           setRecentSearches(parsed.slice(0, MAX_RECENT_ITEMS));
+          return;
         }
       }
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [isOpen]);
-
-  const saveRecentItem = React.useCallback((item: RecentSearchItem) => {
-    try {
-      setRecentSearches((prev) => {
-        const filtered = prev.filter((i) => i.id !== item.id);
-        const updated = [item, ...filtered].slice(0, MAX_RECENT_ITEMS);
-        try {
-          localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(updated));
-        } catch {
-          // ignore
-        }
-        return updated;
-      });
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const clearRecentSearches = React.useCallback((e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    try {
-      localStorage.removeItem(RECENT_SEARCHES_STORAGE_KEY);
       setRecentSearches([]);
     } catch {
-      // ignore
+      setRecentSearches([]);
+      // Ignore localStorage errors
     }
-  }, []);
+  }, [isOpen, recentStorageKey]);
+
+  const saveRecentItem = React.useCallback(
+    (item: RecentSearchItem) => {
+      try {
+        setRecentSearches((prev) => {
+          const filtered = prev.filter((i) => i.id !== item.id);
+          const updated = [item, ...filtered].slice(0, MAX_RECENT_ITEMS);
+          try {
+            localStorage.setItem(recentStorageKey, JSON.stringify(updated));
+          } catch {
+            // ignore
+          }
+          return updated;
+        });
+      } catch {
+        // ignore
+      }
+    },
+    [recentStorageKey]
+  );
+
+  const clearRecentSearches = React.useCallback(
+    (e?: React.MouseEvent) => {
+      if (e) e.stopPropagation();
+      try {
+        localStorage.removeItem(recentStorageKey);
+        setRecentSearches([]);
+      } catch {
+        // ignore
+      }
+    },
+    [recentStorageKey]
+  );
 
   // Close modal helper
   const handleClose = React.useCallback(() => {
@@ -301,7 +383,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       },
       {
         id: "nav-documents",
-        title: "Đi tới Văn bản",
+        title: canonicalNavLabel("/documents", "Văn bản"),
         description: "Sổ văn bản điện tử, văn bản đến, đi và chỉ đạo điều hành",
         category: "navigation",
         icon: FileText,
@@ -315,7 +397,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       },
       {
         id: "nav-calendar",
-        title: "Đi tới Lịch",
+        title: canonicalNavLabel("/calendar", "Lịch"),
         description: "Lịch công tác trường và kế hoạch làm việc tuần/tháng",
         category: "navigation",
         icon: Calendar,
@@ -329,7 +411,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       },
       {
         id: "nav-dashboard",
-        title: "Bàn làm việc (Tổng quan)",
+        title: canonicalNavLabel("/", "Bàn làm việc"),
         description: "Bảng điều hành số liệu, chỉ số KPI và tiến độ trọng tâm",
         category: "navigation",
         icon: LayoutDashboard,
@@ -343,7 +425,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       },
       {
         id: "nav-tasks",
-        title: "Danh sách công việc",
+        title: canonicalNavLabel("/tasks", "Nhiệm vụ"),
         description: "Xem và quản lý bảng nhiệm vụ, tiến độ phân công DACUM",
         category: "navigation",
         icon: CheckSquare,
@@ -370,7 +452,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       },
       {
         id: "nav-org",
-        title: "Cơ cấu tổ chức & Nhân sự",
+        title: canonicalNavLabel("/org", "Tổ chức"),
         description: "Sơ đồ phòng ban, khoa và thông tin cán bộ giảng viên",
         category: "navigation",
         icon: Building2,
@@ -383,7 +465,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       },
       {
         id: "nav-notifications",
-        title: "Trung tâm Thông báo",
+        title: canonicalNavLabel("/notifications", "Thông báo"),
         description: "Nhật ký chỉ đạo, cảnh báo hạn chót và thông báo giao việc",
         category: "navigation",
         icon: Bell,
@@ -454,8 +536,12 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     if (!isOpen) return;
 
     const trimmed = query.trim();
-    if (searchCacheRef.current.has(trimmed)) {
-      const cached = searchCacheRef.current.get(trimmed)!;
+    // T41 / Server Truth: key the cache by the authenticated account id so a
+    // no-reload account switch can never read back the previous account's
+    // cached results.
+    const cacheKey = scopedSearchCacheKey(user?.id, trimmed);
+    if (searchCacheRef.current.has(cacheKey)) {
+      const cached = searchCacheRef.current.get(cacheKey)!;
       setTasks(cached.tasks);
       setDocuments(cached.documents);
       setUsers(cached.users);
@@ -465,6 +551,9 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     }
 
     let isMounted = true;
+    // C10: cancellation / staleness — abort the in-flight request when the
+    // query changes so fast typing can never render an out-of-order response.
+    const controller = new AbortController();
     setIsLoading(true);
 
     const timer = setTimeout(async () => {
@@ -472,20 +561,21 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         const url = trimmed
           ? `/api/search?q=${encodeURIComponent(trimmed)}`
           : "/api/search";
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) throw new Error("Search failed");
         const json = await res.json();
         if (isMounted && json.success) {
           const t: SearchTaskResult[] = json.results?.tasks || [];
           const d: SearchDocumentResult[] = json.results?.documents || [];
           const u: SearchUserResult[] = json.results?.users || [];
-          searchCacheRef.current.set(trimmed, { tasks: t, documents: d, users: u });
+          searchCacheRef.current.set(cacheKey, { tasks: t, documents: d, users: u });
           setTasks(t);
           setDocuments(d);
           setUsers(u);
           setSelectedIndex(0);
         }
-      } catch {
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
         if (isMounted) {
           setTasks([]);
           setDocuments([]);
@@ -501,8 +591,9 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     return () => {
       isMounted = false;
       clearTimeout(timer);
+      controller.abort();
     };
-  }, [isOpen, query]);
+  }, [isOpen, query, user?.id]);
 
   // Filter actions based on query and score
   const filteredActions = React.useMemo(() => {
@@ -522,44 +613,79 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       .map((entry) => entry.action);
   }, [query, quickActions]);
 
-  // Filtered lists according to active tab
-  const displayTasks = activeTab === "all" || activeTab === "tasks" ? tasks : [];
-  const displayDocuments = activeTab === "all" || activeTab === "documents" ? documents : [];
-  const displayActions = activeTab === "all" || activeTab === "actions" ? filteredActions : [];
-  const displayUsers = activeTab === "all" || activeTab === "users" ? users : [];
+  // T39: split quick actions into the two command intents.
+  const navigationActions = React.useMemo(
+    () => filteredActions.filter((a) => a.category === "navigation"),
+    [filteredActions]
+  );
+  const commandActions = React.useMemo(
+    () => filteredActions.filter((a) => a.category === "action"),
+    [filteredActions]
+  );
 
-  // Build flat items list for keyboard navigation
+  // T38: an explicit per-group visibility rule keyed by classification.
+  const isGroupVisible = React.useCallback(
+    (tab: CommandPaletteTab, kind: Exclude<CommandPaletteItemKind, "recent">): boolean =>
+      tab === "all" ||
+      (tab === "navigation" && kind === "navigation") ||
+      (tab === "tasks" && kind === "task") ||
+      (tab === "documents" && kind === "document") ||
+      (tab === "people" && kind === "user") ||
+      (tab === "commands" && kind === "command"),
+    []
+  );
+
+  // Filtered lists according to the active intent tab
+  const displayNavigation = isGroupVisible(activeTab, "navigation") ? navigationActions : [];
+  const displayTasks = isGroupVisible(activeTab, "task") ? tasks : [];
+  const displayDocuments = isGroupVisible(activeTab, "document") ? documents : [];
+  const displayUsers = isGroupVisible(activeTab, "user") ? users : [];
+  const displayCommands = isGroupVisible(activeTab, "command") ? commandActions : [];
+  const showRecent = !query.trim() && recentSearches.length > 0 && activeTab === "all";
+
+  // Build flat items list for keyboard navigation, ordered to match the rendered
+  // intent groups: Gần đây -> Đi tới -> Nhiệm vụ -> Văn bản -> Cán bộ -> Hành động.
   type FlatItem =
-    | { type: "recent"; item: RecentSearchItem }
-    | { type: "action"; item: QuickAction }
-    | { type: "task"; item: SearchTaskResult }
-    | { type: "document"; item: SearchDocumentResult }
-    | { type: "user"; item: SearchUserResult };
+    | { kind: "recent"; item: RecentSearchItem }
+    | { kind: "navigation"; item: QuickAction }
+    | { kind: "command"; item: QuickAction }
+    | { kind: "task"; item: SearchTaskResult }
+    | { kind: "document"; item: SearchDocumentResult }
+    | { kind: "user"; item: SearchUserResult };
 
   const flatItems = React.useMemo<FlatItem[]>(() => {
     const items: FlatItem[] = [];
-    if (!query.trim() && recentSearches.length > 0 && activeTab === "all") {
-      recentSearches.forEach((r) => items.push({ type: "recent", item: r }));
+    if (showRecent) {
+      recentSearches.forEach((r) => items.push({ kind: "recent", item: r }));
     }
-    displayActions.forEach((a) => items.push({ type: "action", item: a }));
-    displayTasks.forEach((t) => items.push({ type: "task", item: t }));
-    displayDocuments.forEach((d) => items.push({ type: "document", item: d }));
-    displayUsers.forEach((u) => items.push({ type: "user", item: u }));
+    displayNavigation.forEach((a) => items.push({ kind: "navigation", item: a }));
+    displayTasks.forEach((t) => items.push({ kind: "task", item: t }));
+    displayDocuments.forEach((d) => items.push({ kind: "document", item: d }));
+    displayUsers.forEach((u) => items.push({ kind: "user", item: u }));
+    displayCommands.forEach((a) => items.push({ kind: "command", item: a }));
     return items;
-  }, [activeTab, displayActions, displayTasks, displayDocuments, displayUsers, query, recentSearches]);
+  }, [
+    showRecent,
+    displayNavigation,
+    displayTasks,
+    displayDocuments,
+    displayUsers,
+    displayCommands,
+    recentSearches,
+  ]);
 
   // Execute selected item
   const executeItem = React.useCallback(
     (item: FlatItem, inNewTab = false) => {
-      if (item.type === "action") {
+      if (item.kind === "navigation" || item.kind === "command") {
         item.item.action(inNewTab);
-      } else if (item.type === "task") {
+      } else if (item.kind === "task") {
         handleSelectTask(item.item, inNewTab);
-      } else if (item.type === "document") {
+      } else if (item.kind === "document") {
         handleSelectDocument(item.item, inNewTab);
-      } else if (item.type === "user") {
+      } else if (item.kind === "user") {
         handleSelectUser(item.item);
-      } else if (item.type === "recent") {
+      } else if (item.kind === "recent") {
         if (item.item.type === "task" && item.item.data) {
           handleSelectTask(item.item.data, inNewTab);
         } else if (item.item.type === "document" && item.item.data) {
@@ -572,22 +698,61 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
     [handleSelectTask, handleSelectDocument, handleSelectUser]
   );
 
-  // Keyboard navigation inside modal
+  const PALETTE_TAB_ORDER: CommandPaletteTab[] = [
+    "all",
+    "navigation",
+    "tasks",
+    "documents",
+    "people",
+    "commands",
+  ];
+
+  // T42: keyboard + focus containment. Up/Down move the roving selection,
+  // Enter activates (Cmd/Ctrl+Enter opens in a new tab), Escape closes, and
+  // Tab / Shift+Tab are trapped inside the dialog so focus can never escape.
+  // While the tab strip is focused, Left/Right switch the active intent group
+  // (ARIA tabs pattern) instead of hijacking Tab. IME-safe: composition
+  // keystrokes never trigger commands.
   const handleKeyDownInList = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent?.isComposing) return;
+
     if (e.key === "Tab") {
+      const root = dialogRef.current;
+      if (!root) return;
+      const focusable = Array.from(
+        root.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      const inside = Boolean(active && root.contains(active));
+      if (e.shiftKey) {
+        if (!inside || active === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (!inside || active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+      return;
+    }
+
+    const focused = document.activeElement as HTMLElement | null;
+    const tabBarFocused = Boolean(
+      focused && tabsRef.current && tabsRef.current.contains(focused)
+    );
+    if (tabBarFocused && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
       e.preventDefault();
-      const tabs: Array<"all" | "tasks" | "documents" | "actions" | "users"> = [
-        "all",
-        "tasks",
-        "documents",
-        "actions",
-        "users",
-      ];
-      const currentIdx = tabs.indexOf(activeTab);
-      const nextIdx = e.shiftKey
-        ? (currentIdx - 1 + tabs.length) % tabs.length
-        : (currentIdx + 1) % tabs.length;
-      setActiveTab(tabs[nextIdx]);
+      const currentIdx = PALETTE_TAB_ORDER.indexOf(activeTab);
+      const nextIdx =
+        e.key === "ArrowRight"
+          ? (currentIdx + 1) % PALETTE_TAB_ORDER.length
+          : (currentIdx - 1 + PALETTE_TAB_ORDER.length) % PALETTE_TAB_ORDER.length;
+      setActiveTab(PALETTE_TAB_ORDER[nextIdx]);
       setSelectedIndex(0);
       return;
     }
@@ -640,6 +805,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
       }}
     >
       <div
+        ref={dialogRef}
         className="w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-98 duration-150"
         onKeyDown={handleKeyDownInList}
       >
@@ -683,8 +849,11 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           </button>
         </div>
 
-        {/* Tab Filters Bar */}
-        <div className="flex items-center gap-1.5 px-4 py-2 bg-neutral-50/70 border-b border-neutral-100 text-xs overflow-x-auto">
+        {/* Intent tabs (T39) */}
+        <div
+          ref={tabsRef}
+          className="flex items-center gap-1.5 px-4 py-2 bg-neutral-50/70 border-b border-neutral-100 text-xs overflow-x-auto"
+        >
           <button
             type="button"
             onClick={() => {
@@ -703,6 +872,22 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           <button
             type="button"
             onClick={() => {
+              setActiveTab("navigation");
+              setSelectedIndex(0);
+            }}
+            className={cn(
+              "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
+              activeTab === "navigation"
+                ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
+                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
+            )}
+          >
+            <LayoutDashboard className="w-3.5 h-3.5 text-neutral-600" />
+            Đi tới
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setActiveTab("tasks");
               setSelectedIndex(0);
             }}
@@ -714,7 +899,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             )}
           >
             <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
-            Công việc {tasks.length > 0 && `(${tasks.length})`}
+            Nhiệm vụ {tasks.length > 0 && `(${tasks.length})`}
           </button>
           <button
             type="button"
@@ -735,34 +920,34 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           <button
             type="button"
             onClick={() => {
-              setActiveTab("actions");
+              setActiveTab("commands");
               setSelectedIndex(0);
             }}
             className={cn(
               "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
-              activeTab === "actions"
+              activeTab === "commands"
                 ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
                 : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
             )}
           >
             <Zap className="w-3.5 h-3.5 text-violet-600" />
-            Thao tác nhanh
+            Hành động
           </button>
           <button
             type="button"
             onClick={() => {
-              setActiveTab("users");
+              setActiveTab("people");
               setSelectedIndex(0);
             }}
             className={cn(
               "px-2.5 py-1 rounded-md font-medium transition-colors whitespace-nowrap flex items-center gap-1",
-              activeTab === "users"
+              activeTab === "people"
                 ? "bg-white text-neutral-900 shadow-2xs border border-neutral-200"
                 : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80"
             )}
           >
             <Users className="w-3.5 h-3.5 text-emerald-600" />
-            Nhân sự {users.length > 0 && `(${users.length})`}
+            Cán bộ {users.length > 0 && `(${users.length})`}
           </button>
         </div>
 
@@ -785,13 +970,13 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             </div>
           )}
 
-          {/* Section: Recent Searches */}
-          {!query.trim() && recentSearches.length > 0 && activeTab === "all" && (
+          {/* Section: Gần đây (account-scoped recents) */}
+          {showRecent && (
             <div>
               <div className="flex items-center justify-between px-2.5 py-1 mb-1">
                 <span className="text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center gap-1.5">
                   <Clock className="w-3 h-3 text-neutral-400" />
-                  Đã xem gần đây
+                  {COMMAND_INTENT_LABELS.recent}
                 </span>
                 <button
                   type="button"
@@ -810,7 +995,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
                       key={item.id}
                       role="option"
                       aria-selected={isSelected}
-                      onClick={() => executeItem({ type: "recent", item })}
+                      onClick={() => executeItem({ kind: "recent", item })}
                       className={cn(
                         "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
                         isSelected
@@ -837,16 +1022,16 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             </div>
           )}
 
-          {/* Section: Quick Actions */}
-          {displayActions.length > 0 && (
+          {/* Section: Đi tới (navigation intent) */}
+          {displayNavigation.length > 0 && (
             <div>
               <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase">
-                Thao tác & Điều hướng nhanh
+                {COMMAND_INTENT_LABELS.navigation}
               </div>
               <div className="space-y-0.5">
-                {displayActions.map((action) => {
+                {displayNavigation.map((action) => {
                   const currentFlatIndex = flatItems.findIndex(
-                    (f) => f.type === "action" && f.item.id === action.id
+                    (f) => f.kind === "navigation" && f.item.id === action.id
                   );
                   const isSelected = selectedIndex === currentFlatIndex;
                   const Icon = action.icon;
@@ -903,13 +1088,13 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {displayTasks.length > 0 && (
             <div>
               <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center justify-between">
-                <span>Nhiệm vụ & Kế hoạch ({displayTasks.length})</span>
+                <span>{COMMAND_INTENT_LABELS.task} ({displayTasks.length})</span>
                 <span className="text-xs text-neutral-400 lowercase">phím ↵ để mở</span>
               </div>
               <div className="space-y-1">
                 {displayTasks.map((task) => {
                   const currentFlatIndex = flatItems.findIndex(
-                    (f) => f.type === "task" && f.item.id === task.id
+                    (f) => f.kind === "task" && f.item.id === task.id
                   );
                   const isSelected = selectedIndex === currentFlatIndex;
 
@@ -973,14 +1158,14 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
               <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-amber-600" />
-                  Văn bản & Chỉ đạo ({displayDocuments.length})
+                  {COMMAND_INTENT_LABELS.document} ({displayDocuments.length})
                 </span>
                 <span className="text-xs text-neutral-400 lowercase">phím ↵ để mở</span>
               </div>
               <div className="space-y-1">
                 {displayDocuments.map((doc) => {
                   const currentFlatIndex = flatItems.findIndex(
-                    (f) => f.type === "document" && f.item.id === doc.id
+                    (f) => f.kind === "document" && f.item.id === doc.id
                   );
                   const isSelected = selectedIndex === currentFlatIndex;
 
@@ -1040,13 +1225,13 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {displayUsers.length > 0 && (
             <div>
               <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center justify-between">
-                <span>Cán bộ & Giảng viên ({displayUsers.length})</span>
+                <span>{COMMAND_INTENT_LABELS.user} ({displayUsers.length})</span>
                 <span className="text-xs text-neutral-400 lowercase">phím ↵ để liên hệ</span>
               </div>
               <div className="space-y-1">
                 {displayUsers.map((user) => {
                   const currentFlatIndex = flatItems.findIndex(
-                    (f) => f.type === "user" && f.item.id === user.id
+                    (f) => f.kind === "user" && f.item.id === user.id
                   );
                   const isSelected = selectedIndex === currentFlatIndex;
 
@@ -1110,6 +1295,61 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
               </div>
             </div>
           )}
+
+          {/* Section: Hành động (command intent) */}
+          {displayCommands.length > 0 && (
+            <div>
+              <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase">
+                {COMMAND_INTENT_LABELS.command}
+              </div>
+              <div className="space-y-0.5">
+                {displayCommands.map((action) => {
+                  const currentFlatIndex = flatItems.findIndex(
+                    (f) => f.kind === "command" && f.item.id === action.id
+                  );
+                  const isSelected = selectedIndex === currentFlatIndex;
+                  const Icon = action.icon;
+
+                  return (
+                    <div
+                      key={action.id}
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => action.action()}
+                      className={cn(
+                        "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
+                        isSelected
+                          ? "bg-neutral-100 text-neutral-900 font-medium"
+                          : "text-neutral-700 hover:bg-neutral-50"
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 bg-blue-50 text-blue-600">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm text-neutral-800">
+                            <HighlightedText text={action.title} query={query} />
+                          </p>
+                          <p className="text-xs text-neutral-400 truncate">
+                            <HighlightedText text={action.description} query={query} />
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        {action.shortcut && (
+                          <kbd className="px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-white rounded border border-neutral-200">
+                            {action.shortcut}
+                          </kbd>
+                        )}
+                        <ArrowRight className="w-3.5 h-3.5 text-neutral-300 group-hover:text-neutral-500" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer shortcuts hint bar */}
@@ -1129,7 +1369,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
             </span>
             <span className="flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600">
-                Tab
+                ← →
               </kbd>
               <span>Chuyển nhóm</span>
             </span>

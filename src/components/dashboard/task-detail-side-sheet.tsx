@@ -59,6 +59,39 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCategoryBadgeConfig } from "./cascading-task-table";
 import { getSystemReferenceDate, isTaskOverdue } from "@/lib/academic-calendar";
+import {
+  evaluateTaskCapabilityMatrix,
+  type DelegationContract as TaskDelegationContract,
+  type TaskActorContract,
+  type TaskCapabilityMatrix,
+  type TaskEntityContract,
+} from "@/domain/tasks/contract";
+import {
+  mapDbStatusToLifecycle,
+  type TaskLifecycleStatus,
+} from "@/domain/tasks/canonical-semantics";
+
+/**
+ * Stable empty delegation list shared across renders. A fresh `[]` default would
+ * change identity on every render and force the approval/capability memos to
+ * recompute; the exported helpers still accept an optional list.
+ */
+const EMPTY_DELEGATIONS: DelegationRule[] = [];
+
+/**
+ * Restores logical focus (C12 / T19 / D9) to the element that opened the sheet.
+ * Best-effort: never throws on close and never targets a detached node.
+ */
+function restoreLogicalFocus(el: HTMLElement | null): void {
+  if (typeof document === "undefined") return;
+  if (el && typeof el.focus === "function" && document.contains(el)) {
+    try {
+      el.focus({ preventScroll: true });
+    } catch {
+      /* focus restoration is best-effort and must never throw on close */
+    }
+  }
+}
 
 export function formatDetailDate(dateStr?: string): string {
   if (!dateStr) return "Chưa đặt";
@@ -184,7 +217,13 @@ export function getDetailStatusConfig(status: TaskStatus | string) {
 }
 
 /**
- * Role Permission Helpers for Task Detail Side Sheet (Decree 232 & DACUM)
+ * Legacy role/name helpers for Task Detail Side Sheet (Decree 232 & DACUM).
+ *
+ * These are retained for backward-compatible callers. The detail surface itself
+ * no longer uses {@link canUserSubmitDeliverable} for submit gating: it consumes
+ * the canonical capability projection from {@link deriveTaskDetailCapabilities}
+ * so the decision derives from lifecycle + actor identity + server policy rather
+ * than a display-name/status match (C2).
  */
 export function canUserSubmitDeliverable(
   task: StaffTask,
@@ -205,6 +244,12 @@ export function canUserReviewTask(
   return actor.role === "MANAGER" || actor.role === "ADMIN";
 }
 
+/**
+ * Statutory SchoolTask executive-closure gate (Điều lệ Trường Cao đẳng): only
+ * Ban Giám hiệu (ADMIN) may close a school-level task that is awaiting
+ * executive acceptance. Kept separate from the capability matrix because the
+ * canonical engine does not model PENDING_EXECUTIVE_APPROVAL as approvable.
+ */
 export function canUserCloseSchoolTask(
   task: SchoolTask,
   actor?: AuthUser | null
@@ -212,6 +257,214 @@ export function canUserCloseSchoolTask(
   if (!actor) return false;
   if (task.status !== "PENDING_EXECUTIVE_APPROVAL") return false;
   return actor.role === "ADMIN";
+}
+
+/**
+ * Real, server-authoritative audit record surfaced on the detail surface.
+ *
+ * These are append-only WORM audit events supplied by the server
+ * (see src/lib/db/audit.ts getTaskAuditTrail). They must NEVER be synthesized on
+ * the client: if no records are available the "Lịch sử" section renders a
+ * truthful empty state instead.
+ */
+export interface TaskAuditEvent {
+  id: string;
+  /** Canonical AuditAction value, e.g. TASK_CREATED / DELIVERABLE_SUBMITTED. */
+  action: string;
+  actorName?: string;
+  timestamp: string;
+  description?: string;
+}
+
+/**
+ * Presentation labels for real audit actions. This maps server enum values to
+ * Vietnamese copy; it never invents events (an unknown action renders verbatim).
+ */
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  TASK_CREATED: "Khởi tạo nhiệm vụ",
+  TASK_UPDATED: "Cập nhật nhiệm vụ",
+  TASK_ASSIGNED: "Phân công nhiệm vụ",
+  STATUS_CHANGED: "Thay đổi trạng thái",
+  DEADLINE_CHANGED: "Thay đổi thời hạn",
+  APPROVED: "Phê duyệt",
+  REJECTED: "Từ chối",
+  REVISION_REQUESTED: "Yêu cầu chỉnh sửa",
+  DELIVERABLE_SUBMITTED: "Nộp minh chứng",
+  DELIVERABLE_REVIEWED: "Thẩm định minh chứng",
+};
+
+/**
+ * Capability projection for the detail surface (C2 / C11 / T20).
+ *
+ * Capability is derived from lifecycle state + actor identity + server policy
+ * (the canonical capability matrix) and delegations — never from a display name
+ * or a raw role branch in this component. The SAME result is intended to drive
+ * row, detail, bulk, context-menu and command entry points (C11): the matrix
+ * module is the single owner.
+ *
+ * Scope note: this projection covers the submit and unit-review (approve /
+ * reject) decisions. The SchoolTask executive closure remains governed by the
+ * statutory BGH authority gate (`canUserCloseSchoolTask`) because the canonical
+ * capability engine does not model the PENDING_EXECUTIVE_APPROVAL lifecycle as
+ * an approvable state; the detail surface must not infer that authority from
+ * the unit-review capability.
+ */
+export interface TaskDetailCapabilities {
+  matrix: TaskCapabilityMatrix;
+  lifecycle: TaskLifecycleStatus;
+  isTerminal: boolean;
+  canSubmit: boolean;
+  canApprove: boolean;
+  canReject: boolean;
+}
+
+/**
+ * Normalizes a canonical lifecycle status into the exact token the capability
+ * engine understands. OVERDUE is an in-progress task past its deadline, so it
+ * must not silently lose submit/edit capability.
+ */
+function toEngineStatus(lifecycle: TaskLifecycleStatus): string {
+  switch (lifecycle) {
+    case "NOT_STARTED":
+      return "NEW";
+    case "WAITING_APPROVAL":
+      return "WAITING_APPROVAL";
+    case "PENDING_EXECUTIVE_APPROVAL":
+      return "PENDING_EXECUTIVE_APPROVAL";
+    case "COMPLETED":
+      return "COMPLETED";
+    case "CANCELLED":
+      return "CANCELLED";
+    case "IN_PROGRESS":
+    case "OVERDUE":
+    default:
+      return "IN_PROGRESS";
+  }
+}
+
+/** Resolves the task's DRI/assignee stable id, falling back to a name match. */
+export function resolveTaskAssigneeId(
+  task: SchoolTask | StaffTask | null | undefined,
+  actor?: AuthUser | null
+): string | null {
+  if (!task) return null;
+  if (isSchoolTask(task)) {
+    if (task.leadAssigneeId) return task.leadAssigneeId;
+    if (actor && task.leadAssigneeName && task.leadAssigneeName === actor.name) {
+      return actor.id;
+    }
+    return null;
+  }
+  const staff = task as StaffTask;
+  if (staff.assigneeId) return staff.assigneeId;
+  if (actor && staff.assigneeName && staff.assigneeName === actor.name) {
+    return actor.id;
+  }
+  return null;
+}
+
+function toTaskDelegationContract(rule: DelegationRule): TaskDelegationContract {
+  const isApprovalScope =
+    rule.scope === "DACUM_REVIEW_STEP1" ||
+    rule.scope === "FULL_DEPARTMENT_APPROVAL";
+  return {
+    // The contract treats FULL_DEPARTMENT_APPROVAL as the approval grant token.
+    action: isApprovalScope ? "FULL_DEPARTMENT_APPROVAL" : rule.scope,
+    granteeUserId: rule.granteeId,
+    validFrom: rule.startDate,
+    validUntil: rule.endDate,
+    status: rule.status,
+    revokedAt: rule.revokedAt,
+  };
+}
+
+/**
+ * Derives the detail surface capabilities from the canonical capability matrix.
+ * Pure and side-effect free so it is directly unit-testable and reusable by any
+ * entry point (C11).
+ */
+export function deriveTaskDetailCapabilities(
+  task: SchoolTask | StaffTask | null | undefined,
+  actor?: AuthUser | null,
+  delegations: DelegationRule[] = EMPTY_DELEGATIONS
+): TaskDetailCapabilities {
+  const lifecycle = mapDbStatusToLifecycle(task?.status ?? "");
+  const isTerminal = lifecycle === "COMPLETED" || lifecycle === "CANCELLED";
+
+  const emptyMatrix: TaskCapabilityMatrix = {
+    CAN_VIEW: false,
+    CAN_EDIT: false,
+    CAN_SUBMIT: false,
+    CAN_APPROVE: false,
+    CAN_REJECT: false,
+    CAN_DELEGATE: false,
+    CAN_DELETE: false,
+    CAN_DOWNLOAD: false,
+  };
+
+  if (!task || !actor) {
+    return {
+      matrix: emptyMatrix,
+      lifecycle,
+      isTerminal,
+      canSubmit: false,
+      canApprove: false,
+      canReject: false,
+    };
+  }
+
+  const isSchool = isSchoolTask(task);
+  const assigneeId = resolveTaskAssigneeId(task, actor);
+  const departmentId = isSchool
+    ? (task as SchoolTask).leadDepartmentCode ??
+      (task as SchoolTask).departmentCode ??
+      null
+    : (task as StaffTask).departmentCode ?? null;
+
+  const actorContract: TaskActorContract = {
+    id: actor.id,
+    role: actor.role,
+    departmentId: actor.departmentCode ?? null,
+  };
+
+  const entity: TaskEntityContract = {
+    id: task.id,
+    status: toEngineStatus(lifecycle),
+    scope: isSchool ? "SCHOOL" : "DEPARTMENT",
+    departmentId,
+    primaryOwnerId: assigneeId,
+    driId: assigneeId,
+    assigneeIds: assigneeId ? [assigneeId] : [],
+    assignees: assigneeId ? [{ userId: assigneeId }] : [],
+    deliverables: isSchool
+      ? []
+      : ((task as StaffTask).deliverables ?? []).map((d) => ({
+          id: d.id,
+          fileUrl: d.url ?? null,
+        })),
+  };
+
+  const { matrix } = evaluateTaskCapabilityMatrix(
+    actorContract,
+    entity,
+    delegations.map(toTaskDelegationContract)
+  );
+
+  return {
+    matrix,
+    lifecycle,
+    isTerminal,
+    canSubmit: matrix.CAN_SUBMIT,
+    canApprove: matrix.CAN_APPROVE,
+    canReject: matrix.CAN_REJECT,
+  };
+}
+
+/** True only for lifecycle COMPLETED — completion is never derived from progress. */
+export function isTaskCompletedLifecycle(
+  task: SchoolTask | StaffTask | null | undefined
+): boolean {
+  return mapDbStatusToLifecycle(task?.status ?? "") === "COMPLETED";
 }
 
 function getInitials(name: string): string {
@@ -364,6 +617,11 @@ export interface TaskDetailSideSheetProps {
   onUpdateStaffTask?: (updatedTask: StaffTask) => void;
   onCloseSchoolTask?: (schoolTaskId: string) => void;
   delegations?: DelegationRule[];
+  /**
+   * Real server audit events (append-only). Rendered verbatim under "Lịch sử";
+   * never synthesized client-side. Absent/empty renders a truthful empty state.
+   */
+  auditEvents?: TaskAuditEvent[];
 }
 
 export function TaskDetailSideSheet({
@@ -378,13 +636,12 @@ export function TaskDetailSideSheet({
   currentUser,
   onUpdateStaffTask,
   onCloseSchoolTask,
-  delegations = [],
+  delegations = EMPTY_DELEGATIONS,
+  auditEvents = [],
 }: TaskDetailSideSheetProps) {
   const auth = useAuth();
   const user = currentUser ?? auth.user;
   const visible = isOpen !== undefined ? isOpen : task !== null;
-  const [newSubtaskTitle, setNewSubtaskTitle] = React.useState("");
-  const [isAddingSubtask, setIsAddingSubtask] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
 
   const dashboardModal = React.useContext(DashboardModalContext);
@@ -502,22 +759,66 @@ export function TaskDetailSideSheet({
     });
   }, [user, task, taskDepartmentCode, taskAssigneeId, delegations]);
 
+  const capabilities = React.useMemo(
+    () => deriveTaskDetailCapabilities(task, user, delegations),
+    [task, user, delegations]
+  );
+
+  // C12 / T19 / D9 — capture the launcher element when the sheet OPENS and
+  // restore logical focus to it when the sheet CLOSES. The canonical workspace
+  // (unified-adaptive-workspace) and the calendar page keep this sheet mounted
+  // and toggle `isOpen`, so restoration is keyed on the visible transition
+  // rather than on component unmount; the same effect cleanup also covers
+  // callers that conditionally mount the sheet (dashboard-modals-host).
+  // Switching tasks while open (taskId change with `visible` unchanged) leaves
+  // the effect untouched, preserving the original launcher.
+  const returnFocusRef = React.useRef<HTMLElement | null>(null);
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (!visible) return;
+    const active = document.activeElement;
+    // Never capture this sheet's own subtree as the launcher.
+    if (
+      active instanceof HTMLElement &&
+      !active.closest('[data-slot="task-detail-side-sheet"]')
+    ) {
+      returnFocusRef.current = active;
+    }
+    return () => {
+      restoreLogicalFocus(returnFocusRef.current);
+      returnFocusRef.current = null;
+    };
+  }, [visible]);
+
   if (!visible || !task) {
     return null;
   }
 
   const isSchool = isSchoolTask(task);
-  const isDone = task.status === "COMPLETED";
+  const isDone = isTaskCompletedLifecycle(task);
   const levelBadge = getTaskLevelBadge(isSchool);
   const statusConfig = getDetailStatusConfig(task.status);
   const assigneeName = isSchool ? task.leadAssigneeName : task.assigneeName;
   const relativeTime = getRelativeTimeString(task.dueDate, isDone);
   const isOverdue = isTaskOverdue(task.status, task.dueDate);
-  const auditTimeline = getTaskAuditTimeline(task);
+  const derivedMilestones = getTaskAuditTimeline(task);
+  const requiresReview = !isSchool && Boolean((task as StaffTask).requiresReview);
 
+  // C2: submit is capability-driven (canonical matrix = lifecycle + actor
+  // identity + server policy), never from the display-name/status helper. The
+  // lifecycle guard keeps the submit affordance on the maker's active state
+  // (BLOCKED still maps to in-progress) and stops re-offering it once the task
+  // already awaits review.
   const canSubmitDeliverable =
-    !isSchool && canUserSubmitDeliverable(task as StaffTask, user);
-  const canReview = !isSchool && approvalResult.allowed;
+    !isSchool &&
+    capabilities.canSubmit &&
+    capabilities.lifecycle === "IN_PROGRESS";
+  // T20 / C2: review actions are capability-driven (lifecycle + actor identity +
+  // server policy + delegations), never role-only. COMPLETED is terminal so the
+  // matrix yields no review CTA; SoD blocks the submitter/maker.
+  const canReview = !isSchool && capabilities.canApprove;
+  const canRejectReview = !isSchool && capabilities.canReject;
+  const actorIsAssignee = Boolean(user && resolveTaskAssigneeId(task, user) === user.id);
   const isSeparationOfDutiesBlocked =
     !isSchool &&
     !approvalResult.allowed &&
@@ -525,6 +826,8 @@ export function TaskDetailSideSheet({
       (user?.id && taskAssigneeId && user.id === taskAssigneeId) ||
       (user && (task as StaffTask).assigneeName === user.name)
     );
+  const actorHasApprovalAuthority =
+    !isSchool && !isSeparationOfDutiesBlocked && approvalResult.allowed;
   const canCloseSchool =
     isSchool && canUserCloseSchoolTask(task as SchoolTask, user);
 
@@ -642,17 +945,6 @@ export function TaskDetailSideSheet({
     );
   };
 
-  const handleCreateSubtask = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedTitle = newSubtaskTitle.trim();
-    if (!trimmedTitle || !isSchool) return;
-    if (effectiveOnAddSubTask) {
-      effectiveOnAddSubTask(task.id, trimmedTitle);
-    }
-    setIsAddingSubtask(false);
-    setNewSubtaskTitle("");
-  };
-
   const sheetContent = (
     <>
       {/* Backdrop overlay */}
@@ -742,29 +1034,8 @@ export function TaskDetailSideSheet({
             )}
           </div>
 
-          {/* Quick Status Select & Close Button */}
+          {/* Close Button (lifecycle changes flow only through capability-driven actions) */}
           <div className="flex items-center gap-2 shrink-0">
-            {onStatusChange && (
-              <select
-                id="status-select"
-                value={task.status}
-                onChange={(e) =>
-                  onStatusChange(task.id, e.target.value as TaskStatus)
-                }
-                className="min-h-[44px] md:min-h-8 md:h-8 rounded-lg border border-border/60 bg-background px-2.5 text-xs font-medium text-foreground hover:border-border transition-all cursor-pointer outline-none focus:border-ring focus:ring-1 focus:ring-ring"
-                aria-label="Cập nhật trạng thái nhiệm vụ"
-              >
-                <option value="NEW">Mới</option>
-                <option value="IN_PROGRESS">Đang thực hiện</option>
-                <option value="NEEDS_REVIEW">Cần chỉnh sửa / Chờ duyệt</option>
-                {/* Staff cannot directly select COMPLETED if task requires review */}
-                {(user?.role !== "STAFF" || !(task as StaffTask).requiresReview) && (
-                  <option value="COMPLETED">Hoàn thành</option>
-                )}
-                <option value="BLOCKED">Bị nghẽn / Phối hợp</option>
-              </select>
-            )}
-
             <button
               type="button"
               onClick={onClose}
@@ -805,7 +1076,7 @@ export function TaskDetailSideSheet({
           )}
 
           {/* Header Block: Code + Level Badge + Title */}
-          <div>
+          <div data-slot="detail-title">
             <div className="flex items-center gap-2 mb-2">
               <span className="font-mono text-xs font-semibold text-muted-foreground bg-muted/60 border border-border/50 px-2 py-0.5 rounded-md tabular-nums">
                 {(task as any).code || (task as any).taskCode || (task.id.startsWith("NV-") ? task.id : `NV-${task.id.slice(0, 8).toUpperCase()}`)}
@@ -843,448 +1114,57 @@ export function TaskDetailSideSheet({
               </div>
             )}
 
-            {/* Quick 1-Click Action Bar based on RBAC & DACUM */}
-            <div className="mt-3.5 flex flex-wrap items-center gap-2">
-              {/* If task is NEW */}
-              {task.status === "NEW" && onStatusChange && (
-                <Button
-                  type="button"
-                  onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
-                  className="flex-1 h-8.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+            {/* Status + deadline summary (T16 decision-first order) */}
+            <div
+              data-slot="detail-status-deadline"
+              className="mt-3.5 flex flex-wrap items-center gap-2"
+            >
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border",
+                  isOverdue
+                    ? "border-rose-500/20 bg-rose-500/10 text-rose-600"
+                    : statusConfig.className
+                )}
+              >
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full shrink-0",
+                    isDone
+                      ? "bg-emerald-500"
+                      : isOverdue
+                      ? "bg-rose-500"
+                      : "bg-primary"
+                  )}
+                />
+                <span>{isOverdue ? "Quá hạn" : statusConfig.label}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Calendar className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                <span className="font-mono font-semibold text-foreground tabular-nums">
+                  {formatDetailDate(task.dueDate)}
+                </span>
+              </span>
+              {relativeTime && (
+                <span
+                  className={cn(
+                    "text-xs px-2.5 py-0.5 rounded-full border tabular-nums font-mono",
+                    relativeTime.color
+                  )}
                 >
-                  <Play className="size-3.5" strokeWidth={1.5} />
-                  <span>Tiếp nhận công việc</span>
-                </Button>
-              )}
-
-              {/* If task is IN_PROGRESS */}
-              {task.status === "IN_PROGRESS" && (
-                <>
-                  {user?.role === "STAFF" ? (
-                    canSubmitDeliverable ? (
-                      (task as StaffTask).requiresReview ? (
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            const formElem = document.getElementById("deliverable-form");
-                            formElem?.scrollIntoView({ behavior: "smooth" });
-                            const nameInput = document.getElementById("deliverable-name");
-                            nameInput?.focus();
-                          }}
-                          className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                        >
-                          <FileCheck className="size-3.5" strokeWidth={1.5} />
-                          <span>Nộp minh chứng nghiệm thu</span>
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          onClick={() => onStatusChange?.(task.id, "COMPLETED")}
-                          className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                        >
-                          <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                          <span>Hoàn thành nhiệm vụ</span>
-                        </Button>
-                      )
-                    ) : null
-                  ) : onStatusChange ? (
-                    <>
-                      <Button
-                        type="button"
-                        onClick={() => onStatusChange(task.id, "COMPLETED")}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                      >
-                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                        <span>Nghiệm thu hoàn thành</span>
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => setIsRejectionModalOpen(true)}
-                        className="h-8.5 px-3 text-xs font-medium border border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
-                        title="Chuyển sang trạng thái cần chỉnh sửa"
-                      >
-                        <AlertTriangle className="size-3.5" strokeWidth={1.5} />
-                        <span>Yêu cầu sửa</span>
-                      </button>
-                    </>
-                  ) : null}
-                </>
-              )}
-
-              {/* If task is NEEDS_REVIEW */}
-              {task.status === "NEEDS_REVIEW" && (
-                <>
-                  {/* AI Executive Brief Card */}
-                  {aiReview && canReview && (
-                    <div className="w-full rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="size-4 text-indigo-600 shrink-0" strokeWidth={1.5} />
-                        <span className="text-xs font-semibold text-indigo-700">
-                          Kết quả sàng lọc tự động
-                        </span>
-                        <span className={cn(
-                          "ml-auto text-xs font-mono tabular-nums px-1.5 py-0.5 rounded-md border",
-                          aiReview.complianceScore >= 80
-                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
-                            : aiReview.complianceScore >= 50
-                            ? "border-amber-500/20 bg-amber-500/10 text-amber-700"
-                            : "border-rose-500/20 bg-rose-500/10 text-rose-700"
-                        )}>
-                          Điểm tuân thủ: {aiReview.complianceScore}/100
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {aiReview.executiveSummary}
-                      </p>
-                      {aiReview.flags.length > 0 && (
-                        <ul className="space-y-1">
-                          {aiReview.flags.map((flag, idx) => (
-                            <li key={idx} className={cn(
-                              "text-xs flex items-start gap-1.5",
-                              flag.type === "CRITICAL"
-                                ? "text-rose-600"
-                                : flag.type === "WARNING"
-                                ? "text-amber-600"
-                                : "text-blue-600"
-                            )}>
-                              <AlertTriangle className="size-3 shrink-0 mt-0.5" strokeWidth={1.5} />
-                              <span>{flag.message}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {aiReview.suggestedAction === "QUICK_APPROVE" && (
-                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
-                          <CheckCircle2 className="size-3" strokeWidth={1.5} />
-                          <span>Khuyến nghị: Duyệt nhanh</span>
-                        </div>
-                      )}
-                      {aiReview.suggestedAction === "REQUEST_CHANGES" && (
-                        <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
-                          <RotateCcw className="size-3" strokeWidth={1.5} />
-                          <span>Khuyến nghị: Yêu cầu bổ sung</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {/* Delegation notice if acting under delegated authority */}
-                  {approvalResult.isDelegated && (
-                    <div className="w-full flex items-center gap-2 p-2.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs text-purple-700 font-medium">
-                      <ShieldCheck className="size-4 shrink-0 text-purple-600" strokeWidth={1.5} />
-                      <span>
-                        Phê duyệt theo thẩm quyền ủy quyền của {approvalResult.rule?.grantorName || "Trưởng đơn vị"}
-                      </span>
-                    </div>
-                  )}
-
-                  {canReview ? (
-                    <div className="flex items-center gap-2 w-full">
-                      {aiReview?.suggestedAction === "QUICK_APPROVE" ? (
-                        <Button
-                          type="button"
-                          onClick={handleManagerApprove}
-                          className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                        >
-                          <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                          <span>Duyệt nhanh (Đạt chuẩn)</span>
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          onClick={handleManagerApprove}
-                          className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                        >
-                          <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                          <span>Nghiệm thu Đạt (Hoàn thành)</span>
-                        </Button>
-                      )}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsRejectionModalOpen(true)}
-                        className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
-                      >
-                        <RotateCcw className="size-3.5" strokeWidth={1.5} />
-                        <span>Trả lại Yêu cầu Sửa</span>
-                      </Button>
-                    </div>
-                  ) : isSeparationOfDutiesBlocked ? (
-                    <div className="space-y-2 w-full">
-                      <div className="w-full flex items-start gap-2 p-2.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-xs text-rose-700 font-medium">
-                        <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" strokeWidth={1.5} />
-                        <div className="space-y-0.5">
-                          <p className="font-semibold">Phân lập thẩm quyền công vụ</p>
-                          <p className="text-xs text-rose-600/90 leading-relaxed">
-                            Theo chuẩn quản trị đại học (Separation of Duties), bạn không thể tự nghiệm thu công việc do chính mình phụ trách.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 w-full">
-                        <Button
-                          type="button"
-                          disabled
-                          className="flex-1 h-8.5 text-xs font-semibold bg-muted text-muted-foreground rounded-lg cursor-not-allowed opacity-50 gap-1.5"
-                        >
-                          <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                          <span>Nghiệm thu Đạt (Vô hiệu hóa)</span>
-                        </Button>
-                        <Button
-                          type="button"
-                          disabled
-                          variant="outline"
-                          className="h-8.5 px-3 text-xs font-medium border-muted bg-muted/40 text-muted-foreground rounded-lg cursor-not-allowed opacity-50 inline-flex items-center gap-1.5"
-                        >
-                          <RotateCcw className="size-3.5" strokeWidth={1.5} />
-                          <span>Trả lại Yêu cầu Sửa</span>
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 font-medium">
-                      <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
-                      <span>Đã nộp minh chứng. Đang chờ Trưởng đơn vị kiểm tra và nghiệm thu.</span>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* If task is COMPLETED */}
-              {task.status === "COMPLETED" && (
-                <div className="flex items-center justify-between w-full p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-xs text-emerald-700 font-medium">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="size-3.5 shrink-0" strokeWidth={1.5} />
-                    <span>Nhiệm vụ đã được nghiệm thu hoàn thành</span>
-                  </div>
-                  {(user?.role === "ADMIN" || user?.role === "MANAGER") && onStatusChange && (
-                    <button
-                      type="button"
-                      onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
-                      className="h-7 px-2.5 text-xs font-medium border border-border/60 bg-card text-foreground hover:bg-secondary rounded-md transition-all cursor-pointer inline-flex items-center gap-1"
-                      title="Mở lại công việc để tiếp tục xử lý"
-                    >
-                      <RotateCcw className="size-3" strokeWidth={1.5} />
-                      <span>Mở lại</span>
-                    </button>
-                  )}
-                </div>
+                  {relativeTime.text}
+                </span>
               )}
             </div>
 
-            {/* Warning Banner: BLOCKED Status */}
-            {task.status === "BLOCKED" && (
-              <div className="mt-3.5 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs">
-                <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" strokeWidth={1.5} />
-                  <div className="space-y-1">
-                    <h4 className="font-semibold text-rose-700">
-                      Cảnh báo cản trở: Nhiệm vụ đang bị ách tắc / Cần phối hợp
-                    </h4>
-                    <p className="text-rose-600/90 leading-relaxed">
-                      {("blockedReason" in task && task.blockedReason) ||
-                        "Công việc đang bị nghẽn tiến độ. Vui lòng kiểm tra vướng mắc hoặc tạo Phiếu phối hợp liên đơn vị để tháo gỡ."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Rejection Reason Notice (if returned to IN_PROGRESS) */}
-            {"rejectionReason" in task && task.rejectionReason && task.status === "IN_PROGRESS" && (
-              <div className="mt-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
-                <div className="flex items-start gap-2.5">
-                  <RotateCcw className="size-4 shrink-0 text-amber-600 mt-0.5" strokeWidth={1.5} />
-                  <div className="space-y-1">
-                    <h4 className="font-semibold text-amber-700">
-                      Yêu cầu chỉnh sửa từ Trưởng đơn vị
-                    </h4>
-                    <p className="text-amber-600/90 leading-relaxed">
-                      {task.rejectionReason}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* AI Executive Brief Card (StaffTask NEEDS_REVIEW for MANAGER/ADMIN) */}
-            {!isSchool && task.status === "NEEDS_REVIEW" && canReview && (task as StaffTask).aiReview && (() => {
-              const aiReview = (task as StaffTask).aiReview!;
-              const riskColorMap: Record<string, string> = {
-                CLEAN: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                NEEDS_ATTENTION: "bg-amber-50 text-amber-700 border-amber-200",
-                HIGH_RISK: "bg-rose-50 text-rose-700 border-rose-200",
-              };
-              const riskLabel: Record<string, string> = {
-                CLEAN: "An toàn",
-                NEEDS_ATTENTION: "Cần lưu ý",
-                HIGH_RISK: "Rủi ro cao",
-              };
-              return (
-                <div className="mt-3.5 rounded-xl border border-border/50 bg-card p-4 text-xs space-y-3 shadow-xs" data-testid="ai-executive-brief">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-foreground flex items-center gap-1.5">
-                      <ShieldCheck className="size-4 text-primary" strokeWidth={1.5} />
-                      Trạng thái thẩm định hồ sơ (AI Executive Brief)
-                    </h4>
-                    <span className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border",
-                      riskColorMap[aiReview.status] || riskColorMap.CLEAN
-                    )}>
-                      {riskLabel[aiReview.status] || aiReview.status}
-                    </span>
-                  </div>
-
-                  {/* Compliance Score */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Điểm tuân thủ quy chuẩn:
-                    </span>
-                    <span className={cn(
-                      "font-mono font-bold tabular-nums",
-                      aiReview.complianceScore >= 80 ? "text-emerald-700" :
-                      aiReview.complianceScore >= 50 ? "text-amber-700" :
-                      "text-rose-700"
-                    )}>
-                      {aiReview.complianceScore}/100
-                    </span>
-                  </div>
-
-                  {/* Executive Summary */}
-                  <p className="text-xs text-foreground leading-relaxed">
-                    {aiReview.executiveSummary}
-                  </p>
-
-                  {/* DACUM Criteria Matched */}
-                  {aiReview.dacumCriteriaMatched.length > 0 && (
-                    <div className="space-y-1">
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        Tiêu chí DACUM đạt:
-                      </span>
-                      <ul className="list-disc list-inside text-xs text-foreground space-y-0.5 pl-1">
-                        {aiReview.dacumCriteriaMatched.map((c, i) => (
-                          <li key={i}>{c}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Warning Flags */}
-                  {aiReview.flags.length > 0 && (
-                    <div className="space-y-1">
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        Cảnh báo:
-                      </span>
-                      <ul className="space-y-0.5 pl-1">
-                        {aiReview.flags.map((f, i) => (
-                          <li key={i} className={cn(
-                            "text-xs",
-                            f.type === "CRITICAL" ? "text-rose-600 font-medium" :
-                            f.type === "WARNING" ? "text-amber-600" :
-                            "text-muted-foreground"
-                          )}>
-                            [{f.type}] {f.message}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Quick Approve / Request Changes Buttons */}
-                  <div className="flex items-center gap-2 pt-1">
-                    {aiReview.suggestedAction === "QUICK_APPROVE" && (
-                      <Button
-                        type="button"
-                        onClick={handleManagerApprove}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                      >
-                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                        <span>Duyệt nhanh theo đề xuất AI</span>
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        if (aiReview.suggestedFeedback) {
-                          setRejectionReasonInput(aiReview.suggestedFeedback);
-                        }
-                        setIsRejectionModalOpen(true);
-                      }}
-                      className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
-                    >
-                      <AlertTriangle className="size-3.5" strokeWidth={1.5} />
-                      <span>Yêu cầu chỉnh sửa</span>
-                    </Button>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Escalation Notice Banner (48h SLA exceeded) */}
-            {!isSchool && (task as StaffTask).escalation?.isEscalated && (
-              <div className="mt-3.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 p-4 text-xs" data-testid="escalation-notice">
-                <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="size-4 shrink-0 mt-0.5" strokeWidth={1.5} />
-                  <div className="space-y-1">
-                    <h4 className="font-semibold">
-                      Thông báo leo thang: Vượt quá SLA 48h
-                    </h4>
-                    <p className="leading-relaxed">
-                      Công việc này đã vượt quá thời hạn xử lý 48 giờ và hiện đã được chuyển lên Ban Giám hiệu (BGH) để giám sát.
-                      {(task as StaffTask).escalation?.escalationNote && (
-                        <> {(task as StaffTask).escalation!.escalationNote}</>
-                      )}
-                    </p>
-                    {(task as StaffTask).escalation?.escalatedAt && (
-                      <span className="text-xs font-mono tabular-nums text-rose-600">
-                        Leo thang lúc: {formatDetailDate((task as StaffTask).escalation!.escalatedAt)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* SchoolTask Executive Approval (Hiệu trưởng nghiệm thu cấp 2) */}
-            {isSchool && task.status === "PENDING_EXECUTIVE_APPROVAL" && (
-              <div className="mt-3.5 rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-xs space-y-3">
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="size-4 shrink-0 text-purple-600 mt-0.5" strokeWidth={1.5} />
-                  <div className="space-y-1 flex-1">
-                    <h4 className="font-semibold text-purple-700">
-                      Nghiệm thu cấp 2: Chờ Ban Giám hiệu phê duyệt
-                    </h4>
-                    <p className="text-purple-600/90 leading-relaxed">
-                      Tất cả nhiệm vụ thành phần trực thuộc ({task.completedSubTasks}/{task.totalSubTasks}) đã hoàn thành 100%. Nhiệm vụ cấp Trường sẵn sàng để Ban Giám hiệu nghiệm thu và đóng nhiệm vụ.
-                    </p>
-                  </div>
-                </div>
-
-                {canCloseSchool ? (
-                  <Button
-                    type="button"
-                    onClick={handleExecutiveClose}
-                    className="w-full h-8.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all"
-                  >
-                    <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
-                    <span>Đóng Nhiệm vụ cấp Trường</span>
-                  </Button>
-                ) : (
-                  <p className="text-xs font-medium text-muted-foreground italic">
-                    Chỉ Ban Giám hiệu mới có thẩm quyền nghiệm thu đóng Nhiệm vụ cấp Trường.
-                  </p>
-                )}
-
-                {executiveActionFeedback && (
-                  <p className="text-xs font-medium text-emerald-600">
-                    {executiveActionFeedback}
-                  </p>
-                )}
-              </div>
-            )}
+            {/* Contextual notices (BLOCKED / rejection / escalation) live with the contextual action block below, after the submitted evidence. */}
           </div>
 
-          {/* 2-Column Metadata Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-border/50 bg-card/60 shadow-xs text-xs">
+          {/* Owner / Unit metadata grid (T16: owner & unit before evidence) */}
+          <div
+            data-slot="detail-owner-unit"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-border/50 bg-card/60 shadow-xs text-xs"
+          >
             {/* Cell 1: Lead / Assignee */}
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
@@ -1312,30 +1192,7 @@ export function TaskDetailSideSheet({
               </span>
             </div>
 
-            {/* Cell 3: Due Date */}
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <Calendar className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-                Thời hạn hoàn thành
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-semibold text-foreground tabular-nums">
-                  {formatDetailDate(task.dueDate)}
-                </span>
-                {relativeTime && (
-                  <span
-                    className={cn(
-                      "text-xs px-2 py-0.5 rounded-full border font-sans font-medium",
-                      relativeTime.color
-                    )}
-                  >
-                    {relativeTime.text}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Cell 4: Progress / Last Update */}
+            {/* Cell 3: Progress / Last Update */}
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 {isSchool ? (
@@ -1398,9 +1255,45 @@ export function TaskDetailSideSheet({
             )}
           </div>
 
-          {/* DACUM Deliverable Section (StaffTask only) */}
+          {/* Requirement / expected result (T16: owner & unit -> requirement -> evidence) */}
+          <div data-slot="detail-requirement" className="space-y-2">
+            <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <ListTodo className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+              Yêu cầu nhiệm vụ
+            </h3>
+            <div className="rounded-xl border border-border/50 bg-card/60 p-3 space-y-2 text-xs">
+              {isSchool ? (
+                <>
+                  <p className="text-foreground leading-relaxed whitespace-pre-wrap">
+                    {(task as SchoolTask).description ||
+                      "Chưa có mô tả yêu cầu cho nhiệm vụ cấp Trường này."}
+                  </p>
+                  {(task as SchoolTask).executiveCriteria && (
+                    <div className="space-y-1 border-t border-border/30 pt-2">
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        Tiêu chí nghiệm thu cấp Trường:
+                      </span>
+                      <p className="text-foreground leading-relaxed whitespace-pre-wrap">
+                        {(task as SchoolTask).executiveCriteria}
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (task as StaffTask).deliverableDescription ? (
+                <p className="text-foreground leading-relaxed whitespace-pre-wrap">
+                  {(task as StaffTask).deliverableDescription}
+                </p>
+              ) : (
+                <p className="text-muted-foreground italic">
+                  Chưa có mô tả yêu cầu / kết quả mong đợi cho công việc này.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Submitted evidence (T16: requirement -> submitted evidence -> context action) */}
           {!isSchool && (
-            <div className="space-y-3.5 pt-2" id="deliverable-section">
+            <div data-slot="detail-evidence" className="space-y-3.5 pt-2" id="deliverable-section">
               <div className="flex items-center justify-between">
                 <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <FileCheck className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
@@ -1454,18 +1347,6 @@ export function TaskDetailSideSheet({
               ) : (
                 <div className="py-4 text-center text-xs text-muted-foreground rounded-xl border border-dashed border-border/60 bg-muted/20">
                   Chưa có sản phẩm minh chứng nào được nộp
-                </div>
-              )}
-
-              {/* Deliverable description / summary note if present */}
-              {(task as StaffTask).deliverableDescription && (
-                <div className="rounded-xl border border-border/40 bg-muted/30 p-3 space-y-1">
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    Báo cáo kết quả công việc:
-                  </span>
-                  <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
-                    {(task as StaffTask).deliverableDescription}
-                  </p>
                 </div>
               )}
 
@@ -1575,9 +1456,448 @@ export function TaskDetailSideSheet({
             </div>
           )}
 
+          {/* Contextual action block (T16: after evidence; T07/T20: capability-driven, no lifecycle bypass) */}
+          <div
+            id="task-detail-context-actions"
+            data-slot="detail-context-action"
+            className="space-y-3.5"
+          >
+            <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Play className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+              Thao tác xử lý
+            </h3>
+
+            {/* Warning Banner: BLOCKED Status */}
+            {task.status === "BLOCKED" && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" strokeWidth={1.5} />
+                  <div className="space-y-1">
+                    <h4 className="font-semibold text-rose-700">
+                      Cảnh báo cản trở: Nhiệm vụ đang bị ách tắc / Cần phối hợp
+                    </h4>
+                    <p className="text-rose-600/90 leading-relaxed">
+                      {("blockedReason" in task && task.blockedReason) ||
+                        "Công việc đang bị nghẽn tiến độ. Vui lòng kiểm tra vướng mắc hoặc tạo Phiếu phối hợp liên đơn vị để tháo gỡ."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Rejection Reason Notice (if returned to IN_PROGRESS) */}
+            {"rejectionReason" in task && task.rejectionReason && task.status === "IN_PROGRESS" && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
+                <div className="flex items-start gap-2.5">
+                  <RotateCcw className="size-4 shrink-0 text-amber-600 mt-0.5" strokeWidth={1.5} />
+                  <div className="space-y-1">
+                    <h4 className="font-semibold text-amber-700">
+                      Yêu cầu chỉnh sửa từ Trưởng đơn vị
+                    </h4>
+                    <p className="text-amber-600/90 leading-relaxed">
+                      {task.rejectionReason}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Delegation notice if acting under delegated authority */}
+            {approvalResult.isDelegated && (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-xs text-purple-700 font-medium">
+                <ShieldCheck className="size-4 shrink-0 text-purple-600" strokeWidth={1.5} />
+                <span>
+                  Phê duyệt theo thẩm quyền ủy quyền của {approvalResult.rule?.grantorName || "Trưởng đơn vị"}
+                </span>
+              </div>
+            )}
+
+            {/* AI screening card for reviewers of a submitted result */}
+            {!isSchool && task.status === "NEEDS_REVIEW" && canReview && aiReview && (
+              <div className="w-full rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="size-4 text-indigo-600 shrink-0" strokeWidth={1.5} />
+                  <span className="text-xs font-semibold text-indigo-700">
+                    Kết quả sàng lọc tự động
+                  </span>
+                  <span className={cn(
+                    "ml-auto text-xs font-mono tabular-nums px-1.5 py-0.5 rounded-md border",
+                    aiReview.complianceScore >= 80
+                      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+                      : aiReview.complianceScore >= 50
+                      ? "border-amber-500/20 bg-amber-500/10 text-amber-700"
+                      : "border-rose-500/20 bg-rose-500/10 text-rose-700"
+                  )}>
+                    Điểm tuân thủ: {aiReview.complianceScore}/100
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {aiReview.executiveSummary}
+                </p>
+                {aiReview.flags.length > 0 && (
+                  <ul className="space-y-1">
+                    {aiReview.flags.map((flag, idx) => (
+                      <li key={idx} className={cn(
+                        "text-xs flex items-start gap-1.5",
+                        flag.type === "CRITICAL"
+                          ? "text-rose-600"
+                          : flag.type === "WARNING"
+                          ? "text-amber-600"
+                          : "text-blue-600"
+                      )}>
+                        <AlertTriangle className="size-3 shrink-0 mt-0.5" strokeWidth={1.5} />
+                        <span>{flag.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {aiReview.suggestedAction === "QUICK_APPROVE" && (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                    <CheckCircle2 className="size-3" strokeWidth={1.5} />
+                    <span>Khuyến nghị: Duyệt nhanh</span>
+                  </div>
+                )}
+                {aiReview.suggestedAction === "REQUEST_CHANGES" && (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+                    <RotateCcw className="size-3" strokeWidth={1.5} />
+                    <span>Khuyến nghị: Yêu cầu bổ sung</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Capability-driven primary actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* NEW: accept/start the assignment */}
+              {task.status === "NEW" && onStatusChange && (actorIsAssignee || actorHasApprovalAuthority) && (
+                <Button
+                  type="button"
+                  onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
+                  className="flex-1 h-8.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                >
+                  <Play className="size-3.5" strokeWidth={1.5} />
+                  <span>Tiếp nhận công việc</span>
+                </Button>
+              )}
+
+              {/* IN_PROGRESS */}
+              {task.status === "IN_PROGRESS" && (
+                <>
+                  {canSubmitDeliverable ? (
+                    requiresReview ? (
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          const formElem = document.getElementById("deliverable-form");
+                          formElem?.scrollIntoView({ behavior: "smooth" });
+                          const nameInput = document.getElementById("deliverable-name");
+                          nameInput?.focus();
+                        }}
+                        className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                      >
+                        <FileCheck className="size-3.5" strokeWidth={1.5} />
+                        <span>Nộp minh chứng nghiệm thu</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={() => onStatusChange?.(task.id, "COMPLETED")}
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                      >
+                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <span>Hoàn thành nhiệm vụ</span>
+                      </Button>
+                    )
+                  ) : requiresReview ? (
+                    <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 font-medium">
+                      <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
+                      <span>Đang thực hiện. Nghiệm thu chỉ khả dụng sau khi người phụ trách nộp minh chứng.</span>
+                    </div>
+                  ) : actorHasApprovalAuthority && onStatusChange ? (
+                    <Button
+                      type="button"
+                      onClick={() => onStatusChange(task.id, "COMPLETED")}
+                      className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                    >
+                      <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                      <span>Nghiệm thu hoàn thành</span>
+                    </Button>
+                  ) : null}
+                </>
+              )}
+
+              {/* NEEDS_REVIEW: reviewer sees permitted actions; submitter never sees approve; terminal shows none */}
+              {task.status === "NEEDS_REVIEW" && (
+                canReview ? (
+                  <div className="flex items-center gap-2 w-full">
+                    {aiReview?.suggestedAction === "QUICK_APPROVE" ? (
+                      <Button
+                        type="button"
+                        onClick={handleManagerApprove}
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                      >
+                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <span>Duyệt nhanh (Đạt chuẩn)</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={handleManagerApprove}
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                      >
+                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <span>Nghiệm thu Đạt (Hoàn thành)</span>
+                      </Button>
+                    )}
+                    {canRejectReview && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsRejectionModalOpen(true)}
+                        className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <RotateCcw className="size-3.5" strokeWidth={1.5} />
+                        <span>Trả lại Yêu cầu Sửa</span>
+                      </Button>
+                    )}
+                  </div>
+                ) : isSeparationOfDutiesBlocked ? (
+                  <div className="space-y-2 w-full">
+                    <div className="w-full flex items-start gap-2 p-2.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-xs text-rose-700 font-medium">
+                      <AlertTriangle className="size-4 shrink-0 text-rose-600 mt-0.5" strokeWidth={1.5} />
+                      <div className="space-y-0.5">
+                        <p className="font-semibold">Phân lập thẩm quyền công vụ</p>
+                        <p className="text-xs text-rose-600/90 leading-relaxed">
+                          Theo chuẩn quản trị đại học (Separation of Duties), bạn không thể tự nghiệm thu công việc do chính mình phụ trách.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 w-full">
+                      <Button
+                        type="button"
+                        disabled
+                        className="flex-1 h-8.5 text-xs font-semibold bg-muted text-muted-foreground rounded-lg cursor-not-allowed opacity-50 gap-1.5"
+                      >
+                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <span>Nghiệm thu Đạt (Vô hiệu hóa)</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        disabled
+                        variant="outline"
+                        className="h-8.5 px-3 text-xs font-medium border-muted bg-muted/40 text-muted-foreground rounded-lg cursor-not-allowed opacity-50 inline-flex items-center gap-1.5"
+                      >
+                        <RotateCcw className="size-3.5" strokeWidth={1.5} />
+                        <span>Trả lại Yêu cầu Sửa</span>
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full flex items-center gap-2 p-2 rounded-lg border border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 font-medium">
+                    <Clock className="size-3.5 shrink-0" strokeWidth={1.5} />
+                    <span>Đã nộp minh chứng. Đang chờ Trưởng đơn vị kiểm tra và nghiệm thu.</span>
+                  </div>
+                )
+              )}
+
+              {/* COMPLETED: terminal lifecycle — no review CTA.
+                  The former ADMIN/MANAGER "Mở lại" (reopen) action was removed
+                  intentionally (SK-4): COMPLETED/CANCELLED are immutable per the
+                  canonical Terminal State Protection invariant, and reopening
+                  through a generic `onStatusChange` status jump is exactly the
+                  lifecycle bypass T07 prohibits. A future reopen must route
+                  through a canonical reopen command, never a raw status write. */}
+              {task.status === "COMPLETED" && (
+                <div className="flex items-center gap-2 w-full p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-xs text-emerald-700 font-medium">
+                  <CheckCircle2 className="size-3.5 shrink-0" strokeWidth={1.5} />
+                  <span>Nhiệm vụ đã được nghiệm thu hoàn thành</span>
+                </div>
+              )}
+            </div>
+
+            {/* AI Executive Brief Card (StaffTask NEEDS_REVIEW for reviewer capability) */}
+            {!isSchool && task.status === "NEEDS_REVIEW" && canReview && (task as StaffTask).aiReview && (() => {
+              const aiReview = (task as StaffTask).aiReview!;
+              const riskColorMap: Record<string, string> = {
+                CLEAN: "bg-emerald-50 text-emerald-700 border-emerald-200",
+                NEEDS_ATTENTION: "bg-amber-50 text-amber-700 border-amber-200",
+                HIGH_RISK: "bg-rose-50 text-rose-700 border-rose-200",
+              };
+              const riskLabel: Record<string, string> = {
+                CLEAN: "An toàn",
+                NEEDS_ATTENTION: "Cần lưu ý",
+                HIGH_RISK: "Rủi ro cao",
+              };
+              return (
+                <div className="rounded-xl border border-border/50 bg-card p-4 text-xs space-y-3 shadow-xs" data-testid="ai-executive-brief">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-foreground flex items-center gap-1.5">
+                      <ShieldCheck className="size-4 text-primary" strokeWidth={1.5} />
+                      Trạng thái thẩm định hồ sơ (AI Executive Brief)
+                    </h4>
+                    <span className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border",
+                      riskColorMap[aiReview.status] || riskColorMap.CLEAN
+                    )}>
+                      {riskLabel[aiReview.status] || aiReview.status}
+                    </span>
+                  </div>
+
+                  {/* Compliance Score */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Điểm tuân thủ quy chuẩn:
+                    </span>
+                    <span className={cn(
+                      "font-mono font-bold tabular-nums",
+                      aiReview.complianceScore >= 80 ? "text-emerald-700" :
+                      aiReview.complianceScore >= 50 ? "text-amber-700" :
+                      "text-rose-700"
+                    )}>
+                      {aiReview.complianceScore}/100
+                    </span>
+                  </div>
+
+                  {/* Executive Summary */}
+                  <p className="text-xs text-foreground leading-relaxed">
+                    {aiReview.executiveSummary}
+                  </p>
+
+                  {/* DACUM Criteria Matched */}
+                  {aiReview.dacumCriteriaMatched.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        Tiêu chí DACUM đạt:
+                      </span>
+                      <ul className="list-disc list-inside text-xs text-foreground space-y-0.5 pl-1">
+                        {aiReview.dacumCriteriaMatched.map((c, i) => (
+                          <li key={i}>{c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Warning Flags */}
+                  {aiReview.flags.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        Cảnh báo:
+                      </span>
+                      <ul className="space-y-0.5 pl-1">
+                        {aiReview.flags.map((f, i) => (
+                          <li key={i} className={cn(
+                            "text-xs",
+                            f.type === "CRITICAL" ? "text-rose-600 font-medium" :
+                            f.type === "WARNING" ? "text-amber-600" :
+                            "text-muted-foreground"
+                          )}>
+                            [{f.type}] {f.message}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Quick Approve / Request Changes Buttons */}
+                  <div className="flex items-center gap-2 pt-1">
+                    {aiReview.suggestedAction === "QUICK_APPROVE" && (
+                      <Button
+                        type="button"
+                        onClick={handleManagerApprove}
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all duration-150"
+                      >
+                        <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                        <span>Duyệt nhanh theo đề xuất AI</span>
+                      </Button>
+                    )}
+                    {canRejectReview && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          if (aiReview.suggestedFeedback) {
+                            setRejectionReasonInput(aiReview.suggestedFeedback);
+                          }
+                          setIsRejectionModalOpen(true);
+                        }}
+                        className="h-8.5 px-3 text-xs font-medium border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 rounded-lg transition-all duration-150 active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
+                      >
+                        <AlertTriangle className="size-3.5" strokeWidth={1.5} />
+                        <span>Yêu cầu chỉnh sửa</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Escalation Notice Banner (48h SLA exceeded) */}
+            {!isSchool && (task as StaffTask).escalation?.isEscalated && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 p-4 text-xs" data-testid="escalation-notice">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="size-4 shrink-0 mt-0.5" strokeWidth={1.5} />
+                  <div className="space-y-1">
+                    <h4 className="font-semibold">
+                      Thông báo leo thang: Vượt quá SLA 48h
+                    </h4>
+                    <p className="leading-relaxed">
+                      Công việc này đã vượt quá thời hạn xử lý 48 giờ và hiện đã được chuyển lên Ban Giám hiệu (BGH) để giám sát.
+                      {(task as StaffTask).escalation?.escalationNote && (
+                        <> {(task as StaffTask).escalation!.escalationNote}</>
+                      )}
+                    </p>
+                    {(task as StaffTask).escalation?.escalatedAt && (
+                      <span className="text-xs font-mono tabular-nums text-rose-600">
+                        Leo thang lúc: {formatDetailDate((task as StaffTask).escalation!.escalatedAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SchoolTask Executive Approval (Hiệu trưởng nghiệm thu cấp 2) */}
+            {isSchool && task.status === "PENDING_EXECUTIVE_APPROVAL" && (
+              <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-xs space-y-3">
+                <div className="flex items-start gap-2.5">
+                  <CheckCircle2 className="size-4 shrink-0 text-purple-600 mt-0.5" strokeWidth={1.5} />
+                  <div className="space-y-1 flex-1">
+                    <h4 className="font-semibold text-purple-700">
+                      Nghiệm thu cấp 2: Chờ Ban Giám hiệu phê duyệt
+                    </h4>
+                    <p className="text-purple-600/90 leading-relaxed">
+                      Tất cả nhiệm vụ thành phần trực thuộc ({task.completedSubTasks}/{task.totalSubTasks}) đã hoàn thành 100%. Nhiệm vụ cấp Trường sẵn sàng để Ban Giám hiệu nghiệm thu và đóng nhiệm vụ.
+                    </p>
+                  </div>
+                </div>
+
+                {canCloseSchool ? (
+                  <Button
+                    type="button"
+                    onClick={handleExecutiveClose}
+                    className="w-full h-8.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-xs gap-1.5 cursor-pointer active:scale-[0.98] transition-all"
+                  >
+                    <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
+                    <span>Đóng Nhiệm vụ cấp Trường</span>
+                  </Button>
+                ) : (
+                  <p className="text-xs font-medium text-muted-foreground italic">
+                    Chỉ Ban Giám hiệu mới có thẩm quyền nghiệm thu đóng Nhiệm vụ cấp Trường.
+                  </p>
+                )}
+
+                {executiveActionFeedback && (
+                  <p className="text-xs font-medium text-emerald-600">
+                    {executiveActionFeedback}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Subtasks Section (SchoolTask only) */}
           {isSchool && (
-            <div className="space-y-3.5">
+            <div data-slot="detail-child-tasks" className="space-y-3.5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <div className="flex items-center gap-2">
@@ -1592,76 +1912,22 @@ export function TaskDetailSideSheet({
                     Mỗi việc con có đúng 1 người phụ trách, hạn nộp và trạng thái riêng biệt
                   </p>
                 </div>
+                {/* T17: the single consolidated child-task CTA. Child creation routes
+                    through the canonical create path (effectiveOnAddSubTask). */}
                 {effectiveOnAddSubTask && (
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => effectiveOnAddSubTask(task.id, newSubtaskTitle.trim() || undefined)}
-                      className="h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg cursor-pointer"
-                      title="Phân rã nhiệm vụ cha qua biểu mẫu"
-                    >
-                      <Plus className="size-3.5" strokeWidth={1.5} />
-                      <span>Phân rã nhiệm vụ</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => effectiveOnAddSubTask(task.id)}
-                      className="h-7 text-xs gap-1 border-border/70 hover:bg-muted font-medium rounded-lg cursor-pointer"
-                      title="Thêm việc con mới"
-                    >
-                      <Plus className="size-3.5" strokeWidth={1.5} />
-                      <span>+ Thêm việc con</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsAddingSubtask(!isAddingSubtask)}
-                      className="h-7 text-xs gap-1 rounded-lg cursor-pointer text-muted-foreground hover:text-foreground"
-                    >
-                      <span>{isAddingSubtask ? "Đóng" : "Giao nhanh"}</span>
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {/* Add Subtask Inline Form */}
-              {isAddingSubtask && (
-                <form
-                  onSubmit={handleCreateSubtask}
-                  className="p-3 rounded-xl border border-border/60 bg-muted/30 flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200"
-                >
-                  <input
-                    type="text"
-                    value={newSubtaskTitle}
-                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    placeholder="Nhập tên việc con cần phân công..."
-                    className="flex-1 text-xs bg-background border border-border/60 rounded-lg px-2.5 py-1.5 outline-none focus:border-ring focus:ring-1 focus:ring-ring"
-                    autoFocus
-                  />
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={!newSubtaskTitle.trim()}
-                    className="h-7 text-xs px-3 rounded-lg cursor-pointer"
-                  >
-                    Lưu
-                  </Button>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={() => setIsAddingSubtask(false)}
-                    className="h-7 text-xs px-2 text-muted-foreground rounded-lg cursor-pointer"
+                    onClick={() => effectiveOnAddSubTask(task.id)}
+                    className="h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg cursor-pointer"
+                    title="Tạo việc con trực thuộc nhiệm vụ này"
                   >
-                    Hủy
+                    <Plus className="size-3.5" strokeWidth={1.5} />
+                    <span>Thêm việc con</span>
                   </Button>
-                </form>
-              )}
+                )}
+              </div>
 
               {/* Subtask Clean List */}
               <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden shadow-xs">
@@ -1669,18 +1935,6 @@ export function TaskDetailSideSheet({
                   <div className="py-6 flex flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
                     <ListTodo className="size-6 text-muted-foreground/50" strokeWidth={1.5} />
                     <p>Chưa có nhiệm vụ con trực thuộc</p>
-                    {effectiveOnAddSubTask && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => effectiveOnAddSubTask(task.id)}
-                        className="mt-1 h-7 text-xs gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-semibold rounded-lg cursor-pointer"
-                      >
-                        <Plus className="size-3.5" strokeWidth={1.5} />
-                        <span>Phân rã nhiệm vụ ngay</span>
-                      </Button>
-                    )}
                   </div>
                 ) : (
                   task.subTasks.map((sub) => {
@@ -1782,67 +2036,100 @@ export function TaskDetailSideSheet({
                     );
                   })
                 )}
-                {task.subTasks.length > 0 && effectiveOnAddSubTask && (
-                  <div className="p-2 bg-muted/20 border-t border-border/40 flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => effectiveOnAddSubTask(task.id)}
-                      className="h-7 text-xs gap-1 text-primary hover:bg-primary/10 font-semibold rounded-lg cursor-pointer"
-                    >
-                      <Plus className="size-3.5" strokeWidth={1.5} />
-                      <span>+ Thêm việc con</span>
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
           )}
 
-          {/* Audit Timeline Section */}
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
-              <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <History className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-                Nhật ký hoạt động & tiến độ
-              </h3>
-              <span className="text-xs font-mono text-muted-foreground tabular-nums">
-                {auditTimeline.length} sự kiện
-              </span>
-            </div>
-
-            <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/60">
-              {auditTimeline.map((item) => (
-                <div key={item.id} className="relative flex flex-col gap-0.5">
-                  {/* Flat round node */}
-                  <span className="absolute -left-5 top-1 flex size-4 items-center justify-center rounded-full border border-border/80 bg-card">
-                    <span className="size-1.5 rounded-full bg-primary/70" />
+          {/* Truthful history + derived milestones (T18) */}
+          <div className="space-y-6 pt-2">
+            {/* Real, server-authoritative audit events only. Never synthesized. */}
+            <section data-slot="detail-history" className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <History className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  Lịch sử
+                </h3>
+                {auditEvents.length > 0 && (
+                  <span className="text-xs font-mono text-muted-foreground tabular-nums">
+                    {auditEvents.length} bản ghi
                   </span>
+                )}
+              </div>
 
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-foreground">
-                      {item.label}
-                    </span>
-                    <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                      {item.timestamp}
-                    </span>
-                  </div>
-
-                  {item.description && (
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {item.description}
-                    </p>
-                  )}
-
-                  {item.actor && (
-                    <span className="text-xs font-medium text-muted-foreground/80">
-                      Chủ thể: {item.actor}
-                    </span>
-                  )}
+              {auditEvents.length > 0 ? (
+                <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/60">
+                  {auditEvents.map((event) => (
+                    <div key={event.id} className="relative flex flex-col gap-0.5">
+                      <span className="absolute -left-5 top-1 flex size-4 items-center justify-center rounded-full border border-border/80 bg-card">
+                        <span className="size-1.5 rounded-full bg-emerald-500/70" />
+                      </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-foreground">
+                          {event.description || AUDIT_ACTION_LABELS[event.action] || event.action}
+                        </span>
+                        <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                          {formatDetailDate(event.timestamp)}
+                        </span>
+                      </div>
+                      {event.actorName && (
+                        <span className="text-xs font-medium text-muted-foreground/80">
+                          Chủ thể: {event.actorName}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="py-4 text-center text-xs text-muted-foreground rounded-xl border border-dashed border-border/60 bg-muted/20">
+                  Chưa có bản ghi kiểm toán từ máy chủ cho nhiệm vụ này.
+                </div>
+              )}
+            </section>
+
+            {/* Derived facts aggregated from the task record — informational only. */}
+            <section data-slot="detail-derived-milestones" className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <TrendingUp className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
+                  Mốc thông tin
+                </h3>
+                <span className="text-xs font-mono text-muted-foreground tabular-nums">
+                  {derivedMilestones.length} mốc
+                </span>
+              </div>
+
+              <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/60">
+                {derivedMilestones.map((item) => (
+                  <div key={item.id} className="relative flex flex-col gap-0.5">
+                    {/* Flat round node */}
+                    <span className="absolute -left-5 top-1 flex size-4 items-center justify-center rounded-full border border-border/80 bg-card">
+                      <span className="size-1.5 rounded-full bg-primary/70" />
+                    </span>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-foreground">
+                        {item.label}
+                      </span>
+                      <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                        {item.timestamp}
+                      </span>
+                    </div>
+
+                    {item.description && (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {item.description}
+                      </p>
+                    )}
+
+                    {item.actor && (
+                      <span className="text-xs font-medium text-muted-foreground/80">
+                        Chủ thể: {item.actor}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
 
@@ -1871,8 +2158,8 @@ export function TaskDetailSideSheet({
                   <span>Phê duyệt</span>
                 </Button>
               </div>
-            ) : canSubmitDeliverable || (user?.role === "STAFF" && !isSchool && task.status !== "COMPLETED") ? (
-              /* Condition 2: Staff Reporting Mode */
+            ) : canSubmitDeliverable ? (
+              /* Condition 2: submitter reporting — scrolls to the evidence form */
               <Button
                 type="button"
                 onClick={() => {
@@ -1887,23 +2174,29 @@ export function TaskDetailSideSheet({
                 <FileCheck className="size-4" strokeWidth={1.5} />
                 <span>Nộp báo cáo</span>
               </Button>
+            ) : task.status === "NEW" && onStatusChange && (actorIsAssignee || actorHasApprovalAuthority) ? (
+              /* Condition 3: accept the new assignment (canonical lifecycle start) */
+              <Button
+                type="button"
+                onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
+                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
+              >
+                <Play className="size-4" strokeWidth={1.5} />
+                <span>Tiếp nhận công việc</span>
+              </Button>
             ) : (
-              /* Condition 3: Normal In-Progress Mode */
+              /* Condition 4: no mobile primary action — deep-links into the context action block (no status bypass) */
               <Button
                 type="button"
                 onClick={() => {
-                  if (task.status === "NEW" && onStatusChange) {
-                    onStatusChange(task.id, "IN_PROGRESS");
-                  } else if (task.status === "IN_PROGRESS" && onStatusChange) {
-                    onStatusChange(task.id, "COMPLETED");
-                  } else {
-                    document.getElementById("status-select")?.focus();
-                  }
+                  document
+                    .getElementById("task-detail-context-actions")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
                 className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
               >
                 <Play className="size-4" strokeWidth={1.5} />
-                <span>Cập nhật tiến độ</span>
+                <span>Xem thao tác xử lý</span>
               </Button>
             )}
 
@@ -1957,19 +2250,6 @@ export function TaskDetailSideSheet({
                       <Share2 className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                       <span>Chia sẻ liên kết</span>
                     </button>
-                    {isSchool && effectiveOnAddSubTask && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          effectiveOnAddSubTask(task.id);
-                        }}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-primary hover:bg-primary/10 font-semibold transition-colors text-left cursor-pointer min-h-[36px]"
-                      >
-                        <Plus className="size-3.5 text-primary" strokeWidth={1.5} />
-                        <span>Thêm việc con</span>
-                      </button>
-                    )}
                     {onStatusChange && task.status !== "BLOCKED" && task.status !== "COMPLETED" && (
                       <button
                         type="button"

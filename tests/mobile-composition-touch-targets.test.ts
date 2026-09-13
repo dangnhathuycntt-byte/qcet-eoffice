@@ -14,18 +14,40 @@ describe("Task 8: Mobile-First Composition, Task Cards & 44px Touch Targets", ()
       assert.strictEqual(fs.existsSync(bottomNavPath), true);
     });
 
-    it("verifies bottom nav contains exactly 4 primary mobile items", () => {
+    it("verifies mobile bottom bar is registry-driven with exactly 4 primary destinations", () => {
       const content = fs.readFileSync(bottomNavPath, "utf8");
-      // Check for the 4 primary tabs
-      assert.ok(content.includes("Bàn làm việc"), "Must have 'Bàn làm việc' tab");
-      assert.ok(content.includes("Nhiệm vụ"), "Must have 'Nhiệm vụ' tab");
-      assert.ok(content.includes("Văn bản"), "Must have 'Văn bản' tab");
-      assert.ok(content.includes("Thêm"), "Must have 'Thêm' tab");
 
-      // Verify routes
-      assert.ok(content.includes('href: "/"') || content.includes("href: '/'") || content.includes('href = "/"'), "Must link to /");
-      assert.ok(content.includes('href: "/tasks"') || content.includes("href: '/tasks'"), "Must link to /tasks");
-      assert.ok(content.includes('href: "/documents"') || content.includes("href: '/documents'"), "Must link to /documents");
+      // T86 single source of truth: the nav must NOT hard-code its own route
+      // table; primary destinations come from the canonical registry.
+      assert.ok(
+        content.includes("getMobileBottomBarItems"),
+        "Nav must source primary destinations from the canonical navigation registry"
+      );
+      assert.ok(
+        content.includes("isRouteActive"),
+        "Nav must use the canonical active-route matcher"
+      );
+
+      // The destinations and their labels are defined where they belong: the registry.
+      const registryPath = path.join(SRC_DIR, "lib", "navigation", "canonical-navigation-registry.ts");
+      const registry = fs.readFileSync(registryPath, "utf8");
+
+      const bottomBarCount = (registry.match(/mobilePlacement:\s*"bottom-bar"/g) || []).length;
+      assert.strictEqual(
+        bottomBarCount,
+        4,
+        "Registry must define exactly 4 bottom-bar destinations"
+      );
+
+      for (const [label, href] of [
+        ["Bàn làm việc", '"/"'],
+        ["Quản lý nhiệm vụ", '"/tasks"'],
+        ["Văn bản & Công văn", '"/documents"'],
+        ["Lịch công tác", '"/calendar"'],
+      ]) {
+        assert.ok(registry.includes(label), `Registry must define the '${label}' destination`);
+        assert.ok(registry.includes(href), `Registry must define href ${href}`);
+      }
     });
 
     it("ensures bottom nav has >= 44px touch targets", () => {
@@ -36,12 +58,24 @@ describe("Task 8: Mobile-First Composition, Task Cards & 44px Touch Targets", ()
       );
     });
 
-    it("ensures drawer close button has >= 44px touch targets (min-h-[44px] min-w-[44px])", () => {
+    it("ensures the canonical drawer close button has >= 44px touch targets", () => {
+      // The drawer lives where the plan puts it: the canonical MobileMenuDrawer
+      // hosted at AppShell (single navigation owner, no second More sheet).
       const content = fs.readFileSync(bottomNavPath, "utf8");
       assert.ok(
-        content.includes("min-h-[44px] min-w-[44px]"),
-        "Drawer close button must have >= 44px touch targets"
+        content.includes("MobileMenuDrawer") || content.includes("mobile-menu-drawer"),
+        "Nav must delegate secondary destinations to the canonical MobileMenuDrawer"
       );
+
+      const drawerPath = path.join(SRC_DIR, "components", "layout", "mobile-menu-drawer.tsx");
+      const drawer = fs.readFileSync(drawerPath, "utf8");
+      const closeTarget = drawer.match(/(min-h-\[\d+px\])[^>]*?(min-w-\[\d+px\])|(min-w-\[\d+px\])[^>]*?(min-h-\[\d+px\])/);
+      assert.ok(closeTarget, "Drawer must declare explicit min-h/min-w touch bounds");
+
+      for (const px of drawer.match(/min-[hw]-\[(\d+)px\]/g) || []) {
+        const size = parseInt(px.match(/\[(\d+)px\]/)![1], 10);
+        assert.ok(size >= 44, `Drawer touch target ${px} must be >= 44px (rule 11-mobile #3)`);
+      }
     });
 
     it("ensures bottom nav respects typography floor (>= 12px, zero text-[11px])", () => {
@@ -50,15 +84,26 @@ describe("Task 8: Mobile-First Composition, Task Cards & 44px Touch Targets", ()
       assert.strictEqual(smallText, null, "Must not contain text smaller than 12px (rule 10-ui.md invariant 6)");
     });
 
-    it("ensures bottom nav opens a drawer/sheet for 'Thêm' (More) containing sub-links", () => {
+    it("ensures secondary destinations are provided by the canonical drawer, not a second sheet", () => {
+      // Single Control Point (10-ui #5): the nav must not own a second route
+      // table or its own More sheet — those live in the canonical drawer.
       const content = fs.readFileSync(bottomNavPath, "utf8");
+      for (const forbidden of ["isDrawerOpen", "isMoreOpen", "moreOpen", "showMore"]) {
+        assert.ok(
+          !content.includes(forbidden),
+          `Nav must not own a second More-sheet state ('${forbidden}'); secondary nav belongs to the canonical drawer`
+        );
+      }
+
+      const registryPath = path.join(SRC_DIR, "lib", "navigation", "canonical-navigation-registry.ts");
+      const registry = fs.readFileSync(registryPath, "utf8");
       assert.ok(
-        content.includes("isDrawerOpen") || content.includes("isMoreOpen") || content.includes("moreOpen") || content.includes("showMore"),
-        "Must have state for More sheet"
+        registry.includes('mobilePlacement: "drawer"'),
+        "Registry must define the drawer destinations"
       );
-      assert.ok(content.includes("/calendar"), "Must have link to /calendar");
-      assert.ok(content.includes("/org"), "Must have link to /org");
-      assert.ok(content.includes("/notifications") || content.includes("/settings"), "Must have links to notifications/settings");
+      for (const href of ['"/calendar"', '"/org"', '"/notifications"', '"/settings"']) {
+        assert.ok(registry.includes(href), `Registry must define drawer/route ${href}`);
+      }
     });
 
     it("verifies mobile bottom nav adheres to light-only anti-slop rules", () => {

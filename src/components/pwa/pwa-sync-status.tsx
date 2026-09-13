@@ -38,9 +38,14 @@ import {
   OfflineOutboxItem,
   getOutboxQueue,
   subscribeOutbox,
-  flushOutbox,
+  drainOutbox,
   getActiveUserId,
 } from "@/lib/pwa/outbox-manager";
+import {
+  deriveOfflineState,
+  offlineStateForDisplay,
+  OFFLINE_STATE_LABELS,
+} from "@/lib/pwa/offline-state";
 import { OfflineConflictDialog, useOfflineConflicts } from "./offline-conflict-dialog";
 
 export interface PWASyncStatusProps {
@@ -113,7 +118,7 @@ export function PWASyncStatusBar({
     setSyncProgress({ current: 1, total: pendingItems.length });
 
     try {
-      const result = await flushOutbox(activeUid);
+      const result = await drainOutbox(activeUid);
       const refreshedQueue = await getOutboxQueue(activeUid);
       setQueue(refreshedQueue);
 
@@ -135,6 +140,12 @@ export function PWASyncStatusBar({
   );
   const hasConflicts = conflictItems.length > 0;
   const hasPending = pendingItems.length > 0;
+  const offlineState = deriveOfflineState(queue);
+  // Honour live connectivity so a queued mutation on an offline device renders
+  // the truthful "Đã lưu trên thiết bị" (local-only) instead of "Đang chờ đồng bộ".
+  const displayState = offlineState
+    ? offlineStateForDisplay(offlineState, { isOnline })
+    : null;
 
   // Determine visibility
   const isVisible =
@@ -149,40 +160,63 @@ export function PWASyncStatusBar({
     return null;
   }
 
-  // Determine textual description and visual status theme
-  let statusText = "Đã đồng bộ";
+  // Determine textual description and visual status theme.
+  // Labels are drawn from the canonical taxonomy (T62) — never invented locally.
   let statusVariant: "online" | "syncing" | "degraded" | "offline" | "conflict" = "online";
+  let statusText: string = OFFLINE_STATE_LABELS["server-confirmed"];
+  let statusDetail = "Dữ liệu ngoại tuyến đồng nhất";
   let statusIcon = <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />;
 
   if (hasConflicts) {
     statusVariant = "conflict";
-    statusText = `${conflictItems.length} thay đổi cần xử lý (Xung đột)`;
+    statusText = OFFLINE_STATE_LABELS.conflict;
+    statusDetail = `${conflictItems.length} thay đổi cần bạn quyết định, không tự ghi đè`;
     statusIcon = <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />;
   } else if (isSyncing) {
     statusVariant = "syncing";
     const current = syncProgress?.current ?? 1;
     const total = syncProgress?.total ?? Math.max(pendingItems.length, 1);
-    statusText = `Đang đồng bộ ${current}/${total}...`;
+    statusText = OFFLINE_STATE_LABELS.syncing;
+    statusDetail = `Đang gửi ${current}/${total} lên máy chủ...`;
     statusIcon = <RefreshCw className="h-4 w-4 text-sky-600 animate-spin shrink-0" />;
+  } else if (displayState === "failed") {
+    // A permanently rejected mutation must surface its failed state even while
+    // the device is offline/degraded — it is not merely "waiting to sync".
+    statusVariant = "degraded";
+    statusText = OFFLINE_STATE_LABELS.failed;
+    statusDetail = "Máy chủ từ chối thay đổi; mở để xem và xử lý";
+    statusIcon = <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />;
+  } else if (displayState === "local-only") {
+    statusVariant = "offline";
+    statusText = OFFLINE_STATE_LABELS["local-only"];
+    statusDetail = `${pendingItems.length} thay đổi được lưu an toàn tại thiết bị`;
+    statusIcon = <WifiOff className="h-4 w-4 text-slate-600 shrink-0" />;
+  } else if (displayState === "unknown-after-timeout") {
+    statusVariant = "degraded";
+    statusText = OFFLINE_STATE_LABELS.queued;
+    statusDetail = "Đang đối chiếu lại kết quả với máy chủ...";
+    statusIcon = <Database className="h-4 w-4 text-amber-600 shrink-0" />;
   } else if (isOffline) {
     statusVariant = "offline";
-    statusText = hasPending
-      ? `${pendingItems.length} thay đổi đang chờ đồng bộ`
-      : "Mất kết nối mạng (Ngoại tuyến)";
+    statusText = "Ngoại tuyến";
+    statusDetail = "Không có kết nối mạng";
     statusIcon = <WifiOff className="h-4 w-4 text-slate-600 shrink-0" />;
   } else if (isDegraded) {
     statusVariant = "degraded";
-    statusText = hasPending
-      ? `${pendingItems.length} thay đổi đang chờ đồng bộ (Máy chủ gián đoạn)`
-      : "Kết nối máy chủ gián đoạn";
+    statusText = hasPending ? OFFLINE_STATE_LABELS.queued : "Kết nối máy chủ gián đoạn";
+    statusDetail = hasPending
+      ? `${pendingItems.length} thay đổi chờ gửi lại khi máy chủ phản hồi`
+      : "Sẽ tự động thử lại khi máy chủ phản hồi";
     statusIcon = <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />;
   } else if (hasPending) {
     statusVariant = "degraded";
-    statusText = `${pendingItems.length} thay đổi đang chờ đồng bộ`;
+    statusText = OFFLINE_STATE_LABELS.queued;
+    statusDetail = `${pendingItems.length} thay đổi đang chờ đồng bộ`;
     statusIcon = <Database className="h-4 w-4 text-amber-600 shrink-0" />;
   } else if (justSynced) {
     statusVariant = "online";
-    statusText = "Đã đồng bộ";
+    statusText = OFFLINE_STATE_LABELS["server-confirmed"];
+    statusDetail = "Đã xác nhận từ máy chủ";
     statusIcon = <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />;
   }
 
@@ -208,14 +242,14 @@ export function PWASyncStatusBar({
         role="status"
         aria-live="polite"
         className={cn(
-          "fixed z-50 transition-all duration-300 pointer-events-auto",
-          "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 sm:bottom-6 max-w-[94vw] sm:max-w-md w-full",
+          "fixed z-50 transition-all duration-300 pointer-events-none",
+          "bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 sm:bottom-6 max-w-[94vw] sm:max-w-md w-full",
           className
         )}
       >
         <div
           className={cn(
-            "rounded-xl border p-3 flex items-center justify-between gap-3 text-xs sm:text-sm font-medium",
+            "rounded-xl border p-3 flex items-center justify-between gap-3 text-xs sm:text-sm font-medium pointer-events-auto",
             variantStyles[statusVariant]
           )}
         >
@@ -233,15 +267,7 @@ export function PWASyncStatusBar({
                 {statusText}
               </span>
               <span className="text-xs text-slate-500 font-normal truncate">
-                {isOffline
-                  ? "Dữ liệu được lưu an toàn tại thiết bị"
-                  : isDegraded
-                  ? "Sẽ tự động gửi lại khi máy chủ phản hồi"
-                  : isSyncing
-                  ? "Đang gửi dữ liệu lên máy chủ..."
-                  : hasConflicts
-                  ? "Nhấn để giải quyết dữ liệu xung đột"
-                  : "Dữ liệu ngoại tuyến đồng nhất"}
+                {statusDetail}
               </span>
             </div>
           </div>
@@ -325,7 +351,7 @@ export function PWASyncStatusBadge({ className }: { className?: string }) {
         )}
       >
         <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
-        <span>{conflictCount} xung đột</span>
+        <span>{`${conflictCount} ${OFFLINE_STATE_LABELS.conflict}`}</span>
       </span>
     );
   }
@@ -367,7 +393,7 @@ export function PWASyncStatusBadge({ className }: { className?: string }) {
         )}
       >
         <RefreshCw className="h-3.5 w-3.5 text-sky-600 animate-spin" />
-        <span>{pendingCount} đang đồng bộ</span>
+        <span>{`${pendingCount} ${OFFLINE_STATE_LABELS.queued}`}</span>
       </span>
     );
   }

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-13T04:10:00.000Z",
+  "note": "Documented exceptions for the S-PERF budget gate. These cells breach the frozen C16 LCP good threshold (<= 2500 ms) because the /tasks table-view family (table, detail-open, search, bulk-select) is a known, separately-owned pre-existing bottleneck that renders ~3.1-3.3 s lab p75 on this host — measured in BOTH the recorded baseline and the recorded candidate (see artifacts/ux-v5-1/performance/{baseline,candidate}.json). They are NOT waived budget math: the surface lane owns the fix (T77) and S-PERF changes no application code. Waiving them HERE (never silently) is what lets `npm run perf:budget` be wired into the shared `npm run verify` without making it permanently red for every engineer (PERF-03). A waived cell is NOT a pass: it stays listed in the gate output and must be closed by the owning performance lane, after which its entry is removed. Regression-tier (baseline-relative) breaches on other cells are NOT listed here: a same-checkout re-run cannot evidence a code regression, so the gate classifies those as VARIANCE, not WAIVED.",
+  "entries": [
+    {
+      "route": "tasks-table",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "reason": "Known /tasks table-view LCP bottleneck (pre-existing; ~3.3s lab p75 on this host), over the C16 2500ms target in BOTH baseline and candidate same-checkout runs. Owned by the tasks surface lane (T77), not S-PERF."
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "reason": "Known /tasks table-view LCP bottleneck (pre-existing; ~3.2s lab p75 on this host), over the C16 2500ms target. Owned by the tasks surface lane (T77)."
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "reason": "Known /tasks detail-open LCP bottleneck (pre-existing; ~3.2s lab p75), over the C16 2500ms target in BOTH baseline and candidate. Owning lane must fix; tracked in delta.json."
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "reason": "Known /tasks detail-open LCP bottleneck (pre-existing; ~3.2s lab p75), over the C16 2500ms target. Owning lane must fix; tracked in delta.json."
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "reason": "Known /tasks search LCP bottleneck (pre-existing; ~3.2s lab p75), over the C16 2500ms target in BOTH baseline and candidate. Owning lane must fix; tracked in delta.json."
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "reason": "Known /tasks search LCP bottleneck (pre-existing; ~3.2s lab p75), over the C16 2500ms target. Owning lane must fix; tracked in delta.json."
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "reason": "Known /tasks bulk-select LCP bottleneck (pre-existing; ~3.3s lab p75), over the C16 2500ms target in BOTH baseline and candidate. Owning lane must fix; tracked in delta.json."
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "reason": "Known /tasks bulk-select LCP bottleneck (pre-existing; ~3.2s lab p75), over the C16 2500ms target. Owning lane must fix; tracked in delta.json."
+    }
+  ]
+}

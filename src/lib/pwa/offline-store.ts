@@ -264,6 +264,13 @@ export interface OfflineOutboxItem<TPayload = unknown> extends BaseOfflineRecord
   createdAt: number;
   retryCount: number;
   status: "pending" | "syncing" | "conflict" | "failed";
+  /**
+   * True when a send was attempted but the response was lost (network dropped
+   * after the request left the device). The item stays `pending` so it remains
+   * in the drain, but it must be reconciled with the original Idempotency-Key
+   * before it can be treated as confirmed (T66). Never a success indicator.
+   */
+  unconfirmedResult?: boolean;
   serverConflictData?: unknown;
   errorMessage?: string;
   updatedAt: number;
@@ -281,6 +288,7 @@ export interface EnqueueOutboxItemInput<TPayload = unknown> {
   createdAt?: number;
   retryCount?: number;
   status?: "pending" | "syncing" | "conflict" | "failed";
+  unconfirmedResult?: boolean;
   serverConflictData?: unknown;
   errorMessage?: string;
   updatedAt?: number;
@@ -318,6 +326,7 @@ export async function enqueueOutboxItem<TPayload = unknown>(
     createdAt: item.createdAt || now,
     retryCount: item.retryCount || 0,
     status: item.status || "pending",
+    unconfirmedResult: item.unconfirmedResult,
     serverConflictData: item.serverConflictData,
     errorMessage: item.errorMessage,
     updatedAt: item.updatedAt || now,

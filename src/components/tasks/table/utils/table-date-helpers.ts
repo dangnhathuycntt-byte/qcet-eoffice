@@ -2,6 +2,7 @@ import {
   getSystemReferenceDate,
   isTaskPastDue as calendarIsTaskPastDue,
 } from "@/lib/academic-calendar";
+import { DATE_FALLBACK } from "@/lib/format/date";
 import type { TaskStatus } from "@/types/dashboard";
 import type { SlaBadgeStatus } from "../types";
 
@@ -82,10 +83,10 @@ export function getDaysRemaining(
  * Định dạng ngày hiển thị bảng công việc theo chuẩn Việt Nam (DD/MM/YYYY).
  */
 export function formatTableDate(dateStr?: string | Date | null): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return DATE_FALLBACK;
   const iso = extractIsoDateString(dateStr);
   if (!iso) {
-    return "—";
+    return DATE_FALLBACK;
   }
   const [year, month, day] = iso.split("-");
   return `${day}/${month}/${year}`;
@@ -160,12 +161,12 @@ export function getSlaBadgeStatus(
 
   if (!dueDate || daysRemaining === null) {
     return {
-      label: "-",
+      label: DATE_FALLBACK,
       colorClass: "text-zinc-400 bg-transparent border-transparent",
       isOverdue: false,
       isToday: false,
       daysRemaining: null,
-      formattedDate: "-",
+      formattedDate: DATE_FALLBACK,
     };
   }
 

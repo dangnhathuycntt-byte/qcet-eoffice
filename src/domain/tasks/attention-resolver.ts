@@ -95,17 +95,45 @@ export function isUserUnitHead(context: UserContext, unitId?: string | null): bo
 
 /**
  * Verifies if the user is an authorized checker/approver for the given task.
+ *
+ * Capability resolution order (INT-9):
+ *   1. An explicit server denial (`canApprove === false`) always wins - it must
+ *      never be re-granted by role membership.
+ *   2. The PENDING_EXECUTIVE_APPROVAL executive-only guard is evaluated BEFORE
+ *      any generic user-level capability grant, so a coarse `canApprove`
+ *      boolean can never widen institutional executive-only authority to a
+ *      unit-scoped actor. Only an institutional executive, or an explicit
+ *      task-level server grant, may approve this lifecycle level.
+ *   3. Otherwise an explicit server grant (`canApprove === true`) is
+ *      authoritative for unit-level (WAITING_APPROVAL) approval.
+ *   4. With no explicit verdict, the legacy role/position heuristics apply.
+ *
+ * Note: `canApprove` on {@link UserAttentionContext} is a single per-actor
+ * boolean (see src/contracts/workspace-semantic.ts). Fully modelling approval
+ * capability per task/scope requires a frozen-contract revision owned by the
+ * contracts shard; this module must not invent a second capability channel.
  */
 export function isUserAuthorizedApprover(task: any, userContext: UserContext): boolean {
-  if (userContext.canApprove) return true;
-  if (isUserExecutive(userContext)) return true;
+  // Server Truth Wins: an explicit denial is authoritative at every approval
+  // level and MUST NOT be re-granted by role/position membership.
+  if (userContext.canApprove === false) return false;
 
   const status = mapDbStatusToLifecycle(task.status);
 
-  // Executive-only approval level
+  // Executive-only approval level (INT-9). The executive-only guard precedes
+  // the generic capability grant so a unit-scoped `canApprove` boolean cannot
+  // bypass it; only an institutional executive or an explicit server grant
+  // may approve.
   if (status === 'PENDING_EXECUTIVE_APPROVAL') {
-    return false;
+    if (isUserExecutive(userContext)) return true;
+    return userContext.canApprove === true;
   }
+
+  // Server Truth Wins: an explicit server capability grant overrides the
+  // legacy role/position heuristics.
+  if (userContext.canApprove === true) return true;
+
+  if (isUserExecutive(userContext)) return true;
 
   // Department-level / Waiting approval
   const taskDeptId = task.departmentId || task.leadDepartmentId || null;
@@ -114,6 +142,38 @@ export function isUserAuthorizedApprover(task: any, userContext: UserContext): b
   }
 
   return false;
+}
+
+/**
+ * Canonical actor-specific review-capability gate (T04).
+ *
+ * Answers, for a specific authenticated actor, whether the approval of this
+ * task is genuinely "waiting for them". It requires ALL of:
+ *   1. Actor identity - an authenticated userId is present.
+ *   2. Approvable lifecycle - status is WAITING_APPROVAL or
+ *      PENDING_EXECUTIVE_APPROVAL.
+ *   3. Capability + SoD - the actor holds approval capability (explicit server
+ *      verdict when supplied, otherwise the legacy authority heuristics) AND
+ *      is not a maker of the task.
+ *
+ * Consequence (T04): a user who cannot review never sees the task as
+ * waiting-for-them, even when the status is WAITING_APPROVAL.
+ *
+ * Single canonical owner (One Capability, One Implementation): consumers must
+ * import THIS gate rather than re-implementing a role/status review check, so
+ * Segregation of Duties and lifecycle gating can never be silently bypassed.
+ */
+export function canUserReviewTask(task: any, userContext: UserContext): boolean {
+  if (!task || !userContext || !userContext.userId) return false;
+
+  const status = mapDbStatusToLifecycle(task.status);
+  if (status !== 'WAITING_APPROVAL' && status !== 'PENDING_EXECUTIVE_APPROVAL') {
+    return false;
+  }
+
+  if (isTaskMaker(task, userContext.userId)) return false;
+
+  return isUserAuthorizedApprover(task, userContext);
 }
 
 /**
@@ -336,7 +396,6 @@ export function resolveUserAttention(
   const status = mapDbStatusToLifecycle(task.status);
   const attentions: UserAttentionType[] = [];
 
-  const isMaker = isTaskMaker(task, userId);
   const isAssignee = isTaskAssignee(task, userId);
 
   const isOverdue =
@@ -369,13 +428,10 @@ export function resolveUserAttention(
   }
 
   // 4. Checker Attention: 'requires_my_approval'
-  // Enforcing SoD: A task creator / lead assignee / submitter CANNOT have 'requires_my_approval'
-  if (status === 'WAITING_APPROVAL' || status === 'PENDING_EXECUTIVE_APPROVAL') {
-    if (!isMaker) {
-      if (isUserAuthorizedApprover(task, userContext)) {
-        attentions.push('requires_my_approval');
-      }
-    }
+  // Actor-specific, server-capability gated, and SoD-enforced via the single
+  // canonical review gate (T04).
+  if (canUserReviewTask(task, userContext)) {
+    attentions.push('requires_my_approval');
   }
 
   // 5. Blocked Attention: 'blocked'

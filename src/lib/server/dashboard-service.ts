@@ -33,6 +33,10 @@ export interface LiveDashboardOptions {
 export async function getLiveDashboardData(options?: LiveDashboardOptions): Promise<DashboardPayload> {
   const referenceDate = getSystemReferenceDate();
 
+  // Active dataset scope for this request. `"all"` (school-wide view) disables department confinement.
+  const scopedDepartmentId =
+    options?.departmentId && options.departmentId !== "all" ? options.departmentId : undefined;
+
   const whereTask: any = {
     scope: { in: [TaskScope.SCHOOL, TaskScope.DEPARTMENT] },
     parentTaskId: null,
@@ -40,8 +44,8 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
   };
   if (options?.academicMonth) whereTask.academicMonth = options.academicMonth;
   if (options?.academicYear) whereTask.academicYear = options.academicYear;
-  if (options?.departmentId && options.departmentId !== "all") {
-    whereTask.departmentId = options.departmentId;
+  if (scopedDepartmentId) {
+    whereTask.departmentId = scopedDepartmentId;
   }
   if (options?.userId) {
     whereTask.assignees = {
@@ -75,6 +79,12 @@ export async function getLiveDashboardData(options?: LiveDashboardOptions): Prom
         subTasks: {
           where: {
             status: { not: TaskStatus.CANCELLED },
+            // Confine child tasks to the same department scope as their parent query. A parent task
+            // anchored to the caller's department (e.g. a SCHOOL directive) would otherwise serialize
+            // every cross-department subtask, leaking titles, assignee names and deliverable `fileUrl`
+            // evidence links. `departmentId` is the canonical Task-level ownership field (mapPrismaTaskToStaffTask
+            // never populates `assignedToDepartmentId`, which the route-level prune relied on).
+            ...(scopedDepartmentId ? { departmentId: scopedDepartmentId } : {}),
           },
           include: {
             department: true,

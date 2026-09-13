@@ -37,7 +37,7 @@ function countMatches(content: string, pattern: RegExp): number {
 
 const TOPBAR = src("components/layout/app-topbar.tsx");
 const SIDEBAR = src("components/layout/app-sidebar.tsx");
-const MOBILE_NAV = src("components/layout/mobile-bottom-nav.tsx");
+const MOBILE_NAV = src("components/navigation/mobile-bottom-nav.tsx");
 const KANBAN = src("components/tasks/task-kanban-board.tsx");
 const WORKSPACE = src("components/workspace/unified-adaptive-workspace.tsx");
 const WORKSPACE_TOOLBAR = src("components/workspace/workspace-toolbar.tsx");

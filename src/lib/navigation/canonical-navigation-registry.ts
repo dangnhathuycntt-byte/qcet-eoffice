@@ -131,38 +131,28 @@ export function getRouteByPath(pathname: string): CanonicalRouteConfig | undefin
   );
 }
 
+/**
+ * T88: convenience map of the primary canonical routes, derived from
+ * CANONICAL_ROUTES so hrefs and labels can never drift from the single
+ * navigation source of truth.
+ */
+function pickNavItem(
+  id: string
+): Pick<CanonicalRouteConfig, "id" | "href" | "label" | "iconName"> {
+  const route = CANONICAL_ROUTES.find((r) => r.id === id);
+  if (!route) {
+    throw new Error(`Unknown canonical route id: ${id}`);
+  }
+  return { id: route.id, href: route.href, label: route.label, iconName: route.iconName };
+}
+
 export const CANONICAL_NAV_ITEMS = {
-  WORKBENCH: {
-    id: "desk",
-    href: "/",
-    label: "Bàn làm việc",
-    iconName: "LayoutDashboard" as const,
-  },
-  TASKS: {
-    id: "tasks",
-    href: "/tasks",
-    label: "Nhiệm vụ",
-    iconName: "CheckSquare" as const,
-  },
-  CALENDAR: {
-    id: "calendar",
-    href: "/calendar",
-    label: "Lịch công tác",
-    iconName: "Calendar" as const,
-  },
-  DOCUMENTS: {
-    id: "documents",
-    href: "/documents",
-    label: "Sổ văn bản",
-    iconName: "FileText" as const,
-  },
-  ORG: {
-    id: "org",
-    href: "/org",
-    label: "Cơ cấu & Danh bạ",
-    iconName: "Building2" as const,
-  },
-} as const;
+  WORKBENCH: pickNavItem("desk"),
+  TASKS: pickNavItem("tasks"),
+  CALENDAR: pickNavItem("calendar"),
+  DOCUMENTS: pickNavItem("documents"),
+  ORG: pickNavItem("org"),
+};
 
 export interface ResolveTasksUrlOptions {
   scope?: "school" | "unit" | "my";

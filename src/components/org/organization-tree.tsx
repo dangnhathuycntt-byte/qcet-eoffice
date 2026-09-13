@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import {
   Building2,
   Users,
@@ -14,22 +13,13 @@ import {
   Mail,
   Phone,
   MapPin,
-  ExternalLink,
-  Shield,
   Layers,
   LayoutGrid,
   List,
-  Calendar,
   X,
-  Sparkles,
   Download,
   Printer,
-  CheckCircle2,
-  Radio,
-  BarChart3,
   UserCheck,
-  AlertCircle,
-  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -1304,21 +1294,56 @@ export function exportDirectoryToCSV(departments: DepartmentNode[]) {
 }
 
 // ============================================================================
-// 4. Main OrganizationTree Component
+// 4. Logical-context persistence (T59)
+// ============================================================================
+// Expand / search / view context survives reloads and re-entry so the user never
+// loses their logical position in the directory. This is session-scoped UI state
+// only — never authorization and never dataset scope (Role Is Not Scope).
+
+const ORG_TREE_STATE_KEY = "qcet:org:tree-state";
+
+interface PersistedOrgTreeState {
+  activeTab?: "directory" | "bento";
+  selectedDeptCode?: string;
+  searchQuery?: string;
+  viewMode?: "grid" | "list";
+  expandedCategories?: Record<DepartmentCategory, boolean>;
+}
+
+function readPersistedOrgTreeState(): PersistedOrgTreeState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(ORG_TREE_STATE_KEY);
+    return raw ? (JSON.parse(raw) as PersistedOrgTreeState) : null;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================================
+// 5. Main OrganizationTree Component
 // ============================================================================
 
 interface OrganizationTreeProps {
   initialDepartmentCode?: string;
   onSelectStaff?: (staff: StaffMember) => void;
+  /**
+   * T59: persist logical browse context (tab / search / expanded categories /
+   * drill position) across reloads. Enabled by the full-page /org surface only,
+   * so an embedded dashboard zone does not inherit page-local browse state.
+   */
+  persistContext?: boolean;
 }
 
 export function OrganizationTree({
   initialDepartmentCode,
   onSelectStaff,
+  persistContext = false,
 }: OrganizationTreeProps) {
-  // Active Tab: "directory" | "bento" | "tree"
-  const [activeTab, setActiveTab] = React.useState<"directory" | "bento" | "tree">(
-    "bento"
+  // Primary view is the directory/tree (T56/D12). The unit overview ("bento")
+  // is a secondary presentation, never the default landing view.
+  const [activeTab, setActiveTab] = React.useState<"directory" | "bento">(
+    "directory"
   );
   const [selectedDeptCode, setSelectedDeptCode] = React.useState<string | null>(
     initialDepartmentCode || "ALL"
@@ -1343,6 +1368,51 @@ export function OrganizationTree({
   const [activeProfileStaff, setActiveProfileStaff] =
     React.useState<StaffMember | null>(null);
 
+  // T59: persist logical context. Declared before the hydration effect so the
+  // first commit can never overwrite an already-stored position.
+  const orgContextHydratedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!persistContext || !orgContextHydratedRef.current || typeof window === "undefined") return;
+    const payload: PersistedOrgTreeState = {
+      activeTab,
+      selectedDeptCode: selectedDeptCode ?? "ALL",
+      searchQuery,
+      viewMode,
+      expandedCategories,
+    };
+    try {
+      window.sessionStorage.setItem(ORG_TREE_STATE_KEY, JSON.stringify(payload));
+    } catch {
+      // Storage unavailable (e.g. private mode): context is simply not persisted.
+    }
+  }, [persistContext, activeTab, selectedDeptCode, searchQuery, viewMode, expandedCategories]);
+
+  // T59: restore logical context after mount. Skipped when a parent pins an
+  // explicit department, so an embedded drill-down keeps its own context.
+  React.useEffect(() => {
+    if (persistContext && !initialDepartmentCode) {
+      const persisted = readPersistedOrgTreeState();
+      if (persisted) {
+        if (persisted.activeTab) setActiveTab(persisted.activeTab);
+        if (persisted.selectedDeptCode) {
+          setSelectedDeptCode(persisted.selectedDeptCode);
+        }
+        if (typeof persisted.searchQuery === "string") {
+          setSearchQuery(persisted.searchQuery);
+        }
+        if (persisted.viewMode) setViewMode(persisted.viewMode);
+        if (persisted.expandedCategories) {
+          setExpandedCategories((prev) => ({
+            ...prev,
+            ...persisted.expandedCategories,
+          }));
+        }
+      }
+    }
+    orgContextHydratedRef.current = true;
+  }, [persistContext, initialDepartmentCode]);
+
   const toggleCategory = (cat: DepartmentCategory) => {
     setExpandedCategories((prev) => ({
       ...prev,
@@ -1365,7 +1435,7 @@ export function OrganizationTree({
     },
     {
       category: "PHONG_CHUC_NANG",
-      label: "Phòng chức năng (6 đơn vị)",
+      label: "Phòng chức năng",
       icon: Briefcase,
       departments: QCET_DEPARTMENTS.filter(
         (d) => d.category === "PHONG_CHUC_NANG"
@@ -1373,7 +1443,7 @@ export function OrganizationTree({
     },
     {
       category: "KHOA_CHUYEN_MON",
-      label: "Khoa chuyên môn (9 đơn vị)",
+      label: "Khoa chuyên môn",
       icon: GraduationCap,
       departments: QCET_DEPARTMENTS.filter(
         (d) => d.category === "KHOA_CHUYEN_MON"
@@ -1381,7 +1451,7 @@ export function OrganizationTree({
     },
     {
       category: "TRUNG_TAM",
-      label: "Trung tâm trực thuộc (2 đơn vị)",
+      label: "Trung tâm trực thuộc",
       icon: Globe,
       departments: QCET_DEPARTMENTS.filter((d) => d.category === "TRUNG_TAM"),
     },
@@ -1451,6 +1521,7 @@ export function OrganizationTree({
         <MobileOrgDrillDown
           initialDepartmentCode={initialDepartmentCode}
           onSelectStaff={handleOpenStaff}
+          persistContext={persistContext}
         />
       </div>
 
@@ -1460,24 +1531,8 @@ export function OrganizationTree({
         {/* 1. Main Navigation Tabs & Action Strip                                */}
         {/* ===================================================================== */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-border/70 pb-3">
-        {/* Modern Segmented Tab Pills */}
+        {/* Modern Segmented Tab Pills — primary (directory) first, secondary last */}
         <div className="inline-flex p-1 rounded-xl bg-muted/60 border border-border/70 shadow-2xs self-start">
-          <button
-            type="button"
-            onClick={() => setActiveTab("bento")}
-            className={cn(
-              "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-              activeTab === "bento"
-                ? "bg-card text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <LayoutGrid className="size-3.5 text-primary" strokeWidth={1.5} />
-            <span>Sơ đồ Khối Đơn vị</span>
-            <Badge variant="secondary" className="text-xs h-4.5 px-1.5 font-mono">
-              17
-            </Badge>
-          </button>
           <button
             type="button"
             onClick={() => setActiveTab("directory")}
@@ -1489,23 +1544,26 @@ export function OrganizationTree({
             )}
           >
             <Users className="size-3.5 text-indigo-500" strokeWidth={1.5} />
-            <span>Danh bạ Cán bộ & Giảng viên</span>
-            <Badge variant="secondary" className="text-xs h-4.5 px-1.5 font-mono">
+            <span>Danh bạ & Cây tổ chức</span>
+            <Badge variant="secondary" className="text-xs h-4.5 px-1.5 font-mono tabular-nums">
               {QCET_DEPARTMENTS.reduce((sum, d) => sum + d.members.length, 0)}
             </Badge>
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("tree")}
+            onClick={() => setActiveTab("bento")}
             className={cn(
               "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-              activeTab === "tree"
+              activeTab === "bento"
                 ? "bg-card text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Layers className="size-3.5 text-emerald-500" strokeWidth={1.5} />
-            <span>Cây Phân cấp Tổ chức</span>
+            <LayoutGrid className="size-3.5 text-primary" strokeWidth={1.5} />
+            <span>Sơ đồ đơn vị</span>
+            <Badge variant="secondary" className="text-xs h-4.5 px-1.5 font-mono tabular-nums">
+              {QCET_DEPARTMENTS.length}
+            </Badge>
           </button>
         </div>
 
@@ -1684,9 +1742,9 @@ export function OrganizationTree({
       )}
 
       {/* ===================================================================== */}
-      {/* 3. TAB CONTENT 2 & 3: DANH BẠ NHÂN SỰ & CÂY PHÂN CẤP TỔ CHỨC           */}
+      {/* 3. TAB CONTENT 2: DANH BẠ NHÂN SỰ & CÂY PHÂN CẤP TỔ CHỨC (PRIMARY)     */}
       {/* ===================================================================== */}
-      {(activeTab === "directory" || activeTab === "tree") && (
+      {activeTab === "directory" && (
         <div className="space-y-6">
           {/* Global Search & Filter Bar */}
           <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-xs p-3.5 shadow-card">
@@ -1813,7 +1871,7 @@ export function OrganizationTree({
                       <Building2 className="size-3.5" strokeWidth={1.5} />
                     </span>
                     <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-                      Cơ cấu 17 Đơn vị QCET
+                      Cơ cấu {QCET_DEPARTMENTS.length} đơn vị QCET
                     </span>
                   </div>
                   <Badge

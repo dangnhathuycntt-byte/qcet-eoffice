@@ -24,6 +24,7 @@ export type PWATelemetryEventName =
   | "sync.queued"
   | "sync.success"
   | "sync.conflict"
+  | "sync.reconcile"
   | "sync.flush.start"
   | "sync.flush.completed"
   | "storage.persist.granted"

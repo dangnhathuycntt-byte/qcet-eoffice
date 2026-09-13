@@ -1,0 +1,1439 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-13T03:57:49.583Z",
+  "baselineLabel": "baseline",
+  "baselineGeneratedAt": "2026-09-13T03:46:22.364Z",
+  "baselineGitSha": "7363c4309007a776269f57cb3058bb64cf059c2e",
+  "runs": 5,
+  "headroomMultiplier": 1.25,
+  "thresholdsSource": "src/telemetry/web-vitals.ts",
+  "cwvThresholds": {
+    "LCP": {
+      "good": 2500,
+      "needsImprovement": 4000
+    },
+    "INP": {
+      "good": 200,
+      "needsImprovement": 500
+    },
+    "CLS": {
+      "good": 0.1,
+      "needsImprovement": 0.25
+    },
+    "TTFB": {
+      "good": 800,
+      "needsImprovement": 1800
+    },
+    "FCP": {
+      "good": 1800,
+      "needsImprovement": 3000
+    },
+    "FID": {
+      "good": 100,
+      "needsImprovement": 300
+    }
+  },
+  "entries": [
+    {
+      "route": "home",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "home",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 268,
+      "budget": 335,
+      "basis": "baseline p75 268 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "home",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "home",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.011,
+      "budget": 0.031,
+      "basis": "baseline p75 0.011 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "home",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 110.1,
+      "budget": 138,
+      "basis": "baseline p75 110.1 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "home",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 248,
+      "budget": 310,
+      "basis": "baseline p75 248 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 3296,
+      "budget": 4120,
+      "basis": "baseline p75 3296 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "cwv",
+      "budget": 200,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "regression",
+      "baselineP75": 72,
+      "budget": 90,
+      "basis": "baseline p75 72 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.062,
+      "budget": 0.082,
+      "basis": "baseline p75 0.062 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 112.2,
+      "budget": 141,
+      "basis": "baseline p75 112.2 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 256,
+      "budget": 320,
+      "basis": "baseline p75 256 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 720,
+      "budget": 900,
+      "basis": "baseline p75 720 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.102,
+      "budget": 0.1275,
+      "basis": "baseline p75 0.102 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 100.9,
+      "budget": 127,
+      "basis": "baseline p75 100.9 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 252,
+      "budget": 315,
+      "basis": "baseline p75 252 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 832,
+      "budget": 1040,
+      "basis": "baseline p75 832 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.063,
+      "budget": 0.083,
+      "basis": "baseline p75 0.063 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 106.8,
+      "budget": 134,
+      "basis": "baseline p75 106.8 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 240,
+      "budget": 300,
+      "basis": "baseline p75 240 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 3196,
+      "budget": 3995,
+      "basis": "baseline p75 3196 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "cwv",
+      "budget": 200,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "regression",
+      "baselineP75": 152,
+      "budget": 190,
+      "basis": "baseline p75 152 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.062,
+      "budget": 0.082,
+      "basis": "baseline p75 0.062 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 30.6,
+      "budget": 39,
+      "basis": "baseline p75 30.6 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 256,
+      "budget": 320,
+      "basis": "baseline p75 256 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 3188,
+      "budget": 3985,
+      "basis": "baseline p75 3188 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "cwv",
+      "budget": 200,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "regression",
+      "baselineP75": 72,
+      "budget": 90,
+      "basis": "baseline p75 72 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.062,
+      "budget": 0.082,
+      "basis": "baseline p75 0.062 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 28.7,
+      "budget": 37,
+      "basis": "baseline p75 28.7 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 192,
+      "budget": 240,
+      "basis": "baseline p75 192 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 3188,
+      "budget": 3985,
+      "basis": "baseline p75 3188 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "cwv",
+      "budget": 200,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "regression",
+      "baselineP75": 32,
+      "budget": 40,
+      "basis": "baseline p75 32 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.062,
+      "budget": 0.082,
+      "basis": "baseline p75 0.062 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 40.6,
+      "budget": 51,
+      "basis": "baseline p75 40.6 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 216,
+      "budget": 270,
+      "basis": "baseline p75 216 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 232,
+      "budget": 290,
+      "basis": "baseline p75 232 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "cwv",
+      "budget": 200,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "regression",
+      "baselineP75": 120,
+      "budget": 150,
+      "basis": "baseline p75 120 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.001,
+      "budget": 0.021,
+      "basis": "baseline p75 0.001 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 7.3,
+      "budget": 16,
+      "basis": "baseline p75 7.3 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 116,
+      "budget": 145,
+      "basis": "baseline p75 116 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 256,
+      "budget": 320,
+      "basis": "baseline p75 256 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.001,
+      "budget": 0.021,
+      "basis": "baseline p75 0.001 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 7.9,
+      "budget": 16,
+      "basis": "baseline p75 7.9 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 140,
+      "budget": 175,
+      "basis": "baseline p75 140 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "documents",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "documents",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 136,
+      "budget": 170,
+      "basis": "baseline p75 136 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "documents",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "documents",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.002,
+      "budget": 0.022,
+      "basis": "baseline p75 0.002 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "documents",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 7.5,
+      "budget": 16,
+      "basis": "baseline p75 7.5 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "documents",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 136,
+      "budget": 170,
+      "basis": "baseline p75 136 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "org",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "org",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 300,
+      "budget": 375,
+      "basis": "baseline p75 300 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "org",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "org",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.001,
+      "budget": 0.021,
+      "basis": "baseline p75 0.001 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "org",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 8,
+      "budget": 16,
+      "basis": "baseline p75 8 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "org",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 132,
+      "budget": 165,
+      "basis": "baseline p75 132 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "desktop",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 324,
+      "budget": 405,
+      "basis": "baseline p75 324 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "cwv",
+      "budget": 200,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "desktop",
+      "metric": "INP",
+      "tier": "regression",
+      "baselineP75": 136,
+      "budget": 170,
+      "basis": "baseline p75 136 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "desktop",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0.011,
+      "budget": 0.031,
+      "basis": "baseline p75 0.011 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "desktop",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 113.2,
+      "budget": 142,
+      "basis": "baseline p75 113.2 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "desktop",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 288,
+      "budget": 360,
+      "basis": "baseline p75 288 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "home",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "home",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 324,
+      "budget": 405,
+      "basis": "baseline p75 324 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "home",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "home",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "home",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 121.1,
+      "budget": 152,
+      "basis": "baseline p75 121.1 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "home",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 256,
+      "budget": 320,
+      "basis": "baseline p75 256 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 3172,
+      "budget": 3965,
+      "basis": "baseline p75 3172 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "mobile",
+      "metric": "INP",
+      "tier": "cwv",
+      "budget": 200,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "mobile",
+      "metric": "INP",
+      "tier": "regression",
+      "baselineP75": 56,
+      "budget": 70,
+      "basis": "baseline p75 56 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 95.2,
+      "budget": 119,
+      "basis": "baseline p75 95.2 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-table",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 244,
+      "budget": 305,
+      "basis": "baseline p75 244 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 692,
+      "budget": 865,
+      "basis": "baseline p75 692 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 131.4,
+      "budget": 165,
+      "basis": "baseline p75 131.4 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-kanban",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 272,
+      "budget": 340,
+      "basis": "baseline p75 272 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 768,
+      "budget": 960,
+      "basis": "baseline p75 768 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 105.4,
+      "budget": 132,
+      "basis": "baseline p75 105.4 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-detail",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 296,
+      "budget": 370,
+      "basis": "baseline p75 296 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 3164,
+      "budget": 3955,
+      "basis": "baseline p75 3164 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 36.5,
+      "budget": 46,
+      "basis": "baseline p75 36.5 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-open-detail",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 156,
+      "budget": 195,
+      "basis": "baseline p75 156 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 3160,
+      "budget": 3950,
+      "basis": "baseline p75 3160 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "mobile",
+      "metric": "INP",
+      "tier": "cwv",
+      "budget": 200,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "mobile",
+      "metric": "INP",
+      "tier": "regression",
+      "baselineP75": 56,
+      "budget": 70,
+      "basis": "baseline p75 56 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 30.8,
+      "budget": 39,
+      "basis": "baseline p75 30.8 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-search",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 148,
+      "budget": 185,
+      "basis": "baseline p75 148 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 3164,
+      "budget": 3955,
+      "basis": "baseline p75 3164 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 99.3,
+      "budget": 125,
+      "basis": "baseline p75 99.3 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "tasks-bulk",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 244,
+      "budget": 305,
+      "basis": "baseline p75 244 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 588,
+      "budget": 735,
+      "basis": "baseline p75 588 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "mobile",
+      "metric": "INP",
+      "tier": "cwv",
+      "budget": 200,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "mobile",
+      "metric": "INP",
+      "tier": "regression",
+      "baselineP75": 144,
+      "budget": 180,
+      "basis": "baseline p75 144 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 7.6,
+      "budget": 16,
+      "basis": "baseline p75 7.6 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "calendar",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 132,
+      "budget": 165,
+      "basis": "baseline p75 132 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 124,
+      "budget": 155,
+      "basis": "baseline p75 124 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 7.6,
+      "budget": 16,
+      "basis": "baseline p75 7.6 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "notifications",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 124,
+      "budget": 155,
+      "basis": "baseline p75 124 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "documents",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "documents",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 140,
+      "budget": 175,
+      "basis": "baseline p75 140 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "documents",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "documents",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "documents",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 8,
+      "budget": 16,
+      "basis": "baseline p75 8 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "documents",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 140,
+      "budget": 175,
+      "basis": "baseline p75 140 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "org",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "org",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 156,
+      "budget": 195,
+      "basis": "baseline p75 156 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "org",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "org",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "org",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 8.7,
+      "budget": 17,
+      "basis": "baseline p75 8.7 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "org",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 156,
+      "budget": 195,
+      "basis": "baseline p75 156 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "cwv",
+      "budget": 2500,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "mobile",
+      "metric": "LCP",
+      "tier": "regression",
+      "baselineP75": 336,
+      "budget": 420,
+      "basis": "baseline p75 336 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "cwv",
+      "budget": 0.1,
+      "basis": "C16 good threshold (src/telemetry/web-vitals.ts)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "mobile",
+      "metric": "CLS",
+      "tier": "regression",
+      "baselineP75": 0,
+      "budget": 0.02,
+      "basis": "baseline p75 0 x 1.25 (+0.02 score floor)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "mobile",
+      "metric": "TTFB",
+      "tier": "regression",
+      "baselineP75": 120.4,
+      "budget": 151,
+      "basis": "baseline p75 120.4 x 1.25 (+8 ms floor)"
+    },
+    {
+      "route": "command-search",
+      "viewport": "mobile",
+      "metric": "FCP",
+      "tier": "regression",
+      "baselineP75": 268,
+      "budget": 335,
+      "basis": "baseline p75 268 x 1.25 (+8 ms floor)"
+    }
+  ]
+}

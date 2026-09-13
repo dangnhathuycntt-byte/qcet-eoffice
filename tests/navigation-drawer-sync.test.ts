@@ -5,7 +5,7 @@ import path from "node:path";
 
 describe("Mobile Navigation & Drawer Synchronization Suite", () => {
   test("mobile-bottom-nav.tsx defines 4 standardized tabs with 48px ergonomics and haptics", () => {
-    const navPath = path.resolve(process.cwd(), "src/components/layout/mobile-bottom-nav.tsx");
+    const navPath = path.resolve(process.cwd(), "src/components/navigation/mobile-bottom-nav.tsx");
     const content = fs.readFileSync(navPath, "utf-8");
     assert.ok(content.includes('triggerHaptic("light")'));
     assert.ok(content.includes("safe-area-inset-bottom"));

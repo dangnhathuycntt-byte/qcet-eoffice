@@ -7,6 +7,7 @@ import type { UpcomingItem } from "@/types/dashboard";
 export type { UpcomingItem };
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { formatDisplayDate } from "@/lib/format";
 
 export interface UpcomingDeadlinesWidgetProps {
   items?: UpcomingItem[];
@@ -86,18 +87,6 @@ export function getInitials(name: string): string {
   const first = parts[0].charAt(0);
   const last = parts[parts.length - 1].charAt(0);
   return (first + last).toUpperCase();
-}
-
-export function formatDisplayDate(dateStr: string): string {
-  if (!dateStr) return "";
-  try {
-    const parts = parseDateOnly(dateStr);
-    const day = String(parts.day).padStart(2, "0");
-    const month = String(parts.month + 1).padStart(2, "0");
-    return `${day}/${month}`;
-  } catch {
-    return dateStr;
-  }
 }
 
 export function UpcomingDeadlinesWidget({

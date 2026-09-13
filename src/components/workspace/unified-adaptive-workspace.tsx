@@ -57,10 +57,8 @@ const SubmitDeliverableModal = dynamic(
   () => import("@/components/portal/submit-deliverable-modal").then((mod) => mod.SubmitDeliverableModal),
   { ssr: false }
 );
-import {
-  applyOptimisticStatusChange,
-  applyOptimisticCreateTask,
-} from "./utils/task-workspace-mutations";
+import { applyOptimisticStatusChange } from "./utils/task-workspace-mutations";
+import type { CreateTaskSubmitResult } from "@/lib/adapters/create-task-mapper";
 import { cn } from "@/lib/utils";
 
 export { type WorkspaceScope, type ViewMode, matchesUser };
@@ -1054,27 +1052,52 @@ export function UnifiedAdaptiveWorkspace({
     }
   }, [onCreateTask, onAction, isStaff, activeScope, openCreateModal]);
 
+  // Canonical refresh: delegates to the parent when the dataset is controlled,
+  // otherwise reloads the canonical server collection.
+  const handleRefresh = React.useCallback(async () => {
+    if (onRefresh) {
+      await onRefresh();
+      return;
+    }
+    setIsRefreshingInternal(true);
+    try {
+      const res = await fetch("/api/dashboard/overview");
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.tasks) {
+          setInternalTasks(data.tasks);
+          setInternalError(null);
+        }
+      }
+    } catch {
+      // transient
+    } finally {
+      setIsRefreshingInternal(false);
+    }
+  }, [onRefresh]);
+
+  // Task-creation reconciliation (T73 / Server-Truth-Wins).
+  //
+  // `CreateTaskModal` is the single writer for the create command: it maps the
+  // draft through the canonical adapter, POSTs the strict `CreateTaskInput`, and
+  // invokes `onSubmit` only with a server-confirmed DTO. The workspace must not
+  // re-issue the mutation (the former duplicate raw POST of the UI form draft was
+  // rejected by the strict schema) and must never roll a confirmed create back to
+  // a stale pre-create snapshot. Instead it reconciles local state from server
+  // truth through the canonical refresh.
   const handleCreateTaskSubmit = React.useCallback(
-    async (formData: CreateTaskFormData) => {
-      const previousData = internalTasks;
-      const todayStr = getSystemReferenceDate();
-      setInternalTasks((prev) => applyOptimisticCreateTask(prev, formData, todayStr));
+    async (_formData: CreateTaskFormData, result?: CreateTaskSubmitResult) => {
       setIsCreateModalOpen(false);
 
-      try {
-        const res = await fetch("/api/tasks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        });
-        if (!res.ok) {
-          throw new Error("Lỗi tạo nhiệm vụ");
-        }
-      } catch (err) {
-        setInternalTasks(previousData);
+      // Without a server-confirmed DTO there is nothing proven to reconcile;
+      // leave the list untouched rather than fabricating or rolling back state.
+      if (!result?.ok) {
+        return;
       }
+
+      await handleRefresh();
     },
-    [internalTasks]
+    [handleRefresh]
   );
 
   // Status mutation handler with optimistic UI and rollback
@@ -1143,29 +1166,6 @@ export function UnifiedAdaptiveWorkspace({
     },
     [onSendReminder]
   );
-
-  // Refresh handler
-  const handleRefresh = React.useCallback(async () => {
-    if (onRefresh) {
-      await onRefresh();
-      return;
-    }
-    setIsRefreshingInternal(true);
-    try {
-      const res = await fetch("/api/dashboard/overview");
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.tasks) {
-          setInternalTasks(data.tasks);
-          setInternalError(null);
-        }
-      }
-    } catch {
-      // transient
-    } finally {
-      setIsRefreshingInternal(false);
-    }
-  }, [onRefresh]);
 
   const effectiveIsRefreshing = isRefreshing || isRefreshingInternal;
   const effectiveError = errorMessage || internalError;

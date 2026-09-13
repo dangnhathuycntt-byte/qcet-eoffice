@@ -23,7 +23,12 @@ export type FeatureFlagKey =
   | "largeExcelExport"
   | "taskWorkspaceV2"
   | "mobileAgenda"
-  | "newExecutiveDashboard";
+  | "newExecutiveDashboard"
+  | "uxTasksV5"
+  | "uxCalendarV5"
+  | "uxNotificationsV5"
+  | "uxDocumentsV5"
+  | "uxOrgV5";
 
 export interface FeatureFlagDefinition {
   readonly key: FeatureFlagKey;
@@ -79,6 +84,46 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
   newExecutiveDashboard: {
     key: "newExecutiveDashboard",
     description: "Phased rollout flag for the new executive multi-unit cross-department analytics dashboard",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  // --- V5.1 migration-boundary rollout flags (C17 / T92) -------------------
+  // One flag per reconstructed surface boundary — NOT one per component.
+  // Each gates implementation availability only; it never gates authorization.
+  // camelCase keys realize the conceptual §38.3 UX_*_V5 names via toSnakeCaseUpper,
+  // e.g. uxTasksV5 -> UX_TASKS_V5 -> env FEATURE_FLAG_UX_TASKS_V5.
+  uxTasksV5: {
+    key: "uxTasksV5",
+    description: "Migration-boundary rollout flag for the Tasks V5 reconstructed workspace core (list/board/detail/create)",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  uxCalendarV5: {
+    key: "uxCalendarV5",
+    description: "Migration-boundary rollout flag for the Calendar V5 reconstructed surface",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  uxNotificationsV5: {
+    key: "uxNotificationsV5",
+    description: "Migration-boundary rollout flag for the Notifications V5 reconstructed surface",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  uxDocumentsV5: {
+    key: "uxDocumentsV5",
+    description: "Migration-boundary rollout flag for the Documents V5 reconstructed surface",
+    defaultValue: false,
+    isKillSwitch: false,
+    isPublic: true,
+  },
+  uxOrgV5: {
+    key: "uxOrgV5",
+    description: "Migration-boundary rollout flag for the Organization V5 reconstructed surface",
     defaultValue: false,
     isKillSwitch: false,
     isPublic: true,

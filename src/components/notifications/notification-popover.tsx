@@ -3,10 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import {
+  AlertTriangle,
   Check,
   CheckCheck,
   Clock,
   ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/layout/sidebar-context";
@@ -20,6 +22,10 @@ import {
   formatRelativeTime,
   getTimeGroup,
   resolveActionableDeepLink,
+  deriveNotificationsViewState,
+  getNotificationEmptyCopy,
+  beginOptimisticRead,
+  settleOptimisticRead,
 } from "@/lib/notification-triage";
 
 // Re-export for backward compatibility
@@ -35,22 +41,31 @@ interface NotificationPopoverProps {
 export function NotificationPopover({ isOpen, onClose, containerRef }: NotificationPopoverProps) {
   const [notifications, setNotifications] = React.useState<QCETNotification[]>([]);
   const [filter, setFilter] = React.useState<"all" | "unread">("all");
-  const [, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const popoverRef = React.useRef<HTMLDivElement>(null);
   const { setBadgeCounts } = useSidebar();
 
   const fetchNotifications = React.useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/notifications");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.notifications)) {
-          setNotifications(data.notifications.map(mapDbNotification));
-        }
+      if (!res.ok) {
+        throw new Error(`Yêu cầu thất bại (${res.status})`);
       }
-    } catch {
-      // Best effort fallback
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.notifications)) {
+        throw new Error("Dữ liệu thông báo không hợp lệ");
+      }
+      setNotifications(data.notifications.map(mapDbNotification));
+    } catch (err) {
+      // A failed fetch is an ERROR state, never an apparent empty inbox (T44).
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Không thể kết nối tới máy chủ thông báo."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -108,23 +123,30 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Optimistic mark-read with rollback to server truth on failure (T46).
   const markAsRead = async (id: string) => {
-    setNotifications((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, isRead: true } : item))
-    );
+    const session = beginOptimisticRead(notifications, id);
+    setNotifications(session.optimistic);
     try {
-      await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+      const res = await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+      setNotifications((prev) =>
+        settleOptimisticRead(session, { ok: res.ok, serverNotifications: prev })
+      );
     } catch {
-      // Best effort
+      setNotifications(settleOptimisticRead(session, { ok: false }));
     }
   };
 
   const markAllAsRead = async () => {
-    setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    const session = beginOptimisticRead(notifications, "all");
+    setNotifications(session.optimistic);
     try {
-      await fetch("/api/notifications", { method: "PATCH" });
+      const res = await fetch("/api/notifications", { method: "PATCH" });
+      setNotifications((prev) =>
+        settleOptimisticRead(session, { ok: res.ok, serverNotifications: prev })
+      );
     } catch {
-      // Best effort
+      setNotifications(settleOptimisticRead(session, { ok: false }));
     }
   };
 
@@ -134,6 +156,14 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
     }
     return notifications;
   }, [notifications, filter]);
+
+  // Explicit loading/data/empty/error parity with the full page (T44/T47).
+  const viewState = deriveNotificationsViewState({
+    isLoading,
+    hasError: error !== null,
+    count: notifications.length,
+  });
+  const emptyCopy = getNotificationEmptyCopy("all", filter === "unread");
 
   const newItems = React.useMemo(() => {
     return filteredNotifications.filter((n) => n.timeGroup === "new");
@@ -166,7 +196,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
             ) : (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground font-medium">
                 <Check size={11} strokeWidth={1.5} className="text-emerald-500" />
-                <span>Đã cập nhật</span>
+                <span>Không có thông báo chưa đọc</span>
               </span>
             )}
           </div>
@@ -232,21 +262,44 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
 
       {/* Scrollable Notification List */}
       <div className="flex-1 overflow-y-auto overscroll-contain py-1 divide-y divide-border/30 thin-scrollbar">
-        {filteredNotifications.length === 0 ? (
-          <div className="py-12 px-4 text-center">
+        {viewState === "error" ? (
+          <div className="py-12 px-4 text-center" role="alert" data-testid="notification-error-state">
+            <div className="size-10 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto mb-2.5">
+              <AlertTriangle size={18} strokeWidth={1.5} />
+            </div>
+            <p className="text-xs font-semibold text-foreground">Không thể tải thông báo</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {error ?? "Không thể kết nối tới máy chủ thông báo."}
+            </p>
+            <button
+              type="button"
+              onClick={fetchNotifications}
+              disabled={isLoading}
+              className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw size={12} strokeWidth={1.5} className={isLoading ? "animate-spin" : ""} />
+              <span>Thử lại</span>
+            </button>
+          </div>
+        ) : viewState === "loading" ? (
+          <div className="py-3 px-3 space-y-2" data-testid="notification-loading-state" aria-label="Đang tải thông báo...">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-start gap-3 p-2.5 animate-pulse">
+                <div className="size-10 rounded-full bg-muted/60 shrink-0" />
+                <div className="space-y-2 flex-1 min-w-0">
+                  <div className="h-3.5 w-3/4 rounded bg-muted/60" />
+                  <div className="h-3 w-1/3 rounded bg-muted/40" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="py-12 px-4 text-center" data-testid="notification-empty-state">
             <div className="size-10 rounded-full bg-secondary/80 text-muted-foreground flex items-center justify-center mx-auto mb-2.5">
               <Check size={18} strokeWidth={1.5} />
             </div>
-            <p className="text-xs font-semibold text-foreground">
-              {filter === "unread"
-                ? "Không có thông báo chưa đọc nào"
-                : "Hiện tại Đồng chí không có thông báo mới nào"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {filter === "unread"
-                ? "Bạn đã xử lý và cập nhật toàn bộ hoạt động điều hành"
-                : "Bạn đã nắm bắt hết mọi thông tin điều hành"}
-            </p>
+            <p className="text-xs font-semibold text-foreground">{emptyCopy.title}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{emptyCopy.description}</p>
           </div>
         ) : (
           <>

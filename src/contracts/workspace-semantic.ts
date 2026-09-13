@@ -1,6 +1,12 @@
 /**
  * Canonical Workspace Semantic Contracts (Gate G0 Frozen Interface)
  *
+ * FROZEN CONTRACT — single-writer (shard-contracts-freeze owns src/contracts/**).
+ * Authority: Master Plan §5 (C1–C16) + §38–§41 (C17–C20); see
+ * docs/agent-work/decisions/ux-contract-freeze.md and
+ * docs/agent-work/UI_SEMANTIC_CONTRACT.md. Consumers must not rename or widen
+ * these interfaces without domain proof and an explicit contract revision.
+ *
  * Defines the 8 universal semantic dimensions:
  * 1. scope: 'school' | 'unit' | 'my'
  * 2. period: academic month (1..12, ALL) or date (YYYY-MM-DD)
@@ -236,11 +242,28 @@ export interface WorkspaceFilterState {
 }
 
 /**
- * Normalized query parameters parsed from / written to window.location.search
+ * Normalized query parameters parsed from / written to window.location.search.
+ *
+ * FROZEN CONTRACT — C3 canonical workspace query keys (Master Plan §5 C3):
+ *   scope dept period status attention view q taskId viewId
+ *
+ * - `period` is the canonical aggregate temporal key. Accepted input forms:
+ *   academic month `1..12`, `ALL`, `YYYY-MM`, or ISO date `YYYY-MM-DD`.
+ *   `month` and `date` are the concrete period sub-keys the F2 query engine
+ *   surfaces separately for URL/state convenience; they are NOT independent
+ *   dimensions and must never be treated as one.
+ * - `sort` / `group` are intentionally NOT declared here. The canonical parser
+ *   src/lib/workspace-query.ts has no parse/serialize/equality support for
+ *   them, so declaring them would advertise query keys that no consumer parses
+ *   (silently dropped on parse, not re-emitted on serialize, and ignored by
+ *   isWorkspaceQueryEqual). They are added to the frozen contract together
+ *   with their parser support when the F2 query/scope/loading lane lands them
+ *   (tracked in docs/agent-work/UX_MIGRATION_LEDGER.md).
  */
 export interface WorkspaceQueryParams {
   scope?: WorkspaceScopeType;
   dept?: string;
+  period?: string;
   month?: string;
   date?: string;
   status?: string;

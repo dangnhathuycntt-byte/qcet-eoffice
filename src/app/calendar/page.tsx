@@ -32,6 +32,7 @@ import {
   type TaskLevel,
 } from "@/components/dashboard/create-task-modal";
 import { TaskDetailSideSheet } from "@/components/dashboard/task-detail-side-sheet";
+import type { CreateTaskSubmitResult } from "@/lib/adapters/create-task-mapper";
 import { useAuth } from "@/lib/auth-context";
 import {
   getSystemReferenceDate,
@@ -586,82 +587,28 @@ function CalendarRouteContent() {
     setIsCreateEventModalOpen(true);
   }, [selectedDate]);
 
-  const handleCreateTaskSubmit = useCallback(async (data: CreateTaskFormData) => {
-    setIsCreateTaskModalOpen(false);
+  const handleCreateTaskSubmit = useCallback(
+    (_data: CreateTaskFormData, result?: CreateTaskSubmitResult) => {
+      setIsCreateTaskModalOpen(false);
 
-    const tempId = `task-created-${Date.now()}`;
-    const cleanDueDate = data.dueDate ? `${data.dueDate}T17:00:00.000Z` : undefined;
+      // The create-task modal owns the canonical create: it POSTs through the
+      // create-task adapter and invokes this consumer only on a server-confirmed
+      // success. This handler must NEVER issue a second create request and must
+      // NEVER synthesize a local task from the form draft — fields such as
+      // status, progress, assignee identity and category label are server-derived
+      // and the raw `category` enum code is not part of the persisted contract
+      // (create-task-mapper.ts), so fabricating them here would render data the
+      // server never set (C1/T73, Server-Truth-Wins, Data-Dignity).
+      // Reconciliation is performed by re-loading canonical server truth, the
+      // same path confirmed event creation takes, so the created task carries
+      // exactly what the server persisted.
+      const serverTask = result?.ok ? result.task : undefined;
+      if (!serverTask) return;
 
-    setTasks((previousTasks) => {
-      const updated = [...previousTasks];
-      if (data.level === "TRUONG") {
-        const code = `NV-${new Date().getFullYear()}-${String(previousTasks.length + 1).padStart(2, "0")}`;
-        const newSchoolTask: SchoolTask = {
-          id: tempId,
-          title: data.title,
-          code,
-          taskCode: code,
-          category: data.category || "CNTT",
-          categoryLabel: data.category || "Công nghệ thông tin",
-          status: "IN_PROGRESS",
-          dueDate: cleanDueDate || `${new Date().toISOString().split("T")[0]}T17:00:00.000Z`,
-          progressPercent: 0,
-          totalSubTasks: 0,
-          completedSubTasks: 0,
-          leadAssigneeName: user?.name || "Lãnh đạo phụ trách",
-          assignedDate: new Date().toISOString().split("T")[0],
-          coAssignees: [],
-          subTasks: [],
-        };
-        updated.unshift(newSchoolTask);
-      } else {
-        const newSubTask: StaffTask = {
-          id: tempId,
-          taskId: data.parentTaskId || (updated[0]?.id ?? "task-root"),
-          title: data.title,
-          status: "IN_PROGRESS",
-          dueDate: cleanDueDate || `${new Date().toISOString().split("T")[0]}T17:00:00.000Z`,
-          assigneeName: user?.name || "Chuyên viên phụ trách",
-          assignedToDepartmentId: user?.departmentCode || user?.department || "",
-          assignedToDepartmentName: user?.department || "Đơn vị phụ trách",
-          department: user?.department || "Đơn vị phụ trách",
-          parentSchoolTaskId: data.parentTaskId || updated[0]?.id,
-          updatedAt: new Date().toISOString(),
-        };
-
-        if (data.parentTaskId) {
-          return updated.map((schoolTask) =>
-            schoolTask.id === data.parentTaskId
-              ? { ...schoolTask, subTasks: [newSubTask, ...schoolTask.subTasks] }
-              : schoolTask
-          );
-        }
-        if (updated.length > 0) {
-          updated[0] = { ...updated[0], subTasks: [newSubTask, ...updated[0].subTasks] };
-        }
-      }
-      return updated.map((task) => computeSchoolTaskRollup(task));
-    });
-
-    try {
-      const response = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: data.title,
-          description: data.description || data.requiredDeliverables || "",
-          dueDate: data.dueDate,
-          departmentId: user?.departmentCode || user?.department || "",
-          scope: data.level === "TRUONG" ? "SCHOOL" : "DEPARTMENT",
-          parentTaskId: data.parentTaskId || undefined,
-          creatorId: user?.id,
-        }),
-      });
-      if (!response.ok) console.warn("Không thể lưu nhiệm vụ vào máy chủ:", await response.text().catch(() => ""));
-    } catch (taskError) {
-      console.warn("Lỗi khi kết nối đến máy chủ để lưu nhiệm vụ:", taskError);
-    }
-  }, [user]);
+      void loadCalendarData();
+    },
+    [loadCalendarData]
+  );
 
   const handleCreateEventSubmit = useCallback(async (eventData: CreateEventFormData) => {
     if (eventData.endTime <= eventData.startTime) {

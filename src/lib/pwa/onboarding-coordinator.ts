@@ -215,6 +215,7 @@ export class PWAOnboardingCoordinator {
   private sessionStartTime: number = Date.now();
   private listeners: Set<(state: CoordinatorState) => void> = new Set();
   private isInitialized = false;
+  private windowListenersAttached = false;
 
   constructor(config?: CoordinatorConfig) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -869,6 +870,12 @@ export class PWAOnboardingCoordinator {
 
   private setupWindowListeners(): void {
     if (typeof window === "undefined") return;
+
+    // Attach the global install listeners exactly once per coordinator instance.
+    // `init` runs on every identity change; without this guard each re-init would
+    // stack another pair of `beforeinstallprompt`/`appinstalled` handlers (T68).
+    if (this.windowListenersAttached) return;
+    this.windowListenersAttached = true;
 
     const handleBeforeInstallPrompt = (e: Event) => {
       this.handleBeforeInstallPrompt(e as BeforeInstallPromptEvent);

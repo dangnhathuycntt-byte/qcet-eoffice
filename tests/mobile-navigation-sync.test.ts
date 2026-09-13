@@ -11,7 +11,7 @@ import {
 import { isRouteActive } from "../src/lib/navigation/active-matcher";
 
 describe("Task 6: Mobile Navigation Synchronization & Touch Ergonomics", () => {
-  const bottomNavPath = path.resolve(process.cwd(), "src/components/layout/mobile-bottom-nav.tsx");
+  const bottomNavPath = path.resolve(process.cwd(), "src/components/navigation/mobile-bottom-nav.tsx");
   const drawerPath = path.resolve(process.cwd(), "src/components/layout/mobile-menu-drawer.tsx");
 
   describe("1. Canonical Route Alignment for Mobile Bottom Bar (4 Destinations)", () => {

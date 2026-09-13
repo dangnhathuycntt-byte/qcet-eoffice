@@ -887,5 +887,40 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
       }
     });
   });
+
+  describe("Invariant 7: Period !== Status (Orthogonality)", () => {
+    test("a period parameter never populates a lifecycle status, and a status never populates a period", () => {
+      const periodOnly = parseWorkspaceQuery({ period: "2026-09" });
+      assert.equal(periodOnly.month, 9, "period '2026-09' must populate the period/month dimension");
+      assert.equal(
+        periodOnly.status,
+        "ALL",
+        "setting a period must never set a lifecycle status; status stays at the neutral default"
+      );
+
+      const statusOnly = parseWorkspaceQuery({ status: "IN_PROGRESS" });
+      assert.equal(statusOnly.status, "IN_PROGRESS", "status must populate the status dimension");
+      assert.equal(
+        statusOnly.month,
+        "ALL",
+        "setting a status must never populate the period/month dimension"
+      );
+    });
+
+    test("canonical period identifiers and lifecycle status identifiers are disjoint sets", () => {
+      const periodIdentifiers = new Set<string>([
+        "ALL",
+        ...Array.from({ length: 12 }, (_, i) => String(i + 1)),
+      ]);
+      const statusIdentifiers = new Set<string>(CANONICAL_TASK_STATUSES);
+
+      const overlap = [...periodIdentifiers].filter((p) => statusIdentifiers.has(p));
+      assert.equal(
+        overlap.length,
+        0,
+        `Period identifiers and status identifiers must never overlap. Overlap found: ${JSON.stringify(overlap)}`
+      );
+    });
+  });
 });
 

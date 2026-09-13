@@ -91,12 +91,16 @@ export function MobileAppInstallModal({
     }
   }, []);
 
-  // Global event listener to open modal from anywhere
+  // Global event listener to open modal from anywhere.
+  // When a parent controls `isOpen` (e.g. AppShell's container that owns the
+  // listener), the parent owns the trigger — registering a second listener here
+  // would duplicate the open path (T68).
   React.useEffect(() => {
+    if (propIsOpen !== undefined) return;
     const handleOpen = () => setInternalOpen(true);
     window.addEventListener("qcet:open-install-modal", handleOpen);
     return () => window.removeEventListener("qcet:open-install-modal", handleOpen);
-  }, []);
+  }, [propIsOpen]);
 
   // Fetch local network & Tailscale info
   React.useEffect(() => {

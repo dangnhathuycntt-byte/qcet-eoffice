@@ -658,3 +658,165 @@ export function filterNotificationsMobile(
   return notifications;
 }
 
+// ============================================================================
+// View-State Machine, Bounded Empty Copy & Optimistic Read Reconciliation
+// T44 (error vs empty), T45 (bounded copy), T46 (read reconciliation)
+// ============================================================================
+
+/**
+ * The four explicit, mutually exclusive notification view states (T44).
+ * - loading: a fetch is in flight and no prior data is available
+ * - data:    at least one notification is available to render
+ * - empty:   the fetch succeeded and the authoritative result set is empty
+ * - error:   the fetch failed (rejected promise or non-ok response)
+ *
+ * Error always wins over empty/data so a failed fetch can NEVER collapse into
+ * an apparent no-data state (T44).
+ */
+export type NotificationsViewState = "loading" | "data" | "empty" | "error";
+
+export interface NotificationsViewStateInput {
+  isLoading: boolean;
+  hasError: boolean;
+  count: number;
+}
+
+/**
+ * Pure state derivation shared by desktop page, mobile inbox and popover so all
+ * surfaces resolve loading/data/empty/error identically (T44/T47).
+ */
+export function deriveNotificationsViewState(
+  input: NotificationsViewStateInput
+): NotificationsViewState {
+  if (input.hasError) return "error";
+  if (input.isLoading && input.count === 0) return "loading";
+  return input.count > 0 ? "data" : "empty";
+}
+
+/**
+ * Canonical phrases that overclaim that ALL institutional work is handled.
+ * Empty notification copy must never contain these (T45).
+ */
+export const NOTIFICATION_OVERCLAIM_PHRASES = [
+  "toàn bộ hoạt động",
+  "nắm bắt toàn bộ",
+  "nắm bắt hết",
+  "cập nhật toàn bộ",
+  "xử lý toàn bộ",
+  "đã xử lý và cập nhật",
+  "hoàn tất toàn bộ",
+] as const;
+
+export interface NotificationEmptyCopy {
+  title: string;
+  description: string;
+}
+
+/**
+ * Bounded, non-overclaiming empty copy for the notification page
+ * (T45). Every message is scoped to "this view/subset" only and never asserts
+ * that all institutional work or activity has been resolved.
+ */
+export function getNotificationEmptyCopy(
+  tab: NotificationTriageTab,
+  unreadOnly = false
+): NotificationEmptyCopy {
+  if (unreadOnly) {
+    return {
+      title: "Không có thông báo chưa đọc trong mục này",
+      description: "Các thông báo đang hiển thị ở đây đều đã được đánh dấu đã đọc.",
+    };
+  }
+  switch (tab) {
+    case "action_required":
+      return {
+        title: "Không có việc cần làm trong mục này",
+        description: "Hiện chưa có thông báo nào yêu cầu bạn xử lý.",
+      };
+    case "approvals":
+      return {
+        title: "Không có nội dung chờ phê duyệt",
+        description: "Hiện chưa có thông báo phê duyệt nào trong mục này.",
+      };
+    case "reminders":
+      return {
+        title: "Không có thông báo nhắc hạn",
+        description: "Hiện chưa có thông báo nhắc hạn nào trong mục này.",
+      };
+    case "all":
+    default:
+      return {
+        title: "Không có thông báo nào trong mục này",
+        description: "Hiện chưa có cập nhật nào được ghi nhận trong phạm vi này.",
+      };
+  }
+}
+
+/**
+ * Bounded empty copy for the mobile inbox triage filters (T45/T47).
+ */
+export function getMobileNotificationEmptyCopy(
+  filter: MobileNotificationFilter
+): NotificationEmptyCopy {
+  if (filter === "unread") return getNotificationEmptyCopy("all", true);
+  if (filter === "action_required") return getNotificationEmptyCopy("action_required");
+  return getNotificationEmptyCopy("all");
+}
+
+/**
+ * Optimistic read mutation used by both desktop and mobile surfaces (T46).
+ * Marks a single notification (or the whole inbox when target === "all") read.
+ */
+export function applyOptimisticRead(
+  notifications: QCETNotification[],
+  target: string | "all"
+): QCETNotification[] {
+  return notifications.map((item) =>
+    target === "all" || item.id === target ? { ...item, isRead: true } : item
+  );
+}
+
+export interface OptimisticReadSession {
+  /** Last known server truth before the optimistic mutation. */
+  snapshot: QCETNotification[];
+  /** The optimistically-updated list to render immediately. */
+  optimistic: QCETNotification[];
+}
+
+/**
+ * Begins an optimistic mark-read transaction, capturing server truth so it can
+ * be restored if the mutation fails.
+ */
+export function beginOptimisticRead(
+  notifications: QCETNotification[],
+  target: string | "all"
+): OptimisticReadSession {
+  return {
+    snapshot: notifications,
+    optimistic: applyOptimisticRead(notifications, target),
+  };
+}
+
+export interface ReadSettlement {
+  ok: boolean;
+  /** Authoritative list returned by the server, when the caller can refetch it. */
+  serverNotifications?: QCETNotification[];
+}
+
+/**
+ * Settles an optimistic mark-read transaction against server truth (T46):
+ * - success: adopt server notifications when provided, otherwise keep the
+ *   optimistic view (the server acknowledged the same read transition)
+ * - failure: roll back to the pre-mutation snapshot so client state yields to
+ *   the authoritative server database state
+ */
+export function settleOptimisticRead(
+  session: OptimisticReadSession,
+  settlement: ReadSettlement
+): QCETNotification[] {
+  if (settlement.ok) {
+    return settlement.serverNotifications ?? session.optimistic;
+  }
+  return session.snapshot;
+}
+

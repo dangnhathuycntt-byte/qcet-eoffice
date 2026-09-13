@@ -1,5 +1,7 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { NextRequest } from "next/server";
 import {
   isFeatureEnabled,
@@ -54,6 +56,11 @@ describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
         "taskWorkspaceV2",
         "mobileAgenda",
         "newExecutiveDashboard",
+        "uxTasksV5",
+        "uxCalendarV5",
+        "uxNotificationsV5",
+        "uxDocumentsV5",
+        "uxOrgV5",
       ];
 
       for (const flag of expectedFlags) {
@@ -78,6 +85,13 @@ describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
       assert.strictEqual(isFeatureEnabled("taskWorkspaceV2"), false);
       assert.strictEqual(isFeatureEnabled("mobileAgenda"), false);
       assert.strictEqual(isFeatureEnabled("newExecutiveDashboard"), false);
+
+      // V5.1 migration-boundary rollout flags are disabled by default
+      assert.strictEqual(isFeatureEnabled("uxTasksV5"), false);
+      assert.strictEqual(isFeatureEnabled("uxCalendarV5"), false);
+      assert.strictEqual(isFeatureEnabled("uxNotificationsV5"), false);
+      assert.strictEqual(isFeatureEnabled("uxDocumentsV5"), false);
+      assert.strictEqual(isFeatureEnabled("uxOrgV5"), false);
     });
 
     it("returns false safely for invalid or non-existent feature flags without throwing", () => {
@@ -101,6 +115,11 @@ describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
       assert.strictEqual(toSnakeCaseUpper("taskWorkspaceV2"), "TASK_WORKSPACE_V2");
       assert.strictEqual(toSnakeCaseUpper("mobileAgenda"), "MOBILE_AGENDA");
       assert.strictEqual(toSnakeCaseUpper("newExecutiveDashboard"), "NEW_EXECUTIVE_DASHBOARD");
+      assert.strictEqual(toSnakeCaseUpper("uxTasksV5"), "UX_TASKS_V5");
+      assert.strictEqual(toSnakeCaseUpper("uxCalendarV5"), "UX_CALENDAR_V5");
+      assert.strictEqual(toSnakeCaseUpper("uxNotificationsV5"), "UX_NOTIFICATIONS_V5");
+      assert.strictEqual(toSnakeCaseUpper("uxDocumentsV5"), "UX_DOCUMENTS_V5");
+      assert.strictEqual(toSnakeCaseUpper("uxOrgV5"), "UX_ORG_V5");
     });
 
     it("parseBooleanFlag parses varied truthy and falsy representations", () => {
@@ -168,6 +187,29 @@ describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
       process.env.FEATURE_FLAG_newExecutiveDashboard = "enabled";
       assert.strictEqual(isFeatureEnabled("newExecutiveDashboard"), true);
     });
+
+    it("enables V5 migration-boundary rollout flags via their canonical env names", () => {
+      // Canonical camelCase key -> UPPER_SNAKE env name mapping (§38.3 UX_*_V5).
+      assert.strictEqual(isFeatureEnabled("uxTasksV5"), false);
+      process.env.FEATURE_FLAG_UX_TASKS_V5 = "true";
+      assert.strictEqual(isFeatureEnabled("uxTasksV5"), true);
+
+      assert.strictEqual(isFeatureEnabled("uxCalendarV5"), false);
+      process.env.FEATURE_FLAG_UX_CALENDAR_V5 = "true";
+      assert.strictEqual(isFeatureEnabled("uxCalendarV5"), true);
+
+      assert.strictEqual(isFeatureEnabled("uxNotificationsV5"), false);
+      process.env.NEXT_PUBLIC_FEATURE_FLAG_UX_NOTIFICATIONS_V5 = "1";
+      assert.strictEqual(isFeatureEnabled("uxNotificationsV5"), true);
+
+      assert.strictEqual(isFeatureEnabled("uxDocumentsV5"), false);
+      process.env.FEATURE_UX_DOCUMENTS_V5 = "on";
+      assert.strictEqual(isFeatureEnabled("uxDocumentsV5"), true);
+
+      assert.strictEqual(isFeatureEnabled("uxOrgV5"), false);
+      process.env.FEATURE_FLAG_uxOrgV5 = "enabled";
+      assert.strictEqual(isFeatureEnabled("uxOrgV5"), true);
+    });
   });
 
   describe("4. Runtime In-Memory Overrides", () => {
@@ -214,6 +256,11 @@ describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
       assert.strictEqual(allFlags.taskWorkspaceV2, true);
       assert.strictEqual(allFlags.mobileAgenda, false);
       assert.strictEqual(allFlags.newExecutiveDashboard, false);
+      assert.strictEqual(allFlags.uxTasksV5, false);
+      assert.strictEqual(allFlags.uxCalendarV5, false);
+      assert.strictEqual(allFlags.uxNotificationsV5, false);
+      assert.strictEqual(allFlags.uxDocumentsV5, false);
+      assert.strictEqual(allFlags.uxOrgV5, false);
     });
 
     it("getPublicFeatureFlags provides zero secrets and conforms to runtime-config whitelist", () => {
@@ -227,6 +274,11 @@ describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
       assert.strictEqual(typeof publicFlags.taskWorkspaceV2, "boolean");
       assert.strictEqual(typeof publicFlags.mobileAgenda, "boolean");
       assert.strictEqual(typeof publicFlags.newExecutiveDashboard, "boolean");
+      assert.strictEqual(typeof publicFlags.uxTasksV5, "boolean");
+      assert.strictEqual(typeof publicFlags.uxCalendarV5, "boolean");
+      assert.strictEqual(typeof publicFlags.uxNotificationsV5, "boolean");
+      assert.strictEqual(typeof publicFlags.uxDocumentsV5, "boolean");
+      assert.strictEqual(typeof publicFlags.uxOrgV5, "boolean");
 
       // Verify zero secrets scanner passes on public flags
       assert.doesNotThrow(() => assertZeroSecrets(publicFlags as unknown as Record<string, unknown>));
@@ -339,6 +391,90 @@ describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
       return exportExcelRoute(req).then((res) => {
         assert.strictEqual(res.status, 401, "Enabled feature flag MUST NOT bypass 401 Unauthorized check");
       });
+    });
+  });
+
+  describe("8. V5 Migration-Boundary Rollout Flags (C17 / T92)", () => {
+    const V5_FLAGS: FeatureFlagKey[] = [
+      "uxTasksV5",
+      "uxCalendarV5",
+      "uxNotificationsV5",
+      "uxDocumentsV5",
+      "uxOrgV5",
+    ];
+
+    it("registers exactly one rollout flag per migration boundary (no per-component flags)", () => {
+      for (const flag of V5_FLAGS) {
+        const def = FEATURE_FLAGS[flag];
+        assert.ok(def, `Flag ${flag} must be defined`);
+        assert.strictEqual(def.key, flag);
+        assert.strictEqual(def.defaultValue, false, `${flag} must default OFF`);
+        assert.strictEqual(def.isKillSwitch, false, `${flag} is a rollout flag, not a kill switch`);
+        assert.strictEqual(def.isPublic, true, `${flag} must be client-safe (isPublic)`);
+        assert.ok(def.description.length > 0);
+      }
+    });
+
+    it("keeps rollout flags distinct from operational kill switches", () => {
+      const operational: FeatureFlagKey[] = [
+        "pushNotifications",
+        "externalGoogleLogin",
+        "offlineMutations",
+        "largeExcelExport",
+      ];
+      for (const key of operational) {
+        assert.strictEqual(FEATURE_FLAGS[key].isKillSwitch, true);
+        assert.strictEqual(FEATURE_FLAGS[key].defaultValue, true);
+      }
+      for (const key of V5_FLAGS) {
+        assert.strictEqual(FEATURE_FLAGS[key].isKillSwitch, false);
+      }
+    });
+
+    it("exposes all V5 rollout flags through getPublicFeatureFlags", () => {
+      const publicFlags = getPublicFeatureFlags();
+      for (const flag of V5_FLAGS) {
+        assert.strictEqual(typeof publicFlags[flag], "boolean");
+      }
+    });
+
+    it("is not read anywhere in the server authorization / policy layer (Feature Flag != Permission)", () => {
+      const flagTokens = [
+        "isFeatureEnabled",
+        "FEATURE_FLAGS",
+        "features/flags",
+        "getPublicFeatureFlags",
+        "getAllFeatureFlags",
+      ];
+      const scanRoots = [
+        resolve(process.cwd(), "src/server/authorization"),
+        resolve(process.cwd(), "src/server/policies"),
+      ];
+      const offenders: string[] = [];
+
+      const walk = (dir: string): void => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const full = join(dir, entry.name);
+          if (entry.isDirectory()) {
+            walk(full);
+          } else if (entry.isFile() && /\.(ts|tsx)$/.test(entry.name)) {
+            const content = readFileSync(full, "utf8");
+            if (flagTokens.some((token) => content.includes(token))) {
+              offenders.push(full);
+            }
+          }
+        }
+      };
+
+      for (const root of scanRoots) {
+        if (existsSync(root)) walk(root);
+      }
+
+      assert.deepStrictEqual(
+        offenders,
+        [],
+        `Authorization/policy modules must never read feature flags: ${offenders.join(", ")}`
+      );
     });
   });
 });

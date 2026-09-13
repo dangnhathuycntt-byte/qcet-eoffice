@@ -19,6 +19,7 @@ import {
   updateOutboxItem as storeUpdate,
   removeOutboxItem as storeRemove,
   clearUserOutbox as storeClear,
+  purgeUserOfflineData,
 } from "./offline-store";
 import { recordTelemetry } from "./telemetry";
 
@@ -39,6 +40,14 @@ export function setActiveUserId(userId: string | null): void {
   activeUserIdOverride = userId;
 }
 
+/**
+ * Resolves the active authenticated user partition for offline storage.
+ *
+ * Returns an empty string when no authenticated user can be resolved. This is
+ * deliberate (T63): mutations must never be silently partitioned into a shared
+ * bucket. A caller that requires a user MUST guard against the empty value —
+ * `enqueueOutbox` refuses to queue without an authenticated owner.
+ */
 export function getActiveUserId(): string {
   if (activeUserIdOverride) {
     return activeUserIdOverride;
@@ -56,7 +65,27 @@ export function getActiveUserId(): string {
       // Ignore storage read errors
     }
   }
-  return "system";
+  return "";
+}
+
+/**
+ * Safely switches the active offline partition to another account (T63).
+ *
+ * On an account switch the previous user's queued data MUST NOT leak into the
+ * new user's partition. Passing `purgePrevious: true` clears the outgoing
+ * account's private offline data (read cache, drafts, outbox) after the switch.
+ */
+export async function switchActiveUser(
+  nextUserId: string | null,
+  options?: { purgePrevious?: boolean }
+): Promise<void> {
+  const previousUserId = activeUserIdOverride ?? getActiveUserId();
+  setActiveUserId(nextUserId);
+
+  const next = nextUserId ?? "";
+  if (options?.purgePrevious && previousUserId && previousUserId !== next) {
+    await purgeUserOfflineData(previousUserId);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +185,13 @@ export async function enqueueOutbox(
   userId?: string
 ): Promise<OfflineOutboxItem> {
   const uid = userId || getActiveUserId();
+  if (!uid) {
+    // Server truth / account isolation: never queue a mutation without an
+    // authenticated owner partition (T63).
+    throw new Error(
+      "Cannot enqueue an offline mutation without an authenticated user"
+    );
+  }
   const created = await storeEnqueue(uid, item);
 
   // Trigger background sync or fallback drain
@@ -182,7 +218,12 @@ export async function enqueueOutbox(
 
 /**
  * Startup reconciliation: Resets any mutation items left in "syncing" state back to "pending".
- * Safe because all mutations carry unique Idempotency-Key headers.
+ *
+ * An item still "syncing" at startup means a request was dispatched but the app
+ * never observed the response (tab closed / crash mid-flight). Its outcome is
+ * therefore UNKNOWN, not cleanly unsent (T66) — the item is flagged
+ * `unconfirmedResult` so it is reconciled with its original Idempotency-Key
+ * rather than blindly replayed as a fresh mutation.
  */
 export async function reconcileStuckSyncingItems(userId?: string): Promise<number> {
   const uid = userId || getActiveUserId();
@@ -190,6 +231,7 @@ export async function reconcileStuckSyncingItems(userId?: string): Promise<numbe
   for (const item of syncingItems) {
     await storeUpdate(uid, item.id, {
       status: "pending",
+      unconfirmedResult: true,
       updatedAt: Date.now(),
     });
   }
@@ -230,6 +272,19 @@ export async function getConflictItems(
 ): Promise<OfflineOutboxItem[]> {
   const uid = userId || getActiveUserId();
   return storeGetQueue(uid, "conflict");
+}
+
+/**
+ * Get all mutation items whose send result is unconfirmed (T66). These are
+ * pending items whose prior request may have reached the server but whose
+ * response was lost; they must be reconciled before being treated as confirmed.
+ */
+export async function getUnknownResultItems(
+  userId?: string
+): Promise<OfflineOutboxItem[]> {
+  const uid = userId || getActiveUserId();
+  const pending = await storeGetQueue(uid, "pending");
+  return pending.filter((item) => item.unconfirmedResult === true);
 }
 
 /**
@@ -314,6 +369,20 @@ export interface FlushResult {
   conflicts: number;
 }
 
+export interface FlushOptions {
+  fetchFn?: typeof fetch;
+  maxRetries?: number;
+  /**
+   * Drain scope:
+   * - `"all"` (default) processes every pending mutation.
+   * - `"unknown"` processes only mutations whose previous send result was
+   *   unconfirmed (T66 reconciliation).
+   * - `"clean"` processes only never-sent/clean mutations, so a reconciliation
+   *   pass is never immediately repeated by the subsequent normal drain.
+   */
+  scope?: "all" | "unknown" | "clean";
+}
+
 let isFlushing = false;
 let activeFlushPromise: Promise<FlushResult> | null = null;
 
@@ -323,10 +392,7 @@ let activeFlushPromise: Promise<FlushResult> | null = null;
  */
 export async function flushOutbox(
   userId?: string,
-  options?: {
-    fetchFn?: typeof fetch;
-    maxRetries?: number;
-  }
+  options?: FlushOptions
 ): Promise<FlushResult> {
   if (isFlushing && activeFlushPromise) {
     return activeFlushPromise;
@@ -345,14 +411,88 @@ export async function flushOutbox(
   return activeFlushPromise;
 }
 
-async function executeFlush(
+/**
+ * Single logical reconnect drain (T65 / T66).
+ *
+ * Every reconnect trigger (network `online`, tab focus, visibility, Service
+ * Worker drain message) funnels through here. It first reconciles mutations
+ * whose previous send result was unknown — replaying them with their ORIGINAL
+ * Idempotency-Key — and then performs the one normal flush for the remaining
+ * clean queue. The shared flush mutex guarantees concurrent reconnect events
+ * collapse into a single logical flush with no duplicate mutations.
+ */
+export async function drainOutbox(
   userId?: string,
-  options?: {
-    fetchFn?: typeof fetch;
-    maxRetries?: number;
-  }
+  options?: FlushOptions
 ): Promise<FlushResult> {
   const uid = userId || getActiveUserId();
+  await reconcileUnknownItems(uid, options);
+  // Drain only clean, never-reconciled mutations so a mutation whose result is
+  // still unknown is not blindly re-attempted inside the same logical drain.
+  return flushOutbox(uid, { ...options, scope: "clean" });
+}
+
+export interface ReconcileResult {
+  attempted: number;
+  reconciled: number;
+  remaining: number;
+  conflicts: number;
+  failed: number;
+}
+
+/**
+ * Reconciles mutations whose send result is unknown (T66).
+ *
+ * A request that was dispatched but whose response was lost is NOT blindly
+ * retried as a fresh mutation. Instead it is replayed with its ORIGINAL
+ * Idempotency-Key, so the server's at-most-once idempotency record returns the
+ * cached result when the mutation already applied, and applies it otherwise —
+ * exactly once. The pass is scoped to unconfirmed items only, so clean pending
+ * work is left untouched for the normal drain. Any item still unconfirmed after
+ * the replay remains in the "unknown-after-timeout" state and is never reported
+ * as server-confirmed.
+ */
+export async function reconcileUnknownItems(
+  userId?: string,
+  options?: FlushOptions
+): Promise<ReconcileResult> {
+  const uid = userId || getActiveUserId();
+  const unknownBefore = await getUnknownResultItems(uid);
+
+  if (unknownBefore.length === 0) {
+    return { attempted: 0, reconciled: 0, remaining: 0, conflicts: 0, failed: 0 };
+  }
+
+  // Restrict the pass to unconfirmed items so reconciliation never masquerades
+  // as a generic retry of clean, never-sent mutations.
+  const result = await flushOutbox(uid, { ...options, scope: "unknown" });
+  const remaining = (await getUnknownResultItems(uid)).length;
+
+  recordTelemetry(
+    "sync.reconcile",
+    {
+      attempted: unknownBefore.length,
+      reconciled: Math.max(0, unknownBefore.length - remaining),
+      remaining,
+    },
+    uid
+  );
+
+  return {
+    attempted: unknownBefore.length,
+    reconciled: Math.max(0, unknownBefore.length - remaining),
+    remaining,
+    conflicts: result.conflicts,
+    failed: result.failed,
+  };
+}
+
+async function executeFlush(
+  userId?: string,
+  options?: FlushOptions
+): Promise<FlushResult> {
+  const uid = userId || getActiveUserId();
+  const scope = options?.scope ?? "all";
   const fetcher = options?.fetchFn || (typeof fetch !== "undefined" ? fetch : null);
   const maxRetries = options?.maxRetries ?? MAX_OUTBOX_RETRIES;
 
@@ -368,7 +508,11 @@ async function executeFlush(
   // 0. Pre-flush sweep: reset any items stuck in "syncing" back to "pending"
   await reconcileStuckSyncingItems(uid);
 
-  const pendingItems = await storeGetQueue(uid, "pending");
+  const pendingItems = (await storeGetQueue(uid, "pending")).filter((item) => {
+    if (scope === "unknown") return item.unconfirmedResult === true;
+    if (scope === "clean") return item.unconfirmedResult !== true;
+    return true;
+  });
   if (pendingItems.length === 0) {
     return { succeeded: 0, failed: 0, conflicts: 0 };
   }
@@ -467,6 +611,7 @@ async function executeFlush(
           status: "conflict",
           serverConflictData: conflictData,
           errorMessage: conflictItem.errorMessage,
+          unconfirmedResult: false,
           updatedAt: Date.now(),
         });
 
@@ -492,6 +637,7 @@ async function executeFlush(
           retryCount: nextRetries,
           status: "failed",
           errorMessage: clientErr,
+          unconfirmedResult: false,
           updatedAt: Date.now(),
         });
       } else {
@@ -506,6 +652,7 @@ async function executeFlush(
             retryCount: nextRetries,
             status: "failed",
             errorMessage: `Thất bại sau ${maxRetries} lần thử lại máy chủ.`,
+            unconfirmedResult: false,
             updatedAt: Date.now(),
           });
         } else {
@@ -513,12 +660,16 @@ async function executeFlush(
             retryCount: nextRetries,
             status: "pending",
             errorMessage: `Lỗi máy chủ (${response.status}), sẽ thử lại.`,
+            unconfirmedResult: false,
             updatedAt: Date.now(),
           });
         }
       }
     } catch (networkErr: any) {
-      // Network drop or connection refused: Revert to pending and abort sequential drain
+      // Network drop after the request was dispatched: the outcome is unknown.
+      // Do NOT treat this as a clean, never-sent pending item — mark it as an
+      // unconfirmed result (T66) so it is reconciled with its original
+      // Idempotency-Key before being considered confirmed, then abort the drain.
       failed++;
       if (item.entityId) {
         blockedEntityIds.add(item.entityId);
@@ -527,7 +678,9 @@ async function executeFlush(
       await storeUpdate(uid, item.id, {
         retryCount: nextRetries,
         status: "pending",
-        errorMessage: networkErr?.message || "Mất kết nối mạng khi đồng bộ.",
+        unconfirmedResult: true,
+        errorMessage:
+          "Chưa xác định kết quả đồng bộ (mất kết nối sau khi gửi). Sẽ đối chiếu lại với máy chủ.",
         updatedAt: Date.now(),
       });
       break; // Stop drain when offline
@@ -558,7 +711,9 @@ export function setupOutboxAutoSyncListeners(): void {
 
   const triggerDrain = () => {
     if (isOnline()) {
-      flushOutbox().catch(() => {});
+      // Reconcile unknown results first, then drain the clean queue — one
+      // logical flush per reconnect event (T65 / T66).
+      drainOutbox().catch(() => {});
     }
   };
 

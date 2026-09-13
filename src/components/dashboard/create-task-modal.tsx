@@ -34,6 +34,11 @@ import {
 } from "@/lib/departments";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { TaskPriorityInput } from "@/contracts/tasks";
+import {
+  submitCreateTask,
+  type CreateTaskSubmitResult,
+} from "@/lib/adapters/create-task-mapper";
 
 export type TaskLevel = "TRUONG" | "DON_VI" | "STAFF";
 
@@ -63,6 +68,8 @@ export interface CreateTaskFormData {
   vtvlRole?: string;
   isBypassWarning?: boolean;
   requiresReview?: boolean;
+  /** Canonical priority (T22). Optional; the server defaults to MEDIUM. */
+  priority?: TaskPriorityInput;
 }
 
 export function getInitialTaskFormData(
@@ -82,8 +89,19 @@ export function getInitialTaskFormData(
     vtvlRole: "",
     isBypassWarning: false,
     requiresReview: false,
+    priority: "MEDIUM",
   };
 }
+
+/**
+ * Honesty disclosure (SK-04 / D11): the current canonical create contract does
+ * not persist the advanced institutional metadata collected by this form
+ * (VTVL, lĩnh vực công tác, hạn chót nội bộ, sản phẩm đầu ra, nghiệm thu).
+ * Surfaced in the UI so the user is never asked to enter a value that is
+ * silently discarded by the adapter.
+ */
+export const ADVANCED_METADATA_PERSISTENCE_NOTICE =
+  "Tùy chọn nâng cao (VTVL, lĩnh vực công tác, hạn chót nội bộ, sản phẩm đầu ra, nghiệm thu) hiện chưa được lưu vào hợp đồng tạo nhiệm vụ.";
 
 export const CATEGORY_OPTIONS: { id: TaskCategory; label: string; color: string }[] = [
   { id: "CHUYEN_DOI_SO", label: "Chuyển đổi số", color: "bg-blue-500" },
@@ -144,6 +162,145 @@ export function canRoleSelectAssignee(
     message: result.reason,
     isBypassWarning: result.isBypassWarning,
   };
+}
+
+/**
+ * Canonical create-task policy (T06 / D5 / §9).
+ *
+ * One product policy that decides whether the create form may be opened and in
+ * which mode:
+ * - INSTITUTIONAL: the actor holds institutional levels (ADMIN -> cấp Trường /
+ *   Đơn vị, MANAGER -> cấp Đơn vị) and may delegate work to personnel.
+ * - PERSONAL: an actor without an institutional level creates an INDIVIDUAL
+ *   (cấp cá nhân) task for themselves. This mirrors server truth: the server
+ *   `canCreateTask` (server/policies/task-policy.ts) permits any authenticated
+ *   user to create a personal task, and `canUserCreateTask`
+ *   (server/tasks/task-policy.ts) allows INDIVIDUAL scope for non-privileged
+ *   users.
+ *
+ * It is derived entirely from the existing role/policy helpers and must remain
+ * the single gate for the create form (no ad-hoc role branching in the JSX).
+ */
+export type CreateTaskMode = "INSTITUTIONAL" | "PERSONAL";
+
+export interface CreateTaskPolicy {
+  canCreate: boolean;
+  mode: CreateTaskMode;
+  /** Institutional levels the actor may author (empty for personal-only actors). */
+  institutionalLevels: TaskLevel[];
+  defaultLevel: TaskLevel;
+}
+
+export function resolveCreateTaskPolicy(user?: AuthUser | null): CreateTaskPolicy {
+  const institutionalLevels = getAllowedTaskLevelsForRole(user?.role ?? "ADMIN");
+  if (!user) {
+    return {
+      canCreate: false,
+      mode: "INSTITUTIONAL",
+      institutionalLevels,
+      defaultLevel: "DON_VI",
+    };
+  }
+
+  const hasInstitutionalScope = institutionalLevels.length > 0;
+  const canSelfAssign = canRoleSelectAssignee(
+    user,
+    user.departmentCode ?? "",
+    false,
+    user.name
+  ).allowed;
+
+  return {
+    canCreate: hasInstitutionalScope || canSelfAssign,
+    mode: hasInstitutionalScope ? "INSTITUTIONAL" : "PERSONAL",
+    institutionalLevels,
+    defaultLevel: hasInstitutionalScope ? getDefaultTaskLevelForRole(user.role) : "STAFF",
+  };
+}
+
+/**
+ * Stable-identity resolution for the create command (T24 / D5 / SK-03).
+ *
+ * The canonical API persists a task's DRI by stable user id and requires a unit
+ * (`departmentId`); a display name alone cannot satisfy both the strict
+ * `CreateTaskInputSchema` and the server `createTask` guard. This pure resolver
+ * is the single gate deciding whether the current draft can be submitted:
+ * - INSTITUTIONAL: the selected DRI must exist in the personnel directory so an
+ *   id (and its unit) can be derived. A free-text name outside the directory is
+ *   rejected BEFORE any request is issued, instead of failing server-side.
+ * - PERSONAL: the actor is the DRI; their own directory record supplies the unit.
+ *
+ * It never invents ids: an unresolvable assignee or unit is a hard failure.
+ */
+export interface CreateTaskPersonnelRef {
+  id: string;
+  name: string;
+  departmentId?: string | null;
+}
+
+export type CreateTaskIdentityResult =
+  | { ok: true; assigneeId: string; departmentId: string }
+  | { ok: false; field: "leadAssigneeName" | "form"; message: string };
+
+export function resolveCreateTaskIdentity(
+  data: Pick<CreateTaskFormData, "leadAssigneeName">,
+  personnel: readonly CreateTaskPersonnelRef[] | undefined,
+  actor?: { id?: string; name?: string } | null,
+  mode: CreateTaskMode = "INSTITUTIONAL"
+): CreateTaskIdentityResult {
+  const directory = Array.isArray(personnel) ? personnel : [];
+  if (directory.length === 0) {
+    return {
+      ok: false,
+      field: "form",
+      message:
+        "Chưa tải được danh mục nhân sự nên không thể xác định mã định danh cán bộ/đơn vị. Vui lòng thử lại sau.",
+    };
+  }
+
+  if (mode === "PERSONAL") {
+    const actorName = (actor?.name ?? "").trim().toLowerCase();
+    const self = actor
+      ? directory.find((p) => p.id === actor.id) ??
+        directory.find((p) => p.name.trim().toLowerCase() === actorName)
+      : undefined;
+    if (!self || !self.departmentId) {
+      return {
+        ok: false,
+        field: "form",
+        message:
+          "Không xác định được đơn vị công tác của bạn trong danh mục nhân sự. Vui lòng liên hệ quản trị để bổ sung hồ sơ.",
+      };
+    }
+    return { ok: true, assigneeId: self.id, departmentId: self.departmentId };
+  }
+
+  const name = (data.leadAssigneeName ?? "").trim().toLowerCase();
+  if (!name) {
+    return {
+      ok: false,
+      field: "leadAssigneeName",
+      message: "Vui lòng chọn người thực hiện",
+    };
+  }
+  const match = directory.find((p) => p.name.trim().toLowerCase() === name);
+  if (!match) {
+    return {
+      ok: false,
+      field: "leadAssigneeName",
+      message:
+        "Người phụ trách không có trong danh mục nhân sự. Vui lòng chọn cán bộ từ danh mục để xác định mã định danh.",
+    };
+  }
+  if (!match.departmentId) {
+    return {
+      ok: false,
+      field: "form",
+      message:
+        "Không xác định được đơn vị của người phụ trách. Vui lòng liên hệ quản trị để cập nhật hồ sơ nhân sự.",
+    };
+  }
+  return { ok: true, assigneeId: match.id, departmentId: match.departmentId };
 }
 
 export function formatDetailDateDisplay(dateStr?: string): string {
@@ -267,10 +424,43 @@ export function validateTaskForm(
   return errors;
 }
 
+/**
+ * Pure create-submission orchestrator (C1 / T26 / T27 / T73).
+ *
+ * Wraps the canonical F3 adapter (`submitCreateTask`) so the UI has one
+ * testable outcome:
+ * - `created`: server-confirmed. The only state that may be treated as success.
+ * - `rejected`: the server refused the mutation (validation / authorization).
+ * - `unknown`: transport failure / timeout. The request may or may not have been
+ *   applied. Callers MUST preserve the draft and reuse the SAME idempotency key
+ *   on any retry rather than declaring failure or resending with a fresh key.
+ */
+export type CreateTaskSubmissionStatus = "created" | "rejected" | "unknown";
+
+export interface CreateTaskSubmissionOutcome {
+  status: CreateTaskSubmissionStatus;
+  message?: string;
+  result: CreateTaskSubmitResult;
+}
+
+export async function performCreateTaskSubmission(
+  draft: CreateTaskFormData,
+  options: Parameters<typeof submitCreateTask>[1] = {}
+): Promise<CreateTaskSubmissionOutcome> {
+  const result = await submitCreateTask(draft, options);
+  if (result.ok) {
+    return { status: "created", result };
+  }
+  if (result.reason === "unknown") {
+    return { status: "unknown", message: result.error, result };
+  }
+  return { status: "rejected", message: result.error, result };
+}
+
 export interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateTaskFormData) => void;
+  onSubmit: (data: CreateTaskFormData, result?: CreateTaskSubmitResult) => void | Promise<void>;
   onOpenCollaborationRequest?: (targetDeptCode?: string) => void;
   schoolTasks?: SchoolTask[];
   initialLevel?: TaskLevel;
@@ -308,18 +498,20 @@ export function CreateTaskModal({
 }: CreateTaskModalProps) {
   const { user } = useAuth();
   const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
-  const allowedLevels = getAllowedTaskLevelsForRole(user?.role ?? "ADMIN");
-  const isStaff = user?.role === "STAFF";
+  const createPolicy = React.useMemo(() => resolveCreateTaskPolicy(user), [user]);
+  const allowedLevels = createPolicy.institutionalLevels;
+  const isStaff = createPolicy.mode === "PERSONAL";
   const isManager = user?.role === "MANAGER";
   const isSubtaskMode = Boolean(initialParentTaskId);
 
   const getEffectiveLevel = React.useCallback(
     (requestedLevel: TaskLevel): TaskLevel => {
-      if (initialParentTaskId || isManager || isStaff) return "DON_VI";
+      if (createPolicy.mode === "PERSONAL") return "STAFF";
+      if (initialParentTaskId || isManager) return "DON_VI";
       if (allowedLevels.includes(requestedLevel)) return requestedLevel;
-      return getDefaultTaskLevelForRole(user?.role ?? "ADMIN");
+      return createPolicy.defaultLevel;
     },
-    [initialParentTaskId, isManager, isStaff, allowedLevels, user?.role]
+    [createPolicy, initialParentTaskId, isManager, allowedLevels]
   );
 
   const [formData, setFormData] = React.useState<CreateTaskFormData>(() => ({
@@ -331,7 +523,6 @@ export function CreateTaskModal({
     vtvlRole: isStaff ? (user?.roleLabel || "Giảng viên") : "",
   }));
   const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const [isCustomAssignee, setIsCustomAssignee] = React.useState(false);
   const [deptFilter, setDeptFilter] = React.useState<string>("ALL");
   const [mounted, setMounted] = React.useState(false);
   const titleInputRef = React.useRef<HTMLInputElement>(null);
@@ -348,6 +539,17 @@ export function CreateTaskModal({
   const collabDropdownRef = React.useRef<HTMLDivElement>(null);
 
   const [personnelList, setPersonnelList] = React.useState<ApiPersonnel[]>([]);
+
+  // Submission lifecycle (T26 / T27 / T73): the form never closes or clears on a
+  // rejection or an unproven timeout; success is only declared for a server DTO.
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [submissionStatus, setSubmissionStatus] = React.useState<
+    CreateTaskSubmissionStatus | "idle" | "submitting"
+  >("idle");
+  const [submissionMessage, setSubmissionMessage] = React.useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const idempotencyKeyRef = React.useRef<string | null>(null);
+  const errorSummaryRef = React.useRef<HTMLDivElement>(null);
 
   // Child task mode: level is DON_VI or STAFF, or linked to a parent task
   const isChildTaskMode =
@@ -581,10 +783,14 @@ export function CreateTaskModal({
         vtvlRole: isStaff ? (user?.roleLabel || "Giảng viên") : "",
       });
       setErrors({});
-      setIsCustomAssignee(false);
       setDeptFilter("ALL");
       setIsComboboxOpen(false);
       setAssigneeSearchQuery("");
+      setIsSubmitting(false);
+      setSubmissionStatus("idle");
+      setSubmissionMessage(null);
+      setShowAdvanced(false);
+      idempotencyKeyRef.current = null;
       setTimeout(() => titleInputRef.current?.focus(), 80);
     }
     prevIsOpen.current = isOpen;
@@ -623,11 +829,30 @@ export function CreateTaskModal({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, formData, isStaff, allowedLevels, isExternalDeptBlocked, isComboboxOpen, isCollabDropdownOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, formData, isStaff, allowedLevels, isExternalDeptBlocked, isComboboxOpen, isCollabDropdownOpen, isSubmitting]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const focusFirstError = React.useCallback((fieldErrors: Record<string, string>) => {
+    const focusOrder: { key: string; targetId: string }[] = [
+      { key: "title", targetId: "task-title-input" },
+      { key: "leadAssigneeName", targetId: "task-assignee-field" },
+      { key: "dueDate", targetId: "task-due-date-input" },
+      { key: "internalDueDate", targetId: "task-internal-due-input" },
+      { key: "requiredDeliverables", targetId: "task-deliverables-input" },
+      { key: "coAssignees", targetId: "task-collaborators-input" },
+    ];
+    const first = focusOrder.find((entry) => fieldErrors[entry.key]);
+    const el = first ? document.getElementById(first.targetId) : null;
+    if (el instanceof HTMLElement) {
+      el.focus();
+      scrollActiveInputIntoView();
+      return;
+    }
+    errorSummaryRef.current?.focus();
+  }, []);
+
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (allowedLevels.length === 0 || isExternalDeptBlocked) return;
+    if (!createPolicy.canCreate || isExternalDeptBlocked || isSubmitting) return;
 
     const validationErrors = validateTaskForm(
       formData,
@@ -638,6 +863,27 @@ export function CreateTaskModal({
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      setSubmissionStatus("idle");
+      setSubmissionMessage(null);
+      focusFirstError(validationErrors);
+      return;
+    }
+
+    // T24 / D5 / SK-03: resolve a stable assignee id + unit BEFORE any request.
+    // An unresolvable DRI (e.g. a free-text name outside the directory) is a
+    // hard stop, never a guaranteed server-side validation failure.
+    const identity = resolveCreateTaskIdentity(
+      formData,
+      personnelList,
+      user,
+      createPolicy.mode
+    );
+    if (!identity.ok) {
+      const identityErrors = { [identity.field]: identity.message };
+      setErrors(identityErrors);
+      setSubmissionStatus("idle");
+      setSubmissionMessage(null);
+      focusFirstError(identityErrors);
       return;
     }
 
@@ -668,14 +914,75 @@ export function CreateTaskModal({
           (name) => name && name.trim().toLowerCase() !== formData.leadAssigneeName.trim().toLowerCase()
         );
 
-    onSubmit({
+    const draft: CreateTaskFormData = {
       ...formData,
       parentTaskId: formData.parentTaskId || initialParentTaskId,
       leadAssigneeName: formData.leadAssigneeName,
       coAssignees: cleanCollaborators,
       isBypassWarning: formData.isBypassWarning || isAdminBypass,
-    });
-    onClose();
+    };
+
+    // Stable per-create idempotency key: generated once and reused for any safe
+    // retry, so a lost response (T27/T72) can never double-submit.
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current = `task-create-${
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      }`;
+    }
+
+    setErrors({});
+    setSubmissionMessage(null);
+    setSubmissionStatus("submitting");
+    setIsSubmitting(true);
+
+    try {
+      const outcome = await performCreateTaskSubmission(draft, {
+        personnel: personnelList.map((p) => ({
+          id: p.id,
+          name: p.name,
+          departmentId: p.departmentId,
+        })),
+        assigneeId: identity.assigneeId,
+        departmentId: identity.departmentId,
+        idempotencyKey: idempotencyKeyRef.current,
+      });
+
+      if (outcome.status === "created") {
+        idempotencyKeyRef.current = null;
+        setSubmissionStatus("idle");
+        setIsSubmitting(false);
+        await onSubmit(draft, outcome.result);
+        onClose();
+        return;
+      }
+
+      if (outcome.status === "unknown") {
+        // Unproven, not failed (T27): keep the draft, keep the key for a safe retry.
+        setSubmissionStatus("unknown");
+        setIsSubmitting(false);
+        setSubmissionMessage(
+          "Chưa xác nhận được kết quả từ máy chủ. Nhiệm vụ có thể đã được tạo. Nội dung đã nhập vẫn được giữ nguyên — có thể thử lại an toàn bằng cùng một mã yêu cầu."
+        );
+        return;
+      }
+
+      // Server-confirmed refusal: preserve all input and surface field feedback.
+      setSubmissionStatus("rejected");
+      setIsSubmitting(false);
+      setSubmissionMessage(outcome.message || "Máy chủ từ chối tạo nhiệm vụ.");
+      setErrors({ form: outcome.message || "Máy chủ từ chối tạo nhiệm vụ." });
+      errorSummaryRef.current?.focus();
+    } catch {
+      // Defensive: the adapter reports transport failures as `unknown`; an
+      // unexpected throw must never be mistaken for a proven failure.
+      setSubmissionStatus("unknown");
+      setIsSubmitting(false);
+      setSubmissionMessage(
+        "Chưa xác nhận được kết quả từ máy chủ. Nội dung đã nhập vẫn được giữ nguyên."
+      );
+    }
   };
 
   const handleDatePreset = (days: number) => {
@@ -926,11 +1233,12 @@ export function CreateTaskModal({
                       <span>{user?.name || "Bạn"} (Chính bạn — {user?.roleLabel || "Giảng viên"})</span>
                       <span className="text-xs text-muted-foreground font-normal">Tự thực hiện</span>
                     </div>
-                  ) : !isCustomAssignee ? (
+                  ) : (
                     <div className="relative">
                       {/* Searchable Combobox Trigger Button */}
                       <button
                         type="button"
+                        id="task-assignee-field"
                         onClick={() => {
                           setIsComboboxOpen((prev) => !prev);
                           setTimeout(() => searchInputRef.current?.focus(), 60);
@@ -1068,46 +1376,9 @@ export function CreateTaskModal({
                                 Không tìm thấy nhân sự phù hợp
                               </div>
                             )}
-
-                            {/* Option to type custom name */}
-                            <div className="pt-1">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsCustomAssignee(true);
-                                  setIsComboboxOpen(false);
-                                  handleAssigneeSelect("");
-                                }}
-                                className="w-full min-h-[44px] px-2.5 py-2 rounded-xl text-left text-xs font-medium text-primary hover:bg-primary/10 transition-colors cursor-pointer flex items-center"
-                              >
-                                + Nhập cán bộ khác ngoài danh mục...
-                              </button>
-                            </div>
                           </div>
                         </div>
                       )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        aria-label="Họ và tên cán bộ chủ trì"
-                        placeholder="Họ và tên cán bộ (VD: Nguyễn Văn Tuấn)..."
-                        value={formData.leadAssigneeName}
-                        onChange={(e) => handleAssigneeSelect(e.target.value)}
-                        onFocus={() => scrollActiveInputIntoView()}
-                        className="w-full min-h-[44px] h-11 sm:h-10 px-3 rounded-xl border border-border/70 bg-card text-base sm:text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary font-medium"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsCustomAssignee(false);
-                          handleAssigneeSelect("");
-                        }}
-                        className="min-h-[44px] sm:min-h-0 text-xs font-semibold text-primary hover:underline shrink-0 cursor-pointer inline-flex items-center"
-                      >
-                        Chọn danh mục
-                      </button>
                     </div>
                   )}
 
@@ -1155,6 +1426,10 @@ export function CreateTaskModal({
                   )}
                 </div>
 
+                {/* Progressive disclosure (T23): institutional metadata (VTVL,
+                    lĩnh vực công tác) is requested only on demand. */}
+                {showAdvanced && (
+                <>
                 {/* Field: Vị trí việc làm (VTVL - NĐ 232) */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -1201,6 +1476,8 @@ export function CreateTaskModal({
                     <ChevronDown className="size-4 text-muted-foreground pointer-events-none absolute right-3 top-3.5" strokeWidth={1.5} />
                   </div>
                 </div>
+                </>
+                )}
               </div>
 
               {/* Column 2: Schedule & Constraints */}
@@ -1222,6 +1499,7 @@ export function CreateTaskModal({
 
                   <input
                     type="date"
+                    id="task-due-date-input"
                     value={formData.dueDate}
                     max={effectiveParentDueDate ? effectiveParentDueDate.split("T")[0] : undefined}
                     onChange={(e) => {
@@ -1275,7 +1553,35 @@ export function CreateTaskModal({
                   )}
                 </div>
 
-                {/* Field: Hạn chót nội bộ (Internal Due Date) */}
+                {/* Field: Ưu tiên (canonical priority, T22) */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                      <ShieldAlert className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+                      <span>Mức ưu tiên</span>
+                    </label>
+                    <span className="text-xs text-muted-foreground">Bình thường</span>
+                  </div>
+                  <div className="relative">
+                    <select
+                      value={formData.priority || "MEDIUM"}
+                      onChange={(e) =>
+                        setFormData((p) => ({ ...p, priority: e.target.value as TaskPriorityInput }))
+                      }
+                      className="w-full min-h-[44px] h-11 sm:h-10 pl-3 pr-8 rounded-xl border border-border/70 bg-card text-base sm:text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate shadow-2xs"
+                    >
+                      <option value="LOW">Thấp</option>
+                      <option value="MEDIUM">Bình thường</option>
+                      <option value="HIGH">Cao</option>
+                      <option value="URGENT">Khẩn cấp</option>
+                    </select>
+                    <ChevronDown className="size-4 text-muted-foreground pointer-events-none absolute right-3 top-3.5" strokeWidth={1.5} />
+                  </div>
+                </div>
+
+                {/* Progressive disclosure (T23): internal due & parent linkage are
+                    institutional metadata, disclosed on demand. */}
+                {showAdvanced && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
@@ -1287,6 +1593,7 @@ export function CreateTaskModal({
 
                   <input
                     type="date"
+                    id="task-internal-due-input"
                     value={formData.internalDueDate || ""}
                     onChange={(e) => {
                       setFormData((p) => ({ ...p, internalDueDate: e.target.value }));
@@ -1306,9 +1613,10 @@ export function CreateTaskModal({
                     </p>
                   )}
                 </div>
+                )}
 
                 {/* Field: Thuộc nhiệm vụ cấp Trường (Parent Task - only when not in fixed subtask mode) */}
-                {formData.level === "DON_VI" && !isSubtaskMode && schoolTasks.length > 0 && (
+                {showAdvanced && formData.level === "DON_VI" && !isSubtaskMode && schoolTasks.length > 0 && (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
@@ -1340,8 +1648,31 @@ export function CreateTaskModal({
               </div>
             </div>
 
-            {/* 4. Collaborator Row (Level: TRUONG only; Locked for Child Subtasks) */}
-            {isChildTaskMode ? (
+            {/* Progressive disclosure toggle (T23) */}
+            <div className="pt-3 border-t border-border/60">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((prev) => !prev)}
+                aria-expanded={showAdvanced}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors cursor-pointer active:scale-95"
+              >
+                <ChevronDown
+                  className={cn("size-3.5 transition-transform", showAdvanced && "rotate-180")}
+                  strokeWidth={1.5}
+                />
+                <span>
+                  {showAdvanced
+                    ? "Ẩn tùy chọn nâng cao"
+                    : "Tùy chọn nâng cao (phối hợp, hạn nội bộ, sản phẩm đầu ra, nghiệm thu...)"}
+                </span>
+              </button>
+              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                {ADVANCED_METADATA_PERSISTENCE_NOTICE}
+              </p>
+            </div>
+
+            {/* 4. Collaborator Row (advanced disclosure) */}
+            {showAdvanced && (isChildTaskMode ? (
               <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
                 <Users className="size-3.5 text-muted-foreground/60 shrink-0" strokeWidth={1.5} />
                 <span>Nhiệm vụ con tuân thủ nguyên tắc Single DRI: Mỗi công việc do đúng 1 cán bộ phụ trách chính.</span>
@@ -1390,6 +1721,7 @@ export function CreateTaskModal({
                 <div className="relative">
                   <select
                     value=""
+                    id="task-collaborators-input"
                     onChange={(e) => {
                       const selected = e.target.value;
                       if (selected && !formData.coAssignees.includes(selected)) {
@@ -1431,10 +1763,10 @@ export function CreateTaskModal({
                   </p>
                 )}
               </div>
-            )}
+            ))}
 
             {/* 5. DACUM Section: Cấu hình quy trình phê duyệt & Sản phẩm đầu ra (Level: DON_VI) */}
-            {formData.level === "DON_VI" && (
+            {showAdvanced && formData.level === "DON_VI" && (
               <div className="space-y-2.5 pt-3 border-t border-border/60">
                 <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
                   <div className="flex items-center gap-2">
@@ -1476,6 +1808,7 @@ export function CreateTaskModal({
                 <div className="space-y-1">
                   <textarea
                     rows={2}
+                    id="task-deliverables-input"
                     placeholder={
                       formData.requiresReview
                         ? "Bắt buộc: Mô tả cụ thể sản phẩm đầu ra (VD: Dự thảo Quy chế PDF, Báo cáo kỹ thuật hệ thống, Biên bản nghiệm thu...)"
@@ -1502,14 +1835,55 @@ export function CreateTaskModal({
               </div>
             )}
 
-            {/* Validation Errors Summary (if any) */}
-            {(errors.leadAssigneeName || errors.coAssignees || errors.dueDate || errors.internalDueDate || errors.requiredDeliverables) && (
-              <div className="text-xs text-destructive space-y-1 p-3 rounded-xl bg-destructive/10 border border-destructive/20">
-                {errors.leadAssigneeName && <p>• {errors.leadAssigneeName}</p>}
-                {errors.coAssignees && <p>• {errors.coAssignees}</p>}
-                {errors.dueDate && <p>• {errors.dueDate}</p>}
-                {errors.internalDueDate && <p>• {errors.internalDueDate}</p>}
-                {errors.requiredDeliverables && <p>• {errors.requiredDeliverables}</p>}
+            {/* Validation & submission feedback (T70): summary + per-field links + focus. */}
+            {submissionStatus === "unknown" && submissionMessage && (
+              <div
+                role="status"
+                className="rounded-xl border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900 leading-relaxed"
+              >
+                {submissionMessage}
+              </div>
+            )}
+
+            {(errors.title || errors.leadAssigneeName || errors.coAssignees || errors.dueDate || errors.internalDueDate || errors.requiredDeliverables || errors.form) && (
+              <div
+                ref={errorSummaryRef}
+                tabIndex={-1}
+                role="alert"
+                className="text-xs text-destructive space-y-1 p-3 rounded-xl bg-destructive/10 border border-destructive/20 focus:outline-none focus:ring-1 focus:ring-destructive/40"
+              >
+                <p className="font-semibold">Không thể tạo nhiệm vụ. Vui lòng kiểm tra các mục sau:</p>
+                {errors.title && (
+                  <button type="button" onClick={() => document.getElementById("task-title-input")?.focus()} className="block text-left hover:underline cursor-pointer">
+                    • {errors.title}
+                  </button>
+                )}
+                {errors.leadAssigneeName && (
+                  <button type="button" onClick={() => document.getElementById("task-assignee-field")?.focus()} className="block text-left hover:underline cursor-pointer">
+                    • {errors.leadAssigneeName}
+                  </button>
+                )}
+                {errors.coAssignees && (
+                  <button type="button" onClick={() => document.getElementById("task-collaborators-input")?.focus()} className="block text-left hover:underline cursor-pointer">
+                    • {errors.coAssignees}
+                  </button>
+                )}
+                {errors.dueDate && (
+                  <button type="button" onClick={() => document.getElementById("task-due-date-input")?.focus()} className="block text-left hover:underline cursor-pointer">
+                    • {errors.dueDate}
+                  </button>
+                )}
+                {errors.internalDueDate && (
+                  <button type="button" onClick={() => document.getElementById("task-internal-due-input")?.focus()} className="block text-left hover:underline cursor-pointer">
+                    • {errors.internalDueDate}
+                  </button>
+                )}
+                {errors.requiredDeliverables && (
+                  <button type="button" onClick={() => document.getElementById("task-deliverables-input")?.focus()} className="block text-left hover:underline cursor-pointer">
+                    • {errors.requiredDeliverables}
+                  </button>
+                )}
+                {errors.form && <p>• {errors.form}</p>}
               </div>
             )}
           </div>
@@ -1535,6 +1909,7 @@ export function CreateTaskModal({
                 variant="outline"
                 size="sm"
                 onClick={onClose}
+                disabled={isSubmitting}
                 className="h-11 sm:h-10 min-h-[44px] rounded-xl px-4 text-xs font-semibold cursor-pointer active:scale-95 transition-all w-1/2 sm:w-auto"
               >
                 Hủy
@@ -1542,21 +1917,21 @@ export function CreateTaskModal({
               <Button
                 type="submit"
                 size="sm"
-                disabled={allowedLevels.length === 0 || isExternalDeptBlocked}
+                disabled={!createPolicy.canCreate || isExternalDeptBlocked || isSubmitting}
                 className={cn(
                   "h-11 sm:h-10 min-h-[44px] rounded-xl px-5 text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs active:scale-[0.98] transition-all cursor-pointer inline-flex items-center justify-center gap-2 w-1/2 sm:w-auto",
-                  (allowedLevels.length === 0 || isExternalDeptBlocked) && "opacity-50 cursor-not-allowed"
+                  (!createPolicy.canCreate || isExternalDeptBlocked || isSubmitting) && "opacity-50 cursor-not-allowed"
                 )}
               >
                 <CheckCircle2 className="size-4" strokeWidth={1.5} />
                 <span>
-                  {isStaff
-                    ? "Tạo việc mới"
+                  {isSubmitting
+                    ? "Đang gửi..."
+                    : isStaff
+                    ? "Tạo việc cá nhân"
                     : formData.level === "TRUONG"
-                    ? "Tạo việc cấp Trường"
-                    : formData.leadAssigneeName && formData.leadAssigneeName !== user?.name
-                    ? "Giao việc"
-                    : "Tạo việc mới"}
+                    ? "Giao việc cấp Trường"
+                    : "Giao việc"}
                 </span>
               </Button>
             </div>

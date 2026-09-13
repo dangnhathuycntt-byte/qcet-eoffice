@@ -28,6 +28,10 @@ import {
   mapDbNotification,
   resolveActionableDeepLink,
   extractNotificationEntity,
+  deriveNotificationsViewState,
+  getNotificationEmptyCopy,
+  beginOptimisticRead,
+  settleOptimisticRead,
 } from "@/lib/notification-triage";
 import { MobileNotificationInbox } from "@/components/notifications/mobile-notification-inbox";
 
@@ -50,6 +54,7 @@ export default function NotificationsPage() {
   const [unreadOnly, setUnreadOnly] = React.useState(false);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const filterDropdownRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -64,16 +69,24 @@ export default function NotificationsPage() {
 
   const fetchNotifications = React.useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/notifications");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.notifications)) {
-          setNotifications(data.notifications.map(mapDbNotification));
-        }
+      if (!res.ok) {
+        throw new Error(`Yêu cầu thất bại (${res.status})`);
       }
-    } catch {
-      // Best-effort
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.notifications)) {
+        throw new Error("Dữ liệu thông báo không hợp lệ");
+      }
+      setNotifications(data.notifications.map(mapDbNotification));
+    } catch (err) {
+      // A failed fetch is an ERROR state, never an apparent empty inbox (T44).
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Không thể kết nối tới máy chủ thông báo."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -83,29 +96,42 @@ export default function NotificationsPage() {
     fetchNotifications();
   }, [fetchNotifications]);
 
+  const viewState = deriveNotificationsViewState({
+    isLoading,
+    hasError: error !== null,
+    count: notifications.length,
+  });
+
   const unreadCount = React.useMemo(() => {
     return notifications.filter((n) => !n.isRead).length;
   }, [notifications]);
 
-  // Mark a single notification as read
+  // Mark a single notification as read with optimistic rollback on failure (T46).
   const markAsRead = async (id: string) => {
-    setNotifications((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, isRead: true } : item))
-    );
+    const session = beginOptimisticRead(notifications, id);
+    setNotifications(session.optimistic);
     try {
-      await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+      const res = await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+      setNotifications((prev) =>
+        settleOptimisticRead(session, { ok: res.ok, serverNotifications: prev })
+      );
     } catch {
-      // Best-effort
+      // Server did not acknowledge: revert to the last known server truth.
+      setNotifications(settleOptimisticRead(session, { ok: false }));
     }
   };
 
-  // Mark all notifications as read
+  // Mark all notifications as read with optimistic rollback on failure (T46).
   const markAllAsRead = async () => {
-    setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    const session = beginOptimisticRead(notifications, "all");
+    setNotifications(session.optimistic);
     try {
-      await fetch("/api/notifications", { method: "PATCH" });
+      const res = await fetch("/api/notifications", { method: "PATCH" });
+      setNotifications((prev) =>
+        settleOptimisticRead(session, { ok: res.ok, serverNotifications: prev })
+      );
     } catch {
-      // Best-effort
+      setNotifications(settleOptimisticRead(session, { ok: false }));
     }
   };
 
@@ -126,40 +152,8 @@ export default function NotificationsPage() {
     return displayedNotifications.filter((n) => n.timeGroup === "earlier");
   }, [displayedNotifications]);
 
-  // Informative empty state configuration per tab
-  const getEmptyStateContent = () => {
-    if (unreadOnly) {
-      return {
-        title: "Không có thông báo chưa đọc nào",
-        description: "Tất cả các thông báo liên quan đã được nắm bắt và đánh dấu đã đọc.",
-      };
-    }
-    switch (categoryFilter) {
-      case "action_required":
-        return {
-          title: "Không có việc cần làm",
-          description: "Tất cả nhiệm vụ phân công và chỉ đạo điều hành trực tiếp đã được xử lý hoàn tất.",
-        };
-      case "approvals":
-        return {
-          title: "Không có sản phẩm chờ phê duyệt",
-          description: "Hiện không có báo cáo tiến độ, minh chứng hoặc hồ sơ DACUM nào cần bạn thẩm định.",
-        };
-      case "reminders":
-        return {
-          title: "Không có thông báo nhắc hạn",
-          description: "Không có công việc nào cận hạn trong 24 giờ tới hoặc cần gửi cảnh báo nhắc nhở.",
-        };
-      case "all":
-      default:
-        return {
-          title: "Hiện tại Đồng chí không có thông báo nào",
-          description: "Bạn đã nắm bắt toàn bộ hoạt động điều hành và văn bản nghiệp vụ của Nhà trường.",
-        };
-    }
-  };
-
-  const emptyState = getEmptyStateContent();
+  // Bounded, non-overclaiming empty state copy (T45).
+  const emptyState = getNotificationEmptyCopy(categoryFilter, unreadOnly);
 
   return (
     <div className="max-w-3xl mx-auto py-4 px-2 sm:px-0 space-y-4">
@@ -168,6 +162,7 @@ export default function NotificationsPage() {
         <MobileNotificationInbox
           notifications={notifications}
           isLoading={isLoading}
+          error={error}
           onRefresh={fetchNotifications}
           onMarkAsRead={markAsRead}
           onMarkAllAsRead={markAllAsRead}
@@ -192,7 +187,7 @@ export default function NotificationsPage() {
               ) : (
                 <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
                   <Check size={13} strokeWidth={1.5} className="text-emerald-500" />
-                  <span>Đã cập nhật toàn bộ</span>
+                  <span>Không có thông báo chưa đọc</span>
                 </span>
               )}
             </div>
@@ -316,8 +311,35 @@ export default function NotificationsPage() {
 
         {/* List Content */}
         <div className="p-2 divide-y divide-border/30">
-          {isLoading && notifications.length === 0 ? (
-            <div className="py-12 space-y-3 px-4 animate-pulse">
+          {viewState === "error" ? (
+            <div
+              className="py-16 px-4 text-center"
+              role="alert"
+              data-testid="notification-error-state"
+            >
+              <div className="size-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle size={22} strokeWidth={1.5} />
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                Không thể tải thông báo
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                {error ?? "Không thể kết nối tới máy chủ thông báo."}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={fetchNotifications}
+                disabled={isLoading}
+                className="mt-3 gap-1.5 text-xs cursor-pointer rounded-lg"
+              >
+                <RefreshCw size={13} strokeWidth={1.5} className={isLoading ? "animate-spin" : ""} />
+                <span>Thử lại</span>
+              </Button>
+            </div>
+          ) : viewState === "loading" ? (
+            <div className="py-12 space-y-3 px-4 animate-pulse" data-testid="notification-loading-state">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex items-start gap-3.5 p-3 rounded-xl bg-muted/20">
                   <div className="size-11 rounded-full bg-muted/60 shrink-0" />
@@ -329,7 +351,7 @@ export default function NotificationsPage() {
               ))}
             </div>
           ) : displayedNotifications.length === 0 ? (
-            <div className="py-16 px-4 text-center">
+            <div className="py-16 px-4 text-center" data-testid="notification-empty-state">
               <div className="size-12 rounded-full bg-secondary/80 text-muted-foreground flex items-center justify-center mx-auto mb-3">
                 <CheckCircle2 size={22} strokeWidth={1.5} className="text-emerald-600" />
               </div>

@@ -28,12 +28,15 @@ import {
   resolveActionableDeepLink,
   groupNotificationsByDay,
   filterNotificationsMobile,
+  getMobileNotificationEmptyCopy,
+  deriveNotificationsViewState,
   type MobileNotificationFilter,
 } from "@/lib/notification-triage";
 
 export interface MobileNotificationInboxProps {
   notifications: QCETNotification[];
   isLoading?: boolean;
+  error?: string | null;
   onRefresh?: () => void;
   onMarkAsRead: (id: string) => Promise<void> | void;
   onMarkAllAsRead?: () => Promise<void> | void;
@@ -43,6 +46,7 @@ export interface MobileNotificationInboxProps {
 export function MobileNotificationInbox({
   notifications,
   isLoading = false,
+  error = null,
   onRefresh,
   onMarkAsRead,
   onMarkAllAsRead,
@@ -80,6 +84,14 @@ export function MobileNotificationInbox({
   const totalCount = notifications.length;
   const unreadCount = notifications.filter((n) => !n.isRead).length;
   const actionRequiredCount = filterNotificationsMobile(notifications, "action_required").length;
+
+  // Explicit loading/data/empty/error parity with the desktop page (T44/T47).
+  const viewState = deriveNotificationsViewState({
+    isLoading,
+    hasError: error !== null,
+    count: notifications.length,
+  });
+  const emptyCopy = getMobileNotificationEmptyCopy(filterTab);
 
   const handleCardClick = (item: QCETNotification, deepLink: string) => {
     if (!item.isRead) {
@@ -209,17 +221,53 @@ export function MobileNotificationInbox({
       {/* =================================================================== */}
       {/* 3. Notification Groups List (HÔM NAY & TRƯỚC ĐÓ)                     */}
       {/* =================================================================== */}
-      {filteredList.length === 0 ? (
-        <div className="py-12 px-4 text-center rounded-2xl border border-dashed border-border/80 bg-card">
-          <Bell size={24} strokeWidth={1.5} className="mx-auto text-muted-foreground/60 mb-2" />
-          <p className="text-xs font-bold text-foreground">Không có thông báo nào</p>
+      {viewState === "error" ? (
+        <div
+          className="py-12 px-4 text-center rounded-2xl border border-destructive/20 bg-card"
+          role="alert"
+          data-testid="notification-error-state"
+        >
+          <AlertTriangle size={24} strokeWidth={1.5} className="mx-auto text-destructive mb-2" />
+          <p className="text-xs font-bold text-foreground">Không thể tải thông báo</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {filterTab === "unread"
-              ? "Tất cả thông báo đã được đánh dấu đã đọc"
-              : filterTab === "action_required"
-              ? "Không có công việc hoặc văn bản nào cần xử lý lúc này"
-              : "Hộp thư thông báo của bạn đang trống"}
+            {error ?? "Không thể kết nối tới máy chủ thông báo."}
           </p>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="mt-3 inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg border border-border/80 bg-card text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw size={14} strokeWidth={1.5} className={isLoading ? "animate-spin" : ""} />
+              <span>Thử lại</span>
+            </button>
+          )}
+        </div>
+      ) : viewState === "loading" ? (
+        <div className="space-y-2" data-testid="notification-loading-state" aria-label="Đang tải thông báo...">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex items-start gap-3 p-3 min-h-[48px] rounded-xl border border-border/70 bg-card animate-pulse"
+            >
+              <div className="size-10 rounded-full bg-muted/60 shrink-0" />
+              <div className="space-y-2 flex-1 min-w-0">
+                <div className="h-3.5 w-3/4 rounded bg-muted/60" />
+                <div className="h-3 w-1/2 rounded bg-muted/40" />
+                <div className="h-3 w-1/3 rounded bg-muted/30" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredList.length === 0 ? (
+        <div
+          className="py-12 px-4 text-center rounded-2xl border border-dashed border-border/80 bg-card"
+          data-testid="notification-empty-state"
+        >
+          <Bell size={24} strokeWidth={1.5} className="mx-auto text-muted-foreground/60 mb-2" />
+          <p className="text-xs font-bold text-foreground">{emptyCopy.title}</p>
+          <p className="text-xs text-muted-foreground mt-1">{emptyCopy.description}</p>
         </div>
       ) : (
         <div className="space-y-4">

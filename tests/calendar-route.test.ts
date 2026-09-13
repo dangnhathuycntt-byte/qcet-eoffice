@@ -69,12 +69,27 @@ describe("Calendar Route (/calendar) First-Class Standalone Route & Hygiene", ()
     );
   });
 
-  test("src/app/calendar/page.tsx persists created tasks to /api/tasks and avoids hardcoded 'task-1'", () => {
+  test("src/app/calendar/page.tsx delegates creation to the canonical create command and avoids hardcoded 'task-1'", () => {
     const content = fs.readFileSync(calendarPagePath, "utf8");
-    assert.ok(
-      content.includes('fetch("/api/tasks"') || content.includes("fetch('/api/tasks'"),
-      "Page must persist created task to /api/tasks"
+
+    // Plan R-C1: the Create Command pipeline is canonical —
+    // UI Draft -> canonical mapper -> CreateTaskInput -> API. A page must NOT
+    // issue its own raw POST to /api/tasks; that duplicate-create defect is what
+    // this assertion now forbids (previously it required the opposite).
+    assert.doesNotMatch(
+      content,
+      /fetch\(\s*["'`]\/api\/tasks["'`]/,
+      "Page must not issue a raw POST to /api/tasks — creation must go through the canonical create command"
     );
+
+    // The create must still be persisted, via the shared canonical surface
+    // rather than a locally fabricated task.
+    assert.ok(
+      content.includes("@/lib/adapters/create-task-mapper") ||
+        content.includes("@/components/dashboard/create-task-modal"),
+      "Page must route creation through the canonical create adapter/modal"
+    );
+
     assert.doesNotMatch(
       content,
       /"task-1"/,
