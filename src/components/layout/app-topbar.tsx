@@ -40,18 +40,27 @@ export function getInitials(name: string): string {
   return (first + last).toUpperCase();
 }
 
-const LEVEL_1_ROOTS = new Set(["/", "/dashboard", "/tasks", "/calendar", "/notifications", "/org"]);
+const LEVEL_1_ROOTS = new Set([
+  "/",
+  "/dashboard",
+  "/workbench",
+  "/tasks",
+  "/calendar",
+  "/notifications",
+  "/documents",
+  "/org",
+  "/settings",
+]);
 
 function TopbarBreadcrumbs({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams();
   const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/", searchParams);
-  const isDocuments = pathname?.startsWith("/documents");
   const cleanPath = pathname?.split("?")[0].replace(/\/+$/, "") || "/";
   const isLevel1 = LEVEL_1_ROOTS.has(cleanPath);
   const hasDeeperContext = Boolean(searchParams?.get("taskId") || searchParams?.get("id") || searchParams?.get("unitId"));
 
   // Level-1 pages do not repeat location with sidebar + breadcrumb + title; breadcrumbs remain for deeper context
-  if (isLevel1 && !hasDeeperContext && !isDocuments) {
+  if (isLevel1 && !hasDeeperContext) {
     return null;
   }
 
@@ -67,23 +76,17 @@ function TopbarBreadcrumbs({ pathname }: { pathname: string }) {
       <span className="text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-none">
         {pageTitle}
       </span>
-      {isDocuments && (
-        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0 select-none">
-          Đang phát triển
-        </span>
-      )}
     </div>
   );
 }
 
 function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
   const [rootTitle, pageTitle] = resolveBreadcrumb(pathname || "/");
-  const isDocuments = pathname?.startsWith("/documents");
   const cleanPath = pathname?.split("?")[0].replace(/\/+$/, "") || "/";
   const isLevel1 = LEVEL_1_ROOTS.has(cleanPath);
 
   // Level-1 pages do not repeat location with sidebar + breadcrumb + title
-  if (isLevel1 && !isDocuments) {
+  if (isLevel1) {
     return null;
   }
 
@@ -99,11 +102,6 @@ function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
       <span className="text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-none">
         {pageTitle}
       </span>
-      {isDocuments && (
-        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0 select-none">
-          Đang phát triển
-        </span>
-      )}
     </div>
   );
 }
@@ -113,6 +111,8 @@ export function AppTopbar() {
   const router = useRouter();
   const { isCollapsed, toggleCollapse, badgeCounts } = useSidebar();
   const { user, logout, isProfileModalOpen, setIsProfileModalOpen, isOfflineReadOnly } = useAuth();
+
+  const unreadNotifications = Number(badgeCounts?.notifications) || 0;
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -177,10 +177,10 @@ export function AppTopbar() {
   return (
     <header
       data-slot="app-topbar"
-      className="sticky top-0 z-30 w-full h-[calc(52px+env(safe-area-inset-top,0px))] border-b border-border/50 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top,0px)] transition-colors"
+      className="sticky top-0 z-30 w-full h-[calc(52px+env(safe-area-inset-top,0px))] border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top,0px)] transition-colors"
     >
-      <div className="h-full w-full px-3.5 sm:px-6 flex items-center justify-between gap-3">
-        {/* Left Zone: Desktop Collapse Toggle & Dynamic Breadcrumbs */}
+      <div className="h-full w-full px-3.5 sm:px-6 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_minmax(280px,384px)_minmax(0,1fr)] items-center gap-2 sm:gap-4">
+        {/* Left Zone: Desktop Collapse Toggle & Deep Breadcrumbs */}
         <div className="flex items-center min-w-0 gap-2 sm:gap-3">
           {/* Mobile Menu Trigger (< 768px) đã được thay thế bằng tab 'Thêm' ở Bottom Nav để tránh xung đột 2 drawer */}
 
@@ -190,10 +190,10 @@ export function AppTopbar() {
             size="icon-sm"
             className="hidden md:inline-flex size-8 mr-1 shrink-0 text-muted-foreground hover:text-foreground"
             onClick={toggleCollapse}
-            title="Thu gọn / Mở rộng thanh bên (phím [ hoặc Ctrl+B)"
+            title="Thu gọn / Mở rộng thanh bên (Ctrl+B hoặc ⌘B)"
             aria-label="Thu gọn / Mở rộng thanh bên"
           >
-            {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            {isCollapsed ? <PanelLeftOpen size={16} strokeWidth={1.5} /> : <PanelLeftClose size={16} strokeWidth={1.5} />}
           </Button>
 
           {/* Dynamic Breadcrumbs */}
@@ -202,15 +202,15 @@ export function AppTopbar() {
           </Suspense>
         </div>
 
-        {/* Center Zone: Global Command / Quick Search */}
-        <div className="flex items-center justify-center flex-1 max-w-md px-2">
+        {/* Center Zone: Bounded Command Search Launcher */}
+        <div className="hidden sm:flex items-center justify-center w-full">
           <button
             id="tour-topbar-search"
             type="button"
             onClick={handleOpenSearch}
-            className="hidden sm:flex items-center justify-between w-64 md:w-80 lg:w-96 h-9 px-3 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/60 text-muted-foreground transition-colors cursor-pointer group"
-            title="Tìm nhanh công việc, nhân sự... (phím ⌘K hoặc Ctrl+K)"
-            aria-label="Tìm nhanh công việc, nhân sự"
+            className="flex items-center justify-between w-full max-w-sm h-9 px-3 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/60 text-muted-foreground transition-colors cursor-pointer group"
+            title="Tìm kiếm toàn hệ thống… (phím ⌘K hoặc Ctrl+K)"
+            aria-label="Tìm kiếm toàn hệ thống"
           >
             <div className="flex items-center gap-2 min-w-0">
               <Search
@@ -218,7 +218,7 @@ export function AppTopbar() {
                 strokeWidth={1.5}
                 className="size-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors"
               />
-              <span className="text-xs truncate">Tìm nhanh công việc, nhân sự...</span>
+              <span className="text-xs truncate">Tìm kiếm toàn hệ thống…</span>
             </div>
             <kbd className="text-xs font-mono px-1.5 py-0.5 rounded border border-border/60 bg-background/80 text-muted-foreground group-hover:text-foreground shrink-0">
               ⌘K
@@ -226,8 +226,8 @@ export function AppTopbar() {
           </button>
         </div>
 
-        {/* Right Zone: Notification Bell, Theme Switcher & User Profile */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        {/* Right Zone: justify-self-end: Notifications & Compact Profile */}
+        <div className="flex items-center justify-self-end gap-1.5 sm:gap-2.5 shrink-0">
           {/* Mobile Quick Search Trigger */}
           <button
             type="button"
@@ -236,7 +236,7 @@ export function AppTopbar() {
             title="Tìm kiếm"
             aria-label="Tìm nhanh công việc, nhân sự"
           >
-            <Search size={18} strokeWidth={1.75} />
+            <Search size={18} strokeWidth={1.5} />
           </button>
 
           {/* Notification Bell: Popover Trigger */}
@@ -250,8 +250,10 @@ export function AppTopbar() {
               aria-expanded={isNotificationOpen}
             >
               <Bell size={16} strokeWidth={1.5} className="size-4" />
-              {Number(badgeCounts?.notifications) > 0 && (
-                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
+              {unreadNotifications > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground flex items-center justify-center ring-2 ring-background tabular-nums pointer-events-none">
+                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                </span>
               )}
             </button>
             <Link href="/notifications" className="sr-only">
@@ -263,23 +265,6 @@ export function AppTopbar() {
               containerRef={notificationRef}
             />
           </div>
-
-          {/* Mobile App Install Button */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("qcet:open-install-modal"));
-              }
-            }}
-            aria-label="Cài đặt ứng dụng di động"
-            title="Cài đặt ứng dụng di động"
-            className="hidden sm:flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-primary transition-colors cursor-pointer touch-manipulation"
-          >
-            <Smartphone size={16} strokeWidth={1.5} />
-          </Button>
 
           {/* User Avatar + Profile Dropdown */}
           {user ? (
@@ -297,34 +282,24 @@ export function AppTopbar() {
               title={`Hồ sơ cá nhân: ${user.name}`}
               aria-expanded={isProfileDropdownOpen}
             >
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-2xs">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-semibold shadow-2xs shrink-0">
                 {getInitials(user.name)}
               </div>
-              <div className="hidden text-left xl:block">
-                <div className="flex items-center gap-1.5">
-                  <p
-                    className="text-xs font-semibold leading-tight text-foreground max-w-[120px] truncate"
-                    title={user.name}
-                  >
-                    {user.name}
-                  </p>
-                  {isOfflineReadOnly && (
-                    <span
-                      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-900 border border-amber-300 shrink-0"
-                      title="Phiên đăng nhập máy chủ đã hết hạn (Chỉ xem)"
-                    >
-                      Chỉ xem
-                    </span>
-                  )}
-                </div>
-                <p
-                  className="text-xs text-muted-foreground font-medium max-w-[130px] truncate"
-                  title={user.roleLabel}
+              <div className="hidden items-center gap-1.5 text-left md:flex">
+                <span
+                  className="text-xs font-semibold text-foreground max-w-[100px] lg:max-w-[130px] truncate"
+                  title={user.name}
                 >
-                  {user.role === "ADMIN"
-                    ? "BGH QCET"
-                    : user.departmentCode || user.department}
-                </p>
+                  {user.name}
+                </span>
+                {isOfflineReadOnly && (
+                  <span
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-900 border border-amber-300 shrink-0"
+                    title="Phiên đăng nhập máy chủ đã hết hạn (Chỉ xem)"
+                  >
+                    Chỉ xem
+                  </span>
+                )}
               </div>
               <ChevronDown
                 size={12}
