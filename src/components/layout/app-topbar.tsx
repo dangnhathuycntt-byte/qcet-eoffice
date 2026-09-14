@@ -25,6 +25,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { NotificationPopover } from "@/components/notifications/notification-popover";
+import { RoleSwitcherPill } from "@/components/auth/role-switcher-pill";
 
 const UserProfileModal = dynamic(
   () => import("@/components/auth/user-profile-modal").then((m) => m.UserProfileModal),
@@ -414,6 +415,9 @@ export function AppTopbar() {
                     <span>Đổi tài khoản / Đăng nhập khác</span>
                   </Link>
                 </div>
+
+                {/* Dev-only: Role Switcher */}
+                <RoleSwitcherPill className="border-t border-border/50 pt-2 mt-1 px-1" />
 
                 {/* Divider & Logout */}
                 <div className="border-t border-border/50 pt-1.5 mt-1">
