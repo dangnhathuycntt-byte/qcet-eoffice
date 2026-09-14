@@ -6,15 +6,15 @@ export { type AuthUser, type UserRole } from "../types/auth";
 export const DEFAULT_DEMO_USERS: AuthUser[] = [
   {
     id: "user-admin-bgh",
-    name: "ThS. Phạm Văn Tường",
-    email: "tuongpv@cdktcnqn.edu.vn",
+    name: "ThS. Đặng Nhật Huy",
+    email: "dangnhathuy@cdktcnqn.edu.vn",
     role: "ADMIN",
-    roleLabel: "Ban Giám hiệu (Hiệu trưởng - ThS. Phạm Văn Tường)",
+    roleLabel: "Ban Giám hiệu (Hiệu trưởng - ThS. Đặng Nhật Huy)",
     department: "Ban Giám hiệu",
     departmentCode: "BGH",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
     title: "Hiệu trưởng",
-    aliases: ["Ban Giám hiệu", "Hiệu trưởng", "Phạm Văn Tường", "bgh@cdktcnqn.edu.vn"],
+    aliases: ["Ban Giám hiệu", "Hiệu trưởng", "Đặng Nhật Huy", "bgh@cdktcnqn.edu.vn"],
   },
   {
     id: "user-manager-qldt",

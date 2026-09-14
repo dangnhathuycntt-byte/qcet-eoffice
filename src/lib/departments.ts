@@ -189,12 +189,14 @@ export const QCET_DEPARTMENT_GROUPS: DepartmentPersonnelGroup[] = [
     icon: "",
     aliases: ["ban-giam-hieu", "BAN_GIAM_HIEU"],
     personnel: [
-      { name: "Phạm Văn Tường", title: "ThS. Phạm Văn Tường", role: "Hiệu trưởng", email: "tuongpv@cdktcnqn.edu.vn" },
+      { name: "Đặng Nhật Huy", title: "ThS. Đặng Nhật Huy", role: "Hiệu trưởng", email: "dangnhathuy@cdktcnqn.edu.vn" },
+      { name: "Phạm Văn Tường", title: "ThS. Phạm Văn Tường", role: "Phó Hiệu trưởng", email: "tuongpv@cdktcnqn.edu.vn" },
       { name: "Trần Trọng Kiệm", title: "ThS. Trần Trọng Kiệm", role: "Phó Hiệu trưởng", email: "kiemtt@cdktcnqn.edu.vn" },
       { name: "Lê Xuân Nguyên", title: "ThS. Lê Xuân Nguyên", role: "Phó Hiệu trưởng", email: "nguyenlx@cdktcnqn.edu.vn" },
     ],
     members: [
-      { name: "Phạm Văn Tường", title: "ThS. Phạm Văn Tường", role: "Hiệu trưởng", email: "tuongpv@cdktcnqn.edu.vn" },
+      { name: "Đặng Nhật Huy", title: "ThS. Đặng Nhật Huy", role: "Hiệu trưởng", email: "dangnhathuy@cdktcnqn.edu.vn" },
+      { name: "Phạm Văn Tường", title: "ThS. Phạm Văn Tường", role: "Phó Hiệu trưởng", email: "tuongpv@cdktcnqn.edu.vn" },
       { name: "Trần Trọng Kiệm", title: "ThS. Trần Trọng Kiệm", role: "Phó Hiệu trưởng", email: "kiemtt@cdktcnqn.edu.vn" },
       { name: "Lê Xuân Nguyên", title: "ThS. Lê Xuân Nguyên", role: "Phó Hiệu trưởng", email: "nguyenlx@cdktcnqn.edu.vn" },
     ],

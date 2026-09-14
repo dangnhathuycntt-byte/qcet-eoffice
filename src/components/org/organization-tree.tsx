@@ -95,12 +95,12 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     groupField: "Nhóm",
     members: [
       {
-        id: "staff-tuong-pv",
-        name: "Phạm Văn Tường",
+        id: "staff-huy-dnh",
+        name: "Đặng Nhật Huy",
         titlePrefix: "ThS.",
-        role: "Hiệu trưởng / Bí thư Đảng ủy",
-        email: "tuongpv@cdktcnqn.edu.vn",
-        phone: "0913 400 111",
+        role: "Hiệu trưởng",
+        email: "dangnhathuy@cdktcnqn.edu.vn",
+        phone: "0256.3846.478",
         avatar:
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
         departmentId: "dept-bgh",
@@ -111,6 +111,23 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
           "Phụ trách chung toàn bộ hoạt động nhà trường",
           "Chỉ đạo chiến lược chuyển đổi số, tổ chức bộ máy và tài chính",
           "Ký duyệt các quyết định, văn bản QPPL và quy chế nội bộ",
+        ],
+      },
+      {
+        id: "staff-tuong-pv",
+        name: "Phạm Văn Tường",
+        titlePrefix: "ThS.",
+        role: "Phó Hiệu trưởng",
+        email: "tuongpv@cdktcnqn.edu.vn",
+        phone: "0913 400 111",
+        avatar:
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80",
+        departmentId: "dept-bgh",
+        departmentName: "Ban Giám hiệu",
+        status: "ACTIVE",
+        room: "P.302",
+        responsibilities: [
+          "Phụ trách công tác tổ chức cán bộ và hành chính",
         ],
       },
       {

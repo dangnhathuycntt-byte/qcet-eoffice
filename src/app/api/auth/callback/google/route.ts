@@ -152,7 +152,7 @@ export async function GET(req: NextRequest) {
         defaultRole = UserRole.ADMIN;
         defaultDepartmentId = "TT_STT";
         defaultTitle = "Trung tâm Số - Truyền thông (Quản trị mạng)";
-      } else if (normalizedEmail.includes("bgh") || normalizedEmail.includes("tuongpv")) {
+      } else if (normalizedEmail.includes("bgh") || normalizedEmail.includes("dangnhathuy") || normalizedEmail.includes("tuongpv")) {
         defaultRole = UserRole.BAN_GIAM_HIEU;
         defaultDepartmentId = "BGH";
         defaultTitle = "Ban Giám hiệu";

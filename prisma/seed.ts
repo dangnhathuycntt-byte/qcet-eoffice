@@ -71,10 +71,11 @@ async function main() {
 
   const users = [
     // Ban Giám hiệu
-    { email: "tuongpv@cdktcnqn.edu.vn", name: "ThS. Phạm Văn Tường (Hiệu trưởng)", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: defaultPasswordHash },
+    { email: "dangnhathuy@cdktcnqn.edu.vn", name: "ThS. Đặng Nhật Huy (Hiệu trưởng)", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: defaultPasswordHash },
+    { email: "tuongpv@cdktcnqn.edu.vn", name: "ThS. Phạm Văn Tường (Phó Hiệu trưởng)", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Phó Hiệu trưởng", phone: "0256.3846.478", passwordHash: defaultPasswordHash },
     { email: "kiemtt@cdktcnqn.edu.vn", name: "ThS. Trần Trọng Kiệm (Phó Hiệu trưởng Đào tạo & NCKH)", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Phó Hiệu trưởng", phone: "0256.3846.479", passwordHash: defaultPasswordHash },
     { email: "nguyenlx@cdktcnqn.edu.vn", name: "ThS. Lê Xuân Nguyên (Phó Hiệu trưởng HC & CSVC)", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Phó Hiệu trưởng", phone: "0256.3846.480", passwordHash: defaultPasswordHash },
-    { email: "bgh@cdktcnqn.edu.vn", name: "ThS. Phạm Văn Tường", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: qcet2026PasswordHash },
+    { email: "bgh@cdktcnqn.edu.vn", name: "ThS. Đặng Nhật Huy", role: UserRole.BAN_GIAM_HIEU, departmentId: "BGH", title: "Hiệu trưởng", phone: "0256.3846.478", passwordHash: qcet2026PasswordHash },
     { email: "admin@cdktcnqn.edu.vn", name: "Quản trị hệ thống QCET", role: UserRole.ADMIN, departmentId: "BGH", title: "Quản trị viên", phone: "0900.000.001", passwordHash: defaultPasswordHash },
     { email: "vanthu@cdktcnqn.edu.vn", name: "CN. Trương Thị Hồng Nhung (Văn thư trường)", role: UserRole.VAN_THU, departmentId: "P_HCQT", title: "Văn thư trường", phone: "0256.3846.481", passwordHash: defaultPasswordHash },
 
@@ -127,7 +128,7 @@ async function main() {
 
   // 3. Tạo 40 Nhiệm vụ mẫu trải đều qua 12 tháng học vụ và 11 đơn vị
     const adminId = userMap["admin@cdktcnqn.edu.vn"];
-  const bghOwnerId = userMap["tuongpv@cdktcnqn.edu.vn"] || userMap["bgh@cdktcnqn.edu.vn"];
+  const bghOwnerId = userMap["dangnhathuy@cdktcnqn.edu.vn"] || userMap["bgh@cdktcnqn.edu.vn"];
   const pdtOwnerId = userMap["levanthi@cdktcnqn.edu.vn"] || userMap["daotao@cdktcnqn.edu.vn"];
   const cnttOwnerId = userMap["k.cntt@cdktcnqn.edu.vn"] || userMap["vinhnn@cdktcnqn.edu.vn"];
   const gvId = userMap["khoipd@cdktcnqn.edu.vn"] || userMap["hungth@cdktcnqn.edu.vn"];
@@ -2623,7 +2624,7 @@ async function main() {
       dueDate: new Date('2026-09-30T17:00:00Z'),
       leadDepartmentId: 'BGH',
       leadUserId: bghOwnerId,
-      signerName: 'ThS. Phạm Văn Tường',
+      signerName: 'ThS. Đặng Nhật Huy',
       signerTitle: 'Hiệu trưởng',
       draftingDeptId: 'P_TCDBCL',
       recipientList: 'Đảng ủy (để báo cáo); Ban Giám hiệu; Các phòng, khoa, trung tâm; Lưu: VT, TC-ĐBCL',
@@ -3239,7 +3240,7 @@ async function main() {
     {
       id: 'notif-seed-task-assigned-01',
       userId: qldtOwnerId || adminId,
-      actorName: 'ThS. Phạm Văn Tường',
+      actorName: 'ThS. Đặng Nhật Huy',
       title: 'Tổ chức Lễ Khai giảng năm học 2026-2027',
       body: 'Ban Giám hiệu phân công chủ trì xây dựng kịch bản chi tiết và khánh tiết trước ngày 25/09.',
       category: 'Nhiệm vụ',
