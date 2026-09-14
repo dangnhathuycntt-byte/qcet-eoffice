@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
 
 export interface CreateEventFormData {
   title: string;
@@ -57,6 +58,7 @@ export function CreateEventModal({
 
   const titleInputRef = React.useRef<HTMLInputElement>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
+  useVirtualKeyboard();
 
   React.useEffect(() => {
     if (isOpen) {
@@ -80,22 +82,12 @@ export function CreateEventModal({
 
   React.useEffect(() => {
     if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
     document.body.style.overflow = "hidden";
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -148,9 +140,9 @@ export function CreateEventModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-event-dialog-title"
-        className="relative w-full max-w-lg rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-150"
+        className="relative w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-150 overflow-hidden"
       >
-        <div className="flex items-center justify-between pb-4 border-b border-border/60">
+        <div className="flex items-center justify-between pb-4 border-b border-border/60 shrink-0">
           <div className="flex items-center gap-2">
             <div className="flex size-9 items-center justify-center rounded-xl bg-sky-50 border border-sky-200 text-sky-700">
               <CalendarIcon className="size-4" strokeWidth={1.5} />
@@ -177,13 +169,13 @@ export function CreateEventModal({
         {error && (
           <div
             role="alert"
-            className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 flex items-center gap-2"
+            className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 flex items-center gap-2 shrink-0"
           >
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3.5 flex-1 overflow-y-auto pr-1 thin-scrollbar">
           <div>
             <label htmlFor="calendar-event-title" className="block text-xs font-semibold text-foreground mb-1.5">
               Tên sự kiện / Cuộc họp <span className="text-rose-600">*</span>
@@ -195,8 +187,9 @@ export function CreateEventModal({
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
               placeholder="VD: Giao ban Lãnh đạo Trường tháng 9"
-              className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+              className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
@@ -211,7 +204,8 @@ export function CreateEventModal({
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-xs text-foreground font-mono focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
+                className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-base sm:text-xs text-foreground font-mono focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
@@ -224,7 +218,8 @@ export function CreateEventModal({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-xs text-foreground font-mono focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                  onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
+                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-base sm:text-xs text-foreground font-mono focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                 />
                 <Clock className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
               </div>
@@ -239,7 +234,8 @@ export function CreateEventModal({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-xs text-foreground font-mono focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                  onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
+                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-base sm:text-xs text-foreground font-mono focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                 />
                 <Clock className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
               </div>
@@ -257,8 +253,9 @@ export function CreateEventModal({
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
+                  onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
                   placeholder="VD: Phòng họp số 1"
-                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background pl-8 pr-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                 />
                 <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
               </div>
@@ -272,7 +269,8 @@ export function CreateEventModal({
                 id="calendar-event-type"
                 value={scope}
                 onChange={(e) => setScope(e.target.value as "SCHOOL" | "UNIT")}
-                className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-xs text-foreground focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
+                className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-base sm:text-xs text-foreground focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
               >
                 <option value="SCHOOL">Cấp Trường (Toàn trường)</option>
                 <option value="UNIT">Cấp Đơn vị (Nội bộ khoa/phòng)</option>
@@ -291,8 +289,9 @@ export function CreateEventModal({
                   type="text"
                   value={host}
                   onChange={(e) => setHost(e.target.value)}
+                  onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
                   placeholder="VD: TS. Nguyễn Văn A - Hiệu trưởng"
-                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background pl-8 pr-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                 />
                 <User className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
               </div>
@@ -308,8 +307,9 @@ export function CreateEventModal({
                   type="text"
                   value={participants}
                   onChange={(e) => setParticipants(e.target.value)}
+                  onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
                   placeholder="VD: Ban Giám hiệu, Trưởng các Đơn vị"
-                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                  className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background pl-8 pr-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                 />
                 <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
               </div>
@@ -325,12 +325,13 @@ export function CreateEventModal({
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onFocus={(e) => scrollActiveInputIntoView(e.currentTarget)}
               placeholder="Ghi chú về tài liệu họp, nội dung chi tiết..."
-              className="w-full rounded-xl border border-border/80 bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 resize-none"
+              className="w-full rounded-xl border border-border/80 bg-background p-3 text-base sm:text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20 resize-none"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60 shrink-0">
             <Button
               type="button"
               variant="outline"

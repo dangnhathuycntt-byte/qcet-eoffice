@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Tv,
+  LayoutDashboard,
   CheckSquare,
   Calendar,
   ArrowUpRight,
@@ -190,18 +190,14 @@ export default function PortalPage() {
             aria-label="Mở Dashboard Điều Hành & Báo Cáo KPI"
             className="lg:col-span-7 relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-7 md:p-8 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
           >
-            {/* Subtle background ambient tint */}
-            <div className="absolute -top-20 -right-20 size-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-
             {/* Top header within card */}
             <div>
               <div className="flex items-center justify-between gap-4">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                  <span className="size-1.5 rounded-full bg-primary" />
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
                   Màn hình Điều hành BGH
                 </span>
                 <div className="size-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 transition-colors">
-                  <Tv size={22} strokeWidth={1.5} />
+                  <LayoutDashboard size={22} strokeWidth={1.5} />
                 </div>
               </div>
 
@@ -235,7 +231,7 @@ export default function PortalPage() {
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-background/80 border border-border/70 flex items-center gap-3 shadow-2xs">
-                  <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                  <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                     <CheckCircle2 size={17} strokeWidth={1.5} aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
@@ -276,16 +272,16 @@ export default function PortalPage() {
             >
               <div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                    <Briefcase size={12} strokeWidth={1.5} />
-                    Dành cho Khoa / Phòng
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <Briefcase size={13} strokeWidth={1.5} />
+                    Khoa / Phòng
                   </span>
-                  <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0 transition-colors">
+                  <div className="size-11 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 transition-colors">
                     <CheckSquare size={20} strokeWidth={1.5} />
                   </div>
                 </div>
 
-                <h3 className="text-xl font-bold tracking-tight text-foreground mt-4 group-hover:text-emerald-600 transition-colors">
+                <h3 className="text-xl font-bold tracking-tight text-foreground mt-4 group-hover:text-primary transition-colors">
                   Quản Lý Công Việc 2 Cấp
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
@@ -293,7 +289,7 @@ export default function PortalPage() {
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between text-xs font-semibold text-emerald-600">
+              <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between text-xs font-semibold text-primary">
                 <span>Vào bảng công việc</span>
                 <ArrowUpRight size={15} strokeWidth={1.5} aria-hidden="true" />
               </div>
@@ -307,11 +303,11 @@ export default function PortalPage() {
             >
               <div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-600 border border-slate-500/20">
-                    <Users size={12} strokeWidth={1.5} />
-                    Toàn thể Cán bộ & Giảng viên
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <Users size={13} strokeWidth={1.5} />
+                    Cán bộ & Giảng viên
                   </span>
-                  <div className="size-11 rounded-2xl bg-slate-500/10 border border-slate-500/20 text-slate-600 flex items-center justify-center shrink-0 transition-colors">
+                  <div className="size-11 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 transition-colors">
                     <Calendar size={20} strokeWidth={1.5} />
                   </div>
                 </div>

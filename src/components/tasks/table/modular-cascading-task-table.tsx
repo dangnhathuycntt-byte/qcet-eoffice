@@ -50,7 +50,7 @@ import { TaskTableHeader } from "./components/task-table-header";
 import { TaskRow } from "./components/task-row";
 import { SubtaskRowGroup } from "./components/subtask-row-group";
 import { TaskPaginationBar } from "./components/task-pagination-bar";
-import { TaskEmptyState } from "./components/task-empty-state";
+import { TaskEmptyState, type TaskEmptyStateProps } from "./components/task-empty-state";
 import { MobileTaskCard } from "./components/mobile-task-card";
 import {
   TaskTableToolbar,
@@ -117,6 +117,7 @@ export interface ModularCascadingTaskTableProps {
   onBulkDelete?: (taskIds: string[]) => Promise<void> | void;
   onExportExcel?: () => void;
   selectedTaskId?: string;
+  emptyStateProps?: Partial<TaskEmptyStateProps>;
 }
 
 function TableShortcutHelpTrigger() {
@@ -257,6 +258,7 @@ export function ModularCascadingTaskTable({
   onBulkDelete,
   onExportExcel,
   selectedTaskId,
+  emptyStateProps,
 }: ModularCascadingTaskTableProps) {
   // 1. Context & User Resolution
   let user: ReturnType<typeof useAuth>["user"] = null;
@@ -928,13 +930,18 @@ export function ModularCascadingTaskTable({
       {/* 4. Table Content: Empty State vs Data Feed */}
       {sortedTasks.length === 0 ? (
         <TaskEmptyState
-          searchQuery={activeSearch}
-          activeTab={activeTab}
-          department={activeDept}
-          category={activeCategory}
-          onResetFilters={handleResetFilters}
-          onAddTask={onAddTask}
-          canAddTask={canAssignUnit}
+          searchQuery={emptyStateProps?.searchQuery ?? activeSearch}
+          activeTab={emptyStateProps?.activeTab ?? activeTab}
+          attention={emptyStateProps?.attention}
+          status={emptyStateProps?.status}
+          academicMonth={emptyStateProps?.academicMonth ?? activeMonth}
+          department={emptyStateProps?.department ?? activeDept}
+          category={emptyStateProps?.category ?? activeCategory}
+          priority={emptyStateProps?.priority}
+          userName={emptyStateProps?.userName}
+          onResetFilters={emptyStateProps?.onResetFilters ?? handleResetFilters}
+          onAddTask={emptyStateProps?.onAddTask ?? onAddTask}
+          canAddTask={emptyStateProps?.canAddTask ?? canAssignUnit}
         />
       ) : (
         <div className="space-y-3">

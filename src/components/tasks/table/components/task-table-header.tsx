@@ -41,7 +41,7 @@ interface ColumnDefinition {
 // Plan T12 (table hierarchy): Task | Owner | Unit | Due | Status | Progress | Actions.
 const TABLE_COLUMNS: ColumnDefinition[] = [
   { id: "title", label: "Nhiệm vụ", sortable: true },
-  { id: "leadAssignee", label: "DRI", sortable: true, widthClass: "w-36" },
+  { id: "leadAssignee", label: "Người chủ trì", sortable: true, widthClass: "w-36" },
   { id: "department", label: "Đơn vị", sortable: true, widthClass: "w-36 sm:w-40" },
   { id: "dueDate", label: "Hạn", sortable: true, widthClass: "w-32" },
   { id: "status", label: "Trạng thái", sortable: true, widthClass: "w-28" },

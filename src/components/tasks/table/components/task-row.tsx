@@ -177,7 +177,9 @@ export const TaskRow = React.memo(function TaskRow({
     typeof referenceDate === "string" ? referenceDate : referenceDate.toISOString().slice(0, 10)
   );
   const shouldSuppressCategory =
-    suppressCategory || (Boolean(activeCategory) && activeCategory !== "ALL");
+    suppressCategory ||
+    (Boolean(activeCategory) && activeCategory !== "ALL") ||
+    task.category === "KHAC";
   const driInfo = parseLeadAssignee(task.leadAssigneeName, task.department);
 
   const isWaitingApproval =
@@ -277,7 +279,7 @@ export const TaskRow = React.memo(function TaskRow({
       {/* 2. Nhiệm vụ (Title leads, secondary muted mono Code, subtask rollup) */}
       <td className={cn("align-middle text-sm font-medium text-foreground leading-snug", paddingClass)}>
         <div className="flex items-center gap-2">
-          {/* Hierarchical Expand/Collapse Caret */}
+          {/* Hierarchical Expand/Collapse Caret or Indent Spacer (Plan Carbon: no meaningless dot) */}
           {hasSubtasks ? (
             <button
               type="button"
@@ -297,43 +299,45 @@ export const TaskRow = React.memo(function TaskRow({
               )}
             </button>
           ) : (
-            <span className="inline-flex size-6 items-center justify-center shrink-0">
-              <span className="size-1.5 rounded-full bg-muted-foreground/30" />
-            </span>
+            <span className="inline-flex size-6 shrink-0" aria-hidden="true" />
           )}
 
-          {/* Task Title (Primary lead) */}
-          <span
-            className="line-clamp-1 text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate"
-            title={task.title}
-          >
-            {task.title}
-          </span>
+          {/* Task Info: Title on primary line, Task Code on secondary line (Carbon standard) */}
+          <div className="flex flex-col min-w-0 flex-1 gap-0.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                className="line-clamp-1 text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate"
+                title={task.title}
+              >
+                {task.title}
+              </span>
 
-          {/* Task Code (Secondary muted mono) */}
-          <span className="font-mono text-xs text-muted-foreground tabular-nums shrink-0">
-            {(task.code || task.taskCode || task.id).toUpperCase()}
-          </span>
+              {/* Subtask Rollup Indicator */}
+              {hasSubtasks && (
+                <span
+                  className="rounded bg-muted/70 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground border border-border/60 shrink-0"
+                  title={`Hoàn thành ${completedSubTasks} trên tổng số ${totalSubTasks} việc thành phần`}
+                >
+                  [{completedSubTasks}/{totalSubTasks}]
+                </span>
+              )}
 
-          {/* Subtask Rollup Indicator */}
-          {hasSubtasks && (
-            <span
-              className="rounded bg-muted/70 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground border border-border/60 shrink-0"
-              title={`Hoàn thành ${completedSubTasks} trên tổng số ${totalSubTasks} việc thành phần`}
-            >
-              [{completedSubTasks}/{totalSubTasks}]
+              {/* Due in month indicator */}
+              {dueInMonthCount > 0 && (
+                <span
+                  className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums shrink-0"
+                  title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
+                >
+                  Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
+                </span>
+              )}
+            </div>
+
+            {/* Secondary line: Task Code in lighter muted mono */}
+            <span className="font-mono text-xs text-muted-foreground/80 tabular-nums">
+              {(task.code || task.taskCode || task.id).toUpperCase()}
             </span>
-          )}
-
-          {/* Due in month indicator */}
-          {dueInMonthCount > 0 && (
-            <span
-              className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums shrink-0"
-              title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
-            >
-              Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
-            </span>
-          )}
+          </div>
         </div>
       </td>
 
@@ -413,12 +417,12 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* 6. Trạng thái (single clear scanning status badge) */}
+      {/* 6. Trạng thái (single clear scanning status badge with standard UI font) */}
       <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
         <Badge
           variant={statusConfig.variant}
           className={cn(
-            "h-5.5 px-2 text-xs font-semibold tabular-nums leading-none shrink-0",
+            "h-5.5 px-2 text-xs font-sans font-medium leading-none shrink-0",
             statusConfig.className
           )}
         >
@@ -464,7 +468,7 @@ export const TaskRow = React.memo(function TaskRow({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative flex items-center justify-end gap-1.5">
-          {/* Contextual CTA: Inline [Duyệt] if WAITING_APPROVAL */}
+          {/* Contextual CTA: Inline [Xem xét] if WAITING_APPROVAL (Carbon standard: softened visual prominence) */}
           {isWaitingApproval && onStatusChange && (
             <button
               type="button"
@@ -472,12 +476,12 @@ export const TaskRow = React.memo(function TaskRow({
                 e.stopPropagation();
                 onStatusChange(task.id, "COMPLETED");
               }}
-              className="inline-flex h-6.5 items-center gap-1 rounded-md border border-emerald-600/30 bg-emerald-600 px-2 text-xs font-semibold text-white hover:bg-emerald-700 cursor-pointer active:scale-95 transition-all shadow-2xs"
-              title="Duyệt hoàn thành nhiệm vụ"
-              aria-label={`Duyệt nhiệm vụ ${task.taskCode || task.id}`}
+              className="inline-flex h-6.5 items-center gap-1 rounded-md border border-emerald-600/30 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40 px-2 text-xs font-medium cursor-pointer active:scale-95 transition-all"
+              title="Xem xét / Phê duyệt nhiệm vụ"
+              aria-label={`Xem xét nhiệm vụ ${task.taskCode || task.id}`}
             >
               <Check className="size-3" strokeWidth={1.5} />
-              <span>Duyệt</span>
+              <span>Xem xét</span>
             </button>
           )}
 

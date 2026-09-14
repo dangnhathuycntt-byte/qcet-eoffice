@@ -135,12 +135,12 @@ function TaskRow({
     <div
       onClick={onActivate}
       className={cn(
-        "w-full min-h-[40px] sm:min-h-[52px] px-4 py-2 flex items-center gap-3 hover:bg-muted/30 active:bg-muted/50 transition-colors cursor-pointer",
+        "w-full min-h-[44px] sm:min-h-[52px] px-4 py-2 flex items-center gap-3 hover:bg-muted/30 active:bg-muted/50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
         isDone && "opacity-55 bg-muted/10"
       )}
       role="button"
       tabIndex={0}
-      aria-label={`${item.title} — ${getStatusLabel(state)}`}
+      aria-label={`${item.title}, ${getStatusLabel(state)}`}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -212,7 +212,7 @@ function EventRow({
   return (
     <div
       onClick={onActivate}
-      className="w-full min-h-[40px] sm:min-h-[52px] px-4 py-2 flex items-center gap-3 hover:bg-muted/30 active:bg-muted/50 transition-colors cursor-pointer"
+      className="w-full min-h-[44px] sm:min-h-[52px] px-4 py-2 flex items-center gap-3 hover:bg-muted/30 active:bg-muted/50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
       role="button"
       tabIndex={0}
       aria-label={`Sự kiện: ${item.title}${item.time ? ` lúc ${item.time}` : ""}`}
@@ -437,6 +437,12 @@ export function CalendarAgendaView({
     [onOpenDaySheet, onSelectDate]
   );
 
+  const isFilterActive = Boolean(
+    searchQuery.trim() ||
+    (statusFilter && statusFilter !== "ALL") ||
+    (levelFilter && levelFilter !== "ALL")
+  );
+
   return (
     <div className={cn("space-y-0", className)} data-slot="calendar-agenda-view">
       {sortedDates.length === 0 ? (
@@ -448,11 +454,15 @@ export function CalendarAgendaView({
         >
           <CalendarIcon className="size-10 text-muted-foreground/40" strokeWidth={1.5} aria-hidden="true" />
           <div className="space-y-1 max-w-sm">
-            <h3 className="text-sm font-bold text-foreground">Không có lịch công tác hoặc sự kiện</h3>
+            <h3 className="text-sm font-bold text-foreground">
+              {isFilterActive ? "Không tìm thấy kết quả phù hợp" : "Không có lịch công tác hoặc sự kiện"}
+            </h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {period
-                ? `Không có nhiệm vụ nào trong chu kỳ vận hành ${period.label} (${period.shortDateSpan}).`
-                : "Không có nhiệm vụ hoặc sự kiện nào phù hợp với bộ lọc hiện tại."}
+              {isFilterActive
+                ? "Không có nhiệm vụ hoặc sự kiện nào khớp với tiêu chí tìm kiếm/lọc hiện tại."
+                : period
+                  ? `Không có nhiệm vụ nào trong chu kỳ vận hành ${period.label} (${period.shortDateSpan}).`
+                  : "Không có lịch công tác hoặc sự kiện nào trong chu kỳ này."}
             </p>
           </div>
         </div>

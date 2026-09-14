@@ -147,6 +147,14 @@ export function useWorkspaceQuery(
       const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
       const shouldReplace = navOptions?.replace ?? true;
 
+      // Do not add duplicate history entry if targetUrl matches current browser URL
+      if (!shouldReplace && typeof window !== "undefined") {
+        const currentTarget = `${window.location.pathname}${window.location.search || ""}`;
+        if (targetUrl === currentTarget) {
+          return;
+        }
+      }
+
       // Native shallow routing via history API if requested
       if (navOptions?.shallow && typeof window !== "undefined") {
         if (shouldReplace) {

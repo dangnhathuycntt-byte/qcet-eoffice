@@ -427,6 +427,40 @@ export function validateTaskForm(
   return errors;
 }
 
+export function takeFormSnapshot(formData: CreateTaskFormData): CreateTaskFormData {
+  return {
+    ...formData,
+    coAssignees: [...(formData.coAssignees || [])],
+  };
+}
+
+export function isFormDirty(
+  current: CreateTaskFormData,
+  baseline: CreateTaskFormData
+): boolean {
+  if ((current.title || "").trim() !== (baseline.title || "").trim()) return true;
+  if ((current.leadAssigneeName || "").trim() !== (baseline.leadAssigneeName || "").trim()) return true;
+  if ((current.dueDate || "") !== (baseline.dueDate || "")) return true;
+  if ((current.description || "").trim() !== (baseline.description || "").trim()) return true;
+  if ((current.level || "DON_VI") !== (baseline.level || "DON_VI")) return true;
+  if ((current.category || "CHUYEN_DOI_SO") !== (baseline.category || "CHUYEN_DOI_SO")) return true;
+  if ((current.internalDueDate || "") !== (baseline.internalDueDate || "")) return true;
+  if ((current.parentTaskId || "") !== (baseline.parentTaskId || "")) return true;
+  if ((current.requiredDeliverables || "").trim() !== (baseline.requiredDeliverables || "").trim()) return true;
+  if ((current.vtvlRole || "").trim() !== (baseline.vtvlRole || "").trim()) return true;
+  if (Boolean(current.requiresReview) !== Boolean(baseline.requiresReview)) return true;
+  if ((current.priority || "MEDIUM") !== (baseline.priority || "MEDIUM")) return true;
+
+  const currentCo = (current.coAssignees || []).map((s) => s.trim()).filter(Boolean).sort();
+  const baselineCo = (baseline.coAssignees || []).map((s) => s.trim()).filter(Boolean).sort();
+  if (currentCo.length !== baselineCo.length) return true;
+  for (let i = 0; i < currentCo.length; i++) {
+    if (currentCo[i] !== baselineCo[i]) return true;
+  }
+
+  return false;
+}
+
 /**
  * Pure create-submission orchestrator (C1 / T26 / T27 / T73).
  *
@@ -463,7 +497,8 @@ export async function performCreateTaskSubmission(
 export interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateTaskFormData, result?: CreateTaskSubmitResult) => void | Promise<void>;
+  onSubmit?: (data: CreateTaskFormData, result?: CreateTaskSubmitResult) => void | Promise<void>;
+  onSubmitSuccess?: () => void;
   onOpenCollaborationRequest?: (targetDeptCode?: string) => void;
   schoolTasks?: SchoolTask[];
   initialLevel?: TaskLevel;
@@ -489,6 +524,7 @@ export function CreateTaskModal({
   isOpen,
   onClose,
   onSubmit,
+  onSubmitSuccess,
   onOpenCollaborationRequest,
   schoolTasks = [],
   initialLevel = "TRUONG",
@@ -529,6 +565,11 @@ export function CreateTaskModal({
   const [deptFilter, setDeptFilter] = React.useState<string>("ALL");
   const [mounted, setMounted] = React.useState(false);
   const titleInputRef = React.useRef<HTMLInputElement>(null);
+  const baselineSnapshotRef = React.useRef<CreateTaskFormData | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = React.useState(false);
+  const comboboxTriggerRef = React.useRef<HTMLButtonElement>(null);
+  const continueButtonRef = React.useRef<HTMLButtonElement>(null);
+  const [activeOptionIndex, setActiveOptionIndex] = React.useState(0);
 
   // Searchable Assignee Combobox state
   const [isComboboxOpen, setIsComboboxOpen] = React.useState(false);
@@ -664,6 +705,20 @@ export function CreateTaskModal({
       .filter((g) => g.members.length > 0);
   }, [filteredGroups, assigneeSearchQuery]);
 
+  const flatSearchedMembers = React.useMemo(() => {
+    const list: { name: string; title: string; role: string; department: string; code: string }[] = [];
+    for (const group of searchedPersonnel) {
+      for (const member of group.members) {
+        list.push({ ...member, department: group.department, code: group.code });
+      }
+    }
+    return list;
+  }, [searchedPersonnel]);
+
+  React.useEffect(() => {
+    setActiveOptionIndex(0);
+  }, [assigneeSearchQuery, isComboboxOpen]);
+
   // Selected assignee department & delegation checks
   const selectedAssigneeDept = React.useMemo(() => {
     if (personnelList.length > 0) {
@@ -773,18 +828,52 @@ export function CreateTaskModal({
   const effectiveParentTitle = initialParentTaskTitle || parentTask?.title;
   const effectiveParentDueDate = initialParentTaskDueDate || parentTask?.dueDate;
 
+  const forceClose = React.useCallback(() => {
+    setIsComboboxOpen(false);
+    setIsCollabDropdownOpen(false);
+    setShowDiscardConfirm(false);
+    onClose();
+  }, [onClose]);
+
+  const handleRequestClose = React.useCallback(() => {
+    if (isSubmitting) return;
+    if (isComboboxOpen) {
+      setIsComboboxOpen(false);
+      comboboxTriggerRef.current?.focus();
+      return;
+    }
+    if (isCollabDropdownOpen) {
+      setIsCollabDropdownOpen(false);
+      return;
+    }
+    if (showDiscardConfirm) {
+      setShowDiscardConfirm(false);
+      return;
+    }
+    const dirty = baselineSnapshotRef.current
+      ? isFormDirty(formData, baselineSnapshotRef.current)
+      : false;
+    if (dirty) {
+      setShowDiscardConfirm(true);
+    } else {
+      forceClose();
+    }
+  }, [isSubmitting, isComboboxOpen, isCollabDropdownOpen, showDiscardConfirm, formData, forceClose]);
+
   React.useEffect(() => {
     if (isOpen && !prevIsOpen.current) {
       const effectiveLevel = getEffectiveLevel(initialLevel);
-
-      setFormData({
+      const initialBaseline: CreateTaskFormData = {
         ...getInitialTaskFormData(effectiveLevel),
         title: initialTitle || "",
         parentTaskId: initialParentTaskId,
         dueDate: initialDueDate || "",
         leadAssigneeName: initialLeadAssigneeName || (isStaff ? (user?.name || "") : ""),
         vtvlRole: isStaff ? (user?.roleLabel || "Giảng viên") : "",
-      });
+      };
+
+      baselineSnapshotRef.current = initialBaseline;
+      setFormData(initialBaseline);
       setErrors({});
       setDeptFilter("ALL");
       setIsComboboxOpen(false);
@@ -793,6 +882,7 @@ export function CreateTaskModal({
       setSubmissionStatus("idle");
       setSubmissionMessage(null);
       setShowAdvanced(false);
+      setShowDiscardConfirm(false);
       idempotencyKeyRef.current = null;
       setTimeout(() => titleInputRef.current?.focus(), 80);
     }
@@ -809,22 +899,24 @@ export function CreateTaskModal({
     };
   }, [isOpen]);
 
+  // Focus Continue button when discard confirm dialog opens
+  React.useEffect(() => {
+    if (showDiscardConfirm) {
+      const timer = setTimeout(() => {
+        continueButtonRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [showDiscardConfirm]);
+
   // Keyboard shortcuts: ESC to close, Ctrl+Enter or Cmd+Enter to submit
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
       if (e.key === "Escape") {
-        if (isComboboxOpen) {
-          e.stopPropagation();
-          setIsComboboxOpen(false);
-          return;
-        }
-        if (isCollabDropdownOpen) {
-          e.stopPropagation();
-          setIsCollabDropdownOpen(false);
-          return;
-        }
-        onClose();
+        e.preventDefault();
+        e.stopPropagation();
+        handleRequestClose();
       } else if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
         handleSubmit(e as unknown as React.FormEvent);
@@ -832,26 +924,51 @@ export function CreateTaskModal({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, formData, isStaff, allowedLevels, isExternalDeptBlocked, isComboboxOpen, isCollabDropdownOpen, isSubmitting]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, formData, isStaff, allowedLevels, isExternalDeptBlocked, isComboboxOpen, isCollabDropdownOpen, isSubmitting, handleRequestClose]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const focusFirstError = React.useCallback((fieldErrors: Record<string, string>) => {
-    const focusOrder: { key: string; targetId: string }[] = [
-      { key: "title", targetId: "task-title-input" },
-      { key: "leadAssigneeName", targetId: "task-assignee-field" },
-      { key: "dueDate", targetId: "task-due-date-input" },
-      { key: "internalDueDate", targetId: "task-internal-due-input" },
-      { key: "requiredDeliverables", targetId: "task-deliverables-input" },
-      { key: "coAssignees", targetId: "task-collaborators-input" },
-    ];
-    const first = focusOrder.find((entry) => fieldErrors[entry.key]);
-    const el = first ? document.getElementById(first.targetId) : null;
-    if (el instanceof HTMLElement) {
-      el.focus();
-      scrollActiveInputIntoView();
-      return;
-    }
-    errorSummaryRef.current?.focus();
-  }, []);
+  const focusFieldWithError = React.useCallback(
+    (targetId: string, isAdvanced?: boolean) => {
+      if (isAdvanced && !showAdvanced) {
+        setShowAdvanced(true);
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            const el = document.getElementById(targetId);
+            if (el instanceof HTMLElement) {
+              el.focus();
+              scrollActiveInputIntoView();
+            }
+          }, 60);
+        });
+        return;
+      }
+      const el = document.getElementById(targetId);
+      if (el instanceof HTMLElement) {
+        el.focus();
+        scrollActiveInputIntoView();
+      }
+    },
+    [showAdvanced]
+  );
+
+  const focusFirstError = React.useCallback(
+    (fieldErrors: Record<string, string>) => {
+      const focusOrder: { key: string; targetId: string; isAdvanced?: boolean }[] = [
+        { key: "title", targetId: "task-title-input" },
+        { key: "leadAssigneeName", targetId: "task-assignee-field" },
+        { key: "dueDate", targetId: "task-due-date-input" },
+        { key: "internalDueDate", targetId: "task-internal-due-input", isAdvanced: true },
+        { key: "requiredDeliverables", targetId: "task-deliverables-input", isAdvanced: true },
+        { key: "coAssignees", targetId: "task-collaborators-input", isAdvanced: true },
+      ];
+      const first = focusOrder.find((entry) => fieldErrors[entry.key]);
+      if (!first) {
+        errorSummaryRef.current?.focus();
+        return;
+      }
+      focusFieldWithError(first.targetId, first.isAdvanced);
+    },
+    [focusFieldWithError]
+  );
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -956,8 +1073,11 @@ export function CreateTaskModal({
         idempotencyKeyRef.current = null;
         setSubmissionStatus("idle");
         setIsSubmitting(false);
-        await onSubmit(draft, outcome.result);
-        onClose();
+        forceClose();
+        if (onSubmit) {
+          await onSubmit(draft, outcome.result);
+        }
+        onSubmitSuccess?.();
         return;
       }
 
@@ -966,7 +1086,7 @@ export function CreateTaskModal({
         setSubmissionStatus("unknown");
         setIsSubmitting(false);
         setSubmissionMessage(
-          "Chưa xác nhận được kết quả từ máy chủ. Nhiệm vụ có thể đã được tạo. Nội dung đã nhập vẫn được giữ nguyên — có thể thử lại an toàn bằng cùng một mã yêu cầu."
+          "Chưa xác nhận được kết quả từ máy chủ. Nhiệm vụ có thể đã được tạo. Nội dung đã nhập vẫn được giữ nguyên, có thể thử lại an toàn bằng cùng một mã yêu cầu."
         );
         return;
       }
@@ -1047,7 +1167,7 @@ export function CreateTaskModal({
             initial="initial"
             animate="animate"
             exit="exit"
-            onClick={onClose}
+            onClick={handleRequestClose}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm !m-0"
             aria-hidden="true"
           />
@@ -1078,7 +1198,7 @@ export function CreateTaskModal({
                 {isStaff
                   ? "Tạo việc mới (Cá nhân)"
                   : isManager
-                  ? `Tạo việc / Phân công — ${user?.department || "Đơn vị"}`
+                  ? `Tạo việc / Phân công: ${user?.department || "Đơn vị"}`
                   : "Tạo việc & Giao nhiệm vụ"}
               </span>
               <p className="text-xs text-muted-foreground font-medium">
@@ -1131,7 +1251,7 @@ export function CreateTaskModal({
 
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleRequestClose}
               aria-label="Đóng"
               className="size-11 sm:size-9 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer active:scale-95"
             >
@@ -1183,15 +1303,17 @@ export function CreateTaskModal({
 
             {/* 1. Title Input (Clean, Borderless Focus Canvas) */}
             <div className="space-y-1">
-              <label htmlFor="create-task-title" className="sr-only">
+              <label htmlFor="task-title-input" className="sr-only">
                 {isStaff ? "Tên công việc hoặc kế hoạch cá nhân" : "Tiêu đề nhiệm vụ cần tạo hoặc giao"}
               </label>
               <input
-                id="create-task-title"
+                id="task-title-input"
                 ref={titleInputRef}
                 type="text"
                 placeholder={isStaff ? "Tiêu đề công việc hoặc kế hoạch cá nhân..." : "Tiêu đề nhiệm vụ cần tạo / giao..."}
                 value={formData.title}
+                aria-invalid={Boolean(errors.title)}
+                aria-describedby={errors.title ? "task-title-error" : undefined}
                 onChange={(e) => {
                   setFormData((prev) => ({ ...prev, title: e.target.value }));
                   if (errors.title) clearError("title");
@@ -1203,7 +1325,7 @@ export function CreateTaskModal({
                 )}
               />
               {errors.title && (
-                <p className="text-xs font-medium text-destructive flex items-center gap-1 mt-1">
+                <p id="task-title-error" className="text-xs font-medium text-destructive flex items-center gap-1 mt-1">
                   <AlertCircle className="size-3" strokeWidth={1.5} />
                   {errors.title}
                 </p>
@@ -1233,7 +1355,7 @@ export function CreateTaskModal({
                 {/* Field: Người phụ trách chính (Lead Assignee - Single DRI) */}
                 <div className="space-y-1.5" ref={comboboxRef}>
                   <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                    <label id="task-assignee-label" htmlFor="task-assignee-field" className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                       <User className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                       <span>
                         {isChildTaskMode ? "Cán bộ phụ trách" : "Người phụ trách chính (Single DRI)"}
@@ -1245,15 +1367,23 @@ export function CreateTaskModal({
 
                   {isStaff ? (
                     <div className="min-h-[44px] h-11 sm:h-10 px-3 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-between text-xs font-semibold text-primary">
-                      <span>{user?.name || "Bạn"} (Chính bạn — {user?.roleLabel || "Giảng viên"})</span>
+                      <span>{user?.name || "Bạn"} (Chính bạn - {user?.roleLabel || "Giảng viên"})</span>
                       <span className="text-xs text-muted-foreground font-normal">Tự thực hiện</span>
                     </div>
                   ) : (
                     <div className="relative">
                       {/* Searchable Combobox Trigger Button */}
                       <button
+                        ref={comboboxTriggerRef}
                         type="button"
                         id="task-assignee-field"
+                        role="combobox"
+                        aria-haspopup="listbox"
+                        aria-expanded={isComboboxOpen}
+                        aria-controls="task-assignee-listbox"
+                        aria-invalid={Boolean(errors.leadAssigneeName)}
+                        aria-describedby={errors.leadAssigneeName ? "task-assignee-error" : undefined}
+                        aria-labelledby="task-assignee-label"
                         onClick={() => {
                           setIsComboboxOpen((prev) => !prev);
                           setTimeout(() => searchInputRef.current?.focus(), 60);
@@ -1299,10 +1429,51 @@ export function CreateTaskModal({
                               <input
                                 ref={searchInputRef}
                                 type="text"
+                                role="searchbox"
+                                aria-label="Tìm kiếm nhân sự"
                                 placeholder="Tìm theo họ tên, chức danh hoặc đơn vị..."
                                 value={assigneeSearchQuery}
                                 onChange={(e) => setAssigneeSearchQuery(e.target.value)}
                                 onFocus={() => scrollActiveInputIntoView()}
+                                onKeyDown={(e) => {
+                                  if (e.nativeEvent.isComposing) return;
+                                  if (e.key === "ArrowDown") {
+                                    e.preventDefault();
+                                    setActiveOptionIndex((prev) =>
+                                      flatSearchedMembers.length > 0 ? (prev + 1) % flatSearchedMembers.length : 0
+                                    );
+                                  } else if (e.key === "ArrowUp") {
+                                    e.preventDefault();
+                                    setActiveOptionIndex((prev) =>
+                                      flatSearchedMembers.length > 0
+                                        ? (prev - 1 + flatSearchedMembers.length) % flatSearchedMembers.length
+                                        : 0
+                                    );
+                                  } else if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (
+                                      flatSearchedMembers.length > 0 &&
+                                      activeOptionIndex >= 0 &&
+                                      activeOptionIndex < flatSearchedMembers.length
+                                    ) {
+                                      handleAssigneeSelect(flatSearchedMembers[activeOptionIndex].name);
+                                      comboboxTriggerRef.current?.focus();
+                                    }
+                                  } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setIsComboboxOpen(false);
+                                    comboboxTriggerRef.current?.focus();
+                                  }
+                                }}
+                                aria-autocomplete="list"
+                                aria-controls="task-assignee-listbox"
+                                aria-activedescendant={
+                                  flatSearchedMembers[activeOptionIndex]
+                                    ? `assignee-option-${flatSearchedMembers[activeOptionIndex].code}-${flatSearchedMembers[activeOptionIndex].name.replace(/\s+/g, "-")}`
+                                    : undefined
+                                }
                                 className="w-full min-h-[44px] sm:min-h-0 h-11 sm:h-8.5 pl-8 pr-3 rounded-lg border border-border/60 bg-background text-base sm:text-xs text-foreground placeholder:text-muted-foreground/75 focus:outline-none focus:ring-1 focus:ring-primary"
                               />
                             </div>
@@ -1340,7 +1511,12 @@ export function CreateTaskModal({
                           </div>
 
                           {/* Personnel List */}
-                          <div className="max-h-60 overflow-y-auto thin-scrollbar p-1.5 divide-y divide-border/30">
+                          <div
+                            id="task-assignee-listbox"
+                            role="listbox"
+                            aria-labelledby="task-assignee-label"
+                            className="max-h-60 overflow-y-auto thin-scrollbar p-1.5 divide-y divide-border/30"
+                          >
                             {searchedPersonnel.length > 0 ? (
                               searchedPersonnel.map((group, gIdx) => (
                                 <div key={`pop-grp-${group.code}-${gIdx}`} className="py-1">
@@ -1352,15 +1528,30 @@ export function CreateTaskModal({
                                       const isSelected =
                                         formData.leadAssigneeName.trim().toLowerCase() ===
                                         member.name.trim().toLowerCase();
+                                      const flatIndex = flatSearchedMembers.findIndex(
+                                        (m) => m.name === member.name && m.department === group.department
+                                      );
+                                      const isActive = flatIndex === activeOptionIndex;
                                       return (
                                         <button
                                           key={`pop-opt-${group.code}-${member.name}-${idx}`}
                                           type="button"
-                                          onClick={() => handleAssigneeSelect(member.name)}
+                                          role="option"
+                                          id={`assignee-option-${group.code}-${member.name.replace(/\s+/g, "-")}`}
+                                          aria-selected={isSelected}
+                                          onClick={() => {
+                                            handleAssigneeSelect(member.name);
+                                            comboboxTriggerRef.current?.focus();
+                                          }}
+                                          onMouseEnter={() => {
+                                            if (flatIndex >= 0) setActiveOptionIndex(flatIndex);
+                                          }}
                                           className={cn(
                                             "w-full min-h-[44px] px-2.5 py-2 rounded-xl text-left flex items-center justify-between gap-2 transition-colors cursor-pointer",
                                             isSelected
                                               ? "bg-primary/10 text-primary font-semibold"
+                                              : isActive
+                                              ? "bg-secondary text-foreground"
                                               : "hover:bg-secondary text-foreground"
                                           )}
                                         >
@@ -1395,6 +1586,13 @@ export function CreateTaskModal({
                         </div>
                       )}
                     </div>
+                  )}
+
+                  {errors.leadAssigneeName && (
+                    <p id="task-assignee-error" className="text-xs font-medium text-destructive flex items-center gap-1 mt-1">
+                      <AlertCircle className="size-3 shrink-0" strokeWidth={1.5} />
+                      <span>{errors.leadAssigneeName}</span>
+                    </p>
                   )}
 
                   {/* Manager Cross-Department Guard Banner */}
@@ -1500,7 +1698,7 @@ export function CreateTaskModal({
                 {/* Field: Hạn hoàn thành (Due Date + Presets) */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="create-task-due-date" className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                    <label htmlFor="task-due-date-input" className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                       <Calendar className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                       <span>Hạn chót hoàn thành</span>
                       <span className="text-destructive">*</span>
@@ -1514,9 +1712,11 @@ export function CreateTaskModal({
 
                   <input
                     type="date"
-                    id="create-task-due-date"
+                    id="task-due-date-input"
                     value={formData.dueDate}
                     max={effectiveParentDueDate ? effectiveParentDueDate.split("T")[0] : undefined}
+                    aria-invalid={Boolean(errors.dueDate)}
+                    aria-describedby={errors.dueDate ? "task-due-date-error" : undefined}
                     onChange={(e) => {
                       setFormData((p) => ({ ...p, dueDate: e.target.value }));
                       if (errors.dueDate) clearError("dueDate");
@@ -1561,7 +1761,7 @@ export function CreateTaskModal({
                   </div>
 
                   {errors.dueDate && (
-                    <p className="text-xs font-medium text-destructive flex items-center gap-1 mt-1">
+                    <p id="task-due-date-error" className="text-xs font-medium text-destructive flex items-center gap-1 mt-1">
                       <AlertCircle className="size-3 shrink-0" strokeWidth={1.5} />
                       <span>{errors.dueDate}</span>
                     </p>
@@ -1610,6 +1810,8 @@ export function CreateTaskModal({
                     type="date"
                     id="task-internal-due-input"
                     value={formData.internalDueDate || ""}
+                    aria-invalid={Boolean(errors.internalDueDate)}
+                    aria-describedby={errors.internalDueDate ? "task-internal-due-error" : undefined}
                     onChange={(e) => {
                       setFormData((p) => ({ ...p, internalDueDate: e.target.value }));
                       if (errors.internalDueDate) clearError("internalDueDate");
@@ -1622,7 +1824,7 @@ export function CreateTaskModal({
                   />
 
                   {errors.internalDueDate && (
-                    <p className="text-xs font-medium text-destructive flex items-center gap-1 mt-1">
+                    <p id="task-internal-due-error" className="text-xs font-medium text-destructive flex items-center gap-1 mt-1">
                       <AlertCircle className="size-3 shrink-0" strokeWidth={1.5} />
                       <span>{errors.internalDueDate}</span>
                     </p>
@@ -1649,7 +1851,7 @@ export function CreateTaskModal({
                         }
                         className="w-full min-h-[44px] h-11 sm:h-10 pl-3 pr-8 rounded-xl border border-border/70 bg-card text-base sm:text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate shadow-2xs"
                       >
-                        <option value="">— Độc lập (Không liên kết) —</option>
+                        <option value="">Độc lập (Không liên kết)</option>
                         {schoolTasks.map((t) => (
                           <option key={t.id} value={t.id}>
                             {t.title}
@@ -1762,7 +1964,7 @@ export function CreateTaskModal({
                         <optgroup key={`collab-grp-${group.code}-${gIdx}`} label={group.department}>
                           {availableMembers.map((member, idx) => (
                             <option key={`collab-opt-${group.code}-${member.name}-${idx}`} value={member.name}>
-                              {member.title} — {member.role}
+                              {member.title} - {member.role}
                             </option>
                           ))}
                         </optgroup>
@@ -1830,6 +2032,8 @@ export function CreateTaskModal({
                         : "Mô tả kết quả/minh chứng cụ thể (tùy chọn)..."
                     }
                     value={formData.requiredDeliverables || ""}
+                    aria-invalid={Boolean(errors.requiredDeliverables)}
+                    aria-describedby={errors.requiredDeliverables ? "task-deliverables-error" : undefined}
                     onChange={(e) => {
                       setFormData((p) => ({ ...p, requiredDeliverables: e.target.value }));
                       if (errors.requiredDeliverables) clearError("requiredDeliverables");
@@ -1841,7 +2045,7 @@ export function CreateTaskModal({
                     )}
                   />
                   {errors.requiredDeliverables && (
-                    <p className="text-xs font-medium text-destructive flex items-center gap-1 mt-1">
+                    <p id="task-deliverables-error" className="text-xs font-medium text-destructive flex items-center gap-1 mt-1">
                       <AlertCircle className="size-3 shrink-0" strokeWidth={1.5} />
                       <span>{errors.requiredDeliverables}</span>
                     </p>
@@ -1869,32 +2073,32 @@ export function CreateTaskModal({
               >
                 <p className="font-semibold">Không thể tạo nhiệm vụ. Vui lòng kiểm tra các mục sau:</p>
                 {errors.title && (
-                  <button type="button" onClick={() => document.getElementById("task-title-input")?.focus()} className="block text-left hover:underline cursor-pointer">
+                  <button type="button" onClick={() => focusFieldWithError("task-title-input")} className="block text-left hover:underline cursor-pointer">
                     • {errors.title}
                   </button>
                 )}
                 {errors.leadAssigneeName && (
-                  <button type="button" onClick={() => document.getElementById("task-assignee-field")?.focus()} className="block text-left hover:underline cursor-pointer">
+                  <button type="button" onClick={() => focusFieldWithError("task-assignee-field")} className="block text-left hover:underline cursor-pointer">
                     • {errors.leadAssigneeName}
                   </button>
                 )}
                 {errors.coAssignees && (
-                  <button type="button" onClick={() => document.getElementById("task-collaborators-input")?.focus()} className="block text-left hover:underline cursor-pointer">
+                  <button type="button" onClick={() => focusFieldWithError("task-collaborators-input", true)} className="block text-left hover:underline cursor-pointer">
                     • {errors.coAssignees}
                   </button>
                 )}
                 {errors.dueDate && (
-                  <button type="button" onClick={() => document.getElementById("task-due-date-input")?.focus()} className="block text-left hover:underline cursor-pointer">
+                  <button type="button" onClick={() => focusFieldWithError("task-due-date-input")} className="block text-left hover:underline cursor-pointer">
                     • {errors.dueDate}
                   </button>
                 )}
                 {errors.internalDueDate && (
-                  <button type="button" onClick={() => document.getElementById("task-internal-due-input")?.focus()} className="block text-left hover:underline cursor-pointer">
+                  <button type="button" onClick={() => focusFieldWithError("task-internal-due-input", true)} className="block text-left hover:underline cursor-pointer">
                     • {errors.internalDueDate}
                   </button>
                 )}
                 {errors.requiredDeliverables && (
-                  <button type="button" onClick={() => document.getElementById("task-deliverables-input")?.focus()} className="block text-left hover:underline cursor-pointer">
+                  <button type="button" onClick={() => focusFieldWithError("task-deliverables-input", true)} className="block text-left hover:underline cursor-pointer">
                     • {errors.requiredDeliverables}
                   </button>
                 )}
@@ -1923,7 +2127,7 @@ export function CreateTaskModal({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={onClose}
+                onClick={handleRequestClose}
                 disabled={isSubmitting}
                 className="h-11 sm:h-10 min-h-[44px] rounded-xl px-4 text-xs font-semibold cursor-pointer active:scale-95 transition-all w-1/2 sm:w-auto"
               >
@@ -1941,7 +2145,7 @@ export function CreateTaskModal({
                 <CheckCircle2 className="size-4" strokeWidth={1.5} />
                 <span>
                   {isSubmitting
-                    ? "Đang gửi..."
+                    ? "Đang tạo nhiệm vụ..."
                     : isStaff
                     ? "Tạo việc cá nhân"
                     : formData.level === "TRUONG"
@@ -1953,6 +2157,52 @@ export function CreateTaskModal({
           </div>
         </form>
           </m.div>
+
+        {showDiscardConfirm && (
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="discard-dialog-title"
+            aria-describedby="discard-dialog-desc"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full max-w-sm rounded-2xl border border-border/80 bg-card p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="space-y-1.5">
+                <h3 id="discard-dialog-title" className="text-sm font-bold text-foreground font-heading">
+                  Bỏ nội dung chưa lưu?
+                </h3>
+                <p id="discard-dialog-desc" className="text-xs text-muted-foreground leading-relaxed">
+                  Nội dung bạn đang nhập sẽ bị mất nếu đóng lúc này. Bạn có muốn tiếp tục nhập không?
+                </p>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowDiscardConfirm(false);
+                    forceClose();
+                  }}
+                  className="text-xs min-h-[40px] text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                >
+                  Bỏ thay đổi
+                </Button>
+                <Button
+                  ref={continueButtonRef}
+                  type="button"
+                  size="sm"
+                  autoFocus
+                  onClick={() => setShowDiscardConfirm(false)}
+                  className="text-xs min-h-[40px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                >
+                  Tiếp tục nhập
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
         </div>
       )}
     </AnimatePresence>

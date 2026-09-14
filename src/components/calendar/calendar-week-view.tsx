@@ -375,7 +375,7 @@ export function CalendarWeekView({
                 )}
                 {dayTasks.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-xs text-muted-foreground/40 italic select-none">
-                    —
+                    -
                   </div>
                 ) : (
                   dayTasks.map((task) => {

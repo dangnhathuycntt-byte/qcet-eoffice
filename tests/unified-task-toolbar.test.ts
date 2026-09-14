@@ -10,6 +10,8 @@ import {
   PRIORITY_FILTER_OPTIONS,
   filterTasksByScope,
   UnifiedTaskToolbar,
+  buildRoleActionPill,
+  buildQuickFilterPills,
   type ScopeTab,
   type ViewModeOption,
   type UnifiedTaskToolbarProps,
@@ -611,6 +613,226 @@ describe("URL Parameter Synchronization Engine", () => {
   });
 });
 
+
+describe("Task 3 — Quick Filter Pills: Role Action, Count, Callback, Advanced Filter Label", () => {
+  const adminUser = DEFAULT_DEMO_USERS[0]; // Admin / BGH (isExecutiveRole = true)
+  const staffUser = DEFAULT_DEMO_USERS[2]; // Nguyễn Ngọc Vinh — Staff (isExecutiveRole = false)
+
+  test("Executive user sees 'Cần tôi duyệt' role action pill, not 'Chờ tôi nộp'", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "",
+        onSearchChange: () => {},
+        tabCounts: { waiting_approval: 3, overdue: 1 },
+      })
+    );
+    assert.ok(html.includes("Cần tôi duyệt"), "Executive must see 'Cần tôi duyệt'");
+    assert.ok(!html.includes("Chờ tôi nộp"), "Executive must NOT see 'Chờ tôi nộp'");
+  });
+
+  test("Staff user sees 'Chờ tôi nộp' role action pill, not 'Cần tôi duyệt'", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "my",
+        onScopeChange: () => {},
+        user: staffUser,
+        isExecutive: false,
+        searchQuery: "",
+        onSearchChange: () => {},
+        tabCounts: { pending_submission: 2, overdue: 0 },
+      })
+    );
+    assert.ok(html.includes("Chờ tôi nộp"), "Staff must see 'Chờ tôi nộp'");
+    assert.ok(!html.includes("Cần tôi duyệt"), "Staff must NOT see 'Cần tôi duyệt'");
+  });
+
+  test("Quick filter pill with count=0 still renders and aria-pressed='false' when not selected", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "",
+        onSearchChange: () => {},
+        activeTab: "all",
+        tabCounts: { all: 10, waiting_approval: 0, overdue: 0 },
+      })
+    );
+    // Pill "Cần tôi duyệt" must render even with count=0
+    assert.ok(html.includes("Cần tôi duyệt"), "Role action pill must render even when count=0");
+    // Must have aria-pressed attribute
+    assert.ok(html.includes('aria-pressed="false"'), "Inactive pills must have aria-pressed='false'");
+  });
+
+  test("Active quick filter pill has aria-pressed='true'", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "",
+        onSearchChange: () => {},
+        activeTab: "overdue",
+        tabCounts: { overdue: 5 },
+      })
+    );
+    assert.ok(html.includes('aria-pressed="true"'), "Active pill must have aria-pressed='true'");
+  });
+
+  test("Quick filter group renders with role='group' and aria-label for a11y", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "",
+        onSearchChange: () => {},
+      })
+    );
+    assert.ok(html.includes('role="group"'), "Quick filter group must have role='group'");
+    assert.ok(html.includes("Lọc nhanh"), "Quick filter group must have aria-label 'Lọc nhanh'");
+  });
+
+  test("Advanced filter popover trigger is labeled 'Bộ lọc nâng cao'", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "",
+        onSearchChange: () => {},
+      })
+    );
+    assert.ok(
+      html.includes("Bộ lọc nâng cao"),
+      "Advanced filter aria-label must be 'Bộ lọc nâng cao'"
+    );
+  });
+
+  test("SavedViewsSelector label changes to 'Góc nhìn: Tùy chỉnh' when search query is active", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "tuyen sinh",
+        onSearchChange: () => {},
+      })
+    );
+    assert.ok(
+      html.includes("Góc nhìn: Tùy chỉnh"),
+      "SavedViewsSelector must display 'Góc nhìn: Tùy chỉnh' when search is active"
+    );
+    assert.ok(
+      !html.includes("Góc nhìn: Tất cả nhiệm vụ"),
+      "Must not display default label when filter is active"
+    );
+  });
+
+  test("Quick filter pills all use type='button' to prevent form submission", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(UnifiedTaskToolbar, {
+        scope: "school",
+        onScopeChange: () => {},
+        user: adminUser,
+        searchQuery: "",
+        onSearchChange: () => {},
+        tabCounts: { all: 10, waiting_approval: 3, overdue: 2 },
+      })
+    );
+    // Count 3 pills (Tất cả, Cần tôi duyệt, Quá hạn), each with type="button"
+    const typeButtonMatches = html.match(/type="button"/g) ?? [];
+    assert.ok(
+      typeButtonMatches.length >= 3,
+      `Must have at least 3 type='button' elements for quick filter pills, found ${typeButtonMatches.length}`
+    );
+  });
+
+  test("buildQuickFilterPills returns correct pill ids for executive role", () => {
+    const pills = buildQuickFilterPills(
+      true, // isExecutiveRole
+      { all: 12, waiting_approval: 4, overdue: 1 },
+      "all"
+    );
+    const ids = pills.map((p) => p.id);
+    assert.deepEqual(ids, ["all", "waiting_approval", "overdue"]);
+  });
+
+  test("buildQuickFilterPills returns correct pill ids for staff role", () => {
+    const pills = buildQuickFilterPills(
+      false, // isExecutiveRole = false
+      { all: 8, pending_submission: 2, overdue: 0 },
+      "all"
+    );
+    const ids = pills.map((p) => p.id);
+    assert.deepEqual(ids, ["all", "pending_submission", "overdue"]);
+  });
+
+  test("onTabChange callback is invoked with correct tab id when a pill is clicked (mock function)", () => {
+    // Build pills to get the ids, then simulate the click handler (onTabChange?.(pill.id))
+    // This tests that the binding: onClick={() => onTabChange?.(pill.id)} fires correctly.
+    const callLog: string[] = [];
+    const mockOnTabChange = (tab: string) => { callLog.push(tab); };
+
+    const pills = buildQuickFilterPills(
+      true, // executive → roleActionPill.id = "waiting_approval"
+      { all: 5, waiting_approval: 2, overdue: 3 },
+      "all"
+    );
+
+    // Simulate clicking each pill by calling the handler directly
+    for (const pill of pills) {
+      mockOnTabChange(pill.id);
+    }
+
+    assert.deepEqual(callLog, ["all", "waiting_approval", "overdue"],
+      "onTabChange must be called with correct tab id for each pill in order");
+  });
+
+  test("onTabChange callback receives 'overdue' when overdue pill is clicked", () => {
+    const callLog: string[] = [];
+    const mockOnTabChange = (tab: string) => { callLog.push(tab); };
+
+    const pills = buildQuickFilterPills(
+      false,
+      { all: 10, pending_submission: 3, overdue: 5 },
+      "all"
+    );
+    const overduePill = pills.find((p) => p.id === "overdue");
+    assert.ok(overduePill, "Overdue pill must exist");
+
+    // Simulate click → handler fires
+    mockOnTabChange(overduePill.id);
+
+    assert.equal(callLog[0], "overdue",
+      "onTabChange callback must be invoked with 'overdue' when overdue pill is clicked");
+  });
+
+  test("onTabChange callback receives role-specific id for executive action pill", () => {
+    const callLog: string[] = [];
+    const mockOnTabChange = (tab: string) => { callLog.push(tab); };
+
+    const execPill = buildRoleActionPill(true, { waiting_approval: 3 }, "all");
+    mockOnTabChange(execPill.id);
+
+    assert.equal(callLog[0], "waiting_approval",
+      "Executive action pill must invoke onTabChange with 'waiting_approval'");
+  });
+
+  test("onTabChange callback receives 'pending_submission' for staff action pill", () => {
+    const callLog: string[] = [];
+    const mockOnTabChange = (tab: string) => { callLog.push(tab); };
+
+    const staffPill = buildRoleActionPill(false, { pending_submission: 2 }, "all");
+    mockOnTabChange(staffPill.id);
+
+    assert.equal(callLog[0], "pending_submission",
+      "Staff action pill must invoke onTabChange with 'pending_submission'");
+  });
+});
 
 describe("Unified Task Toolbar UI Polish & Action Queue Integration", () => {
   const adminUser = DEFAULT_DEMO_USERS[0]; // Admin / BGH

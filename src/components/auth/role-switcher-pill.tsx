@@ -36,7 +36,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfigItem> = {
     role: "STAFF",
     label: "Chuyên viên",
     shortLabel: "Chuyên viên",
-    description: "Gi��ng viên / Chuyên viên thực hiện",
+    description: "Giảng viên / Chuyên viên thực hiện",
     icon: User,
     color: "text-emerald-700 bg-emerald-500/10 border-emerald-500/30",
   },

@@ -18,7 +18,7 @@ import { parseDateParts } from "@/lib/academic-calendar";
 export const ICT_TIME_ZONE = "Asia/Ho_Chi_Minh";
 
 /** Fallback emitted for missing/invalid input. */
-export const DATE_FALLBACK = "—";
+export const DATE_FALLBACK = "-";
 
 export interface IctDateTimeParts {
   year: number;

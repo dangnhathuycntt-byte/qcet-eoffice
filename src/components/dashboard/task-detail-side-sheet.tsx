@@ -116,6 +116,41 @@ export function formatDetailDate(dateStr?: string): string {
   }
 }
 
+export function getRelativeDueTime(
+  dueDate?: string | Date
+): { text: string; color: string } | null {
+  if (!dueDate) return null;
+  const target = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
+  if (isNaN(target.getTime())) return null;
+
+  const now = new Date();
+  const diffMs = target.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return {
+      text: `Quá hạn ${Math.abs(diffDays)} ngày`,
+      color: "border-red-500/30 bg-red-500/10 text-red-700",
+    };
+  }
+  if (diffDays === 0) {
+    return {
+      text: "Hạn hôm nay",
+      color: "border-amber-500/30 bg-amber-500/10 text-amber-700",
+    };
+  }
+  if (diffDays === 1) {
+    return {
+      text: "Còn 1 ngày",
+      color: "border-amber-500/30 bg-amber-500/10 text-amber-700",
+    };
+  }
+  return {
+    text: `Còn ${diffDays} ngày`,
+    color: "border-border/60 bg-muted/40 text-muted-foreground",
+  };
+}
+
 export const TASK_LEVEL_CONFIG = {
   TRUONG: {
     label: "Nhiệm vụ cấp Trường",

@@ -319,6 +319,62 @@ export function filterTasksByScope(
 export { getAcademicMonthsForYear };
 
 // ============================================================================
+// Quick Filter Pills Factory (exported for unit testing without DOM)
+// ============================================================================
+
+export interface QuickFilterPill {
+  id: string;
+  label: string;
+  count: number | undefined;
+  isActive: boolean;
+}
+
+export function buildRoleActionPill(
+  isExecutiveRole: boolean,
+  tabCounts: UnifiedTaskToolbarProps["tabCounts"],
+  activeTab: string
+): QuickFilterPill {
+  if (isExecutiveRole) {
+    return {
+      id: "waiting_approval",
+      label: "Cần tôi duyệt",
+      count: tabCounts?.waiting_approval ?? tabCounts?.review ?? 0,
+      isActive: activeTab === "waiting_approval" || activeTab === "review",
+    };
+  }
+  return {
+    id: "pending_submission",
+    label: "Chờ tôi nộp",
+    count: tabCounts?.pending_submission ?? 0,
+    isActive: activeTab === "pending_submission",
+  };
+}
+
+export function buildQuickFilterPills(
+  isExecutiveRole: boolean,
+  tabCounts: UnifiedTaskToolbarProps["tabCounts"],
+  activeTab: string,
+  totalTasksCount?: number
+): QuickFilterPill[] {
+  const roleActionPill = buildRoleActionPill(isExecutiveRole, tabCounts, activeTab);
+  return [
+    {
+      id: "all",
+      label: "Tất cả",
+      count: tabCounts?.all ?? totalTasksCount,
+      isActive: activeTab === "all" || !activeTab,
+    },
+    roleActionPill,
+    {
+      id: "overdue",
+      label: "Quá hạn",
+      count: tabCounts?.overdue ?? 0,
+      isActive: activeTab === "overdue",
+    },
+  ];
+}
+
+// ============================================================================
 // 3. UnifiedTaskToolbar Component
 // ============================================================================
 
@@ -578,6 +634,29 @@ export function UnifiedTaskToolbar({
     my: tabCounts?.my ?? tabCounts?.my_tasks,
   };
 
+  const isExecutiveRole = Boolean(
+    propIsExecutive ||
+    (userRole as any) === "ADMIN" ||
+    (userRole as any) === "EXECUTIVE" ||
+    (userRole as any) === "MANAGER" ||
+    (userRole as any) === "DEPT_HEAD" ||
+    user?.role === "ADMIN" ||
+    (user?.role as any) === "EXECUTIVE" ||
+    (user?.role as any) === "MANAGER" ||
+    (user?.role as any) === "DEPT_HEAD" ||
+    isExecutive
+  );
+
+  const roleActionPill = React.useMemo(
+    () => buildRoleActionPill(isExecutiveRole, tabCounts, activeTab),
+    [isExecutiveRole, tabCounts, activeTab]
+  );
+
+  const quickFilterPills = React.useMemo(
+    () => buildQuickFilterPills(isExecutiveRole, tabCounts, activeTab, totalTasksCount),
+    [isExecutiveRole, tabCounts, activeTab, totalTasksCount]
+  );
+
   // Count active advanced filters
   const activeAdvancedFilterCount = React.useMemo(() => {
     let count = 0;
@@ -585,41 +664,142 @@ export function UnifiedTaskToolbar({
     if (selectedCategory && selectedCategory !== "ALL") count++;
     if (selectedPriority && selectedPriority !== "ALL") count++;
     if (effectiveMonth !== undefined && effectiveMonth !== "ALL") count++;
+    if (
+      activeTab === "today" ||
+      (isExecutiveRole
+        ? activeTab === "pending_submission"
+        : activeTab === "waiting_approval" || activeTab === "review")
+    ) {
+      count++;
+    }
     return count;
-  }, [selectedDepartment, selectedCategory, selectedPriority, effectiveMonth]);
+  }, [
+    selectedDepartment,
+    selectedCategory,
+    selectedPriority,
+    effectiveMonth,
+    activeTab,
+    isExecutiveRole,
+  ]);
 
-  // 4. Smart Filter Pills configuration ('Của tôi' strictly purged; exists exclusively in ScopeSwitcher)
-  const smartFilterPills: SmartFilterPill[] = [
-    {
-      id: "all",
-      label: "Tất cả",
-      count: tabCounts?.all ?? totalTasksCount,
-    },
-    {
-      id: "waiting_approval",
-      label: "Chờ duyệt",
-      count: tabCounts?.waiting_approval ?? tabCounts?.review,
-    },
-    ...(tabCounts?.pending_submission !== undefined && tabCounts.pending_submission > 0
-      ? [
-          {
-            id: "pending_submission",
-            label: "Chờ nộp BC",
-            count: tabCounts.pending_submission,
-          },
-        ]
-      : []),
-    {
-      id: "overdue",
-      label: "Quá hạn",
-      count: tabCounts?.overdue,
-    },
-    {
-      id: "today",
-      label: "Hôm nay",
-      count: tabCounts?.today,
-    },
-  ];
+  // Check if active view ID should be retained or cleared due to criteria divergence
+  const effectiveActiveViewId = React.useMemo(() => {
+    if (!activeViewId) return null;
+    const view =
+      ALL_ROLE_PRESETS.find((p) => p.id === activeViewId) ||
+      getCustomSavedViews(user?.id).find((v) => v.id === activeViewId);
+    if (!view) return null;
+    if (effectiveCriteria && !areCriteriaEqual(view.criteria, effectiveCriteria)) {
+      return null;
+    }
+    return activeViewId;
+  }, [activeViewId, effectiveCriteria, user?.id]);
+
+  const hasCustomFilters = React.useMemo(() => {
+    return Boolean(
+      (searchQuery && searchQuery.trim().length > 0) ||
+      (selectedDepartment && selectedDepartment !== "ALL") ||
+      (selectedCategory && selectedCategory !== "ALL") ||
+      (selectedPriority && selectedPriority !== "ALL") ||
+      (effectiveMonth !== undefined && effectiveMonth !== "ALL") ||
+      (activeTab && activeTab !== "all")
+    );
+  }, [
+    searchQuery,
+    selectedDepartment,
+    selectedCategory,
+    selectedPriority,
+    effectiveMonth,
+    activeTab,
+  ]);
+
+  // Active filter chips for individual criterion removal
+  const activeFilterChips = React.useMemo(() => {
+    const chips: Array<{ id: string; label: string; onRemove: () => void }> = [];
+
+    if (searchQuery && searchQuery.trim().length > 0) {
+      chips.push({
+        id: "search",
+        label: `Từ khóa: "${searchQuery}"`,
+        onRemove: () => onSearchChange(""),
+      });
+    }
+
+    if (activeTab && activeTab !== "all") {
+      let tabLabel = "";
+      if (activeTab === "overdue") tabLabel = "Quá hạn";
+      else if (activeTab === "waiting_approval" || activeTab === "review") {
+        tabLabel = isExecutiveRole ? "Cần tôi duyệt" : "Chờ duyệt";
+      } else if (activeTab === "pending_submission") {
+        tabLabel = !isExecutiveRole ? "Chờ tôi nộp" : "Chờ nộp BC";
+      } else if (activeTab === "today") tabLabel = "Hôm nay";
+      else tabLabel = activeTab;
+
+      chips.push({
+        id: "tab",
+        label: tabLabel,
+        onRemove: () => onTabChange?.("all"),
+      });
+    }
+
+    if (selectedDepartment && selectedDepartment !== "ALL") {
+      const deptName =
+        availableDepartments.find((d) => d.code === selectedDepartment)?.name ||
+        selectedDepartment;
+      chips.push({
+        id: "dept",
+        label: `Đơn vị: ${deptName}`,
+        onRemove: () => onDepartmentChange?.("ALL"),
+      });
+    }
+
+    if (selectedCategory && selectedCategory !== "ALL") {
+      const catLabel =
+        CATEGORY_FILTER_OPTIONS.find((c) => c.id === selectedCategory)?.label ||
+        selectedCategory;
+      chips.push({
+        id: "cat",
+        label: `Danh mục: ${catLabel}`,
+        onRemove: () => onCategoryChange?.("ALL"),
+      });
+    }
+
+    if (selectedPriority && selectedPriority !== "ALL") {
+      const prioLabel =
+        PRIORITY_FILTER_OPTIONS.find((p) => p.id === selectedPriority)?.label ||
+        selectedPriority;
+      chips.push({
+        id: "prio",
+        label: `Ưu tiên: ${prioLabel}`,
+        onRemove: () => onPriorityChange?.("ALL"),
+      });
+    }
+
+    if (effectiveMonth !== undefined && effectiveMonth !== "ALL") {
+      chips.push({
+        id: "month",
+        label: `Tháng ${effectiveMonth}`,
+        onRemove: () => handleEffectiveMonthChange?.("ALL"),
+      });
+    }
+
+    return chips;
+  }, [
+    searchQuery,
+    onSearchChange,
+    activeTab,
+    isExecutiveRole,
+    onTabChange,
+    selectedDepartment,
+    availableDepartments,
+    onDepartmentChange,
+    selectedCategory,
+    onCategoryChange,
+    selectedPriority,
+    onPriorityChange,
+    effectiveMonth,
+    handleEffectiveMonthChange,
+  ]);
 
   // Optional 12 month cycle list for year
   const academicMonths = React.useMemo(() => {
@@ -635,6 +815,8 @@ export function UnifiedTaskToolbar({
 
   // Reset all filters
   const handleResetFilters = () => {
+    onSearchChange("");
+    onTabChange?.("all");
     onDepartmentChange?.("ALL");
     onCategoryChange?.("ALL");
     onPriorityChange?.("ALL");
@@ -825,7 +1007,7 @@ export function UnifiedTaskToolbar({
         </div>
       )}
       {/* ==================================================================== */}
-      {/* ROW 2: View Selector, Search, Filter, Display (VIEW-FIRST)           */}
+      {/* ROW 2: View Selector, Search, Quick Filters, Filter, Display         */}
       {/* ==================================================================== */}
       <div
         data-slot="unified-task-toolbar-row-2"
@@ -835,18 +1017,18 @@ export function UnifiedTaskToolbar({
         {showSavedViews && (
           <SavedViewsSelector
             user={user}
-            activeViewId={activeViewId}
+            activeViewId={effectiveActiveViewId}
             onSelectView={onSelectView}
             currentCriteria={effectiveCriteria}
             onSaveView={onSaveView}
             onDeleteView={onDeleteView}
             onRenameView={onRenameView}
-            defaultLabel="Góc nhìn: Tất cả nhiệm vụ"
+            defaultLabel={hasCustomFilters ? "Góc nhìn: Tùy chỉnh" : "Góc nhìn: Tất cả nhiệm vụ"}
           />
         )}
 
-        {/* Center: Search Input (flex-1, min-width 160px) */}
-        <div className="relative flex-1 min-w-[160px]">
+        {/* Center: Search Input */}
+        <div className="relative w-full sm:w-auto sm:flex-1 min-w-[160px]">
           <Search
             className="size-4 sm:size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
             strokeWidth={1.5}
@@ -888,6 +1070,46 @@ export function UnifiedTaskToolbar({
               </kbd>
             )}
           </div>
+        </div>
+
+        {/* Quick Filter Group [Lọc nhanh] */}
+        <div
+          role="group"
+          aria-label="Lọc nhanh"
+          className="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs shrink-0 flex-wrap sm:flex-nowrap"
+        >
+          {quickFilterPills.map((pill) => (
+            <button
+              key={pill.id}
+              type="button"
+              aria-pressed={pill.isActive ? "true" : "false"}
+              onClick={() => onTabChange?.(pill.id)}
+              className={cn(
+                "inline-flex min-h-[44px] sm:min-h-[32px] sm:h-8 items-center gap-1.5 rounded-lg px-2.5 sm:px-2 text-xs font-medium transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary touch-manipulation active:scale-95",
+                pill.isActive
+                  ? "bg-card text-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+              )}
+            >
+              <span>{pill.label}</span>
+              {typeof pill.count === "number" && (
+                <span
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-md px-1.5 py-0.2 text-xs font-mono font-semibold tabular-nums",
+                    pill.isActive
+                      ? pill.id === "overdue" && pill.count > 0
+                        ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
+                        : "bg-primary/10 text-primary"
+                      : pill.id === "overdue" && pill.count > 0
+                      ? "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {pill.count}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
         {/* Right: Filter + Display controls */}
@@ -1353,6 +1575,48 @@ export function UnifiedTaskToolbar({
           )}
         </div>
       </div>
+
+      {/* ==================================================================== */}
+      {/* ACTIVE FILTER CHIPS ROW (Only when active criteria exist)            */}
+      {/* ==================================================================== */}
+      {activeFilterChips.length > 0 && (
+        <div
+          data-slot="active-filter-chips-row"
+          className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/30"
+        >
+          <div
+            className="flex flex-wrap items-center gap-1.5 min-w-0"
+            role="group"
+            aria-label="Bộ lọc đang áp dụng"
+          >
+            {activeFilterChips.map((chip) => (
+              <span
+                key={chip.id}
+                className="inline-flex min-h-[28px] items-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 py-0.5 text-xs text-foreground shadow-2xs font-medium"
+              >
+                <span>{chip.label}</span>
+                <button
+                  type="button"
+                  onClick={chip.onRemove}
+                  aria-label={`Xóa tiêu chí ${chip.label}`}
+                  className="inline-flex size-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                >
+                  <X className="size-3" strokeWidth={1.5} />
+                </button>
+              </span>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="inline-flex min-h-[32px] items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer underline-offset-2 hover:underline transition-colors shrink-0"
+          >
+            <RotateCcw className="size-3" strokeWidth={1.5} />
+            <span>Xóa bộ lọc</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

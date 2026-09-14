@@ -29,9 +29,7 @@ function LoginSkeleton() {
       aria-label="Đang tải trang đăng nhập"
       className="relative flex min-h-[100dvh] w-full flex-col justify-between bg-background outline-none focus:outline-hidden"
     >
-      {/* Background patterns */}
-      <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] opacity-35 pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,rgba(14,83,180,0.05),transparent_70%)] pointer-events-none" />
+      {/* Clean institutional background */}
 
       {/* Top Header Skeleton */}
       <header className="relative z-10 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -122,9 +120,7 @@ function LoginFormContent() {
       aria-label="Trang đăng nhập QCET E-Office"
       className="relative flex min-h-[100dvh] w-full flex-col justify-between bg-background selection:bg-primary/15 selection:text-primary outline-none focus:outline-hidden"
     >
-      {/* Blueprint Grid & Academic Blue Ambient Glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] opacity-35 pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,rgba(14,83,180,0.05),transparent_70%)] pointer-events-none" />
+      {/* Clean institutional background */}
 
       {/* 1. TOP HEADER (Line mỏng, nằm hẳn phía trên) */}
       <header className="relative z-10 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">

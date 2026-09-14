@@ -15,8 +15,13 @@ export interface TaskEmptyStateProps {
   description?: string;
   searchQuery?: string;
   activeTab?: SmartFilterTab | string;
+  /** attention/workbox filter (e.g. "requires_my_approval", "overdue") — used to determine hasFilterActive */
+  attention?: string;
+  status?: string;
+  academicMonth?: number | "ALL";
   department?: string;
   category?: string;
+  priority?: string;
   userName?: string;
   onResetFilters?: () => void;
   onAddTask?: () => void;
@@ -29,8 +34,12 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   description,
   searchQuery,
   activeTab,
+  attention,
+  status,
+  academicMonth,
   department,
   category,
+  priority,
   userName,
   onResetFilters,
   onAddTask,
@@ -56,6 +65,24 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       displayTitle = "Không có nhiệm vụ nào quá hạn";
       displayDescription =
         "Tuyệt vời! Tất cả các nhiệm vụ đều đang đúng tiến độ hoặc đã được giải quyết.";
+    } else if (
+      status === "WAITING_APPROVAL" ||
+      status === "waiting_approval" ||
+      status === "approvals" ||
+      activeTab === "waiting_approval" ||
+      activeTab === "review"
+    ) {
+      displayTitle = "Không có nhiệm vụ nào chờ phê duyệt";
+      displayDescription =
+        "Hiện tại không có nhiệm vụ hoặc báo cáo nào đang chờ duyệt từ bạn.";
+    } else if (status === "COMPLETED" || activeTab === "completed") {
+      displayTitle = "Chưa có nhiệm vụ hoàn thành";
+      displayDescription =
+        "Chưa có nhiệm vụ nào được đánh dấu hoàn thành trong phạm vi hiển thị.";
+    } else if (academicMonth !== undefined && academicMonth !== "ALL") {
+      displayTitle = `Không có nhiệm vụ trong Tháng ${academicMonth}`;
+      displayDescription =
+        `Không có nhiệm vụ nào được lên lịch hoặc giao trong tháng ${academicMonth}.`;
     } else if (activeTab === "due_this_month") {
       displayTitle = "Không có nhiệm vụ nào đến hạn trong tháng này";
       displayDescription =
@@ -75,7 +102,13 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
     isSearchEmpty ||
     (department && department !== "ALL") ||
     (category && category !== "ALL") ||
-    (activeTab && activeTab !== "all")
+    (priority && priority !== "ALL") ||
+    (status && status !== "ALL" && status !== "all") ||
+    (attention && attention !== "ALL" && attention !== "all") ||
+    (academicMonth !== undefined && academicMonth !== "ALL") ||
+    (activeTab &&
+      activeTab !== "all" &&
+      activeTab !== "ALL")
   );
 
   return (

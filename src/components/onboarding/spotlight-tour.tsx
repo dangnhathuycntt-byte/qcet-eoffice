@@ -22,6 +22,9 @@ export function calculateCutoutRect(
   };
 }
 
+/** data-testid dùng trong test và automation */
+export const SKIP_BUTTON_TESTID = "spotlight-tour-skip";
+
 export interface SpotlightTourProps {
   isActive: boolean;
   steps: TourStepConfig[];
@@ -82,15 +85,21 @@ export function SpotlightTour({
     // Chạy lại updateRect sau một khoảng ngắn đề phòng animation hoặc lazy-render
     const timer = setTimeout(updateRect, 100);
 
+    // ResizeObserver bắt layout shift thay vì scroll listener (jank-prone)
+    const el =
+      document.querySelector(currentStep.targetSelector) ||
+      (currentStep.fallbackSelector ? document.querySelector(currentStep.fallbackSelector) : null);
+    const ro = new ResizeObserver(updateRect);
+    if (el) ro.observe(el);
+
     window.addEventListener("resize", checkDevice);
     window.addEventListener("resize", updateRect);
-    window.addEventListener("scroll", updateRect, { passive: true });
 
     return () => {
       clearTimeout(timer);
+      ro.disconnect();
       window.removeEventListener("resize", checkDevice);
       window.removeEventListener("resize", updateRect);
-      window.removeEventListener("scroll", updateRect);
     };
   }, [isActive, currentStep]);
 
@@ -120,7 +129,7 @@ export function SpotlightTour({
       aria-labelledby="tour-step-title"
       aria-describedby="tour-step-desc"
     >
-      {/* 1. Lớp phủ SVG Mask */}
+      {/* 1. Lớp phủ SVG Mask — pointer-events-none để không chặn tương tác với nội dung phía sau */}
       <svg className="w-full h-full" aria-hidden="true">
         <defs>
           <mask id="qcet-spotlight-mask">
@@ -138,15 +147,14 @@ export function SpotlightTour({
             )}
           </mask>
         </defs>
+        {/* Opacity thấp hơn (0.2) và không pointer-events-auto → nội dung phía sau vẫn tương tác được */}
         <rect
           x="0"
           y="0"
           width="100%"
           height="100%"
-          fill="rgba(15, 23, 42, 0.45)"
+          fill="rgba(15, 23, 42, 0.20)"
           mask="url(#qcet-spotlight-mask)"
-          className="pointer-events-auto cursor-pointer"
-          onClick={onClose}
         />
       </svg>
 
@@ -164,11 +172,23 @@ export function SpotlightTour({
         />
       )}
 
-      {/* 3. Popover Tooltip (Desktop), Bottom Sheet (Mobile), hoặc Centered Fallback Card khi target không tìm thấy */}
+      {/* 3. Nút "Bỏ qua tour" cố định góc trên phải — luôn hiển thị, dễ tìm */}
+      <button
+        type="button"
+        data-testid={SKIP_BUTTON_TESTID}
+        onClick={onClose}
+        aria-label="Bỏ qua tour hướng dẫn"
+        className="pointer-events-auto fixed top-4 right-4 z-[51] flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/90 border border-border/60 text-xs text-muted-foreground hover:text-foreground hover:bg-background hover:border-border shadow-sm backdrop-blur-sm transition-colors cursor-pointer"
+      >
+        <X className="w-3.5 h-3.5" />
+        Bỏ qua
+      </button>
+
+      {/* 4. Popover Tooltip (Desktop), Bottom Sheet (Mobile), hoặc Centered Fallback Card khi target không tìm thấy */}
       {!targetRect ? (
         <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none z-50">
           <div
-            className="pointer-events-auto w-full max-w-md bg-card border border-border/80 rounded-2xl p-5 sm:p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="pointer-events-auto w-full max-w-md bg-card border border-border/80 rounded-2xl p-5 sm:p-6 shadow-2xl motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-200"
             data-testid="spotlight-fallback-card"
           >
             <div className="flex items-center justify-between gap-2 mb-3">

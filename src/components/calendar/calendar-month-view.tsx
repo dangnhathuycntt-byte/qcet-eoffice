@@ -500,7 +500,7 @@ export function getEventParticipants(item: CalendarTaskItem): { host: string; pa
     orig?.host ||
     orig?.leadAssigneeName ||
     item.assigneeName ||
-    "TS. Lê Doãn Cường";
+    "(Chưa xác định)";
   const participants =
     (orig?.attendees && orig.attendees.length > 0 ? orig.attendees.join(", ") : "") ||
     (orig?.coAssignees && orig.coAssignees.length > 0 ? orig.coAssignees.join(", ") : "") ||

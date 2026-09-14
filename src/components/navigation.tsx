@@ -112,7 +112,7 @@ export function ZoomToggle() {
     <button
       type="button"
       onClick={toggleZoom}
-      className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary/80 text-xs font-medium text-foreground transition-colors cursor-pointer active:scale-[0.98]"
+      className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-border/50 bg-secondary/40 hover:bg-secondary/80 text-xs font-medium text-foreground transition-colors cursor-pointer active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       title="Bật / Tắt phóng to giao diện (100% / 120%)"
     >
       <span className="text-xs text-muted-foreground font-normal">Zoom</span>
@@ -226,7 +226,7 @@ export function MobileNav({ pathname: initialPathname }: { pathname?: string } =
               setDrawerOpen(true);
             }}
             className={cn(
-              "relative flex flex-col items-center justify-center min-h-[48px] min-w-[48px] rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors active:scale-95 touch-manipulation cursor-pointer select-none",
+              "relative flex flex-col items-center justify-center min-h-[48px] min-w-[48px] rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors active:scale-95 touch-manipulation cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
               drawerOpen && "text-primary font-semibold"
             )}
             aria-label="Menu mở rộng và tài khoản"
@@ -422,7 +422,7 @@ export function Navigation() {
             <button
               type="button"
               onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
-              className="flex items-center gap-2 pl-2 border-l border-border/50 transition-opacity hover:opacity-90 group cursor-pointer focus:outline-none"
+              className="flex items-center gap-2 pl-2 border-l border-border/50 transition-opacity hover:opacity-90 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               title={`Hồ sơ cá nhân: ${user.name}`}
               aria-expanded={isProfileDropdownOpen}
             >
@@ -497,7 +497,7 @@ export function Navigation() {
                       setIsProfileDropdownOpen(false);
                       setIsProfileModalOpen(true);
                     }}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
                     <Settings size={14} strokeWidth={1.5} className="text-muted-foreground" />
                     <span>Cập nhật hồ sơ cán bộ</span>
@@ -506,7 +506,7 @@ export function Navigation() {
                   <Link
                     href="/login"
                     onClick={() => setIsProfileDropdownOpen(false)}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
                     <User size={14} strokeWidth={1.5} className="text-muted-foreground" />
                     <span>Đổi tài khoản / Đăng nhập khác</span>
@@ -518,7 +518,7 @@ export function Navigation() {
                       setIsProfileDropdownOpen(false);
                       logout();
                     }}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer text-left active:scale-[0.98]"
+                    className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors cursor-pointer text-left active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
                     <LogOut size={14} strokeWidth={1.5} />
                     <span>Đăng xuất</span>

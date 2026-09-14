@@ -220,8 +220,8 @@ function CalendarRouteContent() {
   const secondaryRef = useRef<HTMLDivElement>(null);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
-  const hasActiveFilters = levelFilter !== "ALL" || statusFilter !== "ALL";
-  const activeFilterCount = (levelFilter !== "ALL" ? 1 : 0) + (statusFilter !== "ALL" ? 1 : 0);
+  const hasActiveFilters = levelFilter !== "ALL" || statusFilter !== "ALL" || Boolean(searchQuery.trim());
+  const activeFilterCount = (levelFilter !== "ALL" ? 1 : 0) + (statusFilter !== "ALL" ? 1 : 0) + (searchQuery.trim() ? 1 : 0);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(initialDateStr);
   const [isDaySheetOpen, setIsDaySheetOpen] = useState(false);
@@ -644,6 +644,7 @@ function CalendarRouteContent() {
   const handleResetFilters = useCallback(() => {
     setLevelFilter("ALL");
     setStatusFilter("ALL");
+    setSearchQuery("");
   }, []);
 
   return (
@@ -941,6 +942,71 @@ function CalendarRouteContent() {
           )}
         </div>
       </div>
+
+      {/* Active filter criteria with individual removal (Zero Silent Loss / Explicit State) */}
+      {(levelFilter !== "ALL" || statusFilter !== "ALL" || Boolean(searchQuery.trim())) && (
+        <div
+          data-slot="calendar-active-filters"
+          className="flex flex-wrap items-center gap-2 py-1 px-0.5 text-xs animate-in fade-in duration-100"
+        >
+          <span className="text-muted-foreground font-medium">Bộ lọc:</span>
+          {levelFilter !== "ALL" && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
+              <span>Cấp: {levelFilter === "TRUONG" ? "Trường" : "Đơn vị"}</span>
+              <button
+                type="button"
+                aria-label="Xóa lọc cấp"
+                onClick={() => setLevelFilter("ALL")}
+                className="hover:text-primary/70 transition-colors cursor-pointer"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          )}
+          {statusFilter !== "ALL" && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
+              <span>
+                Trạng thái:{" "}
+                {statusFilter === "IN_PROGRESS"
+                  ? "Đang làm"
+                  : statusFilter === "COMPLETED"
+                  ? "Hoàn thành"
+                  : statusFilter === "OVERDUE"
+                  ? "Quá hạn"
+                  : statusFilter}
+              </span>
+              <button
+                type="button"
+                aria-label="Xóa lọc trạng thái"
+                onClick={() => setStatusFilter("ALL")}
+                className="hover:text-primary/70 transition-colors cursor-pointer"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          )}
+          {searchQuery.trim() && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
+              <span>Tìm: &ldquo;{searchQuery}&rdquo;</span>
+              <button
+                type="button"
+                aria-label="Xóa từ khóa tìm kiếm"
+                onClick={() => setSearchQuery("")}
+                className="hover:text-primary/70 transition-colors cursor-pointer"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 ml-1 cursor-pointer transition-colors"
+          >
+            Xóa tất cả
+          </button>
+        </div>
+      )}
 
       {/* Calendar Content: Month Grid or Agenda List */}
       {error && (
