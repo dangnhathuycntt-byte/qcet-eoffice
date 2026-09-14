@@ -226,7 +226,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
             </div>
             {selectedMonth !== "ALL" && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                Kỳ T{selectedMonth}
+                Tháng {selectedMonth}
               </span>
             )}
           </div>
@@ -245,7 +245,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
             >
               <div className="flex items-center gap-1.5 truncate">
                 <Sparkles size={12} className="text-primary shrink-0" />
-                <span className="truncate">Kỳ hiện tại: T{currentActualMonth}</span>
+                <span className="truncate">Tháng hiện tại: T{currentActualMonth}</span>
               </div>
               {selectedMonth === currentActualMonth && (
                 <Check size={12} className="text-primary shrink-0 ml-1" />
@@ -296,11 +296,11 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
                     <div className="min-w-0 pr-1">
                       <div className="flex items-center gap-1">
                         <span className="text-xs font-medium leading-tight truncate">
-                          Kỳ T{m}
+                          Tháng {m}
                         </span>
                         {isActualCurrent && (
                           <span
-                            title="Kỳ hiện tại trên lịch thực tế"
+                            title="Tháng hiện tại trên lịch thực tế"
                             className="size-1.5 rounded-full bg-emerald-500 shrink-0"
                           />
                         )}
