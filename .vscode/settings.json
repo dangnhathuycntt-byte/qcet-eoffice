@@ -1,0 +1,24 @@
+{
+  "//": "Hide generated/runtime output from the Explorer so the visible tree is source of truth. Nothing is deleted; every excluded path is gitignored build or runtime data. storage/private is deliberately NOT excluded — it holds tracked institutional documents.",
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/uploads": true,
+    "**/storage/temp": true,
+    "**/tsconfig.tsbuildinfo": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/uploads": true,
+    "**/storage/temp": true,
+    "**/package-lock.json": true,
+    "**/public/sw.js": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/storage/**": true,
+    "**/uploads/**": true
+  }
+}
