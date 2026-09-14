@@ -36,7 +36,17 @@ function DashboardZoneComponent() {
   const baseTasks = monthScopedBaseTasks ?? tasks;
 
   return (
-    <div className="space-y-6 sm:space-y-8" data-slot="zone-dashboard">
+    <div className="space-y-6 sm:space-y-8 relative min-h-screen" data-slot="zone-dashboard">
+      {/* Ambient background gradient — decorative only, pointer-events-none */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 20% 0%, oklch(0.95 0.025 250 / 0.35) 0%, transparent 60%), " +
+            "radial-gradient(ellipse 60% 40% at 80% 100%, oklch(0.96 0.018 150 / 0.2) 0%, transparent 55%)",
+        }}
+      />
       {/* Mobile Attention-First Feed (viewports < 640px) */}
       <div className="block sm:hidden" data-slot="mobile-workbench-feed-container">
         <WorkbenchMobileFeed />
@@ -46,7 +56,7 @@ function DashboardZoneComponent() {
       <div className="hidden sm:block space-y-7" data-slot="desktop-workbench-container">
 
         {/* HEADER: Title + Create + Toolbar + Situation */}
-        <div className="space-y-2.5" data-slot="dashboard-header">
+        <div className="space-y-3" data-slot="dashboard-header">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h1 className="font-heading font-bold text-2xl sm:text-3xl tracking-tight text-foreground leading-[1.15]">
@@ -120,10 +130,10 @@ function DashboardZoneComponent() {
         </div>
 
         {/* SECTION 1 — CẦN XỬ LÝ */}
-        <section aria-label="CẦN XỬ LÝ" data-slot="section-action" className="space-y-3">
+        <section aria-label="CẦN XỬ LÝ" data-slot="section-action" className="space-y-3 rounded-2xl bg-primary/[0.03] border border-primary/10 px-4 py-4">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold tracking-widest text-muted-foreground/60 uppercase select-none">Cần xử lý</span>
-            <div className="flex-1 h-px bg-border/40" />
+            <span className="text-xs font-semibold tracking-widest uppercase select-none inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{background: "oklch(0.42 0.18 250)", color: "white", letterSpacing: "0.1em"}}>Cần xử lý</span>
+            <div className="flex-1 h-px" style={{background: "linear-gradient(to right, oklch(0.42 0.18 250 / 0.3), transparent)"}} />
           </div>
           {(isExecutive && executiveStats) ? (
             <ExecutiveActionCenter
@@ -151,7 +161,7 @@ function DashboardZoneComponent() {
         </section>
 
         {/* SECTION 2 — CHI TIẾT VẬN HÀNH */}
-        <section aria-label="CHI TIẾT VẬN HÀNH" data-slot="section-details" className="space-y-3">
+        <section aria-label="CHI TIẾT VẬN HÀNH" data-slot="section-details" className="space-y-3 pt-1">
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold tracking-widest text-muted-foreground/60 uppercase select-none">Ngữ cảnh vận hành</span>
             <div className="flex-1 h-px bg-border/40" />

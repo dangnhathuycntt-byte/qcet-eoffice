@@ -190,7 +190,7 @@ export function ExecutiveActionCenter({
 
       <section
         aria-labelledby="executive-action-queue-title"
-        className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-card"
+        className="rounded-2xl p-4 sm:p-5" style={{background: "white", border: "1px solid oklch(0.42 0.18 250 / 0.15)", boxShadow: "0 2px 8px 0 rgba(0,0,0,0.06), 0 8px 24px -4px rgba(37,99,235,0.08)"}}
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
@@ -283,9 +283,11 @@ export function ExecutiveActionCenter({
               {previewItems.map((item) => (
                 <li
                   key={item.id}
-                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 rounded-xl px-2 -mx-2 transition-colors hover:bg-muted/30"
+                  className="group/item flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 rounded-xl px-3 -mx-2 transition-colors hover:bg-muted/30 border-l-2 border-transparent data-[has-review=true]:border-amber-400 data-[has-overdue=true]:border-rose-500"
                   data-slot="action-item-row"
                   data-task-id={item.taskId}
+                  data-has-review={item.reasons.includes("REVIEW") ? "true" : undefined}
+                  data-has-overdue={item.reasons.includes("OVERDUE") || item.reasons.includes("BLOCKED") ? "true" : undefined}
                 >
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -295,8 +297,8 @@ export function ExecutiveActionCenter({
                           className={cn(
                             "rounded px-1.5 py-0.5 text-xs font-semibold",
                             reason === "REVIEW"
-                              ? "bg-amber-500/10 text-amber-800"
-                              : "bg-rose-500/10 text-rose-800"
+                              ? "bg-amber-500/15 text-amber-800 border border-amber-400/30"
+                              : "bg-rose-500/15 text-rose-800 border border-rose-400/30"
                           )}
                           data-reason={reason}
                         >
