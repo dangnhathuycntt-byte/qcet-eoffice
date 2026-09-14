@@ -9,7 +9,7 @@
  * Timezone: Indochina Time (`Asia/Ho_Chi_Minh`, UTC+7) is the sole timezone for all
  * outputs. Calendar parts derived from a `Date` are always resolved through
  * `Intl.DateTimeFormat` in ICT — a UTC ISO string is never sliced to derive an ICT day
- * (QCET rule 22-calendar #3).
+ * (QCET rule ui.md #24).
  */
 
 import { parseDateParts } from "@/lib/academic-calendar";

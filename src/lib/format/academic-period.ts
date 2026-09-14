@@ -4,7 +4,7 @@
  * Authority: docs/ux/QCET_UI_VOCABULARY.md §G.3 (FROZEN v1).
  *
  * This module is a thin presentation layer over the single canonical academic-period
- * engine in `src/lib/academic-calendar.ts` (QCET rule 40-data-integrity #4 / 22-calendar
+ * engine in `src/lib/academic-calendar.ts` (QCET rule backend-security #15 / ui.md #23
  * #1). Period math is never duplicated here — only its labels are emitted, so there is
  * exactly one implementation of the operational-month cycle.
  */

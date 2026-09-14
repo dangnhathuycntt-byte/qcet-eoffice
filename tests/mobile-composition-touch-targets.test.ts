@@ -74,18 +74,18 @@ describe("Task 8: Mobile-First Composition, Task Cards & 44px Touch Targets", ()
 
       for (const px of drawer.match(/min-[hw]-\[(\d+)px\]/g) || []) {
         const size = parseInt(px.match(/\[(\d+)px\]/)![1], 10);
-        assert.ok(size >= 44, `Drawer touch target ${px} must be >= 44px (rule 11-mobile #3)`);
+        assert.ok(size >= 44, `Drawer touch target ${px} must be >= 44px (rule ui.md #10)`);
       }
     });
 
     it("ensures bottom nav respects typography floor (>= 12px, zero text-[11px])", () => {
       const content = fs.readFileSync(bottomNavPath, "utf8");
       const smallText = content.match(/text-\[1[01]px\]/g);
-      assert.strictEqual(smallText, null, "Must not contain text smaller than 12px (rule 10-ui.md invariant 6)");
+      assert.strictEqual(smallText, null, "Must not contain text smaller than 12px (rule ui.md #4)");
     });
 
     it("ensures secondary destinations are provided by the canonical drawer, not a second sheet", () => {
-      // Single Control Point (10-ui #5): the nav must not own a second route
+      // Single Control Point (ui.md #7): the nav must not own a second route
       // table or its own More sheet — those live in the canonical drawer.
       const content = fs.readFileSync(bottomNavPath, "utf8");
       for (const forbidden of ["isDrawerOpen", "isMoreOpen", "moreOpen", "showMore"]) {

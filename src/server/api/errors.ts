@@ -2,7 +2,7 @@ import { ZodError } from 'zod';
 
 export interface ApiErrorResponse {
   success: false;
-  error: string; // for backward compatibility with .claude/rules/30-api.md
+  error: string; // for backward compatibility with .claude/rules/backend-security.md
   code: string; // AUTH_REQUIRED | FORBIDDEN | VALIDATION_ERROR | NOT_FOUND | CONFLICT | PRECONDITION_FAILED | INVALID_TRANSITION | RATE_LIMITED | INTERNAL_ERROR
   message: string;
   fieldErrors?: Record<string, string[]>;

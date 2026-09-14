@@ -208,7 +208,7 @@ describe('Central API Request Context & Auth Extraction', () => {
       assert.strictEqual(ctx.user, null);
     });
 
-    it('enforces 31-auth-security: ignores spoofed client user headers', async () => {
+    it('enforces backend-security: ignores spoofed client user headers', async () => {
       // Attacker tries to send identity headers without a valid cryptographically signed session
       const req = new Request('http://localhost:3000/api/tasks', {
         headers: {

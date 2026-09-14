@@ -3,7 +3,7 @@
  *
  * FROZEN CONTRACT — single-writer (shard-contracts-freeze owns src/contracts/**).
  * Authority: Master Plan §5 (C1–C16) + §38–§41 (C17–C20); see
- * .claude/rules/05-domain-freeze.md. Consumers must not rename or widen
+ * .claude/rules/core.md. Consumers must not rename or widen
  * these interfaces without domain proof and an explicit contract revision.
  *
  * Defines the 8 universal semantic dimensions:

@@ -200,7 +200,7 @@ export interface SessionResolutionResult {
 }
 
 /**
- * Pure session state resolver enforcing Server Session Truth (31-auth-security.md):
+ * Pure session state resolver enforcing Server Session Truth (backend-security.md):
  * - Server session is the sole authority for active authentication.
  * - If server session is valid (200 with authenticated: true):
  *     state: { status: 'authenticated', user }, canMutate: true, isAuthenticated: true, isOfflineReadOnly: false
@@ -256,7 +256,7 @@ export function resolveSessionState(
 }
 
 /**
- * Guard assertion enforcing Server Session Truth (31-auth-security.md):
+ * Guard assertion enforcing Server Session Truth (backend-security.md):
  * Mutations are only permitted when the session is authenticated by the server
  * and canMutate is true. Offline-cached or anonymous sessions cannot mutate data.
  */

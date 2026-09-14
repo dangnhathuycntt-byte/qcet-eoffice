@@ -155,7 +155,7 @@ export type TaskQuery = TaskQueryParams;
  * Canonical CreateTaskInputSchema (C1 — Create Command).
  *
  * FROZEN CONTRACT — single-writer (shard-contracts-freeze owns src/contracts/**).
- * Authority: Master Plan §5 C1 + P0-01; see .claude/rules/05-domain-freeze.md.
+ * Authority: Master Plan §5 C1 + P0-01; see .claude/rules/core.md.
  *
  * Strictly prevents mass-assignment injection of privileged system fields (e.g. id, status, createdById, approvedAt).
  * The `.strict()` boundary is load-bearing and must not be relaxed or widened

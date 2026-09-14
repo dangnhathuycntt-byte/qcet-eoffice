@@ -1116,7 +1116,7 @@ describe("Workspace Query: Parsing, Serialization, Legacy Migrations & Deep Link
     });
 
     test("Role is Not Scope invariant: TaskScope visual filter selection never alters or elevates user authority", () => {
-      // Upholding 05-domain-freeze.md & 00-core.md:
+      // Upholding core.md:
       // Scope selection by an authenticated user does NOT alter, widen, or narrow their statutory operational authorization.
       const lecturerUser = {
         id: "lecturer-uuid-001",

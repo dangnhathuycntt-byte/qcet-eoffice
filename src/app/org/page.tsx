@@ -29,7 +29,7 @@ import {
  * Removed by this migration:
  * - the hard-coded digital-identity coverage claim (T61 — unproven static metric);
  * - the presentation-only refresh control that pretended a server reload (T60/P1-07);
- * - the page-level duplicate print/export actions (single control point, rule 10-ui §5).
+ * - the page-level duplicate print/export actions (single control point, rule ui.md #7).
  */
 export default function OrgPage() {
   const totals = React.useMemo(

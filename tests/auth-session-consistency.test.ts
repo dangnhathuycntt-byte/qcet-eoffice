@@ -237,7 +237,7 @@ describe("Task 6: Session Consistency & Auth State Guard (P0-8)", () => {
     });
   });
 
-  describe("4. Static architecture & rule invariants (.claude/rules/31-auth-security.md)", () => {
+  describe("4. Static architecture & rule invariants (.claude/rules/backend-security.md)", () => {
     const authContextPath = path.resolve(__dirname, "../src/lib/auth-context.tsx");
     const source = fs.readFileSync(authContextPath, "utf-8");
 

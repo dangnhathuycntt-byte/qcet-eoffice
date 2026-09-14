@@ -7,7 +7,7 @@
  *
  * Requirement now covered: selecting a scope changes WHICH tasks are visible, and a
  * role label does not grant a wider dataset on its own. TaskScope stays a display/
- * aggregation filter, never a permission (05-domain-freeze §3).
+ * aggregation filter, never a permission (core.md #2).
  */
 
 import { describe, test } from "node:test";

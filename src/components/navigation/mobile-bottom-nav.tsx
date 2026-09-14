@@ -54,7 +54,7 @@ export function MobileBottomNav({ className }: MobileBottomNavProps) {
 
   const bottomItems = getMobileBottomBarItems();
 
-  // Hide the bar while the virtual keyboard is open (WCAG 2.4.11 & rule 11-mobile).
+  // Hide the bar while the virtual keyboard is open (WCAG 2.4.11 & rule ui.md #12).
   if (isKeyboardOpen) {
     return null;
   }
