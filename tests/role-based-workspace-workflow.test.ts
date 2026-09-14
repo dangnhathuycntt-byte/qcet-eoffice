@@ -231,7 +231,6 @@ describe("Deliverable Submission Validation", () => {
   test("Zero-Emoji Strict Anti-Slop Audit on submit-deliverable-modal", () => {
     const modalFiles = [
       "src/components/portal/submit-deliverable-modal.tsx",
-      "src/components/workspace/submit-deliverable-modal.tsx",
     ];
 
     modalFiles.forEach((relPath) => {
@@ -434,7 +433,6 @@ describe("Review Action Rules", () => {
   test("Zero-Emoji Strict Anti-Slop Audit on review-action-dialog", () => {
     const dialogFiles = [
       "src/components/portal/review-action-dialog.tsx",
-      "src/components/workspace/review-action-dialog.tsx",
     ];
 
     dialogFiles.forEach((relPath) => {
@@ -930,8 +928,6 @@ describe("LecturerFocusWorkspace Component Static Rendering", () => {
 describe("Zero-Emoji Strict Anti-Slop Audit on lecturer-focus-workspace", () => {
   const workspaceFiles = [
     "src/components/portal/lecturer-focus-workspace.tsx",
-    "src/components/workspace/lecturer-focus-workspace.tsx",
-    "src/components/workspace/staff-workspace.tsx",
     "src/components/portal/staff-workspace.tsx",
   ];
 
@@ -1405,9 +1401,7 @@ describe("DepartmentManagerWorkspace Component Static Rendering", () => {
 describe("Zero-Emoji Strict Anti-Slop Audit on department-manager-workspace", () => {
   const managerWorkspaceFiles = [
     "src/components/portal/department-manager-workspace.tsx",
-    "src/components/workspace/department-manager-workspace.tsx",
     "src/components/portal/manager-workspace.tsx",
-    "src/components/workspace/manager-workspace.tsx",
   ];
 
   managerWorkspaceFiles.forEach((relPath) => {
@@ -1971,9 +1965,7 @@ describe("ExecutiveCockpitWorkspace Component Static Rendering", () => {
 describe("Zero-Emoji Strict Anti-Slop Audit on executive-cockpit-workspace", () => {
   const executiveFiles = [
     "src/components/portal/executive-cockpit-workspace.tsx",
-    "src/components/workspace/executive-cockpit-workspace.tsx",
     "src/components/portal/executive-workspace.tsx",
-    "src/components/workspace/executive-workspace.tsx",
   ];
 
   executiveFiles.forEach((relPath) => {

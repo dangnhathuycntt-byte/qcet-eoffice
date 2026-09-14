@@ -22,7 +22,7 @@ import {
   parseApiError,
   type ApiErrorResponse,
 } from "../src/server/api/errors";
-import { parseApiError as clientParseApiError } from "../src/lib/api-client";
+// api-client shim removed; parseApiError is imported directly from src/server/api/errors above
 import { apiError } from "../src/server/api/response";
 
 // Import all route loading and error components
@@ -191,10 +191,6 @@ describe("Phase 20: Canonical Error Contract", () => {
   });
 
   describe("parseApiError parsing helper", () => {
-    it("is identically exported from @/lib/api-client and @/server/api/errors", () => {
-      assert.strictEqual(parseApiError, clientParseApiError);
-    });
-
     it("parses canonical flat API error response", () => {
       const payload = {
         error: "Truy cập bị từ chối",

@@ -68,3 +68,4 @@ benchmarks/e2e/results/**/probe-transcript.jsonl
 benchmarks/e2e/results/
 qcet-executor-runs/
 .gstack/
+test-results.log

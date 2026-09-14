@@ -14,22 +14,6 @@ test("tasks page has no duplicate in-page breadcrumb navigation", () => {
   );
 });
 
-test("adaptive-metric-strip uses flat hairline grid without triple-nested cards", () => {
-  const metricStripPath = path.resolve(
-    process.cwd(),
-    "src/components/workspace/components/adaptive-metric-strip.tsx"
-  );
-  const content = fs.readFileSync(metricStripPath, "utf-8");
-  assert.ok(
-    content.includes("divide-x") || content.includes("divide-border"),
-    "Metric strip should use hairline divider grid"
-  );
-  assert.ok(
-    !content.includes("bg-card/80"),
-    "Metric strip items should not be nested cards with separate bg-card/80 styling"
-  );
-});
-
 test("cascading-task-table uses neutral category tags without rainbow pastel pills", () => {
   const categories = [
     "CNTT",

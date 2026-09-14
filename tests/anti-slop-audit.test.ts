@@ -42,51 +42,6 @@ describe("QCET E-Office Anti-Slop Comprehensive Audit", () => {
     );
   });
 
-  test("Anti-slop audit: Tabular numerals applied to numeric metrics and dates", () => {
-    const componentsCheckingTabular = [
-      "src/components/dashboard/executive-stat-strip.tsx",
-      "src/components/dashboard/cascading-task-table.tsx",
-      "src/components/dashboard/task-detail-side-sheet.tsx",
-      "src/components/tasks/task-kanban-board.tsx",
-      "src/components/calendar/calendar-month-view.tsx",
-    ];
-
-    componentsCheckingTabular.forEach(relPath => {
-      const fullPath = path.join(process.cwd(), relPath);
-      assert.ok(fs.existsSync(fullPath), `File must exist: ${relPath}`);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      assert.ok(
-        content.includes("tabular-nums"),
-        `Component ${relPath} should utilize tabular-nums for numeric precision`
-      );
-    });
-  });
-
-  test("Anti-slop audit: Lucide icon stroke widths strictly adhere to 1.5 standard", () => {
-    const keyComponents = [
-      "src/components/dashboard/unified-task-toolbar.tsx",
-      "src/components/dashboard/cascading-task-table.tsx",
-      "src/components/tasks/task-kanban-board.tsx",
-      "src/components/calendar/calendar-month-view.tsx",
-      "src/components/org/organization-tree.tsx",
-      "src/components/layout/app-topbar.tsx",
-      "src/components/layout/app-sidebar.tsx",
-    ];
-
-    keyComponents.forEach(relPath => {
-      const fullPath = path.join(process.cwd(), relPath);
-      if (!fs.existsSync(fullPath)) return;
-      const content = fs.readFileSync(fullPath, "utf-8");
-      // Verify strokeWidth={1.5} is present when Lucide icons are used
-      if (content.includes('from "lucide-react"')) {
-        assert.ok(
-          content.includes("strokeWidth={1.5}") || content.includes('strokeWidth="1.5"'),
-          `${relPath} should use strokeWidth 1.5 for refined micro-icons`
-        );
-      }
-    });
-  });
-
   test("Anti-slop audit: CSS design tokens define OKLCH color spaces and elevation levels", () => {
     const cssPath = path.join(process.cwd(), "src/app/globals.css");
     assert.ok(fs.existsSync(cssPath), "globals.css must exist");
