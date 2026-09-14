@@ -158,7 +158,7 @@ export function ExecutiveActionCenter({
                 onClick={() => onFilterChange(isActive ? "ALL" : card.filterKey)}
                 className={cn(
                   "group relative flex flex-col justify-between gap-3 rounded-xl border bg-card p-3.5 sm:p-4 text-left transition-all duration-200 cursor-pointer select-none overflow-hidden w-full",
-                  "hover:-translate-y-0.5 hover:shadow-xs",
+                  "hover:-translate-y-0.5 hover:shadow-xs active:scale-[0.98] active:translate-y-0",
                   isActive
                     ? cn("shadow-xs z-10", card.activeAccent, card.activeBg)
                     : cn("border-border/60 hover:bg-muted/15", card.hoverBorder),
@@ -204,7 +204,7 @@ export function ExecutiveActionCenter({
             {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
           </div>
           {filteredTotal > 0 && (
-            <span className="font-mono tabular-nums text-xs text-muted-foreground">
+            <span className="inline-flex items-center rounded-full bg-muted/70 px-2 py-0.5 font-mono tabular-nums text-xs font-medium text-muted-foreground">
               {filteredTotal} nhiệm vụ
             </span>
           )}
@@ -226,8 +226,9 @@ export function ExecutiveActionCenter({
                   aria-pressed={isActive}
                   onClick={() => onFilterChange(lens.filter)}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-lg border px-2.5 min-h-[44px] sm:min-h-[36px] text-xs font-medium transition-colors",
+                    "inline-flex items-center gap-1.5 rounded-lg border px-2.5 min-h-[44px] sm:min-h-[36px] text-xs font-medium transition-all",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    "active:scale-[0.97] active:translate-y-px",
                     isActive
                       ? "border-primary/40 bg-primary/10 text-primary"
                       : "border-border/60 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
@@ -334,7 +335,7 @@ export function ExecutiveActionCenter({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="min-h-[44px] sm:min-h-[36px] h-9 shrink-0 gap-1.5 rounded-lg px-3 text-xs font-semibold"
+                    className="min-h-[44px] sm:min-h-[36px] h-9 shrink-0 gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all active:scale-[0.97]"
                     aria-label={`${item.actionLabel || "Xem chi tiết"}: ${item.title}`}
                     onClick={() => onAction?.(item.actionType || item.filterType, item)}
                   >

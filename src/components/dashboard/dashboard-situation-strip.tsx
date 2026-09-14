@@ -89,35 +89,35 @@ export function DashboardSituationStrip({
       data-slot="dashboard-situation-strip"
       data-situation-state={situationState}
       className={cn(
-        "px-1 py-2 text-xs text-foreground/80 flex flex-wrap items-center",
+        "px-1 py-1.5 text-xs text-foreground/80 flex flex-wrap items-center gap-y-0.5",
         className
       )}
       aria-label={`Tình hình: ${ariaLabel}`}
     >
       <span className="font-mono tabular-nums font-semibold text-foreground">{progressPercent}% tiến độ</span>
-      <span className="mx-1.5 text-border" aria-hidden="true">·</span>
+      <span className="mx-2 text-border/80 select-none" aria-hidden="true">·</span>
       <span className="font-mono tabular-nums">
         {totalTasks.toLocaleString("vi-VN")} nhiệm vụ
       </span>
       {overdueCount > 0 && (
         <>
-          <span className="mx-1.5 text-border" aria-hidden="true">·</span>
-          <span className="font-mono tabular-nums text-rose-700 font-medium">
+          <span className="mx-2 text-border/80 select-none" aria-hidden="true">·</span>
+          <span className="font-mono tabular-nums text-rose-700 font-semibold">
             {overdueCount} quá hạn
           </span>
         </>
       )}
       {blockedCount > 0 && (
         <>
-          <span className="mx-1.5 text-border" aria-hidden="true">·</span>
-          <span className="font-mono tabular-nums text-rose-700 font-medium">
+          <span className="mx-2 text-border/80 select-none" aria-hidden="true">·</span>
+          <span className="font-mono tabular-nums text-rose-700 font-semibold">
             {blockedCount} vướng mắc
           </span>
         </>
       )}
       {unitsNeedingAttention != null && unitsNeedingAttention > 0 && (
         <>
-          <span className="mx-1.5 text-border" aria-hidden="true">·</span>
+          <span className="mx-2 text-border/80 select-none" aria-hidden="true">·</span>
           <span className="font-mono tabular-nums text-amber-700 font-medium">
             {unitsNeedingAttention} đơn vị cần chú ý
           </span>

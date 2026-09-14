@@ -96,7 +96,7 @@ export function DepartmentAttentionPreview({
                       {dept.departmentName}
                     </span>
                   </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                     {overdue > 0 && (
                       <span className="font-mono tabular-nums text-rose-700 font-medium">
                         {overdue} quá hạn
@@ -108,9 +108,21 @@ export function DepartmentAttentionPreview({
                       </span>
                     )}
                     <span className="font-mono tabular-nums">
-                      Hoàn thành {completed}/{total}
+                      {completed}/{total} hoàn thành
                     </span>
                   </div>
+                  {/* Progress micro-bar */}
+                  {total > 0 && (
+                    <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted/60">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          overdue > 0 || blocked > 0 ? "bg-rose-500/70" : "bg-emerald-500/70"
+                        )}
+                        style={{ width: `${Math.round((completed / total) * 100)}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
                 <Link
                   href={getDepartmentTasksUrl(deptId)}

@@ -164,8 +164,11 @@ export function ActivityFeedWidget({
       {/* Activity Timeline List */}
       <div className="flex flex-col divide-y divide-border/50 pt-1">
         {displayedActivities.length === 0 ? (
-          <div className="py-8 text-center text-xs text-muted-foreground">
-            Chưa có hoạt động mới nào được ghi nhận
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
+              <Activity className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
+            </div>
+            <p className="text-xs text-muted-foreground">Chưa có hoạt động mới nào được ghi nhận</p>
           </div>
         ) : (
           displayedActivities.map((item) => {

@@ -739,16 +739,16 @@ export function PersonalWorkbench({
                     <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                       <span className="truncate">Chủ trì: {item.assigneeName}</span>
                       <div className="flex items-center gap-2 shrink-0">
-                        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
                             className={cn(
-                              "h-full rounded-full transition-all",
+                              "h-full rounded-full transition-all duration-300",
                               item.isOverdue ? "bg-rose-500" : "bg-primary"
                             )}
                             style={{ width: `${Math.min(100, item.progressPercent)}%` }}
                           />
                         </div>
-                        <span className="font-mono tabular-nums">{item.progressPercent}%</span>
+                        <span className="font-mono tabular-nums text-foreground/70">{item.progressPercent}%</span>
                       </div>
                     </div>
                   </div>
@@ -760,7 +760,7 @@ export function PersonalWorkbench({
             <div className="pt-2 border-t border-border/40 text-center sm:text-right">
               <Link
                 href={viewAllTasksUrl}
-                className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-[32px] items-center"
+                className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-[32px] transition-colors"
               >
                 <span>Mở bảng nhiệm vụ đầy đủ ({baseTasks.length} nhiệm vụ)</span>
                 <ArrowRight size={13} strokeWidth={1.5} />
