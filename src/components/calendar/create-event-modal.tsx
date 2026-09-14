@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 export interface CreateEventFormData {
   title: string;
@@ -55,7 +56,7 @@ export function CreateEventModal({
   const [error, setError] = React.useState<string | null>(null);
 
   const titleInputRef = React.useRef<HTMLInputElement>(null);
-  const dialogRef = React.useRef<HTMLDivElement>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
 
   React.useEffect(() => {
     if (isOpen) {
@@ -184,11 +185,12 @@ export function CreateEventModal({
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1.5">
+            <label htmlFor="calendar-event-title" className="block text-xs font-semibold text-foreground mb-1.5">
               Tên sự kiện / Cuộc họp <span className="text-rose-600">*</span>
             </label>
             <input
               ref={titleInputRef}
+              id="calendar-event-title"
               type="text"
               required
               value={title}
@@ -200,10 +202,11 @@ export function CreateEventModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
+              <label htmlFor="calendar-event-date" className="block text-xs font-semibold text-foreground mb-1.5">
                 Ngày <span className="text-rose-600">*</span>
               </label>
               <input
+                id="calendar-event-date"
                 type="date"
                 required
                 value={startDate}
@@ -212,11 +215,12 @@ export function CreateEventModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
+              <label htmlFor="calendar-event-start-time" className="block text-xs font-semibold text-foreground mb-1.5">
                 Bắt đầu
               </label>
               <div className="relative">
                 <input
+                  id="calendar-event-start-time"
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
@@ -226,11 +230,12 @@ export function CreateEventModal({
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
+              <label htmlFor="calendar-event-end-time" className="block text-xs font-semibold text-foreground mb-1.5">
                 Kết thúc
               </label>
               <div className="relative">
                 <input
+                  id="calendar-event-end-time"
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
@@ -243,11 +248,12 @@ export function CreateEventModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
+              <label htmlFor="calendar-event-location" className="block text-xs font-semibold text-foreground mb-1.5">
                 Địa điểm / Phòng họp
               </label>
               <div className="relative">
                 <input
+                  id="calendar-event-location"
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
@@ -259,10 +265,11 @@ export function CreateEventModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
+              <label htmlFor="calendar-event-type" className="block text-xs font-semibold text-foreground mb-1.5">
                 Cấp quản lý
               </label>
               <select
+                id="calendar-event-type"
                 value={scope}
                 onChange={(e) => setScope(e.target.value as "SCHOOL" | "UNIT")}
                 className="w-full min-h-[44px] sm:min-h-9 h-9 rounded-xl border border-border/80 bg-background px-3 text-xs text-foreground focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/20"
@@ -275,11 +282,12 @@ export function CreateEventModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
+              <label htmlFor="calendar-event-host" className="block text-xs font-semibold text-foreground mb-1.5">
                 Chủ trì cuộc họp
               </label>
               <div className="relative">
                 <input
+                  id="calendar-event-host"
                   type="text"
                   value={host}
                   onChange={(e) => setHost(e.target.value)}
@@ -291,11 +299,12 @@ export function CreateEventModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">
+              <label htmlFor="calendar-event-department" className="block text-xs font-semibold text-foreground mb-1.5">
                 Thành phần tham dự
               </label>
               <div className="relative">
                 <input
+                  id="calendar-event-department"
                   type="text"
                   value={participants}
                   onChange={(e) => setParticipants(e.target.value)}
@@ -308,10 +317,11 @@ export function CreateEventModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1.5">
+            <label htmlFor="calendar-event-description" className="block text-xs font-semibold text-foreground mb-1.5">
               Nội dung chuẩn bị / Ghi chú
             </label>
             <textarea
+              id="calendar-event-description"
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}

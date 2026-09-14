@@ -109,8 +109,8 @@ export function getActionCardData(stats: ExecutiveActionStats) {
 /** Workbench queue lenses. Each is a predicate over the SAME item set. */
 const QUEUE_LENSES: { filter: ExecutiveFilter; label: string }[] = [
   { filter: "ALL", label: "Tất cả" },
-  { filter: "PENDING_APPROVAL", label: "Chờ xem xét" },
-  { filter: "BLOCKED_OVERDUE", label: "Vướng mắc" },
+  { filter: "PENDING_APPROVAL", label: "Chờ duyệt" },
+  { filter: "BLOCKED_OVERDUE", label: "Vướng mắc & Quá hạn" },
 ];
 
 /** Drill-down target that each parser really consumes (plan T08.1). */
@@ -275,7 +275,7 @@ export function ExecutiveActionCenter({
                 Không có nhiệm vụ cần xử lý
               </h4>
               <p className="text-xs text-muted-foreground">
-                Không có hồ sơ chờ xem xét, việc quá hạn hoặc vướng mắc trong phạm vi hiện tại.
+                Không có hồ sơ chờ duyệt, việc quá hạn hoặc vướng mắc trong phạm vi hiện tại.
               </p>
             </div>
           </div>
@@ -303,10 +303,10 @@ export function ExecutiveActionCenter({
                           data-reason={reason}
                         >
                           {reason === "REVIEW"
-                            ? "Chờ xem xét"
+                            ? "Chờ duyệt"
                             : reason === "BLOCKED"
                               ? "Vướng mắc"
-                              : "Trễ hạn"}
+                              : "Quá hạn"}
                         </span>
                       ))}
                     </div>

@@ -145,19 +145,115 @@ self.addEventListener('fetch', (event) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ngoại tuyến - QCET E-Office</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #fbfbfb; color: #1e293b; padding: 20px; box-sizing: border-box; text-align: center; }
-    .card { background: white; border-radius: 12px; padding: 32px 24px; max-width: 420px; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
-    h1 { font-size: 1.25rem; margin: 0 0 12px; color: #0f172a; }
-    p { font-size: 0.925rem; color: #64748b; line-height: 1.5; margin: 0 0 24px; }
-    button { background: #1e3a8a; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.925rem; font-weight: 500; cursor: pointer; }
-    button:hover { background: #1e40af; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #f8fafc;
+      color: #1e293b;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 36px 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+      border: 1px solid #e2e8f0;
+    }
+    .icon-wrap {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: #eff6ff;
+      color: #0e53b4;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0 0 10px;
+      color: #0f172a;
+    }
+    p {
+      font-size: 0.925rem;
+      color: #64748b;
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 24px;
+      background: #0e53b4;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.925rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.1s ease;
+    }
+    button:hover {
+      background: #0b4394;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #090d16;
+        color: #f1f5f9;
+      }
+      .card {
+        background: #111827;
+        border-color: #1f2937;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      }
+      .icon-wrap {
+        background: rgba(14, 83, 180, 0.2);
+        color: #60a5fa;
+      }
+      h1 {
+        color: #f8fafc;
+      }
+      p {
+        color: #94a3b8;
+      }
+      button {
+        background: #0e53b4;
+      }
+      button:hover {
+        background: #0b4394;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="card">
+    <div class="icon-wrap">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="2" y1="2" x2="22" y2="22"></line>
+        <path d="M8.5 16.5a5 5 0 0 1 7 0"></path>
+        <path d="M4.93 10.93a10 10 0 0 1 12.02-.57"></path>
+        <path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
+    </div>
     <h1>Hệ thống đang ngoại tuyến</h1>
-    <p>Hiện không có kết nối mạng. Vui lòng kiểm tra lại đường truyền của bạn.</p>
-    <button onclick="window.location.reload()">Thử lại</button>
+    <p>Hiện không có kết nối Internet. Vui lòng kiểm tra lại đường truyền mạng hoặc thử kết nối lại.</p>
+    <button type="button" onclick="window.location.reload()">Thử tải lại</button>
   </div>
 </body>
 </html>`,

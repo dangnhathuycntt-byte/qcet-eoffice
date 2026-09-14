@@ -1276,6 +1276,15 @@ interface OrganizationTreeProps {
   persistContext?: boolean;
 }
 
+export function getStaffInitials(name?: string): string {
+  if (!name || !name.trim()) return "CB";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  const first = parts[0].charAt(0);
+  const last = parts[parts.length - 1].charAt(0);
+  return (first + last).toUpperCase();
+}
+
 export function OrganizationTree({
   initialDepartmentCode,
   onSelectStaff,
@@ -1607,8 +1616,8 @@ export function OrganizationTree({
                             : dept.category === "PHONG_CHUC_NANG"
                             ? "bg-indigo-500/10 text-indigo-600"
                             : dept.category === "KHOA_CHUYEN_MON"
-                            ? "bg-emerald-500/10 text-emerald-600"
-                            : "bg-amber-500/10 text-amber-600"
+                            ? "bg-emerald-500/10 text-emerald-700"
+                            : "bg-amber-500/10 text-amber-700"
                         )}
                       >
                         <Icon className="size-4.5" strokeWidth={1.5} />
@@ -1993,11 +2002,17 @@ export function OrganizationTree({
                     >
                       <div className="flex items-start gap-3">
                         <div className="relative shrink-0">
-                          <img
-                            src={staff.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80"}
-                            alt={staff.name}
-                            className="size-11 rounded-xl object-cover border border-border shadow-2xs"
-                          />
+                          {staff.avatar ? (
+                            <img
+                              src={staff.avatar}
+                              alt={staff.name}
+                              className="size-11 rounded-xl object-cover border border-border shadow-2xs"
+                            />
+                          ) : (
+                            <div className="flex size-11 items-center justify-center rounded-xl border border-border bg-primary/10 text-primary font-bold text-sm shadow-2xs">
+                              {getStaffInitials(staff.name)}
+                            </div>
+                          )}
                           <span
                             className={cn(
                               "absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-card",
@@ -2104,11 +2119,17 @@ export function OrganizationTree({
                           >
                             <td className="py-2.5 px-3">
                               <div className="flex items-center gap-2.5">
-                                <img
-                                  src={staff.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80"}
-                                  alt={staff.name}
-                                  className="size-7 rounded-lg object-cover border border-border/70"
-                                />
+                                {staff.avatar ? (
+                                  <img
+                                    src={staff.avatar}
+                                    alt={staff.name}
+                                    className="size-7 rounded-lg object-cover border border-border/70 shrink-0"
+                                  />
+                                ) : (
+                                  <div className="flex size-7 items-center justify-center rounded-lg border border-border/70 bg-primary/10 text-primary font-semibold text-xs shrink-0">
+                                    {getStaffInitials(staff.name)}
+                                  </div>
+                                )}
                                 <span className="font-semibold text-foreground">
                                   {staff.titlePrefix ? `${staff.titlePrefix} ` : ""}
                                   {staff.name}
@@ -2139,8 +2160,8 @@ export function OrganizationTree({
                                 className={cn(
                                   "inline-flex items-center px-2 py-0.5 rounded-md text-2xs font-semibold",
                                   staff.status === "ACTIVE"
-                                    ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                                    : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                                    ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
+                                    : "bg-amber-500/10 text-amber-700 border border-amber-500/20"
                                 )}
                               >
                                 {staff.status === "ACTIVE" ? "Đang công tác" : "Nghỉ phép"}
@@ -2174,14 +2195,17 @@ export function OrganizationTree({
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3.5">
-                <img
-                  src={
-                    activeProfileStaff.avatar ||
-                    "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80"
-                  }
-                  alt={activeProfileStaff.name}
-                  className="size-14 rounded-2xl object-cover border border-border shadow-xs"
-                />
+                {activeProfileStaff.avatar ? (
+                  <img
+                    src={activeProfileStaff.avatar}
+                    alt={activeProfileStaff.name}
+                    className="size-14 rounded-2xl object-cover border border-border shadow-xs shrink-0"
+                  />
+                ) : (
+                  <div className="flex size-14 items-center justify-center rounded-2xl border border-border bg-primary/10 text-primary font-bold text-lg shadow-xs shrink-0">
+                    {getStaffInitials(activeProfileStaff.name)}
+                  </div>
+                )}
                 <div>
                   <h3 className="text-base font-bold text-foreground">
                     {activeProfileStaff.titlePrefix

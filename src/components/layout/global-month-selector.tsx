@@ -140,17 +140,14 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
     if (selectedMonth === "ALL") {
       return `Cả năm ${currentAcademicYear}`;
     }
-    if (activePeriod) {
-      return `Kỳ T${selectedMonth} · ${activePeriod.shortDateSpan.replace(" - ", "–")}`;
-    }
-    return `Kỳ T${selectedMonth}`;
-  }, [selectedMonth, activePeriod, currentAcademicYear]);
+    return `Tháng ${selectedMonth}/2026`;
+  }, [selectedMonth, currentAcademicYear]);
 
   const triggerMobileLabel = React.useMemo(() => {
     if (selectedMonth === "ALL") {
       return "Cả năm";
     }
-    return `Kỳ T${selectedMonth}`;
+    return `Tháng ${selectedMonth}`;
   }, [selectedMonth]);
 
   // Handle month selection

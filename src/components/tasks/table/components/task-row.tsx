@@ -252,7 +252,7 @@ export const TaskRow = React.memo(function TaskRow({
         rowHeightClass,
         isSelected && "bg-primary/[0.04]",
         isExpanded && "bg-muted/30",
-        isActive && "ring-1 ring-inset ring-indigo-500/40 bg-indigo-50/20",
+        isActive && "ring-1 ring-inset ring-primary/40 bg-primary/[0.04]",
         className
       )}
     >
@@ -537,7 +537,7 @@ export const TaskRow = React.memo(function TaskRow({
                         }}
                         className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-muted/60 cursor-pointer transition-colors text-left"
                       >
-                        <Check className="size-3.5 text-emerald-600" strokeWidth={1.5} />
+                        <Check className="size-3.5 text-emerald-700" strokeWidth={1.5} />
                         <span>
                           {task.status === "COMPLETED"
                             ? "Đổi thành Đang làm"
@@ -576,7 +576,7 @@ export const TaskRow = React.memo(function TaskRow({
                           }}
                           className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-muted/60 cursor-pointer transition-colors text-left"
                         >
-                          <Bell className="size-3.5 text-amber-600" strokeWidth={1.5} />
+                          <Bell className="size-3.5 text-amber-700" strokeWidth={1.5} />
                           <span>Đôn đốc tiến độ</span>
                         </button>
                       )}

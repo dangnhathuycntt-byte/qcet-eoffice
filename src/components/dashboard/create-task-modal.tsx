@@ -1183,11 +1183,11 @@ export function CreateTaskModal({
 
             {/* 1. Title Input (Clean, Borderless Focus Canvas) */}
             <div className="space-y-1">
-              <label htmlFor="task-title-input" className="sr-only">
+              <label htmlFor="create-task-title" className="sr-only">
                 {isStaff ? "Tên công việc hoặc kế hoạch cá nhân" : "Tiêu đề nhiệm vụ cần tạo hoặc giao"}
               </label>
               <input
-                id="task-title-input"
+                id="create-task-title"
                 ref={titleInputRef}
                 type="text"
                 placeholder={isStaff ? "Tiêu đề công việc hoặc kế hoạch cá nhân..." : "Tiêu đề nhiệm vụ cần tạo / giao..."}
@@ -1212,11 +1212,11 @@ export function CreateTaskModal({
 
             {/* 2. Description Textarea */}
             <div>
-              <label htmlFor="task-description-input" className="sr-only">
+              <label htmlFor="create-task-description" className="sr-only">
                 Yêu cầu chi tiết hoặc mô tả nhiệm vụ
               </label>
               <textarea
-                id="task-description-input"
+                id="create-task-description"
                 rows={2}
                 placeholder="Yêu cầu chi tiết, kết quả mong đợi, hoặc ghi chú thực hiện (tùy chọn)..."
                 value={formData.description}
@@ -1344,7 +1344,7 @@ export function CreateTaskModal({
                             {searchedPersonnel.length > 0 ? (
                               searchedPersonnel.map((group, gIdx) => (
                                 <div key={`pop-grp-${group.code}-${gIdx}`} className="py-1">
-                                  <div className="px-2.5 py-1 text-xs font-bold text-muted-foreground sticky top-0 bg-card/95 backdrop-blur-xs">
+                                  <div className="px-2.5 py-1 text-xs font-bold text-muted-foreground sticky top-0 bg-card/95">
                                     {group.department}
                                   </div>
                                   <div className="space-y-0.5">
@@ -1500,7 +1500,7 @@ export function CreateTaskModal({
                 {/* Field: Hạn hoàn thành (Due Date + Presets) */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                    <label htmlFor="create-task-due-date" className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                       <Calendar className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                       <span>Hạn chót hoàn thành</span>
                       <span className="text-destructive">*</span>
@@ -1514,7 +1514,7 @@ export function CreateTaskModal({
 
                   <input
                     type="date"
-                    id="task-due-date-input"
+                    id="create-task-due-date"
                     value={formData.dueDate}
                     max={effectiveParentDueDate ? effectiveParentDueDate.split("T")[0] : undefined}
                     onChange={(e) => {

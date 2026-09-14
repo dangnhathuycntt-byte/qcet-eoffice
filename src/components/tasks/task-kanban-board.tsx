@@ -771,7 +771,7 @@ export function TaskKanbanBoard({
                 columnRefs.current[idx] = el;
               }}
               className={cn(
-                "w-[86vw] max-w-[340px] shrink-0 snap-center flex flex-col md:w-auto md:max-w-none rounded-2xl border border-border/60 bg-muted/20 backdrop-blur-xs p-3.5 transition-all",
+                "w-[86vw] max-w-[340px] shrink-0 snap-center flex flex-col md:w-auto md:max-w-none rounded-2xl border border-border/60 bg-muted/30 p-3.5 transition-all",
                 col.bgClass
               )}
             >

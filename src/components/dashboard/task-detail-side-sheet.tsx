@@ -2010,11 +2010,15 @@ export function TaskDetailSideSheet({
                             {sub.assigneeAvatar ? (
                               <img
                                 src={sub.assigneeAvatar}
-                                alt={sub.assigneeName || "Người phụ trách"}
+                                alt=""
+                                aria-hidden="true"
                                 className="size-4 rounded-full object-cover border border-border/60"
                               />
                             ) : (
-                              <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                              <div
+                                aria-hidden="true"
+                                className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs"
+                              >
                                 {sub.assigneeName ? sub.assigneeName.charAt(0).toUpperCase() : "?"}
                               </div>
                             )}

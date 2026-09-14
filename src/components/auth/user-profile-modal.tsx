@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { QCET_DEPARTMENT_GROUPS } from "@/lib/departments";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 export function UserProfileModal() {
   const { user, updateProfile, isProfileModalOpen, setIsProfileModalOpen } = useAuth();
@@ -27,10 +28,16 @@ export function UserProfileModal() {
   const [departmentCode, setDepartmentCode] = React.useState(user?.departmentCode || "QCET");
   const [title, setTitle] = React.useState(user?.title || "Viên chức");
   const [phone, setPhone] = React.useState(user?.phone || "");
+  const [bio, setBio] = React.useState("");
   const [savedSuccess, setSavedSuccess] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [mounted, setMounted] = React.useState(false);
+
+  const dialogRef = useFocusTrap<HTMLDivElement>({
+    isOpen: isProfileModalOpen,
+    onClose: () => setIsProfileModalOpen(false),
+  });
 
   React.useEffect(() => {
     setMounted(true);
@@ -103,7 +110,13 @@ export function UserProfileModal() {
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto my-auto thin-scrollbar">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="user-profile-dialog-title"
+        className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 overflow-y-auto my-auto thin-scrollbar"
+      >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-border/60 pb-4">
           <div className="flex items-center gap-3">
@@ -118,7 +131,7 @@ export function UserProfileModal() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-foreground">
+                <h3 id="user-profile-dialog-title" className="text-base font-bold text-foreground">
                   Hồ sơ Cán bộ & Viên chức
                 </h3>
                 {user.emailVerified && (
@@ -179,7 +192,7 @@ export function UserProfileModal() {
           {/* Họ và tên */}
           <div className="space-y-1.5">
             <label
-              htmlFor="profileName"
+              htmlFor="profile-display-name"
               className="block text-xs font-semibold text-foreground"
             >
               Họ và tên đầy đủ <span className="text-destructive">*</span>
@@ -189,7 +202,7 @@ export function UserProfileModal() {
                 <User className="size-4 text-muted-foreground" strokeWidth={1.5} />
               </div>
               <input
-                id="profileName"
+                id="profile-display-name"
                 type="text"
                 required
                 value={name}
@@ -268,7 +281,7 @@ export function UserProfileModal() {
 
             <div className="space-y-1.5">
               <label
-                htmlFor="profilePhone"
+                htmlFor="profile-phone"
                 className="block text-xs font-semibold text-foreground"
               >
                 Số điện thoại liên hệ
@@ -278,7 +291,7 @@ export function UserProfileModal() {
                   <Phone className="size-4 text-muted-foreground" strokeWidth={1.5} />
                 </div>
                 <input
-                  id="profilePhone"
+                  id="profile-phone"
                   type="tel"
                   inputMode="tel"
                   value={phone}
@@ -288,6 +301,24 @@ export function UserProfileModal() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Tiểu sử / Giới thiệu */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="profile-bio"
+              className="block text-xs font-semibold text-foreground"
+            >
+              Tiểu sử / Giới thiệu
+            </label>
+            <textarea
+              id="profile-bio"
+              rows={2}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Giới thiệu ngắn về chuyên môn, hướng nghiên cứu hoặc nhiệm vụ phụ trách..."
+              className="block w-full rounded-xl border border-border/80 bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors resize-none leading-relaxed"
+            />
           </div>
 
           {/* Quyền hạn điều hành hệ thống (Role) - CHỈ ĐỌC do Nhà trường quản lý */}

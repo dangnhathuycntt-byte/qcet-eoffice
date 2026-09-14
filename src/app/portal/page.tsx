@@ -166,7 +166,12 @@ export default function PortalPage() {
       </header>
 
       {/* Main Content: Hero + Bento Navigation Hub */}
-      <main id="main-content" className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-12 md:py-16 flex flex-col justify-center">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        role="main"
+        className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-12 md:py-16 flex flex-col justify-center outline-none focus:outline-hidden"
+      >
         {/* Centered Hero Section */}
         <div className="text-center max-w-2xl mx-auto mb-10 md:mb-14">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground font-heading">

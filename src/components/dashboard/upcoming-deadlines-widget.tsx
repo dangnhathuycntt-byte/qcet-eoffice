@@ -264,14 +264,18 @@ export function UpcomingDeadlinesWidget({
                     {item.assigneeAvatar ? (
                       <img
                         src={item.assigneeAvatar}
-                        alt={item.assigneeName}
+                        alt=""
+                        aria-hidden="true"
                         width={16}
                         height={16}
                         loading="lazy"
                         className="size-4 rounded-full object-cover shrink-0 ring-1 ring-border/50"
                       />
                     ) : (
-                      <div className="flex size-4 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-xs font-semibold text-secondary-foreground ring-1 ring-border/50">
+                      <div
+                        aria-hidden="true"
+                        className="flex size-4 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-xs font-semibold text-secondary-foreground ring-1 ring-border/50"
+                      >
                         {getInitials(item.assigneeName)}
                       </div>
                     )}

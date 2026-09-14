@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 // ============================================================================
 // 1. Constants & Validation Helpers
@@ -174,6 +175,7 @@ export function ReviewActionDialog({
   const [validationError, setValidationError] = React.useState<string | null>(null);
   const [localSubmitting, setLocalSubmitting] = React.useState(false);
   const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
+  const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
 
   // Derive task data from either explicit props or task object
   const effectiveTaskId = taskId || task?.id || "";
@@ -300,6 +302,7 @@ export function ReviewActionDialog({
 
   return createPortal(
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="review-dialog-title"
@@ -478,7 +481,7 @@ export function ReviewActionDialog({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label
-                htmlFor="review-comment-input"
+                htmlFor="review-approval-comment"
                 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5"
               >
                 <MessageSquare className="h-3.5 w-3.5" />
@@ -504,7 +507,7 @@ export function ReviewActionDialog({
             </div>
 
             <textarea
-              id="review-comment-input"
+              id="review-approval-comment"
               rows={4}
               value={comment}
               onChange={handleCommentChange}

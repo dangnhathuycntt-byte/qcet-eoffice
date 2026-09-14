@@ -322,16 +322,18 @@ export function SavedViewsSelector({
                           className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border"
                         >
                           <input
+                            id="saved-view-rename-input"
+                            aria-label="Tên góc nhìn"
                             type="text"
                             value={editingName}
                             onChange={(e) => setEditingName(e.target.value)}
-                            className="flex-1 min-h-[36px] px-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                            className="flex-1 min-h-[44px] sm:min-h-[36px] px-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                             autoFocus
                           />
                           <button
                             type="submit"
                             aria-label="Xác nhận đổi tên"
-                            className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                            className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
                           >
                             <Check className="size-3.5" />
                           </button>
@@ -339,7 +341,7 @@ export function SavedViewsSelector({
                             type="button"
                             onClick={handleCancelRename}
                             aria-label="Hủy đổi tên"
-                            className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                            className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] flex items-center justify-center rounded-lg bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
                           >
                             <X className="size-3.5" />
                           </button>
@@ -374,7 +376,7 @@ export function SavedViewsSelector({
                             type="button"
                             onClick={(e) => handleStartRename(view, e)}
                             aria-label={`Đổi tên góc nhìn ${view.name}`}
-                            className="min-h-[32px] min-w-[32px] p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center cursor-pointer opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center cursor-pointer opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <Pencil className="size-3" />
                           </button>
@@ -382,7 +384,7 @@ export function SavedViewsSelector({
                             type="button"
                             onClick={(e) => handleDelete(view.id, e)}
                             aria-label={`Xóa góc nhìn ${view.name}`}
-                            className="min-h-[32px] min-w-[32px] p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center cursor-pointer opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center cursor-pointer opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <Trash2 className="size-3" />
                           </button>
