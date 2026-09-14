@@ -70,22 +70,24 @@ function LoginSkeleton() {
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   const targetUrl = React.useMemo(() => {
     return sanitizeRedirectUrl(searchParams.get("redirect") || searchParams.get("callbackUrl"));
   }, [searchParams]);
 
-  // Auto-redirect once authenticated. router.refresh() flushes the Next.js RSC
-  // router cache so the target page sees the new session cookie immediately —
-  // without it, a stale unauthenticated render may linger and the server can
-  // redirect back to /login even though the cookie is already set.
+  // Auto-redirect once server-authenticated. Uses `isAuthenticated` (server
+  // session confirmed) rather than `user` (which can be a stale offline-cached
+  // identity after logout). router.refresh() flushes the Next.js RSC router
+  // cache so the target page sees the new session cookie immediately — without
+  // it, a stale unauthenticated render may linger and the server can redirect
+  // back to /login even though the cookie is already set.
   React.useEffect(() => {
-    if (!isLoading && user) {
+    if (!isLoading && isAuthenticated && user) {
       router.refresh();
       router.replace(targetUrl);
     }
-  }, [isLoading, user, router, targetUrl]);
+  }, [isLoading, isAuthenticated, user, router, targetUrl]);
 
   // OAuth Error handling from URL params
   const errorParam = searchParams.get("error");

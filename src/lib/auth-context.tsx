@@ -485,6 +485,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // Clear localStorage FIRST — before the API call whose `Clear-Site-Data`
+    // response header can flush the browser HTTP cache and, on some WebKit
+    // builds, interrupt pending JS execution in the current navigation context.
+    // If the removal ran after the fetch, a `Clear-Site-Data: "cache"` response
+    // could prevent `localStorage.removeItem` from ever executing, leaving a
+    // stale cached user that tricks `/login` into an auto-redirect loop.
+    setAuthState({ status: "anonymous" });
+    setUser(null);
+    setIsAuthenticated(false);
+    setIsOfflineReadOnly(false);
+    setCanMutate(false);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      } catch {
+        // ignore
+      }
+    }
+
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch (err) {
@@ -499,17 +518,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    setAuthState({ status: "anonymous" });
-    setUser(null);
-    setIsAuthenticated(false);
-    setIsOfflineReadOnly(false);
-    setCanMutate(false);
     if (typeof window !== "undefined") {
-      try {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-      } catch {
-        // ignore
-      }
       window.location.href = "/login";
     }
   }, [user?.id]);
