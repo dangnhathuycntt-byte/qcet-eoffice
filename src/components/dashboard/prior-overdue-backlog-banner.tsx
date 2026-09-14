@@ -112,13 +112,13 @@ export function PriorOverdueBacklogBanner({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs font-semibold text-amber-900 hover:text-amber-950 hover:bg-amber-100/60 gap-1.5 h-8 px-3 rounded-xl"
+            className="text-xs font-semibold text-amber-900 hover:text-amber-950 hover:bg-amber-100/60 active:bg-amber-200/60 gap-1.5 h-8 px-3 rounded-xl transition-colors"
             aria-expanded={isExpanded}
           >
             <span>{isExpanded ? "Ẩn danh sách" : "Xem danh sách"}</span>
@@ -129,11 +129,11 @@ export function PriorOverdueBacklogBanner({
             type="button"
             size="sm"
             onClick={handleViewAndResolve}
-            className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium gap-1.5 h-8 px-3 rounded-xl shadow-xs"
+            className="bg-amber-600 hover:bg-amber-700 active:bg-amber-800 active:scale-[0.97] text-white text-xs font-semibold gap-1.5 h-8 px-3 rounded-xl shadow-xs transition-all"
           >
-            <Clock className="size-3.5" />
-            <span>Xem và xử lý nhiệm vụ tồn đọng</span>
-            <ArrowRight className="size-3.5" />
+            <Clock className="size-3.5" strokeWidth={1.5} />
+            <span>Xem & xử lý</span>
+            <ArrowRight className="size-3.5" strokeWidth={1.5} />
           </Button>
         </div>
       </div>
