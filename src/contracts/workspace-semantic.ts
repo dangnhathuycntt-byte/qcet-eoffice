@@ -3,8 +3,7 @@
  *
  * FROZEN CONTRACT — single-writer (shard-contracts-freeze owns src/contracts/**).
  * Authority: Master Plan §5 (C1–C16) + §38–§41 (C17–C20); see
- * docs/agent-work/decisions/ux-contract-freeze.md and
- * docs/agent-work/UI_SEMANTIC_CONTRACT.md. Consumers must not rename or widen
+ * .claude/rules/05-domain-freeze.md. Consumers must not rename or widen
  * these interfaces without domain proof and an explicit contract revision.
  *
  * Defines the 8 universal semantic dimensions:
@@ -258,7 +257,7 @@ export interface WorkspaceFilterState {
  *   (silently dropped on parse, not re-emitted on serialize, and ignored by
  *   isWorkspaceQueryEqual). They are added to the frozen contract together
  *   with their parser support when the F2 query/scope/loading lane lands them
- *   (tracked in docs/agent-work/UX_MIGRATION_LEDGER.md).
+ *   (tracked in git history).
  */
 export interface WorkspaceQueryParams {
   scope?: WorkspaceScopeType;
