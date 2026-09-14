@@ -22,10 +22,16 @@ import {
   CalendarMonthGrid,
   type CalendarScope,
 } from "@/components/calendar/calendar-month-grid";
+import { CalendarWeekView } from "@/components/calendar/calendar-week-view";
+import { CalendarAgendaView } from "@/components/calendar/calendar-agenda-view";
 import {
   CalendarDaySheet,
   type DayTaskItem,
 } from "@/components/calendar/calendar-day-sheet";
+import {
+  CreateEventModal,
+  type CreateEventFormData,
+} from "@/components/calendar/create-event-modal";
 import {
   CreateTaskModal,
   type CreateTaskFormData,
@@ -50,16 +56,6 @@ import { cn } from "@/lib/utils";
 
 // ExecutiveCalendarWorkspace compatibility and canonical workspace integration
 export type { CalendarScope };
-
-interface CreateEventFormData {
-  title: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  department: string;
-  description: string;
-}
 
 interface CalendarMeeting {
   id: string;
@@ -111,199 +107,11 @@ function toMeetingIso(date: string, time: string): string {
   return new Date(`${date}T${time}:00+07:00`).toISOString();
 }
 
-function CreateEventModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  initialDate,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: CreateEventFormData) => Promise<void> | void;
-  initialDate?: string;
-}) {
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(initialDate || getSystemReferenceDate());
-  const [startTime, setStartTime] = useState("08:00");
-  const [endTime, setEndTime] = useState("09:30");
-  const [location, setLocation] = useState("");
-  const [department, setDepartment] = useState("Ban Giám hiệu");
-  const [description, setDescription] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (initialDate) setDate(initialDate);
-  }, [initialDate]);
-
-  useEffect(() => {
-    if (!isOpen) setSubmitError(null);
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!title.trim() || isSubmitting) return;
-
-    setIsSubmitting(true);
-    setSubmitError(null);
-    try {
-      await onSubmit({
-        title: title.trim(),
-        date,
-        startTime,
-        endTime,
-        location: location.trim(),
-        department: department.trim(),
-        description: description.trim(),
-      });
-      setTitle("");
-      setLocation("");
-      setDescription("");
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Không thể lưu sự kiện");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="create-event-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-    >
-      <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
-        onClick={isSubmitting ? undefined : onClose}
-        aria-hidden="true"
-      />
-      <div className="relative w-full max-w-md rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-2xl space-y-4 text-xs text-foreground animate-in fade-in zoom-in-95 duration-150">
-        <div className="flex items-start justify-between border-b border-border/60 pb-3">
-          <div className="space-y-0.5">
-            <h2 id="create-event-modal-title" className="text-base font-bold text-foreground font-heading">
-              Tạo Sự Kiện Lịch Biểu
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Sự kiện được lưu vào lịch họp chính thức của hệ thống
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="min-h-9 min-w-9 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
-            aria-label="Đóng"
-          >
-            <X className="mx-auto size-4" strokeWidth={1.5} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3.5">
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">
-              Tiêu đề sự kiện <span className="text-destructive">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Ví dụ: Họp giao ban Ban Giám hiệu đầu tuần"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">
-                Ngày diễn ra <span className="text-destructive">*</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-                className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Đơn vị chủ trì</label>
-              <input
-                type="text"
-                value={department}
-                onChange={(event) => setDepartment(event.target.value)}
-                className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Giờ bắt đầu</label>
-              <input
-                type="time"
-                required
-                value={startTime}
-                onChange={(event) => setStartTime(event.target.value)}
-                className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Giờ kết thúc</label>
-              <input
-                type="time"
-                required
-                value={endTime}
-                min={startTime}
-                onChange={(event) => setEndTime(event.target.value)}
-                className="w-full h-9 px-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Địa điểm / Phòng họp</label>
-            <input
-              type="text"
-              placeholder="Ví dụ: Phòng họp 1 - Nhà Hiệu bộ"
-              value={location}
-              onChange={(event) => setLocation(event.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Ghi chú nội dung</label>
-            <textarea
-              rows={2}
-              placeholder="Nội dung tóm tắt sự kiện hoặc thành phần tham dự..."
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              className="w-full p-2.5 rounded-lg border border-border/70 bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-            />
-          </div>
-
-          {submitError && (
-            <div role="alert" className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-              {submitError}
-            </div>
-          )}
-
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isSubmitting} className="h-9 text-xs rounded-lg">
-              Hủy
-            </Button>
-            <Button type="submit" size="sm" disabled={isSubmitting} className="h-9 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90">
-              {isSubmitting ? "Đang lưu..." : "Lưu sự kiện"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+function toDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function CalendarLoadingSkeleton() {
@@ -384,8 +192,9 @@ function CalendarRouteContent() {
     [selectedAcademicYear]
   );
 
-  const [viewMode, setViewMode] = useState<"month" | "agenda">(() => {
+  const [viewMode, setViewMode] = useState<"month" | "week" | "agenda">(() => {
     if (viewParam === "agenda" || viewParam === "agenda_list") return "agenda";
+    if (viewParam === "week") return "week";
     if (viewParam === "month") return "month";
     if (typeof window !== "undefined" && window.innerWidth < 640) return "agenda";
     return "month";
@@ -423,6 +232,10 @@ function CalendarRouteContent() {
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [createInitialDueDate, setCreateInitialDueDate] = useState<string | undefined>(undefined);
   const [createInitialLevel, setCreateInitialLevel] = useState<TaskLevel>("TRUONG");
+  const [showWeekends, setShowWeekends] = useState(true);
+  const [compactMode, setCompactMode] = useState(false);
+  const [createInitialStartTime, setCreateInitialStartTime] = useState("08:00");
+  const [createInitialEndTime, setCreateInitialEndTime] = useState("09:30");
 
   useEffect(() => {
     document.title = "Lịch Công Tác Học Vụ | QCET E-Office";
@@ -466,7 +279,7 @@ function CalendarRouteContent() {
     window.history.replaceState(null, "", url.toString());
   }, []);
 
-  const handleViewChange = useCallback((mode: "month" | "agenda") => {
+  const handleViewChange = useCallback((mode: "month" | "week" | "agenda") => {
     setViewMode(mode);
     updateUrlParam("view", mode);
   }, [updateUrlParam]);
@@ -513,6 +326,24 @@ function CalendarRouteContent() {
     updateUrlParam("date", sysDate);
     updateUrlParam("month", String(info.monthNumber));
   }, [sysDate, updateUrlParam]);
+
+  const handlePrevWeek = useCallback(() => {
+    const current = selectedDate || toDateKey(new Date());
+    const [y, m, d] = current.split("-").map(Number);
+    const dt = new Date(y, m - 1, d - 7, 12, 0, 0);
+    const newDate = toDateKey(dt);
+    handleSelectDate(newDate);
+    updateUrlParam("date", newDate);
+  }, [selectedDate, handleSelectDate, updateUrlParam]);
+
+  const handleNextWeek = useCallback(() => {
+    const current = selectedDate || toDateKey(new Date());
+    const [y, m, d] = current.split("-").map(Number);
+    const dt = new Date(y, m - 1, d + 7, 12, 0, 0);
+    const newDate = toDateKey(dt);
+    handleSelectDate(newDate);
+    updateUrlParam("date", newDate);
+  }, [selectedDate, handleSelectDate, updateUrlParam]);
 
   const loadCalendarData = useCallback(async (showRefreshingSpinner = false) => {
     void showRefreshingSpinner;
@@ -616,7 +447,8 @@ function CalendarRouteContent() {
     }
 
     const agenda = [
-      eventData.department ? `Đơn vị chủ trì: ${eventData.department}` : "",
+      eventData.host ? `Chủ trì: ${eventData.host}` : "",
+      eventData.participants ? `Thành phần: ${eventData.participants}` : "",
       eventData.description,
     ].filter(Boolean).join("\n");
 
@@ -625,8 +457,8 @@ function CalendarRouteContent() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: eventData.title,
-        startTime: toMeetingIso(eventData.date, eventData.startTime),
-        endTime: toMeetingIso(eventData.date, eventData.endTime),
+        startTime: toMeetingIso(eventData.startDate, eventData.startTime),
+        endTime: toMeetingIso(eventData.startDate, eventData.endTime),
         location: eventData.location || undefined,
         agenda: agenda || undefined,
       }),
@@ -781,10 +613,15 @@ function CalendarRouteContent() {
           levelFilter === "ALL" ||
           (levelFilter === "TRUONG" && meeting.level === "Trường") ||
           (levelFilter === "DON_VI" && meeting.level === "Đơn vị");
+        // Use canonical ICT-aware date key for meeting date matching.
+        const meetingDateKey = getMeetingDateKey(meeting.dueDate);
+        // Confirm real start time via canonical extractor (getMeetingTime) before pushing.
+        const hasRealTime = getMeetingTime(meeting.dueDate) !== undefined || meeting.time !== undefined;
         if (
           meetingScopeMatch &&
           meetingLevelMatch &&
-          meeting.dueDate.split("T")[0] === selectedDate &&
+          meetingDateKey === selectedDate &&
+          hasRealTime &&
           matchesSearch([meeting.title, meeting.assigneeName, meeting.host, meeting.location])
         ) {
           items.push(meeting);
@@ -849,8 +686,8 @@ function CalendarRouteContent() {
         {/* Month navigation: ‹ Tháng 9 › */}
         <button
           type="button"
-          onClick={handlePrevMonth}
-          aria-label="Tháng trước"
+          onClick={viewMode === "week" ? handlePrevWeek : handlePrevMonth}
+          aria-label={viewMode === "week" ? "Tuần trước" : "Tháng trước"}
           className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <ChevronLeft className="size-4" strokeWidth={1.5} />
@@ -862,8 +699,8 @@ function CalendarRouteContent() {
 
         <button
           type="button"
-          onClick={handleNextMonth}
-          aria-label="Tháng sau"
+          onClick={viewMode === "week" ? handleNextWeek : handleNextMonth}
+          aria-label={viewMode === "week" ? "Tuần tiếp theo" : "Tháng sau"}
           className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <ChevronRight className="size-4" strokeWidth={1.5} />
@@ -882,10 +719,47 @@ function CalendarRouteContent() {
 
         <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0" aria-hidden="true" />
 
-        {/* Scope selector: Toàn trường ▾ */}
+        {/* View mode: Tháng | Tuần | Danh sách — primary toolbar, no secondary needed */}
+        <div role="tablist" aria-label="Chế độ hiển thị lịch" className="hidden sm:inline-flex items-center rounded-lg border border-border/60 bg-secondary/50 p-0.5 gap-0.5">
+          {(["month", "week", "agenda"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              role="tab"
+              aria-selected={viewMode === mode}
+              onClick={() => handleViewChange(mode)}
+              className={cn(
+                "inline-flex items-center justify-center gap-1 min-h-8 px-2.5 rounded text-xs font-semibold transition-all",
+                viewMode === mode ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {mode === "month" ? <CalendarIcon className="size-3.5 shrink-0" strokeWidth={1.5} /> : <List className="size-3.5 shrink-0" strokeWidth={1.5} />}
+              {mode === "month" ? "Tháng" : mode === "week" ? "Tuần" : "Danh sách"}
+            </button>
+          ))}
+        </div>
+        {/* Mobile: Danh sách quick-switch (agenda is the default mobile view) */}
+        <button
+          type="button"
+          aria-label={viewMode === "agenda" ? "Đang xem Danh sách" : "Xem Danh sách"}
+          aria-pressed={viewMode === "agenda"}
+          onClick={() => handleViewChange("agenda")}
+          className={cn(
+            "sm:hidden inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2.5 text-xs font-semibold transition-colors",
+            viewMode === "agenda" ? "text-primary bg-primary/5" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}
+        >
+          <List className="size-3.5 shrink-0" strokeWidth={1.5} />
+          Danh sách
+        </button>
+
+        <div className="w-px h-5 bg-border/60 mx-0.5 shrink-0 hidden sm:block" aria-hidden="true" />
+
+        {/* Scope + Filter selector: Bộ lọc ▾ */}
         <div className="relative" ref={filterDropdownRef}>
           <button
             type="button"
+            aria-label="Bộ lọc"
             onClick={() => setIsFilterOpen((previous) => !previous)}
             aria-expanded={isFilterOpen}
             aria-haspopup="listbox"
@@ -983,7 +857,7 @@ function CalendarRouteContent() {
             onClick={() => setIsSecondaryOpen((previous) => !previous)}
             aria-expanded={isSecondaryOpen}
             aria-haspopup="dialog"
-            aria-label="Tùy chọn thêm"
+            aria-label="Tùy chọn hiển thị"
             className={cn(
               "inline-flex min-h-[44px] min-w-[44px] sm:min-h-9 sm:min-w-9 items-center justify-center rounded-lg transition-colors",
               isSecondaryOpen ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -994,35 +868,6 @@ function CalendarRouteContent() {
 
           {isSecondaryOpen && (
             <div role="dialog" aria-label="Tùy chọn hiển thị" className="absolute right-0 top-full mt-1.5 w-72 rounded-xl border border-border/70 bg-card p-3 shadow-lg z-30 space-y-3 animate-in fade-in zoom-in-95 duration-150">
-              {/* View mode */}
-              <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">Chế độ xem</span>
-                <div role="tablist" aria-label="Chế độ hiển thị lịch" className="inline-flex w-full items-center rounded-lg border border-border/70 bg-secondary/50 p-0.5 gap-0.5">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={viewMode === "month"}
-                    onClick={() => { handleViewChange("month"); }}
-                    className={cn("flex-1 inline-flex items-center justify-center gap-1.5 min-h-8 px-3 rounded text-xs font-semibold transition-all", viewMode === "month" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground")}
-                  >
-                    <CalendarIcon className="size-3.5" strokeWidth={1.5} />
-                    Tháng
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={viewMode === "agenda"}
-                    onClick={() => { handleViewChange("agenda"); }}
-                    className={cn("flex-1 inline-flex items-center justify-center gap-1.5 min-h-8 px-3 rounded text-xs font-semibold transition-all", viewMode === "agenda" ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground")}
-                  >
-                    <List className="size-3.5" strokeWidth={1.5} />
-                    <span>Danh sách</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="border-t border-border/40" />
-
               {/* Academic year */}
               <div className="space-y-1.5">
                 <span className="text-xs font-semibold text-muted-foreground">Năm học</span>
@@ -1053,7 +898,7 @@ function CalendarRouteContent() {
 
               {/* Search — inline expandable, not a permanent row */}
               <div className="space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">Tìm kiếm</span>
+                <span className="text-xs font-semibold text-muted-foreground">Lọc lịch hiện tại</span>
                 {isSearchExpanded ? (
                   <div className="relative">
                     <Search className="size-3.5 text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" strokeWidth={1.5} />
@@ -1112,7 +957,53 @@ function CalendarRouteContent() {
 
       {isLoading && tasks.length === 0 && meetings.length === 0 ? (
         <CalendarLoadingSkeleton />
+      ) : viewMode === "week" ? (
+        <CalendarWeekView
+          currentDate={selectedDate || toDateKey(new Date())}
+          tasks={tasks}
+          events={meetingDayItems}
+          selectedDate={selectedDate}
+          onSelectDate={handleSelectDate}
+          onOpenDaySheet={handleOpenDaySheet}
+          onSelectTask={handleSelectTask}
+          onAddTaskOnDate={(dateStr) => handleOpenAddTask(dateStr)}
+          onAddEventOnDate={(dateStr, time) => {
+            setCreateInitialDueDate(dateStr);
+            if (time) setCreateInitialStartTime(time);
+            setIsCreateEventModalOpen(true);
+          }}
+          scope={activeScope}
+          currentUserId={user?.id}
+          currentUserName={user?.name}
+          showWeekends={showWeekends}
+          compactMode={compactMode}
+          searchQuery={searchQuery}
+          statusFilter={statusFilter}
+          levelFilter={levelFilter}
+        />
+      ) : viewMode === "agenda" ? (
+        <CalendarAgendaView
+          period={currentPeriod}
+          tasks={tasks}
+          events={meetingDayItems}
+          selectedDate={selectedDate}
+          onSelectDate={handleSelectDate}
+          onOpenDaySheet={handleOpenDaySheet}
+          onSelectTask={handleSelectTask}
+          onAddTaskOnDate={(dateStr) => handleOpenAddTask(dateStr)}
+          onAddEventOnDate={(dateStr) => {
+            setCreateInitialDueDate(dateStr);
+            setIsCreateEventModalOpen(true);
+          }}
+          scope={activeScope}
+          currentUserId={user?.id}
+          currentUserName={user?.name}
+          searchQuery={searchQuery}
+          statusFilter={statusFilter}
+          levelFilter={levelFilter}
+        />
       ) : (
+        // meetingDayItems feeds month view with real meeting times
         <CalendarMonthGrid
           period={currentPeriod}
           tasks={tasks}
@@ -1124,7 +1015,6 @@ function CalendarRouteContent() {
           scope={activeScope}
           currentUserId={user?.id}
           currentUserName={user?.name}
-          viewMode={viewMode}
           searchQuery={searchQuery}
           statusFilter={statusFilter}
           levelFilter={levelFilter}
@@ -1157,6 +1047,8 @@ function CalendarRouteContent() {
         onClose={() => setIsCreateEventModalOpen(false)}
         onSubmit={handleCreateEventSubmit}
         initialDate={createInitialDueDate}
+        initialStartTime={createInitialStartTime}
+        initialEndTime={createInitialEndTime}
       />
 
       <TaskDetailSideSheet

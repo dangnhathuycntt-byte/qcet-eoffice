@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   CircleDot,
   Clock3,
-  User,
 } from "lucide-react";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
@@ -18,9 +17,13 @@ import {
 } from "@/lib/academic-calendar";
 import {
   getCalendarAttentionState,
-  getCalendarDaySummary,
+  getMonthCellPresentation,
+  groupCalendarEntriesByDate,
   sortCalendarItemsByAttention,
   type CalendarAttentionState,
+  type CalendarEntry,
+  type CalendarTaskEntry,
+  type CalendarEventEntry,
 } from "@/lib/calendar/calendar-presentation";
 import { type DayTaskItem } from "./calendar-day-sheet";
 
@@ -30,6 +33,11 @@ export interface CalendarMonthGridProps {
   period: AcademicMonthPeriod;
   tasks: SchoolTask[];
   events?: DayTaskItem[];
+  /** Canonical CalendarEntry[] for progressive adoption. When provided, month
+   *  cells are rendered through getMonthCellPresentation and tasksByDate
+   *  derivation is skipped. The legacy tasks/events props remain for
+   *  backward compatibility during transition. */
+  entries?: CalendarEntry[];
   selectedDate: string | null;
   onSelectDate: (dateStr: string) => void;
   onOpenDaySheet: (dateStr: string) => void;
@@ -37,6 +45,8 @@ export interface CalendarMonthGridProps {
   scope?: CalendarScope;
   currentUserId?: string;
   currentUserName?: string;
+  /** Kept for backward compatibility with page-level state; month grid always
+   *  renders month only. Agenda mode is owned by the page-level agenda-view. */
   viewMode?: "month" | "agenda";
   searchQuery?: string;
   statusFilter?: string;
@@ -89,48 +99,45 @@ function StatusIcon({ state, className }: { state: CalendarAttentionState; class
   }
 }
 
-function ItemStatus({ item, state }: { item: DayTaskItem; state: CalendarAttentionState }) {
+/** Adapt a legacy DayTaskItem to a minimal CalendarTaskEntry for use with
+ *  getMonthCellPresentation. No SchoolTask->subTasks traversal is performed;
+ *  the data is already flattened into DayTaskItem by the caller. */
+function dayTaskItemToCalendarEntry(item: DayTaskItem, dateKey: string): CalendarEntry {
   if (item.isEvent) {
-    return (
-      <>
-        <CalendarIcon className="size-3 shrink-0 text-sky-600" aria-hidden="true" />
-        <span>Sự kiện</span>
-      </>
-    );
+    return {
+      kind: "event",
+      id: item.id,
+      meetingId: item.id,
+      date: dateKey,
+      title: item.title,
+      startTime: item.time?.split(" - ")[0] ?? "00:00",
+      endTime: item.time?.split(" - ")[1],
+      location: item.location,
+      organizerName: item.host ?? item.assigneeName,
+      level: item.level,
+    } satisfies CalendarEventEntry;
   }
-  return (
-    <>
-      <StatusIcon state={state} />
-      <span>{getStatusLabel(state)}</span>
-    </>
-  );
-}
-
-function formatDateVi(dateStr: string): string {
-  try {
-    const clean = dateStr.split("T")[0];
-    const [year, month, day] = clean.split("-");
-    const dateObj = new Date(Number(year), Number(month) - 1, Number(day));
-    const dayNames = [
-      "Chủ Nhật",
-      "Thứ Hai",
-      "Thứ Ba",
-      "Thứ Tư",
-      "Thứ Năm",
-      "Thứ Sáu",
-      "Thứ Bảy",
-    ];
-    const dayName = dayNames[dateObj.getDay()] || "";
-    return `${dayName}, ${day}/${month}/${year}`;
-  } catch {
-    return dateStr;
-  }
+  return {
+    kind: "task",
+    id: item.id,
+    sourceTaskId: item.parentSchoolTaskId ?? item.id,
+    date: dateKey,
+    title: item.title,
+    level: item.level,
+    dueDate: item.dueDate,
+    status: item.status as string,
+    assigneeName: item.assigneeName,
+    parentSchoolTaskId: item.parentSchoolTaskId,
+    progressPercent: item.progressPercent,
+    originalTask: item.originalTask,
+  } satisfies CalendarTaskEntry;
 }
 
 export function CalendarMonthGrid({
   period,
   tasks = [],
   events = [],
+  entries,
   selectedDate,
   onSelectDate,
   onOpenDaySheet,
@@ -138,7 +145,9 @@ export function CalendarMonthGrid({
   scope = "school",
   currentUserId,
   currentUserName,
-  viewMode = "month",
+  // viewMode is accepted but ignored; this component always renders month.
+  // Agenda mode is handled by the page-level agenda-view component.
+  viewMode: _viewMode,
   searchQuery = "",
   statusFilter = "ALL",
   levelFilter = "ALL",
@@ -148,7 +157,17 @@ export function CalendarMonthGrid({
   const gridCells = React.useMemo(() => generateAcademicMonthGrid(period), [period]);
   const deferredQuery = React.useDeferredValue(searchQuery.trim().toLowerCase());
 
+  // --- Canonical CalendarEntry path ---
+  const entriesByDate = React.useMemo(() => {
+    if (!entries || entries.length === 0) return null;
+    return groupCalendarEntriesByDate(entries);
+  }, [entries]);
+
+  // --- Legacy DayTaskItem path (backward compat while entries not yet wired) ---
   const tasksByDate = React.useMemo(() => {
+    // If canonical entries are provided, skip legacy derivation entirely.
+    if (entriesByDate !== null) return new Map<string, DayTaskItem[]>();
+
     const map = new Map<string, DayTaskItem[]>();
 
     const matchesStatus = (status: string, dueDate?: string) => {
@@ -267,6 +286,7 @@ export function CalendarMonthGrid({
 
     return map;
   }, [
+    entriesByDate,
     tasks,
     events,
     scope,
@@ -278,18 +298,6 @@ export function CalendarMonthGrid({
     referenceDate,
   ]);
 
-  const agendaGroups = React.useMemo(() => {
-    return gridCells
-      .filter((cell) => cell.isCurrentMonth)
-      .map((cell) => ({
-        dateString: cell.dateString,
-        dayHeaderVi: formatDateVi(cell.dateString),
-        isToday: cell.isToday,
-        items: tasksByDate.get(cell.dateString) || [],
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [gridCells, tasksByDate]);
-
   const openDay = React.useCallback(
     (dateString: string) => {
       onSelectDate(dateString);
@@ -298,116 +306,10 @@ export function CalendarMonthGrid({
     [onOpenDaySheet, onSelectDate]
   );
 
-  const renderAgendaList = (slotName: string) => (
-    <div className="space-y-4" data-slot={slotName}>
-      {agendaGroups.length === 0 ? (
-        <div className="flex flex-col items-center justify-center text-center py-16 px-4 rounded-2xl border border-dashed border-border/70 bg-card/60 space-y-3">
-          <CalendarIcon className="size-10 text-muted-foreground/40" strokeWidth={1.5} />
-          <div className="space-y-1 max-w-sm">
-            <h3 className="text-sm font-bold text-foreground">Không có lịch công tác hoặc sự kiện</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Không có nhiệm vụ nào đến hạn trong chu kỳ vận hành {period.label} ({period.shortDateSpan}).
-            </p>
-          </div>
-        </div>
-      ) : (
-        agendaGroups.map((group) => {
-          const summary = getCalendarDaySummary(group.items, referenceDate);
-          return (
-            <section
-              key={group.dateString}
-              className={cn(
-                "rounded-2xl border border-border/70 bg-card overflow-hidden shadow-2xs transition-all",
-                group.isToday && "border-primary/50 ring-1 ring-primary/20"
-              )}
-              aria-label={`${group.dayHeaderVi}, ${summary.total} mục lịch`}
-            >
-              <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-muted/30 border-b border-border/50">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xs sm:text-sm font-bold text-foreground font-mono tabular-nums">
-                      {group.dayHeaderVi}
-                    </h3>
-                    {group.isToday && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-primary text-primary-foreground uppercase">
-                        Hôm nay
-                      </span>
-                    )}
-                  </div>
-                  {summary.attention > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {summary.overdue > 0 && <span className="font-semibold text-rose-700">{summary.overdue} quá hạn</span>}
-                      {summary.overdue > 0 && summary.waiting > 0 && <span> · </span>}
-                      {summary.waiting > 0 && <span className="font-semibold text-amber-700">{summary.waiting} chờ duyệt</span>}
-                      {(summary.overdue > 0 || summary.waiting > 0) && summary.dueToday > 0 && <span> · </span>}
-                      {summary.dueToday > 0 && <span>{summary.dueToday} đến hạn hôm nay</span>}
-                    </p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => openDay(group.dateString)}
-                  className="min-h-9 shrink-0 rounded-lg px-2.5 text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  Xem tất cả {summary.total} →
-                </button>
-              </div>
-
-              <div className="divide-y divide-border/40">
-                {group.items.map((item) => {
-                  const state = getCalendarAttentionState(item, referenceDate);
-                  const isDone = state === "completed";
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        if (item.originalTask) onSelectTask?.(item.originalTask);
-                        else openDay(group.dateString);
-                      }}
-                      className={cn(
-                        "w-full p-3.5 flex flex-col gap-2 hover:bg-muted/30 active:bg-muted/50 transition-colors text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
-                        isDone && "opacity-65 bg-muted/10"
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold border bg-muted/30 text-foreground border-border/60">
-                          {item.isEvent ? "Lịch" : item.level === "Trường" ? "Cấp Trường" : "Đơn vị"}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                          <ItemStatus item={item} state={state} />
-                        </span>
-                      </div>
-                      <h4 className={cn("text-xs sm:text-sm font-semibold text-foreground leading-snug", isDone && "line-through text-muted-foreground")}>{item.title}</h4>
-                      {(item.assigneeName || item.host) && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <User className="size-3" strokeWidth={1.5} aria-hidden="true" />
-                          <span>Phụ trách: {item.assigneeName || item.host}</span>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })
-      )}
-    </div>
-  );
-
-  if (viewMode === "agenda") {
-    return <div className={cn("space-y-4", className)}>{renderAgendaList("calendar-agenda-view")}</div>;
-  }
-
   return (
     <div className={cn("flex flex-col space-y-4", className)} data-slot="calendar-month-grid">
-      <div className="block sm:hidden" data-slot="mobile-responsive-agenda-feed">
-        {renderAgendaList("mobile-responsive-agenda-feed")}
-      </div>
-
       <div
-        className="hidden sm:flex sm:flex-col rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden transition-all"
+        className="flex flex-col rounded-2xl border border-border/60 bg-card shadow-card overflow-hidden transition-all"
         data-slot="desktop-responsive-month-grid"
       >
         <div className="grid grid-cols-7 border-b border-border/50 bg-muted/30 text-center select-none">
@@ -427,11 +329,28 @@ export function CalendarMonthGrid({
 
         <div className="grid grid-cols-7 divide-x divide-y divide-border/40 bg-border/20">
           {gridCells.map((cell) => {
-            const dayTasks = tasksByDate.get(cell.dateString) || [];
-            const summary = getCalendarDaySummary(dayTasks, referenceDate);
-            const MAX_PREVIEW = 3;
-            const displayedTasks = dayTasks.slice(0, MAX_PREVIEW);
-            const remainingCount = dayTasks.length - MAX_PREVIEW;
+            // Derive cell presentation from canonical entries or legacy items.
+            let cellPresentation: ReturnType<typeof getMonthCellPresentation>;
+            let legacyDayItems: DayTaskItem[] = [];
+
+            if (entriesByDate !== null) {
+              const dayEntries = entriesByDate.get(cell.dateString) ?? [];
+              cellPresentation = getMonthCellPresentation(cell.dateString, dayEntries, referenceDate, {
+                maxEventPreviews: 1,
+              });
+            } else {
+              legacyDayItems = tasksByDate.get(cell.dateString) ?? [];
+              const legacyEntries: CalendarEntry[] = legacyDayItems.map((item) =>
+                dayTaskItemToCalendarEntry(item, cell.dateString)
+              );
+              cellPresentation = getMonthCellPresentation(cell.dateString, legacyEntries, referenceDate, {
+                maxEventPreviews: 1,
+              });
+            }
+
+            const { total, overdueCount, waitingCount, dueCount, eventPreviews, taskPreviews, hiddenCount } =
+              cellPresentation;
+
             const isSelected = selectedDate === cell.dateString;
 
             return (
@@ -443,12 +362,14 @@ export function CalendarMonthGrid({
                   cell.isCurrentMonth && "bg-card",
                   cell.isWeekend && cell.isCurrentMonth && "bg-muted/[0.04]",
                   cell.isToday && "bg-primary/[0.04] border-primary/30",
-                  isSelected && "ring-1.5 ring-primary ring-inset bg-primary/[0.06] z-10 shadow-xs"
+                  // Selected: ring indicator — visually distinct from today (filled circle) and urgent (rose/amber)
+                  isSelected && "ring-2 ring-primary/40 ring-inset z-10 shadow-xs"
                 )}
                 data-date={cell.dateString}
-                aria-label={`${cell.dateString}: ${summary.total} mục lịch`}
+                aria-label={`${cell.dateString}: ${total} mục lịch`}
               >
                 <div className="flex items-center justify-between gap-2">
+                  {/* Date number: today = filled primary circle; selected ≠ today = bold primary text; other = plain */}
                   <button
                     type="button"
                     onClick={() => openDay(cell.dateString)}
@@ -456,89 +377,125 @@ export function CalendarMonthGrid({
                       "inline-flex min-h-6 min-w-6 items-center justify-center rounded-full px-1 font-mono text-xs font-medium tabular-nums transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
                       cell.isToday
                         ? "bg-primary text-primary-foreground font-bold shadow-xs"
-                        : cell.isCurrentMonth
-                          ? "text-foreground hover:bg-muted/60"
-                          : "text-muted-foreground/40 hover:bg-muted/40",
-                      isSelected && !cell.isToday && "font-bold text-primary"
+                        : isSelected
+                          ? "ring-1.5 ring-primary text-primary font-bold"
+                          : cell.isCurrentMonth
+                            ? "text-foreground hover:bg-muted/60"
+                            : "text-muted-foreground/40 hover:bg-muted/40"
                     )}
                     aria-label={`Mở lịch ngày ${cell.dateString}`}
                   >
                     {cell.dayNumber}
                   </button>
 
-                  {summary.total > 0 && (
+                  {total > 0 && (
                     <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                      {summary.total} việc
+                      {total} việc
                     </span>
                   )}
                 </div>
 
-                {summary.total > 0 && (
-                  <div className="mt-1.5 min-h-[18px] flex items-center gap-2 overflow-hidden whitespace-nowrap text-xs leading-none">
-                    {summary.overdue > 0 && (
-                      <span className="inline-flex items-center gap-1 font-semibold text-rose-700" title={`${summary.overdue} nhiệm vụ quá hạn`}>
+                {/* Attention summary row: overdue / waiting / due-today counts */}
+                {total > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => openDay(cell.dateString)}
+                    className="mt-1.5 min-h-[18px] flex items-center gap-2 overflow-hidden whitespace-nowrap text-xs leading-none w-full text-left focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded"
+                    aria-label={`Xem chi tiết ngày ${cell.dateString}`}
+                    tabIndex={total === 0 ? -1 : 0}
+                  >
+                    {overdueCount > 0 && (
+                      <span
+                        className="inline-flex items-center gap-1 font-semibold text-rose-700"
+                        title={`${overdueCount} nhiệm vụ quá hạn`}
+                      >
                         <AlertTriangle className="size-3" aria-hidden="true" />
-                        {summary.overdue} quá hạn
+                        {overdueCount} quá hạn
                       </span>
                     )}
-                    {summary.waiting > 0 && (
-                      <span className="inline-flex items-center gap-1 font-semibold text-amber-700" title={`${summary.waiting} nhiệm vụ chờ duyệt`}>
+                    {waitingCount > 0 && (
+                      <span
+                        className="inline-flex items-center gap-1 font-semibold text-amber-700"
+                        title={`${waitingCount} nhiệm vụ chờ duyệt`}
+                      >
                         <Clock3 className="size-3" aria-hidden="true" />
-                        {summary.waiting} chờ duyệt
+                        {waitingCount} chờ duyệt
                       </span>
                     )}
-                    {summary.overdue === 0 && summary.waiting === 0 && summary.dueToday > 0 && (
+                    {overdueCount === 0 && waitingCount === 0 && dueCount > 0 && (
                       <span className="inline-flex items-center gap-1 font-semibold text-orange-700">
                         <Clock3 className="size-3" aria-hidden="true" />
-                        {summary.dueToday} hôm nay
+                        {dueCount} hôm nay
                       </span>
                     )}
-                  </div>
+                  </button>
                 )}
 
                 <div className="mt-1.5 flex-1 space-y-1 overflow-hidden min-h-0">
-                  {displayedTasks.map((item) => {
-                    const state = getCalendarAttentionState(item, referenceDate);
+                  {/* At most 1 high-value timed event preview */}
+                  {eventPreviews.map((ev) => (
+                    <button
+                      key={ev.id}
+                      type="button"
+                      onClick={() => openDay(cell.dateString)}
+                      className="w-full min-h-6 text-left flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium transition-colors border truncate shadow-2xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary bg-sky-500/5 border-sky-500/20 text-foreground hover:border-sky-500/40 hover:bg-sky-500/10"
+                      title={`Sự kiện · ${ev.title}${ev.startTime ? ` · ${ev.startTime}` : ""}`}
+                      aria-label={`Sự kiện: ${ev.title}`}
+                    >
+                      <CalendarIcon className="size-3 shrink-0 text-sky-600" aria-hidden="true" />
+                      <span className="truncate font-sans text-xs leading-tight">{ev.title}</span>
+                    </button>
+                  ))}
+
+                  {/* Attention-ranked task previews (completed suppressed) */}
+                  {taskPreviews.map((taskEntry) => {
+                    const state = getCalendarAttentionState(
+                      { id: taskEntry.id, title: taskEntry.title, status: taskEntry.status, dueDate: taskEntry.dueDate },
+                      referenceDate
+                    );
                     const isDone = state === "completed";
-                    const itemLabel = item.isEvent ? "Sự kiện" : getStatusLabel(state);
+                    const itemLabel = getStatusLabel(state);
+                    // For legacy path: retrieve originalTask from DayTaskItem for onSelectTask
+                    const legacyItem = entriesByDate === null
+                      ? legacyDayItems.find((d) => d.id === taskEntry.id)
+                      : undefined;
                     return (
                       <button
-                        key={item.id}
+                        key={taskEntry.id}
                         type="button"
                         onClick={() => {
-                          if (item.originalTask) onSelectTask?.(item.originalTask);
-                          else openDay(cell.dateString);
+                          if (legacyItem?.originalTask) {
+                            onSelectTask?.(legacyItem.originalTask);
+                          } else {
+                            openDay(cell.dateString);
+                          }
                         }}
                         className={cn(
                           "w-full min-h-6 text-left flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium transition-colors border truncate shadow-2xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
-                          item.isEvent
-                            ? "bg-sky-500/5 border-sky-500/20 text-foreground hover:border-sky-500/40 hover:bg-sky-500/10"
-                            : item.level === "Trường"
-                              ? "bg-background/90 border-border/70 text-foreground hover:border-primary/50 hover:bg-accent"
-                              : "bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent",
+                          taskEntry.level === "Trường"
+                            ? "bg-background/90 border-border/70 text-foreground hover:border-primary/50 hover:bg-accent"
+                            : "bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-accent",
                           isDone && "opacity-60 line-through bg-emerald-500/5 border-emerald-500/20 text-muted-foreground"
                         )}
-                        title={`${itemLabel} · ${item.title}`}
-                        aria-label={`${itemLabel}: ${item.title}`}
+                        title={`${itemLabel} · ${taskEntry.title}`}
+                        aria-label={`${itemLabel}: ${taskEntry.title}`}
                       >
-                        {item.isEvent ? <CalendarIcon className="size-3 shrink-0 text-sky-600" aria-hidden="true" /> : <StatusIcon state={state} />}
-                        <span className="truncate font-sans text-xs leading-tight">{item.title}</span>
+                        <StatusIcon state={state} />
+                        <span className="truncate font-sans text-xs leading-tight">{taskEntry.title}</span>
                       </button>
                     );
                   })}
                 </div>
 
-                {remainingCount > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => openDay(cell.dateString)}
-                    className="mt-1 min-h-6 w-full rounded-md px-1.5 text-left text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary block truncate"
-                    aria-label={`Xem thêm ${remainingCount} nhiệm vụ ngày ${cell.dateString}`}
-                    title={`Xem thêm ${remainingCount} nhiệm vụ`}
+                {/* Dim muted overflow count — opens Day Sheet on cell click, not a separate pill */}
+                {hiddenCount > 0 && (
+                  <span
+                    className="mt-1 block px-1.5 text-xs text-muted-foreground/60 tabular-nums leading-tight select-none"
+                    aria-hidden="true"
                   >
-                    +{remainingCount} nhiệm vụ
-                  </button>
-                ) : null}
+                    {hiddenCount} việc
+                  </span>
+                )}
               </section>
             );
           })}
