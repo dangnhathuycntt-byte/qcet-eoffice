@@ -69,3 +69,6 @@ benchmarks/e2e/results/
 qcet-executor-runs/
 .gstack/
 test-results.log
+
+# Impeccable skill cache/output (regenerates per run)
+/.impeccable/

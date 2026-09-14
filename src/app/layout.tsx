@@ -47,8 +47,8 @@ export const metadata: Metadata = {
     title: `${INSTITUTION_CONFIG.shortName} E-Office`,
   },
   icons: {
-    icon: "/icons/icon-192x192.png",
-    shortcut: "/icons/icon-192x192.png",
+    icon: "/icons/icon-192.png",
+    shortcut: "/icons/icon-192.png",
     apple: "/logo-qcet.png", // apple-touch-icon
   },
 };

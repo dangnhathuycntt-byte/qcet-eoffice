@@ -218,7 +218,7 @@ export function usePushNotification(): UsePushNotificationReturn {
           const reg = await navigator.serviceWorker.ready;
           reg.showNotification(title, {
             body,
-            icon: '/icons/icon-192x192.png',
+            icon: '/icons/icon-192.png',
             badge: '/icons/badge-72x72.png',
             tag: `qcet-test-${Date.now()}`,
             vibrate: [200, 100, 200],

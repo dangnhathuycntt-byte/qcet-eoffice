@@ -17,10 +17,8 @@ const PRECACHE_ASSETS = [
   '/tasks',
   '/?zone=tasks', // Legacy alias supported for backwards compatibility
   '/manifest.webmanifest',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
   '/icons/badge-72x72.png',
   '/logo-qcet.png',
   '/logo-qcet.webp',

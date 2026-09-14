@@ -510,7 +510,7 @@ export function formatNotificationPayload(
   return {
     title: title.trim(),
     body: body.trim(),
-    icon: "/icons/icon-192x192.png",
+    icon: "/icons/icon-192.png",
     badge: "/icons/badge-72x72.png",
     tag,
     data: {
