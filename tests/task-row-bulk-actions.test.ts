@@ -415,4 +415,62 @@ describe("Task 5: Task Row Simplification & Bulk Action Floating Bar", () => {
       assert.equal(microFontRegex.test(tableHeaderSource), false, "No sub-12px font in task-table-header.tsx");
     });
   });
+
+  describe("10.6 Task 6.4: TaskRow Title Primacy, Progress Rules & SLA Icon", () => {
+    function renderRow(task: SchoolTask, extraProps: Record<string, unknown> = {}): string {
+      return renderToStaticMarkup(
+        React.createElement("table", null,
+          React.createElement("tbody", null,
+            React.createElement(TaskRow, { task, ...extraProps } as never)
+          )
+        )
+      );
+    }
+
+    it("renders title as primary and ordered before secondary code", () => {
+      const html = renderRow(mockTask, { showSelection: false });
+      const title = "Xây dựng khung năng lực số cho sinh viên ngành CNTT";
+      assert.ok(html.includes(title), "title must render");
+      assert.ok(html.indexOf(title) < html.indexOf("NV-01"), "title ordered before code");
+      assert.match(html, /<span[^>]*text-muted-foreground[^>]*>NV-01<\/span>/, "code rendered secondary muted");
+    });
+
+    it("renders 0% progress as plain text without colored bar", () => {
+      const html = renderRow({ ...mockTask, progressPercent: 0, subTasks: [] });
+      assert.ok(html.includes("0%"), "0% text must render");
+      assert.ok(!html.includes("rounded-full bg-muted/80"), "0% must not render progress bar track");
+    });
+
+    it("renders completed 100% as plain text without bar", () => {
+      const html = renderRow({ ...mockTask, progressPercent: 100, status: "COMPLETED", subTasks: [] });
+      assert.ok(html.includes("100%"), "100% text must render");
+      assert.ok(!html.includes("rounded-full bg-muted/80"), "completed 100% must not render progress bar track");
+    });
+
+    it("renders partial progress with bar", () => {
+      const html = renderRow({ ...mockTask, progressPercent: 45, subTasks: [] });
+      assert.ok(html.includes("45%"), "45% text must render");
+      assert.ok(html.includes("rounded-full bg-muted/80"), "partial progress must render bar track");
+      assert.ok(html.includes("bg-emerald-500"), "partial progress must render colored fill");
+      assert.ok(html.includes("width:45%"), "bar width must match progress");
+    });
+
+    it("renders overdue SLA chip with Quá hạn text plus svg icon", () => {
+      const html = renderRow(
+        { ...mockTask, dueDate: "2026-09-01", status: "IN_PROGRESS" },
+        { referenceDate: "2026-09-09" }
+      );
+      assert.ok(html.includes("Quá hạn"), "overdue chip must show Quá hạn");
+      assert.ok(html.includes("<svg"), "overdue chip must include non-color icon");
+    });
+
+    it("exposes Duyệt action semantics for WAITING_APPROVAL", () => {
+      const html = renderRow(mockApprovalTask, {
+        canAssign: true,
+        onStatusChange: () => {},
+      });
+      assert.ok(html.includes(">Duyệt<"), "WAITING_APPROVAL must expose Duyệt action");
+      assert.ok(html.includes('aria-label="Duyệt nhiệm vụ NV-02"'), "Duyệt must have accessible name");
+    });
+  });
 });

@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  ChevronLeft,
   ChevronRight,
   Settings,
   X,
@@ -126,9 +125,8 @@ export function handleSidebarShortcut(
 }
 
 const SECTIONS: { key: NavigationSection; label: string }[] = [
-  { key: "personal", label: "ĐIỀU HÀNH & CÁ NHÂN" },
-  { key: "workspace", label: "NGHIỆP VỤ CỐT LÕI" },
-  { key: "operations", label: "HỆ THỐNG & TỔ CHỨC" },
+  { key: "work", label: "CÔNG VIỆC" },
+  { key: "org", label: "TỔ CHỨC" },
 ];
 
 export function AppSidebar() {
@@ -232,7 +230,7 @@ export function AppSidebar() {
       } else if (item.href === "/documents") {
         text = badgeCounts?.docsInbox;
       } else if (item.href === "/tasks") {
-        text = badgeCounts?.allTasks ?? badgeCounts?.tasks;
+        text = badgeCounts?.taskAttention ?? badgeCounts?.tasks;
       }
 
       if (item.badgeKey === "calendar" || item.href === "/calendar") {
@@ -241,7 +239,11 @@ export function AppSidebar() {
         variant = "rose";
       } else if (item.badgeKey === "docsInbox" || item.href === "/documents") {
         variant = "amber";
-      } else if (item.href === "/tasks") {
+      } else if (
+        item.badgeKey === "tasks" ||
+        item.badgeKey === "taskAttention" ||
+        item.href === "/tasks"
+      ) {
         variant = "primary";
       } else {
         variant = "muted";
@@ -351,17 +353,17 @@ export function AppSidebar() {
                               }}
                               aria-disabled={item.isComingSoon ? true : undefined}
                               tabIndex={item.isComingSoon ? -1 : undefined}
-                              aria-label={`${item.label}${item.isComingSoon ? " (Đang phát triển - Chưa thể truy cập)" : badge ? ` (${badge.text})` : ""}${item.isMaintenance ? " (Đang bảo trì)" : ""}`}
+                              aria-label={`${item.label}${item.isComingSoon ? " (Sắp có - Chưa thể truy cập)" : badge ? ` (${badge.text})` : ""}${item.isMaintenance ? " (Đang bảo trì)" : ""}`}
                               aria-current={active ? "page" : undefined}
                               className={cn(
                                 "size-9 rounded-lg relative flex items-center justify-center transition-colors",
                                 item.isComingSoon && "cursor-not-allowed opacity-60 hover:bg-transparent",
                                 active
-                                  ? "bg-primary/10 text-primary font-semibold"
+                                  ? "bg-primary/10 text-primary"
                                   : !item.isComingSoon && "text-muted-foreground hover:text-foreground hover:bg-accent/40"
                               )}
                             >
-                              <Icon size={18} strokeWidth={active ? 2 : 1.5} />
+                              <Icon size={18} strokeWidth={1.5} />
                               {item.isComingSoon ? (
                                 <span
                                   className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500 ring-2 ring-background"
@@ -386,7 +388,7 @@ export function AppSidebar() {
                             <div className="flex items-center gap-1.5">
                               <span>{item.label}</span>
                               {item.isComingSoon ? (
-                                <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+                                <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
                                   Sắp có
                                 </span>
                               ) : badge ? (
@@ -449,22 +451,19 @@ export function AppSidebar() {
                           }}
                           aria-disabled={item.isComingSoon ? true : undefined}
                           tabIndex={item.isComingSoon ? -1 : undefined}
-                          aria-label={`${item.label}${item.isComingSoon ? " (Đang phát triển - Chưa thể truy cập)" : ""}`}
+                          aria-label={`${item.label}${item.isComingSoon ? " (Sắp có - Chưa thể truy cập)" : ""}`}
                           aria-current={active ? "page" : undefined}
                           className={cn(
                             "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 min-h-[36px] text-[13px] tracking-tight transition-colors select-none",
                             item.isComingSoon && "cursor-not-allowed opacity-60 hover:bg-transparent",
                             active
-                              ? "bg-primary/10 text-primary font-semibold shadow-2xs"
+                              ? "bg-primary/10 text-primary"
                               : !item.isComingSoon && "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                           )}
                         >
-                          {active && (
-                            <span className="absolute left-0.5 top-2 bottom-2 w-[3px] bg-primary rounded-r-full" />
-                          )}
                           <Icon
                             size={16}
-                            strokeWidth={active ? 2 : 1.5}
+                            strokeWidth={1.5}
                             className={cn(
                               "shrink-0 transition-colors",
                               active
@@ -475,10 +474,11 @@ export function AppSidebar() {
                           <span className="truncate flex-1 font-medium">{item.label}</span>
                           {item.isComingSoon ? (
                             <span
-                              title="Đang phát triển"
+                              title="Sắp có"
+                              aria-label="Sắp có"
                               className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium tracking-tight bg-amber-500/10 text-amber-800 border border-amber-500/20 shrink-0 select-none leading-none whitespace-nowrap"
                             >
-                              Đang phát triển
+                              Sắp có
                             </span>
                           ) : badge ? (
                             <span
@@ -575,22 +575,12 @@ export function AppSidebar() {
               />
               <span className="truncate flex-1">Cài đặt</span>
             </Link>
-            {/* Notion: Đang kết nối (bg-emerald-500) mock widget removed */}
-            <button
-              type="button"
-              onClick={toggleCollapse}
-              className="flex w-full items-center gap-2 px-2.5 py-2 min-h-9 rounded-lg text-[13px] text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors cursor-pointer select-none"
-              title="Thu gọn thanh bên [Ctrl+B / ⌘B]"
-              aria-label="Thu gọn thanh bên [Ctrl+B / ⌘B]"
-            >
-              <ChevronLeft size={16} strokeWidth={1.5} className="shrink-0" />
-              <span className="truncate flex-1 text-left font-medium">
-                Thu gọn thanh bên
-              </span>
-              <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border/60 bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
-                ⌘B
-              </kbd>
-            </button>
+
+            {/* Notion: Đang kết nối pill with active green dot */}
+            <div className="flex items-center gap-2 px-2.5 py-1 text-xs text-muted-foreground">
+              <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="truncate">Notion: Đang kết nối</span>
+            </div>
           </div>
         )}
       </aside>

@@ -1,1 +1,0 @@
-../../plans/superseded/2026-09-09-role-scope-navigation-and-unassigned-department-plan.md

@@ -61,42 +61,30 @@ describe("Single-Tier Sidebar Component Contracts (app-sidebar.tsx)", () => {
     assert.ok(content.includes("Năm học 2026–2027"), "Must render academic year 2026–2027");
   });
 
-  test("app-sidebar.tsx renders sections ĐIỀU HÀNH & CÁ NHÂN, NGHIỆP VỤ CỐT LÕI, HỆ THỐNG & TỔ CHỨC", () => {
+  test("app-sidebar.tsx renders sections CÔNG VIỆC and TỔ CHỨC", () => {
     const content = fs.readFileSync(sidebarPath, "utf-8");
     assert.ok(
-      content.includes("ĐIỀU HÀNH & CÁ NHÂN") || content.includes("CÁ NHÂN"),
-      "Must render Section 1"
+      content.includes("CÔNG VIỆC"),
+      "Must render CÔNG VIỆC section"
     );
     assert.ok(
-      content.includes("NGHIỆP VỤ CỐT LÕI") || content.includes("CÔNG VIỆC"),
-      "Must render Section 2"
-    );
-    assert.ok(
-      content.includes("HỆ THỐNG & TỔ CHỨC") || content.includes("VĂN BẢN & ĐIỀU HÀNH"),
-      "Must render Section 3"
+      content.includes("TỔ CHỨC"),
+      "Must render TỔ CHỨC section"
     );
   });
 
-  test("app-sidebar.tsx renders subtle active indicator bar", () => {
+  test("app-sidebar.tsx renders clean subtle active state", () => {
     const content = fs.readFileSync(sidebarPath, "utf-8");
     assert.ok(
-      content.includes("bg-primary/10 text-primary font-semibold"),
+      content.includes("bg-primary/10 text-primary"),
       "Must apply subtle active tint"
     );
-    assert.ok(
-      content.includes("w-[3px] bg-primary rounded-r-full"),
-      "Must render 3px rounded active indicator bar on left"
-    );
   });
 
-  test("app-sidebar.tsx includes settings link and collapse button with ⌘B shortcut in footer", () => {
+  test("app-sidebar.tsx includes settings link in footer", () => {
     const content = fs.readFileSync(sidebarPath, "utf-8");
     assert.ok(content.includes("/settings"), "Must link to /settings");
     assert.ok(content.includes("Cài đặt"), "Must have Cài đặt label");
-    assert.ok(content.includes("toggleCollapse"), "Must wire toggleCollapse");
-    assert.ok(content.includes("⌘B"), "Must advertise ⌘B shortcut");
-    assert.ok(content.includes("ChevronLeft"), "Must render ChevronLeft when expanded");
-    assert.ok(content.includes("ChevronRight"), "Must render ChevronRight when collapsed");
   });
 
   test("app-sidebar.tsx applies thin-scrollbar to navigation scroll containers", () => {

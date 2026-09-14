@@ -5,7 +5,6 @@ import Link from "next/link";
 import { History, Activity, CheckCircle2, Upload, RefreshCw, PlusCircle, AlertCircle, Clock, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import type { ActivityEvent } from "@/types/dashboard";
 export type { ActivityEvent };
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/format/date";
 
@@ -111,16 +110,14 @@ export function ActivityFeedWidget({
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-card p-4 sm:p-5 text-card-foreground shadow-card hover:shadow-card-hover transition-all duration-300",
+        "flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-3.5 sm:p-4 text-card-foreground transition-colors",
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <History className="size-4" strokeWidth={1.5} />
-          </div>
+      <div className="flex items-center justify-between pb-3 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <History className="size-4 text-muted-foreground" strokeWidth={1.5} />
           <div>
             <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
               Hoạt động vừa cập nhật
@@ -133,11 +130,6 @@ export function ActivityFeedWidget({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {activities.length > initialLimit && !isExpanded && (
-            <span className="text-xs font-mono text-muted-foreground hidden sm:inline">
-              Top {displayedActivities.length} / {activities.length}
-            </span>
-          )}
           {/* No audit destination exists; the link is hidden until one is built. */}
           {auditLogHref && (
             <Link
@@ -168,11 +160,11 @@ export function ActivityFeedWidget({
             return (
               <div
                 key={item.id}
-                className="group flex items-start gap-3 py-3 transition-colors first:pt-2.5 last:pb-1"
+                className="group flex items-start gap-2.5 py-2 sm:py-2.5 transition-colors first:pt-2 last:pb-1 min-h-[44px]"
               >
                 {/* Actor Avatar / Initials with action micro-badge */}
                 <div className="relative shrink-0 mt-0.5">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-secondary font-sans text-xs font-bold text-secondary-foreground ring-1 ring-border/50">
+                  <div className="flex size-7 sm:size-8 items-center justify-center rounded-full bg-secondary font-sans text-xs font-bold text-secondary-foreground ring-1 ring-border/50">
                     {initials}
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-card ring-1 ring-border/60 shadow-xs">
@@ -187,7 +179,7 @@ export function ActivityFeedWidget({
                       <span className="font-semibold text-foreground">{item.actorName}</span>{" "}
                       <span className="text-muted-foreground font-normal">{item.action}</span>
                     </div>
-                    {item.category && (
+                    {item.category && item.category !== "KHAC" && (
                       <span className="shrink-0 inline-flex items-center rounded-md bg-secondary/80 px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
                         {item.category}
                       </span>

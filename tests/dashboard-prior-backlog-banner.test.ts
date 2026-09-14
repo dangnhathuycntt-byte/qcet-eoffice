@@ -145,7 +145,7 @@ describe("PriorOverdueBacklogBanner & DashboardZone Monthly Scoping", () => {
     const content = fs.readFileSync(zonePath, "utf8");
     assert.match(content, /GlobalMonthSelector/);
     assert.match(content, /displayedStats/);
-    assert.match(content, /KỲ VẬN HÀNH THÁNG/);
+    assert.match(content, /KỲ VẬN HÀNH/);
 
     // Verify size budget (< 150 lines)
     const lineCount = content.split("\n").length;

@@ -1,1 +1,0 @@
-../../plans/superseded/2026-09-08-unified-mobile-pwa-and-menu-architecture-plan.md

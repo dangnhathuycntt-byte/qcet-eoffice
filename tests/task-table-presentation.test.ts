@@ -244,4 +244,37 @@ describe("Task Table Presentation Components - Unit & Behavior Suite", () => {
       assert.equal(getCategoryBadgeConfig("ATTT").label, "An toàn thông tin");
     });
   });
+
+  describe("Badge Configuration Mappings - NOT_STARTED and Unknown Status Regression", () => {
+    it("maps NOT_STARTED to Vietnamese label without leaking raw enum", () => {
+      const config = getStatusBadgeConfig("NOT_STARTED");
+      assert.equal(config.label, "Chưa bắt đầu");
+      assert.ok(!config.label.includes("NOT_STARTED"));
+    });
+
+    it("maps unknown future status to fallback label without leaking raw input", () => {
+      const raw = "SOME_FUTURE_STATUS_XYZ";
+      const config = getStatusBadgeConfig(raw);
+      assert.equal(config.label, "Chưa xác định");
+      assert.notEqual(config.label, raw);
+      assert.ok(!config.label.includes("SOME_FUTURE"));
+      assert.ok(!config.label.includes(raw));
+    });
+  });
+
+  describe("SLA Single-Value Contract", () => {
+    it("returns null label for far-future due date (single-value, no redundant badge)", () => {
+      const sla = getSlaBadgeStatus("2026-09-30", "IN_PROGRESS", "2026-09-09");
+      assert.equal(sla.label, null);
+      assert.equal(sla.isOverdue, false);
+      assert.equal(sla.isToday, false);
+    });
+
+    it("returns null label when due date is missing", () => {
+      const sla = getSlaBadgeStatus(null, "IN_PROGRESS", "2026-09-09");
+      assert.equal(sla.label, null);
+      assert.equal(sla.isOverdue, false);
+      assert.equal(sla.isToday, false);
+    });
+  });
 });

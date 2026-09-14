@@ -1,9 +1,11 @@
-import { test, describe } from "node:test";
+import { test, describe, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import {
   isAllowedDomain,
   getAppBaseUrl,
   buildGoogleAuthUrl,
+  exchangeGoogleCode,
+  fetchGoogleUserInfo,
 } from "../src/lib/google-oauth";
 
 describe("Google OAuth Helper Functions", () => {
@@ -63,6 +65,57 @@ describe("Google OAuth Helper Functions", () => {
       const req = new Request("http://localhost:3001/api/auth/google");
       const baseUrl = getAppBaseUrl(req);
       assert.strictEqual(baseUrl, "http://localhost:3001");
+    });
+  });
+
+  describe("exchangeGoogleCode", () => {
+    const originalFetch = globalThis.fetch;
+
+    afterEach(() => {
+      globalThis.fetch = originalFetch;
+    });
+
+    test("successfully exchanges authorization code with timeout signal", async () => {
+      globalThis.fetch = async (input, init) => {
+        assert.ok(init?.signal, "Must pass AbortSignal to prevent hung connections");
+        return new Response(
+          JSON.stringify({
+            access_token: "ya29.test_token",
+            token_type: "Bearer",
+            expires_in: 3600,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      };
+
+      const result = await exchangeGoogleCode({
+        code: "auth_code_123",
+        clientId: "client_id",
+        clientSecret: "client_secret",
+        redirectUri: "https://qcet.dixxie.store/api/auth/callback/google",
+      });
+
+      assert.strictEqual(result.access_token, "ya29.test_token");
+      assert.strictEqual(result.expires_in, 3600);
+    });
+
+    test("throws descriptive error when network connection times out", async () => {
+      globalThis.fetch = async () => {
+        const err = new Error("fetch failed");
+        (err as unknown as { cause: { code: string } }).cause = { code: "ETIMEDOUT" };
+        throw err;
+      };
+
+      await assert.rejects(
+        () =>
+          exchangeGoogleCode({
+            code: "bad_code",
+            clientId: "client_id",
+            clientSecret: "client_secret",
+            redirectUri: "https://qcet.dixxie.store/api/auth/callback/google",
+          }),
+        /fetch failed/
+      );
     });
   });
 });

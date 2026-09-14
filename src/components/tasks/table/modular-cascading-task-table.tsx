@@ -4,6 +4,7 @@ import * as React from "react";
 import {
   ChevronDown,
   RotateCcw,
+  X,
 } from "lucide-react";
 import type {
   SchoolTask,
@@ -116,6 +117,109 @@ export interface ModularCascadingTaskTableProps {
   onBulkDelete?: (taskIds: string[]) => Promise<void> | void;
   onExportExcel?: () => void;
   selectedTaskId?: string;
+}
+
+function TableShortcutHelpTrigger() {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className="relative inline-flex items-center">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+        aria-label="Xem danh sách phím tắt (? Phím tắt)"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg border border-border/70 bg-background hover:bg-muted/60 transition-colors cursor-pointer select-none shadow-2xs"
+      >
+        <span className="inline-flex items-center justify-center font-mono font-bold text-xs bg-muted/60 rounded px-1 text-foreground">
+          ?
+        </span>
+        <span className="font-medium">Phím tắt</span>
+      </button>
+
+      {isOpen && (
+        <div
+          role="dialog"
+          aria-label="Phím tắt nhanh: Hướng dẫn thao tác bàn phím"
+          className="absolute bottom-full right-0 mb-2 w-72 rounded-2xl border border-border/80 bg-card p-3 shadow-lg z-50 text-xs text-foreground animate-in fade-in-0 zoom-in-95 duration-100"
+        >
+          <div className="flex items-center justify-between pb-1.5 border-b border-border/60 mb-2">
+            <span className="font-semibold text-foreground">Phím tắt nhanh:</span>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted min-h-[28px] min-w-[28px] flex items-center justify-center cursor-pointer"
+              aria-label="Đóng bảng phím tắt"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span>Tìm kiếm</span>
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
+                /
+              </kbd>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Di chuyển dòng</span>
+              <div className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
+                  J
+                </kbd>
+                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
+                  K
+                </kbd>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Xem chi tiết</span>
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
+                ↵
+              </kbd>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Chọn dòng</span>
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
+                X
+              </kbd>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Đóng / Hủy chọn</span>
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
+                Esc
+              </kbd>
+            </div>
+            <div className="flex items-center justify-between pt-1 border-t border-border/40 text-muted-foreground">
+              <span>Menu lệnh toàn cục</span>
+              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-muted/60 rounded border border-border text-foreground font-semibold shadow-2xs">
+                ⌘K
+              </kbd>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ModularCascadingTaskTable({
@@ -939,55 +1043,6 @@ export function ModularCascadingTaskTable({
             ))}
           </div>
 
-          {/* Keyboard Ergonomics & Shortcut Hints Bar */}
-          <div
-            className="hidden md:flex items-center justify-between px-3.5 py-2 border-t border-slate-200/80 bg-slate-50/60 text-xs text-slate-500 select-none"
-            aria-label="Phím tắt điều hướng nhanh"
-          >
-            <div className="flex items-center gap-3.5 flex-wrap">
-              <span className="font-semibold text-slate-700">Phím tắt nhanh:</span>
-              <span className="inline-flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
-                  /
-                </kbd>
-                <span>Tìm kiếm</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
-                  J
-                </kbd>
-                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
-                  K
-                </kbd>
-                <span>Di chuyển dòng</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
-                  ↵
-                </kbd>
-                <span>Xem chi tiết</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
-                  X
-                </kbd>
-                <span>Chọn dòng</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
-                  Esc
-                </kbd>
-                <span>Đóng / Hủy chọn</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-slate-500">
-              <kbd className="px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-slate-200 text-slate-700 font-semibold shadow-2xs">
-                ⌘K
-              </kbd>
-              <span>Menu lệnh toàn cục</span>
-            </div>
-          </div>
-
           {/* Pagination Controls */}
           <TaskPaginationBar
             currentPage={tableState.currentPage}
@@ -995,6 +1050,7 @@ export function ModularCascadingTaskTable({
             totalItems={tableState.totalItems}
             onPageChange={tableState.setPage}
             onPageSizeChange={tableState.setPageSize}
+            shortcutTrigger={<TableShortcutHelpTrigger />}
           />
         </div>
       )}

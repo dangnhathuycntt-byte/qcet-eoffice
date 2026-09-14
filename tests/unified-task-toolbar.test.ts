@@ -1,5 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -399,9 +401,10 @@ describe("Single Unified Task Toolbar Surface & Role-Based Scope Visibility", ()
       "Row 2 slot must be rendered"
     );
 
-    // SavedViewsSelector is leftmost — its trigger renders the default label
+    // SavedViewsSelector is leftmost — its trigger reads as Góc nhìn (exact contract:
+    // "Góc nhìn: Tất cả nhiệm vụ" default already asserted at line ~762).
     assert.ok(
-      html.includes("Việc cần tôi xử lý") || html.includes("saved-views-selector"),
+      html.includes("Góc nhìn"),
       "Must render Saved Views trigger as primary work navigation"
     );
 
@@ -657,3 +660,109 @@ describe("Anti-Slop & Light-Only Standard Compliance", () => {
     );
   });
 });
+
+describe("Unified Task Toolbar UI Polish & Action Queue Integration", () => {
+  const adminUser = DEFAULT_DEMO_USERS[0]; // Admin / BGH
+
+  test("Toolbar container uses quiet flat border layout instead of heavy floating card wrapper", () => {
+    const filePath = path.join(
+      process.cwd(),
+      "src/components/dashboard/unified-task-toolbar.tsx"
+    );
+    const content = fs.readFileSync(filePath, "utf-8");
+
+    assert.ok(
+      content.includes("border-b border-border/60 pb-3 bg-transparent"),
+      "Toolbar root container must use clean flat border-b layout without floating card elevation"
+    );
+    assert.ok(
+      !content.includes("rounded-2xl border border-border/70 bg-card p-3 shadow-xs"),
+      "Toolbar root container must not use heavy floating card wrapper"
+    );
+  });
+
+  test("Scope switcher active state uses unified neutral segmented control styling", () => {
+    const filePath = path.join(
+      process.cwd(),
+      "src/components/dashboard/unified-task-toolbar.tsx"
+    );
+    const content = fs.readFileSync(filePath, "utf-8");
+
+    assert.ok(
+      content.includes("bg-background text-foreground border border-border/80 font-semibold shadow-2xs"),
+      "Scope switcher active tab must use unified neutral active segmented control styling"
+    );
+    assert.ok(
+      !content.includes("bg-amber-50 text-amber-900 border border-amber-300"),
+      "Must not have discordant amber active color branch"
+    );
+    assert.ok(
+      !content.includes("bg-blue-50 text-blue-900 border border-blue-300"),
+      "Must not have discordant blue active color branch"
+    );
+    assert.ok(
+      !content.includes("bg-emerald-50 text-emerald-900 border border-emerald-300"),
+      "Must not have discordant emerald active color branch"
+    );
+  });
+
+  test("Renders inline Action Queue Trigger in Row 1 when actionQueueCount > 0 and callback provided", () => {
+    const el = React.createElement(UnifiedTaskToolbar, {
+      scope: "school",
+      onScopeChange: () => {},
+      user: adminUser,
+      searchQuery: "",
+      onSearchChange: () => {},
+      actionQueueCount: 5,
+      onOpenActionQueue: () => {},
+    });
+    const html = renderToStaticMarkup(el);
+
+    assert.ok(
+      html.includes('data-slot="action-queue-trigger"'),
+      "Must render action queue trigger in Row 1"
+    );
+    assert.ok(
+      html.includes("Cần xử lý"),
+      "Must render 'Cần xử lý' label"
+    );
+    assert.ok(
+      html.includes("5"),
+      "Must display action queue count"
+    );
+  });
+
+  test("Dynamic search placeholder reflects totalTasksCount when provided", () => {
+    const el = React.createElement(UnifiedTaskToolbar, {
+      scope: "school",
+      onScopeChange: () => {},
+      user: adminUser,
+      searchQuery: "",
+      onSearchChange: () => {},
+      totalTasksCount: 42,
+    });
+    const html = renderToStaticMarkup(el);
+
+    assert.ok(
+      html.includes("Tìm trong 42 nhiệm vụ... /"),
+      "Search input placeholder must reflect totalTasksCount dynamically"
+    );
+  });
+
+  test("SavedViewsSelector renders 'Góc nhìn: Tất cả nhiệm vụ' by default", () => {
+    const el = React.createElement(UnifiedTaskToolbar, {
+      scope: "school",
+      onScopeChange: () => {},
+      user: adminUser,
+      searchQuery: "",
+      onSearchChange: () => {},
+    });
+    const html = renderToStaticMarkup(el);
+
+    assert.ok(
+      html.includes("Góc nhìn: Tất cả nhiệm vụ"),
+      "Saved views selector must display 'Góc nhìn: Tất cả nhiệm vụ'"
+    );
+  });
+});
+

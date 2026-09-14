@@ -19,6 +19,7 @@ import {
   useSavedViews,
   getRolePresetViews,
   resolveUserSavedViewRole,
+  cleanViewName,
 } from "@/lib/saved-views/saved-views-store";
 
 export interface SavedViewsSelectorProps {
@@ -42,7 +43,7 @@ export function SavedViewsSelector({
   onSaveView,
   onDeleteView,
   onRenameView,
-  defaultLabel = "Góc nhìn",
+  defaultLabel = "Góc nhìn: Tất cả nhiệm vụ",
   className,
 }: SavedViewsSelectorProps) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -83,14 +84,6 @@ export function SavedViewsSelector({
   const effectiveActiveViewId = controlledActiveViewId ?? internalActiveViewId;
   const effectiveActiveView =
     allViews.find((v) => v.id === effectiveActiveViewId) || activeView;
-
-  // Role label for preset section header
-  const userRole = React.useMemo(() => resolveUserSavedViewRole(user), [user]);
-  const roleSectionLabel = React.useMemo(() => {
-    if (userRole === "EXECUTIVE") return "Mẫu Ban Giám Hiệu";
-    if (userRole === "MANAGER") return "Mẫu Trưởng Đơn Vị";
-    return "Mẫu Chuyên Viên";
-  }, [userRole]);
 
   // Outside click & Escape listener
   React.useEffect(() => {
@@ -170,20 +163,20 @@ export function SavedViewsSelector({
   const getScopeBadge = (scope: "school" | "unit" | "my") => {
     if (scope === "school") {
       return (
-        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 border border-blue-500/20">
+        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-muted text-foreground border border-border/80">
           Trường
         </span>
       );
     }
     if (scope === "unit") {
       return (
-        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 border border-amber-500/20">
+        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-muted text-foreground border border-border/80">
           Đơn vị
         </span>
       );
     }
     return (
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
+      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-muted text-foreground border border-border/80">
         Cá nhân
       </span>
     );
@@ -217,7 +210,11 @@ export function SavedViewsSelector({
           strokeWidth={1.5}
         />
         <span className="truncate max-w-[130px] sm:max-w-[160px] text-left">
-          {effectiveActiveView ? effectiveActiveView.name : defaultLabel}
+          {effectiveActiveView
+            ? effectiveActiveView.name.startsWith("Góc nhìn")
+              ? cleanViewName(effectiveActiveView.name)
+              : `Góc nhìn: ${cleanViewName(effectiveActiveView.name)}`
+            : defaultLabel}
         </span>
         <ChevronDown
           className={cn(
@@ -257,7 +254,7 @@ export function SavedViewsSelector({
             <div>
               <div className="flex items-center justify-between px-1 mb-1.5">
                 <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                  {roleSectionLabel}
+                  Mặc định cho vai trò
                 </span>
                 <span className="text-xs text-muted-foreground">Mặc định</span>
               </div>
@@ -278,7 +275,7 @@ export function SavedViewsSelector({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="truncate">{preset.name}</span>
+                          <span className="truncate">{cleanViewName(preset.name)}</span>
                           {getScopeBadge(preset.criteria.scope)}
                         </div>
                         {preset.description && (
@@ -363,7 +360,7 @@ export function SavedViewsSelector({
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="truncate">{view.name}</span>
+                            <span className="truncate">{cleanViewName(view.name)}</span>
                             {getScopeBadge(view.criteria.scope)}
                           </div>
                         </div>

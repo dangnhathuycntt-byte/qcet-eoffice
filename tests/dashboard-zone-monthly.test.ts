@@ -14,6 +14,6 @@ describe("DashboardZone Monthly Partitioning", () => {
     // calendar and task-table surfaces, not the zone.
     assert.match(content, /GlobalMonthSelector/);
     assert.match(content, /displayedStats/);
-    assert.match(content, /KỲ VẬN HÀNH THÁNG/);
+    assert.match(content, /KỲ VẬN HÀNH/);
   });
 });

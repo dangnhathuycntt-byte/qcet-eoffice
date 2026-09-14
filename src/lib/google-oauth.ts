@@ -35,18 +35,16 @@ export function isAllowedDomain(email?: string | null, _hd?: string | null): boo
  * Phân giải URL gốc của ứng dụng (Base URL), hỗ trợ Nginx/Docker reverse proxy
  */
 export function getAppBaseUrl(req?: Request): string {
-  if (serverEnv.NEXTAUTH_URL) {
-    return serverEnv.NEXTAUTH_URL.replace(/\/$/, "");
-  }
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
-  }
-
   if (req) {
     const forwardedHost = req.headers.get("x-forwarded-host");
     const forwardedProto = req.headers.get("x-forwarded-proto") || "https";
     if (forwardedHost) {
-      return `${forwardedProto}://${forwardedHost}`.replace(/\/$/, "");
+      return `${forwardedProto}://${forwardedHost.split(",")[0].trim()}`.replace(/\/$/, "");
+    }
+    const host = req.headers.get("host");
+    if (host) {
+      const proto = req.headers.get("x-forwarded-proto") || (host.includes("localhost") || host.includes("127.0.0.1") ? "http" : "https");
+      return `${proto}://${host}`.replace(/\/$/, "");
     }
     try {
       const url = new URL(req.url);
@@ -54,6 +52,13 @@ export function getAppBaseUrl(req?: Request): string {
     } catch {
       // ignore
     }
+  }
+
+  if (serverEnv.NEXTAUTH_URL) {
+    return serverEnv.NEXTAUTH_URL.replace(/\/$/, "");
+  }
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
   }
 
   return "http://localhost:3000";
@@ -100,6 +105,7 @@ export async function exchangeGoogleCode(options: {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!res.ok) {
@@ -116,6 +122,7 @@ export async function exchangeGoogleCode(options: {
 export async function fetchGoogleUserInfo(accessToken: string): Promise<GoogleUserInfo> {
   const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!res.ok) {

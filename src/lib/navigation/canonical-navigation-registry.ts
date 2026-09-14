@@ -1,6 +1,6 @@
 import type { WorkspaceZone } from "@/types/workspace";
 
-export type NavigationSection = "personal" | "workspace" | "operations";
+export type NavigationSection = "work" | "org" | "operations" | "personal" | "workspace";
 
 export interface CanonicalRouteConfig {
   id: string;
@@ -10,9 +10,10 @@ export interface CanonicalRouteConfig {
   section: NavigationSection;
   iconName: "LayoutDashboard" | "Calendar" | "CheckSquare" | "FileText" | "Building2" | "Bell" | "Settings";
   zone?: WorkspaceZone;
-  badgeKey?: "calendar" | "notifications" | "docsInbox" | "docsOutbox" | "docsPending";
+  badgeKey?: "calendar" | "notifications" | "docsInbox" | "docsOutbox" | "docsPending" | "tasks" | "taskAttention";
   aliases?: string[];
   mobilePlacement?: "bottom-bar" | "drawer" | "none";
+  mobileOrder?: number;
   order: number;
 }
 
@@ -22,11 +23,12 @@ export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
     href: "/",
     label: "Bàn làm việc",
     shortLabel: "Tổng quan",
-    section: "personal",
+    section: "work",
     iconName: "LayoutDashboard",
     zone: "dashboard",
-    aliases: ["/dashboard"],
+    aliases: ["/dashboard", "/workbench"],
     mobilePlacement: "bottom-bar",
+    mobileOrder: 1,
     order: 1,
   },
   {
@@ -34,60 +36,64 @@ export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
     href: "/tasks",
     label: "Quản lý nhiệm vụ",
     shortLabel: "Nhiệm vụ",
-    section: "workspace",
+    section: "work",
     iconName: "CheckSquare",
     zone: "tasks",
+    badgeKey: "taskAttention",
     aliases: ["/unit-tasks", "/?zone=tasks"],
     mobilePlacement: "bottom-bar",
+    mobileOrder: 2,
     order: 2,
-  },
-  {
-    id: "documents",
-    href: "/documents",
-    label: "Văn bản & Công văn",
-    shortLabel: "Văn bản",
-    section: "workspace",
-    iconName: "FileText",
-    zone: "documents",
-    badgeKey: "docsInbox",
-    aliases: ["/?zone=documents"],
-    mobilePlacement: "bottom-bar",
-    order: 3,
   },
   {
     id: "calendar",
     href: "/calendar",
     label: "Lịch công tác",
     shortLabel: "Lịch",
-    section: "personal",
+    section: "work",
     iconName: "Calendar",
     zone: "calendar",
     badgeKey: "calendar",
     aliases: ["/?zone=calendar", "/?view=calendar", "/?view=month"],
     mobilePlacement: "bottom-bar",
-    order: 4,
-  },
-  {
-    id: "org",
-    href: "/org",
-    label: "Cơ cấu & Danh bạ",
-    shortLabel: "Tổ chức",
-    section: "operations",
-    iconName: "Building2",
-    zone: "org",
-    aliases: ["/?zone=org"],
-    mobilePlacement: "drawer",
-    order: 5,
+    mobileOrder: 4,
+    order: 3,
   },
   {
     id: "notifications",
     href: "/notifications",
     label: "Thông báo & Nhắc việc",
     shortLabel: "Thông báo",
-    section: "personal",
+    section: "work",
     iconName: "Bell",
     badgeKey: "notifications",
     mobilePlacement: "none",
+    order: 4,
+  },
+  {
+    id: "documents",
+    href: "/documents",
+    label: "Văn bản & Công văn",
+    shortLabel: "Văn bản",
+    section: "work",
+    iconName: "FileText",
+    zone: "documents",
+    badgeKey: "docsInbox",
+    aliases: ["/?zone=documents"],
+    mobilePlacement: "bottom-bar",
+    mobileOrder: 3,
+    order: 5,
+  },
+  {
+    id: "org",
+    href: "/org",
+    label: "Cơ cấu & Danh bạ",
+    shortLabel: "Tổ chức",
+    section: "org",
+    iconName: "Building2",
+    zone: "org",
+    aliases: ["/?zone=org"],
+    mobilePlacement: "drawer",
     order: 6,
   },
   {
@@ -95,7 +101,7 @@ export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
     href: "/settings",
     label: "Cài đặt hệ thống",
     shortLabel: "Cài đặt",
-    section: "operations",
+    section: "org",
     iconName: "Settings",
     mobilePlacement: "drawer",
     order: 7,
@@ -115,7 +121,9 @@ export function getSidebarNavItems(): CanonicalRouteConfig[] {
 }
 
 export function getMobileBottomNavItems(): CanonicalRouteConfig[] {
-  return CANONICAL_ROUTES.filter((r) => r.mobilePlacement === "bottom-bar").sort((a, b) => a.order - b.order);
+  return CANONICAL_ROUTES.filter((r) => r.mobilePlacement === "bottom-bar").sort(
+    (a, b) => (a.mobileOrder ?? a.order) - (b.mobileOrder ?? b.order)
+  );
 }
 
 export const getMobileBottomBarItems = getMobileBottomNavItems;
@@ -150,6 +158,7 @@ export const CANONICAL_NAV_ITEMS = {
   WORKBENCH: pickNavItem("desk"),
   TASKS: pickNavItem("tasks"),
   CALENDAR: pickNavItem("calendar"),
+  NOTIFICATIONS: pickNavItem("notifications"),
   DOCUMENTS: pickNavItem("documents"),
   ORG: pickNavItem("org"),
 };

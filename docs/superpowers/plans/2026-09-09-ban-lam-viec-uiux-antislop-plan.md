@@ -1,1 +1,0 @@
-../../plans/superseded/2026-09-09-ban-lam-viec-uiux-antislop-plan.md

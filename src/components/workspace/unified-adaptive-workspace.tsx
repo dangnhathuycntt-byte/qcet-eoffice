@@ -404,6 +404,7 @@ export function UnifiedAdaptiveWorkspace({
   );
 
   // View mode management (Table vs Kanban)
+  // Precedence: explicit URL ?view= > saved view layout > persisted preference > default "table"
   const [internalViewMode, setInternalViewMode] = React.useState<ViewMode>(() => {
     if (controlledViewMode) return controlledViewMode;
     if (
@@ -411,6 +412,16 @@ export function UnifiedAdaptiveWorkspace({
       (workspaceQuery.queryState.view === "table" || workspaceQuery.queryState.view === "kanban")
     ) {
       return workspaceQuery.queryState.view;
+    }
+    if (typeof window !== "undefined") {
+      try {
+        const persisted = window.localStorage.getItem("qcet_task_view_mode");
+        if (persisted === "table" || persisted === "kanban") {
+          return persisted;
+        }
+      } catch {
+        // ignore
+      }
     }
     return initialViewMode || "table";
   });
@@ -428,6 +439,13 @@ export function UnifiedAdaptiveWorkspace({
       setInternalViewMode(mode);
       onViewModeChange?.(mode);
       workspaceQuery?.setView(mode, { replace: true });
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem("qcet_task_view_mode", mode);
+        } catch {
+          // ignore
+        }
+      }
     },
     [onViewModeChange, workspaceQuery]
   );
@@ -736,6 +754,9 @@ export function UnifiedAdaptiveWorkspace({
     };
   }, [scopedTasks, user, activeScope, currentDept]);
 
+  const actionQueueTotal =
+    actionQueue.pendingApprovals.length + actionQueue.myPendingSubmissions.length;
+
   // Compute counts for smart filter pills (Tất cả, Của tôi, Chờ duyệt, Quá hạn, Hôm nay)
   const tabCounts = React.useMemo(() => {
     return computeWorkspaceTabCounts({
@@ -1010,6 +1031,36 @@ export function UnifiedAdaptiveWorkspace({
       workspaceQuery,
     ]
   );
+
+  // SavedView viewId deep-link hydration (mount-once).
+  // View precedence: explicit URL ?view=table|kanban > SavedView layout >
+  // persisted preference (qcet_task_view_mode) > table default.
+  // Mount hydration only: URL-sync of viewId on select is deferred to the
+  // query layer (use-workspace-query does not round-trip viewId).
+  const viewIdHydratedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (viewIdHydratedRef.current) return;
+    if (activeViewId) {
+      viewIdHydratedRef.current = true;
+      return;
+    }
+    viewIdHydratedRef.current = true;
+    if (typeof window === "undefined") return;
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const viewId = sp.get("viewId") || sp.get("view_id") || sp.get("savedView");
+      if (!viewId) return;
+      const preset = findPresetById(viewId);
+      if (!preset) return;
+      handleSelectView(preset);
+      const explicitView = sp.get("view");
+      if (explicitView === "table" || explicitView === "kanban") {
+        handleViewModeChange(explicitView);
+      }
+    } catch {
+      // Ignore malformed query strings; workspace falls back to defaults.
+    }
+  }, [activeViewId, handleSelectView, handleViewModeChange]);
 
   const isStaff =
     !isExecutiveUser(user) &&
@@ -1329,6 +1380,9 @@ export function UnifiedAdaptiveWorkspace({
           onRefresh={handleRefresh}
           isRefreshing={effectiveIsRefreshing}
           totalTasksCount={tasks.length}
+          actionQueueCount={actionQueueTotal}
+          onOpenActionQueue={() => setIsActionQueueOpen(true)}
+          onActionQueueClick={() => setIsActionQueueOpen(true)}
         />
       )}
 
@@ -1358,22 +1412,43 @@ export function UnifiedAdaptiveWorkspace({
             data-slot="split-cockpit-primary"
             className="lg:col-span-7 xl:col-span-8 space-y-3 min-w-0"
           >
-            {/* Active Filter Breadcrumb */}
-            <ActiveFilterBreadcrumb
-              department={currentDept}
-              status={currentStatus}
-              search={currentSearch}
-              overdue={currentOverdue}
-              workbox={currentWorkbox}
-              totalFilteredCount={displayedTasks.length}
-              totalCount={tasks.length}
-              onResetFilters={handleResetFilters}
-              onRemoveDepartment={handleRemoveDept}
-              onRemoveStatus={handleRemoveStatus}
-              onRemoveSearch={handleRemoveSearch}
-              onRemoveOverdue={handleRemoveOverdue}
-              onRemoveWorkbox={handleRemoveWorkbox}
-            />
+            {/* Active Filter Breadcrumb & Action Queue Quick Trigger */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex-1 min-w-0">
+                <ActiveFilterBreadcrumb
+                  department={currentDept}
+                  status={currentStatus}
+                  search={currentSearch}
+                  overdue={currentOverdue}
+                  workbox={currentWorkbox}
+                  totalFilteredCount={displayedTasks.length}
+                  totalCount={tasks.length}
+                  onResetFilters={handleResetFilters}
+                  onRemoveDepartment={handleRemoveDept}
+                  onRemoveStatus={handleRemoveStatus}
+                  onRemoveSearch={handleRemoveSearch}
+                  onRemoveOverdue={handleRemoveOverdue}
+                  onRemoveWorkbox={handleRemoveWorkbox}
+                />
+              </div>
+
+              {actionQueueTotal > 0 && (
+                <button
+                  type="button"
+                  data-slot="action-queue-trigger"
+                  onClick={() => setIsActionQueueOpen(true)}
+                  className="inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-2 px-3 py-1.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold cursor-pointer transition-colors shrink-0 self-start sm:self-auto"
+                  aria-label="Mở hàng đợi xử lý công việc"
+                  title="Mở Hộp việc khẩn cấp (Smart Workbox)"
+                >
+                  <Layers className="size-3.5" strokeWidth={1.5} />
+                  <span>Hộp việc xử lý</span>
+                  <span className="font-mono text-xs px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground tabular-nums leading-none">
+                    {actionQueueTotal}
+                  </span>
+                </button>
+              )}
+            </div>
 
             {/* Unassigned Department State or Empty State or Table/Kanban */}
             {activeScope === "unit" && isUnassigned ? (
@@ -1470,7 +1545,7 @@ export function UnifiedAdaptiveWorkspace({
                   ? "Nhiệm vụ cần thẩm định L1 và phân công đơn vị"
                   : "Nhiệm vụ cần hoàn thành và nộp minh chứng"
               }
-              totalCount={actionQueue.pendingApprovals.length + actionQueue.myPendingSubmissions.length}
+              totalCount={actionQueueTotal}
               collapsible={true}
               defaultCollapsed={false}
               className="border-border/70"
@@ -1509,45 +1584,24 @@ export function UnifiedAdaptiveWorkspace({
             data-slot="full-width-task-canvas"
             className="w-full space-y-3 min-w-0"
           >
-          {/* Active Filter Breadcrumb & Action Queue Quick Trigger */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex-1 min-w-0">
-              <ActiveFilterBreadcrumb
-                department={currentDept}
-                status={currentStatus}
-                search={currentSearch}
-                overdue={currentOverdue}
-                workbox={currentWorkbox}
-                totalFilteredCount={displayedTasks.length}
-                totalCount={tasks.length}
-                onResetFilters={handleResetFilters}
-                onRemoveDepartment={handleRemoveDept}
-                onRemoveStatus={handleRemoveStatus}
-                onRemoveSearch={handleRemoveSearch}
-                onRemoveOverdue={handleRemoveOverdue}
-                onRemoveWorkbox={handleRemoveWorkbox}
-              />
-            </div>
+            {/* Active Filter Breadcrumb */}
+            <ActiveFilterBreadcrumb
+              department={currentDept}
+              status={currentStatus}
+              search={currentSearch}
+              overdue={currentOverdue}
+              workbox={currentWorkbox}
+              totalFilteredCount={displayedTasks.length}
+              totalCount={tasks.length}
+              onResetFilters={handleResetFilters}
+              onRemoveDepartment={handleRemoveDept}
+              onRemoveStatus={handleRemoveStatus}
+              onRemoveSearch={handleRemoveSearch}
+              onRemoveOverdue={handleRemoveOverdue}
+              onRemoveWorkbox={handleRemoveWorkbox}
+            />
 
-            {(actionQueue.pendingApprovals.length > 0 || actionQueue.myPendingSubmissions.length > 0) && (
-              <button
-                type="button"
-                data-slot="action-queue-trigger"
-                onClick={() => setIsActionQueueOpen(true)}
-                className="inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-2 px-3 py-1.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-semibold cursor-pointer transition-colors shrink-0 self-start sm:self-auto"
-                aria-label="Mở hàng đợi xử lý công việc"
-                title="Mở Hộp việc khẩn cấp (Smart Workbox)"
-              >
-                <Layers className="size-3.5" strokeWidth={1.5} />
-                <span>Hộp việc xử lý</span>
-                <span className="font-mono text-xs px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground tabular-nums leading-none">
-                  {actionQueue.pendingApprovals.length + actionQueue.myPendingSubmissions.length}
-                </span>
-              </button>
-            )}
-          </div>
-
-          {/* Unassigned Department State or Empty State or Table/Kanban */}
+            {/* Unassigned Department State or Empty State or Table/Kanban */}
           {activeScope === "unit" && isUnassigned ? (
             <UnassignedDepartmentState onOpenProfile={() => setIsProfileModalOpen(true)} />
           ) : tasks.length === 0 && !initialLoading && !isLoading && !isInternalLoading ? (
@@ -1650,7 +1704,7 @@ export function UnifiedAdaptiveWorkspace({
               <div className="flex items-center gap-2">
                 <Layers className="size-4 text-primary" strokeWidth={1.5} />
                 <h3 className="text-sm font-bold text-foreground">
-                  Hộp việc khẩn cấp (Smart Workbox)
+                  Hàng đợi xử lý công việc
                 </h3>
               </div>
               <button
@@ -1666,7 +1720,7 @@ export function UnifiedAdaptiveWorkspace({
               <AdaptiveMetricStrip metrics={metrics} scope={activeScope} />
               <ActionQueueShell
                 title="Hàng đợi hành động"
-                totalCount={actionQueue.pendingApprovals.length + actionQueue.myPendingSubmissions.length}
+                totalCount={actionQueueTotal}
                 collapsible={false}
                 className="border-border/70"
               >

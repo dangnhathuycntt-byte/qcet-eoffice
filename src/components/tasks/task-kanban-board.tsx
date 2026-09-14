@@ -414,7 +414,7 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
     <div
       onClick={handleCardClick}
       className={cn(
-        "group relative flex flex-col gap-2 rounded-lg border border-border/60 bg-card p-3 text-card-foreground transition-all duration-150 cursor-pointer shadow-2xs",
+        "group relative flex flex-col gap-1.5 rounded-lg border border-border/60 bg-card py-2.5 px-3 text-card-foreground transition-all duration-150 cursor-pointer shadow-2xs",
         "hover:border-primary/40 hover:shadow-subtle hover:-translate-y-[1px] active:translate-y-0",
         item.level === "TRUONG"
           ? "border-l-2 border-l-blue-500/70"
@@ -433,7 +433,7 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
               <span className="truncate">{item.parentSchoolTaskTitle}</span>
             </div>
           )}
-          <h4 className="text-xs font-semibold text-foreground leading-snug line-clamp-3 group-hover:text-primary transition-colors">
+          <h4 className="text-xs font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
             {item.title}
           </h4>
         </div>
@@ -589,30 +589,32 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
         )}
       </div>
 
-      {/* Row 4: Progress bar (School tasks only) */}
-      {item.progressPercent !== undefined && (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs text-muted-foreground font-mono tabular-nums">
-            <span className="text-muted-foreground/70">Tiến độ</span>
-            <span>{item.progressPercent ?? 0}%</span>
+      {/* Row 4: Progress bar - suppressed when 0% or 100% completed */}
+      {item.progressPercent !== undefined &&
+        item.progressPercent > 0 &&
+        (item.progressPercent < 100 || item.status !== "COMPLETED") && (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground font-mono tabular-nums">
+              <span className="text-muted-foreground/70">Tiến độ</span>
+              <span>{item.progressPercent}%</span>
+            </div>
+            <div className="h-1 w-full overflow-hidden rounded-full bg-muted/60">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-300",
+                  item.progressPercent === 100
+                    ? "bg-emerald-500"
+                    : item.progressPercent >= 50
+                    ? "bg-blue-500"
+                    : "bg-amber-500"
+                )}
+                style={{
+                  width: `${Math.min(100, Math.max(0, item.progressPercent))}%`,
+                }}
+              />
+            </div>
           </div>
-          <div className="h-1 w-full overflow-hidden rounded-full bg-muted/60">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all duration-300",
-                (item.progressPercent ?? 0) === 100
-                  ? "bg-emerald-500"
-                  : (item.progressPercent ?? 0) >= 50
-                  ? "bg-blue-500"
-                  : "bg-amber-500"
-              )}
-              style={{
-                width: `${Math.min(100, Math.max(0, item.progressPercent ?? 0))}%`,
-              }}
-            />
-          </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
@@ -711,20 +713,19 @@ export function TaskKanbanBoard({
       className={cn("w-full overflow-x-auto pb-4", className)}
       data-slot="task-kanban-board"
     >
-      {/* Explicit Count Notice Header (Zero Silent Loss Guarantee) */}
+      {/* Flat compact summary (Zero Silent Loss Guarantee) */}
       <div
         data-slot="kanban-count-notice"
-        className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 mb-3 rounded-xl border border-border/60 bg-muted/30 text-xs text-muted-foreground"
+        className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground mb-2 px-0.5"
       >
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-foreground">
-            Bảng Kanban:
-          </span>
-          <span className="font-mono tabular-nums font-semibold text-foreground">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-medium text-foreground">Kanban</span>
+          <span>·</span>
+          <span className="font-mono tabular-nums font-medium text-foreground">
             {totalVisibleCount} / {totalExtractedCount} công việc
           </span>
           {excludedCount > 0 && (
-            <span className="text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 font-medium">
+            <span className="text-amber-700 bg-amber-500/10 px-1.5 py-0.5 rounded text-xs border border-amber-500/20 font-medium">
               ({excludedCount} công việc bị huỷ / lưu trữ không hiển thị trên bảng)
             </span>
           )}

@@ -1,1 +1,0 @@
-../../plans/superseded/2026-09-06-ui-ux-anti-slop-redesign.md

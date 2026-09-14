@@ -298,7 +298,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       const content = fs.readFileSync(selectorPath, "utf-8");
 
       assert.match(content, /export function GlobalMonthSelector/);
-      assert.match(content, /Tháng hiện tại: T/);
+      assert.match(content, /Kỳ hiện tại: T/);
       assert.match(content, /Xem cả năm/);
       assert.match(content, /monthlyTaskCounts/);
       assert.match(content, /SEMESTER_GROUPS/);
@@ -314,7 +314,7 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       );
       const content = fs.readFileSync(dashboardZonePath, "utf-8");
 
-      assert.match(content, /aria-label="Thanh tác vụ ngữ cảnh: KỲ VẬN HÀNH THÁNG và Phạm vi"/);
+      assert.match(content, /aria-label="Thanh tác vụ ngữ cảnh: KỲ VẬN HÀNH và Phạm vi"/);
       assert.match(content, /<ScopeSwitcher \/>/);
       assert.match(content, /<GlobalMonthSelector \/>/);
       assert.match(content, /Suspense/);

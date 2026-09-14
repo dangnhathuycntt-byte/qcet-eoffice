@@ -129,14 +129,14 @@ describe("Dashboard composition invariants", () => {
     );
   });
 
-  test("8. Section order is SUMMARY → ACTION → CONTEXT", () => {
-    const situationPos = dashboardSource.indexOf('data-slot="section-situation"');
+  test("8. Section order is ACTION → SITUATION → CONTEXT (Action-First)", () => {
     const actionPos = dashboardSource.indexOf('data-slot="section-action"');
+    const situationPos = dashboardSource.indexOf('data-slot="section-situation"');
     const contextPos = dashboardSource.indexOf('data-slot="section-context"');
 
     assert.ok(situationPos > -1 && actionPos > -1 && contextPos > -1);
-    assert.ok(situationPos < actionPos, "the summary must sit BEFORE the queue");
-    assert.ok(actionPos < contextPos, "the queue must sit BEFORE the context section");
+    assert.ok(actionPos < situationPos, "the action queue must sit BEFORE the situation summary");
+    assert.ok(situationPos < contextPos, "the situation summary must sit BEFORE the context section");
   });
 
   test("9. Executive overdue surfaces even when personal stats show none", () => {

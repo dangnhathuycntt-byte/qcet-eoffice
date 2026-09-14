@@ -19,6 +19,7 @@ export interface TaskPaginationBarProps {
   pageSizeOptions?: number[];
   disabled?: boolean;
   className?: string;
+  shortcutTrigger?: React.ReactNode;
 }
 
 export function getPageNumbers(currentPage: number, totalPages: number): (number | "...")[] {
@@ -57,6 +58,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
   pageSizeOptions = DEFAULT_PAGE_SIZES,
   disabled = false,
   className,
+  shortcutTrigger,
 }: TaskPaginationBarProps) {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -99,23 +101,22 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
     <nav
       aria-label="Phân trang bảng công việc"
       className={cn(
-        "flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-200/80 bg-slate-50/70 px-4 py-2.5 select-none",
+        "flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border/60 bg-muted/20 px-4 py-2 select-none",
         className
       )}
     >
       {/* Left section: Item range counter & page size selector */}
-      <div className="flex items-center gap-3 text-xs sm:text-[13px] text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground w-full sm:w-auto justify-between sm:justify-start">
         <div className="tabular-nums">
           {totalItems === 0 ? (
             <span>0 nhiệm vụ</span>
           ) : (
             <span>
-              Hiển thị{" "}
-              <strong className="font-semibold text-foreground">
-                {startItem} - {endItem}
+              <strong className="font-semibold text-foreground font-mono">
+                {startItem}–{endItem}
               </strong>{" "}
-              trên tổng số{" "}
-              <strong className="font-semibold text-foreground">
+              /{" "}
+              <strong className="font-semibold text-foreground font-mono">
                 {totalItems}
               </strong>{" "}
               nhiệm vụ
@@ -124,16 +125,16 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
         </div>
 
         {/* Page Size Selector */}
-        <div className="flex items-center gap-1.5 ml-2">
-          <label htmlFor="task-table-page-size" className="sr-only sm:not-sr-only text-xs text-muted-foreground">
-            Hiển thị:
+        <div className="flex items-center gap-1.5 ml-1">
+          <label htmlFor="task-table-page-size" className="sr-only">
+            Số lượng công việc trên mỗi trang
           </label>
           <select
             id="task-table-page-size"
             value={pageSize}
             disabled={disabled || totalItems === 0}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="h-8 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-foreground shadow-2xs focus:border-primary focus:outline-hidden focus:ring-2 focus:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+            className="h-8 rounded-lg border border-border/80 bg-background px-2 py-0.5 text-xs font-medium text-foreground shadow-2xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             aria-label="Số lượng công việc trên mỗi trang"
           >
             {effectivePageSizeOptions.map((size) => (
@@ -145,14 +146,14 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
         </div>
       </div>
 
-      {/* Right section: Page navigation buttons */}
+      {/* Right section: Page navigation buttons & optional shortcut trigger */}
       <div className="flex items-center gap-1">
         {/* First Page Button */}
         <button
           type="button"
           onClick={handleFirst}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200/80 bg-white text-muted-foreground transition-colors hover:bg-slate-100 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
+          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
           title="Trang đầu"
           aria-label="Về trang đầu"
         >
@@ -164,7 +165,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           type="button"
           onClick={handlePrevious}
           disabled={disabled || safeCurrentPage <= 1}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200/80 bg-white text-muted-foreground transition-colors hover:bg-slate-100 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
+          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
           title="Trang trước"
           aria-label="Sang trang trước"
         >
@@ -198,7 +199,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
                   "inline-flex size-8 items-center justify-center rounded-lg text-xs font-medium font-mono tabular-nums transition-colors shadow-2xs cursor-pointer active:scale-95",
                   isCurrent
                     ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "border border-slate-200/80 bg-white text-muted-foreground hover:bg-slate-100 hover:text-foreground"
+                    : "border border-border/80 bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 )}
                 aria-label={`Trang ${p}`}
               >
@@ -213,7 +214,7 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           type="button"
           onClick={handleNext}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200/80 bg-white text-muted-foreground transition-colors hover:bg-slate-100 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
+          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
           title="Trang sau"
           aria-label="Sang trang sau"
         >
@@ -225,12 +226,19 @@ export const TaskPaginationBar = React.memo(function TaskPaginationBar({
           type="button"
           onClick={handleLast}
           disabled={disabled || safeCurrentPage >= totalPages}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-slate-200/80 bg-white text-muted-foreground transition-colors hover:bg-slate-100 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
+          className="inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95"
           title="Trang cuối"
           aria-label="Về trang cuối"
         >
           <ChevronsRight className="size-3.5" strokeWidth={1.5} />
         </button>
+
+        {/* Optional Shortcut Help Trigger */}
+        {shortcutTrigger && (
+          <div className="hidden sm:flex items-center ml-1.5 pl-2 border-l border-border/60">
+            {shortcutTrigger}
+          </div>
+        )}
       </div>
     </nav>
   );

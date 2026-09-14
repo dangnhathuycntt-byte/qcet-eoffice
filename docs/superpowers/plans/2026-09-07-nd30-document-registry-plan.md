@@ -1,1 +1,0 @@
-../../plans/completed/2026-09-07-nd30-document-registry-plan.md

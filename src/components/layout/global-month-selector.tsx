@@ -141,16 +141,16 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
       return `Cả năm ${currentAcademicYear}`;
     }
     if (activePeriod) {
-      return `${activePeriod.label} (${activePeriod.shortDateSpan})`;
+      return `Kỳ T${selectedMonth} · ${activePeriod.shortDateSpan.replace(" - ", "–")}`;
     }
-    return `Tháng ${selectedMonth}`;
+    return `Kỳ T${selectedMonth}`;
   }, [selectedMonth, activePeriod, currentAcademicYear]);
 
   const triggerMobileLabel = React.useMemo(() => {
     if (selectedMonth === "ALL") {
       return "Cả năm";
     }
-    return `T${selectedMonth}`;
+    return `Kỳ T${selectedMonth}`;
   }, [selectedMonth]);
 
   // Handle month selection
@@ -188,7 +188,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
         onClick={() => setIsOpen((prev) => !prev)}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
-        aria-label="Chọn tháng học thuật"
+        aria-label="Chọn kỳ vận hành"
         className={cn(
           "group inline-flex min-h-[44px] sm:min-h-[32px] h-auto sm:h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/40 hover:bg-secondary/80 px-2.5 text-xs font-medium text-foreground transition-all cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.98] touch-manipulation",
           className
@@ -214,7 +214,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Chọn tháng vận hành"
+          aria-label="Chọn kỳ vận hành"
           className="absolute left-0 sm:left-auto sm:right-0 md:left-0 md:right-auto top-full mt-1.5 w-[330px] sm:w-[390px] max-w-[calc(100vw-24px)] rounded-xl border border-border/70 bg-card p-3 text-popover-foreground shadow-xl backdrop-blur-md z-50 animate-in fade-in-0 zoom-in-95 focus:outline-none"
         >
           {/* Header & Year Info */}
@@ -224,12 +224,12 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
                 NĂM HỌC {currentAcademicYear}
               </span>
               <p className="text-xs text-muted-foreground">
-                Chu kỳ nghiệp vụ: ngày 25 đến 24 hàng tháng
+                Chu kỳ vận hành: ngày 25 đến 24 hàng tháng
               </p>
             </div>
             {selectedMonth !== "ALL" && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                Tháng {selectedMonth}
+                Kỳ T{selectedMonth}
               </span>
             )}
           </div>
@@ -248,7 +248,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
             >
               <div className="flex items-center gap-1.5 truncate">
                 <Sparkles size={12} className="text-primary shrink-0" />
-                <span className="truncate">Tháng hiện tại: T{currentActualMonth}</span>
+                <span className="truncate">Kỳ hiện tại: T{currentActualMonth}</span>
               </div>
               {selectedMonth === currentActualMonth && (
                 <Check size={12} className="text-primary shrink-0 ml-1" />
@@ -299,11 +299,11 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
                     <div className="min-w-0 pr-1">
                       <div className="flex items-center gap-1">
                         <span className="text-xs font-medium leading-tight truncate">
-                          {period.label}
+                          Kỳ T{m}
                         </span>
                         {isActualCurrent && (
                           <span
-                            title="Tháng hiện tại trên lịch thực tế"
+                            title="Kỳ hiện tại trên lịch thực tế"
                             className="size-1.5 rounded-full bg-emerald-500 shrink-0"
                           />
                         )}

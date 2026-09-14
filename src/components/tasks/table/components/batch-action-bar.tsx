@@ -175,13 +175,13 @@ export function BatchActionBar({
         className
       )}
     >
-      <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 rounded-2xl border border-slate-200/90 bg-white/95 backdrop-blur-md px-3.5 py-2 shadow-xl text-slate-900">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 rounded-2xl border border-border/80 bg-card/95 backdrop-blur-md px-3.5 py-2 shadow-xl text-foreground">
         {/* Bộ đếm số lượng mục đã chọn */}
-        <div className="flex items-center gap-2 pr-2.5 border-r border-slate-200">
+        <div className="flex items-center gap-2 pr-2.5 border-r border-border">
           <CheckSquare className="size-4 text-primary shrink-0" strokeWidth={1.5} />
-          <span className="text-xs font-medium text-slate-800 whitespace-nowrap">
+          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
             Đã chọn{" "}
-            <strong className="font-semibold font-mono tabular-nums text-slate-900">
+            <strong className="font-semibold font-mono tabular-nums text-foreground">
               {selectedCount}
             </strong>
             {totalCount ? `/${totalCount}` : ""} nhiệm vụ được chọn
@@ -221,7 +221,7 @@ export function BatchActionBar({
                 }
               }}
               disabled={isLoading}
-              className="h-8.5 pl-3 pr-7 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none shadow-2xs"
+              className="h-8.5 pl-3 pr-7 rounded-lg border border-border bg-background text-xs font-medium text-foreground hover:bg-muted/60 focus:outline-hidden focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none shadow-2xs"
             >
               <option value="" disabled>
                 Đổi trạng thái...
@@ -233,7 +233,7 @@ export function BatchActionBar({
               ))}
             </select>
             <ChevronDown
-              className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-slate-500 pointer-events-none"
+              className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
               strokeWidth={1.5}
             />
           </div>
@@ -247,7 +247,7 @@ export function BatchActionBar({
             size="sm"
             onClick={() => onBulkReassign("")}
             disabled={isLoading}
-            className="h-8.5 px-2.5 text-xs font-medium border-slate-200 bg-white hover:bg-slate-50 text-slate-800 gap-1.5 cursor-pointer shadow-2xs"
+            className="h-8.5 px-2.5 text-xs font-medium border-border bg-background hover:bg-muted/60 text-foreground gap-1.5 cursor-pointer shadow-2xs"
             aria-label="Phân công lại các công việc đã chọn"
             title="Giao lại nhiệm vụ"
           >
@@ -261,7 +261,7 @@ export function BatchActionBar({
         {onBulkExtendDeadline && (
           <div className="relative inline-flex items-center">
             <Calendar
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-500 pointer-events-none"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
               strokeWidth={1.5}
             />
             <select
@@ -279,7 +279,7 @@ export function BatchActionBar({
                 }
               }}
               disabled={isLoading}
-              className="h-8.5 pl-8 pr-7 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none shadow-2xs"
+              className="h-8.5 pl-8 pr-7 rounded-lg border border-border bg-background text-xs font-medium text-foreground hover:bg-muted/60 focus:outline-hidden focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors cursor-pointer appearance-none shadow-2xs"
             >
               <option value="" disabled>
                 Gia hạn hạn chót...
@@ -290,7 +290,7 @@ export function BatchActionBar({
               <option value="30">+30 ngày (1 tháng)</option>
             </select>
             <ChevronDown
-              className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-slate-500 pointer-events-none"
+              className="absolute right-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
               strokeWidth={1.5}
             />
           </div>
@@ -304,7 +304,7 @@ export function BatchActionBar({
             size="sm"
             onClick={onExportExcel}
             disabled={isLoading}
-            className="h-8.5 px-2.5 text-xs font-medium border-slate-200 bg-white hover:bg-slate-50 text-slate-800 gap-1.5 cursor-pointer shadow-2xs"
+            className="h-8.5 px-2.5 text-xs font-medium border-border bg-background hover:bg-muted/60 text-foreground gap-1.5 cursor-pointer shadow-2xs"
             aria-label="Xuất file Excel các công việc đã chọn"
           >
             <FileSpreadsheet
@@ -338,13 +338,13 @@ export function BatchActionBar({
           size="sm"
           onClick={onClearSelection}
           disabled={isLoading}
-          className="h-8.5 px-2.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 gap-1.5 cursor-pointer"
+          className="h-8.5 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 gap-1.5 cursor-pointer"
           aria-label="Bỏ chọn tất cả công việc"
           title="Bỏ chọn (Esc)"
         >
           <X className="size-3.5" strokeWidth={1.5} />
           <span className="hidden sm:inline">Bỏ chọn</span>
-          <kbd className="inline-flex items-center rounded border border-slate-200 bg-slate-100 px-1 font-mono text-xs text-slate-600">
+          <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 font-mono text-xs text-muted-foreground">
             Esc
           </kbd>
         </Button>

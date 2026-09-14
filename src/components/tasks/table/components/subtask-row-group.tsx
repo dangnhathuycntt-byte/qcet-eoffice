@@ -36,7 +36,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
   parentTask,
   subTasks = parentTask.subTasks || [],
   isExpanded,
-  colSpan = 9,
+  colSpan = 8,
   density = "comfortable",
   scope,
   selectedAcademicMonth,
@@ -67,14 +67,14 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
     <tr
       data-parent-id={parentTask.id}
       data-task-tier="2"
-      className={cn("bg-slate-50/60 transition-colors", className)}
+      className={cn("bg-muted/20 transition-colors", className)}
     >
-      <td colSpan={colSpan} className="p-0 border-b border-slate-200/70">
+      <td colSpan={colSpan} className="p-0 border-b border-border/70">
         <div className="py-2.5 pr-4 pl-8 sm:pl-10">
           {/* Tree indentation vertical connector line */}
-          <div className="border-l-2 border-slate-200 ml-6 pl-3 space-y-2">
+          <div className="border-l-2 border-border ml-6 pl-3 space-y-2">
             {!hasSubtasks ? (
-              <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-white/80 border border-dashed border-slate-200 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-card border border-dashed border-border text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <ListTodo className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
                   <span>Nhiệm vụ này chưa có việc thành phần nào.</span>
@@ -131,7 +131,7 @@ export const SubtaskRowGroup = React.memo(function SubtaskRowGroup({
                     <button
                       type="button"
                       onClick={() => onAddSubTask(parentTask.id)}
-                      className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-dashed border-slate-300 bg-white/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 text-xs font-medium cursor-pointer transition-colors"
+                      className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-lg border border-dashed border-border bg-card/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 text-xs font-medium cursor-pointer transition-colors"
                     >
                       <Plus className="size-3 text-primary" strokeWidth={1.5} />
                       <span>Thêm việc con cho [{parentTask.taskCode || parentTask.id}]</span>

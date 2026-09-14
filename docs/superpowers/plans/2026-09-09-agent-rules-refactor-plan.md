@@ -1,1 +1,0 @@
-../../plans/active/2026-09-09-agent-rules-refactor-plan.md

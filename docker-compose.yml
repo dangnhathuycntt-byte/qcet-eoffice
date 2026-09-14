@@ -35,10 +35,11 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
       DATABASE_URL: ${APP_DATABASE_URL:-postgresql://${POSTGRES_USER:-qcet_admin}:${POSTGRES_PASSWORD}@qcet-db:5432/${POSTGRES_DB:-qcet_eoffice}?schema=public}
       JWT_SECRET: ${JWT_SECRET:?Vui long cung cap JWT_SECRET}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://e-office.cdktcnqn.edu.vn}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://e-office.cdktcnqn.edu.vn}
+      NEXTAUTH_URL: ${PUBLIC_APP_URL:-https://qcet.dixxie.store}
+      NEXT_PUBLIC_APP_URL: ${PUBLIC_APP_URL:-https://qcet.dixxie.store}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
@@ -54,6 +55,9 @@ services:
       - ${UPLOADS_HOST_PATH:?Vui long cung cap UPLOADS_HOST_PATH trong .env.production}:/app/uploads
     networks:
       - qcet-internal
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   qcet-tunnel:
     container_name: qcet-eoffice-tunnel

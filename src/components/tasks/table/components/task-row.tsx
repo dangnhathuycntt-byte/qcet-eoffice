@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import {
+  AlertTriangle,
   Bell,
   Check,
   ChevronDown,
   ChevronRight,
+  Clock,
   Eye,
   MoreHorizontal,
   Plus,
@@ -246,10 +248,10 @@ export const TaskRow = React.memo(function TaskRow({
       data-task-tier="1"
       aria-selected={isSelected}
       className={cn(
-        "group cursor-pointer transition-colors border-b border-slate-200/70 select-none hover:bg-slate-50/80 focus-visible:outline-hidden",
+        "group cursor-pointer transition-colors border-b border-border/70 select-none hover:bg-muted/50 focus-visible:outline-hidden",
         rowHeightClass,
         isSelected && "bg-primary/[0.04]",
-        isExpanded && "bg-slate-50/50",
+        isExpanded && "bg-muted/30",
         isActive && "ring-1 ring-inset ring-indigo-500/40 bg-indigo-50/20",
         className
       )}
@@ -265,14 +267,14 @@ export const TaskRow = React.memo(function TaskRow({
               type="checkbox"
               checked={isSelected}
               onChange={(e) => onToggleSelect?.(task.id, e)}
-              className="size-4 rounded border-slate-300 text-primary focus:ring-2 focus:ring-primary/25 cursor-pointer transition-colors"
+              className="size-4 rounded border-input text-primary focus:ring-2 focus:ring-primary/25 cursor-pointer transition-colors"
               aria-label={`Chọn nhiệm vụ ${task.taskCode || task.id}`}
             />
           </div>
         </td>
       )}
 
-      {/* 2. Nhiệm vụ (Code & Title, clear subtask indicator with hierarchical indent) */}
+      {/* 2. Nhiệm vụ (Title leads, secondary muted mono Code, subtask rollup) */}
       <td className={cn("align-middle text-sm font-medium text-foreground leading-snug", paddingClass)}>
         <div className="flex items-center gap-2">
           {/* Hierarchical Expand/Collapse Caret */}
@@ -280,7 +282,7 @@ export const TaskRow = React.memo(function TaskRow({
             <button
               type="button"
               onClick={handleExpandClick}
-              className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-slate-200/60 hover:text-foreground cursor-pointer shrink-0"
+              className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted/80 hover:text-foreground cursor-pointer shrink-0"
               aria-expanded={isExpanded}
               aria-label={
                 isExpanded
@@ -296,16 +298,11 @@ export const TaskRow = React.memo(function TaskRow({
             </button>
           ) : (
             <span className="inline-flex size-6 items-center justify-center shrink-0">
-              <span className="size-1.5 rounded-full bg-slate-300" />
+              <span className="size-1.5 rounded-full bg-muted-foreground/30" />
             </span>
           )}
 
-          {/* Task Code */}
-          <span className="font-mono text-xs font-semibold tabular-nums px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/70 shrink-0">
-            {(task.code || task.taskCode || task.id).toUpperCase()}
-          </span>
-
-          {/* Task Title */}
+          {/* Task Title (Primary lead) */}
           <span
             className="line-clamp-1 text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate"
             title={task.title}
@@ -313,10 +310,15 @@ export const TaskRow = React.memo(function TaskRow({
             {task.title}
           </span>
 
+          {/* Task Code (Secondary muted mono) */}
+          <span className="font-mono text-xs text-muted-foreground tabular-nums shrink-0">
+            {(task.code || task.taskCode || task.id).toUpperCase()}
+          </span>
+
           {/* Subtask Rollup Indicator */}
           {hasSubtasks && (
             <span
-              className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-slate-600 border border-slate-200/60 shrink-0"
+              className="rounded bg-muted/70 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground border border-border/60 shrink-0"
               title={`Hoàn thành ${completedSubTasks} trên tổng số ${totalSubTasks} việc thành phần`}
             >
               [{completedSubTasks}/{totalSubTasks}]
@@ -352,7 +354,7 @@ export const TaskRow = React.memo(function TaskRow({
               className="size-5.5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
             />
           ) : (
-            <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold tabular-nums text-slate-700 border border-slate-200">
+            <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums text-muted-foreground border border-border">
               {getInitials(driInfo.primaryName)}
             </span>
           )}
@@ -382,7 +384,7 @@ export const TaskRow = React.memo(function TaskRow({
         </div>
       </td>
 
-      {/* 5. Hạn (SLA formatted date, highlighted if overdue) */}
+      {/* 5. Hạn (SLA formatted date, highlighted if overdue; SLA badge only when urgent) */}
       <td className={cn("w-32 align-middle whitespace-nowrap", paddingClass)}>
         <div className="flex items-center gap-1.5">
           <span
@@ -393,13 +395,18 @@ export const TaskRow = React.memo(function TaskRow({
           >
             {formatTableDate(task.dueDate)}
           </span>
-          {slaStatus.label !== "-" && (
+          {slaStatus.label && task.status !== "COMPLETED" && task.status !== "CANCELLED" && (
             <span
               className={cn(
-                "inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold border tabular-nums",
+                "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold border tabular-nums",
                 slaStatus.colorClass
               )}
             >
+              {slaStatus.isOverdue ? (
+                <AlertTriangle className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+              ) : (
+                <Clock className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+              )}
               {slaStatus.label}
             </span>
           )}
@@ -419,21 +426,36 @@ export const TaskRow = React.memo(function TaskRow({
         </Badge>
       </td>
 
-      {/* 7. Tiến độ (compact progress bar + percentage with tabular-nums) */}
+      {/* 7. Tiến độ (compact progress bar when 0 < progress < 100, suppressed bar at 0% and completed 100%) */}
       <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
-        <div className="flex items-center gap-2">
-          <div className="relative flex h-1.5 w-14 overflow-hidden rounded-full bg-slate-200/80">
-            <div
-              className="h-full bg-emerald-500 transition-all duration-300 ease-out"
-              style={{
-                width: `${Math.min(100, Math.max(0, task.progressPercent))}%`,
-              }}
-            />
+        {task.progressPercent > 0 && task.progressPercent < 100 ? (
+          <div className="flex items-center gap-2">
+            <div className="relative flex h-1.5 w-14 overflow-hidden rounded-full bg-muted/80">
+              <div
+                className="h-full bg-emerald-500 transition-all duration-300 ease-out"
+                style={{
+                  width: `${task.progressPercent}%`,
+                }}
+              />
+            </div>
+            <span className="font-mono text-xs font-semibold tabular-nums text-foreground/80">
+              {task.progressPercent}%
+            </span>
           </div>
-          <span className="font-mono text-xs font-semibold tabular-nums text-slate-700">
-            {task.progressPercent}%
+        ) : task.progressPercent === 100 && task.status !== "COMPLETED" ? (
+          <div className="flex items-center gap-2">
+            <div className="relative flex h-1.5 w-14 overflow-hidden rounded-full bg-muted/80">
+              <div className="h-full w-full bg-emerald-500" />
+            </div>
+            <span className="font-mono text-xs font-semibold tabular-nums text-amber-700">
+              100%
+            </span>
+          </div>
+        ) : (
+          <span className="font-mono text-xs tabular-nums text-muted-foreground/60">
+            {task.progressPercent === 100 ? "100%" : "0%"}
           </span>
-        </div>
+        )}
       </td>
 
       {/* 8. Actions (maximum 1 contextual CTA if required + ... overflow dropdown menu) */}
@@ -464,7 +486,7 @@ export const TaskRow = React.memo(function TaskRow({
             <button
               type="button"
               onClick={handleToggleMenu}
-              className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-slate-200/70 hover:text-foreground cursor-pointer transition-colors"
+              className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/80 hover:text-foreground cursor-pointer transition-colors"
               aria-expanded={isMenuOpen}
               aria-label="Thao tác khác"
               title="Thao tác khác"
@@ -485,7 +507,7 @@ export const TaskRow = React.memo(function TaskRow({
                 <div
                   role="menu"
                   aria-orientation="vertical"
-                  className="absolute right-0 top-full mt-1 w-44 rounded-xl border border-slate-200 bg-white p-1 shadow-lg z-40 text-xs font-medium divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100"
+                  className="absolute right-0 top-full mt-1 w-44 rounded-xl border border-border bg-card p-1 shadow-lg z-40 text-xs font-medium divide-y divide-border/50 animate-in fade-in zoom-in-95 duration-100"
                 >
                   <div className="py-0.5 space-y-0.5">
                     <button
@@ -496,9 +518,9 @@ export const TaskRow = React.memo(function TaskRow({
                         setIsMenuOpen(false);
                         onClick?.(task);
                       }}
-                      className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-800 hover:bg-slate-100 cursor-pointer transition-colors text-left"
+                      className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-muted/60 cursor-pointer transition-colors text-left"
                     >
-                      <Eye className="size-3.5 text-slate-500" strokeWidth={1.5} />
+                      <Eye className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                       <span>Xem chi tiết</span>
                     </button>
 
@@ -513,7 +535,7 @@ export const TaskRow = React.memo(function TaskRow({
                             task.status === "COMPLETED" ? "IN_PROGRESS" : "COMPLETED";
                           onStatusChange(task.id, nextStatus);
                         }}
-                        className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-800 hover:bg-slate-100 cursor-pointer transition-colors text-left"
+                        className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-muted/60 cursor-pointer transition-colors text-left"
                       >
                         <Check className="size-3.5 text-emerald-600" strokeWidth={1.5} />
                         <span>
@@ -536,7 +558,7 @@ export const TaskRow = React.memo(function TaskRow({
                             setIsMenuOpen(false);
                             onAddSubTask(task.id);
                           }}
-                          className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-800 hover:bg-slate-100 cursor-pointer transition-colors text-left"
+                          className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-muted/60 cursor-pointer transition-colors text-left"
                         >
                           <Plus className="size-3.5 text-primary" strokeWidth={1.5} />
                           <span>Thêm việc con</span>
@@ -552,7 +574,7 @@ export const TaskRow = React.memo(function TaskRow({
                             setIsMenuOpen(false);
                             onUrge(task.id, task.title, task.leadAssigneeName || "");
                           }}
-                          className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-800 hover:bg-slate-100 cursor-pointer transition-colors text-left"
+                          className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-muted/60 cursor-pointer transition-colors text-left"
                         >
                           <Bell className="size-3.5 text-amber-600" strokeWidth={1.5} />
                           <span>Đôn đốc tiến độ</span>

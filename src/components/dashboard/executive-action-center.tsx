@@ -109,8 +109,8 @@ export function getActionCardData(stats: ExecutiveActionStats) {
 /** Workbench queue lenses. Each is a predicate over the SAME item set. */
 const QUEUE_LENSES: { filter: ExecutiveFilter; label: string }[] = [
   { filter: "ALL", label: "Tất cả" },
-  { filter: "PENDING_APPROVAL", label: "Hồ sơ chờ xem xét" },
-  { filter: "BLOCKED_OVERDUE", label: "Vướng mắc & Trễ hạn" },
+  { filter: "PENDING_APPROVAL", label: "Chờ xem xét" },
+  { filter: "BLOCKED_OVERDUE", label: "Vướng mắc" },
 ];
 
 /** Drill-down target that each parser really consumes (plan T08.1). */
@@ -126,7 +126,7 @@ export function ExecutiveActionCenter({
   onFilterChange,
   items,
   onAction,
-  title = "Hàng đợi điều hành",
+  title = "Cần bạn xử lý",
   subtitle,
   hideCards = true,
   isLoading = false,
@@ -157,7 +157,7 @@ export function ExecutiveActionCenter({
                 aria-label={`Lọc theo ${card.title}: ${card.value} ${card.subtext}`}
                 onClick={() => onFilterChange(isActive ? "ALL" : card.filterKey)}
                 className={cn(
-                  "group relative flex flex-col justify-between gap-3 rounded-xl border bg-card p-4 sm:p-5 text-left transition-all duration-200 cursor-pointer select-none overflow-hidden w-full",
+                  "group relative flex flex-col justify-between gap-3 rounded-xl border bg-card p-3.5 sm:p-4 text-left transition-all duration-200 cursor-pointer select-none overflow-hidden w-full",
                   "hover:-translate-y-0.5 hover:shadow-xs",
                   isActive
                     ? cn("shadow-xs z-10", card.activeAccent, card.activeBg)
@@ -190,15 +190,16 @@ export function ExecutiveActionCenter({
 
       <section
         aria-labelledby="executive-action-queue-title"
-        className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5"
+        className="rounded-lg border border-border/50 bg-card/60 p-3.5 sm:p-4"
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <h2
               id="executive-action-queue-title"
-              className="font-heading text-sm font-bold tracking-tight text-foreground"
+              className="font-heading text-sm font-bold tracking-tight text-foreground flex items-center gap-2"
             >
-              {title}
+              <span>{title}</span>
+              <span className="sr-only">Hàng đợi điều hành</span>
             </h2>
             {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
           </div>
@@ -263,7 +264,7 @@ export function ExecutiveActionCenter({
           </div>
         ) : filteredTotal === 0 ? (
           <div
-            className="flex items-center gap-3.5 rounded-xl border border-border/70 bg-card/60 px-3.5 py-3 min-h-[64px]"
+            className="flex items-center gap-3.5 px-1 py-3 min-h-[64px]"
             data-slot="action-center-empty-state"
           >
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground border border-border/60">
@@ -289,6 +290,26 @@ export function ExecutiveActionCenter({
                   data-task-id={item.taskId}
                 >
                   <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {item.reasons.map((reason) => (
+                        <span
+                          key={reason}
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-xs font-semibold",
+                            reason === "REVIEW"
+                              ? "bg-amber-500/10 text-amber-800"
+                              : "bg-rose-500/10 text-rose-800"
+                          )}
+                          data-reason={reason}
+                        >
+                          {reason === "REVIEW"
+                            ? "Chờ xem xét"
+                            : reason === "BLOCKED"
+                              ? "Vướng mắc"
+                              : "Trễ hạn"}
+                        </span>
+                      ))}
+                    </div>
                     <h4
                       className="line-clamp-2 text-sm font-semibold leading-snug text-foreground"
                       title={item.title}
@@ -299,28 +320,18 @@ export function ExecutiveActionCenter({
                       <span className="font-medium text-foreground/80">
                         {item.departmentName || item.department}
                       </span>
-                      <span aria-hidden="true">·</span>
-                      <span>Chủ trì: {item.leadName || item.assignee}</span>
-                      <span aria-hidden="true">·</span>
-                      <span className="font-mono tabular-nums">Hạn: {item.dueDate}</span>
-                      {item.reasons.map((reason) => (
-                        <span
-                          key={reason}
-                          className={cn(
-                            "rounded px-1.5 py-0.5 font-medium",
-                            reason === "REVIEW"
-                              ? "bg-amber-500/10 text-amber-800"
-                              : "bg-rose-500/10 text-rose-800"
-                          )}
-                          data-reason={reason}
-                        >
-                          {reason === "REVIEW"
-                            ? "Hồ sơ chờ xem xét"
-                            : reason === "BLOCKED"
-                              ? "Tắc nghẽn"
-                              : "Trễ hạn"}
-                        </span>
-                      ))}
+                      {item.leadName || item.assignee ? (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span>Chủ trì: {item.leadName || item.assignee}</span>
+                        </>
+                      ) : null}
+                      {item.dueDate ? (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-mono tabular-nums">Hạn: {item.dueDate}</span>
+                        </>
+                      ) : null}
                     </p>
                   </div>
                   <Button

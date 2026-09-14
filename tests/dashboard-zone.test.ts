@@ -22,7 +22,7 @@ describe("DashboardZone Contract & Structure Verification", () => {
 
   // Requirement (plan T06.2 / F01): the compact summary must be visible BEFORE the
   // queue. The old ACTION→SITUATION order pushed the summary below the queue.
-  test("DashboardZone enforces SITUATION -> ACTION -> CONTEXT section order", () => {
+  test("DashboardZone enforces ACTION -> SITUATION -> CONTEXT section order (Action-First)", () => {
     const filePath = path.resolve(__dirname, "../src/components/dashboard/zones/dashboard-zone.tsx");
     const content = fs.readFileSync(filePath, "utf-8");
 
@@ -33,8 +33,8 @@ describe("DashboardZone Contract & Structure Verification", () => {
     assert.ok(actionPos > -1, 'Must have data-slot="section-action"');
     assert.ok(situationPos > -1, 'Must have data-slot="section-situation"');
     assert.ok(contextPos > -1, 'Must have data-slot="section-context"');
-    assert.ok(situationPos < actionPos, "SUMMARY (situation) must appear before the queue");
-    assert.ok(actionPos < contextPos, "ACTION section must appear before CONTEXT section");
+    assert.ok(actionPos < situationPos, "ACTION queue must appear before SITUATION summary");
+    assert.ok(situationPos < contextPos, "SITUATION section must appear before CONTEXT section");
   });
 
   // Requirement (plan T06.1 / F01): one H1 "Bàn làm việc"; no role badge, no duplicated

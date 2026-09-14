@@ -25,11 +25,17 @@ export interface UpcomingDeadlinesWidgetProps {
 
 export function parseDateOnly(input: string | Date): { year: number; month: number; day: number } {
   if (input instanceof Date) {
-    return {
-      year: input.getFullYear(),
-      month: input.getMonth(),
-      day: input.getDate(),
-    };
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    });
+    const parts = formatter.formatToParts(input);
+    const y = parseInt(parts.find((p) => p.type === "year")?.value || "0", 10);
+    const m = parseInt(parts.find((p) => p.type === "month")?.value || "1", 10) - 1;
+    const d = parseInt(parts.find((p) => p.type === "day")?.value || "1", 10);
+    return { year: y, month: m, day: d };
   }
   if (typeof input === "string") {
     const match = input.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -42,15 +48,31 @@ export function parseDateOnly(input: string | Date): { year: number; month: numb
     }
     const d = new Date(input);
     if (!isNaN(d.getTime())) {
-      return {
-        year: d.getFullYear(),
-        month: d.getMonth(),
-        day: d.getDate(),
-      };
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+      });
+      const parts = formatter.formatToParts(d);
+      const y = parseInt(parts.find((p) => p.type === "year")?.value || "0", 10);
+      const m = parseInt(parts.find((p) => p.type === "month")?.value || "1", 10) - 1;
+      const dayVal = parseInt(parts.find((p) => p.type === "day")?.value || "1", 10);
+      return { year: y, month: m, day: dayVal };
     }
   }
   const now = new Date();
-  return { year: now.getFullYear(), month: now.getMonth(), day: now.getDate() };
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  });
+  const parts = formatter.formatToParts(now);
+  const y = parseInt(parts.find((p) => p.type === "year")?.value || "0", 10);
+  const m = parseInt(parts.find((p) => p.type === "month")?.value || "1", 10) - 1;
+  const d = parseInt(parts.find((p) => p.type === "day")?.value || "1", 10);
+  return { year: y, month: m, day: d };
 }
 
 export function isDateOverdue(dateStr: string, referenceDate?: Date | string): boolean {
@@ -112,16 +134,14 @@ export function UpcomingDeadlinesWidget({
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-card p-4 sm:p-5 text-card-foreground shadow-card hover:shadow-card-hover transition-all duration-300",
+        "flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-3.5 sm:p-4 text-card-foreground transition-colors",
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-3.5 border-b border-border/50">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
-            <Calendar className="size-4" strokeWidth={1.5} />
-          </div>
+      <div className="flex items-center justify-between pb-3 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <Calendar className="size-4 text-muted-foreground" strokeWidth={1.5} />
           <div>
             <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
               Hạn chót 7 ngày tới
@@ -134,11 +154,6 @@ export function UpcomingDeadlinesWidget({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {windowTotal > initialLimit && !isExpanded && (
-            <span className="text-xs font-mono text-muted-foreground hidden sm:inline">
-              Top {displayedItems.length} / {windowTotal}
-            </span>
-          )}
           <Link
             href={viewAllHref}
             className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
@@ -165,6 +180,7 @@ export function UpcomingDeadlinesWidget({
             const overdue = item.isOverdue || isDateOverdue(item.dueDate);
             const relativeDistance = formatDeadlineDistance(item.dueDate);
             const displayDate = formatDisplayDate(item.dueDate);
+            const isRelativeClear = relativeDistance === "Hôm nay" || relativeDistance === "Ngày mai";
             const isSchool = item.level === "Trường";
             const levelBg = isSchool
               ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
@@ -182,8 +198,8 @@ export function UpcomingDeadlinesWidget({
                   }
                 }}
                 className={cn(
-                  "group flex flex-col gap-1.5 py-3 transition-colors first:pt-2.5 last:pb-1 focus-visible:outline-hidden focus-visible:bg-muted/50",
-                  onSelectTask && "cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-xl"
+                  "group flex flex-col justify-center gap-1 py-2 sm:py-2.5 transition-colors first:pt-2 last:pb-1 focus-visible:outline-hidden focus-visible:bg-muted/50 min-h-[44px]",
+                  onSelectTask && "cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-lg"
                 )}
                 role={onSelectTask ? "button" : undefined}
                 aria-label={onSelectTask ? `Chi tiết hạn chót: ${item.title}` : undefined}
@@ -211,7 +227,7 @@ export function UpcomingDeadlinesWidget({
                     {overdue ? (
                       <Badge
                         variant="rose"
-                        className="text-xs px-2 py-0.5 font-semibold h-5 rounded-md gap-1"
+                        className="text-xs px-1.5 py-0.5 font-semibold h-5 rounded-md gap-1"
                       >
                         <AlertTriangle className="size-3" strokeWidth={1.5} />
                         {relativeDistance.startsWith("Quá hạn")
@@ -220,13 +236,8 @@ export function UpcomingDeadlinesWidget({
                       </Badge>
                     ) : (
                       <Badge
-                        variant={
-                          relativeDistance === "Hôm nay" ||
-                          relativeDistance === "Ngày mai"
-                            ? "amber"
-                            : "outline"
-                        }
-                        className="text-xs px-2 py-0.5 font-medium h-5 rounded-md gap-1"
+                        variant={isRelativeClear ? "amber" : "outline"}
+                        className="text-xs px-1.5 py-0.5 font-medium h-5 rounded-md gap-1"
                       >
                         <Clock className="size-3 opacity-75" strokeWidth={1.5} />
                         {relativeDistance}
@@ -234,38 +245,37 @@ export function UpcomingDeadlinesWidget({
                     )}
                   </div>
 
-                  {/* Absolute date */}
-                  <span className="font-mono text-xs text-muted-foreground whitespace-nowrap font-medium">
-                    {displayDate}
-                  </span>
+                  {/* Absolute date moved to title tooltip; shown only in badge title attr */}
+                  {!isRelativeClear && (
+                    <span className="sr-only">{displayDate}</span>
+                  )}
                 </div>
 
-                {/* Title */}
-                <h4
-                  className="text-xs font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors"
-                  title={item.title}
-                >
-                  {item.title}
-                </h4>
+                {/* Title and Assignee compact row */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                  <h4
+                    className="text-xs font-semibold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors flex-1"
+                    title={`${item.title} (Hạn: ${displayDate})`}
+                  >
+                    {item.title}
+                  </h4>
 
-                {/* Assignee row */}
-                <div className="flex items-center gap-2 pt-0.5 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
                     {item.assigneeAvatar ? (
                       <img
                         src={item.assigneeAvatar}
                         alt={item.assigneeName}
-                        width={18}
-                        height={18}
+                        width={16}
+                        height={16}
                         loading="lazy"
-                        className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/50"
+                        className="size-4 rounded-full object-cover shrink-0 ring-1 ring-border/50"
                       />
                     ) : (
-                      <div className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-xs font-semibold text-secondary-foreground ring-1 ring-border/50">
+                      <div className="flex size-4 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-xs font-semibold text-secondary-foreground ring-1 ring-border/50">
                         {getInitials(item.assigneeName)}
                       </div>
                     )}
-                    <span className="truncate text-foreground/80 font-medium">
+                    <span className="truncate max-w-[140px] text-foreground/80 font-medium">
                       {item.assigneeName}
                     </span>
                   </div>
@@ -278,7 +288,7 @@ export function UpcomingDeadlinesWidget({
 
       {/* Expand / Collapse Footer */}
       {windowTotal > initialLimit && (
-        <div className="pt-3 mt-1 border-t border-border/40 flex flex-wrap items-center justify-center gap-3">
+        <div className="pt-2 mt-1 border-t border-border/40 flex items-center justify-center">
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
@@ -297,13 +307,6 @@ export function UpcomingDeadlinesWidget({
               </>
             )}
           </button>
-          <Link
-            href={viewAllHref}
-            className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
-            title="Mở trong Không gian Nhiệm vụ"
-          >
-            <span>Xem trên bảng &rarr;</span>
-          </Link>
         </div>
       )}
     </div>

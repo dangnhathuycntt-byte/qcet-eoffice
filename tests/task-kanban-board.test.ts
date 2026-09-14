@@ -532,3 +532,238 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
     );
   });
 });
+
+describe("Plan 10.7: Kanban progress suppression, overdue text label, column coverage + count integrity", () => {
+  function makeSchoolTask(
+    id: string,
+    overrides: Partial<SchoolTask> = {}
+  ): SchoolTask {
+    return {
+      id,
+      title: `Nhiệm vụ ${id}`,
+      category: "CNTT",
+      categoryLabel: "CNTT",
+      leadAssigneeName: "Nguyễn Văn A",
+      coAssignees: [],
+      assignedDate: "2026-09-01",
+      dueDate: "2026-09-30",
+      status: "IN_PROGRESS",
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 0,
+      ...overrides,
+    };
+  }
+
+  test("0% progress card suppresses the progress bar", () => {
+    const tasks: SchoolTask[] = [
+      makeSchoolTask("zero", {
+        title: "Nhiệm vụ 0 phần trăm",
+        status: "IN_PROGRESS",
+        progressPercent: 0,
+      }),
+    ];
+    const html = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, { tasks })
+    );
+    assert.ok(
+      html.includes("Nhiệm vụ 0 phần trăm"),
+      "card must render so the suppression assertion is not vacuous"
+    );
+    assert.ok(
+      !html.includes("Tiến độ"),
+      "0% card must suppress the 'Tiến độ' progress block"
+    );
+  });
+
+  test("100% COMPLETED card suppresses the progress bar", () => {
+    const tasks: SchoolTask[] = [
+      makeSchoolTask("done", {
+        title: "Nhiệm vụ hoàn thành triệt để",
+        status: "COMPLETED",
+        progressPercent: 100,
+        dueDate: "2026-08-25",
+      }),
+    ];
+    const html = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, { tasks })
+    );
+    assert.ok(
+      html.includes("Nhiệm vụ hoàn thành triệt để"),
+      "card must render so the suppression assertion is not vacuous"
+    );
+    assert.ok(
+      !html.includes("Tiến độ"),
+      "100% COMPLETED card must suppress the progress block (nothing left to track)"
+    );
+  });
+
+  test("65% in-progress card shows the progress bar", () => {
+    const tasks: SchoolTask[] = [
+      makeSchoolTask("mid", {
+        title: "Nhiệm vụ đang dở dang",
+        status: "IN_PROGRESS",
+        progressPercent: 65,
+      }),
+    ];
+    const html = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, { tasks })
+    );
+    assert.ok(
+      html.includes("Tiến độ"),
+      "65% card must render the 'Tiến độ' progress block"
+    );
+    assert.ok(html.includes("65%"), "65% card must render the numeric percent");
+  });
+
+  test("overdue is not color-only: text label 'Quá hạn' is present", () => {
+    const tasks: SchoolTask[] = [
+      makeSchoolTask("past-due", {
+        title: "Nhiệm vụ trễ hạn theo ngày",
+        status: "IN_PROGRESS",
+        dueDate: "2026-08-01",
+        progressPercent: 30,
+      }),
+      makeSchoolTask("flagged", {
+        title: "Nhiệm vụ bị gắn cờ quá hạn",
+        status: "OVERDUE",
+        dueDate: "2026-08-01",
+        progressPercent: 30,
+      }),
+    ];
+    const html = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, { tasks })
+    );
+    assert.ok(
+      html.includes("Nhiệm vụ trễ hạn theo ngày") &&
+        html.includes("Nhiệm vụ bị gắn cờ quá hạn"),
+      "both overdue cards must render"
+    );
+    assert.ok(
+      html.includes("Quá hạn"),
+      "overdue must render the 'Quá hạn' text label, not color alone"
+    );
+  });
+
+  test("every active status maps to a visible canonical column", () => {
+    const ACTIVE_STATUSES: SchoolTask["status"][] = [
+      "NOT_STARTED",
+      "NEW",
+      "IN_PROGRESS",
+      "OVERDUE",
+      "BLOCKED",
+      "WAITING_APPROVAL",
+      "PENDING_EXECUTIVE_APPROVAL",
+      "NEEDS_REVIEW",
+      "COMPLETED",
+    ];
+    const VISIBLE_COLUMNS = new Set([
+      "NEW",
+      "IN_PROGRESS",
+      "NEEDS_REVIEW",
+      "COMPLETED",
+    ]);
+
+    for (const s of ACTIVE_STATUSES) {
+      const col = mapTaskStatusToKanbanColumn(s);
+      assert.ok(
+        VISIBLE_COLUMNS.has(col),
+        `${s} must map to a visible canonical column, got ${col}`
+      );
+    }
+
+    // Grouped: one task per active status lands exactly once across the 4 columns.
+    const tasks = ACTIVE_STATUSES.map((s, i) =>
+      makeSchoolTask(`active-${i}`, {
+        title: `Nhiệm vụ active ${i}`,
+        status: s,
+        progressPercent: 10,
+      })
+    );
+    const grouped = groupTasksByStatus(tasks);
+    const visible =
+      grouped.NEW.length +
+      grouped.IN_PROGRESS.length +
+      grouped.NEEDS_REVIEW.length +
+      grouped.COMPLETED.length;
+    assert.equal(
+      visible,
+      ACTIVE_STATUSES.length,
+      "every active task must land in exactly one visible column"
+    );
+    assert.ok(
+      grouped.NEW.length > 0 &&
+        grouped.IN_PROGRESS.length > 0 &&
+        grouped.NEEDS_REVIEW.length > 0 &&
+        grouped.COMPLETED.length > 0,
+      "all four canonical columns must be reachable from active statuses"
+    );
+  });
+
+  test("cancelled/archived exclusion is explicit and counts reconcile (visible + excluded = extracted)", () => {
+    const tasks: SchoolTask[] = [
+      makeSchoolTask("a1", {
+        title: "Nhiệm vụ hiện hữu 1",
+        status: "IN_PROGRESS",
+        progressPercent: 40,
+      }),
+      makeSchoolTask("a2", {
+        title: "Nhiệm vụ hiện hữu 2",
+        status: "NEW",
+        progressPercent: 0,
+      }),
+      makeSchoolTask("a3", {
+        title: "Nhiệm vụ hiện hữu 3",
+        status: "COMPLETED",
+        progressPercent: 100,
+      }),
+      makeSchoolTask("x1", {
+        title: "Nhiệm vụ đã huỷ bỏ",
+        status: "CANCELLED",
+        progressPercent: 0,
+      }),
+      makeSchoolTask("x2", {
+        title: "Nhiệm vụ lưu trữ kho",
+        status: "ARCHIVED" as unknown as SchoolTask["status"],
+        progressPercent: 0,
+      }),
+      makeSchoolTask("x3", {
+        title: "Nhiệm vụ canceled legacy",
+        status: "CANCELED" as unknown as SchoolTask["status"],
+        progressPercent: 0,
+      }),
+    ];
+
+    const extracted = filterKanbanItems(tasks, "ALL", "ALL", "");
+    const grouped = groupTasksByStatus(tasks);
+    const visible =
+      grouped.NEW.length +
+      grouped.IN_PROGRESS.length +
+      grouped.NEEDS_REVIEW.length +
+      grouped.COMPLETED.length;
+    const excluded = extracted.length - visible;
+
+    assert.equal(extracted.length, 6, "extraction must see every task");
+    assert.equal(visible, 3, "only the 3 active tasks are visible on columns");
+    assert.equal(excluded, 3, "cancelled/archived tasks are the excluded remainder");
+
+    const html = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, { tasks })
+    );
+    assert.ok(
+      html.includes("3 / 6 công việc"),
+      "count notice must state visible / extracted"
+    );
+    assert.ok(
+      html.includes("bị huỷ / lưu trữ không hiển thị"),
+      "exclusion of cancelled/archived tasks must be explicit, not silent"
+    );
+    assert.ok(
+      !html.includes("Nhiệm vụ đã huỷ bỏ") &&
+        !html.includes("Nhiệm vụ lưu trữ kho") &&
+        !html.includes("Nhiệm vụ canceled legacy"),
+      "excluded tasks must not render as board cards"
+    );
+  });
+});

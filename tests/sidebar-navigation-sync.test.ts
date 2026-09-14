@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   getSidebarNavItems,
+  getMobileBottomBarItems,
   CANONICAL_ROUTES,
 } from "@/lib/navigation/canonical-navigation-registry";
 import { isRouteActive } from "@/lib/navigation/active-matcher";
@@ -45,20 +46,18 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       // Verify canonical order
       assert.deepEqual(
         ids,
-        ["desk", "tasks", "documents", "calendar", "org", "notifications", "settings"],
+        ["desk", "tasks", "calendar", "notifications", "documents", "org", "settings"],
         "Items must follow canonical order"
       );
     });
 
-    test("canonical items cover all 3 navigation sections without omission", () => {
+    test("canonical items cover all 2 navigation sections without omission", () => {
       const items = getSidebarNavItems();
-      const personalItems = items.filter((i) => i.section === "personal");
-      const workspaceItems = items.filter((i) => i.section === "workspace");
-      const operationsItems = items.filter((i) => i.section === "operations");
+      const workItems = items.filter((i) => i.section === "work");
+      const orgItems = items.filter((i) => i.section === "org");
 
-      assert.equal(personalItems.length, 3, "Personal section has Desk, Calendar, Notifications");
-      assert.equal(workspaceItems.length, 2, "Workspace section has Tasks, Documents");
-      assert.equal(operationsItems.length, 2, "Operations section has Org, Settings");
+      assert.equal(workItems.length, 5, "Work section has Desk, Tasks, Calendar, Notifications, Documents");
+      assert.equal(orgItems.length, 2, "Org section has Org, Settings");
     });
   });
 
@@ -225,7 +224,7 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
       assert.equal(navigatedTo, "/tasks");
       assert.equal(defaultPrevented, true);
 
-      // Number shortcut '3' (documents under development) must prevent default and NOT navigate
+      // Number shortcut '3' should navigate to /calendar
       defaultPrevented = false;
       navigatedTo = null;
       handled = handleSidebarShortcut(
@@ -239,7 +238,24 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
         mockOptions
       );
       assert.equal(handled, true);
-      assert.equal(navigatedTo, null, "Shortcut 3 for documents must not trigger navigation");
+      assert.equal(navigatedTo, "/calendar");
+      assert.equal(defaultPrevented, true);
+
+      // Number shortcut '5' (documents under development) must prevent default and NOT navigate
+      defaultPrevented = false;
+      navigatedTo = null;
+      handled = handleSidebarShortcut(
+        {
+          key: "5",
+          target: buttonTarget,
+          preventDefault: () => {
+            defaultPrevented = true;
+          },
+        },
+        mockOptions
+      );
+      assert.equal(handled, true);
+      assert.equal(navigatedTo, null, "Shortcut 5 for documents must not trigger navigation");
       assert.equal(defaultPrevented, true);
     });
   });
@@ -276,13 +292,77 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
         "app-sidebar.tsx must use canonical isRouteActive"
       );
       assert.ok(
-        content.includes("bg-primary/10 text-primary font-semibold"),
+        content.includes("bg-primary/10 text-primary"),
         "Must apply subtle active color tint"
       );
-      assert.ok(
-        content.includes("w-[3px] bg-primary rounded-r-full"),
-        "Must render active indicator bar"
+    });
+  });
+
+  describe("Plan 10.3: Canonical Order, Visual Groups & Footer Discipline", () => {
+    test("canonical order: tasks immediately follows workbench (desk)", () => {
+      const items = getSidebarNavItems();
+      const ids = items.map((i) => i.id);
+      assert.equal(ids[0], "desk", "First canonical item must be desk (workbench)");
+      assert.equal(ids[1], "tasks", "Second canonical item must be tasks, immediately after desk");
+    });
+
+    test("only CONG VIEC / TO CHUC visual groups rendered", () => {
+      const content = fs.readFileSync(sidebarPath, "utf-8");
+      assert.ok(content.includes('"CÔNG VIỆC"'), "Must render CÔNG VIỆC visual group");
+      assert.ok(content.includes('"TỔ CHỨC"'), "Must render TỔ CHỨC visual group");
+      const sectionLabels = [...content.matchAll(/label:\s*"([^"]+)"/g)].map((m) => m[1]);
+      const groupLabels = sectionLabels.filter((l) => l === "CÔNG VIỆC" || l === "TỔ CHỨC");
+      assert.equal(sectionLabels.length, groupLabels.length, "Only CÔNG VIỆC/TỔ CHỨC section labels allowed");
+    });
+
+    test("app-sidebar source contains no allTasks badge reference for tasks urgency", () => {
+      const content = fs.readFileSync(sidebarPath, "utf-8");
+      assert.equal(
+        content.includes("allTasks"),
+        false,
+        "app-sidebar must not reference legacy allTasks badge"
       );
+    });
+
+    test("expanded footer collapse toggle removed", () => {
+      const content = fs.readFileSync(sidebarPath, "utf-8");
+      assert.equal(
+        content.includes("Thu gọn thanh bên (Ctrl+B)"),
+        false,
+        "Expanded footer must not render legacy collapse toggle button"
+      );
+    });
+
+    test("collapsed tooltips and accessibility retained", () => {
+      const content = fs.readFileSync(sidebarPath, "utf-8");
+      assert.ok(content.includes("TooltipContent"), "Collapsed mode must render TooltipContent");
+      assert.ok(
+        content.includes('side="right"'),
+        "Collapsed tooltips must open to the right"
+      );
+      assert.ok(content.includes("aria-label"), "Nav targets must expose aria-label");
+      assert.ok(content.includes("aria-current"), "Active nav items must set aria-current");
+    });
+
+    test("canonical registry drives MobileBottomNav destinations", () => {
+      const mobileNavPath = path.resolve(
+        process.cwd(),
+        "src/components/navigation/mobile-bottom-nav.tsx"
+      );
+      assert.ok(fs.existsSync(mobileNavPath), "mobile-bottom-nav.tsx must exist");
+      const content = fs.readFileSync(mobileNavPath, "utf-8");
+      assert.ok(
+        content.includes("getMobileBottomBarItems"),
+        "MobileBottomNav must be driven by getMobileBottomBarItems"
+      );
+      const items = getMobileBottomBarItems();
+      const registryIds = new Set(CANONICAL_ROUTES.map((r) => r.id));
+      for (const item of items) {
+        assert.ok(
+          registryIds.has(item.id),
+          `Mobile bottom item ${item.id} must be a canonical registry subset`
+        );
+      }
     });
   });
 });

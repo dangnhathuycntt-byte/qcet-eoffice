@@ -34,11 +34,11 @@ describe("Document Module Status & Roadmap Landing Test Suite", () => {
       assert.ok(hasDocumentsComingSoon, "Documents navigation item must be flagged with isComingSoon: true");
     });
 
-    test("app-sidebar.tsx renders 'Đang phát triển' badge for coming soon items", () => {
+    test("app-sidebar.tsx renders 'Sắp có' badge for coming soon items", () => {
       const content = fs.readFileSync(sidebarPath, "utf-8");
       assert.ok(
-        content.includes("Đang phát triển"),
-        "app-sidebar.tsx must render 'Đang phát triển' label"
+        content.includes("Sắp có"),
+        "app-sidebar.tsx must render 'Sắp có' label"
       );
       assert.ok(
         content.includes("amber-500"),

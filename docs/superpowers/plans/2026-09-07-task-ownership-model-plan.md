@@ -1,1 +1,0 @@
-../../plans/completed/2026-09-07-task-ownership-model-plan.md

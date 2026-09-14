@@ -1,1 +1,0 @@
-../../plans/superseded/2026-09-09-scope-filter-and-data-consistency-plan.md

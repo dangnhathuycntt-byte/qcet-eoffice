@@ -332,14 +332,14 @@ describe("8. Dashboard — Structure: one attention surface, action→situation�
     assert.strictEqual(count, 1, `Expected 1 section-context, found ${count}`);
   });
 
-  // Requirement (plan T06.2 / F01): summary before queue.
-  it("dashboard sections appear in order: situation → action → context", () => {
+  // Requirement (Action-first remediation): queue before summary.
+  it("dashboard sections appear in order: action → situation → context", () => {
     const actionIdx = zone.indexOf('data-slot="section-action"');
     const situationIdx = zone.indexOf('data-slot="section-situation"');
     const contextIdx = zone.indexOf('data-slot="section-context"');
     assert.ok(
-      situationIdx < actionIdx && actionIdx < contextIdx,
-      `Expected situation < action < context order. Got situation=${situationIdx}, action=${actionIdx}, context=${contextIdx}`
+      actionIdx < situationIdx && situationIdx < contextIdx,
+      `Expected action < situation < context order. Got action=${actionIdx}, situation=${situationIdx}, context=${contextIdx}`
     );
   });
 

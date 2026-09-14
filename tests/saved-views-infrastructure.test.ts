@@ -51,50 +51,50 @@ describe("Saved Views Infrastructure", () => {
   describe("1. Role Presets Specification", () => {
     it("should provide exact Executive presets: Chờ BGH duyệt, Trễ hạn toàn trường, Nhiệm vụ trọng tâm", () => {
       const names = EXECUTIVE_PRESETS.map((p) => p.name);
-      assert.ok(names.includes("★ Chờ BGH duyệt"));
-      assert.ok(names.includes("★ Trễ hạn toàn trường"));
-      assert.ok(names.includes("★ Nhiệm vụ trọng tâm"));
+      assert.ok(names.includes("Chờ BGH duyệt"));
+      assert.ok(names.includes("Trễ hạn toàn trường"));
+      assert.ok(names.includes("Nhiệm vụ trọng tâm"));
 
-      const pendingView = EXECUTIVE_PRESETS.find((p) => p.name === "★ Chờ BGH duyệt");
+      const pendingView = EXECUTIVE_PRESETS.find((p) => p.name === "Chờ BGH duyệt");
       assert.equal(pendingView?.criteria.scope, "school");
       assert.equal(pendingView?.criteria.status, "pending_review");
 
-      const overdueView = EXECUTIVE_PRESETS.find((p) => p.name === "★ Trễ hạn toàn trường");
+      const overdueView = EXECUTIVE_PRESETS.find((p) => p.name === "Trễ hạn toàn trường");
       assert.equal(overdueView?.criteria.scope, "school");
       assert.equal(overdueView?.criteria.status, "overdue");
 
-      const highPriorityView = EXECUTIVE_PRESETS.find((p) => p.name === "★ Nhiệm vụ trọng tâm");
+      const highPriorityView = EXECUTIVE_PRESETS.find((p) => p.name === "Nhiệm vụ trọng tâm");
       assert.equal(highPriorityView?.criteria.scope, "school");
       assert.equal(highPriorityView?.criteria.priority, "HIGH");
     });
 
     it("should provide exact Manager presets: Chờ tôi duyệt, Việc đơn vị, Quá hạn đơn vị", () => {
       const names = MANAGER_PRESETS.map((p) => p.name);
-      assert.ok(names.includes("★ Chờ tôi duyệt"));
-      assert.ok(names.includes("★ Việc đơn vị"));
-      assert.ok(names.includes("★ Quá hạn đơn vị"));
+      assert.ok(names.includes("Chờ tôi duyệt"));
+      assert.ok(names.includes("Việc đơn vị"));
+      assert.ok(names.includes("Quá hạn đơn vị"));
 
-      const pendingView = MANAGER_PRESETS.find((p) => p.name === "★ Chờ tôi duyệt");
+      const pendingView = MANAGER_PRESETS.find((p) => p.name === "Chờ tôi duyệt");
       assert.equal(pendingView?.criteria.scope, "unit");
       assert.equal(pendingView?.criteria.status, "pending_review");
 
-      const unitTasks = MANAGER_PRESETS.find((p) => p.name === "★ Việc đơn vị");
+      const unitTasks = MANAGER_PRESETS.find((p) => p.name === "Việc đơn vị");
       assert.equal(unitTasks?.criteria.scope, "unit");
 
-      const overdueUnit = MANAGER_PRESETS.find((p) => p.name === "★ Quá hạn đơn vị");
+      const overdueUnit = MANAGER_PRESETS.find((p) => p.name === "Quá hạn đơn vị");
       assert.equal(overdueUnit?.criteria.scope, "unit");
       assert.equal(overdueUnit?.criteria.status, "overdue");
     });
 
     it("should provide exact Staff presets: Việc của tôi, Hạn tuần này", () => {
       const names = STAFF_PRESETS.map((p) => p.name);
-      assert.ok(names.includes("★ Việc của tôi"));
-      assert.ok(names.includes("★ Hạn tuần này"));
+      assert.ok(names.includes("Việc của tôi"));
+      assert.ok(names.includes("Hạn tuần này"));
 
-      const myTasks = STAFF_PRESETS.find((p) => p.name === "★ Việc của tôi");
+      const myTasks = STAFF_PRESETS.find((p) => p.name === "Việc của tôi");
       assert.equal(myTasks?.criteria.scope, "my");
 
-      const thisWeek = STAFF_PRESETS.find((p) => p.name === "★ Hạn tuần này");
+      const thisWeek = STAFF_PRESETS.find((p) => p.name === "Hạn tuần này");
       assert.equal(thisWeek?.criteria.scope, "my");
       assert.equal(thisWeek?.criteria.status, "in_progress");
     });
@@ -111,7 +111,7 @@ describe("Saved Views Infrastructure", () => {
       };
       const execViews = getRolePresetViews("EXECUTIVE", execUser);
       assert.equal(execViews.length, 3);
-      assert.equal(execViews[0].name, "★ Chờ BGH duyệt");
+      assert.equal(execViews[0].name, "Chờ BGH duyệt");
 
       const managerUser: AuthUser = {
         id: "u2",
@@ -124,7 +124,7 @@ describe("Saved Views Infrastructure", () => {
       };
       const mgrViews = getRolePresetViews("MANAGER", managerUser);
       assert.equal(mgrViews.length, 3);
-      assert.equal(mgrViews[0].name, "★ Chờ tôi duyệt");
+      assert.equal(mgrViews[0].name, "Chờ tôi duyệt");
 
       const staffUser: AuthUser = {
         id: "u3",
@@ -137,17 +137,23 @@ describe("Saved Views Infrastructure", () => {
       };
       const staffViews = getRolePresetViews("STAFF", staffUser);
       assert.equal(staffViews.length, 2);
-      assert.equal(staffViews[0].name, "★ Việc của tôi");
+      assert.equal(staffViews[0].name, "Việc của tôi");
     });
 
-    it("should lookup presets by id and by name", () => {
+    it("should lookup presets by id and by name (including legacy star prefix compatibility)", () => {
       const byId = findPresetById("exec-pending-approval");
       assert.ok(byId);
-      assert.equal(byId?.name, "★ Chờ BGH duyệt");
+      assert.equal(byId?.name, "Chờ BGH duyệt");
 
-      const byName = findPresetByName("★ Quá hạn đơn vị");
-      assert.ok(byName);
-      assert.equal(byName?.id, "mgr-unit-overdue");
+      // Test backwards compatibility with legacy star prefix
+      const byLegacyName = findPresetByName("★ Quá hạn đơn vị");
+      assert.ok(byLegacyName);
+      assert.equal(byLegacyName?.id, "mgr-unit-overdue");
+
+      // Test clean name lookup
+      const byCleanName = findPresetByName("Quá hạn đơn vị");
+      assert.ok(byCleanName);
+      assert.equal(byCleanName?.id, "mgr-unit-overdue");
     });
   });
 

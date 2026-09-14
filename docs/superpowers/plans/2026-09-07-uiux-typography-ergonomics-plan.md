@@ -1,1 +1,0 @@
-../../plans/superseded/2026-09-07-uiux-typography-ergonomics-plan.md

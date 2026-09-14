@@ -1,1 +1,0 @@
-../../plans/superseded/2026-09-08-mobile-uiux-antislop-remediation-plan.md

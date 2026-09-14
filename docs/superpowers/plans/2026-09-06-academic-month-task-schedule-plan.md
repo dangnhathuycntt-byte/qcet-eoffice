@@ -1,1 +1,0 @@
-../../plans/completed/2026-09-06-academic-month-task-schedule-plan.md

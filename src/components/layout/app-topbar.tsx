@@ -76,6 +76,11 @@ function TopbarBreadcrumbs({ pathname }: { pathname: string }) {
       <span className="text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-none">
         {pageTitle}
       </span>
+      {pathname.startsWith("/documents") && (
+        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+          Đang phát triển
+        </span>
+      )}
     </div>
   );
 }
@@ -102,6 +107,11 @@ function TopbarBreadcrumbsFallback({ pathname }: { pathname: string }) {
       <span className="text-xs font-semibold text-foreground truncate max-w-[120px] sm:max-w-none">
         {pageTitle}
       </span>
+      {pathname.startsWith("/documents") && (
+        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-500/10 text-amber-800 border border-amber-500/20">
+          Đang phát triển
+        </span>
+      )}
     </div>
   );
 }
@@ -218,7 +228,7 @@ export function AppTopbar() {
                 strokeWidth={1.5}
                 className="size-3.5 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors"
               />
-              <span className="text-xs truncate">Tìm kiếm toàn hệ thống…</span>
+              <span className="text-xs truncate">Tìm nhanh công việc, nhân sự...</span>
             </div>
             <kbd className="text-xs font-mono px-1.5 py-0.5 rounded border border-border/60 bg-background/80 text-muted-foreground group-hover:text-foreground shrink-0">
               ⌘K
@@ -251,7 +261,7 @@ export function AppTopbar() {
             >
               <Bell size={16} strokeWidth={1.5} className="size-4" />
               {unreadNotifications > 0 && (
-                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground flex items-center justify-center ring-2 ring-background tabular-nums pointer-events-none">
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-xs font-bold text-destructive-foreground flex items-center justify-center ring-2 ring-background tabular-nums pointer-events-none">
                   {unreadNotifications > 9 ? "9+" : unreadNotifications}
                 </span>
               )}

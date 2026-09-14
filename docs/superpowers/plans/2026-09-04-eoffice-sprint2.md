@@ -1,1 +1,0 @@
-../../plans/completed/2026-09-04-eoffice-sprint2.md

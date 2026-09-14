@@ -62,13 +62,13 @@ export function DepartmentAttentionPreview({
 
       {attentionCount === 0 ? (
         <p
-          className="rounded-xl border border-border/60 bg-muted/20 px-3.5 py-3 text-xs text-muted-foreground"
+          className="px-1 py-2 text-xs text-muted-foreground"
           data-slot="department-attention-empty"
         >
           Không có đơn vị có việc quá hạn hoặc bị chặn trong phạm vi này
         </p>
       ) : (
-        <ul className="divide-y divide-border/50 rounded-xl border border-border/60 bg-card">
+        <ul className="divide-y divide-border/50 border-y border-border/50">
           {preview.map((dept) => {
             const deptId = dept.departmentId;
             const overdue = dept.overdueTasksCount ?? dept.overdueTasks ?? 0;

@@ -12,55 +12,52 @@ import {
 import { CANONICAL_ROUTES } from "../src/lib/navigation/canonical-navigation-registry";
 
 describe("Single-Tier Navigation Configuration (sidebar-context.tsx)", () => {
-  it("exports SINGLE_TIER_NAV_ITEMS across personal, workspace, and operations sections", () => {
+  it("exports SINGLE_TIER_NAV_ITEMS across work and org sections", () => {
     assert.ok(Array.isArray(SINGLE_TIER_NAV_ITEMS), "SINGLE_TIER_NAV_ITEMS must be an array");
     assert.strictEqual(SINGLE_TIER_NAV_ITEMS.length, 6, "SINGLE_TIER_NAV_ITEMS must have 6 items");
 
-    const personalItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "personal");
-    const workspaceItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "workspace");
-    const operationsItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "operations");
+    const workItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "work");
+    const orgItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "org");
 
-    assert.strictEqual(personalItems.length, 3, "Personal section must have 3 items");
-    assert.strictEqual(workspaceItems.length, 2, "Workspace section must have 2 items (Tasks & Documents)");
-    assert.strictEqual(operationsItems.length, 1, "Operations section must have 1 item (Org)");
+    assert.strictEqual(workItems.length, 5, "Work section must have 5 items (Desk, Tasks, Calendar, Notifications, Documents)");
+    assert.strictEqual(orgItems.length, 1, "Org section must have 1 item (Org)");
   });
 
-  it("verifies personal section routes and Vietnamese labels", () => {
-    const personalItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "personal");
+  it("verifies work and org section routes and Vietnamese labels", () => {
+    const workItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "work");
 
-    assert.strictEqual(personalItems[0].href, "/");
-    assert.strictEqual(personalItems[0].label, "Bàn làm việc");
-    assert.strictEqual(personalItems[0].badgeKey, "myFocus");
+    assert.strictEqual(workItems[0].href, "/");
+    assert.strictEqual(workItems[0].label, "Bàn làm việc");
+    assert.strictEqual(workItems[0].badgeKey, "myFocus");
 
-    assert.strictEqual(personalItems[1].href, "/calendar");
-    assert.strictEqual(personalItems[1].label, "Lịch công tác");
-    assert.strictEqual(personalItems[1].badgeKey, "calendar");
-
-    assert.strictEqual(personalItems[2].href, "/notifications");
+    assert.strictEqual(workItems[1].href, "/tasks");
     assert.ok(
-      personalItems[2].label === "Thông báo & Hoạt động" || personalItems[2].label === "Thông báo",
-      "Must have notifications label"
-    );
-    assert.strictEqual(personalItems[2].badgeKey, "notifications");
-  });
-
-  it("verifies workspace and operations section routes and Vietnamese labels", () => {
-    const workspaceItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "workspace");
-    assert.strictEqual(workspaceItems[0].href, "/tasks");
-    assert.ok(
-      workspaceItems[0].label === "Quản lý nhiệm vụ" || workspaceItems[0].label === "Kho nhiệm vụ",
+      workItems[1].label === "Quản lý nhiệm vụ" || workItems[1].label === "Kho nhiệm vụ",
       "Must have tasks label"
     );
-    assert.strictEqual(workspaceItems[0].badgeKey, "allTasks");
+    assert.strictEqual(workItems[1].badgeKey, "taskAttention");
 
-    assert.strictEqual(workspaceItems[1].href, "/documents");
-    assert.strictEqual(workspaceItems[1].label, "Sổ văn bản đến/đi");
-    assert.strictEqual(workspaceItems[1].badgeKey, "docsInbox");
+    assert.strictEqual(workItems[2].href, "/calendar");
+    assert.strictEqual(workItems[2].label, "Lịch công tác");
+    assert.strictEqual(workItems[2].badgeKey, "calendar");
 
-    const operationsItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "operations");
-    assert.strictEqual(operationsItems[0].href, "/org");
+    assert.strictEqual(workItems[3].href, "/notifications");
     assert.ok(
-      operationsItems[0].label === "Cơ cấu tổ chức & Danh bạ" || operationsItems[0].label === "Cơ cấu & Danh bạ",
+      workItems[3].label === "Thông báo & Nhắc việc" || workItems[3].label === "Thông báo",
+      "Must have notifications label"
+    );
+    assert.strictEqual(workItems[3].badgeKey, "notifications");
+
+    assert.strictEqual(workItems[4].href, "/documents");
+    assert.ok(
+      workItems[4].label === "Văn bản & Công văn" || workItems[4].label === "Sổ văn bản đến/đi",
+      "Must have documents label"
+    );
+
+    const orgItems = SINGLE_TIER_NAV_ITEMS.filter((i) => i.section === "org");
+    assert.strictEqual(orgItems[0].href, "/org");
+    assert.ok(
+      orgItems[0].label === "Cơ cấu & Danh bạ" || orgItems[0].label === "Cơ cấu tổ chức & Danh bạ",
       "Must have org label"
     );
   });
@@ -190,23 +187,15 @@ describe("Single-Tier Sidebar Architecture (app-sidebar.tsx)", () => {
     );
   });
 
-  it("renders structured sections: ĐIỀU HÀNH & CÁ NHÂN, NGHIỆP VỤ CỐT LÕI, and HỆ THỐNG & TỔ CHỨC", () => {
+  it("renders structured sections: CÔNG VIỆC and TỔ CHỨC", () => {
     const content = fs.readFileSync(sidebarPath, "utf-8");
     assert.ok(
-      content.includes("SINGLE_TIER_NAV_ITEMS"),
-      "Must iterate over SINGLE_TIER_NAV_ITEMS"
+      content.includes("CÔNG VIỆC"),
+      "Must render CÔNG VIỆC section"
     );
     assert.ok(
-      content.includes("ĐIỀU HÀNH & CÁ NHÂN") || content.includes("CÁ NHÂN"),
-      "Must render Section 1"
-    );
-    assert.ok(
-      content.includes("NGHIỆP VỤ CỐT LÕI") || content.includes("CÔNG VIỆC"),
-      "Must render Section 2"
-    );
-    assert.ok(
-      content.includes("HỆ THỐNG & TỔ CHỨC") || content.includes("VĂN BẢN & ĐIỀU HÀNH"),
-      "Must render Section 3"
+      content.includes("TỔ CHỨC"),
+      "Must render TỔ CHỨC section"
     );
   });
 

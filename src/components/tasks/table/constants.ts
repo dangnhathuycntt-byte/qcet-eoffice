@@ -118,19 +118,37 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
     oklchColor: "oklch(0.55 0.01 250)",
     oklchBg: "oklch(0.95 0.005 250)",
   },
+  NOT_STARTED: {
+    label: "Chưa bắt đầu",
+    className: "border-zinc-300 bg-zinc-100 text-zinc-600",
+    variant: "outline",
+    oklchColor: "oklch(0.55 0.01 250)",
+    oklchBg: "oklch(0.95 0.005 250)",
+  },
+  BLOCKED: {
+    label: "Tạm dừng",
+    className: "border-amber-500/20 bg-amber-500/10 text-amber-700",
+    variant: "amber",
+    oklchColor: "oklch(0.74 0.17 75)",
+    oklchBg: "oklch(0.96 0.05 75)",
+  },
 };
 
 /**
  * Lấy cấu hình nhãn huy hiệu trạng thái an toàn
  */
 export function getStatusBadgeConfig(
-  status: TaskStatus | string
+  status?: TaskStatus | string | null
 ): StatusBadgeConfig {
-  const config = STATUS_BADGE_CONFIGS[status];
-  if (config) return config;
+  if (status) {
+    const config =
+      STATUS_BADGE_CONFIGS[status] ||
+      STATUS_BADGE_CONFIGS[String(status).toUpperCase()];
+    if (config) return config;
+  }
 
   return {
-    label: typeof status === "string" ? status : "Chưa rõ",
+    label: "Chưa xác định",
     className: "border-zinc-200 bg-zinc-50 text-zinc-700",
     variant: "outline",
     oklchColor: "oklch(0.55 0.01 250)",
@@ -345,6 +363,20 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
     borderClass: "border-emerald-500/30",
     oklchColor: "oklch(0.68 0.17 150)",
     oklchBg: "oklch(0.96 0.04 150)",
+  },
+  OVERDUE: {
+    label: "Quá hạn",
+    badgeClass: "border-rose-500/20 bg-rose-500/10 text-rose-700",
+    borderClass: "border-rose-500/30",
+    oklchColor: "oklch(0.63 0.22 25)",
+    oklchBg: "oklch(0.96 0.04 25)",
+  },
+  NOT_STARTED: {
+    label: "Chưa bắt đầu",
+    badgeClass: "border-zinc-300 bg-zinc-100 text-zinc-600",
+    borderClass: "border-zinc-300",
+    oklchColor: "oklch(0.55 0.01 250)",
+    oklchBg: "oklch(0.95 0.005 250)",
   },
   CANCELLED: {
     label: "Đã hủy",

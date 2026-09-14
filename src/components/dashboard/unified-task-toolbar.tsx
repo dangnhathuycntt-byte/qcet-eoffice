@@ -205,6 +205,12 @@ export interface UnifiedTaskToolbarProps {
   totalTasksCount?: number;
   className?: string;
 
+  // Action Queue (Row 1 integrated trigger)
+  actionQueueCount?: number;
+  onOpenActionQueue?: () => void;
+  actionQueueTrigger?: React.ReactNode;
+  onActionQueueClick?: () => void;
+
   // Saved Views Infrastructure (Phase 10)
   showSavedViews?: boolean;
   activeViewId?: string | null;
@@ -360,6 +366,10 @@ export function UnifiedTaskToolbar({
   onSort,
   totalTasksCount,
   className,
+  actionQueueCount,
+  onOpenActionQueue,
+  actionQueueTrigger,
+  onActionQueueClick,
   showSavedViews = true,
   activeViewId,
   onSelectView,
@@ -637,7 +647,7 @@ export function UnifiedTaskToolbar({
     <div
       data-slot="unified-task-toolbar"
       className={cn(
-        "flex flex-col gap-2.5 rounded-2xl border border-border/70 bg-card p-3 shadow-xs",
+        "flex flex-col gap-2.5 border-b border-border/60 pb-3 bg-transparent",
         className
       )}
     >
@@ -648,57 +658,76 @@ export function UnifiedTaskToolbar({
         data-slot="unified-task-toolbar-row-1"
         className="flex items-center justify-between gap-2"
       >
-        {/* Left: Scope Switcher (Only Authorized Scopes) */}
-        <div
-          data-slot="adaptive-scope-header"
-          data-scope-switcher="true"
-          className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs shrink-0"
-          role="tablist"
-          aria-label="Phạm vi công việc"
-        >
-          {authorizedScopes.map((opt) => {
-            const Icon = opt.icon;
-            const isActive = normalizedScope === opt.id;
-            const count = effectiveScopeBadgeCounts?.[opt.id];
+        {/* Left: Scope Switcher (Only Authorized Scopes) + Integrated Action Queue */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <div
+            data-slot="adaptive-scope-header"
+            data-scope-switcher="true"
+            className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs shrink-0"
+            role="tablist"
+            aria-label="Phạm vi công việc"
+          >
+            {authorizedScopes.map((opt) => {
+              const Icon = opt.icon;
+              const isActive = normalizedScope === opt.id;
+              const count = effectiveScopeBadgeCounts?.[opt.id];
 
-            return (
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  role="tab"
+                  data-scope={opt.id}
+                  aria-selected={isActive}
+                  onClick={() => handleScopeSelect(opt.id)}
+                  className={cn(
+                    "inline-flex min-h-[44px] sm:min-h-[34px] items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer select-none",
+                    isActive
+                      ? "bg-background text-foreground border border-border/80 font-semibold shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-card/60"
+                  )}
+                >
+                  <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
+                  <span className="hidden sm:inline">{opt.label}</span>
+                  <span className="sm:hidden">{opt.shortLabel}</span>
+
+                  {typeof count === "number" && count > 0 && (
+                    <span
+                      className={cn(
+                        "inline-flex items-center justify-center rounded-full px-1.5 py-0.2 text-xs font-mono tabular-nums font-semibold",
+                        isActive ? "bg-muted text-foreground" : "bg-muted/60 text-muted-foreground"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Action Queue Trigger (Inline with Scope Switcher in Row 1) */}
+          {actionQueueTrigger ? (
+            actionQueueTrigger
+          ) : (
+            typeof actionQueueCount === "number" && actionQueueCount > 0 && (onOpenActionQueue || onActionQueueClick) && (
               <button
-                key={opt.id}
                 type="button"
-                role="tab"
-                data-scope={opt.id}
-                aria-selected={isActive}
-                onClick={() => handleScopeSelect(opt.id)}
-                className={cn(
-                  "inline-flex min-h-[44px] sm:min-h-[34px] items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer select-none",
-                  isActive
-                    ? opt.id === "school"
-                      ? "bg-amber-50 text-amber-900 border border-amber-300 font-semibold shadow-2xs"
-                      : opt.id === "unit"
-                      ? "bg-blue-50 text-blue-900 border border-blue-300 font-semibold shadow-2xs"
-                      : "bg-emerald-50 text-emerald-900 border border-emerald-300 font-semibold shadow-2xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-card/60"
-                )}
+                data-slot="action-queue-trigger"
+                onClick={onOpenActionQueue || onActionQueueClick}
+                className="inline-flex min-h-[44px] sm:min-h-[34px] items-center gap-1.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary px-3 py-1.5 text-xs font-semibold cursor-pointer transition-colors shadow-2xs shrink-0 select-none"
+                aria-label="Mở hàng đợi xử lý công việc"
+                title="Mở hàng đợi xử lý công việc"
               >
-                <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
-                <span className="hidden sm:inline">{opt.label}</span>
-                <span className="sm:hidden">{opt.shortLabel}</span>
-
-                {typeof count === "number" && count > 0 && (
-                  <span
-                    className={cn(
-                      "inline-flex items-center justify-center rounded-full px-1.5 py-0.2 text-xs font-mono tabular-nums font-semibold",
-                      isActive ? "bg-card/90 text-foreground" : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {count}
-                  </span>
-                )}
+                <Layers className="size-3.5 shrink-0" strokeWidth={1.5} />
+                <span className="hidden sm:inline">Cần xử lý</span>
+                <span className="inline-flex items-center justify-center rounded-full px-1.5 py-0.2 text-xs font-mono tabular-nums font-bold bg-primary text-primary-foreground leading-none">
+                  {actionQueueCount}
+                </span>
               </button>
-            );
-          })}
+            )
+          )}
         </div>
-
 
         {/* Right: Primary Action Button */}
         {canCreateTask && handlePrimaryAction && (
@@ -812,7 +841,7 @@ export function UnifiedTaskToolbar({
             onSaveView={onSaveView}
             onDeleteView={onDeleteView}
             onRenameView={onRenameView}
-            defaultLabel="Việc cần tôi xử lý"
+            defaultLabel="Góc nhìn: Tất cả nhiệm vụ"
           />
         )}
 
@@ -827,7 +856,13 @@ export function UnifiedTaskToolbar({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder}
+            placeholder={
+              searchPlaceholder && searchPlaceholder !== "Tìm nhiệm vụ... /"
+                ? searchPlaceholder
+                : typeof totalTasksCount === "number" && totalTasksCount > 0
+                ? `Tìm trong ${totalTasksCount} nhiệm vụ... /`
+                : searchPlaceholder || "Tìm nhiệm vụ... /"
+            }
             aria-label="Tìm nhiệm vụ"
             className="h-11 sm:h-9 min-h-[44px] sm:min-h-[36px] w-full rounded-xl border border-border/80 bg-background pl-9 pr-10 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs transition-colors"
           />

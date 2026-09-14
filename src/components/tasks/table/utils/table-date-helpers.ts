@@ -155,13 +155,13 @@ export function getSlaBadgeStatus(
   dueDate?: string | Date | null,
   status?: TaskStatus | string,
   referenceDate: string = getSystemReferenceDate()
-): SlaBadgeStatus {
+): Omit<SlaBadgeStatus, "label"> & { label: string | null } {
   const formattedDate = formatTableDate(dueDate);
   const daysRemaining = getDaysRemaining(dueDate, referenceDate);
 
   if (!dueDate || daysRemaining === null) {
     return {
-      label: DATE_FALLBACK,
+      label: null,
       colorClass: "text-zinc-400 bg-transparent border-transparent",
       isOverdue: false,
       isToday: false,
@@ -230,7 +230,7 @@ export function getSlaBadgeStatus(
     };
   }
 
-  // Còn dưới 3 ngày
+  // Còn dưới hoặc bằng 3 ngày
   if (daysRemaining <= 3) {
     return {
       label: `Còn ${daysRemaining} ngày`,
@@ -242,9 +242,9 @@ export function getSlaBadgeStatus(
     };
   }
 
-  // Bình thường: hiển thị ngày
+  // Bình thường (> 3 ngày): không render badge SLA dư thừa
   return {
-    label: formattedDate,
+    label: null,
     colorClass: "text-zinc-600 bg-zinc-50 border-zinc-200/60",
     isOverdue: false,
     isToday: false,

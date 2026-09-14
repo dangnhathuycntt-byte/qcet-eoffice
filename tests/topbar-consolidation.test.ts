@@ -99,4 +99,124 @@ describe("Topbar Consolidation & Anti-Slop Suite", () => {
     assert.ok(content.includes("UserProfileModal"), "Must render UserProfileModal when opened");
     assert.ok(content.includes("logout"), "Must provide logout action");
   });
+
+  test("Wave A2: true 3-zone grid layout and quiet surface styling", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    // Height & quiet surface
+    assert.ok(
+      content.includes("h-[calc(52px+env(safe-area-inset-top,0px))]"),
+      "Must maintain 52px height"
+    );
+    assert.ok(
+      content.includes("bg-background/95"),
+      "Must use quiet bg-background/95 shell styling"
+    );
+    // 3-zone grid structure
+    assert.ok(
+      content.includes("minmax(280px,384px)"),
+      "Must use bounded center track minmax(280px, 384px)"
+    );
+    assert.ok(
+      content.includes("justify-self-end"),
+      "Must justify right actions to the end"
+    );
+    // Top-level PWA install button removed from topbar right actions
+    // Smartphone icon must only appear inside the dropdown, not as a standalone topbar button
+    assert.equal(
+      content.includes('aria-label="Cài đặt ứng dụng di động"\n            title="Cài đặt ứng dụng di động"\n            className="hidden sm:flex min-h-[44px]'),
+      false,
+      "Top-level PWA install button must be removed from topbar chrome"
+    );
+    // Compact profile trigger: no persistent role/department paragraph in the trigger
+    assert.equal(
+      content.includes("title={user.roleLabel}"),
+      false,
+      "Profile trigger must not render persistent second-line role/department"
+    );
+  });
+
+  test("Plan 10.2: level-1 /tasks renders no redundant breadcrumb", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(content.includes('"/tasks"'), "LEVEL_1_ROOTS must include /tasks");
+    assert.ok(
+      content.includes("isLevel1 && !hasDeeperContext"),
+      "TopbarBreadcrumbs must return null for level-1 without deeper context"
+    );
+    assert.ok(content.includes("return null"), "Level-1 breadcrumb must return null");
+  });
+
+  test("Plan 10.2: deep task context with taskId/id can render breadcrumb", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(
+      content.includes("hasDeeperContext"),
+      "Must define hasDeeperContext guard"
+    );
+    assert.ok(
+      content.includes('searchParams?.get("taskId")'),
+      "Deep context must inspect taskId query param"
+    );
+    assert.ok(
+      content.includes('searchParams?.get("id")'),
+      "Deep context must inspect id query param"
+    );
+  });
+
+  test("Plan 10.2: global search launcher with CmdK label present", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(
+      content.includes('id="tour-topbar-search"'),
+      "Must retain global search launcher tour anchor"
+    );
+    assert.ok(content.includes("⌘K"), "Must display ⌘K label on search launcher");
+    assert.ok(
+      content.includes("qcet:open-command-search"),
+      "Search launcher must dispatch qcet:open-command-search"
+    );
+  });
+
+  test("Plan 10.2: no top-level PWA button but profile menu retains install action", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.equal(
+      content.includes('aria-label="Cài đặt ứng dụng di động"'),
+      false,
+      "No top-level PWA Smartphone button in header right zone"
+    );
+    assert.strictEqual(
+      (content.match(/<Smartphone/g) || []).length,
+      1,
+      "Smartphone icon must appear exactly once (inside profile dropdown)"
+    );
+    assert.ok(
+      content.includes("qcet:open-install-modal"),
+      "Profile menu must retain qcet:open-install-modal install action"
+    );
+    assert.ok(
+      content.includes("Cài đặt ứng dụng di động"),
+      "Profile menu must retain install menu label"
+    );
+  });
+
+  test("Plan 10.2: notifications and account remain accessible", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.ok(content.includes("Bell"), "Must render Bell icon");
+    assert.ok(
+      content.includes('aria-label="Thông báo điều hành"'),
+      "Notifications trigger must expose accessible name"
+    );
+    assert.ok(content.includes('href="/notifications"'), "Must link to /notifications");
+    assert.ok(content.includes("getInitials"), "Account trigger must render user initials");
+    assert.ok(content.includes("logout"), "Account menu must provide logout action");
+  });
+
+  test("Plan 10.2: no Giao viec / New Task CTA in topbar", () => {
+    const content = fs.readFileSync(topbarPath, "utf-8");
+    assert.equal(content.includes("Giao việc"), false, "Topbar must not contain Giao việc CTA");
+    assert.equal(content.includes("Giao viec"), false, "Topbar must not contain ascii Giao viec CTA");
+    assert.equal(content.includes("New Task"), false, "Topbar must not contain New Task CTA");
+    assert.equal(
+      content.includes("qcet:open-create-task"),
+      false,
+      "Topbar must not dispatch qcet:open-create-task"
+    );
+  });
 });

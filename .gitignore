@@ -56,6 +56,10 @@ qcet-backend-api/
 /test_storage_*/
 /test_uploads_*/
 
+# Ephemeral agent artifacts and temporary backups
+/artifacts/
+/backups/
+
 # Historical: QCET Plan Executor retired 2026-09-13 (recoverable from
 # git tag backup/plan-executor-before-removal). Entries below kept so old
 # checkouts stay quiet; safe to drop once no checkout predates the tag.

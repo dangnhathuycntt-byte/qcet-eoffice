@@ -2,6 +2,9 @@ import { test, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { TaskPaginationBar } from "../src/components/tasks/table/components/task-pagination-bar";
 import {
   getCategoryBadgeConfig,
   getStatusBadgeConfig,
@@ -402,6 +405,109 @@ describe("Personal Scope Subtask First-Class UX Suite (MY_TASKS)", () => {
         `File ${relPath} must not contain any emojis`
       );
     }
+  });
+});
+
+describe("Plan 10.8/10.9: shortcut strip removal, lightweight help trigger, compact pagination copy", () => {
+  // NOTE on placement: neither src/components/tasks/cascading-task-table.tsx
+  // (facade delegating to ModularCascadingTaskTable) nor
+  // src/components/dashboard/cascading-task-table.tsx (re-export facade)
+  // renders its own pagination footer markup — the footer lives in
+  // src/components/tasks/table/components/task-pagination-bar.tsx and is
+  // composed by ModularCascadingTaskTable. Pagination copy is therefore
+  // asserted via source-string on task-pagination-bar.tsx plus a direct
+  // render of TaskPaginationBar below, not via the facade components.
+
+  it("persistent shortcut strip is absent: footer markup lacks 'Phím tắt nhanh'", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(TaskPaginationBar, {
+        currentPage: 1,
+        pageSize: 10,
+        totalItems: 95,
+        onPageChange: () => {},
+        onPageSizeChange: () => {},
+      })
+    );
+
+    assert.ok(
+      html.includes('aria-label="Phân trang bảng công việc"'),
+      "footer must render so the absence assertion is not vacuous"
+    );
+    assert.ok(
+      !html.includes("Phím tắt nhanh"),
+      "collapsed footer must not persistently show the shortcut strip"
+    );
+  });
+
+  it("lightweight help trigger exists (TableShortcutHelpTrigger, '? Phím tắt', role dialog)", () => {
+    const modularPath = path.resolve(
+      __dirname,
+      "../src/components/tasks/table/modular-cascading-task-table.tsx"
+    );
+    const src = fs.readFileSync(modularPath, "utf-8");
+
+    assert.ok(
+      src.includes("TableShortcutHelpTrigger"),
+      "modular table must define/compose TableShortcutHelpTrigger"
+    );
+    assert.ok(
+      src.includes("? Phím tắt"),
+      "trigger must carry the lightweight '? Phím tắt' affordance"
+    );
+    assert.ok(
+      src.includes('role="dialog"'),
+      "shortcut help must open as a dismissible dialog, not a standing strip"
+    );
+    assert.ok(
+      src.includes("shortcutTrigger={<TableShortcutHelpTrigger />}"),
+      "dialog trigger must compose into the pagination footer via shortcutTrigger"
+    );
+  });
+
+  it("pagination footer uses compact copy ('–' range + '/ N nhiệm vụ', '/ trang')", () => {
+    const barPath = path.resolve(
+      __dirname,
+      "../src/components/tasks/table/components/task-pagination-bar.tsx"
+    );
+    const src = fs.readFileSync(barPath, "utf-8");
+
+    // Compact range + total markers present in source.
+    assert.ok(src.includes("–"), "footer must render the compact en-dash range");
+    assert.ok(src.includes("nhiệm vụ"), "footer must count in 'nhiệm vụ'");
+    assert.ok(src.includes("/ trang"), "page-size options must use compact '/ trang'");
+
+    // Verbose legacy copy must be gone.
+    assert.ok(
+      !src.includes("Hiển thị"),
+      "footer must not use verbose 'Hiển thị ...' copy"
+    );
+    assert.ok(
+      !src.includes("trên tổng số"),
+      "footer must not use verbose 'trên tổng số' copy"
+    );
+
+    // Same contract in rendered markup.
+    const html = renderToStaticMarkup(
+      React.createElement(TaskPaginationBar, {
+        currentPage: 1,
+        pageSize: 10,
+        totalItems: 95,
+        onPageChange: () => {},
+        onPageSizeChange: () => {},
+      })
+    );
+    assert.ok(html.includes("–"), "rendered footer must show the compact range");
+    assert.ok(html.includes("95"), "rendered footer must show the total count");
+    assert.ok(html.includes("nhiệm vụ"), "rendered footer must count in 'nhiệm vụ'");
+    assert.ok(html.includes("/ trang"), "rendered page-size options must use '/ trang'");
+    assert.ok(
+      !html.includes("Hiển thị"),
+      "rendered footer must not use verbose 'Hiển thị' copy"
+    );
+    assert.ok(
+      !html.includes("trên tổng số"),
+      "rendered footer must not use verbose 'trên tổng số' copy"
+    );
   });
 });
 

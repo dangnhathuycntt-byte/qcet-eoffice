@@ -1,1 +1,0 @@
-../../plans/superseded/2026-09-07-ui-ux-ergonomics-typography-redesign-plan.md

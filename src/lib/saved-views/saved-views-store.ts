@@ -62,14 +62,14 @@ export interface TaskViewSerializedParams extends Record<string, string | undefi
 
 /**
  * Executive Presets (Ban Giám Hiệu / Quản trị trường):
- * - ★ Chờ BGH duyệt
- * - ★ Trễ hạn toàn trường
- * - ★ Nhiệm vụ trọng tâm
+ * - Chờ BGH duyệt
+ * - Trễ hạn toàn trường
+ * - Nhiệm vụ trọng tâm
  */
 export const EXECUTIVE_PRESETS: SavedTaskView[] = [
   {
     id: "exec-pending-approval",
-    name: "★ Chờ BGH duyệt",
+    name: "Chờ BGH duyệt",
     description: "Nhiệm vụ cấp trường đang chờ Ban Giám hiệu phê duyệt kết quả",
     isPreset: true,
     targetRole: "EXECUTIVE",
@@ -81,7 +81,7 @@ export const EXECUTIVE_PRESETS: SavedTaskView[] = [
   },
   {
     id: "exec-school-overdue",
-    name: "★ Trễ hạn toàn trường",
+    name: "Trễ hạn toàn trường",
     description: "Nhiệm vụ chậm tiến độ hoặc quá hạn trên phạm vi toàn trường",
     isPreset: true,
     targetRole: "EXECUTIVE",
@@ -93,7 +93,7 @@ export const EXECUTIVE_PRESETS: SavedTaskView[] = [
   },
   {
     id: "exec-strategic-focus",
-    name: "★ Nhiệm vụ trọng tâm",
+    name: "Nhiệm vụ trọng tâm",
     description: "Nhiệm vụ chiến lược trọng tâm và ưu tiên cao của nhà trường",
     isPreset: true,
     targetRole: "EXECUTIVE",
@@ -107,14 +107,14 @@ export const EXECUTIVE_PRESETS: SavedTaskView[] = [
 
 /**
  * Manager Presets (Trưởng Khoa / Trưởng Phòng):
- * - ★ Chờ tôi duyệt
- * - ★ Việc đơn vị
- * - ★ Quá hạn đơn vị
+ * - Chờ tôi duyệt
+ * - Việc đơn vị
+ * - Quá hạn đơn vị
  */
 export const MANAGER_PRESETS: SavedTaskView[] = [
   {
     id: "mgr-pending-approval",
-    name: "★ Chờ tôi duyệt",
+    name: "Chờ tôi duyệt",
     description: "Báo cáo và nhiệm vụ trong đơn vị đang chờ trưởng đơn vị duyệt",
     isPreset: true,
     targetRole: "MANAGER",
@@ -126,7 +126,7 @@ export const MANAGER_PRESETS: SavedTaskView[] = [
   },
   {
     id: "mgr-unit-tasks",
-    name: "★ Việc đơn vị",
+    name: "Việc đơn vị",
     description: "Toàn bộ nhiệm vụ công việc thuộc phạm vi quản lý của đơn vị",
     isPreset: true,
     targetRole: "MANAGER",
@@ -137,7 +137,7 @@ export const MANAGER_PRESETS: SavedTaskView[] = [
   },
   {
     id: "mgr-unit-overdue",
-    name: "★ Quá hạn đơn vị",
+    name: "Quá hạn đơn vị",
     description: "Nhiệm vụ của đơn vị đang bị trễ hạn cần tập trung đôn đốc",
     isPreset: true,
     targetRole: "MANAGER",
@@ -151,13 +151,13 @@ export const MANAGER_PRESETS: SavedTaskView[] = [
 
 /**
  * Staff Presets (Chuyên viên / Giảng viên):
- * - ★ Việc của tôi
- * - ★ Hạn tuần này
+ * - Việc của tôi
+ * - Hạn tuần này
  */
 export const STAFF_PRESETS: SavedTaskView[] = [
   {
     id: "staff-my-tasks",
-    name: "★ Việc của tôi",
+    name: "Việc của tôi",
     description: "Nhiệm vụ cá nhân được phân công chủ trì hoặc phối hợp",
     isPreset: true,
     targetRole: "STAFF",
@@ -169,7 +169,7 @@ export const STAFF_PRESETS: SavedTaskView[] = [
   },
   {
     id: "staff-this-week",
-    name: "★ Hạn tuần này",
+    name: "Hạn tuần này",
     description: "Nhiệm vụ cá nhân cần hoàn thành trong tuần này hoặc hôm nay",
     isPreset: true,
     targetRole: "STAFF",
@@ -257,6 +257,14 @@ export function findPresetById(id?: string | null): SavedTaskView | undefined {
     }
     return false;
   });
+}
+
+/**
+ * Strips decorative star glyphs from view names for clean presentation.
+ */
+export function cleanViewName(name?: string | null): string {
+  if (!name) return "";
+  return name.replace(/^[★*]\s*/, "").trim();
 }
 
 /**
