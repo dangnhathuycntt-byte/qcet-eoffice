@@ -45,7 +45,7 @@ function DashboardZoneComponent() {
       {/* Desktop Layout (viewports >= 640px) — SUMMARY → ACTION → CONTEXT */}
       <div className="hidden sm:block space-y-6" data-slot="desktop-workbench-container">
 
-        {/* HEADER: Scope / Period / Actions */}
+        {/* HEADER: Scope / Period / Actions + Quick Situation Strip */}
         <div className="space-y-3" data-slot="dashboard-header">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="font-heading font-bold text-xl sm:text-2xl tracking-tight text-foreground">
@@ -70,7 +70,14 @@ function DashboardZoneComponent() {
               <div id="tour-scope-switcher"><Suspense fallback={<div className="h-8 w-44 rounded-lg bg-muted/40 animate-pulse" />}><ScopeSwitcher /></Suspense></div>
               <div id="tour-month-selector"><Suspense fallback={<div className="h-8 w-32 rounded-lg bg-muted/40 animate-pulse" />}><GlobalMonthSelector /></Suspense></div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-3 shrink-0">
+              <DashboardSituationStrip
+                stats={displayedStats}
+                executiveStats={executiveStats}
+                departmentHealth={departmentHealth}
+                isExecutive={isExecutive}
+                className="hidden md:flex py-0 px-1"
+              />
               <Button
                 variant="ghost"
                 size="icon"
@@ -83,6 +90,15 @@ function DashboardZoneComponent() {
                 <RefreshCw size={14} className={isRefreshing ? "animate-spin text-primary" : ""} strokeWidth={1.5} />
               </Button>
             </div>
+          </div>
+          {/* Situation strip for mobile/tablet when not in header right */}
+          <div className="md:hidden px-1">
+            <DashboardSituationStrip
+              stats={displayedStats}
+              executiveStats={executiveStats}
+              departmentHealth={departmentHealth}
+              isExecutive={isExecutive}
+            />
           </div>
         </div>
 
@@ -113,27 +129,20 @@ function DashboardZoneComponent() {
           ) : null}
         </section>
 
-        {/* SECTION 2 — SITUATION (TÌNH HÌNH): compact summary following the queue */}
-        <section aria-label="TÌNH HÌNH" data-slot="section-situation">
-          <p className="px-1 pb-1 text-xs font-semibold text-muted-foreground">Tình hình trong kỳ</p>
-          <DashboardSituationStrip
-            stats={displayedStats}
-            executiveStats={executiveStats}
-            departmentHealth={departmentHealth}
-            isExecutive={isExecutive}
-          />
-        </section>
-
-        {/* SECTION 3 — CONTEXT (ĐƠN VỊ CẦN CHÚ Ý / Hạn chót / Hoạt động) */}
-        <section aria-label="ĐƠN VỊ CẦN CHÚ Ý" data-slot="section-context" className="space-y-4">
-          {isExecutive && departmentHealth.length > 0 && (
-            <DepartmentAttentionPreview departments={departmentHealth} limit={5} />
-          )}
-          <UpcomingDeadlinesWidget
-            items={roleUpcoming}
-            onSelectTask={(item) => openTaskDetailById(item.taskId || item.id)}
-          />
-          <ActivityFeedWidget activities={activities} initialLimit={3} />
+        {/* SECTION 2 — DUAL-COLUMN WORKBENCH (Sắp đến hạn / Đơn vị cần chú ý / Hoạt động gần nhất) */}
+        <section aria-label="CHI TIẾT VẬN HÀNH" data-slot="section-details" className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="lg:col-span-7 space-y-4">
+            <UpcomingDeadlinesWidget
+              items={roleUpcoming}
+              onSelectTask={(item) => openTaskDetailById(item.taskId || item.id)}
+            />
+          </div>
+          <div className="lg:col-span-5 space-y-4">
+            {isExecutive && departmentHealth.length > 0 && (
+              <DepartmentAttentionPreview departments={departmentHealth} limit={5} />
+            )}
+            <ActivityFeedWidget activities={activities} initialLimit={4} />
+          </div>
         </section>
       </div>
     </div>

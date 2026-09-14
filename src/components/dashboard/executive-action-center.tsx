@@ -210,37 +210,39 @@ export function ExecutiveActionCenter({
           )}
         </div>
 
-        {/* Three lenses with a correct accessible selected state and matching counts */}
-        <div
-          className="mt-2 flex flex-wrap items-center gap-1.5"
-          role="group"
-          aria-label="Lọc hàng đợi theo lý do"
-        >
-          {QUEUE_LENSES.map((lens) => {
-            const isActive = activeFilter === lens.filter;
-            return (
-              <button
-                key={lens.filter}
-                type="button"
-                aria-pressed={isActive}
-                onClick={() => onFilterChange(lens.filter)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg border px-2.5 min-h-[44px] sm:min-h-[36px] text-xs font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                  isActive
-                    ? "border-primary/40 bg-primary/10 text-primary"
-                    : "border-border/60 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                )}
-                data-slot="action-queue-lens"
-                data-filter={lens.filter}
-                data-active={isActive ? "true" : "false"}
-              >
-                <span>{lens.label}</span>
-                <span className="font-mono tabular-nums">{lensCount(lens.filter)}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Three lenses with a correct accessible selected state and matching counts - only show when there are items to filter */}
+        {allItems.length > 0 && (
+          <div
+            className="mt-2 flex flex-wrap items-center gap-1.5"
+            role="group"
+            aria-label="Lọc hàng đợi theo lý do"
+          >
+            {QUEUE_LENSES.map((lens) => {
+              const isActive = activeFilter === lens.filter;
+              return (
+                <button
+                  key={lens.filter}
+                  type="button"
+                  aria-pressed={isActive}
+                  onClick={() => onFilterChange(lens.filter)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-lg border px-2.5 min-h-[44px] sm:min-h-[36px] text-xs font-medium transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    isActive
+                      ? "border-primary/40 bg-primary/10 text-primary"
+                      : "border-border/60 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                  )}
+                  data-slot="action-queue-lens"
+                  data-filter={lens.filter}
+                  data-active={isActive ? "true" : "false"}
+                >
+                  <span>{lens.label}</span>
+                  <span className="font-mono tabular-nums">{lensCount(lens.filter)}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {errorMessage ? (
           <div
@@ -264,20 +266,15 @@ export function ExecutiveActionCenter({
           </div>
         ) : filteredTotal === 0 ? (
           <div
-            className="flex items-center gap-3.5 px-1 py-3 min-h-[64px]"
+            className="flex items-center gap-3 px-1 py-2 text-xs text-muted-foreground"
             data-slot="action-center-empty-state"
           >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground border border-border/60">
-              <ShieldCheck className="size-5" strokeWidth={1.5} />
-            </div>
-            <div className="space-y-0.5 min-w-0 flex-1">
-              <h4 className="text-sm font-semibold text-foreground leading-snug">
-                Không có nhiệm vụ cần xử lý
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                Không có hồ sơ chờ duyệt, việc quá hạn hoặc vướng mắc trong phạm vi hiện tại.
-              </p>
-            </div>
+            <ShieldCheck className="size-4 text-emerald-600 shrink-0" strokeWidth={1.5} />
+            <span>
+              {allItems.length === 0
+                ? "Không có nhiệm vụ cần xử lý trong phạm vi hiện tại."
+                : "Không có nhiệm vụ nào phù hợp với bộ lọc đã chọn."}
+            </span>
           </div>
         ) : (
           <>

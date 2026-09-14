@@ -77,8 +77,8 @@ export function DashboardSituationStrip({
   const ariaLabel = [
     `${progressPercent}% tiến độ`,
     `${totalTasks} nhiệm vụ`,
-    overdueCount > 0 ? `${overdueCount} trễ` : null,
-    blockedCount > 0 ? `${blockedCount} bị chặn` : null,
+    overdueCount > 0 ? `${overdueCount} quá hạn` : null,
+    blockedCount > 0 ? `${blockedCount} vướng mắc` : null,
     unitsNeedingAttention ? `${unitsNeedingAttention} đơn vị cần chú ý` : null,
   ]
     .filter(Boolean)
@@ -94,7 +94,7 @@ export function DashboardSituationStrip({
       )}
       aria-label={`Tình hình: ${ariaLabel}`}
     >
-      <span className="font-mono tabular-nums">{progressPercent}% tiến độ</span>
+      <span className="font-mono tabular-nums font-semibold text-foreground">{progressPercent}% tiến độ</span>
       <span className="mx-1.5 text-border" aria-hidden="true">·</span>
       <span className="font-mono tabular-nums">
         {totalTasks.toLocaleString("vi-VN")} nhiệm vụ
@@ -103,7 +103,7 @@ export function DashboardSituationStrip({
         <>
           <span className="mx-1.5 text-border" aria-hidden="true">·</span>
           <span className="font-mono tabular-nums text-rose-700 font-medium">
-            {overdueCount} trễ
+            {overdueCount} quá hạn
           </span>
         </>
       )}
@@ -111,7 +111,7 @@ export function DashboardSituationStrip({
         <>
           <span className="mx-1.5 text-border" aria-hidden="true">·</span>
           <span className="font-mono tabular-nums text-rose-700 font-medium">
-            {blockedCount} bị chặn
+            {blockedCount} vướng mắc
           </span>
         </>
       )}

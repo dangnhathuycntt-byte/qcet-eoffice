@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Calendar, Clock, AlertTriangle, Building2, Layers, CheckCircle, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
+import { Calendar, Clock, AlertTriangle, Building2, Layers, CheckCircle, ChevronDown, ChevronUp, ChevronRight, UserMinus } from "lucide-react";
 import type { UpcomingItem } from "@/types/dashboard";
 export type { UpcomingItem };
 import { Badge } from "@/components/ui/badge";
@@ -144,12 +144,10 @@ export function UpcomingDeadlinesWidget({
           <Calendar className="size-4 text-muted-foreground" strokeWidth={1.5} />
           <div>
             <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
-              Hạn chót 7 ngày tới
+              Sắp đến hạn
             </h3>
             <p className="text-xs text-muted-foreground">
-              {windowTotal > initialLimit && !isExpanded
-                ? `Hiển thị ${displayedItems.length} nhiệm vụ sát hạn nhất trong ${windowTotal}`
-                : "Nhiệm vụ cần ưu tiên hoàn tất theo tiến độ"}
+              7 ngày tới · Ưu tiên xử lý
             </p>
           </div>
         </div>
@@ -160,12 +158,9 @@ export function UpcomingDeadlinesWidget({
             data-slot="upcoming-view-all"
             title="Xem tất cả nhiệm vụ hạn chót"
           >
-            <span>Xem tất cả</span>
+            <span>Xem tất cả ({windowTotal})</span>
             <ChevronRight className="size-3" strokeWidth={1.5} />
           </Link>
-          <Badge variant="secondary" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full">
-            {windowTotal}
-          </Badge>
         </div>
       </div>
 
@@ -271,6 +266,13 @@ export function UpcomingDeadlinesWidget({
                         loading="lazy"
                         className="size-4 rounded-full object-cover shrink-0 ring-1 ring-border/50"
                       />
+                    ) : item.assigneeName === "Chưa phân công" ? (
+                      <div
+                        aria-hidden="true"
+                        className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted/60 text-muted-foreground"
+                      >
+                        <UserMinus className="size-2.5 opacity-70" strokeWidth={1.5} />
+                      </div>
                     ) : (
                       <div
                         aria-hidden="true"
@@ -279,7 +281,10 @@ export function UpcomingDeadlinesWidget({
                         {getInitials(item.assigneeName)}
                       </div>
                     )}
-                    <span className="truncate max-w-[140px] text-foreground/80 font-medium">
+                    <span className={cn(
+                      "truncate max-w-[140px] font-medium",
+                      item.assigneeName === "Chưa phân công" ? "text-muted-foreground italic text-2xs" : "text-foreground/80"
+                    )}>
                       {item.assigneeName}
                     </span>
                   </div>
@@ -290,29 +295,37 @@ export function UpcomingDeadlinesWidget({
         )}
       </div>
 
-      {/* Expand / Collapse Footer */}
-      {windowTotal > initialLimit && (
-        <div className="pt-2 mt-1 border-t border-border/40 flex items-center justify-center">
+      {/* Expand / Collapse & Calendar Link Footer */}
+      <div className="pt-2.5 mt-1 border-t border-border/40 flex items-center justify-between text-xs">
+        <Link
+          href="/calendar"
+          className="inline-flex items-center gap-1 font-medium text-primary hover:underline transition-colors"
+          data-slot="upcoming-calendar-cta"
+        >
+          <span>Mở lịch công tác</span>
+          <ChevronRight className="size-3.5" strokeWidth={1.5} />
+        </Link>
+        {windowTotal > initialLimit && (
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
             aria-expanded={isExpanded}
           >
             {isExpanded ? (
               <>
-                <span>Thu gọn (hiển thị {initialLimit} mục)</span>
+                <span>Thu gọn</span>
                 <ChevronUp className="size-3.5" strokeWidth={1.5} />
               </>
             ) : (
               <>
-                <span>Xem tất cả {windowTotal} nhiệm vụ hạn chót</span>
+                <span>Hiện thêm {windowTotal - initialLimit} nhiệm vụ</span>
                 <ChevronDown className="size-3.5" strokeWidth={1.5} />
               </>
             )}
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

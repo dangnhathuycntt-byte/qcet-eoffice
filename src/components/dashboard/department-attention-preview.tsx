@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Building2, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { summarizeDepartmentAttention } from "@/lib/executive-matrix-aggregator";
 import { getDepartmentTasksUrl } from "@/components/dashboard/department-progress-matrix";
 
@@ -47,14 +48,20 @@ export function DepartmentAttentionPreview({
     <section
       data-slot="department-attention-preview"
       aria-label="Đơn vị cần chú ý"
-      className={className}
+      className={cn(
+        "rounded-xl border border-border/70 bg-card p-3.5 sm:p-4 text-card-foreground shadow-sm",
+        className
+      )}
     >
-      <div className="flex items-baseline justify-between gap-3 px-1 pb-2">
-        <h2 className="text-sm font-semibold text-foreground tracking-tight">
-          Đơn vị cần chú ý
-        </h2>
+      <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <Building2 className="size-4 text-amber-600" strokeWidth={1.5} />
+          <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
+            Đơn vị cần chú ý
+          </h3>
+        </div>
         {attentionCount > 0 && (
-          <span className="text-xs text-muted-foreground font-mono tabular-nums">
+          <span className="text-xs text-amber-700 font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 font-mono tabular-nums">
             {attentionCount} đơn vị
           </span>
         )}
@@ -62,14 +69,14 @@ export function DepartmentAttentionPreview({
 
       {attentionCount === 0 ? (
         <p
-          className="px-1 py-2 text-xs text-muted-foreground"
+          className="px-1 py-3 text-xs text-muted-foreground"
           data-slot="department-attention-empty"
         >
           Không có đơn vị có việc quá hạn hoặc bị chặn trong phạm vi này
         </p>
       ) : (
-        <ul className="divide-y divide-border/50 border-y border-border/50">
-          {preview.map((dept) => {
+        <ul className="divide-y divide-border/50 pt-1">
+        {preview.map((dept) => {
             const deptId = dept.departmentId;
             const overdue = dept.overdueTasksCount ?? dept.overdueTasks ?? 0;
             const blocked = dept.blockedTasksCount ?? 0;
@@ -97,7 +104,7 @@ export function DepartmentAttentionPreview({
                     )}
                     {blocked > 0 && (
                       <span className="font-mono tabular-nums text-rose-700 font-medium">
-                        {blocked} bị chặn
+                        {blocked} vướng mắc
                       </span>
                     )}
                     <span className="font-mono tabular-nums">

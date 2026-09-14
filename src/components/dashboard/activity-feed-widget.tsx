@@ -105,7 +105,25 @@ export function ActivityFeedWidget({
   auditLogHref,
 }: ActivityFeedWidgetProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
-  const displayedActivities = initialLimit && !isExpanded ? activities.slice(0, initialLimit) : activities;
+
+  // Deduplicate consecutive identical activities (same actor + action + target within close timeframe)
+  const uniqueActivities = React.useMemo(() => {
+    const list: ActivityEvent[] = [];
+    const seen = new Set<string>();
+
+    for (const act of activities) {
+      // Key consists of actor, action, target and minute timestamp to prevent spammy identical events
+      const timeKey = act.timestamp ? act.timestamp.slice(0, 16) : "";
+      const key = `${act.actorName}|${act.action}|${act.targetTitle}|${timeKey}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push(act);
+      }
+    }
+    return list;
+  }, [activities]);
+
+  const displayedActivities = initialLimit && !isExpanded ? uniqueActivities.slice(0, initialLimit) : uniqueActivities;
 
   return (
     <div
@@ -123,9 +141,7 @@ export function ActivityFeedWidget({
               Hoạt động vừa cập nhật
             </h3>
             <p className="text-xs text-muted-foreground">
-              {activities.length > initialLimit && !isExpanded
-                ? `Hiển thị ${displayedActivities.length} hoạt động gần nhất`
-                : "Dòng nhật ký tương tác và tiến độ gần nhất"}
+              Ghi nhận theo thời gian thực
             </p>
           </div>
         </div>
@@ -186,28 +202,28 @@ export function ActivityFeedWidget({
                     )}
                   </div>
 
-                  {/* Target title */}
-                  <div
-                    className="text-xs font-medium text-foreground/90 line-clamp-1 group-hover:text-primary transition-colors"
-                    title={item.targetTitle}
-                  >
-                    {item.targetTitle}
-                  </div>
+                {/* Target title */}
+                <div
+                  className="text-xs font-medium text-foreground/90 line-clamp-1 group-hover:text-primary transition-colors"
+                  title={item.targetTitle}
+                >
+                  {item.targetTitle}
+                </div>
 
-                  {/* Timestamp */}
-                  <div className="flex items-center gap-1 pt-0.5 text-xs text-muted-foreground font-mono">
-                    <Clock className="size-2.5 opacity-70" strokeWidth={1.5} />
-                    <span>{formatDateTime(item.timestamp)}</span>
-                  </div>
+                {/* Timestamp */}
+                <div className="flex items-center gap-1 pt-0.5 text-xs text-muted-foreground font-mono">
+                  <Clock className="size-2.5 opacity-70" strokeWidth={1.5} />
+                  <span>{formatDateTime(item.timestamp)}</span>
                 </div>
               </div>
-            );
-          })
-        )}
-      </div>
+            </div>
+          );
+        })
+      )}
+    </div>
 
       {/* Expand / Collapse Footer */}
-      {activities.length > initialLimit && (
+      {uniqueActivities.length > initialLimit && (
         <div className="pt-3 mt-1 border-t border-border/40 text-center">
           <button
             type="button"
@@ -217,12 +233,12 @@ export function ActivityFeedWidget({
           >
             {isExpanded ? (
               <>
-                <span>Thu gọn (hiển thị {initialLimit} mục)</span>
+                <span>Thu gọn</span>
                 <ChevronUp className="size-3.5" strokeWidth={1.5} />
               </>
             ) : (
               <>
-                <span>Xem tất cả {activities.length} hoạt động</span>
+                <span>Xem thêm {uniqueActivities.length - initialLimit} hoạt động</span>
                 <ChevronDown className="size-3.5" strokeWidth={1.5} />
               </>
             )}
