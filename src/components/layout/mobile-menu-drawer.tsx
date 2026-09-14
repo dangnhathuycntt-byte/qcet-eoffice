@@ -112,7 +112,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
         <div className="p-4 space-y-4">
           {/* Core App Navigation Shortcuts - 2-Column Grid with 48px targets */}
           <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1 pb-0.5">
+            <div className="text-xs font-bold text-muted-foreground px-1 pb-0.5">
               LỐI TẮT HỆ THỐNG
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -217,7 +217,7 @@ export function MobileMenuDrawer({ open, onOpenChange }: MobileMenuDrawerProps) 
           {/* Mobile Push Notification & App Section */}
           <div className="space-y-2 pt-2 border-t border-border/40">
             <div className="flex items-center justify-between px-1 pb-1">
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <div className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                 <Bell size={13} className="text-primary" />
                 <span>THÔNG BÁO ĐIỆN THOẠI & ỨNG DỤNG</span>
               </div>

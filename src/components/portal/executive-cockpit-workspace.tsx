@@ -73,6 +73,13 @@ export type ExecutiveCockpitTab =
   | "HEALTH_RADAR"
   | "STRATEGIC_TASKS";
 
+const EXECUTIVE_TAB_KEYS: ExecutiveCockpitTab[] = [
+  "BOTTLENECKS",
+  "APPROVAL_QUEUE",
+  "HEALTH_RADAR",
+  "STRATEGIC_TASKS",
+];
+
 export interface ExecutiveCockpitMetrics {
   bottlenecksCount: number;
   pendingInstitutionalApprovalCount: number;
@@ -597,6 +604,35 @@ export function LegacyExecutiveCockpitWorkspace({
   const [strategicStatusFilter, setStrategicStatusFilter] =
     React.useState<string>("ALL");
 
+  // WAI-ARIA APG tablist keyboard traversal (focus movement only; the existing
+  // onClick handlers still perform selection).
+  const tabRefs = React.useRef<
+    Partial<Record<ExecutiveCockpitTab, HTMLButtonElement | null>>
+  >({});
+
+  const handleTabKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    current: ExecutiveCockpitTab
+  ) => {
+    const currentIndex = EXECUTIVE_TAB_KEYS.indexOf(current);
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") {
+      nextIndex = (currentIndex + 1) % EXECUTIVE_TAB_KEYS.length;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex =
+        (currentIndex - 1 + EXECUTIVE_TAB_KEYS.length) %
+        EXECUTIVE_TAB_KEYS.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = EXECUTIVE_TAB_KEYS.length - 1;
+    }
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const nextKey = EXECUTIVE_TAB_KEYS[nextIndex];
+    tabRefs.current[nextKey]?.focus();
+  };
+
   // Dialog & Drawer states
   const [reviewingTask, setReviewingTask] = React.useState<
     StaffTask | SchoolTask | null
@@ -1036,7 +1072,7 @@ export function LegacyExecutiveCockpitWorkspace({
               }
             }}
             size="sm"
-            className="h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs text-xs font-semibold rounded-lg cursor-pointer active:scale-95"
+            className="min-h-[44px] sm:h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs text-xs font-semibold rounded-lg cursor-pointer active:scale-95"
             title="Giao chỉ đạo nhiệm vụ BGH trọng tâm cấp trường"
           >
             <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -1048,7 +1084,7 @@ export function LegacyExecutiveCockpitWorkspace({
             variant="outline"
             size="sm"
             onClick={() => setShowBriefingModal(true)}
-            className="text-xs h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted cursor-pointer"
+            className="text-xs min-h-[44px] sm:h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted cursor-pointer"
             title="Xem báo cáo giao ban điều hành BGH"
           >
             <FileText className="w-3.5 h-3.5 shrink-0 text-indigo-600" strokeWidth={1.5} />
@@ -1059,7 +1095,7 @@ export function LegacyExecutiveCockpitWorkspace({
             asChild
             variant="outline"
             size="sm"
-            className="text-xs h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80"
+            className="text-xs min-h-[44px] sm:h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80"
           >
             <Link href={tasksUrl} className="inline-flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
@@ -1072,7 +1108,7 @@ export function LegacyExecutiveCockpitWorkspace({
             variant="outline"
             size="sm"
             onClick={handleRefresh}
-            className="text-xs h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted cursor-pointer"
+            className="text-xs min-h-[44px] sm:h-8 gap-1.5 whitespace-nowrap rounded-lg border-border/80 hover:bg-muted cursor-pointer"
             title="Làm mới dữ liệu điều hành"
           >
             <RefreshCw
@@ -1155,7 +1191,7 @@ export function LegacyExecutiveCockpitWorkspace({
           type="button"
           onClick={() => setActiveTab("BOTTLENECKS")}
           className={cn(
-            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs",
+            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             metrics.bottlenecksCount > 0
               ? activeTab === "BOTTLENECKS"
                 ? "border-rose-500/60 bg-rose-500/[0.06] ring-1 ring-rose-500/20 text-rose-600 shadow-xs"
@@ -1232,7 +1268,7 @@ export function LegacyExecutiveCockpitWorkspace({
           type="button"
           onClick={() => setActiveTab("APPROVAL_QUEUE")}
           className={cn(
-            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs",
+            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "APPROVAL_QUEUE"
               ? "border-indigo-500/60 bg-indigo-500/15 shadow-xs ring-1 ring-indigo-500/30 text-indigo-600"
               : metrics.pendingInstitutionalApprovalCount > 0
@@ -1289,7 +1325,7 @@ export function LegacyExecutiveCockpitWorkspace({
           type="button"
           onClick={() => setActiveTab("HEALTH_RADAR")}
           className={cn(
-            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs",
+            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "HEALTH_RADAR"
               ? "border-emerald-500/60 bg-emerald-500/15 shadow-xs ring-1 ring-emerald-500/30 text-emerald-600"
               : "border-emerald-500/30 bg-emerald-500/[0.04] text-foreground hover:bg-emerald-500/[0.08] hover:border-emerald-500/50 shadow-2xs"
@@ -1329,7 +1365,7 @@ export function LegacyExecutiveCockpitWorkspace({
           type="button"
           onClick={() => setActiveTab("STRATEGIC_TASKS")}
           className={cn(
-            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs",
+            "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "STRATEGIC_TASKS"
               ? "border-blue-500/60 bg-blue-500/15 shadow-xs ring-1 ring-blue-500/30 text-blue-600"
               : "border-border/80 bg-muted/30 text-foreground hover:bg-muted/50 hover:border-border"
@@ -1359,15 +1395,27 @@ export function LegacyExecutiveCockpitWorkspace({
       </div>
 
       {/* 3. Navigation Tabs */}
-      <div className="flex items-center gap-1 border-b overflow-x-auto no-scrollbar">
+      <div
+        role="tablist"
+        aria-label="Danh mục chỉ đạo điều hành Ban Giám hiệu"
+        className="flex items-center gap-1 border-b overflow-x-auto no-scrollbar [mask-image:linear-gradient(to_right,white_calc(100%-2rem),transparent)]"
+      >
         <button
           type="button"
+          role="tab"
+          id="tab-BOTTLENECKS"
+          aria-controls="panel-BOTTLENECKS"
+          aria-selected={activeTab === "BOTTLENECKS"}
+          ref={(el) => {
+            tabRefs.current.BOTTLENECKS = el;
+          }}
+          onKeyDown={(event) => handleTabKeyDown(event, "BOTTLENECKS")}
           onClick={() => setActiveTab("BOTTLENECKS")}
           title="Cảnh báo thắt nút cổ chai & Tắc nghẽn"
           className={cn(
-            "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer",
+            "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "BOTTLENECKS"
-              ? "border-rose-600 text-rose-600 font-semibold"
+              ? "border-primary text-primary font-semibold"
               : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
           )}
         >
@@ -1385,12 +1433,20 @@ export function LegacyExecutiveCockpitWorkspace({
 
         <button
           type="button"
+          role="tab"
+          id="tab-APPROVAL_QUEUE"
+          aria-controls="panel-APPROVAL_QUEUE"
+          aria-selected={activeTab === "APPROVAL_QUEUE"}
+          ref={(el) => {
+            tabRefs.current.APPROVAL_QUEUE = el;
+          }}
+          onKeyDown={(event) => handleTabKeyDown(event, "APPROVAL_QUEUE")}
           onClick={() => setActiveTab("APPROVAL_QUEUE")}
           title="Hàng đợi Phê duyệt Chiến lược"
           className={cn(
-            "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer",
+            "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "APPROVAL_QUEUE"
-              ? "border-indigo-600 text-indigo-600 font-semibold"
+              ? "border-primary text-primary font-semibold"
               : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
           )}
         >
@@ -1405,12 +1461,20 @@ export function LegacyExecutiveCockpitWorkspace({
 
         <button
           type="button"
+          role="tab"
+          id="tab-HEALTH_RADAR"
+          aria-controls="panel-HEALTH_RADAR"
+          aria-selected={activeTab === "HEALTH_RADAR"}
+          ref={(el) => {
+            tabRefs.current.HEALTH_RADAR = el;
+          }}
+          onKeyDown={(event) => handleTabKeyDown(event, "HEALTH_RADAR")}
           onClick={() => setActiveTab("HEALTH_RADAR")}
           title="Radar Sức Khỏe 11 Đơn Vị"
           className={cn(
-            "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer",
+            "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "HEALTH_RADAR"
-              ? "border-emerald-600 text-emerald-600 font-semibold"
+              ? "border-primary text-primary font-semibold"
               : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
           )}
         >
@@ -1420,10 +1484,18 @@ export function LegacyExecutiveCockpitWorkspace({
 
         <button
           type="button"
+          role="tab"
+          id="tab-STRATEGIC_TASKS"
+          aria-controls="panel-STRATEGIC_TASKS"
+          aria-selected={activeTab === "STRATEGIC_TASKS"}
+          ref={(el) => {
+            tabRefs.current.STRATEGIC_TASKS = el;
+          }}
+          onKeyDown={(event) => handleTabKeyDown(event, "STRATEGIC_TASKS")}
           onClick={() => setActiveTab("STRATEGIC_TASKS")}
           title="Nhiệm vụ Chiến lược cấp Trường"
           className={cn(
-            "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer",
+            "flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "STRATEGIC_TASKS"
               ? "border-primary text-primary font-semibold"
               : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
@@ -1438,7 +1510,13 @@ export function LegacyExecutiveCockpitWorkspace({
       {/* 4. Tab 1: BOTTLENECKS (70/30 Layout: Bottleneck Stream + Unit Radar)  */}
       {/* ==================================================================== */}
       {activeTab === "BOTTLENECKS" && (
-        <div className="space-y-4" data-slot="bottlenecks-section">
+        <div
+          role="tabpanel"
+          id="panel-BOTTLENECKS"
+          aria-labelledby="tab-BOTTLENECKS"
+          className="space-y-4"
+          data-slot="bottlenecks-section"
+        >
           {activeBottlenecks.length > 0 && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-rose-500/25 bg-rose-500/[0.04]">
               <div className="flex items-center gap-2.5">
@@ -1460,7 +1538,7 @@ export function LegacyExecutiveCockpitWorkspace({
                 variant="outline"
                 size="sm"
                 onClick={handleRemindAll}
-                className="text-xs h-7.5 gap-1.5 border-rose-500/30 text-rose-700 hover:bg-rose-500/10 shrink-0 whitespace-nowrap cursor-pointer"
+                className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 gap-1.5 border-rose-500/30 text-rose-700 hover:bg-rose-500/10 shrink-0 whitespace-nowrap cursor-pointer"
               >
                 <Send className="w-3 h-3" />
                 <span>Đôn đốc tất cả ({affectedUnitsCount} đơn vị)</span>
@@ -1543,7 +1621,7 @@ export function LegacyExecutiveCockpitWorkspace({
                         size="sm"
                         onClick={() => setBottleneckFilter(btn.id as any)}
                         className={cn(
-                          "text-xs h-7.5 px-2.5 whitespace-nowrap",
+                          "text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2.5 whitespace-nowrap",
                           bottleneckFilter === btn.id &&
                             "bg-rose-600 hover:bg-rose-700 text-white border-rose-600"
                         )}
@@ -1600,14 +1678,14 @@ export function LegacyExecutiveCockpitWorkspace({
                           <div className="flex items-center justify-between gap-2">
                             <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-700 border border-rose-500/20">
                               <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-                              <span className="tabular-nums uppercase tracking-wide">
+                              <span className="tabular-nums tracking-wide">
                                 {typeof item.daysOverdue === "number" && item.daysOverdue > 0
-                                  ? `QUÁ HẠN ${item.daysOverdue} NGÀY`
+                                  ? `Quá hạn ${item.daysOverdue} ngày`
                                   : item.isBlocked
-                                    ? "ĐANG BỊ TẮC NGHẼN"
+                                    ? "Đang bị tắc nghẽn"
                                     : item.isOverdue
-                                      ? "ĐÃ QUÁ HẠN"
-                                      : "ĐIỂM NGHẼN CẤP THIẾT"}
+                                      ? "Đã quá hạn"
+                                      : "Điểm nghẽn cấp thiết"}
                               </span>
                             </span>
 
@@ -1649,7 +1727,7 @@ export function LegacyExecutiveCockpitWorkspace({
                               type="button"
                               variant="outline"
                               onClick={() => handleTriggerReminder(item.departmentCode, item.title)}
-                              className="min-h-[40px] h-10 px-3.5 text-xs font-medium hover:bg-muted border-border/70 gap-1.5 cursor-pointer active:scale-95 transition-all"
+                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-medium hover:bg-muted border-border/70 gap-1.5 cursor-pointer active:scale-95 transition-all"
                               title="Gửi thông báo đôn đốc tức thì tới đơn vị"
                             >
                               <Bell className="w-3.5 h-3.5 text-muted-foreground" />
@@ -1658,7 +1736,7 @@ export function LegacyExecutiveCockpitWorkspace({
                             <Button
                               type="button"
                               onClick={() => handleExtend(item, 3)}
-                              className="min-h-[40px] h-10 px-3.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs gap-1.5 cursor-pointer active:scale-95 transition-all"
+                              className="min-h-[44px] h-11 sm:min-h-[40px] sm:h-10 px-3.5 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs gap-1.5 cursor-pointer active:scale-95 transition-all"
                               title="Gia hạn tiến độ thêm 3 ngày và gỡ nghẽn tức thì"
                             >
                               <Clock className="w-3.5 h-3.5" />
@@ -1707,7 +1785,13 @@ export function LegacyExecutiveCockpitWorkspace({
       {/* 5. Tab 2: APPROVAL_QUEUE (Hàng đợi Phê duyệt Chiến lược cấp Trường)  */}
       {/* ==================================================================== */}
       {activeTab === "APPROVAL_QUEUE" && (
-        <div className="space-y-4" data-slot="approval-queue-section">
+        <div
+          role="tabpanel"
+          id="panel-APPROVAL_QUEUE"
+          aria-labelledby="tab-APPROVAL_QUEUE"
+          className="space-y-4"
+          data-slot="approval-queue-section"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
               <h2 className="text-base sm:text-lg font-semibold tracking-tight text-foreground flex items-center gap-2">
@@ -1734,7 +1818,7 @@ export function LegacyExecutiveCockpitWorkspace({
                 value={approvalSearch}
                 onChange={(e) => setApprovalSearch(e.target.value)}
                 placeholder="Tìm tờ trình theo tên, đơn vị, người trình..."
-                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-indigo-500/30"
+                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-lg border bg-background text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               />
               {approvalSearch && (
                 <button
@@ -1748,7 +1832,7 @@ export function LegacyExecutiveCockpitWorkspace({
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar [mask-image:linear-gradient(to_right,white_calc(100%-2rem),transparent)]">
               {[
                 { id: "ALL", label: "Tất cả hồ sơ" },
                 { id: "DE_AN", label: "Đề án & Kế hoạch" },
@@ -1762,7 +1846,7 @@ export function LegacyExecutiveCockpitWorkspace({
                   size="sm"
                   onClick={() => setApprovalCategory(c.id)}
                   className={cn(
-                    "text-xs h-7.5 px-2.5 whitespace-nowrap",
+                    "text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2.5 whitespace-nowrap",
                     approvalCategory === c.id &&
                       "bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
                   )}
@@ -1859,7 +1943,7 @@ export function LegacyExecutiveCockpitWorkspace({
                         variant="outline"
                         size="sm"
                         onClick={() => onSelectTask(item.originalTask)}
-                        className="text-xs min-h-[40px] h-10 sm:h-8 px-3.5 sm:px-3 gap-1 cursor-pointer"
+                        className="text-xs min-h-[44px] h-11 sm:min-h-[36px] sm:h-9 px-3.5 sm:px-3 gap-1 cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>Xem chi tiết</span>
@@ -1870,7 +1954,7 @@ export function LegacyExecutiveCockpitWorkspace({
                       type="button"
                       size="sm"
                       onClick={() => setReviewingTask(item.originalTask)}
-                      className="text-xs min-h-[40px] h-10 sm:h-8 px-3.5 sm:px-3 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer"
+                      className="text-xs min-h-[44px] h-11 sm:min-h-[36px] sm:h-9 px-3.5 sm:px-3 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Ký duyệt ban hành</span>
@@ -1887,7 +1971,13 @@ export function LegacyExecutiveCockpitWorkspace({
       {/* 6. Tab 3: HEALTH_RADAR (Tiến độ & Radar Sức Khỏe 11 Đơn Vị)          */}
       {/* ==================================================================== */}
       {activeTab === "HEALTH_RADAR" && (
-        <div className="space-y-6" data-slot="health-radar-section">
+        <div
+          role="tabpanel"
+          id="panel-HEALTH_RADAR"
+          aria-labelledby="tab-HEALTH_RADAR"
+          className="space-y-6"
+          data-slot="health-radar-section"
+        >
           {/* Top section: Department Progress Matrix (Heatmap) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -1906,7 +1996,7 @@ export function LegacyExecutiveCockpitWorkspace({
                   variant="ghost"
                   size="sm"
                   onClick={() => setSelectedDepartment("ALL")}
-                  className="text-xs h-7 gap-1 text-muted-foreground hover:text-foreground"
+                  className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 gap-1 text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-3 h-3" />
                   <span>Bỏ chọn lọc ({selectedDepartment})</span>
@@ -1938,7 +2028,7 @@ export function LegacyExecutiveCockpitWorkspace({
             {/* Controls bar: Category filter and Sorting */}
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
               {/* Category filter pills for 11 units */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 [mask-image:linear-gradient(to_right,white_calc(100%-2rem),transparent)]">
                 {[
                   { id: "ALL", label: "Tất cả 11 đơn vị" },
                   { id: "FACULTY", label: "5 Khoa chuyên môn" },
@@ -1952,7 +2042,7 @@ export function LegacyExecutiveCockpitWorkspace({
                     size="sm"
                     onClick={() => setUnitCategoryFilter(btn.id as any)}
                     className={cn(
-                      "text-xs h-7.5 px-3 whitespace-nowrap",
+                      "text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-3 whitespace-nowrap",
                       unitCategoryFilter === btn.id &&
                         "bg-primary text-primary-foreground font-semibold"
                     )}
@@ -1979,7 +2069,7 @@ export function LegacyExecutiveCockpitWorkspace({
                     size="sm"
                     onClick={() => setUnitSortBy(s.id as any)}
                     className={cn(
-                      "text-xs h-7 px-2 border cursor-pointer",
+                      "text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2 border cursor-pointer",
                       unitSortBy === s.id
                         ? "bg-muted font-semibold border-border"
                         : "text-muted-foreground border-transparent hover:border-border"
@@ -2111,7 +2201,7 @@ export function LegacyExecutiveCockpitWorkspace({
                             isSelected ? "ALL" : dept.departmentCode
                           )
                         }
-                        className="text-xs h-7 flex-1"
+                        className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 flex-1"
                       >
                         {isSelected ? "Bỏ chọn" : "Xem nhiệm vụ"}
                       </Button>
@@ -2128,7 +2218,7 @@ export function LegacyExecutiveCockpitWorkspace({
                               "Đôn đốc tiến độ"
                             )
                           }
-                          className="text-xs h-7 gap-1 hover:bg-rose-500/10 hover:text-rose-700"
+                          className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 gap-1 hover:bg-rose-500/10 hover:text-rose-700"
                         >
                           <Send className="w-3 h-3" />
                           <span>Đôn đốc</span>
@@ -2147,7 +2237,13 @@ export function LegacyExecutiveCockpitWorkspace({
       {/* 7. Tab 4: STRATEGIC_TASKS (Danh sách nhiệm vụ chiến lược cấp Trường) */}
       {/* ==================================================================== */}
       {activeTab === "STRATEGIC_TASKS" && (
-        <div className="space-y-4" data-slot="strategic-tasks-section">
+        <div
+          role="tabpanel"
+          id="panel-STRATEGIC_TASKS"
+          aria-labelledby="tab-STRATEGIC_TASKS"
+          className="space-y-4"
+          data-slot="strategic-tasks-section"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-base sm:text-lg font-semibold tracking-tight text-foreground flex items-center gap-2">
@@ -2198,7 +2294,7 @@ export function LegacyExecutiveCockpitWorkspace({
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar [mask-image:linear-gradient(to_right,white_calc(100%-2rem),transparent)]">
               {[
                 { id: "ALL", label: "Tất cả" },
                 { id: "IN_PROGRESS", label: "Đang triển khai" },
@@ -2214,7 +2310,7 @@ export function LegacyExecutiveCockpitWorkspace({
                   }
                   size="sm"
                   onClick={() => setStrategicStatusFilter(f.id)}
-                  className="text-xs h-8 whitespace-nowrap"
+                  className="text-xs min-h-[44px] sm:h-8 whitespace-nowrap"
                 >
                   {f.label}
                 </Button>
@@ -2345,7 +2441,7 @@ export function LegacyExecutiveCockpitWorkspace({
                           type="button"
                           size="sm"
                           onClick={() => setReviewingTask(task)}
-                          className="text-xs h-8 gap-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+                          className="text-xs min-h-[44px] sm:h-8 gap-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Ký duyệt</span>

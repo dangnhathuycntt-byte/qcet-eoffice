@@ -154,7 +154,7 @@ export function PeriodSelector({
         <span className="flex items-center gap-2 truncate">
           <Calendar
             className="size-4 text-blue-600 shrink-0"
-            strokeWidth={1.75}
+            strokeWidth={1.5}
             aria-hidden="true"
           />
           <span className="font-semibold truncate">{selectedLabel}</span>
@@ -180,7 +180,7 @@ export function PeriodSelector({
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <span className="text-xs font-bold text-slate-500">
               Năm học {academicYear}
             </span>
             <button

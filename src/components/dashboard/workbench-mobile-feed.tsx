@@ -427,7 +427,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-rose-500" />
-            <h2 className="font-heading font-bold text-sm text-foreground uppercase tracking-wider">
+            <h2 className="font-heading font-bold text-sm text-foreground">
               Cần xử lý ngay
             </h2>
           </div>
@@ -584,7 +584,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-primary" />
-            <h2 className="font-heading font-bold text-sm text-foreground uppercase tracking-wider">
+            <h2 className="font-heading font-bold text-sm text-foreground">
               Nhiệm vụ trọng tâm
             </h2>
           </div>
@@ -693,7 +693,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-indigo-500" />
-            <h2 className="font-heading font-bold text-sm text-foreground uppercase tracking-wider">
+            <h2 className="font-heading font-bold text-sm text-foreground">
               Lịch công tác hôm nay
             </h2>
           </div>
@@ -753,7 +753,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-amber-500" />
-            <h2 className="font-heading font-bold text-sm text-foreground uppercase tracking-wider">
+            <h2 className="font-heading font-bold text-sm text-foreground">
               Thông báo điều hành mới
             </h2>
           </div>

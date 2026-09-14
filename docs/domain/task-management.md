@@ -1,6 +1,6 @@
 # QCET E-Office — Đặc Tả Nghiệp Vụ Quản Lý Nhiệm Vụ (Task Management Specification)
 
-**Cơ quan ban hành:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
+**Cơ quan ban hành:** Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  (QCET)  
 **Tình trạng tài liệu:** Văn bản Chuẩn tắc Miền Nghiệp vụ (Canonical Domain Specification)  
 **Phạm vi áp dụng:** Mô hình dữ liệu Prisma, Bộ máy Phân quyền ReBAC (Relationship-Based Access Control), Động cơ Luồng duyệt (Approval Engine), và Kiến trúc Giao tác vụ Liên thông.  
 **Căn cứ pháp lý:** 

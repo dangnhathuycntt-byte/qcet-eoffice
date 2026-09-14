@@ -469,7 +469,7 @@ export function CascadingTaskTable(props: CascadingTaskTableProps) {
           - Ergonomics: text-sm font-medium, tabular-nums, useDisplayDensity
           - Heights: h-[38px] compact, h-[48px] comfortable
           - Code: font-mono text-xs sm:text-[13px] tabular-nums text-muted-foreground
-          - Header: h-11 px-4 text-xs sm:text-[12.5px] font-semibold uppercase tracking-wider text-muted-foreground
+          - Header: h-11 px-4 text-xs sm:text-[12.5px] font-semibold text-muted-foreground
           - Mobile: hidden md:block, md:hidden, Duyệt nhanh, useSwipeAction, usePullToRefresh
           - Flattening: flattenPersonalTasks, parentSchoolTaskTitle, parentSchoolTaskCode, Việc thành phần
           - Monthly: selectedAcademicMonth, priorOverdueBacklog, TỒN ĐỌNG KỲ TRƯỚC, Prior Overdue Backlog, border-amber-300, bg-amber-50

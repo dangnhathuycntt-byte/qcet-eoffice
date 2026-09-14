@@ -78,7 +78,7 @@ export function PWAInstallPrompt({
       >
         <div className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-600 text-white shrink-0">
-            <CheckCircle2 size={20} strokeWidth={2} />
+            <CheckCircle2 size={20} strokeWidth={1.5} />
           </div>
           <div>
             <h4 className="text-sm font-semibold text-emerald-900">
@@ -103,13 +103,13 @@ export function PWAInstallPrompt({
         <div className="flex items-start gap-3.5">
           <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 border border-blue-100 shrink-0">
             {isIOS ? (
-              <Smartphone size={20} strokeWidth={2} />
+              <Smartphone size={20} strokeWidth={1.5} />
             ) : (
-              <Download size={20} strokeWidth={2} />
+              <Download size={20} strokeWidth={1.5} />
             )}
           </div>
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider bg-blue-50 text-blue-800 border border-blue-200">
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
               Ứng dụng PWA chính thức
             </div>
             <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
@@ -145,7 +145,7 @@ export function PWAInstallPrompt({
           disabled={isProcessing}
           className="min-h-[44px] px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-semibold text-xs sm:text-sm shadow-sm hover:shadow transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          <Download size={16} strokeWidth={2} />
+          <Download size={16} strokeWidth={1.5} />
           <span>{isProcessing ? "Đang xử lý..." : "Cài đặt ngay"}</span>
         </button>
       </div>

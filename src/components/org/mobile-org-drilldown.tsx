@@ -332,7 +332,7 @@ export function MobileOrgDrillDown({
           {currentLevel === "root" && (
             <div className="space-y-2.5" data-testid="mobile-org-root-view">
               <div className="px-1 py-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs font-bold text-muted-foreground">
                   Cơ cấu tổ chức Nhà trường (QCET)
                 </span>
               </div>
@@ -377,7 +377,7 @@ export function MobileOrgDrillDown({
           {currentLevel === "group" && selectedGroup && (
             <div className="space-y-2.5" data-testid="mobile-org-group-view">
               <div className="px-1 py-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs font-bold text-muted-foreground">
                   {getGroupTitle(selectedGroup)} ({groupDepartments.length})
                 </span>
               </div>
@@ -428,7 +428,7 @@ export function MobileOrgDrillDown({
               <div className="p-3.5 rounded-xl border border-border/80 bg-card space-y-2 shadow-2xs">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+                    <span className="text-xs font-semibold text-primary">
                       {selectedDept.categoryLabel}
                     </span>
                     <h2 className="text-sm font-bold text-foreground mt-0.5">
@@ -471,7 +471,7 @@ export function MobileOrgDrillDown({
 
               {/* Personnel List Header */}
               <div className="px-1 pt-1 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs font-bold text-muted-foreground">
                   Danh sách nhân sự ({selectedDept.members.length})
                 </span>
                 <span className="text-xs font-mono tabular-nums text-muted-foreground">

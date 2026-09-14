@@ -302,7 +302,7 @@ export function DepartmentGroupedTaskView({
                   aria-expanded={isExpanded}
                   aria-controls={`dept-panel-${group.departmentId}`}
                   onClick={() => toggleDept(group.departmentId)}
-                  className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left cursor-pointer select-none group/trigger focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring rounded-lg p-0.5"
+                  className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left cursor-pointer select-none group/trigger focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring rounded-lg p-0.5"
                 >
                   <div className="flex items-start sm:items-center gap-3">
                     <span

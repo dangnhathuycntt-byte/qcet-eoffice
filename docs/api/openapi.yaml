@@ -3,7 +3,7 @@ info:
   title: QCET E-Office Canonical API Contract
   version: 1.0.0
   description: >
-    Canonical OpenAPI 3.1 contract for QCET E-Office (Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn ).
+    Canonical OpenAPI 3.1 contract for QCET E-Office (Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn ).
     Documents public, authenticated, and privileged endpoints with strict authorization rules,
     standard error contracts, and DTO schemas.
 servers:

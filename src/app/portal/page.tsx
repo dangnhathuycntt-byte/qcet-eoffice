@@ -79,19 +79,22 @@ export default function PortalPage() {
         const data = await res.json();
         if (isMounted) {
           if (data && data.stats) {
-            const total = data.stats.totalTasks ?? data.stats.totalSchoolTasks ?? 0;
+            const parentTaskTotal = data.stats.totalTasks ?? data.stats.totalSchoolTasks ?? 0;
             const completionRate =
               typeof data.stats.completionRate === "number"
                 ? data.stats.completionRate
-                : total > 0
-                ? Math.round(((data.stats.completedTasks ?? 0) / total) * 100)
+                : parentTaskTotal > 0
+                ? Math.round(((data.stats.completedTasks ?? 0) / parentTaskTotal) * 100)
                 : 0;
             const schoolTasks = data.stats.totalSchoolTasks ?? 0;
 
             setStats({
               completionRate,
-              total,
+              parentTaskTotal,
               schoolTasks,
+              // The server query constrains parentTaskId: null (dashboard-service.ts), so the
+              // denominator is parent-only and matches completionRate.
+              isDenominatorSeparated: true,
             });
           } else {
             setStats(null);
@@ -144,8 +147,8 @@ export default function PortalPage() {
 
             {/* Title stacked */}
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-bold tracking-widest text-muted-foreground uppercase leading-tight truncate">
-                TRƯỜNG CĐ KTCN QUY NHƠN
+              <span className="text-xs font-semibold text-muted-foreground leading-tight truncate">
+                Trường CĐ KTCN Quy Nhơn
               </span>
               <span className="text-xs sm:text-sm font-extrabold tracking-tight text-foreground leading-tight truncate">
                 VĂN PHÒNG ĐIỆN TỬ
@@ -179,25 +182,26 @@ export default function PortalPage() {
           {/* Left Card: Main Executive Dashboard (col-span-7) */}
           <Link
             href="/dashboard"
+            aria-label="Mở Dashboard Điều Hành & Báo Cáo KPI"
             className="lg:col-span-7 relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-7 md:p-8 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
           >
             {/* Subtle background ambient tint */}
-            <div className="absolute -top-20 -right-20 size-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -top-20 -right-20 size-64 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
             {/* Top header within card */}
             <div>
               <div className="flex items-center justify-between gap-4">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 border border-blue-500/20">
-                  <span className="size-1.5 rounded-full bg-blue-600" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                  <span className="size-1.5 rounded-full bg-primary" />
                   Màn hình Điều hành BGH
                 </span>
-                <div className="size-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center shrink-0 transition-colors">
-                  <Tv size={22} strokeWidth={1.75} />
+                <div className="size-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 transition-colors">
+                  <Tv size={22} strokeWidth={1.5} />
                 </div>
               </div>
 
               {/* Title & Description */}
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mt-6 group-hover:text-blue-600 transition-colors">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mt-6 group-hover:text-primary transition-colors">
                 Dashboard Điều Hành & Báo Cáo KPI
               </h2>
               <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
@@ -207,25 +211,39 @@ export default function PortalPage() {
               {/* Two Micro Feature Pills */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-7">
                 <div className="p-3.5 rounded-2xl bg-background/80 border border-border/70 flex items-center gap-3 shadow-2xs">
-                  <div className="size-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
-                    <Activity size={17} strokeWidth={1.75} />
+                  <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Activity size={17} strokeWidth={1.5} aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-foreground truncate">Tiến độ Toàn trường</div>
-                    <div className="text-xs text-muted-foreground font-medium font-mono tabular-nums">
-                      {formatProgressMetric(stats, isLoading, Boolean(user))}
+                    <div className="text-xs text-muted-foreground font-medium font-mono tabular-nums min-h-4">
+                      {isLoading ? (
+                        <span
+                          aria-hidden="true"
+                          className="inline-block h-4 w-24 rounded bg-muted/60 animate-pulse"
+                        />
+                      ) : (
+                        formatProgressMetric(stats, isLoading, Boolean(user))
+                      )}
                     </div>
                   </div>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-background/80 border border-border/70 flex items-center gap-3 shadow-2xs">
                   <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                    <CheckCircle2 size={17} strokeWidth={1.75} />
+                    <CheckCircle2 size={17} strokeWidth={1.5} aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-foreground truncate">Nhiệm vụ Cấp trường</div>
-                    <div className="text-xs text-muted-foreground font-medium font-mono tabular-nums">
-                      {formatSchoolTasksMetric(stats, isLoading, Boolean(user))}
+                    <div className="text-xs text-muted-foreground font-medium font-mono tabular-nums min-h-4">
+                      {isLoading ? (
+                        <span
+                          aria-hidden="true"
+                          className="inline-block h-4 w-24 rounded bg-muted/60 animate-pulse"
+                        />
+                      ) : (
+                        formatSchoolTasksMetric(stats, isLoading, Boolean(user))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -234,11 +252,11 @@ export default function PortalPage() {
 
             {/* Bottom Action */}
             <div className="mt-8 pt-6 border-t border-border/50 flex items-center justify-between">
-              <span className="text-xs font-bold tracking-wider text-blue-600 uppercase">
-                KHỞI CHẠY DASHBOARD ĐIỀU HÀNH
+              <span className="text-xs font-semibold text-primary">
+                Khởi chạy Dashboard điều hành
               </span>
-              <span className="size-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs group-hover:bg-blue-700 transition-colors">
-                <ArrowUpRight size={18} strokeWidth={2.2} />
+              <span className="size-10 rounded-full bg-primary text-white flex items-center justify-center shadow-xs group-hover:bg-primary/90 transition-colors">
+                <ArrowUpRight size={18} strokeWidth={1.5} aria-hidden="true" />
               </span>
             </div>
           </Link>
@@ -248,16 +266,17 @@ export default function PortalPage() {
             {/* Top Right Card: Quản lý Công việc */}
             <Link
               href="/"
+              aria-label="Mở bảng Quản Lý Công Việc 2 Cấp"
               className="relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-6 md:p-7 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
             >
               <div>
                 <div className="flex items-center justify-between gap-4">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                    <Briefcase size={12} strokeWidth={1.75} />
+                    <Briefcase size={12} strokeWidth={1.5} />
                     Dành cho Khoa / Phòng
                   </span>
                   <div className="size-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0 transition-colors">
-                    <CheckSquare size={20} strokeWidth={1.75} />
+                    <CheckSquare size={20} strokeWidth={1.5} />
                   </div>
                 </div>
 
@@ -271,27 +290,28 @@ export default function PortalPage() {
 
               <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between text-xs font-semibold text-emerald-600">
                 <span>Vào bảng công việc</span>
-                <ArrowUpRight size={15} strokeWidth={2.2} />
+                <ArrowUpRight size={15} strokeWidth={1.5} aria-hidden="true" />
               </div>
             </Link>
 
             {/* Bottom Right Card: Lịch công tác & Cơ cấu */}
             <Link
               href="/calendar"
+              aria-label="Mở Lịch Công Tác & Cơ Cấu Tổ Chức"
               className="relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-6 md:p-7 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
             >
               <div>
                 <div className="flex items-center justify-between gap-4">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-600 border border-slate-500/20">
-                    <Users size={12} strokeWidth={1.75} />
+                    <Users size={12} strokeWidth={1.5} />
                     Toàn thể Cán bộ & Giảng viên
                   </span>
                   <div className="size-11 rounded-2xl bg-slate-500/10 border border-slate-500/20 text-slate-600 flex items-center justify-center shrink-0 transition-colors">
-                    <Calendar size={20} strokeWidth={1.75} />
+                    <Calendar size={20} strokeWidth={1.5} />
                   </div>
                 </div>
 
-                <h3 className="text-xl font-bold tracking-tight text-foreground mt-4 group-hover:text-blue-600 transition-colors">
+                <h3 className="text-xl font-bold tracking-tight text-foreground mt-4 group-hover:text-primary transition-colors">
                   Lịch Công Tác & Cơ Cấu Tổ Chức
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed">
@@ -299,9 +319,9 @@ export default function PortalPage() {
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between text-xs font-semibold text-blue-600">
+              <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between text-xs font-semibold text-primary">
                 <span>Xem lịch công tác & danh bạ</span>
-                <ArrowUpRight size={15} strokeWidth={2.2} />
+                <ArrowUpRight size={15} strokeWidth={1.5} aria-hidden="true" />
               </div>
             </Link>
           </div>

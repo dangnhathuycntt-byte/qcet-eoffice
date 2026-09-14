@@ -91,7 +91,7 @@ export function WorkspaceToolbar({
                 className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500"
                 aria-hidden="true"
               >
-                <Search className="size-4" strokeWidth={2} />
+                <Search className="size-4" strokeWidth={1.5} />
               </div>
               <input
                 ref={inputRef}
@@ -116,7 +116,7 @@ export function WorkspaceToolbar({
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg"
                   )}
                 >
-                  <X className="size-4" strokeWidth={2} aria-hidden="true" />
+                  <X className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -170,7 +170,7 @@ export function WorkspaceToolbar({
             >
               <RotateCcw
                 className={cn("size-4", isRefreshing && "animate-spin text-blue-600")}
-                strokeWidth={2}
+                strokeWidth={1.5}
                 aria-hidden="true"
               />
             </button>
@@ -193,7 +193,7 @@ export function WorkspaceToolbar({
                 primaryAction.disabled && "opacity-50 cursor-not-allowed"
               )}
             >
-              <PrimaryIcon className="size-4 shrink-0" strokeWidth={2.25} aria-hidden="true" />
+              <PrimaryIcon className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
               <span>{primaryAction.label}</span>
             </button>
           )}

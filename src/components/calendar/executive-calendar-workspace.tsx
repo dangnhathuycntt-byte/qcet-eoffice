@@ -979,7 +979,7 @@ export function ExecutiveCalendarWorkspace({
                       d.isToday && "bg-primary/5 font-semibold"
                     )}
                   >
-                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <div className="text-xs font-medium text-muted-foreground">
                       {d.dayOfWeekLabel}
                     </div>
                     <div className="flex items-center justify-center gap-1 mt-0.5">
@@ -1184,7 +1184,7 @@ export function ExecutiveCalendarWorkspace({
           <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-lg space-y-4">
             <div className="flex items-start justify-between gap-2 border-b border-border/60 pb-3">
               <div>
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs font-bold text-muted-foreground">
                   Chi tiết công việc
                 </span>
                 <h3 id="preview-modal-title" className="text-sm font-bold text-foreground leading-snug mt-1">

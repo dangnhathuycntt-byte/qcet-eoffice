@@ -353,7 +353,7 @@ export function ReviewActionDialog({
           {/* Task Info Summary */}
           <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+              <span className="text-xs font-semibold text-muted-foreground">
                 Nhiệm vụ thẩm định
               </span>
               {effectiveTaskId && (
@@ -398,7 +398,7 @@ export function ReviewActionDialog({
           <div className="space-y-2.5">
             <label
               id="decision-group-label"
-              className="text-xs font-semibold tracking-wider uppercase text-muted-foreground"
+              className="text-xs font-semibold text-muted-foreground"
             >
               Quyết định thẩm định <span className="text-rose-500">*</span>
             </label>
@@ -479,7 +479,7 @@ export function ReviewActionDialog({
             <div className="flex items-center justify-between">
               <label
                 htmlFor="review-comment-input"
-                className="text-xs font-semibold tracking-wider uppercase text-muted-foreground flex items-center gap-1.5"
+                className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5"
               >
                 <MessageSquare className="h-3.5 w-3.5" />
                 <span>Ý kiến thẩm định & Hướng dẫn</span>

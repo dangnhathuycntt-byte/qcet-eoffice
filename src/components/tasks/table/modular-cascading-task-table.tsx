@@ -734,7 +734,7 @@ export function ModularCascadingTaskTable({
                   <RotateCcw className="size-4" strokeWidth={1.5} />
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-xs sm:text-sm font-bold text-amber-950 uppercase tracking-wide">
+                  <h3 className="text-xs sm:text-sm font-bold text-amber-950">
                     TỒN ĐỌNG KỲ TRƯỚC ({priorOverdueBacklog.length})
                   </h3>
                   <Badge variant="rose" className="text-xs font-semibold">

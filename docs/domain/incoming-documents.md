@@ -1,5 +1,5 @@
 # CANONICAL DOMAIN WORKFLOW: VĂN BẢN ĐẾN (INCOMING DOCUMENTS)
-## HỆ THỐNG ĐIỀU HÀNH & TÁC NGHIỆP ĐIỆN TỬ Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET E-OFFICE)
+## HỆ THỐNG ĐIỀU HÀNH & TÁC NGHIỆP ĐIỆN TỬ Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  (QCET E-OFFICE)
 
 **Tình trạng tài liệu:** Đặc tả chuẩn tắc nghiệp vụ miền (Canonical Domain Specification)  
 **Căn cứ pháp lý cốt lõi:**

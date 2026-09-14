@@ -1,0 +1,1845 @@
+{
+  "$comment": "Design-system debt accepted as of the last baseline update. CI fails on entries NOT listed here. Regenerate deliberately with `node scripts/lint.mjs --update-baseline`.",
+  "entries": [
+    {
+      "ruleId": "icon-stroke-width",
+      "file": "src/components/portal/department-manager-workspace.tsx",
+      "text": "<Plus className=\"w-3.5 h-3.5 shrink-0\" strokeWidth={2} />"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<Bell className=\"w-6 h-6 text-[#1e3a8a] shrink-0\" />"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<Bell className=\"w-6 h-6 text-[#1e3a8a]\" />"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<Download className=\"w-6 h-6 text-[#1e3a8a]\" />"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<PlusSquare className=\"w-4 h-4 text-[#1e3a8a]\" />"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<Settings className=\"w-4 h-4 text-[#1e3a8a]\" />"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<Share className=\"w-4 h-4 text-[#1e3a8a]\" />"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<ShieldCheck className=\"w-6 h-6 text-[#1e3a8a] shrink-0\" />"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<Smartphone className=\"w-6 h-6 text-[#1e3a8a]\" />"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-[#1e3a8a] transition-colors\">"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"w-10 h-10 rounded-xl bg-blue-50 text-[#1e3a8a] border border-blue-200 flex items-center justify-center shrink-0\">"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"w-8 h-8 rounded-lg bg-blue-50 text-[#1e3a8a] font-bold text-sm flex items-center justify-center shrink-0 border border-blue-200\">"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"w-9 h-9 rounded-xl bg-[#1e3a8a] text-white font-bold text-base flex items-center justify-center shrink-0\">"
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "className=\"mt-0.5 h-4 w-4 rounded border-slate-300 text-[#1e3a8a] focus:ring-[#1e3a8a] focus:ring-offset-0\""
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "className=\"w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-[#1e3a8a] text-white font-bold text-base sm:text-lg shadow-lg hover:bg-[#1e40af] transition-all cursor-pointer flex items-center justify-center gap-2.5 disabled:opacity-50\""
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "className=\"w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-[#1e3a8a] text-white font-bold text-base sm:text-lg shadow-lg hover:bg-[#1e40af] transition-all cursor-pointer flex items-center justify-center gap-2.5\""
+    },
+    {
+      "ruleId": "no-arbitrary-color-value",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "className=\"w-full min-h-[52px] py-3.5 px-6 rounded-xl bg-[#1e3a8a] text-white font-semibold text-base shadow-md hover:bg-[#1e40af] transition-colors cursor-pointer mt-2\""
+    },
+    {
+      "ruleId": "no-card-accent-bar",
+      "file": "src/components/tasks/task-kanban-board.tsx",
+      "text": "headerAccent: \"border-t-2 border-t-amber-500\","
+    },
+    {
+      "ruleId": "no-card-accent-bar",
+      "file": "src/components/tasks/task-kanban-board.tsx",
+      "text": "headerAccent: \"border-t-2 border-t-blue-500\","
+    },
+    {
+      "ruleId": "no-card-accent-bar",
+      "file": "src/components/tasks/task-kanban-board.tsx",
+      "text": "headerAccent: \"border-t-2 border-t-emerald-500\","
+    },
+    {
+      "ruleId": "no-card-accent-bar",
+      "file": "src/components/tasks/task-kanban-board.tsx",
+      "text": "headerAccent: \"border-t-2 border-t-slate-500\","
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/common/maintenance-dialog.tsx",
+      "text": "className=\"absolute top-4 right-4 size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/dashboard/department-progress-matrix.tsx",
+      "text": "<div className=\"flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground\">"
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/dashboard/department-progress-matrix.tsx",
+      "text": "<div className=\"flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground\">"
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/dashboard/executive-action-center.tsx",
+      "text": "<div className=\"flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground border border-border/60\">"
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/dashboard/unified-task-toolbar.tsx",
+      "text": "className=\"flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer active:scale-98\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/dashboard/workbench-mobile-feed.tsx",
+      "text": "<div className=\"p-4 rounded-xl border border-dashed border-border/80 bg-muted/10 text-center space-y-1 min-h-[48px] flex flex-col items-center justify-center\">"
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/dashboard/workbench-mobile-feed.tsx",
+      "text": "className=\"w-full min-h-[48px] rounded-xl border border-border bg-background hover:bg-muted/50 active:bg-muted font-medium text-xs text-foreground flex items-center justify-center gap-1.5 shadow-2xs touch-manipulation transition-colors\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/documents/document-detail-dialog.tsx",
+      "text": "className=\"min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors shrink-0 cursor-pointer\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/layout/scope-switcher.tsx",
+      "text": "className=\"min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/org/mobile-org-drilldown.tsx",
+      "text": "<div className=\"size-7 rounded-lg bg-muted/60 flex items-center justify-center text-muted-foreground shrink-0 group-hover:text-foreground\">"
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/org/mobile-org-drilldown.tsx",
+      "text": "className=\"flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg bg-muted/50 hover:bg-muted text-xs font-mono tabular-nums text-foreground touch-manipulation cursor-pointer border border-border/60\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/org/mobile-org-drilldown.tsx",
+      "text": "className=\"flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg bg-muted/50 hover:bg-muted text-xs text-foreground touch-manipulation cursor-pointer border border-border/60 truncate\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/org/organization-tree.tsx",
+      "text": "className=\"size-8 rounded-xl border border-border/70 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/pwa/mobile-app-install-modal.tsx",
+      "text": "className=\"min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/tasks/executive-department-command-center.tsx",
+      "text": "<div className=\"flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 py-8 text-center bg-muted/20\">"
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/tasks/table/components/task-pagination-bar.tsx",
+      "text": "className=\"inline-flex size-8 items-center justify-center rounded-lg border border-border/80 bg-background text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer active:scale-95\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/tasks/table/components/task-row.tsx",
+      "text": "className=\"inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted/80 hover:text-foreground cursor-pointer shrink-0\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/tasks/table/components/task-row.tsx",
+      "text": "className=\"inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/80 hover:text-foreground cursor-pointer transition-colors\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "text": "className=\"absolute right-1 top-1/2 -translate-y-1/2 inline-flex size-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/tasks/table/components/task-table-toolbar.tsx",
+      "text": "className=\"flex-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-border bg-muted/40 text-foreground text-xs font-medium hover:bg-muted transition-colors cursor-pointer active:scale-98\""
+    },
+    {
+      "ruleId": "no-icon-box",
+      "file": "src/components/ui/drawer.tsx",
+      "text": "className=\"flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/80 border border-transparent hover:border-border/60 transition-all duration-200 active:scale-95 shrink-0 cursor-pointer\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/app/portal/page.tsx",
+      "text": "<div className=\"size-11 rounded-2xl bg-slate-500/10 border border-slate-500/20 text-slate-600 flex items-center justify-center shrink-0 transition-colors\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/app/portal/page.tsx",
+      "text": "<span className=\"inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-600 border border-slate-500/20\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/app/settings/page.tsx",
+      "text": "<div className=\"h-64 rounded-xl border border-slate-200 bg-slate-50 animate-pulse\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/app/settings/page.tsx",
+      "text": "<h1 className=\"text-xl font-bold text-slate-900 tracking-tight\">Cài đặt hệ thống</h1>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/app/settings/page.tsx",
+      "text": "<p className=\"text-sm text-slate-500 mt-1\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/calendar/calendar-month-view.tsx",
+      "text": "return \"bg-zinc-400\";"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/calendar/executive-calendar-workspace.tsx",
+      "text": "return \"bg-zinc-500/10 text-zinc-700 border-zinc-500/20\";"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/create-task-modal.tsx",
+      "text": "{ id: \"KHAC\", label: \"Khác\", color: \"bg-slate-500\" },"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/department-grouped-task-view.tsx",
+      "text": "\"bg-slate-50 text-slate-700 border border-slate-200\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/department-progress-matrix.tsx",
+      "text": "? \"bg-slate-200 text-slate-700 border border-slate-300\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/roles/staff-focus-view.tsx",
+      "text": "badgeClass: \"bg-neutral-500/10 text-neutral-700 border-neutral-500/20\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/roles/staff-focus-view.tsx",
+      "text": "badgeClass: \"bg-slate-500/10 text-slate-700 border-slate-500/20\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "text": "\"border-slate-400/20 bg-slate-400/10 text-slate-600\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "text": "\"border-slate-500/20 bg-slate-500/10 text-slate-700\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "text": "<span className=\"truncate max-w-[120px] font-medium text-slate-800\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/dashboard/task-detail-side-sheet.tsx",
+      "text": "className=\"flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200/80\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": ": \"border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": ": \"border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-slate-50\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<Building2 className=\"h-3.5 w-3.5 text-slate-400\" strokeWidth={1.5} />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<Calendar className=\"h-3.5 w-3.5 text-slate-400\" strokeWidth={1.5} />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<Users className=\"h-3.5 w-3.5 text-slate-400\" strokeWidth={1.5} />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<div className=\"flex items-center gap-1.5 text-xs font-medium text-slate-700\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<div className=\"flex items-center justify-between border-b border-slate-100 pb-4\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<div className=\"mt-3 rounded-lg bg-slate-50 p-3 text-xs\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<h3 className=\"text-sm font-semibold text-slate-900\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<label className=\"block text-xs font-medium text-slate-700\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<label className=\"flex items-center gap-1.5 text-xs font-medium text-slate-700\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<p className=\"mt-1 line-clamp-2 text-slate-600 italic\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<p className=\"text-xs text-slate-500\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<span className=\"font-semibold text-slate-700\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<span className=\"text-slate-400\">|</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<span className=\"text-slate-600\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "<span className=\"text-xs text-slate-400\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "className=\"mt-1.5 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "className=\"mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "className=\"rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "className=\"rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "className=\"rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "className=\"w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/directive-action-panel.tsx",
+      "text": "className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-detail-dialog.tsx",
+      "text": "className: \"bg-zinc-500/10 text-zinc-700 border-zinc-500/20\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-pdf-viewer.tsx",
+      "text": "<div className=\"relative flex-1 bg-zinc-100 overflow-auto flex items-center justify-center p-2 min-h-[440px]\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": ": \"border-slate-200 bg-white text-slate-700 hover:bg-slate-50\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<UploadCloud className=\"h-6 w-6 text-slate-400\" strokeWidth={1.5} />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<div className=\"flex flex-col items-center justify-center gap-1 text-slate-500\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<div className=\"flex items-center justify-between border-b border-slate-100 px-5 py-4\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<div className=\"flex items-center justify-end gap-3 border-t border-slate-100 px-5 py-3.5 bg-slate-50/50\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<div className=\"grid grid-cols-1 gap-4 sm:grid-cols-3 border-t border-slate-100 pt-3\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<div className=\"relative rounded-lg border-2 border-dashed border-slate-200 p-4 text-center hover:border-indigo-400 transition-colors\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<label className=\"block text-xs font-medium text-slate-700 mb-1.5\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<label className=\"block text-xs font-medium text-slate-700\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<p className=\"text-xs text-slate-500\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<span className=\"text-slate-400\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<span className=\"text-xs text-slate-400\">Gợi ý nhanh</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "<span className=\"text-xs text-slate-400\">Hỗ trợ PDF tối đa 25MB</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "className=\"fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "className=\"mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-none\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "className=\"mt-1.5 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "className=\"mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "className=\"mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "className=\"relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-xl border border-slate-200 bg-white shadow-2xl text-slate-900 overflow-hidden\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "className=\"rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "className=\"rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "className=\"rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-100\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-quick-entry-modal.tsx",
+      "text": "className=\"rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-100\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/documents/document-split-view.tsx",
+      "text": "className: \"bg-zinc-500/10 text-zinc-700 border-zinc-500/20\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "\"fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-4 md:p-6 bg-slate-900/40 backdrop-blur-xs\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": ": \"bg-neutral-100 text-neutral-600\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": ": \"border-transparent hover:bg-neutral-50/60 hover:border-neutral-200\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": ": \"text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100/80\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": ": \"text-neutral-700 hover:bg-neutral-50\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<ArrowRight className=\"w-3.5 h-3.5 text-neutral-300 group-hover:text-neutral-500\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<Building2 className=\"w-3 h-3 text-neutral-400\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<ChevronRight className=\"w-4 h-4 text-neutral-300 group-hover:text-neutral-500 shrink-0\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<Clock className=\"w-3 h-3 text-neutral-400\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<Clock className=\"w-4 h-4 text-neutral-400 shrink-0\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<LayoutDashboard className=\"w-3.5 h-3.5 text-neutral-600\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<Mail className=\"w-3 h-3 text-neutral-400\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<Phone className=\"w-3 h-3 text-neutral-400\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<Search className=\"w-5 h-5 text-neutral-400 shrink-0\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<Search className=\"w-8 h-8 text-neutral-300 mx-auto mb-2\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<div className=\"flex items-center gap-1 text-neutral-400\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<div className=\"flex items-center gap-1 text-xs text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<div className=\"flex items-center gap-3 mt-0.5 text-xs text-neutral-500 flex-wrap\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<div className=\"flex items-center gap-3 mt-1 text-xs text-neutral-500 flex-wrap\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<div className=\"flex items-center gap-3 px-4 py-3 border-b border-neutral-200 bg-white\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<div className=\"px-2.5 py-1 text-xs font-semibold text-neutral-400 flex items-center justify-between\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<div className=\"px-2.5 py-1 text-xs font-semibold text-neutral-400\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<div className=\"px-4 py-2.5 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between text-xs text-neutral-500\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<kbd className=\"px-1.5 py-0.5 font-mono text-xs bg-white rounded border border-neutral-200 text-neutral-600\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<kbd className=\"px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-white rounded border border-neutral-200\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<p className=\"text-sm font-medium text-neutral-700\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<p className=\"text-sm text-neutral-800\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<p className=\"text-xs text-neutral-400 mt-1 max-w-sm mx-auto\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<p className=\"text-xs text-neutral-400 truncate\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"flex items-center gap-1 text-neutral-600\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-neutral-400\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-neutral-600\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-sm font-medium text-neutral-900 truncate\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-sm font-semibold text-neutral-900\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-sm text-neutral-800\">{item.title}</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-xs font-mono font-medium text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded border border-neutral-200\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-xs font-semibold text-neutral-400 flex items-center gap-1.5\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-xs font-semibold text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-xs text-neutral-400 lowercase\">phím ↵ để liên hệ</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-xs text-neutral-400 lowercase\">phím ↵ để mở</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-xs text-neutral-400 ml-2\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "<span className=\"text-xs text-neutral-500\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "? \"bg-neutral-100 text-neutral-900 font-medium\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "? \"bg-neutral-50/90 border-neutral-300 shadow-2xs\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "? \"bg-white text-neutral-900 shadow-2xs border border-neutral-200\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "className=\"flex items-center gap-1.5 px-4 py-2 bg-neutral-50/70 border-b border-neutral-100 text-xs overflow-x-auto\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "className=\"flex-1 bg-transparent text-sm sm:text-base font-normal text-neutral-900 placeholder:text-neutral-400 focus:outline-hidden\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "className=\"hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono text-neutral-500 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "className=\"p-1 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "className=\"text-xs text-neutral-400 hover:text-neutral-600 flex items-center gap-1 transition-colors\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "className=\"w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col max-h-[85vh]\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/layout/command-search-modal.tsx",
+      "text": "{isLoading && <Loader2 className=\"w-4 h-4 text-neutral-400 animate-spin shrink-0\" />}"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/onboarding/welcome-modal.tsx",
+      "text": "className=\"fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-150\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/org/mobile-org-drilldown.tsx",
+      "text": ": \"bg-slate-400\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/org/organization-tree.tsx",
+      "text": ": \"bg-slate-400\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "\"w-full max-w-xl rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<FileText className=\"size-4 text-slate-500\" strokeWidth={1.5} />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<Server className=\"size-4 text-slate-700\" strokeWidth={1.5} />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<div className=\"flex items-center gap-2 text-slate-900 font-semibold mb-1\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<div className=\"flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-600\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<div className=\"flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-slate-100 bg-amber-50/60\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<div className=\"mt-2 p-3 rounded-lg bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto space-y-1.5 animate-in fade-in duration-150\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<div className=\"p-2.5 rounded-lg bg-white border border-blue-100 text-xs text-slate-700 max-h-36 overflow-y-auto font-mono\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<div className=\"p-2.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 max-h-36 overflow-y-auto font-mono\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<div className=\"p-4 sm:p-5 border-t border-slate-200 bg-slate-50/90 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<div className=\"rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 flex flex-col justify-between\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<div className=\"rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-2\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<div className=\"text-xs text-slate-600 mb-2\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<p><span className=\"text-slate-400\">Idempotency Key:</span> {activeItem.idempotencyKey}</p>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<p><span className=\"text-slate-400\">Tạo lúc:</span> {new Date(activeItem.createdAt).toLocaleString(\"vi-VN\")}</p>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<p><span className=\"text-slate-400\">URL:</span> {activeItem.method} {activeItem.url}</p>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<span className=\"font-mono text-xs text-slate-500 px-2 py-0.5 bg-white border border-slate-200 rounded\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<span className=\"font-semibold text-slate-800\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "<span className=\"text-slate-600 font-sans\">{serverData.error}</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "Phiên bản máy chủ: <span className=\"font-mono font-bold text-slate-900\">{String(serverVersion)}</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "className=\"fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "className=\"inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium py-1.5 cursor-pointer\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "className=\"mt-1 text-xs text-slate-600 leading-relaxed\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "className=\"size-11 min-h-[44px] min-w-[44px] shrink-0 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/offline-conflict-dialog.tsx",
+      "text": "className=\"text-base sm:text-lg font-bold text-slate-900 leading-snug\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": ": \"text-slate-600 hover:text-slate-900\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<BottomSheetDescription className=\"text-sm sm:text-base text-slate-500 mt-0.5\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<BottomSheetHeader className=\"border-b border-slate-200 pb-3 pt-2\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<BottomSheetTitle className=\"text-xl sm:text-2xl font-bold tracking-tight text-slate-900\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<ChevronDown className=\"w-4 h-4 text-slate-500\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<ChevronUp className=\"w-4 h-4 text-slate-500\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<ShieldCheck className=\"w-4 h-4 text-slate-500\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"border border-slate-200 rounded-xl overflow-hidden\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-800\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"flex p-1 bg-slate-100 rounded-xl border border-slate-200\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"h-px bg-slate-200 ml-11\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"h-px bg-slate-200 ml-13\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-900 mt-1\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"p-4 bg-white divide-y divide-slate-100 space-y-3\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"space-y-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-[#1e3a8a] transition-colors\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<div className=\"text-xs text-slate-500 leading-normal mt-0.5\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<p className=\"text-base sm:text-lg font-semibold text-slate-900\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<p className=\"text-base sm:text-lg text-slate-900 font-medium leading-relaxed\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<p className=\"text-base sm:text-lg text-slate-900 font-normal leading-relaxed\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<p className=\"text-base text-slate-600\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<p className=\"text-lg font-bold text-slate-900\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<p className=\"text-sm sm:text-base font-semibold text-slate-900\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<p className=\"text-sm sm:text-base text-slate-600 leading-relaxed\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<p className=\"text-xs sm:text-sm text-slate-600 leading-relaxed\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "<span className=\"text-sm sm:text-base text-slate-900 font-medium\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "? \"bg-white text-slate-900 shadow-sm border border-slate-200\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "className=\"flex items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "className=\"mt-0.5 h-4 w-4 rounded border-slate-300 text-[#1e3a8a] focus:ring-[#1e3a8a] focus:ring-offset-0\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "className=\"w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-medium text-base transition-colors cursor-pointer\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "className=\"w-full min-h-[52px] py-3.5 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-base transition-colors cursor-pointer\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/push-onboarding-sheet.tsx",
+      "text": "className=\"w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left transition-colors min-h-[44px]\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "\"rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-6 text-slate-900\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": ": \"bg-slate-100 text-slate-600 border-slate-200\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": ": \"bg-slate-100 text-slate-700 border-slate-300\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": ": \"bg-slate-200 text-slate-700\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<Badge variant=\"outline\" className=\"text-xs font-mono bg-white border-slate-200\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<div className=\"flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<div className=\"flex items-center gap-2 text-xs bg-white border border-slate-200 rounded-lg px-3 py-2\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<div className=\"flex items-center justify-between text-xs text-slate-500\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<div className=\"flex justify-between text-xs text-slate-600 font-medium\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<div className=\"h-2.5 w-full bg-slate-200 rounded-full overflow-hidden\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<div className=\"min-h-[44px] flex items-center justify-center text-xs text-slate-500 border border-dashed border-slate-200 rounded\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<div className=\"rounded-lg border border-slate-200 bg-slate-50/50 p-4 space-y-3 flex flex-col justify-between\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<div className=\"rounded-xl border border-slate-200 bg-slate-50/30 p-5 space-y-4\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<div className=\"text-xs bg-white border border-slate-200 text-slate-700 rounded-lg p-3 flex items-center gap-2\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<h3 className=\"text-base font-semibold text-slate-900 tracking-tight\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<h4 className=\"text-sm font-semibold text-slate-900\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<p className=\"text-xs text-slate-500 pt-1\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<p className=\"text-xs text-slate-500\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<p className=\"text-xs text-slate-600 bg-white border border-slate-200 rounded p-2 mt-1\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<span className=\"font-medium text-slate-800\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<span className=\"text-slate-500\">Thao tác chờ gửi:</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<span className=\"text-slate-500\">Trạng thái tổng thể:</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<span className=\"text-slate-500\">Xung đột phiên bản:</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<span className=\"text-xs font-semibold text-slate-600\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "<span className=\"text-xs text-slate-500\">Service Worker:</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "className=\"min-h-[44px] text-xs font-medium border-slate-300 text-rose-700 hover:bg-rose-50 hover:border-rose-200\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "className=\"min-h-[44px] text-xs text-slate-600 hover:text-slate-900 ml-auto\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "className=\"min-h-[44px] text-xs text-slate-600 hover:text-slate-900\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "className=\"w-full min-h-[44px] justify-center text-xs font-medium border-slate-300 hover:bg-slate-100\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-health-settings.tsx",
+      "text": "conflictCount > 0 ? \"bg-rose-100 text-rose-800\" : \"bg-slate-100 text-slate-700\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-install-prompt.tsx",
+      "text": "<div className=\"mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-3 border-t border-slate-100\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-install-prompt.tsx",
+      "text": "<h3 className=\"text-sm sm:text-base font-bold text-slate-900 leading-snug\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-install-prompt.tsx",
+      "text": "<p className=\"text-xs sm:text-sm text-slate-600 leading-relaxed\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-install-prompt.tsx",
+      "text": "className=\"min-h-[44px] px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-center\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-install-prompt.tsx",
+      "text": "className=\"min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-install-prompt.tsx",
+      "text": "className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-lg z-50 p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-xl ring-1 ring-slate-900/5 animate-in fade-in slide-in-from-bottom-4 duration-300 ${className}`}"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-sync-status.tsx",
+      "text": "\"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-sync-status.tsx",
+      "text": "<RefreshCw className=\"h-3.5 w-3.5 animate-spin mr-1 text-slate-600\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-sync-status.tsx",
+      "text": "<WifiOff className=\"h-3.5 w-3.5 text-slate-600\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-sync-status.tsx",
+      "text": "<span className=\"font-semibold truncate text-slate-900 leading-tight\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-sync-status.tsx",
+      "text": "<span className=\"inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-sync-status.tsx",
+      "text": "<span className=\"text-xs text-slate-500 font-normal truncate\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-sync-status.tsx",
+      "text": "className=\"min-h-[44px] px-3 font-semibold text-xs rounded-lg border-slate-300 text-slate-800 hover:bg-slate-50 bg-white\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-sync-status.tsx",
+      "text": "offline: \"bg-slate-100 text-slate-800 border-slate-200\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-sync-status.tsx",
+      "text": "offline: \"bg-white border-slate-300 text-slate-900 shadow-sm\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/pwa/pwa-sync-status.tsx",
+      "text": "statusIcon = <WifiOff className=\"h-4 w-4 text-slate-600 shrink-0\" />;"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/cascading-task-table.tsx",
+      "text": "className: \"border-zinc-200 bg-zinc-50 text-zinc-700\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/executive-department-command-center.tsx",
+      "text": "\"bg-slate-50 text-slate-700 border-slate-200\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/executive-department-command-center.tsx",
+      "text": "? \"bg-slate-50/80 border-slate-200/80 hover:bg-slate-100/80 cursor-pointer\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/mobile-task-card.tsx",
+      "text": "className: \"border-slate-200 bg-slate-100/80 text-slate-600 font-normal\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/mobile-task-card.tsx",
+      "text": "className: \"border-slate-200 bg-slate-50 text-slate-600\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/subtask-inline-row.tsx",
+      "text": ": \"border-slate-200/60 bg-white/70 hover:bg-slate-100/70\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/subtask-inline-row.tsx",
+      "text": "<div className=\"relative h-1.5 w-12 overflow-hidden rounded-full bg-slate-200/80\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/subtask-inline-row.tsx",
+      "text": "<span className=\"flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold tabular-nums text-slate-700\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/subtask-inline-row.tsx",
+      "text": "className=\"inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-semibold bg-slate-100 text-slate-700 border border-slate-200 shrink-0\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "text": "<Inbox className=\"size-6 text-slate-500\" strokeWidth={1.5} />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "text": "<RotateCcw className=\"size-3.5 text-slate-500\" strokeWidth={1.5} />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "text": "<SearchX className=\"size-6 text-slate-500\" strokeWidth={1.5} />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "text": "<div className=\"relative mb-4 flex size-14 items-center justify-center rounded-2xl bg-slate-100/90 border border-slate-200/80 shadow-2xs\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/task-empty-state.tsx",
+      "text": "className=\"inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-foreground cursor-pointer active:scale-95 transition-all\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/task-table-header.tsx",
+      "text": "\"sticky top-0 z-10 border-b border-slate-200/80 bg-slate-50/95 backdrop-blur-xs select-none\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/task-table-header.tsx",
+      "text": "className=\"inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-slate-200/70 hover:text-foreground cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors mr-1 shrink-0\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/components/task-table-header.tsx",
+      "text": "className=\"size-4 rounded border-slate-300 text-primary focus:ring-2 focus:ring-primary/25 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/constants.ts",
+      "text": "badgeClass: \"border-zinc-300 bg-zinc-100 text-zinc-600\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/constants.ts",
+      "text": "borderClass: \"border-zinc-300\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/constants.ts",
+      "text": "className: \"border-zinc-200 bg-zinc-50 text-zinc-700\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/constants.ts",
+      "text": "className: \"border-zinc-300 bg-zinc-100 text-zinc-600\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/utils/table-date-helpers.ts",
+      "text": "colorClass: \"text-zinc-400 bg-transparent border-transparent\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/utils/table-date-helpers.ts",
+      "text": "colorClass: \"text-zinc-600 bg-zinc-100 border-zinc-200\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/table/utils/table-date-helpers.ts",
+      "text": "colorClass: \"text-zinc-600 bg-zinc-50 border-zinc-200/60\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/task-kanban-board.tsx",
+      "text": "badgeClass: \"border-slate-500/20 bg-slate-500/10 text-slate-600\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/task-kanban-board.tsx",
+      "text": "dotColor: \"bg-slate-500\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/tasks/task-kanban-board.tsx",
+      "text": "iconColor: \"text-slate-500\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "\"inline-flex items-center justify-center size-11 min-h-[44px] min-w-[44px] rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "\"rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden transition-all\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": ": \"bg-slate-200 text-slate-700\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": ": \"text-slate-600 hover:text-slate-900 hover:bg-white/60\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "<div className=\"flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-b border-slate-100 bg-slate-50/50\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "<div className=\"mt-4 pt-3 border-t border-slate-100 flex items-center justify-between\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "<h3 className=\"text-base font-bold text-slate-900\">{emptyTitle}</h3>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "<p className=\"text-xs sm:text-sm text-slate-700 max-w-md mt-1\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "<p className=\"text-xs sm:text-sm text-slate-700 mt-0.5\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "? \"bg-white text-slate-900 shadow-xs border border-slate-200\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "className=\"flex items-center gap-1.5 p-2 bg-slate-100/60 border-b border-slate-200 overflow-x-auto no-scrollbar\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "className=\"text-base sm:text-lg font-bold text-slate-900 tracking-tight\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/action-queue-shell.tsx",
+      "text": "isActive ? \"text-blue-600\" : \"text-slate-500\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/attention-badge.tsx",
+      "text": "\"bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200/80\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/attention-badge.tsx",
+      "text": "iconColor: \"text-slate-600\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "\"border-2 shadow-xs ring-1 bg-slate-50/40\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "\"cursor-pointer hover:shadow-sm hover:border-slate-300 active:scale-[0.99]\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "\"size-8 rounded-lg flex items-center justify-center shrink-0 border border-slate-200/80 shadow-2xs\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": ": \"border-slate-200 shadow-2xs\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": ": \"text-slate-700 bg-slate-100 border border-slate-200\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "<Minus className=\"size-3 text-slate-500\" aria-hidden=\"true\" />"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "<div className=\"mt-1 flex items-center justify-between text-xs text-slate-700\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "<span className=\"text-2xl sm:text-3xl font-bold font-mono tracking-tight text-slate-900\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "<span className=\"text-xs sm:text-sm font-semibold text-slate-700 truncate\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "<span className=\"text-xs text-slate-700 shrink-0 hidden sm:inline\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "badgeBg: \"bg-slate-100\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "badgeText: \"text-slate-800\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "borderActive: \"border-slate-800\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "className=\"relative rounded-xl p-3.5 sm:p-4 bg-white border border-slate-200 shadow-2xs min-h-[96px]\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "iconBg: \"bg-slate-100\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "iconColor: \"text-slate-700\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/metric-strip.tsx",
+      "text": "ringActive: \"ring-slate-700\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "\"absolute z-50 mt-2 left-0 sm:left-auto sm:right-0 w-[calc(100vw-32px)] sm:w-[360px] rounded-2xl bg-white p-4 shadow-xl border border-slate-200\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "\"hover:bg-slate-50 hover:border-slate-300 active:scale-[0.99]\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "\"inline-flex items-center justify-between rounded-xl bg-white border border-slate-200 text-slate-900 font-medium shadow-xs transition-all select-none\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "\"size-4 text-slate-500 shrink-0 transition-transform duration-200\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": ": \"bg-slate-100 text-slate-700 hover:bg-slate-200\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": ": \"bg-slate-50 border-slate-200\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": ": \"bg-slate-50 text-slate-800 border-slate-200 hover:bg-slate-100 hover:border-slate-300\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "<div className=\"flex items-center justify-between border-b border-slate-100 pb-3 mb-3\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "<span className=\"font-bold text-slate-800\">{sem.shortLabel}</span>"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "<span className=\"text-xs font-bold text-slate-500\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "<span className=\"text-xs font-semibold text-slate-600 block mb-1.5\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "<span className=\"text-xs font-semibold text-slate-600 block mb-2\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "<span className=\"text-xs text-slate-600 mt-0.5\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/period-selector.tsx",
+      "text": "isSelected ? \"text-blue-100\" : \"text-slate-500\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/scope-switcher.tsx",
+      "text": "\"appearance-none bg-white border border-slate-200 text-slate-800 font-medium rounded-xl shadow-xs transition-all\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/scope-switcher.tsx",
+      "text": "\"hover:bg-slate-50 hover:border-slate-300\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/scope-switcher.tsx",
+      "text": "\"inline-flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-xs\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/scope-switcher.tsx",
+      "text": ": \"bg-slate-200 text-slate-700\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/scope-switcher.tsx",
+      "text": ": \"text-slate-500 group-hover:text-slate-700\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/scope-switcher.tsx",
+      "text": ": \"text-slate-600 hover:text-slate-900 hover:bg-slate-200/60\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/scope-switcher.tsx",
+      "text": "? \"bg-white text-slate-900 font-semibold shadow-xs border border-slate-200/80\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/scope-switcher.tsx",
+      "text": "className=\"size-4 text-slate-500 absolute right-2.5 sm:right-3 pointer-events-none\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/status-filter.tsx",
+      "text": "\"flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 shadow-xs\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/status-filter.tsx",
+      "text": ": \"bg-slate-200 text-slate-700\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/status-filter.tsx",
+      "text": ": \"text-slate-500 group-hover:text-slate-700\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/status-filter.tsx",
+      "text": ": \"text-slate-600 hover:text-slate-900 hover:bg-slate-200/60\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/status-filter.tsx",
+      "text": "? \"bg-white text-slate-900 font-semibold shadow-xs border border-slate-200/80\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/view-switcher.tsx",
+      "text": "\"inline-flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-xs\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/view-switcher.tsx",
+      "text": ": \"text-slate-500 group-hover:text-slate-700\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/view-switcher.tsx",
+      "text": ": \"text-slate-600 hover:text-slate-900 hover:bg-slate-200/60\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/view-switcher.tsx",
+      "text": "? \"bg-white text-slate-900 font-semibold shadow-xs border border-slate-200/80\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/workspace-toolbar.tsx",
+      "text": "\"absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 min-w-[44px] justify-center\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/workspace-toolbar.tsx",
+      "text": "\"flex flex-col gap-3 p-3 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-xs\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/workspace-toolbar.tsx",
+      "text": "\"hover:bg-slate-100/70 hover:border-slate-300\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/workspace-toolbar.tsx",
+      "text": "\"hover:bg-slate-50 hover:text-slate-900 active:scale-95\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/workspace-toolbar.tsx",
+      "text": "\"inline-flex items-center justify-center size-11 rounded-xl bg-white border border-slate-200 text-slate-700 transition-colors shrink-0\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/workspace-toolbar.tsx",
+      "text": "\"w-full rounded-xl pl-10 pr-10 py-2.5 text-sm font-medium bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-600 min-h-[44px] transition-all\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/workspace-toolbar.tsx",
+      "text": "<div className=\"pt-2 border-t border-slate-100 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar\">"
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/components/workspace/workspace-toolbar.tsx",
+      "text": "className=\"absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500\""
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/lib/notification-triage.ts",
+      "text": "bg: \"bg-slate-500/15\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/lib/notification-triage.ts",
+      "text": "ring: \"ring-slate-500/30\","
+    },
+    {
+      "ruleId": "no-raw-neutral-palette",
+      "file": "src/lib/notification-triage.ts",
+      "text": "text: \"text-slate-700\","
+    }
+  ]
+}

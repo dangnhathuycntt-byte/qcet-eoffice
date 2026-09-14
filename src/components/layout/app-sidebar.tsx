@@ -421,7 +421,7 @@ export function AppSidebar() {
               if (items.length === 0) return null;
               return (
                 <div key={sec.key} className="space-y-0.5">
-                  <div className="text-xs font-semibold tracking-wider text-muted-foreground/70 px-2.5 pt-3.5 pb-1 uppercase select-none">
+                  <div className="text-xs font-semibold text-muted-foreground/70 px-2.5 pt-3.5 pb-1 select-none">
                     {sec.label}
                   </div>
                   <div className="space-y-0.5">

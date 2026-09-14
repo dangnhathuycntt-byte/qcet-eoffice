@@ -95,7 +95,7 @@ export function MaintenanceDialog({
 
         <div className="flex items-start gap-4">
           <div className="size-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
-            <Wrench className="size-6" strokeWidth={1.75} />
+            <Wrench className="size-6" strokeWidth={1.5} />
           </div>
 
           <div className="space-y-1 pr-6 flex-1 min-w-0">

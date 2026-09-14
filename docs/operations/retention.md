@@ -2,7 +2,7 @@
 
 **Document Status**: Canonical Operational Reference  
 **Scope**: Database Records, Audit Trails, File Storage, Cache Eviction, Pruning Schedules  
-**Authority**: Quản trị mạng / Ban Giám hiệu, Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn   
+**Authority**: Quản trị mạng / Ban Giám hiệu, Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn   
 **Last Updated**: 2026-09-09  
 
 ---

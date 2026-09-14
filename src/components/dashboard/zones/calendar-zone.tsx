@@ -86,7 +86,7 @@ function CalendarZoneComponent() {
       {/* 12-Month Interactive Strip Selector */}
       <div className="flex flex-col gap-2 rounded-2xl border border-border/60 bg-card/70 p-3 shadow-xs">
         <div className="flex items-center justify-between gap-2 px-1">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-xs font-semibold text-muted-foreground">
             Chu kỳ tháng học thuật (2026 - 2027)
           </span>
           <span className="text-2xs font-mono text-muted-foreground">

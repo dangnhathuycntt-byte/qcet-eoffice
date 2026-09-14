@@ -1,9 +1,9 @@
 # BÁO CÁO KIỂM TOÁN TUÂN THỦ PHÁP LÝ HÀNH CHÍNH & THỂ CHẾ GIÁO DỤC NGHỀ NGHIỆP
-## HỆ THỐNG ĐIỀU HÀNH & TÁC NGHIỆP ĐIỆN TỬ Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET E-OFFICE)
+## HỆ THỐNG ĐIỀU HÀNH & TÁC NGHIỆP ĐIỆN TỬ Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  (QCET E-OFFICE)
 
 **Mã văn bản kiểm toán:** `AUDIT-COMPLIANCE-LEGAL-2026-01`  
 **Chức danh thẩm định:** Chuyên viên cao cấp Kiểm soát Tuân thủ Pháp chế Hành chính công & Giáo dục Đại học/Nghề nghiệp  
-**Cơ quan chủ quản:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
+**Cơ quan chủ quản:** Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  (QCET)  
 **Đối tượng kiểm toán:** Toàn bộ 10 hồ sơ đặc tả nghiệp vụ miền tại thư mục `/docs/domain/`:
 1. `regulations_knowledge_base.md` (Cơ sở tri thức pháp lý & điều hành thể chế)
 2. `authority.md` (Kiến trúc ủy quyền & Động cơ phân quyền năng lực)
@@ -36,7 +36,7 @@ Quá trình kiểm toán đối chiếu toàn bộ các quy tắc nghiệp vụ,
 8. **Bộ luật Dân sự số 91/2015/QH13 (Điều 138, Điều 142)**: Nguyên tắc đại diện theo ủy quyền, giới hạn phạm vi ủy quyền và chế định cấm tái ủy quyền (Prohibition of Sub-Delegation).
 
 ### 1.2. Hệ thống Văn bản Quản lý Thể chế QCET
-1. **Quyết định số 283/QĐ-CĐKTCNQN (19/08/2026)**: Quy chế làm việc của Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn .
+1. **Quyết định số 283/QĐ-CĐKTCNQN (19/08/2026)**: Quy chế làm việc của Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn .
 2. **Quyết định số 282/QĐ-CĐKTCNQN (19/08/2026)**: Quy chế tổ chức và hoạt động của Nhà trường (Chuẩn hóa cơ cấu 05 Phòng chức năng, 02 Trung tâm trực thuộc và 09 Khoa chuyên môn).
 3. **Phương án số 690/ĐA-CĐKTCNQN (19/08/2026)**: Phương án sắp xếp, tinh gọn tổ chức bộ máy và bố trí nhân sự giai đoạn 2026-2030.
 4. **Quyết định số 420/QĐ-CĐKTCNQN (03/12/2025)**: Phân công nhiệm vụ cụ thể của Thường trực Ban Giám hiệu (Hiệu trưởng ThS. Phạm Văn Tường, PHT ThS. Trần Trọng Kiệm, PHT ThS. Lê Xuân Nguyên).
@@ -282,7 +282,7 @@ Sau khi nghiên cứu thấu đáo từng điều khoản, ma trận quan hệ v
    Toàn bộ hệ thống tài liệu miền của QCET E-Office tuân thủ 100% các đạo luật và nghị định hiện hành của Nhà nước Việt Nam về công tác văn thư (NĐ 30/2020), quản lý viên chức và vị trí việc làm (NĐ 232/2026), điều lệ trường cao đẳng (TT 63/2026), giao dịch điện tử và chữ ký số chuyên dùng công vụ (Luật 20/2023, NĐ 68/2024), lưu trữ tài liệu số (Luật 33/2024), bảo vệ dữ liệu cá nhân (Luật 91/2025) và bảo vệ bí mật nhà nước (Luật 117/2025).
 
 2. **Về tính Thực tiễn và Thể chế QCET**:
-   Các đặc tả thể hiện sự am hiểu sâu sắc thực tiễn điều hành tại Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn , bám sát các Quyết định 283, 282, 420, 203, 93 và Phương án tinh gọn bộ máy 690. Các kịch bản phân quyền mô phỏng chính xác nhân sự và thẩm quyền thực tế của Ban Giám hiệu và các Khoa, Phòng chuyên môn.
+   Các đặc tả thể hiện sự am hiểu sâu sắc thực tiễn điều hành tại Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn , bám sát các Quyết định 283, 282, 420, 203, 93 và Phương án tinh gọn bộ máy 690. Các kịch bản phân quyền mô phỏng chính xác nhân sự và thẩm quyền thực tế của Ban Giám hiệu và các Khoa, Phòng chuyên môn.
 
 3. **Về tính Chống Gian lận và An toàn Hệ thống**:
    Hệ thống thiết lập các nguyên tắc bất biến không thể bị phá vỡ:

@@ -1,5 +1,5 @@
 # CANONICAL DOMAIN WORKFLOW: VĂN BẢN ĐI (OUTGOING DOCUMENTS)
-## HỆ THỐNG ĐIỀU HÀNH & TÁC NGHIỆP ĐIỆN TỬ Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET E-OFFICE)
+## HỆ THỐNG ĐIỀU HÀNH & TÁC NGHIỆP ĐIỆN TỬ Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  (QCET E-OFFICE)
 
 **Tình trạng tài liệu:** Đặc tả chuẩn tắc nghiệp vụ miền (Canonical Domain Specification)  
 **Căn cứ pháp lý cốt lõi:**
@@ -135,7 +135,7 @@ Quy trình văn bản đi bao gồm 10 trạng thái chuẩn tắc trải qua 4 
 
 ### 3.4. Cấp số & Đóng dấu số Cơ quan (`NUMBERED` & `ORGANIZATION_DIGITAL_SIGN`)
 - **Tác nhân:** Bộ phận Văn thư (được Hiệu trưởng giao quyền giữ và sử dụng con dấu điện tử).
-- **Bản chất:** Xác thực văn bản chính thức thuộc thẩm quyền ban hành của Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn , có giá trị giao dịch pháp lý công vụ (Điều 15, Điều 18 NĐ 30/2020/NĐ-CP và NĐ 68/2024/NĐ-CP).
+- **Bản chất:** Xác thực văn bản chính thức thuộc thẩm quyền ban hành của Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn , có giá trị giao dịch pháp lý công vụ (Điều 15, Điều 18 NĐ 30/2020/NĐ-CP và NĐ 68/2024/NĐ-CP).
 - **Thứ tự thực hiện bắt buộc:**
   1. *Kiểm tra tính toàn vẹn của chữ ký Lãnh đạo*: Xác nhận chữ ký số của BGH còn nguyên vẹn, chứng thư số còn hạn.
   2. *Cấp Số đi*: Nhận số tự động từ hệ thống tăng dần cho năm công tác (ví dụ: 156/QĐ-CĐKTCNQN hoặc 89/CĐKTCNQN-HCQT).

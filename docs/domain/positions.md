@@ -1,7 +1,7 @@
 # QCET E-Office — Domain Specification: Positions, Portfolios & Job Profiles
 **Document Code:** `SPEC-DOMAIN-POS-2026-01`  
 **Domain:** Identity vs. Position Assignment, Responsibility Areas, Portfolio Delegation, and DACUM Profiles  
-**Institution:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
+**Institution:** Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  (QCET)  
 **Status:** Canonical Domain Specification  
 **Version:** 1.0.0  
 **Effective Date:** 2026-09-09  

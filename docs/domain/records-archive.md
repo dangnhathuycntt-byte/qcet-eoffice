@@ -1,6 +1,6 @@
 # QCET E-Office — Đặc Tả Nghiệp Vụ Hồ Sơ Công Việc & Lưu Trữ Điện Tử (Work Dossier & Records Archive Specification)
 
-**Cơ quan ban hành:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
+**Cơ quan ban hành:** Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  (QCET)  
 **Tình trạng tài liệu:** Văn bản Chuẩn tắc Miền Nghiệp vụ (Canonical Domain Specification)  
 **Phạm vi áp dụng:** Mô hình dữ liệu Prisma, Quản trị Vòng đời Hồ sơ Số (Digital Dossier Lifecycle), Quy trình Nộp lưu Lưu trữ Cơ quan, và Hệ thống Kiểm soát Trách nhiệm Viên chức.  
 **Căn cứ pháp lý:**

@@ -1,7 +1,7 @@
 # QCET E-OFFICE: CẨM NANG KIẾN TRÚC MIỀN NGHIỆP VỤ & CHỈ MỤC CHUẨN TẮC
 ## (CANONICAL DOMAIN ARCHITECTURE MASTER GUIDE & SPECIFICATION INDEX)
 
-**Cơ quan chủ quản:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
+**Cơ quan chủ quản:** Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  (QCET)  
 **Vị trí tài liệu:** `/docs/domain/README.md`  
 **Cấp độ hiệu lực:** Tài liệu Kiến trúc Chuẩn tắc Tối cao (Supreme Canonical Architecture Guide)  
 **Ngày ban hành:** 09/09/2026  

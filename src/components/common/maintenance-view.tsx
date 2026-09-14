@@ -82,7 +82,7 @@ export function MaintenanceView({
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-5 relative z-10">
           <div className="size-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center shrink-0 shadow-xs">
-            <Wrench className="size-7" strokeWidth={1.75} />
+            <Wrench className="size-7" strokeWidth={1.5} />
           </div>
 
           <div className="space-y-1.5 flex-1 min-w-0">
@@ -113,7 +113,7 @@ export function MaintenanceView({
         {/* Technical Info Grid */}
         <div className="mt-8 pt-6 border-t border-border/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1 p-3 rounded-xl bg-muted/40 border border-border/40">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            <div className="text-xs text-muted-foreground font-semibold">
               Mã phân hệ
             </div>
             <div className="text-xs font-mono font-bold text-foreground">
@@ -122,7 +122,7 @@ export function MaintenanceView({
           </div>
 
           <div className="space-y-1 p-3 rounded-xl bg-muted/40 border border-border/40">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            <div className="text-xs text-muted-foreground font-semibold">
               Trạng thái
             </div>
             <div className="text-xs font-semibold text-amber-600 flex items-center gap-1.5">
@@ -132,7 +132,7 @@ export function MaintenanceView({
           </div>
 
           <div className="space-y-1 p-3 rounded-xl bg-muted/40 border border-border/40">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            <div className="text-xs text-muted-foreground font-semibold">
               Phạm vi áp dụng
             </div>
             <div className="text-xs font-medium text-foreground">
@@ -141,7 +141,7 @@ export function MaintenanceView({
           </div>
 
           <div className="space-y-1 p-3 rounded-xl bg-muted/40 border border-border/40">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            <div className="text-xs text-muted-foreground font-semibold">
               Hỗ trợ kỹ thuật
             </div>
             <div className="text-xs font-medium text-foreground">

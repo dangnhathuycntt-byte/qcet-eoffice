@@ -618,7 +618,7 @@ export function DocumentRegistryView() {
               onClick={() => setIsCreateOpen(true)}
               className="h-9 px-3.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 cursor-pointer"
             >
-              <Plus className="size-3.5 mr-1.5" strokeWidth={2} />
+              <Plus className="size-3.5 mr-1.5" strokeWidth={1.5} />
               <span>Soạn văn bản / Tờ trình</span>
             </Button>
           </div>
@@ -633,7 +633,7 @@ export function DocumentRegistryView() {
           className="p-4 rounded-2xl border border-border/70 bg-card hover:border-primary/40 transition-colors cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-semibold text-muted-foreground">
               VĂN BẢN ĐẾN
             </span>
             <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600 group-hover:bg-sky-500/20 transition-colors">
@@ -654,7 +654,7 @@ export function DocumentRegistryView() {
           className="p-4 rounded-2xl border border-border/70 bg-card hover:border-primary/40 transition-colors cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-semibold text-muted-foreground">
               VĂN BẢN ĐI
             </span>
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 group-hover:bg-blue-500/20 transition-colors">
@@ -675,7 +675,7 @@ export function DocumentRegistryView() {
           className="p-4 rounded-2xl border border-border/70 bg-card hover:border-primary/40 transition-colors cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-semibold text-muted-foreground">
               TỜ TRÌNH DUYỆT
             </span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 group-hover:bg-amber-500/20 transition-colors">
@@ -693,7 +693,7 @@ export function DocumentRegistryView() {
         {/* Card 4: Tỷ lệ Liên thông Giao việc */}
         <div className="p-4 rounded-2xl border border-border/70 bg-card">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-semibold text-muted-foreground">
               LIÊN THÔNG NHIỆM VỤ
             </span>
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
@@ -949,25 +949,25 @@ export function DocumentRegistryView() {
             <table className="w-full text-left text-xs border-collapse table-row-dense">
               <thead>
                 <tr className="border-b border-border/50 bg-muted/10">
-                  <th className="py-3 px-4 w-[160px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[160px] text-xs font-semibold text-muted-foreground">
                     Số / Ký hiệu
                   </th>
-                  <th className="py-3 px-4 w-[120px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[120px] text-xs font-semibold text-muted-foreground">
                     Ngày BH / Đến
                   </th>
-                  <th className="py-3 px-4 w-[200px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[200px] text-xs font-semibold text-muted-foreground">
                     Cơ quan &amp; Người ký
                   </th>
-                  <th className="py-3 px-4 min-w-[280px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 min-w-[280px] text-xs font-semibold text-muted-foreground">
                     Trích yếu nội dung
                   </th>
-                  <th className="py-3 px-4 w-[160px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[160px] text-xs font-semibold text-muted-foreground">
                     Đơn vị &amp; Tiến độ
                   </th>
-                  <th className="py-3 px-4 w-[180px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[180px] text-xs font-semibold text-muted-foreground">
                     Liên thông việc
                   </th>
-                  <th className="py-3 px-4 w-[80px] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[80px] text-right text-xs font-semibold text-muted-foreground">
                     Chi tiết
                   </th>
                 </tr>
@@ -1034,25 +1034,25 @@ export function DocumentRegistryView() {
             <table className="w-full text-left text-xs border-collapse table-row-dense">
               <thead>
                 <tr className="border-b border-border/50 bg-muted/10">
-                  <th className="py-3 px-4 w-[160px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[160px] text-xs font-semibold text-muted-foreground">
                     Số / Ký hiệu
                   </th>
-                  <th className="py-3 px-4 w-[120px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[120px] text-xs font-semibold text-muted-foreground">
                     Ngày BH / Đến
                   </th>
-                  <th className="py-3 px-4 w-[200px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[200px] text-xs font-semibold text-muted-foreground">
                     Cơ quan &amp; Người ký
                   </th>
-                  <th className="py-3 px-4 min-w-[280px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 min-w-[280px] text-xs font-semibold text-muted-foreground">
                     Trích yếu nội dung
                   </th>
-                  <th className="py-3 px-4 w-[160px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[160px] text-xs font-semibold text-muted-foreground">
                     Đơn vị &amp; Tiến độ
                   </th>
-                  <th className="py-3 px-4 w-[180px] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[180px] text-xs font-semibold text-muted-foreground">
                     Liên thông việc
                   </th>
-                  <th className="py-3 px-4 w-[80px] text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4 w-[80px] text-right text-xs font-semibold text-muted-foreground">
                     Chi tiết
                   </th>
                 </tr>

@@ -1,7 +1,7 @@
 # KIẾN TRÚC ỦY QUYỀN & ĐỘNG CƠ PHÂN QUYỀN NĂNG LỰC CỐT LÕI (CORE AUTHORIZATION & CAPABILITY ENGINE SPECIFICATION)
 ## QCET E-OFFICE CANONICAL DOMAIN SPECIFICATION
 
-**Cơ quan chủ quản:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
+**Cơ quan chủ quản:** Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  (QCET)  
 **Phân hệ:** Động cơ Kiểm soát Truy cập & Năng lực Tác nghiệp (Authorization & Capability Engine)  
 **Tình trạng tài liệu:** Đặc tả Chuẩn tắc (Canonical Reference Specification)  
 **Mã tài liệu:** `QCET-AUTH-SPEC-2026-01`  

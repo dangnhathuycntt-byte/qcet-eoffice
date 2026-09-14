@@ -1073,7 +1073,7 @@ export function UnifiedTaskToolbar({
                   <div className="space-y-3">
                     {/* Department */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <label className="text-xs font-semibold text-muted-foreground">
                         Đơn vị phòng ban
                       </label>
                       <div className="relative">
@@ -1095,7 +1095,7 @@ export function UnifiedTaskToolbar({
 
                     {/* Month */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <label className="text-xs font-semibold text-muted-foreground">
                         Tháng học kỳ ({academicYear})
                       </label>
                       <div className="relative">
@@ -1122,7 +1122,7 @@ export function UnifiedTaskToolbar({
 
                     {/* Category */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <label className="text-xs font-semibold text-muted-foreground">
                         Danh mục DACUM
                       </label>
                       <div className="relative">
@@ -1144,7 +1144,7 @@ export function UnifiedTaskToolbar({
 
                     {/* Priority */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <label className="text-xs font-semibold text-muted-foreground">
                         Mức độ ưu tiên
                       </label>
                       <div className="relative">
@@ -1167,7 +1167,7 @@ export function UnifiedTaskToolbar({
                     {/* Sort option if onSort */}
                     {onSort && (
                       <div className="space-y-1.5">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <label className="text-xs font-semibold text-muted-foreground">
                           Sắp xếp theo
                         </label>
                         <div className="relative">

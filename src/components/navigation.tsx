@@ -237,7 +237,7 @@ export function MobileNav({ pathname: initialPathname }: { pathname?: string } =
                 aria-hidden="true"
               />
             )}
-            <Menu size={19} strokeWidth={1.6} className="mb-0.5" />
+            <Menu size={19} strokeWidth={1.5} className="mb-0.5" />
             <span className="text-xs leading-tight truncate max-w-[64px]">
               Thêm
             </span>

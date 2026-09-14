@@ -348,7 +348,7 @@ export function DepartmentCommandCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-mono font-semibold text-muted-foreground">
                 {summary.departmentCode}
               </span>
               {summary.pendingApprovalCount > 0 && (
@@ -360,7 +360,7 @@ export function DepartmentCommandCard({
             </div>
             <h3
               title={summary.departmentName}
-              className="mt-0.5 text-sm font-bold uppercase tracking-wide text-foreground line-clamp-1"
+              className="mt-0.5 text-sm font-bold text-foreground line-clamp-1"
             >
               {summary.departmentName}
             </h3>
@@ -607,7 +607,7 @@ export function DepartmentDrillDownPanel({
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-mono font-bold text-muted-foreground">
                 {summary.departmentCode}
               </span>
               <span
@@ -626,7 +626,7 @@ export function DepartmentDrillDownPanel({
                 {ragConfig.label}
               </span>
             </div>
-            <h3 className="text-base font-bold uppercase tracking-wide text-foreground">
+            <h3 className="text-base font-bold text-foreground">
               {summary.departmentName}
             </h3>
           </div>
@@ -1058,7 +1058,7 @@ export function ExecutiveDepartmentCommandCenter({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm theo đơn vị, lãnh đạo, việc..."
-            className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
       </div>

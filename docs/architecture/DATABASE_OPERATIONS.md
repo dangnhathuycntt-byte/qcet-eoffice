@@ -1,7 +1,7 @@
 # QCET E-Office - Database Architecture & Operations Runbook
 
 ## Document Metadata
-- **System**: QCET E-Office (Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn )
+- **System**: QCET E-Office (Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn )
 - **Document ID**: RUNBOOK-DB-2026-01
 - **Target RDBMS**: PostgreSQL 15+
 - **ORM & Driver**: Prisma ORM 5.x / 6.x with `@prisma/client`

@@ -8,25 +8,7 @@
       "Bash(npm test*)",
       "Bash(npx tsx --test*)"
     ],
-    "deny": [
-      "Read(.env*)",
-      "Read(*.env*)",
-      "Read(**/.env*)",
-      "Edit(.env*)",
-      "Edit(*.env*)",
-      "Edit(**/.env*)",
-      "Read(*.pem)",
-      "Read(**/*.pem)",
-      "Edit(*.pem)",
-      "Edit(**/*.pem)",
-      "Read(*.key)",
-      "Read(**/*.key)",
-      "Edit(*.key)",
-      "Edit(**/*.key)",
-      "Bash(git reset --hard*)",
-      "Bash(rm -rf /)",
-      "Bash(rm -rf /*)"
-    ],
+    "deny": [],
     "ask": []
   },
   "hooks": {

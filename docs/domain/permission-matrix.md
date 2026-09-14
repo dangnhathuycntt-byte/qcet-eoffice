@@ -1,7 +1,7 @@
 # MA TRẬN PHÂN QUYỀN & THẨM QUYỀN TÁC NGHIỆP TOÀN DIỆN (COMPREHENSIVE PERMISSION & AUTHORITY MATRIX)
 ## QCET E-OFFICE CANONICAL DOMAIN SPECIFICATION
 
-**Cơ quan chủ quản:** Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn  (QCET)  
+**Cơ quan chủ quản:** Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn  (QCET)  
 **Phân hệ:** Ma trận Phân quyền & Năng lực Thể chế (Institutional Permission Matrix)  
 **Tình trạng tài liệu:** Đặc tả Chuẩn tắc (Canonical Reference Specification)  
 **Mã tài liệu:** `QCET-AUTH-MATRIX-2026-01`  
@@ -139,7 +139,7 @@ Ma trận phân quyền trong QCET E-Office không phải là danh sách đánh 
 
 ## 4. KỊCH BẢN TÁC NGHIỆP CỤ THỂ & QUY TRÌNH ĐÁNH GIÁ THỰC TẾ
 
-Dưới đây là 9 kịch bản thực tế mô phỏng chính xác các tương tác hàng ngày tại Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn , làm rõ cơ chế định tuyến và cưỡng chế của hàm `authorize()`.
+Dưới đây là 9 kịch bản thực tế mô phỏng chính xác các tương tác hàng ngày tại Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn , làm rõ cơ chế định tuyến và cưỡng chế của hàm `authorize()`.
 
 ---
 

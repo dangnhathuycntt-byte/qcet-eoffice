@@ -110,7 +110,7 @@ export function MobileNotificationInbox({
       {/* =================================================================== */}
       <div className="flex items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <span className="text-xs font-bold text-muted-foreground">
             Hộp thư thông báo điều hành
           </span>
           {unreadCount > 0 && (
@@ -275,7 +275,7 @@ export function MobileNotificationInbox({
           {today.length > 0 && (
             <div className="space-y-2" data-testid="notification-group-today">
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs font-bold text-muted-foreground">
                   HÔM NAY
                 </span>
                 <span className="text-xs font-mono tabular-nums text-muted-foreground">
@@ -299,7 +299,7 @@ export function MobileNotificationInbox({
           {earlier.length > 0 && (
             <div className="space-y-2" data-testid="notification-group-earlier">
               <div className="flex items-center justify-between px-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs font-bold text-muted-foreground">
                   TRƯỚC ĐÓ
                 </span>
                 <span className="text-xs font-mono tabular-nums text-muted-foreground">

@@ -210,7 +210,7 @@ export function DepartmentProgressMatrix({
           <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
             <Building2 className="size-3.5 shrink-0" strokeWidth={1.5} />
           </div>
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
+          <span className="text-xs font-semibold text-muted-foreground truncate">
             Tiến độ các đơn vị
           </span>
           <span className="text-xs text-muted-foreground font-mono tabular-nums">

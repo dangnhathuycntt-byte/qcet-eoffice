@@ -556,7 +556,7 @@ export function TaskTableToolbar({
 
               {/* Filter: Trạng thái nhiệm vụ */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <label className="text-xs font-semibold text-muted-foreground">
                   Trạng thái nhiệm vụ
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -586,7 +586,7 @@ export function TaskTableToolbar({
               {/* Filter: Đơn vị phòng ban */}
               {onDepartmentChange && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Đơn vị / Phòng ban
                   </label>
                   <div className="relative">
@@ -610,7 +610,7 @@ export function TaskTableToolbar({
               {/* Filter: Tháng học kỳ */}
               {hasMonthHandler && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Kỳ học / Tháng học vụ (2026-2027)
                   </label>
                   <div className="relative">
@@ -641,7 +641,7 @@ export function TaskTableToolbar({
               {/* Filter: Danh mục DACUM */}
               {onCategoryChange && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Danh mục chuyên môn DACUM
                   </label>
                   <div className="relative">
@@ -665,7 +665,7 @@ export function TaskTableToolbar({
               {/* Filter: Sắp xếp theo */}
               {onSort && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <label className="text-xs font-semibold text-muted-foreground">
                     Sắp xếp theo
                   </label>
                   <div className="relative">

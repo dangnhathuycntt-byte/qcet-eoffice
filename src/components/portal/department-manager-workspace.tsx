@@ -599,7 +599,7 @@ export function LegacyDepartmentManagerWorkspace({
             asChild
             variant="outline"
             size="sm"
-            className="text-xs h-8 gap-1.5 whitespace-nowrap rounded-xl border-border/80 hover:bg-muted/80"
+            className="text-xs min-h-[44px] sm:h-8 gap-1.5 whitespace-nowrap rounded-xl border-border/80 hover:bg-muted/80"
           >
             <Link href={tasksUrl} className="inline-flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 shrink-0" />
@@ -615,7 +615,7 @@ export function LegacyDepartmentManagerWorkspace({
               size="sm"
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="text-xs h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80"
+              className="text-xs min-h-[44px] sm:h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80"
               title="Làm mới dữ liệu đơn vị"
             >
               <RefreshCw
@@ -638,16 +638,17 @@ export function LegacyDepartmentManagerWorkspace({
         <button
           type="button"
           onClick={() => setActiveTab("MY_TASKS")}
-          title="Nhiệm vụ trực tiếp cần tôi xử lý"
+          aria-label="Nhiệm vụ trực tiếp cần tôi xử lý"
+          aria-pressed={activeTab === "MY_TASKS"}
           className={cn(
-            "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer",
+            "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "MY_TASKS"
               ? "border-blue-500/50 bg-blue-500/10 shadow-xs ring-1 ring-blue-500/30"
               : "border-border bg-card hover:bg-muted/40 hover:border-border/80"
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-bold text-muted-foreground">
               Nhiệm vụ trực tiếp
             </span>
             <div
@@ -678,15 +679,17 @@ export function LegacyDepartmentManagerWorkspace({
             setActiveTab("UNIT_PROGRESS");
             setUnitFilter("ALL");
           }}
+          aria-label="Xem tất cả nhiệm vụ đang chạy của đơn vị"
+          aria-pressed={activeTab === "UNIT_PROGRESS" && unitFilter === "ALL"}
           className={cn(
-            "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer",
+            "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "UNIT_PROGRESS" && unitFilter === "ALL"
               ? "border-amber-500/50 bg-amber-500/10 shadow-xs ring-1 ring-amber-500/30"
               : "border-border bg-card hover:bg-muted/40 hover:border-border/80"
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-bold text-muted-foreground">
               Đơn vị đang chạy
             </span>
             <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600">
@@ -707,16 +710,17 @@ export function LegacyDepartmentManagerWorkspace({
         <button
           type="button"
           onClick={() => setActiveTab("APPROVAL_QUEUE")}
-          title="Hồ sơ chờ thẩm định và phê duyệt"
+          aria-label="Hồ sơ chờ thẩm định và phê duyệt"
+          aria-pressed={activeTab === "APPROVAL_QUEUE"}
           className={cn(
-            "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer",
+            "flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "APPROVAL_QUEUE"
               ? "border-purple-500/50 bg-purple-500/10 shadow-xs ring-1 ring-purple-500/30"
               : "border-border bg-card hover:bg-muted/40 hover:border-border/80"
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-bold text-muted-foreground">
               Chờ thẩm định
             </span>
             <div
@@ -741,20 +745,23 @@ export function LegacyDepartmentManagerWorkspace({
         </button>
 
         {/* Metric 4: TIẾN ĐỘ ĐƠN VỊ (kèm inline overdue alert) */}
-        <div
+        <button
+          type="button"
           onClick={() => {
             if (metrics.overdueCount > 0) {
               setActiveTab("UNIT_PROGRESS");
               setUnitFilter("OVERDUE");
             }
           }}
+          disabled={metrics.overdueCount === 0}
+          aria-label="Xem tiến độ đơn vị và lọc các nhiệm vụ trễ hạn"
           className={cn(
-            "flex flex-col gap-2 rounded-xl border border-border bg-card p-4 transition-all duration-150",
+            "flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             metrics.overdueCount > 0 && "cursor-pointer hover:border-rose-500/40 hover:bg-rose-500/5"
           )}
         >
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-bold text-muted-foreground">
               Tiến độ đơn vị
             </span>
             <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-600">
@@ -780,17 +787,25 @@ export function LegacyDepartmentManagerWorkspace({
               hoàn thành
             </p>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* 3. Navigation Tabs & Search Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-        <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-xl border">
+        <div
+          role="tablist"
+          aria-label="Danh mục công việc đơn vị"
+          className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-xl border"
+        >
           <button
             type="button"
+            role="tab"
+            id="tab-approval-queue"
+            aria-controls="panel-approval-queue"
+            aria-selected={activeTab === "APPROVAL_QUEUE"}
             onClick={() => setActiveTab("APPROVAL_QUEUE")}
             className={cn(
-              "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer",
+              "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
               activeTab === "APPROVAL_QUEUE"
                 ? "bg-background text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -810,9 +825,13 @@ export function LegacyDepartmentManagerWorkspace({
 
           <button
             type="button"
+            role="tab"
+            id="tab-unit-progress"
+            aria-controls="panel-unit-progress"
+            aria-selected={activeTab === "UNIT_PROGRESS"}
             onClick={() => setActiveTab("UNIT_PROGRESS")}
             className={cn(
-              "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer",
+              "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
               activeTab === "UNIT_PROGRESS"
                 ? "bg-background text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -830,9 +849,13 @@ export function LegacyDepartmentManagerWorkspace({
 
           <button
             type="button"
+            role="tab"
+            id="tab-my-tasks"
+            aria-controls="panel-my-tasks"
+            aria-selected={activeTab === "MY_TASKS"}
             onClick={() => setActiveTab("MY_TASKS")}
             className={cn(
-              "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer",
+              "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
               activeTab === "MY_TASKS"
                 ? "bg-background text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -859,7 +882,7 @@ export function LegacyDepartmentManagerWorkspace({
             placeholder="Tìm theo mã, tên nhiệm vụ, cán bộ thực hiện..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-8 pl-8 pr-3 text-xs bg-background border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full min-h-[44px] sm:h-8 pl-8 pr-3 text-xs bg-background border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
           />
           {searchTerm && (
             <button
@@ -875,7 +898,13 @@ export function LegacyDepartmentManagerWorkspace({
 
       {/* 4. Tab 1 Content: Approval Queue */}
       {activeTab === "APPROVAL_QUEUE" && (
-        <div className="space-y-4" data-slot="approval-queue-tab">
+        <div
+          role="tabpanel"
+          id="panel-approval-queue"
+          aria-labelledby="tab-approval-queue"
+          className="space-y-4"
+          data-slot="approval-queue-tab"
+        >
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -1016,7 +1045,7 @@ export function LegacyDepartmentManagerWorkspace({
                       <Button
                         size="sm"
                         onClick={() => handleOpenReview(task)}
-                        className="text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
+                        className="text-xs min-h-[44px] sm:h-8 bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
                       >
                         <ShieldAlert className="w-3.5 h-3.5" />
                         <span>Thẩm định ngay</span>
@@ -1032,7 +1061,13 @@ export function LegacyDepartmentManagerWorkspace({
 
       {/* 5. Tab 2 Content: Unit Progress & Execution Matrix */}
       {activeTab === "UNIT_PROGRESS" && (
-        <div className="space-y-6" data-slot="unit-progress-tab">
+        <div
+          role="tabpanel"
+          id="panel-unit-progress"
+          aria-labelledby="tab-unit-progress"
+          className="space-y-6"
+          data-slot="unit-progress-tab"
+        >
           {/* Section A: School Tasks assigned to this unit */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -1132,7 +1167,7 @@ export function LegacyDepartmentManagerWorkspace({
                           variant="ghost"
                           size="sm"
                           onClick={() => onSelectTask?.(st)}
-                          className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground"
+                          className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2 text-muted-foreground hover:text-foreground"
                         >
                           <span>Xem chi tiết</span>
                         </Button>
@@ -1140,7 +1175,7 @@ export function LegacyDepartmentManagerWorkspace({
                           variant="outline"
                           size="sm"
                           onClick={() => onCreateSubTask?.(st.id)}
-                          className="text-xs h-7 px-2 gap-1"
+                          className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2 gap-1"
                         >
                           <Plus className="w-3 h-3" />
                           <span>+ Phân công nhiệm vụ</span>
@@ -1265,7 +1300,7 @@ export function LegacyDepartmentManagerWorkspace({
                           <Button
                             size="sm"
                             onClick={() => handleOpenReview(task)}
-                            className="text-xs h-7 bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                            className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
                           >
                             <span>Thẩm định ngay</span>
                           </Button>
@@ -1274,7 +1309,7 @@ export function LegacyDepartmentManagerWorkspace({
                           variant="ghost"
                           size="sm"
                           onClick={() => onSelectTask?.(task)}
-                          className="text-xs h-7 text-muted-foreground hover:text-foreground cursor-pointer"
+                          className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                           <span>Chi tiết</span>
                         </Button>
@@ -1290,7 +1325,13 @@ export function LegacyDepartmentManagerWorkspace({
 
       {/* 6. Tab 3 Content: My Direct Tasks */}
       {activeTab === "MY_TASKS" && (
-        <div className="space-y-4" data-slot="my-tasks-tab">
+        <div
+          role="tabpanel"
+          id="panel-my-tasks"
+          aria-labelledby="tab-my-tasks"
+          className="space-y-4"
+          data-slot="my-tasks-tab"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -1414,7 +1455,7 @@ export function LegacyDepartmentManagerWorkspace({
                         <Button
                           size="sm"
                           onClick={() => handleOpenSubmit(task)}
-                          className="text-xs h-8 bg-primary text-primary-foreground gap-1.5 cursor-pointer"
+                          className="text-xs min-h-[44px] sm:h-8 bg-primary text-primary-foreground gap-1.5 cursor-pointer"
                         >
                           <FileText className="w-3.5 h-3.5" />
                           <span>Nộp minh chứng</span>

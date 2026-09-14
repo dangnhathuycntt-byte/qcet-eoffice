@@ -829,7 +829,7 @@ export function CalendarWorkspace({
                       d.isToday && "bg-primary/5 font-semibold"
                     )}
                   >
-                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <div className="text-xs font-medium text-muted-foreground">
                       {d.dayOfWeekLabel}
                     </div>
                     <div className="flex items-center justify-center gap-1 mt-0.5">

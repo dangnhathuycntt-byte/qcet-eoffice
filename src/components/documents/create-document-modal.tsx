@@ -88,7 +88,7 @@ export function CreateDocumentModal({
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border/60 bg-muted/20">
           <div>
-            <span className="text-xs font-semibold text-primary uppercase tracking-wider block mb-0.5">
+            <span className="text-xs font-semibold text-primary block mb-0.5">
               Nghị định 30/2020/NĐ-CP
             </span>
             <h2

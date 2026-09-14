@@ -790,7 +790,7 @@ export function LegacyLecturerFocusWorkspace({
               size="sm"
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="text-xs h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80 cursor-pointer"
+              className="text-xs min-h-[44px] sm:h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80 cursor-pointer"
               title="Làm mới dữ liệu cá nhân"
             >
               <RefreshCw
@@ -811,12 +811,16 @@ export function LegacyLecturerFocusWorkspace({
         {/* Row 1: Ownership Tabs + Search + Bulk Toggle + Task Counter */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           {/* Segmented ownership tabs */}
-          <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-xl border border-border/70 w-fit shrink-0">
+          <div role="tablist" aria-label="Lọc theo vai trò tham gia nhiệm vụ" className="flex items-center gap-1 p-1 bg-muted/60 rounded-xl border border-border/70 w-fit shrink-0">
             <button
               type="button"
+              role="tab"
+              id="tab-ownership-all"
+              aria-controls="ownership-tabpanel"
+              aria-selected={ownershipFilter === "ALL"}
               onClick={() => setOwnershipFilter("ALL")}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
                 ownershipFilter === "ALL"
                   ? "bg-background text-foreground font-semibold shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -829,9 +833,13 @@ export function LegacyLecturerFocusWorkspace({
             </button>
             <button
               type="button"
+              role="tab"
+              id="tab-ownership-leading"
+              aria-controls="ownership-tabpanel"
+              aria-selected={ownershipFilter === "LEADING"}
               onClick={() => setOwnershipFilter("LEADING")}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
                 ownershipFilter === "LEADING"
                   ? "bg-background text-foreground font-semibold shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -845,9 +853,13 @@ export function LegacyLecturerFocusWorkspace({
             </button>
             <button
               type="button"
+              role="tab"
+              id="tab-ownership-participating"
+              aria-controls="ownership-tabpanel"
+              aria-selected={ownershipFilter === "PARTICIPATING"}
               onClick={() => setOwnershipFilter("PARTICIPATING")}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5",
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
                 ownershipFilter === "PARTICIPATING"
                   ? "bg-background text-foreground font-semibold shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -874,7 +886,8 @@ export function LegacyLecturerFocusWorkspace({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Tìm việc, mã số..."
-                className="w-full h-8 rounded-xl border border-border/70 bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-all"
+                aria-label="Tìm kiếm nhiệm vụ cá nhân theo tiêu đề hoặc mã số"
+                className="w-full min-h-[44px] sm:h-8 rounded-xl border border-border/70 bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-all"
               />
               {searchTerm && (
                 <button
@@ -892,7 +905,7 @@ export function LegacyLecturerFocusWorkspace({
               type="button"
               onClick={handleToggleAllVisible}
               disabled={paginatedGroupedTasks.length === 0}
-              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-border/70 bg-card hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 min-h-[44px] sm:h-8 px-2.5 rounded-xl border border-border/70 bg-card hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shrink-0"
               title={
                 allVisibleCollapsed
                   ? "Mở rộng tất cả nhiệm vụ trên trang này"
@@ -1042,6 +1055,11 @@ export function LegacyLecturerFocusWorkspace({
       {/* ------------------------------------------------------------------ */}
       {/* Section 4: 2-Tier Task List Cards */}
       {/* ------------------------------------------------------------------ */}
+      <div
+        role="tabpanel"
+        id="ownership-tabpanel"
+        aria-labelledby={`tab-ownership-${ownershipFilter.toLowerCase()}`}
+      >
       {filteredGroupedTasks.length === 0 ? (
         groupedTasks.length === 0 && !searchTerm && activeFilter === "ALL" && ownershipFilter === "ALL" ? (
           <div className="rounded-2xl border border-border/70 p-12 text-center bg-card/50 shadow-xs">
@@ -1058,7 +1076,7 @@ export function LegacyLecturerFocusWorkspace({
               <Button
                 id="tour-empty-state-cta"
                 size="sm"
-                className="text-xs h-8 px-3.5 gap-1.5"
+                className="text-xs min-h-[44px] sm:h-8 px-3.5 gap-1.5"
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent("qcet:open-create-task"));
                 }}
@@ -1088,7 +1106,7 @@ export function LegacyLecturerFocusWorkspace({
                   setActiveFilter("ALL");
                   setSearchTerm("");
                 }}
-                className="text-xs h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80 cursor-pointer"
+                className="text-xs min-h-[44px] sm:h-8 gap-1.5 rounded-xl border-border/80 hover:bg-muted/80 cursor-pointer"
               >
                 <span>Xóa bộ lọc &amp; tìm kiếm</span>
               </Button>
@@ -1121,7 +1139,7 @@ export function LegacyLecturerFocusWorkspace({
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Category Badge */}
                       {group.parentTask.categoryLabel && (
-                        <span className="text-xs uppercase tracking-wider font-semibold text-primary/80 bg-primary/10 px-2.5 py-0.5 rounded-md">
+                        <span className="text-xs font-semibold text-primary/80 bg-primary/10 px-2.5 py-0.5 rounded-md">
                           {group.parentTask.categoryLabel}
                         </span>
                       )}
@@ -1186,7 +1204,7 @@ export function LegacyLecturerFocusWorkspace({
                         variant="ghost"
                         size="sm"
                         onClick={() => toggleCollapse(group.parentTask.id, isCollapsed)}
-                        className="text-xs h-7 px-2 gap-1 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
+                        className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 px-2 gap-1 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
                         title={
                           isCollapsed
                             ? "Mở rộng danh sách đầu việc"
@@ -1279,7 +1297,7 @@ export function LegacyLecturerFocusWorkspace({
                 {!isCollapsed && (
                   <div className="pt-3 border-t border-border/60 space-y-2.5">
                     <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                      <span className="font-semibold uppercase tracking-wider text-xs text-foreground flex items-center gap-1.5">
+                      <span className="font-semibold text-xs text-foreground flex items-center gap-1.5">
                         <Layers className="size-3.5" strokeWidth={1.5} />
                         <span>
                           {group.isLeading
@@ -1485,7 +1503,7 @@ export function LegacyLecturerFocusWorkspace({
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => onSelectTask(subTask)}
-                                      className="text-xs h-7 rounded-xl gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                                      className="text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 rounded-xl gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
                                     >
                                       <Eye
                                         className="size-3.5"
@@ -1502,7 +1520,7 @@ export function LegacyLecturerFocusWorkspace({
                                     variant={subTask.status === "COMPLETED" ? "outline" : "default"}
                                     onClick={() => handleOpenSubmitModal(subTask)}
                                     className={cn(
-                                      "text-xs h-7 rounded-xl gap-1.5 cursor-pointer transition-all",
+                                      "text-xs min-h-[44px] sm:min-h-[32px] sm:h-8 rounded-xl gap-1.5 cursor-pointer transition-all",
                                       subTask.status === "COMPLETED"
                                         ? "border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted font-medium"
                                         : "font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
@@ -1539,7 +1557,8 @@ export function LegacyLecturerFocusWorkspace({
                 <select
                   value={pageSize}
                   onChange={(e) => setPageSize(Number(e.target.value))}
-                  className="rounded-lg border border-border/70 bg-card px-2 py-1 text-xs text-foreground outline-none focus:border-ring cursor-pointer"
+                  aria-label="Số lượng nhiệm vụ hiển thị trên mỗi trang"
+                  className="min-h-[44px] sm:min-h-[32px] rounded-lg border border-border/70 bg-card px-2 py-1 text-xs text-foreground outline-none focus:border-ring cursor-pointer"
                 >
                   <option value={5}>5 việc / trang</option>
                   <option value={10}>10 việc / trang</option>
@@ -1558,7 +1577,7 @@ export function LegacyLecturerFocusWorkspace({
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-2.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-xs font-medium text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="min-h-[44px] sm:min-h-[32px] px-2.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-xs font-medium text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   Trước
                 </button>
@@ -1574,7 +1593,7 @@ export function LegacyLecturerFocusWorkspace({
                       type="button"
                       onClick={() => setCurrentPage(Number(p))}
                       className={cn(
-                        "size-7 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                        "size-11 sm:size-8 rounded-lg text-xs font-medium transition-all cursor-pointer",
                         currentPage === p
                           ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                           : "border border-border/70 bg-card hover:bg-muted text-foreground"
@@ -1589,7 +1608,7 @@ export function LegacyLecturerFocusWorkspace({
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-2.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-xs font-medium text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="min-h-[44px] sm:min-h-[32px] px-2.5 py-1.5 rounded-lg border border-border/70 bg-card hover:bg-muted text-xs font-medium text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   Sau
                 </button>
@@ -1598,6 +1617,7 @@ export function LegacyLecturerFocusWorkspace({
           )}
         </div>
       )}
+      </div>
 
       {/* ------------------------------------------------------------------ */}
       {/* Section 5: Modal Nộp Minh Chứng Integration */}

@@ -384,3 +384,32 @@ Phases 1 and 2 are the release blockers (WCAG AA + ergonomics). Phase 4 is block
 9. Supersession
 
 This plan supersedes nothing. No existing active plan targets `/portal`, `src/app/portal/page.tsx`, `src/components/portal/*-workspace.tsx`, or `src/lib/portal-metrics.ts` — verified by grep across `docs/plans/active/` during authoring. `qcet-source-uiux-remediation-plan-65f99561.md` mentions "bàn làm việc" only as one screen inside its review scope; it prescribes no change to these files.
+
+10. Execution record — 2026-09-13
+
+O1 RESOLVED — the rename is truthful. `src/lib/server/dashboard-service.ts:37-41` constrains the task query with `parentTaskId: null`, so `dbTasks` contains only parent tasks. `total = mappedTasks.length` (line 222) and `completionRate = completed / total` (line 261) therefore share the same parent-only denominator. Renaming the field to `parentTaskTotal` and labelling it "việc gốc" is accurate. No server change was needed.
+
+Phases 1, 2, 3 and 5 applied to all four UI files by four parallel agents, each followed by an independent adversarial verifier. Three of the four groups returned PASS with only P3 notes. Phases 4.1 and 4.3 were applied to `portal-metrics.ts` and `portal/page.tsx`.
+
+Gate results, all run and read directly:
+
+| Gate | Result |
+|---|---|
+| `npm run typecheck` | clean |
+| `grep -rn "dark:" src/app/portal src/components/portal` | empty |
+| `grep -rn "size-7\b" src/components/portal` | empty |
+| `grep -rn "strokeWidth={1.75}\|strokeWidth={2.2}" src/app/portal` | empty |
+| `role="tablist"` count | 3, as specified |
+| `role="tab"` count | 10 (4 + 3 + 3), as specified |
+| `aria-label` count in `src/components/portal` | 34 |
+| `tests/portal-real-data-and-zoom-eradication.test.ts` | 21 pass / 0 fail |
+
+Three deviations from the literal spec, all accepted:
+
+1. Task 4.3 specified `<Skeleton className="h-4 w-24 rounded" />`. No shared `Skeleton` component exists anywhere in this repository — the project's canonical convention is an inline `animate-pulse` element (see `src/app/dashboard/loading.tsx`). The metric slot renders an inline `<span aria-hidden="true" className="inline-block h-4 w-24 rounded bg-muted/60 animate-pulse" />` with `min-h-4` on the container to reserve height. The substantive requirement — no `"Đang tải..."` prose, no layout shift, formatters return `null` on the loading branch — is met.
+
+2. Task 4.4 was not assigned to any agent because the implementation agents were constrained to their own file lists. The interface rename broke `tests/portal-real-data-and-zoom-eradication.test.ts` (5× TS2353, 6 failing tests), leaving the branch red. This was fixed in the same session: the test now constructs `parentTaskTotal` + `isDenominatorSeparated`, asserts the `(N việc gốc)` string, asserts the loading branch returns `null`, and asserts the render emits a skeleton rather than `"Đang tải..."` prose.
+
+3. Task 3.1 asked to keep hierarchy via `text-xs font-semibold`; the implementer also converted the two `group-hover:text-blue-600` sites and one `bg-blue-600` dot, which belong to the same hardcoded token family. The emerald and slate semantic hues were deliberately left intact.
+
+Known gap in this plan's scope — recorded, not fixed. Section 3.5 named four UI files. The portal component family actually contains thirteen: `executive-briefing-modal.tsx`, `executive-resolution-drawer.tsx`, `executive-bottleneck-card.tsx`, `executive-unit-radar.tsx` and `review-action-dialog.tsx` still carry twelve `uppercase` + `tracking-wider` sites on Vietnamese text that this audit never inspected, and `executive-briefing-modal.tsx:375,441` use hardcoded `text-rose-600` / `text-indigo-600`. These are live components in the same directory and should be picked up by a follow-up pass; this plan does not cover them.

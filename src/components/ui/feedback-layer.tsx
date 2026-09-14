@@ -115,14 +115,14 @@ const VARIANT_STYLES: Record<
 function renderVariantIcon(variant: FeedbackVariant) {
   switch (variant) {
     case "success":
-      return <CheckCircle2 className="size-4 shrink-0 text-emerald-600" strokeWidth={1.75} />;
+      return <CheckCircle2 className="size-4 shrink-0 text-emerald-600" strokeWidth={1.5} />;
     case "warning":
-      return <AlertTriangle className="size-4 shrink-0 text-amber-600" strokeWidth={1.75} />;
+      return <AlertTriangle className="size-4 shrink-0 text-amber-600" strokeWidth={1.5} />;
     case "error":
-      return <AlertOctagon className="size-4 shrink-0 text-rose-600" strokeWidth={1.75} />;
+      return <AlertOctagon className="size-4 shrink-0 text-rose-600" strokeWidth={1.5} />;
     case "info":
     default:
-      return <Info className="size-4 shrink-0 text-blue-600" strokeWidth={1.75} />;
+      return <Info className="size-4 shrink-0 text-blue-600" strokeWidth={1.5} />;
   }
 }
 
@@ -184,7 +184,7 @@ export function InlineAlertBanner({
             aria-label="Đóng thông báo"
             className="size-7 rounded-lg inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors cursor-pointer"
           >
-            <X className="size-3.5" strokeWidth={1.75} />
+            <X className="size-3.5" strokeWidth={1.5} />
           </button>
         )}
       </div>
@@ -217,7 +217,7 @@ export function FormValidationSummary({
     >
       <div className="flex items-center justify-between gap-2 border-b border-rose-200/60 pb-2">
         <div className="flex items-center gap-2 font-semibold text-rose-900 text-xs">
-          <XCircle className="size-4 text-rose-600 shrink-0" strokeWidth={1.75} />
+          <XCircle className="size-4 text-rose-600 shrink-0" strokeWidth={1.5} />
           <span>{title}</span>
           <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200">
             {errors.length}
@@ -230,7 +230,7 @@ export function FormValidationSummary({
             aria-label="Đóng cảnh báo lỗi form"
             className="size-6 rounded-md inline-flex items-center justify-center text-rose-600 hover:bg-rose-100/80 cursor-pointer transition-colors"
           >
-            <X className="size-3.5" strokeWidth={1.75} />
+            <X className="size-3.5" strokeWidth={1.5} />
           </button>
         )}
       </div>
@@ -321,7 +321,7 @@ export function FeedbackToast({ toast, onDismiss }: FeedbackToastProps) {
           aria-label="Đóng thông báo nổi"
           className="size-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-black/5 cursor-pointer transition-colors"
         >
-          <X className="size-3.5" strokeWidth={1.75} />
+          <X className="size-3.5" strokeWidth={1.5} />
         </button>
       </div>
     </m.div>

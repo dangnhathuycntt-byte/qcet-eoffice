@@ -57,7 +57,7 @@ function DashboardZoneComponent() {
                 onClick={() => openCreateModal(isExecutive ? "TRUONG" : "DON_VI")}
                 className="h-8 gap-1.5 px-3 text-xs font-semibold rounded-lg shadow-xs"
               >
-                <Plus size={14} strokeWidth={2} />
+                <Plus size={14} strokeWidth={1.5} />
                 <span>Tạo nhiệm vụ</span>
               </Button>
             )}
@@ -115,7 +115,7 @@ function DashboardZoneComponent() {
 
         {/* SECTION 2 — SITUATION (TÌNH HÌNH): compact summary following the queue */}
         <section aria-label="TÌNH HÌNH" data-slot="section-situation">
-          <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tình hình trong kỳ</p>
+          <p className="px-1 pb-1 text-xs font-semibold text-muted-foreground">Tình hình trong kỳ</p>
           <DashboardSituationStrip
             stats={displayedStats}
             executiveStats={executiveStats}

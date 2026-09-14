@@ -190,7 +190,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
         aria-expanded={isOpen}
         aria-label="Chọn kỳ vận hành"
         className={cn(
-          "group inline-flex min-h-[44px] sm:min-h-[32px] h-auto sm:h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/40 hover:bg-secondary/80 px-2.5 text-xs font-medium text-foreground transition-all cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.98] touch-manipulation",
+          "group inline-flex min-h-[44px] sm:min-h-[32px] h-auto sm:h-8 items-center gap-1.5 rounded-lg border border-border/60 bg-secondary/40 hover:bg-secondary/80 px-2.5 text-xs font-medium text-foreground transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] touch-manipulation",
           className
         )}
       >
@@ -220,7 +220,7 @@ export function GlobalMonthSelector({ className }: GlobalMonthSelectorProps) {
           {/* Header & Year Info */}
           <div className="flex items-center justify-between pb-2 border-b border-border/50">
             <div>
-              <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+              <span className="text-xs font-bold text-muted-foreground">
                 NĂM HỌC {currentAcademicYear}
               </span>
               <p className="text-xs text-muted-foreground">

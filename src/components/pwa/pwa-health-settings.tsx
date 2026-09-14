@@ -269,7 +269,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
         <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-600">
                 Phiên bản hệ thống
               </span>
               <Badge variant="outline" className="text-xs font-mono bg-white border-slate-200">
@@ -325,7 +325,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
         <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-600">
                 Cài đặt ứng dụng
               </span>
               <span
@@ -372,7 +372,7 @@ export function PWAHealthSettings({ userId: propUserId, className }: PWAHealthSe
         <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-600">
                 Thông báo đẩy (Web Push)
               </span>
               <span

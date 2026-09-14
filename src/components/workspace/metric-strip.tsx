@@ -238,7 +238,7 @@ export function MetricStrip({
                 >
                   <IconComponent
                     className={cn("size-4", scheme.iconColor)}
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                   />
                 </div>
                 <span className="text-xs sm:text-sm font-semibold text-slate-700 truncate">

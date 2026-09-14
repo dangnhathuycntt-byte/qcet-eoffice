@@ -371,7 +371,7 @@ export function DocumentSplitView({
           {/* Original Document Number & Category */}
           <div className="space-y-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <span className="text-xs font-semibold text-muted-foreground">
                 {doc.category}
               </span>
               <span className="text-sm sm:text-base font-mono font-bold text-foreground">
@@ -387,7 +387,7 @@ export function DocumentSplitView({
 
           {/* Summary / Trích yếu nội dung */}
           <div className="space-y-1.5">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+            <span className="text-xs font-bold text-muted-foreground block">
               Trích yếu nội dung văn bản
             </span>
             <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 text-sm font-medium text-foreground leading-relaxed">
@@ -492,7 +492,7 @@ export function DocumentSplitView({
         {/* Leadership Directives & Tasks History (Bút phê BGH) */}
         <div className="p-4 sm:p-5 rounded-2xl bg-card border border-border/70 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
               <ShieldCheck className="size-4 text-primary" strokeWidth={1.5} />
               Ý kiến Bút phê & Chỉ đạo của Ban Giám Hiệu
             </span>

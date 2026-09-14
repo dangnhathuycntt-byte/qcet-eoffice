@@ -1146,7 +1146,7 @@ export function CalendarMonthView({
                     }
                   }}
                   className={cn(
-                    "group relative min-h-[108px] p-2 transition-all cursor-pointer flex flex-col focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+                    "group relative min-h-[108px] p-2 transition-all cursor-pointer flex flex-col focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
                     !cell.isCurrentMonth && "bg-muted/15 text-muted-foreground/40",
                     cell.isCurrentMonth && "bg-card hover:bg-muted/30",
                     cell.isWeekend && cell.isCurrentMonth && "bg-muted/[0.04]",
@@ -1339,7 +1339,7 @@ export function CalendarMonthView({
                         onSelectTask?.(item.originalTask);
                       }
                     }}
-                    className="group flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 transition-all hover:border-primary/40 hover:shadow-card cursor-pointer focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring active:scale-[0.99]"
+                    className="group flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 transition-all hover:border-primary/40 hover:shadow-card cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]"
                     role="button"
                     aria-label={`Xem chi tiết ${item.title}`}
                   >

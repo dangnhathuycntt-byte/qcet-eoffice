@@ -112,7 +112,7 @@ export function ExecutiveUnitRadar({
         <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/60">
           <div className="flex items-center gap-1.5 min-w-0">
             <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground truncate">
+            <h3 className="text-xs font-bold text-foreground truncate">
               TỔNG QUAN 11 ĐƠN VỊ
             </h3>
             {unitsWithIssues > 0 && (

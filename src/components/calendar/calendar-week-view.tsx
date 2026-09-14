@@ -332,7 +332,7 @@ export function CalendarWeekView({
       <div className="grid grid-cols-[64px_1fr] sm:grid-cols-[72px_1fr] border-b-2 border-border/70 bg-amber-500/[0.03]">
         <div className="py-2.5 px-2 border-r border-border/50 flex flex-col items-center justify-center text-center">
           <CheckSquare className="size-3.5 text-primary mb-1" strokeWidth={1.5} />
-          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground leading-tight">
+          <span className="text-xs font-bold text-muted-foreground leading-tight">
             Hạn chót
           </span>
         </div>
@@ -360,7 +360,7 @@ export function CalendarWeekView({
                       onSelectDate(day.date);
                       onOpenDaySheet(day.date);
                     }}
-                    className="flex items-center gap-1 flex-wrap focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-primary rounded-xs"
+                    className="flex items-center gap-1 flex-wrap focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded-xs"
                     aria-label={`${totalCount} nhiệm vụ đến hạn ngày ${day.date}${overdueCount > 0 ? `, ${overdueCount} quá hạn` : ""}`}
                   >
                     <span className="text-xs font-bold text-foreground tabular-nums">
@@ -394,7 +394,7 @@ export function CalendarWeekView({
                           }
                         }}
                         className={cn(
-                          "w-full text-left rounded-md p-1.5 border border-border/60 bg-card hover:border-primary/40 hover:shadow-2xs transition-all flex flex-col gap-1 group focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-primary",
+                          "w-full text-left rounded-md p-1.5 border border-border/60 bg-card hover:border-primary/40 hover:shadow-2xs transition-all flex flex-col gap-1 group focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
                           isDone && "opacity-60 bg-muted/20"
                         )}
                         title={task.title}
@@ -466,7 +466,7 @@ export function CalendarWeekView({
                             onOpenDaySheet(day.date);
                           }
                         }}
-                        className="w-full text-left rounded-md px-1.5 py-1 border border-sky-200 bg-sky-50 hover:bg-sky-100/80 hover:border-sky-300 transition-all shadow-2xs flex items-center gap-1 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-sky-500"
+                        className="w-full text-left rounded-md px-1.5 py-1 border border-sky-200 bg-sky-50 hover:bg-sky-100/80 hover:border-sky-300 transition-all shadow-2xs flex items-center gap-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sky-500"
                         aria-label={`Sự kiện: ${ev.title}${ev.time ? ` lúc ${ev.time}` : ""}`}
                       >
                         <CalendarIcon className="size-2.5 text-sky-700 shrink-0" strokeWidth={1.5} aria-hidden="true" />
@@ -529,7 +529,7 @@ export function CalendarWeekView({
                               onOpenDaySheet(day.date);
                             }
                           }}
-                          className="w-full text-left rounded-lg p-2 border border-sky-200 bg-sky-50 hover:bg-sky-100/80 hover:border-sky-300 transition-all text-foreground shadow-2xs space-y-1 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-sky-500 z-10"
+                          className="w-full text-left rounded-lg p-2 border border-sky-200 bg-sky-50 hover:bg-sky-100/80 hover:border-sky-300 transition-all text-foreground shadow-2xs space-y-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sky-500 z-10"
                           aria-label={`Sự kiện: ${ev.title} lúc ${ev.time || hourLabel}`}
                         >
                           <div className="flex items-center justify-between gap-1 text-xs font-mono tabular-nums text-sky-800">

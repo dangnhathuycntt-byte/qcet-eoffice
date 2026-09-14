@@ -131,7 +131,7 @@ function LoginFormContent() {
               priority
             />
             <div className="flex flex-col justify-center">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground leading-tight">
+              <span className="text-xs font-semibold text-muted-foreground leading-tight">
                 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
               </span>
               <span className="text-sm font-bold tracking-tight text-foreground font-heading leading-tight">
@@ -168,19 +168,19 @@ function LoginFormContent() {
                 {oauthError.variant === "amber" && (
                   <AlertTriangle
                     className="size-4 shrink-0 text-amber-600 mt-0.5"
-                    strokeWidth={1.75}
+                    strokeWidth={1.5}
                   />
                 )}
                 {oauthError.variant === "red" && (
                   <AlertCircle
                     className="size-4 shrink-0 text-red-600 mt-0.5"
-                    strokeWidth={1.75}
+                    strokeWidth={1.5}
                   />
                 )}
                 {oauthError.variant === "neutral" && (
                   <Info
                     className="size-4 shrink-0 text-muted-foreground mt-0.5"
-                    strokeWidth={1.75}
+                    strokeWidth={1.5}
                   />
                 )}
 
@@ -203,7 +203,7 @@ function LoginFormContent() {
                         className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-700 transition-colors shadow-xs"
                       >
                         <span>{oauthError.actionText}</span>
-                        <ArrowRight className="size-3" strokeWidth={1.75} />
+                        <ArrowRight className="size-3" strokeWidth={1.5} />
                       </a>
                     </div>
                   )}
@@ -215,7 +215,7 @@ function LoginFormContent() {
                   className="shrink-0 p-1 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
                   aria-label="Đóng thông báo"
                 >
-                  <X className="size-3.5" strokeWidth={1.75} />
+                  <X className="size-3.5" strokeWidth={1.5} />
                 </button>
               </div>
             </div>
@@ -240,7 +240,7 @@ function LoginFormContent() {
             </div>
 
             <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-border/60 text-xs text-muted-foreground">
-              <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" strokeWidth={2} />
+              <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" strokeWidth={1.5} />
               <span>Hệ thống bảo mật sử dụng tài khoản email chính thức của Nhà trường</span>
             </div>
           </div>

@@ -367,7 +367,7 @@ export default function NotificationsPage() {
               {/* Section: Mới cập nhật (< 2h) */}
               {newItems.length > 0 && (
                 <div className="pb-2">
-                  <div className="flex items-center justify-between px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20 rounded-lg mb-1">
+                  <div className="flex items-center justify-between px-3.5 py-1.5 text-xs font-bold text-muted-foreground/80 bg-muted/20 rounded-lg mb-1">
                     <span>Mới cập nhật</span>
                     <span className="font-mono text-xs">{newItems.length}</span>
                   </div>
@@ -386,7 +386,7 @@ export default function NotificationsPage() {
               {/* Section: Trước đó */}
               {earlierItems.length > 0 && (
                 <div className="pt-2 pb-1">
-                  <div className="flex items-center justify-between px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20 rounded-lg mb-1">
+                  <div className="flex items-center justify-between px-3.5 py-1.5 text-xs font-bold text-muted-foreground/80 bg-muted/20 rounded-lg mb-1">
                     <span>Trước đó</span>
                     <span className="font-mono text-xs">{earlierItems.length}</span>
                   </div>

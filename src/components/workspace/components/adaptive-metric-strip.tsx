@@ -242,7 +242,7 @@ export function AdaptiveMetricStrip({
             className={cn(
               "p-3 rounded-lg bg-card border border-border/70 flex flex-col justify-between space-y-1.5 shadow-2xs transition-colors",
               isInteractive &&
-                "cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40"
+                "cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             )}
           >
             <div className="flex items-start justify-between gap-1.5">

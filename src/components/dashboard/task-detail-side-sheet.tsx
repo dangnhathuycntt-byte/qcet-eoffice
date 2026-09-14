@@ -1262,7 +1262,7 @@ export function TaskDetailSideSheet({
 
           {/* Requirement / expected result (T16: owner & unit -> requirement -> evidence) */}
           <div data-slot="detail-requirement" className="space-y-2">
-            <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
               <ListTodo className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
               Yêu cầu nhiệm vụ
             </h3>
@@ -1300,7 +1300,7 @@ export function TaskDetailSideSheet({
           {!isSchool && (
             <div data-slot="detail-evidence" className="space-y-3.5 pt-2" id="deliverable-section">
               <div className="flex items-center justify-between">
-                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                   <FileCheck className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                   {(task as StaffTask).requiresReview
                     ? "Sản phẩm minh chứng (Bắt buộc nghiệm thu - DACUM)"
@@ -1467,7 +1467,7 @@ export function TaskDetailSideSheet({
             data-slot="detail-context-action"
             className="space-y-3.5"
           >
-            <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
               <Play className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
               Thao tác xử lý
             </h3>
@@ -2063,7 +2063,7 @@ export function TaskDetailSideSheet({
             {/* Real, server-authoritative audit events only. Never synthesized. */}
             <section data-slot="detail-history" className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                   <History className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                   Lịch sử
                 </h3>
@@ -2107,7 +2107,7 @@ export function TaskDetailSideSheet({
             {/* Derived facts aggregated from the task record — informational only. */}
             <section data-slot="detail-derived-milestones" className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <h3 className="font-sans text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                   <TrendingUp className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
                   Mốc thông tin
                 </h3>

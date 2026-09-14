@@ -253,7 +253,7 @@ export function SavedViewsSelector({
             {/* Section 1: Role Presets */}
             <div>
               <div className="flex items-center justify-between px-1 mb-1.5">
-                <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                <span className="text-xs font-semibold text-muted-foreground">
                   Mặc định cho vai trò
                 </span>
                 <span className="text-xs text-muted-foreground">Mặc định</span>
@@ -285,7 +285,7 @@ export function SavedViewsSelector({
                         )}
                       </div>
                       {isActive && (
-                        <Check className="size-4 shrink-0 text-primary" strokeWidth={2} />
+                        <Check className="size-4 shrink-0 text-primary" strokeWidth={1.5} />
                       )}
                     </button>
                   );
@@ -296,7 +296,7 @@ export function SavedViewsSelector({
             {/* Section 2: Custom Saved Views */}
             <div className="pt-2 border-t border-border/60">
               <div className="flex items-center justify-between px-1 mb-1.5">
-                <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                <span className="text-xs font-semibold text-muted-foreground">
                   Góc nhìn tùy chỉnh
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -368,7 +368,7 @@ export function SavedViewsSelector({
                         {/* Inline actions */}
                         <div className="flex items-center gap-1 shrink-0">
                           {isActive && (
-                            <Check className="size-4 text-primary mr-0.5" strokeWidth={2} />
+                            <Check className="size-4 text-primary mr-0.5" strokeWidth={1.5} />
                           )}
                           <button
                             type="button"

@@ -1074,7 +1074,7 @@ export function CreateTaskModal({
               <Sparkles className="size-4" strokeWidth={1.5} />
             </span>
             <div>
-              <span id="modal-title" className="text-sm font-bold uppercase tracking-wider text-foreground font-heading block">
+              <span id="modal-title" className="text-sm font-bold text-foreground font-heading block">
                 {isStaff
                   ? "Tạo việc mới (Cá nhân)"
                   : isManager
@@ -1344,7 +1344,7 @@ export function CreateTaskModal({
                             {searchedPersonnel.length > 0 ? (
                               searchedPersonnel.map((group, gIdx) => (
                                 <div key={`pop-grp-${group.code}-${gIdx}`} className="py-1">
-                                  <div className="px-2.5 py-1 text-xs font-bold text-muted-foreground uppercase tracking-wider sticky top-0 bg-card/95 backdrop-blur-xs">
+                                  <div className="px-2.5 py-1 text-xs font-bold text-muted-foreground sticky top-0 bg-card/95 backdrop-blur-xs">
                                     {group.department}
                                   </div>
                                   <div className="space-y-0.5">
@@ -1786,7 +1786,7 @@ export function CreateTaskModal({
                 <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
                   <div className="flex items-center gap-2">
                     <FileCheck className="size-3.5 text-primary" strokeWidth={1.5} />
-                    <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    <span className="text-xs font-bold text-foreground">
                       Sản phẩm đầu ra đo lường được (DACUM)
                     </span>
                     {formData.requiresReview && <span className="text-destructive font-bold">*</span>}

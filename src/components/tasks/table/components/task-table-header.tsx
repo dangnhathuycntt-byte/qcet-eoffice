@@ -98,7 +98,7 @@ export function TaskTableHeader({
         className
       )}
     >
-      <tr className={cn(rowHeightClass, "text-xs font-semibold uppercase tracking-wider text-muted-foreground")}>
+      <tr className={cn(rowHeightClass, "text-xs font-semibold text-muted-foreground")}>
         {/* Selection Checkbox */}
         {showSelection && (
           <th

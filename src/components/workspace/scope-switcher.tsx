@@ -286,7 +286,7 @@ export function ScopeSwitcher({
         </select>
         <ChevronDown
           className="size-4 text-slate-500 absolute right-2.5 sm:right-3 pointer-events-none"
-          strokeWidth={2}
+          strokeWidth={1.5}
           aria-hidden="true"
         />
       </div>

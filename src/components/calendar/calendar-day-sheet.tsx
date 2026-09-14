@@ -438,7 +438,7 @@ export function CalendarDaySheet({
               {visibleEvents.length > 0 && (
                 <section aria-label="Sự kiện lịch biểu" className="space-y-2">
                   <div className="flex items-center justify-between pb-1 border-b border-border/40">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                       <CalendarIcon className="size-3.5 text-primary" strokeWidth={1.5} aria-hidden="true" />
                       <span>Sự kiện lịch biểu</span>
                     </h3>
@@ -505,7 +505,7 @@ export function CalendarDaySheet({
               {visibleDeadlines.length > 0 && (
                 <section aria-label="Nhiệm vụ đến hạn" className="space-y-2">
                   <div className="flex items-center justify-between pb-1 border-b border-border/40">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                       <CheckSquare className="size-3.5 text-primary" strokeWidth={1.5} aria-hidden="true" />
                       <span>Nhiệm vụ đến hạn</span>
                     </h3>

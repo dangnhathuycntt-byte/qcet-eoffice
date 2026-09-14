@@ -194,7 +194,7 @@ export function ExecutiveBriefingModal({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Building2 className="w-5 h-5 text-primary shrink-0" />
-              <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+              <span className="text-xs font-semibold text-muted-foreground">
                 TRƯỜNG CAO ĐẲNG KỸ THUẬT CÔNG NGHỆ QUY NHƠN
               </span>
             </div>
@@ -233,7 +233,7 @@ export function ExecutiveBriefingModal({
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
           {/* Section 1: Executive KPI Strip */}
           <div className="space-y-2.5">
-            <h3 className="text-xs font-bold tracking-wider uppercase text-muted-foreground flex items-center gap-2">
+            <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" />
               <span>I. Tổng quan vận hành toàn trường</span>
             </h3>
@@ -288,7 +288,7 @@ export function ExecutiveBriefingModal({
           {/* Section 2: Department Rankings */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold tracking-wider uppercase text-muted-foreground flex items-center gap-2">
+              <h3 className="text-xs font-bold text-muted-foreground flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-primary" />
                 <span>II. Tiến độ vận hành 11 đơn vị (Sắp xếp theo tỷ lệ hoàn thành)</span>
               </h3>
@@ -372,7 +372,7 @@ export function ExecutiveBriefingModal({
           {/* Section 3: Critical Bottlenecks */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold tracking-wider uppercase text-rose-600 flex items-center gap-2">
+              <h3 className="text-xs font-bold text-rose-600 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
                 <span>III. Danh sách điểm nghẽn trọng yếu cần BGH chỉ đạo</span>
               </h3>
@@ -438,7 +438,7 @@ export function ExecutiveBriefingModal({
           {/* Section 4: Pending Approvals */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold tracking-wider uppercase text-indigo-600 flex items-center gap-2">
+              <h3 className="text-xs font-bold text-indigo-600 flex items-center gap-2">
                 <FileCheck className="w-4 h-4" />
                 <span>IV. Tờ trình & hồ sơ chờ Ban Giám Hiệu phê duyệt</span>
               </h3>

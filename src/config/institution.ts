@@ -1,6 +1,6 @@
 /**
  * CANONICAL INSTITUTION PROFILE & IDENTITY CONFIGURATION
- * Single Source of Truth for QCET (Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh)
+ * Single Source of Truth for QCET (Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn)
  * Task 3.18 (F14 Institutional Profile) - Sprint 3
  */
 
@@ -49,18 +49,17 @@ function deepFreeze<T extends object>(obj: T): Readonly<T> {
 }
 
 export const INSTITUTION_CONFIG: Readonly<InstitutionProfile> = deepFreeze({
-  officialName: "Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh",
+  officialName: "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
   shortName: "QCET",
-  subordinateTo: "ỦY BAN NHÂN DÂN TỈNH QUẢNG NINH",
+  subordinateTo: "ỦY BAN NHÂN DÂN TỈNH BÌNH ĐỊNH",
   institutionCode: "QCET",
-  issuingAuthority: "Trường Cao đẳng Kinh tế và Công nghệ Quảng Ninh",
-  address: "Thành phố Hạ Long, Tỉnh Quảng Ninh",
-  phone: "(0203) 3850 373",
-  email: "bgh@cdktcnqn.edu.vn",
+  issuingAuthority: "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
+  address: "172 An Dương Vương, Phường Nguyễn Văn Cừ, TP. Quy Nhơn, Tỉnh Bình Định",
+  email: "quantrimang@cdktcnqn.edu.vn",
   website: "https://cdktcnqn.edu.vn",
   logoUrl: "/logo-qcet.png",
-  abbreviatedName: "Trường CĐ Kinh tế & Công nghệ Quảng Ninh",
-  englishName: "Quang Ninh College of Economic and Technology",
+  abbreviatedName: "Trường CĐ Kỹ thuật Công nghệ Quy Nhơn",
+  englishName: "Quy Nhon College of Engineering and Technology",
   domain: "cdktcnqn.edu.vn",
 });
 
@@ -110,7 +109,7 @@ export function getInstitutionHeader(): {
 
 /**
  * Formats the official digital signing capacity for organizational seals.
- * E.g. "VĂN PHÒNG / Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn "
+ * E.g. "VĂN PHÒNG / Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn "
  */
 export function getOfficialSigningCapacity(department = "VĂN PHÒNG"): string {
   return `${department.toUpperCase()} / ${INSTITUTION_CONFIG.officialName.toUpperCase()}`;
@@ -135,8 +134,8 @@ export function isCurrentInstitution(nameOrCode?: string | null): boolean {
     normalized === INSTITUTION_CONFIG.shortName.toLowerCase() ||
     normalized === INSTITUTION_CONFIG.institutionCode.toLowerCase() ||
     normalized === INSTITUTION_CONFIG.abbreviatedName.toLowerCase() ||
-    normalized.includes("kinh tế và công nghệ") ||
-    normalized.includes("kinh tế & công nghệ") ||
+    normalized.includes("kỹ thuật công nghệ") ||
+    normalized.includes("kỹ thuật & công nghệ") ||
     normalized.includes(INSTITUTION_CONFIG.domain.toLowerCase())
   );
 }

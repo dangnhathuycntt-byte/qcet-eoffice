@@ -153,7 +153,7 @@ export function DocumentDetailDialog({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs font-semibold text-muted-foreground">
                   {currentType.label}
                 </span>
                 <span
@@ -191,7 +191,7 @@ export function DocumentDetailDialog({
         <div className="overflow-y-auto p-4 sm:p-5 space-y-4">
           {/* Summary */}
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+            <span className="text-xs font-semibold text-muted-foreground block mb-1.5">
               Trích yếu nội dung văn bản
             </span>
             <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 text-sm font-medium text-foreground leading-relaxed">
@@ -241,7 +241,7 @@ export function DocumentDetailDialog({
           {/* Leadership Directives (Bút phê chỉ đạo) */}
           <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs font-bold text-primary flex items-center gap-1.5">
                 <ShieldCheck className="size-3.5" strokeWidth={1.5} />
                 Bút phê & Chỉ đạo của Ban Giám Hiệu
               </span>
@@ -256,7 +256,7 @@ export function DocumentDetailDialog({
           {doc.linkedTaskId ? (
             <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
                   <CheckCircle2 className="size-3.5" strokeWidth={1.5} />
                   Nhiệm vụ liên thông QCET Unified Task Hub
                 </span>

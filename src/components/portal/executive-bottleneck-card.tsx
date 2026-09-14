@@ -79,7 +79,7 @@ export function ExecutiveBottleneckCard({
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/10 px-2 py-0.5 text-xs font-semibold text-rose-700 border border-rose-500/20">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-          <span className="tabular-nums uppercase tracking-wide">{badgeLabel}</span>
+          <span className="tabular-nums">{badgeLabel}</span>
         </span>
 
         <Badge

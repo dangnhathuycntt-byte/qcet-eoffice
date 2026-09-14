@@ -314,7 +314,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
             {/* Section: Mới */}
             {newItems.length > 0 && (
               <div className="pb-1">
-                <div className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20">
+                <div className="px-3.5 py-1.5 text-xs font-bold text-muted-foreground/80 bg-muted/20">
                   Mới cập nhật
                 </div>
                 <div className="space-y-0.5 px-1 pt-1">
@@ -333,7 +333,7 @@ export function NotificationPopover({ isOpen, onClose, containerRef }: Notificat
             {/* Section: Trước đó */}
             {earlierItems.length > 0 && (
               <div className="pt-1 pb-1">
-                <div className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/20">
+                <div className="px-3.5 py-1.5 text-xs font-bold text-muted-foreground/80 bg-muted/20">
                   Trước đó
                 </div>
                 <div className="space-y-0.5 px-1 pt-1">

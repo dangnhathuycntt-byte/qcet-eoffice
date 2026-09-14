@@ -1004,7 +1004,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {showRecent && (
             <div>
               <div className="flex items-center justify-between px-2.5 py-1 mb-1">
-                <span className="text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-neutral-400 flex items-center gap-1.5">
                   <Clock className="w-3 h-3 text-neutral-400" />
                   {COMMAND_INTENT_LABELS.recent}
                 </span>
@@ -1055,7 +1055,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Section: Đi tới (navigation intent) */}
           {displayNavigation.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase">
+              <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400">
                 {COMMAND_INTENT_LABELS.navigation}
               </div>
               <div className="space-y-0.5">
@@ -1117,7 +1117,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Section: Tasks */}
           {displayTasks.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center justify-between">
+              <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400 flex items-center justify-between">
                 <span>{COMMAND_INTENT_LABELS.task} ({displayTasks.length})</span>
                 <span className="text-xs text-neutral-400 lowercase">phím ↵ để mở</span>
               </div>
@@ -1185,7 +1185,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Section: Documents */}
           {displayDocuments.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center justify-between">
+              <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-amber-600" />
                   {COMMAND_INTENT_LABELS.document} ({displayDocuments.length})
@@ -1254,7 +1254,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Section: Users */}
           {displayUsers.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase flex items-center justify-between">
+              <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400 flex items-center justify-between">
                 <span>{COMMAND_INTENT_LABELS.user} ({displayUsers.length})</span>
                 <span className="text-xs text-neutral-400 lowercase">phím ↵ để liên hệ</span>
               </div>
@@ -1329,7 +1329,7 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
           {/* Section: Hành động (command intent) */}
           {displayCommands.length > 0 && (
             <div>
-              <div className="px-2.5 py-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase">
+              <div className="px-2.5 py-1 text-xs font-semibold text-neutral-400">
                 {COMMAND_INTENT_LABELS.command}
               </div>
               <div className="space-y-0.5">

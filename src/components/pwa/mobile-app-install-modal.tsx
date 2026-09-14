@@ -213,7 +213,7 @@ export function MobileAppInstallModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/60 bg-muted/20 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-              <Smartphone size={18} strokeWidth={2} />
+              <Smartphone size={18} strokeWidth={1.5} />
             </div>
             <div>
               <h2
@@ -326,7 +326,7 @@ export function MobileAppInstallModal({
             {/* Right: Network Address Options & Copy */}
             <div className="md:col-span-7 space-y-3">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs font-bold text-muted-foreground">
                   Chọn kênh kết nối đến điện thoại:
                 </span>
                 <div className="mt-1.5 space-y-1.5">

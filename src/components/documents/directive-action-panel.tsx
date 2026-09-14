@@ -442,7 +442,7 @@ export function DirectiveActionPanel({
                     }`}
                   >
                     <span>{dept.shortName || dept.name}</span>
-                    {isChecked && <CheckCircle2 className="h-3 w-3" strokeWidth={2} />}
+                    {isChecked && <CheckCircle2 className="h-3 w-3" strokeWidth={1.5} />}
                   </button>
                 );
               })}

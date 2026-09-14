@@ -448,7 +448,7 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
             aria-haspopup="menu"
             data-slot="kanban-action-menu-trigger"
             data-actions="status-transition"
-            className="size-7 min-h-[44px] sm:min-h-[28px] flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60 touch-manipulation"
+            className="size-7 min-h-[44px] sm:min-h-[28px] flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 touch-manipulation"
           >
             <MoreHorizontal strokeWidth={1.5} className="size-4" />
           </button>

@@ -1521,7 +1521,7 @@ export function OrganizationTree({
         <div className="space-y-6">
           {/* Quick Category Filter Strip */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">
               Nhóm đơn vị:
             </span>
             <button
@@ -1597,7 +1597,7 @@ export function OrganizationTree({
                         <Icon className="size-4.5" strokeWidth={1.5} />
                       </div>
                       <div>
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
+                        <span className="text-xs font-semibold text-muted-foreground block">
                           {dept.categoryLabel}
                         </span>
                         <h4 className="text-sm font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
@@ -1656,7 +1656,7 @@ export function OrganizationTree({
                         {dept.members.length} nhân sự
                       </span>
                       <span className="font-semibold text-primary group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
-                        Xem danh bạ <ChevronRight className="size-3" strokeWidth={2} />
+                        Xem danh bạ <ChevronRight className="size-3" strokeWidth={1.5} />
                       </span>
                     </div>
                   </div>
@@ -1796,7 +1796,7 @@ export function OrganizationTree({
                     <span className="flex size-6 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <Building2 className="size-3.5" strokeWidth={1.5} />
                     </span>
-                    <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    <span className="text-xs font-bold text-foreground">
                       Cơ cấu {QCET_DEPARTMENTS.length} đơn vị QCET
                     </span>
                   </div>
@@ -2239,7 +2239,7 @@ export function OrganizationTree({
             {activeProfileStaff.responsibilities &&
               activeProfileStaff.responsibilities.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <h4 className="text-xs font-bold text-muted-foreground">
                     Phân công nhiệm vụ trọng tâm
                   </h4>
                   <ul className="space-y-1.5 text-xs text-foreground list-disc pl-4">
