@@ -89,39 +89,31 @@ export function DashboardSituationStrip({
       data-slot="dashboard-situation-strip"
       data-situation-state={situationState}
       className={cn(
-        "px-1 py-1.5 text-xs text-foreground/80 flex flex-wrap items-center gap-y-0.5",
+        "flex flex-wrap items-center gap-1.5 py-0.5",
         className
       )}
       aria-label={`Tình hình: ${ariaLabel}`}
     >
-      <span className="font-mono tabular-nums font-semibold text-foreground">{progressPercent}% tiến độ</span>
-      <span className="mx-2 text-border/80 select-none" aria-hidden="true">·</span>
-      <span className="font-mono tabular-nums">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-xs font-mono tabular-nums font-semibold text-primary">
+        {progressPercent}%
+      </span>
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60 border border-border/50 text-xs font-mono tabular-nums text-foreground/70">
         {totalTasks.toLocaleString("vi-VN")} nhiệm vụ
       </span>
       {overdueCount > 0 && (
-        <>
-          <span className="mx-2 text-border/80 select-none" aria-hidden="true">·</span>
-          <span className="font-mono tabular-nums text-rose-700 font-semibold">
-            {overdueCount} quá hạn
-          </span>
-        </>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/25 text-xs font-mono tabular-nums font-semibold text-rose-700">
+          {overdueCount} quá hạn
+        </span>
       )}
       {blockedCount > 0 && (
-        <>
-          <span className="mx-2 text-border/80 select-none" aria-hidden="true">·</span>
-          <span className="font-mono tabular-nums text-rose-700 font-semibold">
-            {blockedCount} vướng mắc
-          </span>
-        </>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-xs font-mono tabular-nums font-semibold text-amber-700">
+          {blockedCount} vướng mắc
+        </span>
       )}
       {unitsNeedingAttention != null && unitsNeedingAttention > 0 && (
-        <>
-          <span className="mx-2 text-border/80 select-none" aria-hidden="true">·</span>
-          <span className="font-mono tabular-nums text-amber-700 font-medium">
-            {unitsNeedingAttention} đơn vị cần chú ý
-          </span>
-        </>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-xs font-mono tabular-nums font-medium text-amber-700">
+          {unitsNeedingAttention} đơn vị cần chú ý
+        </span>
       )}
     </div>
   );

@@ -134,16 +134,18 @@ export function UpcomingDeadlinesWidget({
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-3.5 sm:p-4 text-card-foreground transition-colors",
+        "flex flex-col overflow-hidden rounded-2xl bg-card p-4 sm:p-5 text-card-foreground shadow-card border border-border/40",
         className
       )}
     >
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <Calendar className="size-4 text-muted-foreground" strokeWidth={1.5} />
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+            <Calendar className="size-4 text-primary" strokeWidth={1.5} />
+          </div>
           <div>
-            <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
+            <h3 className="font-heading text-sm font-bold text-foreground tracking-tight">
               Sắp đến hạn
             </h3>
             <p className="text-xs text-muted-foreground">
@@ -165,7 +167,7 @@ export function UpcomingDeadlinesWidget({
       </div>
 
       {/* List content */}
-      <div className="flex flex-col divide-y divide-border/50 pt-1">
+      <div className="flex flex-col gap-0.5 pt-2">
         {displayedItems.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
@@ -196,8 +198,10 @@ export function UpcomingDeadlinesWidget({
                   }
                 }}
                 className={cn(
-                  "group flex flex-col justify-center gap-1 py-2 sm:py-2.5 transition-colors first:pt-2 last:pb-1 focus-visible:outline-hidden focus-visible:bg-muted/50 min-h-[44px]",
-                  onSelectTask && "cursor-pointer hover:bg-muted/40 -mx-2 px-2 rounded-lg"
+                  "group flex flex-col justify-center gap-1.5 px-2.5 py-2.5 rounded-xl transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring min-h-[44px]",
+                  onSelectTask
+                    ? "cursor-pointer hover:bg-muted/50 active:bg-muted/70 active:scale-[0.99]"
+                    : "bg-muted/20"
                 )}
                 role={onSelectTask ? "button" : undefined}
                 aria-label={onSelectTask ? `Chi tiết hạn chót: ${item.title}` : undefined}

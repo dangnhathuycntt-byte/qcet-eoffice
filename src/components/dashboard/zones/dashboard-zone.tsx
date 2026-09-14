@@ -36,20 +36,20 @@ function DashboardZoneComponent() {
   const baseTasks = monthScopedBaseTasks ?? tasks;
 
   return (
-    <div className="space-y-5 sm:space-y-6" data-slot="zone-dashboard">
+    <div className="space-y-6 sm:space-y-8" data-slot="zone-dashboard">
       {/* Mobile Attention-First Feed (viewports < 640px) */}
       <div className="block sm:hidden" data-slot="mobile-workbench-feed-container">
         <WorkbenchMobileFeed />
       </div>
 
       {/* Desktop Layout (viewports >= 640px) — SUMMARY → ACTION → CONTEXT */}
-      <div className="hidden sm:block space-y-6" data-slot="desktop-workbench-container">
+      <div className="hidden sm:block space-y-7" data-slot="desktop-workbench-container">
 
         {/* HEADER: Title + Create + Toolbar + Situation */}
         <div className="space-y-2.5" data-slot="dashboard-header">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="font-heading font-bold text-xl sm:text-2xl tracking-tight text-foreground leading-none">
+              <h1 className="font-heading font-bold text-2xl sm:text-3xl tracking-tight text-foreground leading-[1.15]">
                 Bàn làm việc
               </h1>
               {/* Situation strip inline dưới tiêu đề trên tablet */}
@@ -95,7 +95,7 @@ function DashboardZoneComponent() {
           {/* Toolbar: Scope / Period / Situation (desktop) */}
           <div
             aria-label="Thanh tác vụ ngữ cảnh: KỲ VẬN HÀNH và Phạm vi"
-            className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-card border border-border/60"
+            className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-muted/40 border border-border/50 shadow-xs"
           >
             <div className="flex flex-wrap items-center gap-2">
               <div id="tour-scope-switcher">
@@ -120,7 +120,11 @@ function DashboardZoneComponent() {
         </div>
 
         {/* SECTION 1 — CẦN XỬ LÝ */}
-        <section aria-label="CẦN XỬ LÝ" data-slot="section-action">
+        <section aria-label="CẦN XỬ LÝ" data-slot="section-action" className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold tracking-widest text-muted-foreground/60 uppercase select-none">Cần xử lý</span>
+            <div className="flex-1 h-px bg-border/40" />
+          </div>
           {(isExecutive && executiveStats) ? (
             <ExecutiveActionCenter
               stats={executiveStats}
@@ -147,22 +151,24 @@ function DashboardZoneComponent() {
         </section>
 
         {/* SECTION 2 — CHI TIẾT VẬN HÀNH */}
-        <section
-          aria-label="CHI TIẾT VẬN HÀNH"
-          data-slot="section-details"
-          className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start"
-        >
-          <div className="lg:col-span-7 space-y-4">
-            <UpcomingDeadlinesWidget
-              items={roleUpcoming}
-              onSelectTask={(item) => openTaskDetailById(item.taskId || item.id)}
-            />
+        <section aria-label="CHI TIẾT VẬN HÀNH" data-slot="section-details" className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold tracking-widest text-muted-foreground/60 uppercase select-none">Ngữ cảnh vận hành</span>
+            <div className="flex-1 h-px bg-border/40" />
           </div>
-          <div className="lg:col-span-5 space-y-4">
-            {isExecutive && departmentHealth.length > 0 && (
-              <DepartmentAttentionPreview departments={departmentHealth} limit={5} />
-            )}
-            <ActivityFeedWidget activities={activities} initialLimit={4} />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            <div className="lg:col-span-7 space-y-4">
+              <UpcomingDeadlinesWidget
+                items={roleUpcoming}
+                onSelectTask={(item) => openTaskDetailById(item.taskId || item.id)}
+              />
+            </div>
+            <div className="lg:col-span-5 space-y-4">
+              {isExecutive && departmentHealth.length > 0 && (
+                <DepartmentAttentionPreview departments={departmentHealth} limit={5} />
+              )}
+              <ActivityFeedWidget activities={activities} initialLimit={4} />
+            </div>
           </div>
         </section>
       </div>

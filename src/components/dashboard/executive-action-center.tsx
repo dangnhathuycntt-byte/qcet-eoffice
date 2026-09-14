@@ -190,7 +190,7 @@ export function ExecutiveActionCenter({
 
       <section
         aria-labelledby="executive-action-queue-title"
-        className="rounded-lg border border-border/50 bg-card/60 p-3.5 sm:p-4"
+        className="rounded-2xl border border-border/40 bg-card p-4 sm:p-5 shadow-card"
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
@@ -279,11 +279,11 @@ export function ExecutiveActionCenter({
           </div>
         ) : (
           <>
-            <ul className="mx-1 mt-1 divide-y divide-border/50" data-slot="action-items-queue">
+            <ul className="mt-2 divide-y divide-border/30" data-slot="action-items-queue">
               {previewItems.map((item) => (
                 <li
                   key={item.id}
-                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 rounded-xl px-2 -mx-2 transition-colors hover:bg-muted/30"
                   data-slot="action-item-row"
                   data-task-id={item.taskId}
                 >

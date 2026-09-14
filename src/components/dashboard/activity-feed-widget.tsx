@@ -128,16 +128,18 @@ export function ActivityFeedWidget({
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-3.5 sm:p-4 text-card-foreground transition-colors",
+        "flex flex-col overflow-hidden rounded-2xl bg-card p-4 sm:p-5 text-card-foreground shadow-card border border-border/40",
         className
       )}
     >
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <History className="size-4 text-muted-foreground" strokeWidth={1.5} />
+          <div className="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 shrink-0">
+            <History className="size-4 text-violet-600" strokeWidth={1.5} />
+          </div>
           <div>
-            <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
+            <h3 className="font-heading text-sm font-bold text-foreground tracking-tight">
               Hoạt động vừa cập nhật
             </h3>
             <p className="text-xs text-muted-foreground">
@@ -162,7 +164,8 @@ export function ActivityFeedWidget({
       </div>
 
       {/* Activity Timeline List */}
-      <div className="flex flex-col divide-y divide-border/50 pt-1">
+      <div className="flex flex-col pt-2 relative">
+        <div className="absolute left-[15px] top-4 bottom-4 w-px bg-border/50" aria-hidden="true" />
         {displayedActivities.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
@@ -179,11 +182,11 @@ export function ActivityFeedWidget({
             return (
               <div
                 key={item.id}
-                className="group flex items-start gap-2.5 py-2 sm:py-2.5 transition-colors first:pt-2 last:pb-1 min-h-[44px]"
+                className="group flex items-start gap-2.5 px-2 py-2 rounded-xl transition-colors hover:bg-muted/40 min-h-[44px] relative"
               >
                 {/* Actor Avatar / Initials with action micro-badge */}
                 <div className="relative shrink-0 mt-0.5">
-                  <div className="flex size-7 sm:size-8 items-center justify-center rounded-full bg-secondary font-sans text-xs font-bold text-secondary-foreground ring-1 ring-border/50">
+                  <div className="flex size-7 sm:size-8 items-center justify-center rounded-full bg-secondary font-sans text-xs font-semibold text-secondary-foreground ring-1 ring-border/60 shadow-xs">
                     {initials}
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-card ring-1 ring-border/60 shadow-xs">
