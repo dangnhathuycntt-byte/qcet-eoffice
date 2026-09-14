@@ -268,24 +268,35 @@ export function assertCanMutate(canMutate: boolean, authState: AuthState): void 
   }
 }
 
-export async function performSessionSync(
-  fetchFn: typeof fetch = fetch,
-  storage: { getItem: (key: string) => string | null; setItem?: (key: string, value: string) => void } | null = typeof window !== "undefined" ? localStorage : null
-): Promise<SessionResolutionResult> {
-  let serverAuth: { authenticated: boolean; user?: any } | null = null;
+async function fetchSessionOnce(
+  fetchFn: typeof fetch
+): Promise<{ authenticated: boolean; user?: any } | null> {
   try {
-    const res = await fetchFn("/api/auth/me");
+    const res = await fetchFn("/api/auth/me", { cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
-      if (data && typeof data === "object") {
-        serverAuth = data;
-      }
-    } else {
-      serverAuth = { authenticated: false };
+      if (data && typeof data === "object") return data;
     }
-  } catch (err) {
-    console.warn("Session check /api/auth/me encountered error, using local fallback:", err);
-    serverAuth = null;
+    return { authenticated: false };
+  } catch {
+    return null;
+  }
+}
+
+export async function performSessionSync(
+  fetchFn: typeof fetch = fetch,
+  storage: { getItem: (key: string) => string | null; setItem?: (key: string, value: string) => void } | null = typeof window !== "undefined" ? localStorage : null,
+  { retryOnUnauthenticated = false }: { retryOnUnauthenticated?: boolean } = {}
+): Promise<SessionResolutionResult> {
+  let serverAuth = await fetchSessionOnce(fetchFn);
+
+  // After a Google OAuth redirect, the session cookie may not be committed to the
+  // browser cookie jar before the first /api/auth/me fetch fires. One retry after a
+  // short delay is enough to resolve the race without introducing a polling loop.
+  if (retryOnUnauthenticated && serverAuth && !serverAuth.authenticated) {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const retried = await fetchSessionOnce(fetchFn);
+    if (retried) serverAuth = retried;
   }
 
   let cachedUserStr: string | null = null;
@@ -343,29 +354,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Sync session with server /api/auth/me on mount
+  const applyResolution = useCallback((resolution: SessionResolutionResult) => {
+    setAuthState(resolution.state);
+    setUser(resolution.user);
+    setIsAuthenticated(resolution.isAuthenticated);
+    setIsOfflineReadOnly(resolution.isOfflineReadOnly);
+    setCanMutate(resolution.canMutate);
+    setIsLoading(false);
+  }, []);
+
+  // Sync session with server /api/auth/me on mount.
+  // retryOnUnauthenticated handles the Google OAuth redirect race: the session
+  // cookie may not yet be committed to the browser jar when the first fetch fires.
   useEffect(() => {
     let isMounted = true;
 
     async function syncSession() {
       const storage = typeof window !== "undefined" ? localStorage : null;
-      const resolution = await performSessionSync(fetch, storage);
-
+      const resolution = await performSessionSync(fetch, storage, {
+        retryOnUnauthenticated: true,
+      });
       if (!isMounted) return;
-
-      setAuthState(resolution.state);
-      setUser(resolution.user);
-      setIsAuthenticated(resolution.isAuthenticated);
-      setIsOfflineReadOnly(resolution.isOfflineReadOnly);
-      setCanMutate(resolution.canMutate);
-      setIsLoading(false);
+      applyResolution(resolution);
     }
 
     syncSession();
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [applyResolution]);
 
   const login = useCallback(
     async (email: string, password: string): Promise<{ success: boolean; error?: string; user?: AuthUser }> => {

@@ -23,7 +23,10 @@ export async function POST(req?: Request | NextRequest): Promise<NextResponse> {
   }
 
   const response = NextResponse.json({ success: true });
-  response.headers.set("Clear-Site-Data", '"cache"');
+  // Clear-Site-Data flushes both the HTTP cache and the cookie jar on supported
+  // browsers. Including "cookies" here ensures the session cookie is evicted even
+  // if the maxAge:0 set below is not honored in some edge-case browser paths.
+  response.headers.set("Clear-Site-Data", '"cache", "cookies"');
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
     value: "",

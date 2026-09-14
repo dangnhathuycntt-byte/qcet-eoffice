@@ -76,9 +76,13 @@ function LoginFormContent() {
     return sanitizeRedirectUrl(searchParams.get("redirect") || searchParams.get("callbackUrl"));
   }, [searchParams]);
 
-  // Auto-redirect if user is already authenticated
+  // Auto-redirect once authenticated. router.refresh() flushes the Next.js RSC
+  // router cache so the target page sees the new session cookie immediately —
+  // without it, a stale unauthenticated render may linger and the server can
+  // redirect back to /login even though the cookie is already set.
   React.useEffect(() => {
     if (!isLoading && user) {
+      router.refresh();
       router.replace(targetUrl);
     }
   }, [isLoading, user, router, targetUrl]);
