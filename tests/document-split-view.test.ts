@@ -4,6 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DocumentSplitView } from "../src/components/documents/document-split-view";
 import { DocumentPdfViewer } from "../src/components/documents/document-pdf-viewer";
+import DocumentsPage, { metadata } from "@/app/documents/page";
 import type { DocumentItem } from "../src/types/document";
 
 describe("Document Split-View UI Component", () => {
@@ -184,5 +185,25 @@ describe("DocumentPdfViewer Component", () => {
       html.includes("Chưa có tệp PDF"),
       "Must render clean empty state message"
     );
+  });
+});
+
+describe("Documents Landing Page (/documents)", () => {
+  test("Metadata title and description match QCET specification", () => {
+    assert.ok(metadata, "Metadata must be exported from page");
+    assert.ok(
+      typeof metadata.title === "string" && metadata.title.includes("Văn bản & Quản lý Công văn"),
+      "Page title must include 'Văn bản & Quản lý Công văn'"
+    );
+    assert.ok(
+      typeof metadata.description === "string" && metadata.description.length > 0,
+      "Page description must be non-empty"
+    );
+  });
+
+  test("DocumentsPage component is a valid callable function returning JSX", () => {
+    assert.strictEqual(typeof DocumentsPage, "function");
+    const element = DocumentsPage();
+    assert.ok(element, "DocumentsPage must return JSX element");
   });
 });

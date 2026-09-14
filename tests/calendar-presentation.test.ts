@@ -306,3 +306,73 @@ describe("calendar attention presentation model", () => {
     assert.deepEqual(isCalendarEntryVisibleForScope(unitTask, "personal"), false);
   });
 });
+
+// Consolidated from calendar-route-integration.test.ts — the dense-day semantic
+// presentation cases exercise the same canonical getMonthCellPresentation
+// contract against route-level fixtures.
+describe("calendar dense-day semantic presentation (route integration)", () => {
+  const ROUTE_REF = "2026-09-14";
+
+  function rTask(id: string, status: string, dueDate: string): CalendarTaskEntry {
+    return { kind: "task", id, sourceTaskId: id, date: ROUTE_REF, dueDate, title: id, status };
+  }
+
+  function rEvent(id: string, startTime: string): CalendarEventEntry {
+    return { kind: "event", id, meetingId: id, date: ROUTE_REF, startTime, title: id };
+  }
+
+  test("semantic summary exposes overdue/waiting/due counts, not raw preview slices", () => {
+    const entries: CalendarEntry[] = [
+      rTask("t-overdue", "IN_PROGRESS", "2026-08-25"),
+      rTask("t-waiting", "WAITING_APPROVAL", ROUTE_REF),
+      rTask("t-today", "IN_PROGRESS", ROUTE_REF),
+    ];
+    const presentation = getMonthCellPresentation(ROUTE_REF, entries, ROUTE_REF);
+    assert.equal(presentation.total, 3);
+    assert.equal(presentation.overdueCount, 1);
+    assert.equal(presentation.waitingCount, 1);
+    assert.equal(presentation.dueCount, 1);
+  });
+
+  test("hidden count accounts for every entry beyond visible previews", () => {
+    const entries: CalendarEntry[] = [];
+    for (let i = 0; i < 5; i += 1) entries.push(rTask(`t-${i}`, "IN_PROGRESS", ROUTE_REF));
+    const presentation = getMonthCellPresentation(ROUTE_REF, entries, ROUTE_REF, {
+      maxTotalPreviews: 3,
+    });
+    assert.equal(presentation.total, 5);
+    assert.ok(
+      presentation.taskPreviews.length + presentation.eventPreviews.length <= 3,
+      "Dense cell shows at most maxTotalPreviews previews"
+    );
+    assert.equal(
+      presentation.hiddenCount,
+      5 - presentation.taskPreviews.length - presentation.eventPreviews.length
+    );
+    assert.ok(presentation.hiddenCount > 0, "Overflow beyond previews must surface as hiddenCount");
+  });
+
+  test("dense day cell is summary-first: one earliest timed event plus attention-ranked tasks", () => {
+    const entries: CalendarEntry[] = [
+      rEvent("e-late", "14:00"),
+      rEvent("e-early", "07:30"),
+      rTask("t-waiting", "WAITING_APPROVAL", ROUTE_REF),
+      rTask("t-open", "IN_PROGRESS", ROUTE_REF),
+    ];
+    const presentation = getMonthCellPresentation(ROUTE_REF, entries, ROUTE_REF, {
+      maxTotalPreviews: 3,
+      maxEventPreviews: 1,
+    });
+    assert.equal(presentation.eventPreviews.length, 1);
+    assert.equal(
+      presentation.eventPreviews[0].title,
+      "e-early",
+      "Single timed preview must be the earliest real startTime"
+    );
+    assert.equal(
+      presentation.taskPreviews[0].title,
+      "t-waiting",
+      "Task previews must be attention-ranked (waiting first)"
+    );
+  });
+});

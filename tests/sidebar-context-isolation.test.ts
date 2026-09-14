@@ -278,10 +278,8 @@ describe("Sidebar Context Isolation & Decoupling (Task 8)", () => {
     });
   });
 
-  describe("AppShell Integration & Anti-Slop Audit", () => {
+  describe("AppShell Integration", () => {
     const appShellPath = path.resolve(process.cwd(), "src/components/layout/app-shell.tsx");
-    const sidebarContextPath = path.resolve(process.cwd(), "src/components/layout/sidebar-context.tsx");
-    const testFilePath = path.resolve(process.cwd(), "tests/sidebar-context-isolation.test.ts");
 
     test("app-shell.tsx imports and uses useSidebarLayout instead of useSidebar", () => {
       const content = fs.readFileSync(appShellPath, "utf-8");
@@ -304,21 +302,50 @@ describe("Sidebar Context Isolation & Decoupling (Task 8)", () => {
         "AppShellInner must NOT consume useSidebar()"
       );
     });
+  });
 
-    test("Anti-slop rule: 0% emojis in sidebar-context.tsx, app-shell.tsx, and this test file", () => {
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+  describe("P0 Attention Signals: Sidebar Badge Invariants (merged)", () => {
+    test("DEFAULT_SIDEBAR_BADGES contains zero fake counts", () => {
+      assert.strictEqual(DEFAULT_SIDEBAR_BADGES.calendar, 0);
+      assert.strictEqual(DEFAULT_SIDEBAR_BADGES.notifications, 0);
+      assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsInbox, 0);
+      assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsOutbox, 0);
+      assert.strictEqual(DEFAULT_SIDEBAR_BADGES.docsPending, 0);
+    });
 
-      const sidebarContent = fs.readFileSync(sidebarContextPath, "utf-8");
-      const appShellContent = fs.readFileSync(appShellPath, "utf-8");
-      const testContent = fs.readFileSync(testFilePath, "utf-8");
+    test("app-sidebar.tsx does not contain fake fallback badge numbers (?? 1, ?? 5, ?? 6)", () => {
+      const filePath = path.join(process.cwd(), "src/components/layout/app-sidebar.tsx");
+      const content = fs.readFileSync(filePath, "utf-8");
 
-      const sidebarMatches = [...sidebarContent.matchAll(emojiRegex)];
-      const appShellMatches = [...appShellContent.matchAll(emojiRegex)];
-      const testMatches = [...testContent.matchAll(emojiRegex)];
+      assert.strictEqual(
+        content.includes("badgeCounts?.calendar ?? 1"),
+        false,
+        "Must not contain calendar ?? 1"
+      );
+      assert.strictEqual(
+        content.includes("badgeCounts?.notifications ?? 5"),
+        false,
+        "Must not contain notifications ?? 5"
+      );
+      assert.strictEqual(
+        content.includes("badgeCounts?.docsInbox ?? 6"),
+        false,
+        "Must not contain docsInbox ?? 6"
+      );
+    });
 
-      assert.strictEqual(sidebarMatches.length, 0, "sidebar-context.tsx must contain 0 emojis");
-      assert.strictEqual(appShellMatches.length, 0, "app-shell.tsx must contain 0 emojis");
-      assert.strictEqual(testMatches.length, 0, "sidebar-context-isolation.test.ts must contain 0 emojis");
+    test("app-sidebar.tsx strictly suppresses zero, empty, or undefined badge counters", () => {
+      const filePath = path.join(process.cwd(), "src/components/layout/app-sidebar.tsx");
+      const content = fs.readFileSync(filePath, "utf-8");
+
+      assert.ok(
+        content.includes("text === undefined") &&
+          content.includes("text === null") &&
+          content.includes('text === ""') &&
+          content.includes("text === 0") &&
+          content.includes('text === "0"'),
+        "app-sidebar must explicitly suppress undefined, null, empty string, 0, and '0' from rendering badges"
+      );
     });
   });
 });

@@ -347,4 +347,29 @@ describe("TaskManagementWorkspace Unit & Integration Suite", () => {
       "unit-tasks/error.tsx must provide reset callback"
     );
   });
+
+  test("P0-05: Task load failure must not become empty task data: error != empty", () => {
+    const source = fs.readFileSync(tasksPagePath, "utf8");
+
+    const swallowsIntoEmptyTasks =
+      /\.catch\(\s*\(\s*\)\s*=>\s*\(\s*\{\s*tasks:\s*\[\]\s*\}\s*\)\s*\)/.test(
+        source
+      );
+
+    assert.equal(
+      swallowsIntoEmptyTasks,
+      false,
+      "a failed task read must not resolve to { tasks: [] } — error is not empty"
+    );
+
+    const boundary = fs.readFileSync(tasksErrorPath, "utf8");
+    assert.ok(
+      boundary.includes('role="alert"'),
+      "the error boundary must announce itself to assistive technology"
+    );
+    assert.ok(
+      boundary.includes("reset"),
+      "the error boundary must offer a retry affordance"
+    );
+  });
 });

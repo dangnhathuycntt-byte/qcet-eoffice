@@ -219,4 +219,51 @@ describe("Topbar Consolidation & Anti-Slop Suite", () => {
       "Topbar must not dispatch qcet:open-create-task"
     );
   });
+
+  describe("Clean Chrome & Contextual Scoping (merged)", () => {
+    const dashboardZonePath = path.resolve(
+      process.cwd(),
+      "src/components/dashboard/zones/dashboard-zone.tsx"
+    );
+
+    test("app-topbar enforces Clean Chrome: no ScopeSwitcher or GlobalMonthSelector", () => {
+      const content = fs.readFileSync(topbarPath, "utf-8");
+      assert.ok(
+        !content.includes("ScopeSwitcher"),
+        "app-topbar.tsx must not contain ScopeSwitcher (Leaky Global Shell)"
+      );
+      assert.ok(
+        !content.includes("GlobalMonthSelector"),
+        "app-topbar.tsx must not contain GlobalMonthSelector (Leaky Global Shell)"
+      );
+    });
+
+    test("app-topbar retains NotificationPopover", () => {
+      const content = fs.readFileSync(topbarPath, "utf-8");
+      assert.ok(content.includes("NotificationPopover"), "Topbar must retain NotificationPopover");
+    });
+
+    test("dashboard-zone mounts ScopeSwitcher and GlobalMonthSelector inside React Suspense", () => {
+      const content = fs.readFileSync(dashboardZonePath, "utf-8");
+      assert.match(
+        content,
+        /import\s+\{\s*ScopeSwitcher\s*\}\s+from\s+["']@\/components\/layout\/scope-switcher["']/,
+        "dashboard-zone.tsx must import ScopeSwitcher"
+      );
+      assert.match(
+        content,
+        /import\s+\{\s*GlobalMonthSelector\s*\}\s+from\s+["']@\/components\/layout\/global-month-selector["']/,
+        "dashboard-zone.tsx must import GlobalMonthSelector"
+      );
+      assert.ok(
+        content.includes('id="tour-scope-switcher"'),
+        "dashboard-zone.tsx must maintain id='tour-scope-switcher'"
+      );
+      assert.ok(
+        content.includes('id="tour-month-selector"'),
+        "dashboard-zone.tsx must maintain id='tour-month-selector'"
+      );
+      assert.ok(content.includes("<Suspense"), "DashboardZone must wrap scope chrome with Suspense");
+    });
+  });
 });

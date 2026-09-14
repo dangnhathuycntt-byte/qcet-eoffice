@@ -356,7 +356,7 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
           documentId,
           certificateMetadata: {
             issuer: "Ban Cơ yếu Chính phủ",
-            organization: "Trường Cao đẳng Kinh tế và Công nghệ Quy Nhơn ",
+            organization: "Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn ",
             serialNumber: `ORG-QCET-${testRunId}`,
           },
         },

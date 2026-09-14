@@ -8,7 +8,7 @@ import {
   extractFocusInitiative,
   QCET_12_DEPARTMENTS,
 } from "@/lib/tasks/executive-department-aggregator";
-import type { SchoolTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask } from "@/types/dashboard";
 
 describe("Executive Department Aggregator", () => {
   test("trả về đủ 12 đơn vị QCET theo thứ tự chuẩn với thông tin lãnh đạo", () => {
@@ -403,5 +403,167 @@ describe("Executive Department Aggregator", () => {
     assert.ok(tttv);
     assert.equal(tttv.metrics.totalTasks, 1);
     assert.equal(tttv.tasks[0].id, "task-tttv-1");
+  });
+});
+
+describe("Executive Department Aggregator — RAG Thresholds & Metadata", () => {
+  function createMockSchoolTask(
+    overrides: Partial<SchoolTask> & { id: string; [key: string]: unknown }
+  ): SchoolTask {
+    return {
+      title: `Nhiệm vụ kiểm thử ${overrides.id}`,
+      category: "CNTT",
+      categoryLabel: "Công nghệ thông tin",
+      leadAssigneeName: "TS. Trần Văn Nam",
+      leadDepartmentId: "KHOA_CNTT",
+      leadDepartmentCode: "KHOA_CNTT",
+      coAssignees: [],
+      assignedDate: "2026-08-15",
+      dueDate: "2026-09-15",
+      status: "IN_PROGRESS",
+      subTasks: [],
+      totalSubTasks: 0,
+      completedSubTasks: 0,
+      progressPercent: 65,
+      ...overrides,
+    };
+  }
+
+  function createMockStaffTask(overrides: Partial<StaffTask> & { id: string }): StaffTask {
+    return {
+      title: `Công việc nội bộ ${overrides.id}`,
+      assigneeName: "Nguyễn Văn A",
+      status: "IN_PROGRESS",
+      dueDate: "2026-09-12",
+      parentSchoolTaskId: "task-parent-1",
+      updatedAt: "2026-09-01",
+      ...overrides,
+    };
+  }
+
+  test("Aggregator assigns RAG status correctly based on threshold logic", () => {
+    const refDate = "2026-09-06";
+
+    // 1. Department with overdue tasks -> RED
+    const overdueTask = createMockSchoolTask({
+      id: "task-overdue",
+      dueDate: "2026-09-01", // Overdue relative to 2026-09-06
+      status: "IN_PROGRESS",
+      leadDepartmentId: "KHOA_CNTT",
+    });
+    const overdueSummaries = computeExecutiveDepartmentSummaries([overdueTask], refDate);
+    const cnttSummary = overdueSummaries.find((s) => s.departmentId === "KHOA_CNTT");
+    assert.ok(cnttSummary);
+    assert.equal(cnttSummary.ragStatus, "RED");
+    assert.ok(cnttSummary.metrics.overdue >= 1);
+
+    // 2. Department with due soon tasks (<= 3 days) -> AMBER
+    const dueSoonTask = createMockSchoolTask({
+      id: "task-duesoon",
+      dueDate: "2026-09-08", // 2 days from 2026-09-06
+      status: "IN_PROGRESS",
+      leadDepartmentId: "KHOA_DIEN",
+    });
+    const dueSoonSummaries = computeExecutiveDepartmentSummaries([dueSoonTask], refDate);
+    const dienSummary = dueSoonSummaries.find((s) => s.departmentId === "KHOA_DIEN");
+    assert.ok(dienSummary);
+    assert.equal(dienSummary.ragStatus, "AMBER");
+    assert.ok(dienSummary.metrics.dueSoon >= 1);
+
+    // 3. Department with healthy tasks (no overdue, no due soon) -> GREEN
+    const healthyTask = createMockSchoolTask({
+      id: "task-healthy",
+      dueDate: "2026-09-25",
+      status: "IN_PROGRESS",
+      progressPercent: 75,
+      leadDepartmentId: "KHOA_CK",
+    });
+    const healthySummaries = computeExecutiveDepartmentSummaries([healthyTask], refDate);
+    const ckSummary = healthySummaries.find((s) => s.departmentId === "KHOA_CK");
+    assert.ok(ckSummary);
+    assert.equal(ckSummary.ragStatus, "GREEN");
+  });
+
+  test("Official 12 QCET Departments mapped with Heads of Department", () => {
+    assert.equal(QCET_12_DEPARTMENTS.length, 12, "QCET must map exactly 12 official departments");
+
+    const expectedCodes = [
+      "KHOA_CNTT",
+      "KHOA_DIEN",
+      "KHOA_CK",
+      "KHOA_XD",
+      "KHOA_KTO",
+      "KHOA_SP",
+      "PHONG_DT",
+      "PHONG_HCQT",
+      "PHONG_KHTC",
+      "PHONG_CTHSSV",
+      "TT_TTTV",
+      "TT_NNTH",
+    ];
+
+    const actualCodes = QCET_12_DEPARTMENTS.map((d) => d.code);
+    assert.deepEqual(actualCodes, expectedCodes);
+
+    // Verify every department has complete leadership metadata
+    QCET_12_DEPARTMENTS.forEach((dept) => {
+      assert.ok(dept.id, `Department ID missing for ${dept.code}`);
+      assert.ok(dept.code, `Department Code missing for ${dept.id}`);
+      assert.ok(dept.name.length > 5, `Department Name too short for ${dept.code}`);
+      assert.ok(dept.head.name.length > 3, `Head name missing for ${dept.code}`);
+      assert.ok(dept.head.title.length > 3, `Head title missing for ${dept.code}`);
+      assert.ok(dept.head.email?.endsWith("@qcet.edu.vn"), `Official email missing for ${dept.code}`);
+      assert.ok(dept.aliases.length > 0, `Aliases missing for ${dept.code}`);
+      assert.ok(dept.keywords.length > 0, `Keywords missing for ${dept.code}`);
+    });
+
+    // Verify faculties (6), functional departments (4), and service centers (2)
+    const faculties = QCET_12_DEPARTMENTS.filter((d) => d.id.startsWith("KHOA_"));
+    const functionalDepts = QCET_12_DEPARTMENTS.filter((d) => d.id.startsWith("PHONG_"));
+    const centers = QCET_12_DEPARTMENTS.filter((d) => d.id.startsWith("TT_"));
+
+    assert.equal(faculties.length, 6, "Must have 6 faculties (Khoa)");
+    assert.equal(functionalDepts.length, 4, "Must have 4 functional rooms (Phòng)");
+    assert.equal(centers.length, 2, "Must have 2 centers (Trung tâm)");
+  });
+
+  test("Department summaries calculate separate schoolLevelTaskCount and unitLevelTaskCount", () => {
+    const taskWithSubs = createMockSchoolTask({
+      id: "task-with-subs",
+      leadDepartmentId: "PHONG_DT",
+      subTasks: [
+        createMockStaffTask({ id: "sub-1" }),
+        createMockStaffTask({ id: "sub-2" }),
+        createMockStaffTask({ id: "sub-3" }),
+      ],
+    });
+
+    const summaries = computeExecutiveDepartmentSummaries([taskWithSubs]);
+    const dtSummary = summaries.find((s) => s.departmentId === "PHONG_DT");
+
+    assert.ok(dtSummary);
+    assert.equal(dtSummary.schoolLevelTaskCount, 1, "School-level task count should be 1");
+    assert.equal(dtSummary.unitLevelTaskCount, 3, "Unit-level internal subtask count should be 3");
+  });
+
+  test("Focus Initiative resolves highest priority urgent task for department", () => {
+    const lowPrioTask = createMockSchoolTask({
+      id: "prio-low",
+      title: "Nhiệm vụ định kỳ",
+      dueDate: "2026-09-30",
+      progressPercent: 90,
+    });
+
+    const urgentTask = createMockSchoolTask({
+      id: "prio-urgent",
+      title: "Khẩn: Chuẩn bị kiểm định quốc tế",
+      dueDate: "2026-09-07",
+      progressPercent: 20,
+    });
+
+    const focus = extractFocusInitiative([lowPrioTask, urgentTask], "2026-09-06");
+    assert.ok(focus);
+    assert.equal(focus.taskId, "prio-urgent", "Focus initiative should prioritize urgent lagging task");
+    assert.equal(focus.priority, "HIGH");
   });
 });

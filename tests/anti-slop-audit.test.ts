@@ -69,4 +69,31 @@ describe("QCET E-Office Anti-Slop Comprehensive Audit", () => {
       `Found replacement character � in: ${violations.join(", ")}`
     );
   });
+
+  test("Strict Light-Only standard: no dark: variants anywhere in src directory", () => {
+    // Single canonical enforcement of the Light-Only design standard across the
+    // whole source tree. Supersedes per-component source-text dark: assertions.
+    //
+    // The pattern requires a class-name character immediately after `dark:` so it
+    // matches Tailwind variants (`dark:bg-slate-900`, `dark:[color:red]`) while
+    // ignoring prose comments ("no dark: classes") and unrelated object keys
+    // (`dark: "#0f172a"` in the QR code colour config).
+    const violations: string[] = [];
+
+    srcFiles.forEach(file => {
+      const content = fs.readFileSync(file, "utf-8");
+      const lines = content.split("\n");
+      lines.forEach((line, idx) => {
+        if (/\bdark:[a-zA-Z[]/.test(line)) {
+          violations.push(`${path.relative(process.cwd(), file)}:${idx + 1}: ${line.trim()}`);
+        }
+      });
+    });
+
+    assert.strictEqual(
+      violations.length,
+      0,
+      `Found dark: variant classes in:\n${violations.slice(0, 10).join("\n")}`
+    );
+  });
 });

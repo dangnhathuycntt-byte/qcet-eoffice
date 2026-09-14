@@ -11,12 +11,16 @@ import {
 } from "@prisma/client";
 
 // Import route handlers
+import { PATCH as taskPatchRoute } from "../src/app/api/tasks/[id]/route";
+import { POST as startRoute } from "../src/app/api/tasks/[id]/actions/start/route";
+import { POST as updateProgressRoute } from "../src/app/api/tasks/[id]/actions/update-progress/route";
 import { POST as submitResultRoute } from "../src/app/api/tasks/[id]/actions/submit-result/route";
 import { POST as reviewRoute } from "../src/app/api/tasks/[id]/actions/review/route";
 import { POST as requestRevisionRoute } from "../src/app/api/tasks/[id]/actions/request-revision/route";
 import { POST as approveRoute } from "../src/app/api/tasks/[id]/actions/approve/route";
 import { POST as reassignRoute } from "../src/app/api/tasks/[id]/actions/reassign/route";
 import { POST as remindRoute } from "../src/app/api/tasks/[id]/actions/remind/route";
+import { POST as cancelRoute } from "../src/app/api/tasks/[id]/actions/cancel/route";
 
 describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
   let dept: any;
@@ -729,6 +733,185 @@ describe("Phase 4B: Task Domain Commands & State Separation APIs", () => {
       });
       assert.ok(outbox);
       assert.equal((outbox.payload as any).urgency, "URGENT");
+    });
+  });
+
+  // ==========================================================================
+  // Merged from task-v2-commands.test.ts: PATCH Hardening, start, update-progress, cancel
+  // ==========================================================================
+  describe("7. Generic PATCH Hardening & Additional Canonical Actions", () => {
+    test("rejects PATCH status mutation with 400 and CANONICAL_COMMAND_REQUIRED", async () => {
+      const req = makeRequest(
+        `http://localhost:3000/api/tasks/${testTask.id}`,
+        { status: "IN_PROGRESS" },
+        creatorToken
+      );
+
+      const res = await taskPatchRoute(req, { params: Promise.resolve({ id: testTask.id }) });
+      assert.strictEqual(res.status, 400);
+
+      const json = await res.json();
+      assert.strictEqual(json.success, false);
+      assert.strictEqual(json.code, "CANONICAL_COMMAND_REQUIRED");
+      assert.match(json.error, /Cấm cập nhật trực tiếp trạng thái.*canonical domain action/);
+    });
+
+    test("rejects PATCH approved or resolution manipulation with 400", async () => {
+      const req = makeRequest(
+        `http://localhost:3000/api/tasks/${testTask.id}`,
+        { approved: true, resolution: "COMPLETED" },
+        creatorToken
+      );
+
+      const res = await taskPatchRoute(req, { params: Promise.resolve({ id: testTask.id }) });
+      assert.strictEqual(res.status, 400);
+
+      const json = await res.json();
+      assert.strictEqual(json.success, false);
+      assert.strictEqual(json.code, "CANONICAL_COMMAND_REQUIRED");
+    });
+
+    test("allows safe metadata update (title, description, priority, dueDate)", async () => {
+      const newDueDate = new Date(Date.now() + 86400000 * 14).toISOString();
+
+      const req = makeRequest(
+        `http://localhost:3000/api/tasks/${testTask.id}`,
+        {
+          title: "Tiêu đề đã cập nhật an toàn qua PATCH",
+          description: "Mô tả mới an toàn",
+          priority: "HIGH",
+          dueDate: newDueDate,
+        },
+        creatorToken
+      );
+
+      const res = await taskPatchRoute(req, { params: Promise.resolve({ id: testTask.id }) });
+      assert.strictEqual(res.status, 200);
+
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+    });
+
+    test("POST /api/tasks/[id]/actions/start transitions task to IN_PROGRESS", async () => {
+      // Create a fresh fixture task in NOT_STARTED
+      const startTask = await prisma.task.create({
+        data: {
+          code: `NV-START-${Date.now()}`,
+          title: "Nhiệm vụ kiểm thử action start",
+          status: TaskStatus.NOT_STARTED,
+          academicMonth: 9,
+          academicYear: "2026-2027",
+          dueDate: new Date(Date.now() + 86400000 * 5),
+          departmentId: dept.id,
+          createdById: creatorUser.id,
+          actors: {
+            create: {
+              userId: driUser.id,
+              role: TaskActorRole.DRI,
+              isPrimaryDRI: true,
+              assignedById: creatorUser.id,
+            },
+          },
+        },
+      });
+      createdTaskIds.push(startTask.id);
+
+      const req = makeRequest(
+        `http://localhost:3000/api/tasks/${startTask.id}/actions/start`,
+        { note: "Bắt đầu triển khai nhiệm vụ" },
+        driToken
+      );
+
+      const res = await startRoute(req, { params: Promise.resolve({ id: startTask.id }) });
+      assert.strictEqual(res.status, 200);
+
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+
+      const dbTask = await prisma.task.findUnique({ where: { id: startTask.id } });
+      assert.strictEqual(dbTask?.status, TaskStatus.IN_PROGRESS);
+    });
+
+    test("POST /api/tasks/[id]/actions/update-progress updates progress percent", async () => {
+      const progressTask = await prisma.task.create({
+        data: {
+          code: `NV-PROG-${Date.now()}`,
+          title: "Nhiệm vụ kiểm thử update progress",
+          status: TaskStatus.IN_PROGRESS,
+          progressPercent: 10,
+          academicMonth: 9,
+          academicYear: "2026-2027",
+          dueDate: new Date(Date.now() + 86400000 * 5),
+          departmentId: dept.id,
+          createdById: creatorUser.id,
+          actors: {
+            create: {
+              userId: driUser.id,
+              role: TaskActorRole.DRI,
+              isPrimaryDRI: true,
+              assignedById: creatorUser.id,
+            },
+          },
+        },
+      });
+      createdTaskIds.push(progressTask.id);
+
+      const req = makeRequest(
+        `http://localhost:3000/api/tasks/${progressTask.id}/actions/update-progress`,
+        {
+          progressPercent: 55,
+          note: "Đã hoàn thành phân tích yêu cầu",
+        },
+        driToken
+      );
+
+      const res = await updateProgressRoute(req, { params: Promise.resolve({ id: progressTask.id }) });
+      assert.strictEqual(res.status, 200);
+
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+
+      const dbTask = await prisma.task.findUnique({ where: { id: progressTask.id } });
+      assert.strictEqual(dbTask?.progressPercent, 55);
+    });
+
+    test("POST /api/tasks/[id]/actions/cancel cancels the task", async () => {
+      const cancelTask = await prisma.task.create({
+        data: {
+          code: `NV-CANCEL-${Date.now()}`,
+          title: "Nhiệm vụ kiểm thử action cancel",
+          status: TaskStatus.NOT_STARTED,
+          academicMonth: 9,
+          academicYear: "2026-2027",
+          dueDate: new Date(Date.now() + 86400000 * 5),
+          departmentId: dept.id,
+          createdById: creatorUser.id,
+          actors: {
+            create: {
+              userId: driUser.id,
+              role: TaskActorRole.DRI,
+              isPrimaryDRI: true,
+              assignedById: creatorUser.id,
+            },
+          },
+        },
+      });
+      createdTaskIds.push(cancelTask.id);
+
+      const req = makeRequest(
+        `http://localhost:3000/api/tasks/${cancelTask.id}/actions/cancel`,
+        { reason: "Kế hoạch thay đổi theo chỉ đạo mới" },
+        creatorToken
+      );
+
+      const res = await cancelRoute(req, { params: Promise.resolve({ id: cancelTask.id }) });
+      assert.strictEqual(res.status, 200);
+
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+
+      const dbTask = await prisma.task.findUnique({ where: { id: cancelTask.id } });
+      assert.strictEqual(dbTask?.status, TaskStatus.CANCELLED);
     });
   });
 });

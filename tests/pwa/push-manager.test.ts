@@ -1,15 +1,23 @@
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 
 import {
   urlBase64ToUint8Array,
   validateSameOriginRoute,
+  validateDeepLinkUrl,
   generateNotificationTag,
   formatNotificationPayload,
   checkIOSPushStatus,
 } from "../../src/lib/pwa/push-manager";
+
+import {
+  isBadgingSupported,
+  setAppBadge,
+  clearAppBadge,
+  calculateActionableBadgeCount,
+  updateActionableBadge,
+  type ActionableBadgeCounts,
+} from "../../src/lib/pwa/badging";
 
 import {
   DEFAULT_PUSH_PREFERENCES,
@@ -254,60 +262,197 @@ describe("Task 7: Push Pre-Prompt, Subscription Lifecycle, Deep Linking & Notifi
     });
   });
 
-  describe("6. Anti-Slop, Institutional QCET UI & Touch Target Invariants", () => {
-    const emojiRegex =
-      /[\u{1F300}-\u{1F5FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F1E0}-\u{1F1FF}]/u;
+  describe("6. Same-Origin Deep Link URL Validation (validateDeepLinkUrl)", () => {
+    test("validates same-origin deep link URLs and rejects external/open redirects", () => {
+      (global as any).window = { location: { origin: "https://eoffice.qcet.edu.vn" } };
 
-    test("push-manager.ts contains 0% emojis", () => {
-      const fileContent = fs.readFileSync(
-        path.join(process.cwd(), "src/lib/pwa/push-manager.ts"),
-        "utf-8"
-      );
+      // Valid internal paths
       assert.equal(
-        emojiRegex.test(fileContent),
-        false,
-        "push-manager.ts must contain 0 emojis"
+        validateDeepLinkUrl("/tasks/task-123", "https://eoffice.qcet.edu.vn"),
+        "https://eoffice.qcet.edu.vn/tasks/task-123"
+      );
+
+      // Malicious external redirects
+      assert.equal(
+        validateDeepLinkUrl("https://phishing-site.com/login", "https://eoffice.qcet.edu.vn"),
+        null,
+        "Must reject external origins"
+      );
+
+      assert.equal(
+        validateDeepLinkUrl("javascript:alert(1)", "https://eoffice.qcet.edu.vn"),
+        null,
+        "Must reject javascript: protocols"
       );
     });
+  });
 
-    test("push-preferences.ts contains 0% emojis", () => {
-      const fileContent = fs.readFileSync(
-        path.join(process.cwd(), "src/lib/pwa/push-preferences.ts"),
-        "utf-8"
-      );
-      assert.equal(
-        emojiRegex.test(fileContent),
-        false,
-        "push-preferences.ts must contain 0 emojis"
-      );
+  describe("7. Push Onboarding Snooze Account Isolation", () => {
+    test("scopes the push/install snooze by account (no shared-device suppression)", async () => {
+      const USER_A = "offline-account-A";
+      const USER_B = "offline-account-B";
+
+      const backing = new Map<string, string>();
+      const originalLocalStorage = globalThis.localStorage;
+      Object.defineProperty(globalThis, "localStorage", {
+        value: {
+          getItem: (key: string) => (backing.has(key) ? backing.get(key)! : null),
+          setItem: (key: string, value: string) => void backing.set(key, value),
+          removeItem: (key: string) => void backing.delete(key),
+          clear: () => backing.clear(),
+          key: (index: number) => Array.from(backing.keys())[index] ?? null,
+          get length() {
+            return backing.size;
+          },
+        },
+        configurable: true,
+        writable: true,
+      });
+
+      try {
+        const { isPushOnboardingSnoozed, recordPushOnboardingSnooze } = await import(
+          "../../src/components/pwa/push-onboarding-sheet"
+        );
+
+        assert.equal(isPushOnboardingSnoozed(USER_A), false, "No dismissal recorded yet");
+
+        recordPushOnboardingSnooze(USER_A);
+
+        assert.equal(
+          isPushOnboardingSnoozed(USER_A),
+          true,
+          "A dismissal must suppress the prompt for the same account"
+        );
+        assert.equal(
+          isPushOnboardingSnoozed(USER_B),
+          false,
+          "A dismissal must NOT suppress the prompt for another account on a shared device"
+        );
+        assert.ok(
+          backing.has(`qcet-push-onboarding-dismissed:${USER_A}`),
+          "Snooze must be persisted under the account-scoped key, never a global constant"
+        );
+      } finally {
+        Object.defineProperty(globalThis, "localStorage", {
+          value: originalLocalStorage,
+          configurable: true,
+          writable: true,
+        });
+      }
+    });
+  });
+
+  describe("8. PWA Badging API Progressive Enhancement", () => {
+    let badgeValue: number | undefined | null = null;
+    let isCleared = false;
+
+    beforeEach(() => {
+      badgeValue = null;
+      isCleared = false;
+
+      Object.defineProperty(global, "navigator", {
+        value: {
+          setAppBadge: async (count?: number) => {
+            badgeValue = count;
+          },
+          clearAppBadge: async () => {
+            isCleared = true;
+            badgeValue = 0;
+          },
+        },
+        configurable: true,
+        writable: true,
+      });
     });
 
-    test("push-onboarding-sheet.tsx contains 0% emojis and 0 dark theme classes", () => {
-      const fileContent = fs.readFileSync(
-        path.join(process.cwd(), "src/components/pwa/push-onboarding-sheet.tsx"),
-        "utf-8"
-      );
-      assert.equal(
-        emojiRegex.test(fileContent),
-        false,
-        "push-onboarding-sheet.tsx must contain 0 emojis"
-      );
-      assert.equal(
-        fileContent.includes("dark:"),
-        false,
-        "push-onboarding-sheet.tsx must not contain dark: classes"
-      );
+    test("returns true when navigator.setAppBadge and clearAppBadge are present", () => {
+      assert.equal(isBadgingSupported(), true);
     });
 
-    test("push-onboarding-sheet.tsx enforces >=44px touch targets for mobile accessibility", () => {
-      const fileContent = fs.readFileSync(
-        path.join(process.cwd(), "src/components/pwa/push-onboarding-sheet.tsx"),
-        "utf-8"
-      );
-      assert.ok(
-        fileContent.includes("min-h-[44px]"),
-        "push-onboarding-sheet.tsx must enforce min-h-[44px] touch targets"
-      );
+    test("returns false when navigator.setAppBadge is missing", () => {
+      Object.defineProperty(global, "navigator", {
+        value: {},
+        configurable: true,
+        writable: true,
+      });
+      assert.equal(isBadgingSupported(), false);
+    });
+
+    test("sets app badge with integer count", async () => {
+      const ok = await setAppBadge(5);
+      assert.equal(ok, true);
+      assert.equal(badgeValue, 5);
+      assert.equal(isCleared, false);
+    });
+
+    test("clears badge automatically when count is 0", async () => {
+      const ok = await setAppBadge(0);
+      assert.equal(ok, true);
+      assert.equal(isCleared, true);
+    });
+
+    test("clears badge directly via clearAppBadge", async () => {
+      const ok = await clearAppBadge();
+      assert.equal(ok, true);
+      assert.equal(isCleared, true);
+    });
+
+    test("gracefully catches exceptions and returns false without crashing", async () => {
+      Object.defineProperty(global, "navigator", {
+        value: {
+          setAppBadge: async () => {
+            throw new Error("SecurityError: Permission denied");
+          },
+          clearAppBadge: async () => {},
+        },
+        configurable: true,
+        writable: true,
+      });
+
+      const ok = await setAppBadge(10);
+      assert.equal(ok, false);
+    });
+
+    test("rejects non-finite badge counts (NaN / Infinity)", async () => {
+      assert.equal(await setAppBadge(NaN), false, "Must reject NaN badge count");
+      assert.equal(await setAppBadge(Infinity), false, "Must reject Infinity badge count");
+    });
+
+    test("calculates badge count strictly from actionable items", () => {
+      const counts: ActionableBadgeCounts = {
+        actionableTasks: 3,
+        pendingReviews: 2,
+        urgentOverdueTasks: 1,
+        pendingApprovals: 4,
+      };
+
+      const total = calculateActionableBadgeCount(counts);
+      assert.equal(total, 10);
+    });
+
+    test("handles zero and undefined counts gracefully", () => {
+      const counts: ActionableBadgeCounts = {
+        actionableTasks: 0,
+      };
+
+      const total = calculateActionableBadgeCount(counts);
+      assert.equal(total, 0);
+    });
+
+    test("updates OS badge with actionable sum and clears when total is zero", async () => {
+      // 1. Positive actionable count
+      await updateActionableBadge({
+        actionableTasks: 2,
+        pendingApprovals: 1,
+      });
+      assert.equal(badgeValue, 3);
+
+      // 2. Zero actionable count
+      await updateActionableBadge({
+        actionableTasks: 0,
+        pendingReviews: 0,
+      });
+      assert.equal(isCleared, true);
     });
   });
 });

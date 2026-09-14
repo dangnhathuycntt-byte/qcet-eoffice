@@ -298,6 +298,34 @@ describe("Desktop Sidebar & Shortcut Guard Test Suite (sidebar-navigation-sync)"
     });
   });
 
+  describe("Mobile Navigation & Drawer Synchronization (merged)", () => {
+    test("mobile-bottom-nav.tsx wires haptics and safe-area ergonomics", () => {
+      const navPath = path.resolve(
+        process.cwd(),
+        "src/components/navigation/mobile-bottom-nav.tsx"
+      );
+      const content = fs.readFileSync(navPath, "utf-8");
+      assert.ok(content.includes('triggerHaptic("light")'), "Bottom nav taps must trigger light haptics");
+      assert.ok(content.includes("safe-area-inset-bottom"), "Bottom nav must respect the safe-area inset");
+    });
+
+    test("navigation.tsx defines standardized tabs matching desktop zones", () => {
+      const navPath = path.resolve(process.cwd(), "src/components/navigation.tsx");
+      const content = fs.readFileSync(navPath, "utf-8");
+      assert.ok(content.includes("triggerHaptic"), "navigation.tsx must trigger haptics");
+      assert.ok(
+        content.includes("pb-safe") || content.includes("safe-area-inset-bottom"),
+        "navigation.tsx must respect the safe-area inset"
+      );
+      assert.ok(content.includes("Tổng quan"), "navigation.tsx must label the overview tab");
+    });
+
+    test("app-sidebar.tsx is desktop-only without dead mobile drawer state", () => {
+      const content = fs.readFileSync(sidebarPath, "utf-8");
+      assert.ok(!content.includes("isMobileOpen"), "Desktop sidebar must not carry mobile drawer state");
+    });
+  });
+
   describe("Plan 10.3: Canonical Order, Visual Groups & Footer Discipline", () => {
     test("canonical order: tasks immediately follows workbench (desk)", () => {
       const items = getSidebarNavItems();

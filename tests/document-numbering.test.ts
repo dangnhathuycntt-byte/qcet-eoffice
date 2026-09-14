@@ -12,6 +12,8 @@ import {
   getDocumentById
 } from "../src/lib/documents/document-service";
 import type { DocumentItem, DocumentType } from "../src/types/document";
+import { formatIsoDate, formatDisplayDate } from "@/lib/format";
+import { getRegistryStateKind } from "@/lib/documents/registry-state";
 
 describe("Document Numbering Engine (ND 30/2020)", () => {
   test("formats incoming and outgoing document numbers properly", () => {
@@ -162,5 +164,69 @@ describe("Document Registration Service", () => {
     const list = await listDocuments({ type: "VAN_BAN_DEN", documentYear: 2026 }, mockPrismaClient as any);
     assert.equal(list.length, 1);
     assert.equal(list[0].id, created.id);
+  });
+});
+
+describe("T49: ICT (UTC+7) Date Formatting & No Slicing", () => {
+  test("Date object near UTC midnight formats to ICT day accurately", () => {
+    // 2026-09-09T23:00:00.000Z in UTC is 2026-09-10 06:00:00 in ICT (UTC+7)
+    const lateNightUtc = new Date("2026-09-09T23:00:00.000Z");
+
+    // naive .slice(0, 10) on ISO string would give "2026-09-09" (WRONG UTC day)
+    assert.strictEqual(lateNightUtc.toISOString().slice(0, 10), "2026-09-09");
+
+    // formatIsoDate gives ICT date "2026-09-10"
+    assert.strictEqual(formatIsoDate(lateNightUtc), "2026-09-10");
+
+    // formatDisplayDate gives ICT display format "10/09/2026"
+    assert.strictEqual(formatDisplayDate(lateNightUtc), "10/09/2026");
+  });
+
+  test("ISO string with +07:00 offset preserves local calendar day", () => {
+    const ictIso = "2026-09-10T08:30:00+07:00";
+    assert.strictEqual(formatIsoDate(ictIso), "2026-09-10");
+    assert.strictEqual(formatDisplayDate(ictIso), "10/09/2026");
+  });
+});
+
+describe("T50 & T51: Failed Fetch Never Renders 'No Documents' Empty State", () => {
+  test("Failed fetch sets state to 'error', not 'empty'", () => {
+    const stateOnFailure = getRegistryStateKind({
+      isLoading: false,
+      hasError: true,
+      itemCount: 0,
+    });
+    assert.strictEqual(
+      stateOnFailure,
+      "error",
+      "When fetch fails, state must be 'error', never 'empty'"
+    );
+  });
+
+  test("Successful empty response sets state to 'empty'", () => {
+    const stateOnEmpty = getRegistryStateKind({
+      isLoading: false,
+      hasError: false,
+      itemCount: 0,
+    });
+    assert.strictEqual(stateOnEmpty, "empty");
+  });
+
+  test("Loading state takes precedence", () => {
+    const stateOnLoading = getRegistryStateKind({
+      isLoading: true,
+      hasError: false,
+      itemCount: 0,
+    });
+    assert.strictEqual(stateOnLoading, "loading");
+  });
+
+  test("Populated documents set state to 'data'", () => {
+    const stateOnData = getRegistryStateKind({
+      isLoading: false,
+      hasError: false,
+      itemCount: 5,
+    });
+    assert.strictEqual(stateOnData, "data");
   });
 });

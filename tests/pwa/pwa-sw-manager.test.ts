@@ -1,7 +1,5 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 
 import {
   checkHasUnsavedChanges,
@@ -11,23 +9,6 @@ import {
 } from "../../src/components/pwa/pwa-service-worker-manager";
 
 describe("Task 2: PWA Service Worker Manager & Safe Update UX", () => {
-  const rootDir = path.resolve(__dirname, "../..");
-  const layoutPath = path.join(rootDir, "src", "app", "layout.tsx");
-  const swManagerPath = path.join(
-    rootDir,
-    "src",
-    "components",
-    "pwa",
-    "pwa-service-worker-manager.tsx"
-  );
-  const updateDialogPath = path.join(
-    rootDir,
-    "src",
-    "components",
-    "pwa",
-    "pwa-update-dialog.tsx"
-  );
-
   let originalNodeEnv: string | undefined;
 
   function setMockDom(mockWindow: unknown, mockDocument: unknown) {
@@ -559,131 +540,6 @@ describe("Task 2: PWA Service Worker Manager & Safe Update UX", () => {
       cleanup();
 
       assert.strictEqual(removedListener, true, "Must remove controllerchange listener on cleanup");
-    });
-
-    it("separates service worker registration effect from form activity listener", () => {
-      const content = fs.readFileSync(swManagerPath, "utf-8");
-
-      // Verify registration effect has empty dependency array []
-      assert.ok(
-        content.includes("void registerServiceWorker"),
-        "Must invoke registerServiceWorker in manager"
-      );
-      assert.ok(
-        content.includes('window.removeEventListener("qcet:check-sw-update", handleManualCheck);') &&
-          content.includes("  }, []);"),
-        "Registration effect must have empty dependency array [] to run once on mount"
-      );
-
-      // Verify form activity listener is isolated with [updateAvailable] dependency array
-      assert.ok(
-        content.includes('window.addEventListener("input", handleActivity, { passive: true });') &&
-          content.includes("  }, [updateAvailable]);"),
-        "Form activity listeners must be in a dedicated effect depending on [updateAvailable]"
-      );
-    });
-  });
-
-  describe("4. PWAUpdateDialog UX & Anti-Slop Component Contract", () => {
-    it("dialog file exists and contains compliant Vietnamese warning and CTA copy", () => {
-      assert.ok(fs.existsSync(updateDialogPath), "PWAUpdateDialog component file must exist");
-      const content = fs.readFileSync(updateDialogPath, "utf-8");
-
-      // Dirty warning copy
-      assert.ok(
-        content.includes("Có bản cập nhật mới. Vui lòng hoàn tất biểu mẫu trước khi cập nhật."),
-        "Must include exact dirty-form protection warning copy"
-      );
-
-      // Clean update copy
-      assert.ok(
-        content.includes("Có phiên bản QCET E-Office mới"),
-        "Must include new version notification title"
-      );
-      assert.ok(
-        content.includes("Cập nhật ngay"),
-        "Must include [Cập nhật ngay] CTA button"
-      );
-      assert.ok(
-        content.includes("Để sau"),
-        "Must include [Để sau] dismiss button"
-      );
-    });
-
-    it("adheres to light-only anti-slop rules (0 dark: classes, 0 emojis)", () => {
-      const dialogContent = fs.readFileSync(updateDialogPath, "utf-8");
-      const managerContent = fs.readFileSync(swManagerPath, "utf-8");
-
-      // 0 dark: classes
-      assert.ok(
-        !dialogContent.includes("dark:"),
-        "PWAUpdateDialog must not contain dark: theme classes"
-      );
-      assert.ok(
-        !managerContent.includes("dark:"),
-        "PWAServiceWorkerManager must not contain dark: theme classes"
-      );
-
-      // 0 emojis
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-      assert.ok(
-        !emojiRegex.test(dialogContent),
-        "PWAUpdateDialog must contain zero emojis"
-      );
-      assert.ok(
-        !emojiRegex.test(managerContent),
-        "PWAServiceWorkerManager must contain zero emojis"
-      );
-    });
-
-    it("provides mobile touch target ergonomics (min-h-[44px])", () => {
-      const content = fs.readFileSync(updateDialogPath, "utf-8");
-      assert.ok(
-        content.includes("min-h-[44px]"),
-        "PWAUpdateDialog action buttons must provide minimum 44px touch targets"
-      );
-    });
-
-    it("has accessible ARIA roles and labels", () => {
-      const content = fs.readFileSync(updateDialogPath, "utf-8");
-      assert.ok(
-        content.includes('role="region"'),
-        "PWAUpdateDialog must define accessible role"
-      );
-      assert.ok(
-        content.includes('aria-label="Thông báo cập nhật QCET E-Office"'),
-        "PWAUpdateDialog must define accessible aria-label"
-      );
-    });
-  });
-
-  describe("5. Root Layout Integration (src/app/layout.tsx)", () => {
-    it("mounts PWAServiceWorkerManager in RootLayout", () => {
-      const content = fs.readFileSync(layoutPath, "utf-8");
-      assert.ok(
-        content.includes("import { PWAServiceWorkerManager }"),
-        "layout.tsx must import PWAServiceWorkerManager"
-      );
-      assert.ok(
-        content.includes("<PWAServiceWorkerManager />"),
-        "layout.tsx must render <PWAServiceWorkerManager />"
-      );
-    });
-
-    it("removes legacy inline service worker registration script from layout.tsx", () => {
-      const content = fs.readFileSync(layoutPath, "utf-8");
-      assert.ok(
-        !content.includes("navigator.serviceWorker.register"),
-        "layout.tsx must NOT contain inline navigator.serviceWorker.register script"
-      );
-    });
-
-    it("preserves display density pre-hydration script in <head>", () => {
-      const content = fs.readFileSync(layoutPath, "utf-8");
-      assert.ok(
-        content.includes("qcet-display-density"),
-        "layout.tsx must preserve qcet-display-density pre-hydration script"
-      );
     });
   });
 });

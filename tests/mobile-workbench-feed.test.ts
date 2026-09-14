@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -11,10 +9,16 @@ import {
   getRoleChipLabel,
   formatShortDueDate,
 } from "../src/components/dashboard/workbench-mobile-feed";
+import {
+  MobileTaskCard,
+  formatMobileDueDate,
+  getMobileDueBadge,
+} from "../src/components/tasks/mobile-task-card";
+import { TaskTableToolbar } from "../src/components/tasks/table/task-table-toolbar";
 import type { SchoolTask, DashboardStats } from "../src/types/dashboard";
 import type { AuthUser } from "../src/types/auth";
 
-describe("Mobile Workbench Attention-First Feed (/)", () => {
+describe("Mobile Workbench Feed & Task Workspace", () => {
   const mockTasks: SchoolTask[] = [
     {
       id: "task-1",
@@ -72,7 +76,30 @@ describe("Mobile Workbench Attention-First Feed (/)", () => {
     averageSchoolProgressPercent: 68,
   } as unknown as DashboardStats;
 
-  test("1. Utility functions format dates, greetings, and roles accurately", () => {
+  const mockTaskCardTask: SchoolTask = {
+    id: "task-001",
+    code: "NV-001",
+    title: "Xây dựng kế hoạch tuyển sinh 2026",
+    description: "Chi tiết kế hoạch tuyển sinh đợt 1 năm học 2026",
+    status: "IN_PROGRESS",
+    priority: "HIGH",
+    dueDate: "2026-10-15",
+    startDate: "2026-09-01",
+    progressPercent: 72,
+    totalSubTasks: 4,
+    completedSubTasks: 2,
+    department: "Phòng Đào tạo",
+    departmentCode: "DAO_TAO",
+    leadAssigneeName: "Nguyễn Văn A",
+    assignedDate: "2026-09-01",
+    coAssignees: [],
+    subTasks: [],
+    academicMonth: 10,
+    category: "CNTT",
+    categoryLabel: "Đào tạo",
+  };
+
+  test("1. Workbench utility functions format dates, greetings, and roles accurately", () => {
     // Vietnamese date format
     const formatted = formatVietnameseCurrentDate("2026-09-09");
     assert.match(formatted, /Thứ Tư, ngày 09\/09\/2026/);
@@ -145,45 +172,7 @@ describe("Mobile Workbench Attention-First Feed (/)", () => {
     assert.ok(html.includes("Thông báo điều hành mới"));
   });
 
-  test("3. Desktop KPI grid is hidden on mobile and visible on desktop in DashboardZone", () => {
-    const dashboardZonePath = path.resolve(
-      __dirname,
-      "../src/components/dashboard/zones/dashboard-zone.tsx"
-    );
-    const content = fs.readFileSync(dashboardZonePath, "utf-8");
-
-    // Must import and mount WorkbenchMobileFeed
-    assert.ok(
-      content.includes("WorkbenchMobileFeed"),
-      "DashboardZone must import WorkbenchMobileFeed"
-    );
-
-    // Mobile container must be block sm:hidden
-    assert.ok(
-      content.includes('className="block sm:hidden"') ||
-      content.includes("data-slot=\"mobile-workbench-feed-container\""),
-      "Mobile container must have block sm:hidden"
-    );
-
-    // Desktop container must be hidden sm:block
-    assert.ok(
-      content.includes('className="hidden sm:block space-y-6"') ||
-      content.includes("data-slot=\"desktop-workbench-container\""),
-      "Desktop container must have hidden sm:block"
-    );
-
-    // The compact summary strip is inside the desktop container. (The dashboard uses
-    // DashboardSituationStrip; ExecutiveStatStrip's KPI grid is not mounted here.)
-    const desktopIndex = content.indexOf('data-slot="desktop-workbench-container"');
-    const statStripIndex = content.indexOf("<DashboardSituationStrip", desktopIndex);
-    assert.ok(
-      desktopIndex !== -1 && statStripIndex > desktopIndex,
-      "DashboardSituationStrip must be rendered inside the desktop container"
-    );
-    assert.equal(content.includes("<ExecutiveStatStrip"), false, "KPI grid must not be mounted");
-  });
-
-  test("4. Role-aware sections: BGH vs Manager vs Staff", () => {
+  test("3. Role-aware sections: BGH vs Manager vs Staff", () => {
     // Executive (BGH)
     const bghHtml = renderToStaticMarkup(
       React.createElement(WorkbenchMobileFeed, {
@@ -235,93 +224,7 @@ describe("Mobile Workbench Attention-First Feed (/)", () => {
     assert.ok(staffHtml.includes("/tasks?scope=my"));
   });
 
-  test("5. Zero emojis in source and rendered output", () => {
-    const feedSourcePath = path.resolve(
-      __dirname,
-      "../src/components/dashboard/workbench-mobile-feed.tsx"
-    );
-    const sourceContent = fs.readFileSync(feedSourcePath, "utf-8");
-
-    // Unicode emoji regex
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-
-    assert.equal(
-      emojiRegex.test(sourceContent),
-      false,
-      "workbench-mobile-feed.tsx must not contain emojis"
-    );
-
-    const html = renderToStaticMarkup(
-      React.createElement(WorkbenchMobileFeed, {
-        isExecutive: true,
-        stats: mockStats,
-        tasks: mockTasks,
-        referenceDate: "2026-09-09",
-      })
-    );
-    assert.equal(
-      emojiRegex.test(html),
-      false,
-      "Rendered HTML must not contain emojis"
-    );
-  });
-
-  test("6. Light-Only standard (strictly zero dark: classes)", () => {
-    const feedSourcePath = path.resolve(
-      __dirname,
-      "../src/components/dashboard/workbench-mobile-feed.tsx"
-    );
-    const sourceContent = fs.readFileSync(feedSourcePath, "utf-8");
-
-    assert.equal(
-      sourceContent.includes("dark:"),
-      false,
-      "workbench-mobile-feed.tsx must not contain dark: classes"
-    );
-
-    const html = renderToStaticMarkup(
-      React.createElement(WorkbenchMobileFeed, {
-        isExecutive: true,
-        stats: mockStats,
-        tasks: mockTasks,
-        referenceDate: "2026-09-09",
-      })
-    );
-    assert.equal(
-      html.includes("dark:"),
-      false,
-      "Rendered HTML must not contain dark: classes"
-    );
-  });
-
-  test("7. Mobile ergonomics: touch targets and tabular numerals", () => {
-    const html = renderToStaticMarkup(
-      React.createElement(WorkbenchMobileFeed, {
-        isExecutive: true,
-        stats: mockStats,
-        tasks: mockTasks,
-        referenceDate: "2026-09-09",
-      })
-    );
-
-    // Minimum touch target classes
-    assert.ok(
-      html.includes("min-h-[48px]"),
-      "Interactive cards and buttons must specify min-h-[48px] touch targets"
-    );
-    assert.ok(
-      html.includes("touch-manipulation"),
-      "Touch manipulation class must be present for responsive tap behavior"
-    );
-
-    // Tabular numerals for dates, counts, and metrics
-    assert.ok(
-      html.includes("font-mono tabular-nums"),
-      "Tabular numerals must be applied to counts and dates"
-    );
-  });
-
-  test("5. P0-03 regression: progress 100 is not completion", () => {
+  test("4. P0-03 regression: progress 100 is not completion", () => {
     // Plan P0-03 / T03: "canonical completion must be lifecycle completion, not
     // percent". Before the fix the progress bar turned emerald at progress >= 100,
     // so a task still WAITING_APPROVAL rendered as if it were done.
@@ -355,5 +258,79 @@ describe("Mobile Workbench Attention-First Feed (/)", () => {
       false,
       "a task at progress 100 that is NOT lifecycle-COMPLETED must not render the completed (emerald) progress bar"
     );
+  });
+
+  describe("Mobile Task Workspace (Sprint M1)", () => {
+    describe("5. formatMobileDueDate and getMobileDueBadge helpers", () => {
+      test("formats mobile due date cleanly without emoji", () => {
+        assert.equal(formatMobileDueDate("2026-10-15"), "Hạn 15/10");
+        assert.equal(formatMobileDueDate(undefined), "Không hạn");
+      });
+
+      test("calculates overdue badges accurately", () => {
+        const badge = getMobileDueBadge("2026-09-01", "IN_PROGRESS", "2026-09-05");
+        assert.ok(badge.label.includes("Quá hạn 4 ngày"));
+        assert.ok(badge.className.includes("text-rose-700"));
+      });
+
+      test("calculates completed status badge accurately", () => {
+        const badge = getMobileDueBadge("2026-09-01", "COMPLETED", "2026-09-05");
+        assert.equal(badge.label, "Hoàn thành");
+        assert.ok(badge.className.includes("text-emerald-700"));
+      });
+    });
+
+    describe("6. MobileTaskCard Component Ergonomics", () => {
+      test("renders task code, status badge, title, unit, and progress with clean styling", () => {
+        const html = renderToStaticMarkup(
+          React.createElement(MobileTaskCard, {
+            task: mockTaskCardTask,
+            onSelectTask: () => {},
+          })
+        );
+
+        // Task code
+        assert.ok(html.includes("NV-001"), "Must display task code NV-001");
+        // Title
+        assert.ok(html.includes("Xây dựng kế hoạch tuyển sinh 2026"), "Must display task title");
+        // Department and Assignee
+        assert.ok(html.includes("Phòng Đào tạo"), "Must display department");
+        assert.ok(html.includes("Nguyễn Văn A"), "Must display assignee name");
+        // Progress percentage
+        assert.ok(html.includes("72%"), "Must display progress percentage");
+        // Touch manipulation and minimum 48px height target
+        assert.ok(html.includes("touch-manipulation"), "Card must have touch-manipulation");
+        assert.ok(html.includes("min-h-[48px]"), "Card must have min-h-[48px]");
+      });
+    });
+
+    describe("7. TaskTableToolbar Mobile Ergonomics", () => {
+      test("renders mobile task bar with search input, quick filter chips, and filter trigger", () => {
+        const html = renderToStaticMarkup(
+          React.createElement(TaskTableToolbar, {
+            searchQuery: "",
+            onSearchChange: () => {},
+            activeTab: "all",
+            onTabChange: () => {},
+            totalTasksCount: 25,
+            pillCounts: {
+              all: 25,
+              my_tasks: 8,
+              review: 3,
+              overdue: 2,
+            },
+          })
+        );
+
+        // Mobile task bar (< md)
+        assert.ok(html.includes("md:hidden"), "Must contain mobile-specific section");
+        assert.ok(html.includes("Tất cả"), "Must render all count chip");
+        assert.ok(html.includes("(25)"), "Must render all count value");
+        assert.ok(html.includes("Của tôi"), "Must render my tasks count chip");
+        assert.ok(html.includes("Chờ duyệt"), "Must render pending review count chip");
+        assert.ok(html.includes("Quá hạn"), "Must render overdue count chip");
+        assert.ok(html.includes("Bộ lọc"), "Must render filter bottom sheet trigger button");
+      });
+    });
   });
 });

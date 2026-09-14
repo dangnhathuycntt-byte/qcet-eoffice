@@ -1,10 +1,13 @@
-import { test, describe } from "node:test";
+import { test, describe, it } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { UnifiedAdaptiveWorkspace } from "../src/components/workspace/unified-adaptive-workspace";
 import { AdaptiveMetricStrip } from "../src/components/workspace/components/adaptive-metric-strip";
 import { UniversalActionQueue } from "../src/components/workspace/components/universal-action-queue";
+import { validateDeliverableSubmission } from "../src/components/portal/submit-deliverable-modal";
 import {
   getRoleTourSteps,
   getRoleChecklist,
@@ -282,5 +285,215 @@ describe("Workspace Real Data Flow & Authentic State Suite", () => {
         )
       );
     });
+  });
+});
+
+
+/* ===== merged from tests/workspace-real-sync.test.ts ===== */
+
+
+
+
+
+
+
+
+
+describe("Workspace & Onboarding Real Sync Suite", () => {
+  const adminUser: AuthUser = {
+    id: "usr-admin-real",
+    email: "bgh@cdktcnqn.edu.vn",
+    name: "TS. Nguyễn Văn A",
+    role: "ADMIN",
+    dbRole: "BAN_GIAM_HIEU",
+    roleLabel: "Ban Giám hiệu",
+    department: "Ban Giám hiệu",
+    departmentCode: "BGH",
+  };
+
+  const managerUser: AuthUser = {
+    id: "usr-mgr-real",
+    email: "truongphong@cdktcnqn.edu.vn",
+    name: "ThS. Trần Thị B",
+    role: "MANAGER",
+    dbRole: "TRUONG_PHONG",
+    roleLabel: "Trưởng phòng Đào tạo",
+    department: "Phòng Quản lý Đào tạo",
+    departmentCode: "P_QLDT",
+  };
+
+  const staffUser: AuthUser = {
+    id: "usr-staff-real",
+    email: "chuyenvien@cdktcnqn.edu.vn",
+    name: "Lê Văn C",
+    role: "STAFF",
+    dbRole: "CHUYEN_VIEN",
+    roleLabel: "Chuyên viên Khảo thí",
+    department: "Phòng Khảo thí & ĐBCL",
+    departmentCode: "P_KTDBCL",
+  };
+
+  test("1. Workspace gán default scope dựa trên user thật từ session", () => {
+    const htmlAdmin = renderToStaticMarkup(
+      React.createElement(UnifiedAdaptiveWorkspace, {
+        user: adminUser,
+        tasks: [],
+        onSelectTask: () => {},
+      })
+    );
+    assert.ok(htmlAdmin.includes("data-active-scope=\"school\""));
+
+    const htmlMgr = renderToStaticMarkup(
+      React.createElement(UnifiedAdaptiveWorkspace, {
+        user: managerUser,
+        tasks: [],
+        onSelectTask: () => {},
+      })
+    );
+    assert.ok(htmlMgr.includes("data-active-scope=\"unit\""));
+
+    const htmlStaff = renderToStaticMarkup(
+      React.createElement(UnifiedAdaptiveWorkspace, {
+        user: staffUser,
+        tasks: [],
+        onSelectTask: () => {},
+      })
+    );
+    assert.ok(htmlStaff.includes("data-active-scope=\"my\""));
+    assert.ok(htmlStaff.includes("role=\"tablist\""));
+    assert.ok(!htmlStaff.includes("data-slot=\"staff-scope-indicator\""));
+  });
+
+  test("2. Trạng thái onboarding gắn theo ID người dùng thật trong CSDL", () => {
+    const keyUser1 = getOnboardingStorageKey("usr-admin-real");
+    const keyUser2 = getOnboardingStorageKey("usr-mgr-real");
+    assert.notStrictEqual(keyUser1, keyUser2);
+    assert.ok(keyUser1.includes("usr-admin-real"));
+    assert.ok(keyUser2.includes("usr-mgr-real"));
+
+    const userWithDbData = {
+      id: "usr-admin-real",
+      onboardedAt: "2026-09-01T08:00:00Z",
+      onboardingData: {
+        hasSeenWelcome: true,
+        hasCompletedTour: true,
+        completedSteps: ["step-profile", "step-push", "step-action", "step-search"],
+        isDismissed: true,
+        snoozedUntil: null,
+      },
+    };
+
+    const resolved = resolveOnboardingState(userWithDbData, null);
+    assert.strictEqual(resolved.hasSeenWelcome, true);
+    assert.strictEqual(resolved.hasCompletedTour, true);
+    assert.strictEqual(resolved.isDismissed, true);
+    assert.strictEqual(resolved.completedSteps.length, 4);
+  });
+
+  test("3. Không fallback về mock payload khi API trả về lỗi hoặc rỗng", () => {
+    const emptyTasks: SchoolTask[] = [];
+
+    const htmlOffline = renderToStaticMarkup(
+      React.createElement(UnifiedAdaptiveWorkspace, {
+        user: adminUser,
+        tasks: emptyTasks,
+        isOffline: true,
+        errorMessage: "Lỗi kết nối máy chủ dữ liệu QCET",
+        onSelectTask: () => {},
+        onRefresh: () => {},
+      })
+    );
+
+    assert.ok(htmlOffline.includes("data-slot=\"workspace-offline-alert\""));
+    assert.ok(htmlOffline.includes("Lỗi kết nối máy chủ dữ liệu QCET"));
+    assert.ok(htmlOffline.includes("data-slot=\"workspace-empty-state\""));
+    assert.ok(htmlOffline.includes("Chưa có nhiệm vụ nào được phân công trong kỳ này"));
+    // Ensure no mock tasks are generated
+    assert.ok(!htmlOffline.includes("Đề xuất mở lớp đào tạo cấp chứng chỉ"));
+    assert.ok(!htmlOffline.includes("Dự án xây dựng phòng thí nghiệm"));
+  });
+});
+
+
+/* ===== merged from tests/workspace-action-queue.test.ts ===== */
+
+
+
+
+
+
+describe("Task 5: Workspace Action Queue & DACUM Review", () => {
+  it("universal-action-queue.tsx does NOT contain hardcoded BGH approval string", () => {
+    const filePath = path.resolve(__dirname, "../src/components/workspace/components/universal-action-queue.tsx");
+    const content = fs.readFileSync(filePath, "utf-8");
+    assert.ok(
+      !content.includes('reviewedByName: "BGH"'),
+      "Must not hardcode reviewedByName: 'BGH'"
+    );
+  });
+
+  it("validateDeliverableSubmission rejects invalid URLs like '#' or 'javascript:'", () => {
+    const res1 = validateDeliverableSubmission("Báo cáo", "#");
+    assert.equal(res1.isValid, false);
+    assert.ok(res1.error?.includes("URL") || res1.error?.includes("giao thức"));
+
+    const res2 = validateDeliverableSubmission("Báo cáo", "javascript:alert(1)");
+    assert.equal(res2.isValid, false);
+    assert.ok(res2.error?.includes("giao thức http:// hoặc https://"));
+
+    const resFtp = validateDeliverableSubmission("Báo cáo", "ftp://ftp.example.com/file.zip");
+    assert.equal(resFtp.isValid, false);
+    assert.ok(resFtp.error?.includes("giao thức http:// hoặc https://"));
+
+    const resData = validateDeliverableSubmission("Báo cáo", "data:text/html,test");
+    assert.equal(resData.isValid, false);
+
+    const resMalformed = validateDeliverableSubmission("Báo cáo", "random-domain-without-protocol.com");
+    assert.equal(resMalformed.isValid, false);
+
+    const res3 = validateDeliverableSubmission("Báo cáo", "https://drive.google.com/file/123");
+    assert.equal(res3.isValid, true);
+    assert.equal(res3.error, undefined);
+
+    const resHttp = validateDeliverableSubmission("Báo cáo", "http://example.edu.vn/document");
+    assert.equal(resHttp.isValid, true);
+  });
+
+  it("validateDeliverableSubmission enforces non-empty deliverable title", () => {
+    const emptyName = validateDeliverableSubmission("", "https://example.com");
+    assert.equal(emptyName.isValid, false);
+    assert.ok(emptyName.error?.includes("tên minh chứng"));
+
+    const whitespaceName = validateDeliverableSubmission("   ", "https://example.com");
+    assert.equal(whitespaceName.isValid, false);
+
+    const validNoUrl = validateDeliverableSubmission("Báo cáo DACUM kỳ 1");
+    assert.equal(validNoUrl.isValid, true);
+  });
+
+  it("unified-adaptive-workspace.tsx integrates ReviewActionDialog passing session user identity", () => {
+    const filePath = path.resolve(__dirname, "../src/components/workspace/unified-adaptive-workspace.tsx");
+    const content = fs.readFileSync(filePath, "utf-8");
+    assert.ok(
+      content.includes("ReviewActionDialog"),
+      "UnifiedAdaptiveWorkspace must import and connect ReviewActionDialog"
+    );
+    assert.ok(
+      content.includes("reviewerName={user.name}"),
+      "ReviewActionDialog must receive logged-in user name as reviewerName"
+    );
+    assert.ok(
+      content.includes("reviewerRole={effectiveReviewerRole}"),
+      "ReviewActionDialog must receive effective reviewer role from context/user"
+    );
+  });
+
+  it("unified-adaptive-workspace.tsx integrates SubmitDeliverableModal for deliverables", () => {
+    const filePath = path.resolve(__dirname, "../src/components/workspace/unified-adaptive-workspace.tsx");
+    const content = fs.readFileSync(filePath, "utf-8");
+    assert.ok(
+      content.includes("SubmitDeliverableModal"),
+      "UnifiedAdaptiveWorkspace must import and connect SubmitDeliverableModal"
+    );
   });
 });

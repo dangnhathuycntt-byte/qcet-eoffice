@@ -2,9 +2,10 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import { GET, POST } from '../src/app/api/tasks/route';
+import { GET as getTaskDetail, PATCH as patchTask } from '../src/app/api/tasks/[id]/route';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
-import { TaskScope, TaskPriority, TaskStatus } from '@prisma/client';
+import { TaskScope, TaskPriority, TaskStatus, AssigneeRole } from '@prisma/client';
 
 describe('Tasks API Route Handler Tests', () => {
   let testUserId: string;
@@ -36,15 +37,29 @@ describe('Tasks API Route Handler Tests', () => {
   after(async () => {
     // Cleanup any tasks created during tests
     if (createdTaskIds.length > 0) {
+      await prisma.document.updateMany({
+        where: { linkedTaskId: { in: createdTaskIds } },
+        data: { linkedTaskId: null },
+      });
       await prisma.taskAssignee.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
       await prisma.taskDeliverable.deleteMany({
         where: { taskId: { in: createdTaskIds } },
       });
-      await prisma.task.deleteMany({
+      const allTasks = await prisma.task.findMany({
         where: { id: { in: createdTaskIds } },
+        select: { id: true, parentTaskId: true },
       });
+      const subtaskIds = allTasks.filter((t) => t.parentTaskId).map((t) => t.id);
+      const parentIds = allTasks.filter((t) => !t.parentTaskId).map((t) => t.id);
+
+      if (subtaskIds.length > 0) {
+        await prisma.task.deleteMany({ where: { id: { in: subtaskIds } } });
+      }
+      if (parentIds.length > 0) {
+        await prisma.task.deleteMany({ where: { id: { in: parentIds } } });
+      }
     }
   });
 
@@ -204,5 +219,264 @@ describe('Tasks API Route Handler Tests', () => {
     const json = await res.json();
     assert.strictEqual(json.success, true);
     assert.ok(Array.isArray(json.data));
+  });
+
+  // ==========================================================================
+  // Merged from task-subtask-api-single-dri.test.ts
+  // ==========================================================================
+  describe('Single DRI and Subtask Hierarchy Route Contracts', () => {
+    let staffUser1: any;
+    let staffUser2: any;
+    let staffToken1: string;
+    let parentCreatedTaskId: string;
+
+    before(async () => {
+      const users = await prisma.user.findMany({ take: 5 });
+      const nonAdmins = users.filter((u) => u.id !== testUserId);
+      staffUser1 = nonAdmins[0] || users[0];
+      staffUser2 = nonAdmins[1] || users[1] || users[0];
+
+      staffToken1 = signSessionToken({
+        id: staffUser1.id,
+        email: staffUser1.email,
+        name: staffUser1.name,
+        role: staffUser1.role,
+        departmentId: staffUser1.departmentId,
+      });
+    });
+
+    test('POST /api/tasks: returns 404 when parentTaskId does not exist', async () => {
+      const req = new NextRequest('http://localhost:3000/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          origin: 'http://localhost:3000',
+          cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        },
+        body: JSON.stringify({
+          title: 'Subtask with non-existent parent',
+          dueDate: '2026-10-30',
+          departmentId: testDeptId,
+          parentTaskId: 'non-existent-task-id-12345',
+        }),
+      });
+
+      const res = await POST(req);
+      assert.strictEqual(res.status, 404);
+      const json = await res.json();
+      assert.strictEqual(json.success, false);
+      assert.match(json.error, /Không tìm thấy nhiệm vụ cha/i);
+    });
+
+    test('POST /api/tasks: creates root task with single DRI (PRIMARY_OWNER) and collaborators', async () => {
+      const req = new NextRequest('http://localhost:3000/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          origin: 'http://localhost:3000',
+          cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        },
+        body: JSON.stringify({
+          title: 'Root Task Single DRI Route Test',
+          dueDate: '2026-10-25',
+          departmentId: testDeptId,
+          academicMonth: 10,
+          academicYear: '2026-2027',
+          assigneeId: staffUser1.id,
+          collaboratorIds: [staffUser2.id, staffUser1.id],
+        }),
+      });
+
+      const res = await POST(req);
+      assert.strictEqual(res.status, 201);
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+      parentCreatedTaskId = json.task.id;
+      createdTaskIds.push(parentCreatedTaskId);
+
+      const assignees = await prisma.taskAssignee.findMany({
+        where: { taskId: parentCreatedTaskId },
+      });
+
+      const owners = assignees.filter((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER);
+      const collabs = assignees.filter((a) => a.roleInTask === AssigneeRole.COLLABORATOR);
+
+      assert.strictEqual(owners.length, 1, 'Must have exactly 1 PRIMARY_OWNER');
+      assert.strictEqual(owners[0].userId, staffUser1.id);
+      assert.strictEqual(collabs.length, 1, 'Must have exactly 1 COLLABORATOR, deduplicating primary owner');
+      assert.strictEqual(collabs[0].userId, staffUser2.id);
+    });
+
+    test('POST /api/tasks: creates subtask inheriting department from parent and references parentTaskId', async () => {
+      assert.ok(parentCreatedTaskId);
+
+      const req = new NextRequest('http://localhost:3000/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          origin: 'http://localhost:3000',
+          cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        },
+        body: JSON.stringify({
+          title: 'Valid Subtask of Root Task',
+          dueDate: '2026-10-20',
+          parentTaskId: parentCreatedTaskId,
+          assigneeId: staffUser2.id,
+        }),
+      });
+
+      const res = await POST(req);
+      assert.strictEqual(res.status, 201);
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+      const subtaskId = json.task.id;
+      createdTaskIds.push(subtaskId);
+
+      const subtaskInDb = await prisma.task.findUnique({
+        where: { id: subtaskId },
+        include: { assignees: true, parentTask: true },
+      });
+
+      assert.ok(subtaskInDb);
+      assert.strictEqual(subtaskInDb.parentTaskId, parentCreatedTaskId);
+      assert.strictEqual(subtaskInDb.departmentId, testDeptId);
+      assert.strictEqual(subtaskInDb.scope, TaskScope.DEPARTMENT);
+    });
+
+    test('POST /api/tasks: enforces subtask dueDate cannot exceed parent dueDate', async () => {
+      assert.ok(parentCreatedTaskId);
+
+      const req = new NextRequest('http://localhost:3000/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          origin: 'http://localhost:3000',
+          cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        },
+        body: JSON.stringify({
+          title: 'Subtask with Invalid DueDate Exceeding Parent',
+          dueDate: '2026-11-15',
+          parentTaskId: parentCreatedTaskId,
+          assigneeId: staffUser1.id,
+        }),
+      });
+
+      const res = await POST(req);
+      assert.strictEqual(res.status, 400);
+      const json = await res.json();
+      assert.strictEqual(json.success, false);
+      assert.match(json.error, /Hạn chót của nhiệm vụ con không thể sau hạn chót của nhiệm vụ cha/i);
+    });
+
+    test('GET /api/tasks: returns parentTask and subTasks, supports assignedTo=me and scope=my', async () => {
+      const reqScopeMy = new NextRequest('http://localhost:3000/api/tasks?scope=my', {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${staffToken1}`,
+        },
+      });
+
+      const resScopeMy = await GET(reqScopeMy);
+      assert.strictEqual(resScopeMy.status, 200);
+      const jsonScopeMy = await resScopeMy.json();
+      assert.strictEqual(jsonScopeMy.success, true);
+      assert.ok(Array.isArray(jsonScopeMy.data));
+
+      const reqAssignedMe = new NextRequest('http://localhost:3000/api/tasks?assignedTo=me', {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${staffToken1}`,
+        },
+      });
+
+      const resAssignedMe = await GET(reqAssignedMe);
+      assert.strictEqual(resAssignedMe.status, 200);
+      const jsonAssignedMe = await resAssignedMe.json();
+      assert.strictEqual(jsonAssignedMe.success, true);
+    });
+
+    test('GET /api/tasks/[id]: includes parentTask and subTasks with relations', async () => {
+      assert.ok(parentCreatedTaskId);
+
+      const context = { params: Promise.resolve({ id: parentCreatedTaskId }) };
+      const req = new NextRequest(`http://localhost:3000/api/tasks/${parentCreatedTaskId}`, {
+        headers: {
+          cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        },
+      });
+
+      const res = await getTaskDetail(req, context);
+      assert.strictEqual(res.status, 200);
+      const json = await res.json();
+      assert.strictEqual(json.success, true);
+      const taskObj = json.task || json.data;
+      assert.ok(taskObj.subTasks !== undefined, 'task.subTasks must be defined');
+    });
+
+    test('PATCH /api/tasks/[id]: prevents self-referencing parentTaskId and handles invalid parentTaskId', async () => {
+      assert.ok(parentCreatedTaskId);
+      const context = { params: Promise.resolve({ id: parentCreatedTaskId }) };
+
+      const reqSelf = new NextRequest(`http://localhost:3000/api/tasks/${parentCreatedTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          origin: 'http://localhost:3000',
+          cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        },
+        body: JSON.stringify({
+          parentTaskId: parentCreatedTaskId,
+        }),
+      });
+      const resSelf = await patchTask(reqSelf, context);
+      assert.strictEqual(resSelf.status, 400);
+      const jsonSelf = await resSelf.json();
+      assert.match(jsonSelf.error, /Nhiệm vụ không thể là nhiệm vụ cha của chính nó/i);
+
+      const reqInvalid = new NextRequest(`http://localhost:3000/api/tasks/${parentCreatedTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          origin: 'http://localhost:3000',
+          cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        },
+        body: JSON.stringify({
+          parentTaskId: 'non-existent-parent-id-xyz',
+        }),
+      });
+      const resInvalid = await patchTask(reqInvalid, context);
+      assert.strictEqual(resInvalid.status, 404);
+    });
+
+    test('PATCH /api/tasks/[id]: safely updates single DRI and collaboratorIds', async () => {
+      assert.ok(parentCreatedTaskId);
+      const context = { params: Promise.resolve({ id: parentCreatedTaskId }) };
+
+      const req = new NextRequest(`http://localhost:3000/api/tasks/${parentCreatedTaskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          origin: 'http://localhost:3000',
+          cookie: `${SESSION_COOKIE_NAME}=${validToken}`,
+        },
+        body: JSON.stringify({
+          assigneeId: staffUser2.id,
+          collaboratorIds: [staffUser1.id],
+        }),
+      });
+
+      const res = await patchTask(req, context);
+      assert.strictEqual(res.status, 200);
+
+      const assignees = await prisma.taskAssignee.findMany({
+        where: { taskId: parentCreatedTaskId },
+      });
+
+      const owners = assignees.filter((a) => a.roleInTask === AssigneeRole.PRIMARY_OWNER);
+      const collabs = assignees.filter((a) => a.roleInTask === AssigneeRole.COLLABORATOR);
+
+      assert.strictEqual(owners.length, 1, 'Only 1 PRIMARY_OWNER');
+      assert.strictEqual(owners[0].userId, staffUser2.id);
+      assert.strictEqual(collabs.length, 1, 'Only 1 COLLABORATOR');
+      assert.strictEqual(collabs[0].userId, staffUser1.id);
+    });
   });
 });

@@ -43,7 +43,7 @@ describe("Task 5: Web App Manifest Audit, Stable Identity, Maskable Icons & Shor
     it("specifies correct QCET administrative name and short name", () => {
       assert.strictEqual(
         manifestData.name,
-        "QCET E-Office - Trường CĐ Kinh tế & Công nghệ Quảng Ninh"
+        "QCET E-Office - Trường CĐ Kỹ thuật Công nghệ Quy Nhơn"
       );
       assert.strictEqual(manifestData.short_name, "QCET E-Office");
       assert.strictEqual(
@@ -52,15 +52,19 @@ describe("Task 5: Web App Manifest Audit, Stable Identity, Maskable Icons & Shor
       );
     });
 
-    it("does not contain outdated Quy Nhon or non-canonical institution references", () => {
-      const serialized = JSON.stringify(manifestData);
+    it("does not contain non-canonical Quảng Ninh institution references", () => {
+      const serialized = JSON.stringify(manifestData).toLowerCase();
       assert.ok(
-        !serialized.toLowerCase().includes("quy nhơn"),
-        "Manifest must not contain references to Quy Nhơn"
+        !serialized.includes("quảng ninh"),
+        "Manifest must not contain references to Quảng Ninh"
       );
       assert.ok(
-        !serialized.toLowerCase().includes("quy nhon"),
-        "Manifest must not contain references to Quy Nhon"
+        !serialized.includes("quang ninh"),
+        "Manifest must not contain references to Quang Ninh"
+      );
+      assert.ok(
+        !serialized.includes("kinh tế"),
+        "Manifest must not contain the deprecated 'Kinh tế' institution name"
       );
     });
 
@@ -168,6 +172,11 @@ describe("Task 5: Web App Manifest Audit, Stable Identity, Maskable Icons & Shor
       const calShortcut = shortcuts.find((s) => s.url === "/calendar");
       assert.ok(calShortcut, "Must have /calendar shortcut");
       assert.strictEqual(calShortcut.name, "Lịch công tác");
+
+      const createTaskShortcut = shortcuts.find(
+        (s) => s.url === "/?action=create_task"
+      );
+      assert.ok(createTaskShortcut, "Must have /?action=create_task shortcut");
     });
 
     it("provides valid icon references for each shortcut", () => {

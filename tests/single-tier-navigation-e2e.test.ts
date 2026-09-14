@@ -168,6 +168,37 @@ describe("AppShell Responsive Layout & Container Padding (app-shell.tsx)", () =>
 
 describe("Single-Tier Sidebar Architecture (app-sidebar.tsx)", () => {
   const sidebarPath = path.resolve(__dirname, "../src/components/layout/app-sidebar.tsx");
+  const railPath = path.resolve(__dirname, "../src/components/layout/app-primary-rail.tsx");
+
+  it("app-primary-rail.tsx is completely deleted from the codebase", () => {
+    assert.strictEqual(fs.existsSync(railPath), false, "app-primary-rail.tsx must be deleted");
+  });
+
+  it("app-sidebar.tsx does NOT import or reference AppPrimaryRail or app-primary-rail", () => {
+    const content = fs.readFileSync(sidebarPath, "utf-8");
+    assert.strictEqual(content.includes("AppPrimaryRail"), false, "Must not reference AppPrimaryRail");
+    assert.strictEqual(
+      content.includes("app-primary-rail"),
+      false,
+      "Must not reference app-primary-rail"
+    );
+  });
+
+  it("app-sidebar.tsx renders the QCET brand header with school year", () => {
+    const content = fs.readFileSync(sidebarPath, "utf-8");
+    assert.ok(content.includes("/logo-qcet.png"), "Must use /logo-qcet.png");
+    assert.ok(
+      content.includes("CỔNG ĐIỀU HÀNH QCET") || content.includes("QUẢN LÝ CÔNG VIỆC"),
+      "Must render brand header title"
+    );
+    assert.ok(content.includes("Năm học 2026–2027"), "Must render academic year 2026–2027");
+  });
+
+  it("app-sidebar.tsx includes settings link in footer", () => {
+    const content = fs.readFileSync(sidebarPath, "utf-8");
+    assert.ok(content.includes("/settings"), "Must link to /settings");
+    assert.ok(content.includes("Cài đặt"), "Must have Cài đặt label");
+  });
 
   it("app-sidebar.tsx exists and exports AppSidebar", () => {
     assert.ok(fs.existsSync(sidebarPath), "app-sidebar.tsx must exist");

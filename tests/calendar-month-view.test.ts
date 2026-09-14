@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   generateMonthGrid,
   generateAcademicMonthGrid,
@@ -16,97 +14,21 @@ import {
 import {
   getAcademicMonthInfo,
   getAdjacentAcademicMonth,
+  getAcademicMonthPeriod,
+  getAcademicMonthsForYear,
+  ACADEMIC_MONTH_ORDER,
+  filterTasksByAcademicMonthStrict,
 } from "../src/lib/academic-calendar";
 import type { SchoolTask } from "../src/types/dashboard";
 
+// Consolidated behavioural coverage for the calendar month view:
+//   - calendar-month-view.tsx helper logic (grids, status dots, headers)
+//   - academic-cycle (25th-to-24th) grid mapping
+//   - legacy calendar-view.test.ts helper coverage
+//   - academic month cycle/scoping from calendar-monthly-sync.test.ts
+// Source-text/styling assertions were dropped per the testing invariants
+// (global equivalents live in tests/anti-slop-audit.test.ts).
 describe("Calendar Month View Component & Precision Specs", () => {
-  const componentPath = path.join(
-    __dirname,
-    "../src/components/calendar/calendar-month-view.tsx"
-  );
-  const calendarPagePath = path.join(
-    __dirname,
-    "../src/app/calendar/page.tsx"
-  );
-  const componentContent = fs.readFileSync(componentPath, "utf-8");
-  const calendarPageContent = fs.readFileSync(calendarPagePath, "utf-8");
-
-  describe("Anti-Slop Zero-Emoji Constraint", () => {
-    const emojiRegex =
-      /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
-
-    test("calendar-month-view.tsx contains ZERO decorative emojis", () => {
-      assert.equal(
-        emojiRegex.test(componentContent),
-        false,
-        "calendar-month-view.tsx must not contain any emojis"
-      );
-    });
-
-    test("src/app/calendar/page.tsx contains ZERO decorative emojis", () => {
-      assert.equal(
-        emojiRegex.test(calendarPageContent),
-        false,
-        "src/app/calendar/page.tsx must not contain any emojis"
-      );
-    });
-  });
-
-  describe("Grid & Styling Specifications", () => {
-    test("uses hairline grid borders (border-border/40 or border-border/60)", () => {
-      assert.ok(
-        componentContent.includes("border-border/40") ||
-          componentContent.includes("border-border/60"),
-        "Month grid must use subtle hairline borders"
-      );
-    });
-
-    test("day numbers use font-mono and tabular-nums", () => {
-      assert.ok(
-        componentContent.includes("font-mono"),
-        "Day numbers must use font-mono"
-      );
-      assert.ok(
-        componentContent.includes("tabular-nums"),
-        "Day numbers must use tabular-nums"
-      );
-    });
-
-    test("Lucide icons standardize strokeWidth to 1.5", () => {
-      assert.ok(
-        componentContent.includes("strokeWidth={1.5}"),
-        "Lucide icons should standardize strokeWidth to 1.5"
-      );
-    });
-
-    test("contains +N nhiệm vụ text format for overflow days", () => {
-      assert.ok(
-        componentContent.includes("nhiệm vụ"),
-        "Overflow indicator must use '+N nhiệm vụ'"
-      );
-    });
-
-    test("contains bottom legend with status dots and Vietnamese labels", () => {
-      assert.ok(
-        componentContent.includes("Hoàn thành"),
-        "Legend must include 'Hoàn thành'"
-      );
-      assert.ok(
-        componentContent.includes("Đang thực hiện"),
-        "Legend must include 'Đang thực hiện'"
-      );
-      assert.ok(
-        componentContent.includes("Chờ thực hiện") ||
-          componentContent.includes("Chờ xử lý"),
-        "Legend must include 'Chờ thực hiện' or 'Chờ xử lý'"
-      );
-      assert.ok(
-        componentContent.includes("Quá hạn"),
-        "Legend must include 'Quá hạn'"
-      );
-    });
-  });
-
   describe("Status Dots & Label Logic", () => {
     test("getStatusDotClass returns emerald for COMPLETED", () => {
       assert.equal(getStatusDotClass("COMPLETED"), "bg-emerald-500");
@@ -148,6 +70,17 @@ describe("Calendar Month View Component & Precision Specs", () => {
       assert.equal(septFirst?.dayNumber, 1);
     });
 
+    test("generateMonthGrid starts with Monday (T2) and ends on Sunday (CN)", () => {
+      const grid = generateMonthGrid(2026, 8); // September 2026 starts on Tuesday (index 1 in Mon-start)
+      // 2026-09-01 was a Tuesday, so first day of grid should be Monday 2026-08-31
+      assert.equal(grid[0].dateString, "2026-08-31");
+      assert.equal(grid[0].isCurrentMonth, false);
+      // Last day of grid should be a Sunday
+      const lastDay = grid[grid.length - 1];
+      const dateObj = new Date(`${lastDay.dateString}T12:00:00+07:00`);
+      assert.equal(dateObj.getDay(), 0); // 0 is Sunday in JS Date
+    });
+
     test("getTasksForDate maps tasks to matching due dates", () => {
       const mockTasks: SchoolTask[] = [
         {
@@ -170,6 +103,85 @@ describe("Calendar Month View Component & Precision Specs", () => {
       const matched = getTasksForDate(mockTasks, "2026-09-24");
       assert.equal(matched.length, 1);
       assert.equal(matched[0].title, "Báo cáo tháng 9");
+    });
+
+    test("getTasksForDate flattens subtasks with Trường/Đơn vị levels", () => {
+      const mockTasks: SchoolTask[] = [
+        {
+          id: "t1",
+          title: "Báo cáo tháng 9",
+          category: "BAO_CAO",
+          categoryLabel: "Báo cáo",
+          leadAssigneeName: "Vinh",
+          coAssignees: [],
+          assignedDate: "2026-09-01",
+          dueDate: "2026-09-24",
+          status: "IN_PROGRESS",
+          subTasks: [
+            {
+              id: "sub-1",
+              title: "Tổng hợp số liệu CNTT",
+              assigneeName: "Cường",
+              status: "IN_PROGRESS",
+              dueDate: "2026-09-24",
+              parentSchoolTaskId: "t1",
+              updatedAt: "2026-09-01",
+            },
+          ],
+          totalSubTasks: 1,
+          completedSubTasks: 0,
+          progressPercent: 0,
+        },
+        {
+          id: "t2",
+          title: "Kế hoạch năm học mới",
+          category: "CHUYEN_DOI_SO",
+          categoryLabel: "Chuyển đổi số",
+          leadAssigneeName: "Hùng",
+          coAssignees: [],
+          assignedDate: "2026-09-01",
+          dueDate: "2026-09-30",
+          status: "IN_PROGRESS",
+          subTasks: [],
+          totalSubTasks: 0,
+          completedSubTasks: 0,
+          progressPercent: 0,
+        },
+      ];
+
+      const tasksOn24th = getTasksForDate(mockTasks, "2026-09-24");
+      assert.equal(tasksOn24th.length, 2); // 1 SchoolTask + 1 StaffTask
+      assert.equal(tasksOn24th[0].title, "Báo cáo tháng 9");
+      assert.equal(tasksOn24th[0].level, "Trường");
+      assert.equal(tasksOn24th[1].title, "Tổng hợp số liệu CNTT");
+      assert.equal(tasksOn24th[1].level, "Đơn vị");
+
+      const tasksOn30th = getTasksForDate(mockTasks, "2026-09-30");
+      assert.equal(tasksOn30th.length, 1);
+      assert.equal(tasksOn30th[0].title, "Kế hoạch năm học mới");
+
+      const tasksOnEmptyDate = getTasksForDate(mockTasks, "2026-09-15");
+      assert.equal(tasksOnEmptyDate.length, 0);
+    });
+
+    test("formatMonthYearVi formats month and year correctly", () => {
+      assert.equal(formatMonthYearVi(2026, 8), "Tháng 09 / 2026");
+      assert.equal(formatMonthYearVi(2026, 0), "Tháng 01 / 2026");
+      assert.equal(formatMonthYearVi(2026, 11), "Tháng 12 / 2026");
+    });
+
+    test("getPrevMonth and getNextMonth handle year transitions", () => {
+      const prevFromJan = getPrevMonth(2026, 0);
+      assert.deepEqual(prevFromJan, { year: 2025, month: 11 });
+
+      const nextFromDec = getNextMonth(2025, 11);
+      assert.deepEqual(nextFromDec, { year: 2026, month: 0 });
+
+      const prevNormal = getPrevMonth(2026, 8);
+      assert.deepEqual(prevNormal, { year: 2026, month: 7 });
+
+      const nextNormal = getNextMonth(2026, 8);
+      assert.deepEqual(nextNormal, { year: 2026, month: 9 });
     });
   });
 
@@ -305,16 +317,83 @@ describe("Calendar Month View Component & Precision Specs", () => {
       assert.equal(aug.endDate, "2026-08-24");
       assert.equal(aug.academicYear, "2025-2026");
     });
+  });
 
-    test("component includes quick reset to 'Tháng hiện tại'", () => {
-      assert.ok(
-        componentContent.includes("Tháng hiện tại"),
-        "Component must include quick reset button labeled 'Tháng hiện tại'"
-      );
-      assert.ok(
-        componentContent.includes("formatAcademicMonthHeader"),
-        "Component must display full academic month header"
-      );
+  // Consolidated from calendar-monthly-sync.test.ts — academic cycle scoping.
+  describe("Academic Calendar Cycle & Scoping Invariants", () => {
+    test("Month 9 operational cycle spans 2026-08-25 to 2026-09-24", () => {
+      const period = getAcademicMonthPeriod(9, "2026-2027");
+      assert.equal(period.monthNumber, 9);
+      assert.equal(period.startDate, "2026-08-25");
+      assert.equal(period.endDate, "2026-09-24");
+      assert.equal(period.academicYear, "2026-2027");
+    });
+
+    test("Month 1 cross-year cycle spans 2026-12-25 to 2027-01-24", () => {
+      const period = getAcademicMonthPeriod(1, "2026-2027");
+      assert.equal(period.monthNumber, 1);
+      assert.equal(period.startDate, "2026-12-25");
+      assert.equal(period.endDate, "2027-01-24");
+      assert.equal(period.academicYear, "2026-2027");
+    });
+
+    test("ACADEMIC_MONTH_ORDER contains 12 months starting with 9 through 8", () => {
+      assert.deepEqual(ACADEMIC_MONTH_ORDER, [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8]);
+      const months = getAcademicMonthsForYear("2026-2027");
+      assert.equal(months.length, 12);
+      assert.equal(months[0].monthNumber, 9);
+      assert.equal(months[11].monthNumber, 8);
+    });
+
+    test("Tasks scoping correctly isolates milestones to selected cycle", () => {
+      const tasks: any[] = [
+        {
+          id: "task-sept",
+          code: "NV-01",
+          title: "Khai giảng Tháng 9",
+          description: "Mục tiêu tháng 9",
+          category: "CHUYEN_MON",
+          priority: "URGENT",
+          status: "IN_PROGRESS",
+          progressPercent: 60,
+          dueDate: "2026-09-10T00:00:00.000Z",
+          startDate: "2026-08-28T00:00:00.000Z",
+          departmentId: "P_DTQLKH",
+          departmentName: "Phòng Đào tạo",
+          subTasks: [],
+          deliverables: [],
+          assignees: [],
+          createdAt: "2026-08-28T00:00:00.000Z",
+          updatedAt: "2026-08-28T00:00:00.000Z",
+        },
+        {
+          id: "task-oct",
+          code: "NV-02",
+          title: "Sơ kết Tháng 10",
+          description: "Mục tiêu tháng 10",
+          category: "HANH_CHINH",
+          priority: "NORMAL",
+          status: "NEW",
+          progressPercent: 0,
+          dueDate: "2026-10-02T00:00:00.000Z",
+          startDate: "2026-09-26T00:00:00.000Z",
+          departmentId: "P_VP",
+          departmentName: "Văn phòng",
+          subTasks: [],
+          deliverables: [],
+          assignees: [],
+          createdAt: "2026-09-26T00:00:00.000Z",
+          updatedAt: "2026-09-26T00:00:00.000Z",
+        },
+      ];
+
+      const septFiltered = filterTasksByAcademicMonthStrict(tasks, 9, "2026-2027");
+      assert.equal(septFiltered.length, 1);
+      assert.equal(septFiltered[0].id, "task-sept");
+
+      const octFiltered = filterTasksByAcademicMonthStrict(tasks, 10, "2026-2027");
+      assert.equal(octFiltered.length, 1);
+      assert.equal(octFiltered[0].id, "task-oct");
     });
   });
 });

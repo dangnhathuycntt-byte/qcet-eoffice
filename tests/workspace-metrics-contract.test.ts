@@ -1,5 +1,17 @@
-import { describe, it } from "node:test";
+import { describe, it, test } from "node:test";
 import assert from "node:assert/strict";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { AdaptiveMetricStrip } from "../src/components/workspace/components/adaptive-metric-strip";
+import {
+  isTaskWaitingApproval,
+  isActiveTaskStatus,
+  isTaskOverdueOrHasOverdueSubtask,
+  isTaskAssignedToUser,
+  isTaskAssignedToUserOrUnit,
+  computeSmartWorkboxCounts,
+  computeWorkspaceTabCounts,
+} from "../src/lib/workspace-metrics-aggregator";
 import {
   deriveAdaptiveWorkspaceData,
   type WorkspaceMetrics,
@@ -314,5 +326,288 @@ describe("WorkspaceMetrics Contract & Denominator Separation (P0-1 & P0-5)", () 
     // Combined counts
     assert.equal(metrics.waitingApprovalCount, 2);
     assert.equal(metrics.urgentOverdueCount, 2);
+  });
+});
+
+
+/* ===== merged from tests/workspace-metrics-aggregator.test.ts ===== */
+
+
+
+
+
+
+describe("Workspace Metrics Aggregator (Unified Phase 5/6)", () => {
+  const staffUser = {
+    id: "user-staff-1",
+    email: "staff@qcet.edu.vn",
+    name: "Nguyễn Văn A",
+    role: "STAFF",
+    roleLabel: "Chuyên viên",
+    departmentCode: "KTL",
+    department: "Khoa Du lịch - Khách sạn",
+  } as unknown as AuthUser;
+
+  const sampleTasks = [
+    {
+      id: "task-1",
+      code: "NV-01",
+      title: "Soạn đề cương bài giảng",
+      assignedTo: "Nguyễn Văn A",
+      departmentCode: "KTL",
+      department: "Khoa Du lịch - Khách sạn",
+      status: "IN_PROGRESS",
+      priority: "HIGH",
+      dueDate: "2026-10-15",
+      progressPercent: 40,
+    },
+    {
+      id: "task-2",
+      code: "NV-02",
+      title: "Báo cáo thực tập sinh viên",
+      leadAssigneeName: "Nguyễn Văn A",
+      departmentCode: "KTL",
+      department: "Khoa Du lịch - Khách sạn",
+      status: "WAITING_APPROVAL",
+      priority: "NORMAL",
+      dueDate: "2026-10-20",
+      progressPercent: 100,
+    },
+    {
+      id: "task-3",
+      code: "NV-03",
+      title: "Kế hoạch hội thảo khoa học",
+      assignedTo: "Trần Thị B",
+      departmentCode: "KTL",
+      department: "Khoa Du lịch - Khách sạn",
+      status: "IN_PROGRESS",
+      priority: "URGENT",
+      dueDate: "2026-09-01", // Overdue relative to 2026-09-10
+      progressPercent: 10,
+    },
+    {
+      id: "task-4",
+      code: "NV-04",
+      title: "Đề án nâng cấp phòng Lab",
+      assignedTo: "Lê Văn C",
+      departmentCode: "CNTT",
+      department: "Khoa Công nghệ Thông tin",
+      status: "COMPLETED",
+      priority: "LOW",
+      dueDate: "2026-08-30",
+      progressPercent: 100,
+    },
+  ] as unknown as SchoolTask[];
+
+  test("isTaskAssignedToUser matches correctly by name and ID", () => {
+    assert.strictEqual(isTaskAssignedToUser(sampleTasks[0], staffUser), true);
+    assert.strictEqual(isTaskAssignedToUser(sampleTasks[1], staffUser), true);
+    assert.strictEqual(isTaskAssignedToUser(sampleTasks[2], staffUser), false);
+    assert.strictEqual(isTaskAssignedToUser(sampleTasks[3], staffUser), false);
+  });
+
+  test("isTaskAssignedToUserOrUnit matches department code and name", () => {
+    assert.strictEqual(isTaskAssignedToUserOrUnit(sampleTasks[0], staffUser), true);
+    assert.strictEqual(isTaskAssignedToUserOrUnit(sampleTasks[1], staffUser), true);
+    assert.strictEqual(isTaskAssignedToUserOrUnit(sampleTasks[2], staffUser), true); // Same dept
+    assert.strictEqual(isTaskAssignedToUserOrUnit(sampleTasks[3], staffUser), false); // Other dept
+  });
+
+  test("computeSmartWorkboxCounts matches expectations for Staff", () => {
+    const counts = computeSmartWorkboxCounts({
+      tasks: sampleTasks,
+      user: staffUser,
+      roleScope: "my",
+      referenceDate: "2026-09-10",
+    });
+
+    // 2 tasks assigned to user (task-1 active, task-2 waiting approval)
+    assert.strictEqual(counts.myCount, 2);
+    assert.strictEqual(counts.waitingApprovalCount, 1);
+    assert.strictEqual(counts.pendingSubmissionCount, 1);
+    assert.strictEqual(counts.overdueCount, 0);
+  });
+
+  test("computeSmartWorkboxCounts matches expectations for Unit scope", () => {
+    const counts = computeSmartWorkboxCounts({
+      tasks: sampleTasks,
+      user: staffUser,
+      roleScope: "unit",
+      referenceDate: "2026-09-10",
+    });
+
+    // 3 tasks in KTL dept (excluding completed task-4)
+    assert.strictEqual(counts.myCount, 3);
+    assert.strictEqual(counts.waitingApprovalCount, 1);
+    assert.strictEqual(counts.pendingSubmissionCount, 2);
+    assert.strictEqual(counts.overdueCount, 1); // task-3 is overdue
+  });
+
+  test("computeWorkspaceTabCounts produces consistent tab counts", () => {
+    const tabCounts = computeWorkspaceTabCounts({
+      scopedTasks: sampleTasks,
+      user: staffUser,
+      referenceDate: "2026-09-10",
+    });
+
+    assert.strictEqual(tabCounts.all, 4);
+    assert.strictEqual(tabCounts.my, 2);
+    assert.strictEqual(tabCounts.waiting_approval, 1);
+    assert.strictEqual(tabCounts.overdue, 1);
+  });
+});
+
+
+/* ===== merged from tests/adaptive-metric-strip.test.ts ===== */
+
+
+
+
+
+
+describe("AdaptiveMetricStrip Component", () => {
+  const metrics = {
+    totalTasks: 24,
+    urgentOverdueCount: 2,
+    waitingApprovalCount: 5,
+    completedRate: 68,
+    labelScope: "Khoa CNTT",
+  };
+
+  test("renders all 4 metric values with font-mono tabular-nums", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveMetricStrip, {
+        metrics,
+        scope: "unit",
+      })
+    );
+
+    assert.ok(html.includes("24"), "Renders total tasks");
+    assert.ok(html.includes("2"), "Renders urgent overdue");
+    assert.ok(html.includes("5"), "Renders waiting approval");
+    assert.ok(html.includes("68%"), "Renders completion rate");
+    assert.ok(html.includes("font-mono"), "Enforces font-mono for numbers");
+    assert.ok(html.includes("tabular-nums"), "Enforces tabular-nums");
+  });
+
+  test("zero emojis in rendered markup", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveMetricStrip, {
+        metrics,
+        scope: "school",
+      })
+    );
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}]/u;
+    assert.ok(!emojiRegex.test(html), "Markup must be 100% free of emojis");
+  });
+
+  test("zero dark theme classes in rendered markup", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveMetricStrip, {
+        metrics,
+        scope: "unit",
+      })
+    );
+    assert.ok(!html.includes("dark:"), "Must follow light-only standard without dark: variants");
+  });
+
+  test("renders school scope specific indicators", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveMetricStrip, {
+        metrics,
+        scope: "school",
+      })
+    );
+
+    assert.ok(html.includes("Tiến độ chung"), "Shows overall school progress");
+    assert.ok(html.includes("Quá hạn"), "Shows school overdue");
+    assert.ok(html.includes("Đang chờ duyệt"), "Shows school waiting approval");
+    assert.ok(html.includes("Toàn trường") || html.includes("toàn trường"), "Shows school scope context");
+  });
+
+  test("renders unit scope specific indicators", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveMetricStrip, {
+        metrics,
+        scope: "unit",
+      })
+    );
+
+    assert.ok(html.includes("Tiến độ đơn vị") || html.includes("Tiến độ khoa"), "Shows faculty progress");
+    assert.ok(html.includes("Quá hạn đơn vị"), "Shows unit overdue indicator");
+    assert.ok(html.includes("Chờ phân công/duyệt"), "Shows unit triage indicator");
+    assert.ok(html.includes("Đã nghiệm thu"), "Shows acceptance metric indicator");
+    assert.ok(html.includes("Khoa CNTT"), "Shows department label");
+  });
+
+  test("renders my scope specific indicators", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveMetricStrip, {
+        metrics,
+        scope: "my",
+      })
+    );
+
+    assert.ok(html.includes("Việc cần làm ngay"), "Shows personal urgent action");
+    assert.ok(html.includes("Đang thực hiện"), "Shows personal in-progress indicator");
+    assert.ok(html.includes("Chờ phản hồi"), "Shows personal feedback waiting indicator");
+    assert.ok(html.includes("Hoàn tất kỳ này"), "Shows personal term completion indicator");
+  });
+
+  test("renders accessible button cards and filter attributes when onMetricClick is provided", () => {
+    const dummyFn = () => {};
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveMetricStrip, {
+        metrics,
+        scope: "school",
+        onMetricClick: dummyFn,
+      })
+    );
+
+    assert.ok(html.includes('role="button"'), "Card should have role=button when clickable");
+    assert.ok(html.includes('data-metric-status="ALL"'), "Has ALL filter target");
+    assert.ok(html.includes('data-metric-status="OVERDUE"'), "Has OVERDUE filter target");
+    assert.ok(html.includes('data-metric-status="NEEDS_REVIEW"'), "Has NEEDS_REVIEW filter target");
+    assert.ok(html.includes('data-metric-status="COMPLETED"'), "Has COMPLETED filter target");
+  });
+
+  test("handles zero overdue and waiting metrics gracefully", () => {
+    const zeroMetrics = {
+      totalTasks: 10,
+      urgentOverdueCount: 0,
+      waitingApprovalCount: 0,
+      completedRate: 100,
+      labelScope: "Phòng Đào tạo",
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveMetricStrip, {
+        metrics: zeroMetrics,
+        scope: "unit",
+      })
+    );
+
+    assert.ok(html.includes("Tiến độ đúng hạn"), "Shows on-schedule state when 0 overdue");
+    assert.ok(html.includes("text-muted-foreground"), "Uses muted style when no pending items");
+  });
+
+  test("a11y aria-label and selectable number typography", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AdaptiveMetricStrip, {
+        metrics: {
+          totalTasks: 15,
+          urgentOverdueCount: 1,
+          waitingApprovalCount: 2,
+          completedRate: undefined as unknown as number,
+          labelScope: "Khoa CNTT",
+        },
+        scope: "school",
+      })
+    );
+
+    assert.ok(html.includes('role="region"'), "Card should have role=region when not interactive");
+    assert.ok(html.includes('aria-label="'), "Must provide accessible aria-label on cards");
+    assert.ok(html.includes("0%"), "Falls back to 0% when completedRate is undefined");
+    assert.ok(html.includes("select-text"), "Number must be selectable for copy-pasting");
   });
 });

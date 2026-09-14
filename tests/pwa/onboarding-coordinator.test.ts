@@ -1,7 +1,5 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import fs from "node:fs";
-import path from "node:path";
 import {
   PWAOnboardingCoordinator,
   type OnboardingStage,
@@ -261,64 +259,113 @@ describe("Task 6: PWA Onboarding Coordinator & Install UX Orchestration", () => 
     });
   });
 
-  describe("5. Anti-Slop, Institutional QCET UI & Touch Target Invariants", () => {
-    const coordinatorPath = path.resolve(
-      process.cwd(),
-      "src/lib/pwa/onboarding-coordinator.ts"
-    );
-    const componentPath = path.resolve(
-      process.cwd(),
-      "src/components/pwa/pwa-install-prompt.tsx"
-    );
+  describe("5. Deferred Prompt Capture, Standalone Detection & Listener Dedup", () => {
+    it("calls preventDefault on the native beforeinstallprompt event and withholds the prompt", () => {
+      let defaultPrevented = false;
+      const fakePromptEvent = {
+        preventDefault: () => {
+          defaultPrevented = true;
+        },
+        prompt: async () => {},
+        userChoice: Promise.resolve({ outcome: "accepted" as const, platform: "web" }),
+      } as unknown as BeforeInstallPromptEvent;
 
-    it("coordinator file contains 0% emojis", () => {
-      const content = fs.readFileSync(coordinatorPath, "utf-8");
-      const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
-      assert.strictEqual(
-        emojiRegex.test(content),
-        false,
-        "Coordinator must have zero emojis"
-      );
+      coordinator.handleBeforeInstallPrompt(fakePromptEvent);
+
+      assert.strictEqual(defaultPrevented, true, "Must preventDefault() on the native prompt");
+      const state = coordinator.getState();
+      assert.strictEqual(state.canShowInstallPrompt, false, "Must require engagement before prompting");
+      assert.strictEqual(state.isInstallable, true);
     });
 
-    it("pwa-install-prompt.tsx contains 0% emojis and 0 dark theme classes", () => {
-      const content = fs.readFileSync(componentPath, "utf-8");
-      const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
-      assert.strictEqual(
-        emojiRegex.test(content),
-        false,
-        "Install prompt component must have zero emojis"
-      );
+    it("detects installed standalone display-mode via matchMedia and disables prompt eligibility", () => {
+      (global as any).window.matchMedia = (query: string) => ({
+        matches: query.includes("display-mode: standalone"),
+      });
 
-      assert.strictEqual(
-        content.includes("dark:"),
-        false,
-        "Install prompt component must not contain dark: classes"
-      );
+      const standaloneCoordinator = new PWAOnboardingCoordinator();
+      standaloneCoordinator.init("matrix-user-standalone");
+      standaloneCoordinator.completeWelcome();
+      standaloneCoordinator.recordAction("task_1");
+      standaloneCoordinator.recordAction("task_2");
+
+      const state = standaloneCoordinator.getState();
+      assert.strictEqual(state.isInstalled, true);
+      assert.strictEqual(state.canShowInstallPrompt, false);
     });
 
-    it("pwa-install-prompt.tsx enforces institutional QCET styling and >=44px touch targets", () => {
-      const content = fs.readFileSync(componentPath, "utf-8");
+    it("captures beforeinstallprompt exactly once across repeated re-inits", () => {
+      const originalWindow = globalThis.window;
+      const originalLocalStorage = globalThis.localStorage;
+      const originalSessionStorage = globalThis.sessionStorage;
 
-      // Verify institutional value proposition
-      assert.ok(
-        content.includes("Cài đặt QCET E-Office"),
-        "Must contain QCET E-Office branding"
-      );
-      assert.ok(
-        content.includes("Cài đặt ngay") || content.includes("Cài đặt ứng dụng"),
-        "Must contain standard Vietnamese CTA"
-      );
-      assert.ok(
-        content.includes("Để sau"),
-        "Must contain polite dismiss CTA"
-      );
+      const registered: Record<string, number> = {};
+      const fakeStorage = {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+        clear: () => {},
+        length: 0,
+        key: () => null,
+      };
+      const fakeWindow = {
+        localStorage: fakeStorage,
+        matchMedia: () => ({ matches: false }),
+        addEventListener: (type: string) => {
+          registered[type] = (registered[type] || 0) + 1;
+        },
+        removeEventListener: () => {},
+      };
 
-      // Verify touch target >= 44px
-      assert.ok(
-        content.includes("min-h-[44px]") || content.includes("h-11"),
-        "Buttons must meet minimum 44px touch target guideline"
-      );
+      Object.defineProperty(globalThis, "window", {
+        value: fakeWindow,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(globalThis, "localStorage", {
+        value: fakeStorage,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(globalThis, "sessionStorage", {
+        value: fakeStorage,
+        configurable: true,
+        writable: true,
+      });
+
+      try {
+        const dedupCoordinator = new PWAOnboardingCoordinator();
+        dedupCoordinator.init("dedup-user-1");
+        dedupCoordinator.init("dedup-user-2");
+        dedupCoordinator.init("dedup-user-1");
+
+        assert.strictEqual(
+          registered["beforeinstallprompt"] ?? 0,
+          1,
+          "Only one beforeinstallprompt capture may be registered across re-inits"
+        );
+        assert.strictEqual(
+          registered["appinstalled"] ?? 0,
+          1,
+          "Only one appinstalled listener may be registered across re-inits"
+        );
+      } finally {
+        Object.defineProperty(globalThis, "window", {
+          value: originalWindow,
+          configurable: true,
+          writable: true,
+        });
+        Object.defineProperty(globalThis, "localStorage", {
+          value: originalLocalStorage,
+          configurable: true,
+          writable: true,
+        });
+        Object.defineProperty(globalThis, "sessionStorage", {
+          value: originalSessionStorage,
+          configurable: true,
+          writable: true,
+        });
+      }
     });
   });
 });

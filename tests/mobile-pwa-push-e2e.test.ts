@@ -1,7 +1,5 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 import { NextRequest } from 'next/server';
 import { prisma } from '../src/lib/prisma';
 import { signSessionToken, SESSION_COOKIE_NAME } from '../src/lib/jwt-session';
@@ -348,41 +346,13 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     }
   });
 
-  test('7. Zero emoji policy verification across all push copywriting templates, service worker messages, and PWA assets', () => {
-    const filesToCheck = [
-      'src/lib/push-service.ts',
-      'src/lib/push-dispatch.ts',
-      'src/app/manifest.ts',
-      'public/sw.js',
-      'src/components/pwa/push-onboarding-sheet.tsx',
-      'src/hooks/use-pwa-install.ts',
-      'src/hooks/use-push-notification.ts',
-    ];
-
-    // Standard Unicode ranges for emojis
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-
-    for (const relPath of filesToCheck) {
-      const absPath = path.resolve(process.cwd(), relPath);
-      assert.ok(fs.existsSync(absPath), `Target file ${relPath} must exist`);
-
-      const content = fs.readFileSync(absPath, 'utf8');
-      const match = content.match(emojiRegex);
-      assert.strictEqual(
-        match,
-        null,
-        `Found forbidden emoji in ${relPath}: ${match ? match[0] : ''}`
-      );
-    }
-  });
-
-  test('8. PWA manifest assets (src/app/manifest.ts, app name, icons 192/512/maskable, standalone display, start_url, theme_color)', () => {
+  test('7. PWA manifest assets (src/app/manifest.ts, app name, icons 192/512/maskable, standalone display, start_url, theme_color)', () => {
     const manifest = manifestFn();
 
     assert.ok(
       manifest.name === 'QCET E-Office - Hệ thống Điều hành Văn phòng Điện tử' ||
-      manifest.name === 'QCET E-Office - Trường CĐ Kinh tế & Công nghệ Quảng Ninh' ||
-      manifest.name === 'QCET E-Office - Trường CĐ Kinh tế & Công nghệ ',
+      manifest.name === 'QCET E-Office - Trường CĐ Kỹ thuật Công nghệ Quy Nhơn' ||
+      manifest.name === 'QCET E-Office - Trường CĐ Kỹ thuật Công nghệ Quy Nhơn ',
       `Unexpected manifest name: ${manifest.name}`
     );
     assert.strictEqual(manifest.short_name, 'QCET E-Office');
@@ -409,62 +379,15 @@ describe('Mobile PWA & Push Notification End-to-End Test Suite', () => {
     assert.ok(hasMaskable, 'Manifest must provide maskable icon');
   });
 
-  test('9. Service Worker (public/sw.js) push event handler, notificationclick event handler with deep link focus/open, offline fallback cache', () => {
-    const swPath = path.resolve(process.cwd(), 'public/sw.js');
-    assert.ok(fs.existsSync(swPath), 'public/sw.js must exist');
-
-    const swContent = fs.readFileSync(swPath, 'utf8');
-
-    // Push event handler
-    assert.ok(swContent.includes("addEventListener('push'"), 'Service worker must handle push event');
-    assert.ok(swContent.includes('showNotification'), 'Service worker must call showNotification');
-    assert.ok(swContent.includes('setAppBadge'), 'Service worker must support badge updates');
-
-    // Notification click event handler
-    assert.ok(swContent.includes("addEventListener('notificationclick'"), 'Service worker must handle notificationclick');
-    assert.ok(swContent.includes('notification.close()'), 'Notification must be closed on click');
-    assert.ok(swContent.includes('clients.matchAll'), 'Service worker must search for open client windows');
-    assert.ok(swContent.includes('client.focus()'), 'Service worker must focus existing window');
-    assert.ok(swContent.includes('openWindow'), 'Service worker must open window if not found');
-
-    // Offline fallback cache
-    assert.ok(swContent.includes('CACHE_NAME'), 'Service worker must define cache name');
-    assert.ok(swContent.includes("addEventListener('fetch'"), 'Service worker must handle fetch event for offline');
-    assert.ok(swContent.includes('caches.match'), 'Service worker must match cached response');
-  });
-
-  test('10. Client hooks & Onboarding components contract (usePWAInstall, usePushNotification, PushOnboardingSheet)', () => {
-    // Check iOS detection logic in usePWAInstall
+  test('8. iOS platform detection (checkIsIOS) drives the iOS install-guide branch', () => {
     assert.strictEqual(checkIsIOS('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'), true);
     assert.strictEqual(checkIsIOS('Mozilla/5.0 (iPad; CPU OS 16_0 like Mac OS X)'), true);
     assert.strictEqual(checkIsIOS('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 5), true); // iPadOS 13+
     assert.strictEqual(checkIsIOS('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', 0), false); // Standard Mac desktop
     assert.strictEqual(checkIsIOS('Mozilla/5.0 (Linux; Android 14; Pixel 8)'), false); // Android
-
-    // Verify source integrity of hooks and component
-    const pwaHookPath = path.resolve(process.cwd(), 'src/hooks/use-pwa-install.ts');
-    const pushHookPath = path.resolve(process.cwd(), 'src/hooks/use-push-notification.ts');
-    const sheetComponentPath = path.resolve(process.cwd(), 'src/components/pwa/push-onboarding-sheet.tsx');
-
-    assert.ok(fs.existsSync(pwaHookPath));
-    assert.ok(fs.existsSync(pushHookPath));
-    assert.ok(fs.existsSync(sheetComponentPath));
-
-    const pwaSource = fs.readFileSync(pwaHookPath, 'utf8');
-    assert.ok(pwaSource.includes('usePWAInstall'));
-    assert.ok(pwaSource.includes('beforeinstallprompt'));
-
-    const pushSource = fs.readFileSync(pushHookPath, 'utf8');
-    assert.ok(pushSource.includes('usePushNotification'));
-    assert.ok(pushSource.includes('subscribeToPush'));
-    assert.ok(pushSource.includes('unsubscribeFromPush'));
-
-    const sheetSource = fs.readFileSync(sheetComponentPath, 'utf8');
-    assert.ok(sheetSource.includes('PushOnboardingSheet'));
-    assert.ok(sheetSource.includes('BottomSheet'));
   });
 
-  test('11. Self-healing subscription handling: 410 Gone / 404 Not Found status marks database subscription as REVOKED', async () => {
+  test('9. Self-healing subscription handling: 410 Gone / 404 Not Found status marks database subscription as REVOKED', async () => {
     // Setup 2 subscriptions in DB
     const sub1 = await prisma.pushSubscription.upsert({
       where: { endpoint: testEndpoint1 },

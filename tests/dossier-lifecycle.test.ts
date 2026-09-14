@@ -147,7 +147,7 @@ describe("Sprint 6: Work Dossier Lifecycle & Archival Domain (Nghị định 30/
         documentYear: 2026,
         originalNumber: "123/KH-UBND",
         issuedDate: new Date(),
-        issuingAuthority: "UBND Tỉnh Quảng Ninh",
+        issuingAuthority: "UBND Tỉnh Bình Định",
         category: "Kế hoạch",
         summary: "Kế hoạch phát triển nhân lực công nghệ cao và CNTT giai đoạn 2026-2030",
         urgency: DocumentUrgency.THUONG,

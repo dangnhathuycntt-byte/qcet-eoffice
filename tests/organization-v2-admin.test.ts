@@ -131,7 +131,7 @@ describe("Sprint 6: Organization Administration & Effective-Dated Authority (Cơ
     const root = await prisma.organizationalUnit.create({
       data: {
         code: `ROOT_${testRunId}`,
-        name: `Trường CĐ KT-CN Quảng Ninh (${testRunId})`,
+        name: `Trường CĐ KT-CN Quy Nhơn (${testRunId})`,
         type: UnitType.SCHOOL,
         status: UnitStatus.ACTIVE,
       },

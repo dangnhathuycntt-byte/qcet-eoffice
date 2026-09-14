@@ -1,8 +1,11 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import manifest from "../src/app/manifest";
+import { INSTITUTION_CONFIG } from "../src/config/institution";
+import {
+  useVirtualKeyboard,
+  scrollActiveInputIntoView,
+} from "@/hooks/use-virtual-keyboard";
 import type { Viewport, Metadata } from "next";
 
 // Intercept CSS and next/font/google imports in Node runtime before importing layout
@@ -40,7 +43,10 @@ describe("Mobile Viewport & PWA Standards Verification", () => {
 
   test("PWA manifest has valid QCET branding and icons", () => {
     const pwa = manifest();
-    assert.ok(typeof pwa.name === "string" && pwa.name.includes("QCET E-Office - Trường CĐ Kinh tế & Công nghệ"), "PWA name must reflect QCET institution branding");
+    // Assert against the canonical institution config rather than a hardcoded
+    // literal, so a legitimate rename cannot silently invalidate this test.
+    const expectedName = `${INSTITUTION_CONFIG.shortName} E-Office - ${INSTITUTION_CONFIG.abbreviatedName}`;
+    assert.equal(pwa.name, expectedName, "PWA name must reflect the canonical QCET institution branding");
     assert.equal(pwa.short_name, "QCET E-Office");
     assert.ok(
       pwa.description?.includes("QCET"),
@@ -76,69 +82,15 @@ describe("Mobile Viewport & PWA Standards Verification", () => {
     assert.equal(viewport.themeColor, "#fbfbfb", "themeColor must be #fbfbfb");
   });
 
-  test("Global CSS specifies safe area insets and mobile ergonomics", () => {
-    const globalsCssPath = path.resolve(__dirname, "../src/app/globals.css");
-    const content = fs.readFileSync(globalsCssPath, "utf-8");
-
-    assert.ok(
-      content.includes("safe-area-inset-top") || content.includes("env(safe-area-inset"),
-      "globals.css must support safe area insets"
-    );
-    assert.ok(
-      content.includes("overscroll-behavior-y") || content.includes("touch-action") || content.includes("pb-safe"),
-      "globals.css should define mobile touch / scroll / safe area classes"
-    );
+  test("Viewport configures interactiveWidget so the virtual keyboard resizes content", () => {
+    assert.ok(viewport);
+    assert.strictEqual(viewport.interactiveWidget, "resizes-content");
+    assert.strictEqual(viewport.width, "device-width");
+    assert.strictEqual(viewport.initialScale, 1);
   });
 
-  test("ScopeSwitcher complies with min 44x44px touch targets on mobile", () => {
-    const switcherPath = path.resolve(__dirname, "../src/components/layout/scope-switcher.tsx");
-    const content = fs.readFileSync(switcherPath, "utf-8");
-
-    // Close button must have min 44x44
-    assert.ok(
-      content.includes("min-h-[44px]") && content.includes("min-w-[44px]"),
-      "ScopeSwitcher close button must enforce min-h-[44px] and min-w-[44px] touch target"
-    );
-
-    // Subordinate units combobox items must enforce min 44px height
-    assert.ok(
-      content.includes("Đơn vị trực thuộc") && content.includes("min-h-[44px]"),
-      "Subordinate units combobox items must enforce min-h-[44px]"
-    );
-
-    // Primary items have min 48px height
-    assert.ok(
-      content.includes("min-h-[48px]"),
-      "Main scope selection buttons must enforce min-h-[48px] touch target"
-    );
-  });
-
-  test("MobileBottomNav complies with 4 touch points and safe area handling", () => {
-    const navPath = path.resolve(__dirname, "../src/components/navigation/mobile-bottom-nav.tsx");
-    const content = fs.readFileSync(navPath, "utf-8");
-
-    assert.ok(
-      content.includes("grid grid-cols-4"),
-      "MobileBottomNav must render 4 distinct touch points"
-    );
-    assert.ok(
-      content.includes("safe-area-inset-bottom"),
-      "MobileBottomNav must account for safe-area-inset-bottom"
-    );
-    assert.ok(
-      content.includes("min-h-[44px]") || content.includes("min-w-[44px]") || content.includes("h-14"),
-      "MobileBottomNav items must satisfy Apple HIG touch target guidelines"
-    );
-  });
-
-  test("BottomSheet wrapper is integrated with Vaul for touch-gesture dismissal", () => {
-    const bottomSheetPath = path.resolve(__dirname, "../src/components/ui/bottom-sheet.tsx");
-    const content = fs.readFileSync(bottomSheetPath, "utf-8");
-
-    assert.ok(content.includes('from "vaul"'), "BottomSheet must wrap vaul drawer primitives");
-    assert.ok(
-      content.includes("safe-area-inset-bottom"),
-      "BottomSheet must include safe-area-inset-bottom padding"
-    );
+  test("useVirtualKeyboard hook exports a valid contract for keyboard offset guards", () => {
+    assert.strictEqual(typeof useVirtualKeyboard, "function");
+    assert.strictEqual(typeof scrollActiveInputIntoView, "function");
   });
 });

@@ -44,8 +44,6 @@ import {
   enqueueOfflineMutation,
   getOfflineMutationQueue,
 } from "../../src/lib/offline-sync";
-import fs from "node:fs";
-import path from "node:path";
 
 describe("Task 3: User-Isolated IndexedDB Offline Data Layer & Logout Purge", () => {
   beforeEach(async () => {
@@ -497,34 +495,6 @@ describe("Task 3: User-Isolated IndexedDB Offline Data Layer & Logout Purge", ()
       assert.strictEqual(await getReadCache("u2", "k2"), null);
       assert.strictEqual(await getDraft("u1", "d1"), null);
       assert.strictEqual(await getDraft("u2", "d2"), null);
-    });
-  });
-
-  describe("8. AuthContext Logout Integration Verification", () => {
-    test("auth-context.tsx imports and calls purgeUserOfflineData during logout", () => {
-      const authContextPath = path.resolve(
-        __dirname,
-        "../../src/lib/auth-context.tsx"
-      );
-      const source = fs.readFileSync(authContextPath, "utf-8");
-
-      assert.match(
-        source,
-        /import\s+{[^}]*purgeUserOfflineData[^}]*}\s+from\s+["']\.\/pwa\/offline-store["']/,
-        "auth-context.tsx must import purgeUserOfflineData from ./pwa/offline-store"
-      );
-
-      assert.match(
-        source,
-        /purgeUserOfflineData\s*\(\s*userIdToPurge\s*\)/,
-        "auth-context logout must execute purgeUserOfflineData with active userId"
-      );
-
-      assert.match(
-        source,
-        /window\.location\.href\s*=\s*["']\/login["']/,
-        "auth-context logout must redirect to /login after purge"
-      );
     });
   });
 });

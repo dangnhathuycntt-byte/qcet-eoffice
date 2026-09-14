@@ -1,31 +1,19 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   CalendarWorkspace,
   CalendarEventDetailModal,
   type CalendarTimeEvent,
-  type CalendarViewMode,
 } from "../src/components/calendar/calendar-workspace";
-import {
-  transformTasksToCalendarOperations,
-  type WorkCalendarItem,
-} from "../src/lib/work-calendar-adapter";
 import type { SchoolTask } from "../src/types/dashboard";
 
+// Behavioural coverage rendered from the real components. Source-text-only
+// assertions (route URL parsing, anti-slop class checks) were dropped per the
+// testing invariants; the route-level ones live in tests/calendar-route.test.ts
+// and class/emoji checks are enforced by tests/anti-slop-audit.test.ts.
 describe("Calendar Task Interaction & Unified Detail Surface", () => {
-  const calendarWorkspacePath = path.resolve(
-    process.cwd(),
-    "src/components/calendar/calendar-workspace.tsx"
-  );
-  const calendarPagePath = path.resolve(
-    process.cwd(),
-    "src/app/calendar/page.tsx"
-  );
-
   const mockTasks: SchoolTask[] = [
     {
       id: "task-school-ai",
@@ -75,21 +63,6 @@ describe("Calendar Task Interaction & Unified Detail Surface", () => {
   };
 
   describe("1. Unified Detail Surface & Event Routing", () => {
-    test("CalendarWorkspace distinguishes task events from non-task events", () => {
-      assert.ok(fs.existsSync(calendarWorkspacePath));
-      const code = fs.readFileSync(calendarWorkspacePath, "utf8");
-
-      // Verifies branching on task vs non-task
-      assert.ok(
-        code.includes("item.sourceTaskId") || code.includes("ev.taskId") || code.includes("event.taskId"),
-        "Must verify whether event corresponds to a task ID"
-      );
-      assert.ok(
-        code.includes("onSelectNonTaskEvent") || code.includes("setSelectedNonTaskEvent"),
-        "Must route non-task events to lightweight detail modal or non-task handler"
-      );
-    });
-
     test("CalendarEventDetailModal renders non-task event details faithfully", () => {
       const html = renderToStaticMarkup(
         React.createElement(CalendarEventDetailModal, {
@@ -119,14 +92,6 @@ describe("Calendar Task Interaction & Unified Detail Surface", () => {
   });
 
   describe("2. Responsive Layout: 7-Column Desktop & Mobile Agenda View", () => {
-    test("CalendarWorkspace supports 4 distinct view modes (month_grid, week_grid, day_view, agenda_list)", () => {
-      const code = fs.readFileSync(calendarWorkspacePath, "utf8");
-      assert.ok(code.includes('"month_grid"'));
-      assert.ok(code.includes('"week_grid"'));
-      assert.ok(code.includes('"day_view"'));
-      assert.ok(code.includes('"agenda_list"'));
-    });
-
     test("Renders full-width 7-column week grid on desktop", () => {
       const html = renderToStaticMarkup(
         React.createElement(CalendarWorkspace, {
@@ -167,73 +132,6 @@ describe("Calendar Task Interaction & Unified Detail Surface", () => {
 
       assert.ok(html.includes("07:00") && html.includes("18:00"), "Must render 07:00-18:00 hours");
       assert.ok(html.includes("nhiệm vụ / sự kiện"), "Must render day summary header");
-    });
-  });
-
-  describe("3. URL & Context Preservation in /calendar Route", () => {
-    test("Calendar page parses ?taskId=... from URL search params", () => {
-      const pageCode = fs.readFileSync(calendarPagePath, "utf8");
-      assert.ok(
-        pageCode.includes('searchParams?.get("taskId")') || pageCode.includes('searchParams.get("taskId")'),
-        "Must read taskId query parameter from URL"
-      );
-      assert.ok(
-        pageCode.includes("setSelectedTask"),
-        "Must update selectedTask when taskIdParam matches"
-      );
-    });
-
-    test("Calendar page updates browser URL without client reload or router.replace", () => {
-      const pageCode = fs.readFileSync(calendarPagePath, "utf8");
-      assert.equal(
-        pageCode.includes("router.replace"),
-        false,
-        "Must not use router.replace to avoid unstyled state and full reload"
-      );
-      assert.ok(
-        pageCode.includes("window.history.pushState") || pageCode.includes("window.history.replaceState"),
-        "Must use window.history pushState / replaceState for seamless URL sync"
-      );
-    });
-
-    test("Level-1 /calendar eliminates redundant 3-tier breadcrumbs while preserving task context", () => {
-      const pageCode = fs.readFileSync(calendarPagePath, "utf8");
-      assert.equal(
-        pageCode.includes('<nav aria-label="Breadcrumb"'),
-        false,
-        "Level-1 primary calendar screen must not repeat location via redundant breadcrumb (P1 navigation invariant)"
-      );
-      assert.ok(
-        pageCode.includes("taskIdParam") || pageCode.includes("selectedTask"),
-        "Calendar page must preserve selectedTask and taskId URL context"
-      );
-    });
-  });
-
-  describe("4. Anti-Slop & Light-Only Standard Compliance", () => {
-    test("calendar-workspace.tsx contains ZERO dark: classes", () => {
-      const code = fs.readFileSync(calendarWorkspacePath, "utf8");
-      assert.doesNotMatch(code, /\bdark:/, "calendar-workspace.tsx must contain no dark: classes");
-    });
-
-    test("calendar-workspace.tsx contains ZERO decorative emojis", () => {
-      const code = fs.readFileSync(calendarWorkspacePath, "utf8");
-      assert.doesNotMatch(code, /[\u{1F300}-\u{1FAFF}]/u, "calendar-workspace.tsx must contain no decorative emojis");
-    });
-
-    test("src/app/calendar/page.tsx contains ZERO dark: classes", () => {
-      const code = fs.readFileSync(calendarPagePath, "utf8");
-      assert.doesNotMatch(code, /\bdark:/, "page.tsx must contain no dark: classes");
-    });
-
-    test("src/app/calendar/page.tsx contains ZERO decorative emojis", () => {
-      const code = fs.readFileSync(calendarPagePath, "utf8");
-      assert.doesNotMatch(code, /[\u{1F300}-\u{1FAFF}]/u, "page.tsx must contain no decorative emojis");
-    });
-
-    test("calendar-workspace.tsx utilizes tabular-nums for numeric precision", () => {
-      const code = fs.readFileSync(calendarWorkspacePath, "utf8");
-      assert.ok(code.includes("tabular-nums"), "Must use tabular-nums for dates, hours, and counters");
     });
   });
 });

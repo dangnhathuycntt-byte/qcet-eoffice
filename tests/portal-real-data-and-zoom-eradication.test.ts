@@ -126,30 +126,32 @@ describe("Task 5: Real Data Binding for /portal & Eradicate CSS Zoom (P0-7 & P1-
     test("formatProgressMetric formats dynamically when stats are available", () => {
       const stats: PortalStatsSummary = {
         completionRate: 68,
-        total: 150,
+        parentTaskTotal: 150,
         schoolTasks: 45,
+        isDenominatorSeparated: true,
       };
       assert.equal(
         formatProgressMetric(stats, false, true),
-        "68% hoàn thành (150 việc)"
+        "68% hoàn thành (150 việc gốc)"
       );
     });
 
     test("formatProgressMetric supports zero values without fallback to mock", () => {
       const stats: PortalStatsSummary = {
         completionRate: 0,
-        total: 0,
+        parentTaskTotal: 0,
         schoolTasks: 0,
+        isDenominatorSeparated: true,
       };
       assert.equal(
         formatProgressMetric(stats, false, true),
-        "0% hoàn thành (0 việc)"
+        "0% hoàn thành (0 việc gốc)"
       );
     });
 
-    test("formatProgressMetric returns 'Đang tải...' when loading", () => {
-      assert.equal(formatProgressMetric(null, true, true), "Đang tải...");
-      assert.equal(formatProgressMetric(null, true, false), "Đang tải...");
+    test("formatProgressMetric returns null when loading so the caller renders a skeleton", () => {
+      assert.equal(formatProgressMetric(null, true, true), null);
+      assert.equal(formatProgressMetric(null, true, false), null);
     });
 
     test("formatProgressMetric returns 'Đăng nhập để xem' when unauthenticated", () => {
@@ -163,8 +165,9 @@ describe("Task 5: Real Data Binding for /portal & Eradicate CSS Zoom (P0-7 & P1-
     test("formatSchoolTasksMetric formats dynamically when stats are available", () => {
       const stats: PortalStatsSummary = {
         completionRate: 40,
-        total: 80,
+        parentTaskTotal: 80,
         schoolTasks: 25,
+        isDenominatorSeparated: true,
       };
       assert.equal(
         formatSchoolTasksMetric(stats, false, true),
@@ -175,8 +178,9 @@ describe("Task 5: Real Data Binding for /portal & Eradicate CSS Zoom (P0-7 & P1-
     test("formatSchoolTasksMetric supports zero values without fallback to mock", () => {
       const stats: PortalStatsSummary = {
         completionRate: 0,
-        total: 0,
+        parentTaskTotal: 0,
         schoolTasks: 0,
+        isDenominatorSeparated: true,
       };
       assert.equal(
         formatSchoolTasksMetric(stats, false, true),
@@ -184,9 +188,9 @@ describe("Task 5: Real Data Binding for /portal & Eradicate CSS Zoom (P0-7 & P1-
       );
     });
 
-    test("formatSchoolTasksMetric returns 'Đang tải...' when loading", () => {
-      assert.equal(formatSchoolTasksMetric(null, true, true), "Đang tải...");
-      assert.equal(formatSchoolTasksMetric(null, true, false), "Đang tải...");
+    test("formatSchoolTasksMetric returns null when loading so the caller renders a skeleton", () => {
+      assert.equal(formatSchoolTasksMetric(null, true, true), null);
+      assert.equal(formatSchoolTasksMetric(null, true, false), null);
     });
 
     test("formatSchoolTasksMetric returns 'Đăng nhập để xem' when unauthenticated", () => {
@@ -215,9 +219,9 @@ describe("Task 5: Real Data Binding for /portal & Eradicate CSS Zoom (P0-7 & P1-
 
       assert.ok(html.includes("Đăng nhập để xem"), "Must display 'Đăng nhập để xem' when unauthenticated");
       assert.equal(
-        html.includes("32% hoàn thành (340 việc)"),
+        html.includes("32% hoàn thành (340 việc gốc)"),
         false,
-        "Must not render synthetic 32% hoàn thành (340 việc)"
+        "Must not render synthetic 32% hoàn thành (340 việc gốc)"
       );
       assert.equal(
         html.includes("94 việc trọng tâm"),
@@ -226,7 +230,7 @@ describe("Task 5: Real Data Binding for /portal & Eradicate CSS Zoom (P0-7 & P1-
       );
     });
 
-    test("renders loading state with 'Đang tải...' when auth is resolving", () => {
+    test("renders a skeleton, not 'Đang tải...' prose, when auth is resolving", () => {
       const auth = createMockAuthContext({
         user: null,
         isLoading: true,
@@ -240,7 +244,15 @@ describe("Task 5: Real Data Binding for /portal & Eradicate CSS Zoom (P0-7 & P1-
         )
       );
 
-      assert.ok(html.includes("Đang tải..."), "Must display 'Đang tải...' during loading phase");
+      assert.equal(
+        html.includes("Đang tải..."),
+        false,
+        "Must not render 'Đang tải...' prose in the metric slot during loading"
+      );
+      assert.ok(
+        html.includes("animate-pulse"),
+        "Must render a skeleton placeholder during the loading phase"
+      );
     });
   });
 
@@ -267,11 +279,12 @@ describe("Task 5: Real Data Binding for /portal & Eradicate CSS Zoom (P0-7 & P1-
 
       const stats: PortalStatsSummary = {
         completionRate,
-        total,
+        parentTaskTotal: total,
         schoolTasks,
+        isDenominatorSeparated: true,
       };
 
-      assert.equal(formatProgressMetric(stats, false, true), "50% hoàn thành (280 việc)");
+      assert.equal(formatProgressMetric(stats, false, true), "50% hoàn thành (280 việc gốc)");
       assert.equal(formatSchoolTasksMetric(stats, false, true), "85 việc trọng tâm");
     });
   });
