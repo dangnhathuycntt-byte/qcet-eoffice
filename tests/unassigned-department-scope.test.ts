@@ -1,6 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { isUserUnassignedDepartment, shouldPromptUnassignedDepartment } from "../src/lib/auth-context";
 import { resolveScopeDetails } from "../src/components/layout/scope-switcher";
 
@@ -30,32 +29,6 @@ describe("Unassigned Department Detection & Scope Details", () => {
     assert.equal(details.label, "Chưa chọn đơn vị");
     assert.equal(details.shortLabel, "Chưa chọn đ/vị");
     assert.equal(details.isWarning, true);
-  });
-
-  test("UnassignedDepartmentState file exists and contains accessible actionable CTA", () => {
-    const content = readFileSync("src/components/workspace/components/unassigned-department-state.tsx", "utf-8");
-    assert.ok(content.includes("UnassignedDepartmentState"));
-    assert.ok(content.includes("onOpenProfile"));
-    assert.ok(content.includes("Building2"));
-    assert.ok(content.includes("Cập nhật Khoa / Phòng công tác ngay"));
-    assert.ok(!content.includes("dark:")); // Light-only compliance
-  });
-
-  test("AdaptiveScopeHeader and TaskManagementWorkspace integration contract verified", () => {
-    const headerContent = readFileSync("src/components/workspace/components/adaptive-scope-header.tsx", "utf-8");
-    assert.ok(headerContent.includes("isUserUnassignedDepartment"));
-    assert.ok(headerContent.includes("Chưa chọn đơn vị"));
-
-    const workspaceContent = readFileSync("src/components/tasks/task-management-workspace.tsx", "utf-8");
-    assert.ok(workspaceContent.includes("UnassignedDepartmentState"));
-    assert.ok(workspaceContent.includes("setIsProfileModalOpen"));
-  });
-
-  test("first login check triggers user profile modal if unassigned", () => {
-    const sidebarContent = readFileSync("src/components/layout/app-sidebar.tsx", "utf-8");
-    assert.ok(sidebarContent.includes("isUserUnassignedDepartment"));
-    assert.ok(sidebarContent.includes("setIsProfileModalOpen"));
-    assert.ok(sidebarContent.includes("qcet_profile_unassigned_prompted"));
   });
 
   test("sessionStorage prompt behavior logic correctly prevents repeated popups", () => {

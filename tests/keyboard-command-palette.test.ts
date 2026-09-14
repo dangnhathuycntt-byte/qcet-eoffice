@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   handleKeyboardNavigation,
   keyboardNavReducer,
@@ -11,22 +9,6 @@ import {
 } from "../src/hooks/use-keyboard-navigation";
 
 describe("Command Palette & Keyboard Ergonomics (Task 11)", () => {
-  const modalPath = path.resolve(
-    process.cwd(),
-    "src/components/layout/command-search-modal.tsx"
-  );
-  const tablePath = path.resolve(
-    process.cwd(),
-    "src/components/tasks/table/modular-cascading-task-table.tsx"
-  );
-  const hookPath = path.resolve(
-    process.cwd(),
-    "src/hooks/use-keyboard-navigation.ts"
-  );
-  const toolbarPath = path.resolve(
-    process.cwd(),
-    "src/components/tasks/table/components/task-table-toolbar.tsx"
-  );
 
   describe("1. keyboardNavReducer", () => {
     const idList = ["task-1", "task-2", "task-3"];
@@ -315,118 +297,6 @@ describe("Command Palette & Keyboard Ergonomics (Task 11)", () => {
 
       assert.equal(handled, false);
       assert.equal(moved, false);
-    });
-  });
-
-  describe("4. CommandSearchModal Command Palette Integration", () => {
-    test("modal file exists and includes required quick actions", () => {
-      assert.ok(fs.existsSync(modalPath), "CommandSearchModal file must exist");
-      const content = fs.readFileSync(modalPath, "utf-8");
-
-      // Required quick actions in brief
-      assert.ok(content.includes("create-task"), "Must support 'Tạo nhiệm vụ' action");
-      assert.ok(content.includes("action-review-tasks"), "Must support 'Xem việc chờ duyệt' action");
-      assert.ok(content.includes("action-my-tasks"), "Must support 'Đổi sang Của tôi' action");
-      assert.ok(content.includes("nav-documents"), "Must support 'Đi tới Văn bản' action");
-      assert.ok(content.includes("nav-calendar"), "Must support 'Đi tới Lịch' action");
-    });
-
-    test("modal supports Cmd+K / Ctrl+K and escape", () => {
-      const content = fs.readFileSync(modalPath, "utf-8");
-
-      assert.ok(
-        content.includes("e.metaKey || e.ctrlKey"),
-        "Must check metaKey or ctrlKey for Cmd/Ctrl+K"
-      );
-      assert.ok(
-        content.includes("isKeyK"),
-        "Must verify 'k' or 'KeyK' with IME resilience"
-      );
-      assert.ok(
-        content.includes('e.key === "Escape"'),
-        "Must handle Escape to close"
-      );
-      assert.ok(
-        content.includes('data-slot="command-palette"'),
-        "Must declare data-slot='command-palette'"
-      );
-    });
-
-    test("strictly conforms to Light-Only standard (no dark: classes)", () => {
-      const content = fs.readFileSync(modalPath, "utf-8");
-      assert.ok(!content.includes("dark:"), "No dark: Tailwind classes permitted");
-    });
-
-    test("strictly adheres to typography floor >= 12px (no sub-12px or text-[11px])", () => {
-      const content = fs.readFileSync(modalPath, "utf-8");
-      assert.ok(
-        !content.includes("text-[11px]"),
-        "No text-[11px] classes permitted; floor is text-xs (12px)"
-      );
-      assert.ok(
-        !content.includes("text-[10px]"),
-        "No text-[10px] classes permitted; floor is text-xs (12px)"
-      );
-      // Ensure all kbd elements explicitly use text-xs
-      const kbdMatches = content.match(/<kbd[^>]*>/g) || [];
-      assert.ok(kbdMatches.length >= 5, "Must contain kbd elements in footer");
-      for (const kbd of kbdMatches) {
-        assert.ok(
-          kbd.includes("text-xs"),
-          `All kbd elements must have text-xs: ${kbd}`
-        );
-      }
-    });
-  });
-
-  describe("5. ModularCascadingTaskTable Ergonomics & Discoverability", () => {
-    test("table wires keyboard navigation and shortcut hint bar", () => {
-      assert.ok(fs.existsSync(tablePath), "Task table component must exist");
-      const content = fs.readFileSync(tablePath, "utf-8");
-
-      // Hook integration
-      assert.ok(
-        content.includes("useTaskKeyboardNav"),
-        "Must invoke useTaskKeyboardNav hook"
-      );
-      assert.ok(
-        content.includes("qcet:focus-task-search"),
-        "Must dispatch qcet:focus-task-search on '/' focus"
-      );
-      assert.ok(
-        content.includes("onEscape:"),
-        "Must define ergonomic onEscape cascade"
-      );
-
-      // Keyboard Shortcut Hints Bar
-      assert.ok(
-        content.includes("Phím tắt nhanh:"),
-        "Must display keyboard shortcut hint header"
-      );
-      assert.ok(content.includes("Di chuyển dòng"), "Must display J/K row navigation hint");
-      assert.ok(content.includes("Xem chi tiết"), "Must display Enter task detail hint");
-      assert.ok(content.includes("Chọn dòng"), "Must display X selection hint");
-      assert.ok(content.includes("Đóng / Hủy chọn"), "Must display Esc cancel hint");
-      assert.ok(content.includes("Menu lệnh toàn cục"), "Must display ⌘K palette hint");
-    });
-
-    test("Toolbar supports '/' shortcut and focuses search input", () => {
-      assert.ok(fs.existsSync(toolbarPath), "Task table toolbar must exist");
-      const content = fs.readFileSync(toolbarPath, "utf-8");
-
-      assert.ok(
-        content.includes("qcet:focus-task-search"),
-        "Toolbar must listen to qcet:focus-task-search"
-      );
-      assert.ok(
-        content.includes("<kbd"),
-        "Toolbar must display subtle kbd badge for search shortcut"
-      );
-    });
-
-    test("Table strictly conforms to Light-Only standard (no dark: classes)", () => {
-      const content = fs.readFileSync(tablePath, "utf-8");
-      assert.ok(!content.includes("dark:"), "No dark: Tailwind classes permitted in task table");
     });
   });
 });

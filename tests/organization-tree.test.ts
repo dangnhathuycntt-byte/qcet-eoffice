@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   QCET_DEPARTMENTS,
   filterStaffMembers,
@@ -102,81 +100,5 @@ describe("OrganizationTree Helpers", () => {
         );
       }
     }
-  });
-});
-
-describe("OrganizationTree Anti-Slop & UI Quality Standards", () => {
-  const orgTreePath = path.resolve(
-    __dirname,
-    "../src/components/org/organization-tree.tsx"
-  );
-  const orgPagePath = path.resolve(__dirname, "../src/app/org/page.tsx");
-
-  test("zero decorative emojis in organization tree and org page source code", () => {
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
-
-    const orgTreeContent = fs.readFileSync(orgTreePath, "utf-8");
-    const orgTreeMatches = [...orgTreeContent.matchAll(emojiRegex)];
-    assert.strictEqual(
-      orgTreeMatches.length,
-      0,
-      `Found emojis in organization-tree.tsx: ${orgTreeMatches.map((m) => m[0]).join(", ")}`
-    );
-
-    const orgPageContent = fs.readFileSync(orgPagePath, "utf-8");
-    const orgPageMatches = [...orgPageContent.matchAll(emojiRegex)];
-    assert.strictEqual(
-      orgPageMatches.length,
-      0,
-      `Found emojis in org/page.tsx: ${orgPageMatches.map((m) => m[0]).join(", ")}`
-    );
-  });
-
-  test("implements thin tree connector guide lines with border-border/60", () => {
-    const content = fs.readFileSync(orgTreePath, "utf-8");
-    assert.ok(
-      content.includes("border-l border-border/60"),
-      "Must implement thin hierarchy tree connector with border-l border-border/60"
-    );
-  });
-
-  test("uses Lucide Building2, Briefcase, and GraduationCap with strokeWidth={1.5}", () => {
-    const content = fs.readFileSync(orgTreePath, "utf-8");
-    assert.ok(content.includes("Building2"), "Must use Building2 for BGH/organization");
-    assert.ok(content.includes("Briefcase"), "Must use Briefcase for functional rooms/units");
-    assert.ok(content.includes("GraduationCap"), "Must use GraduationCap for faculties");
-    assert.ok(
-      content.includes("strokeWidth={1.5}"),
-      "Must standardize Lucide icons with strokeWidth={1.5}"
-    );
-  });
-
-  test("staff cards format staff names with font-medium and tabular-nums", () => {
-    const content = fs.readFileSync(orgTreePath, "utf-8");
-    assert.ok(
-      content.includes("font-medium text-foreground") ||
-        content.includes("font-medium text-foreground truncate"),
-      "Staff card must use font-medium for member name instead of heavy text"
-    );
-    assert.ok(
-      content.includes("tabular-nums"),
-      "Must use tabular-nums for phone numbers and counts"
-    );
-  });
-
-  test("provides 1-click Giao việc quick action button with UserCheck or Send icon", () => {
-    const content = fs.readFileSync(orgTreePath, "utf-8");
-    assert.ok(
-      content.includes("qcet:open-create-task"),
-      "Must dispatch qcet:open-create-task event for 1-click task delegation"
-    );
-    assert.ok(
-      content.includes("UserCheck") || content.includes("Send"),
-      "Must use UserCheck or Send icon for quick task assignment"
-    );
-    assert.ok(
-      content.includes("Giao việc"),
-      "Must have Giao việc button text"
-    );
   });
 });

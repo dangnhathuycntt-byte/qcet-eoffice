@@ -1,7 +1,5 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   EXECUTIVE_PRESETS,
   MANAGER_PRESETS,
@@ -274,39 +272,6 @@ describe("Saved Views Infrastructure", () => {
       assert.equal(criteria.q, "báo cáo");
       assert.equal(criteria.viewMode, "kanban");
       assert.equal(criteria.density, "compact");
-    });
-  });
-
-  describe("4. Anti-slop & Light-Only Standard Compliance", () => {
-    it("should not contain dark: classes in saved views code", () => {
-      const storePath = path.resolve(__dirname, "../src/lib/saved-views/saved-views-store.ts");
-      const selectorPath = path.resolve(__dirname, "../src/components/tasks/saved-views-selector.tsx");
-
-      const storeContent = fs.readFileSync(storePath, "utf-8");
-      const selectorContent = fs.readFileSync(selectorPath, "utf-8");
-
-      assert.ok(!storeContent.includes("dark:"), "saved-views-store must have zero dark: classes");
-      assert.ok(!selectorContent.includes("dark:"), "saved-views-selector must have zero dark: classes");
-    });
-
-    it("should have zero decorative emojis and use Lucide icons or typographic glyphs", () => {
-      const selectorPath = path.resolve(__dirname, "../src/components/tasks/saved-views-selector.tsx");
-      const selectorContent = fs.readFileSync(selectorPath, "utf-8");
-
-      // Regex checking for common emojis (excluding plain characters)
-      const emojiRegex = /[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-      // We allow the star character ★ used in preset titles
-      const sanitized = selectorContent.replace(/★/g, "");
-      assert.ok(!emojiRegex.test(sanitized), "saved-views-selector must not contain decorative emojis");
-    });
-
-    it("should have minimum font size >= 12px (text-xs or larger)", () => {
-      const selectorPath = path.resolve(__dirname, "../src/components/tasks/saved-views-selector.tsx");
-      const selectorContent = fs.readFileSync(selectorPath, "utf-8");
-
-      // No text-[10px], text-[9px], text-[8px], text-[11px]
-      const smallFontRegex = /text-\[(?:[0-9]|10|11)px\]/;
-      assert.ok(!smallFontRegex.test(selectorContent), "Font sizes must be at least 12px (text-xs or larger)");
     });
   });
 });

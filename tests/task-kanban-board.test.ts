@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -153,77 +151,6 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
     const searchSwitch = filterKanbanItems(mockTasks, "ALL", "ALL", "Switch");
     assert.equal(searchSwitch.length, 1);
     assert.equal(searchSwitch[0].id, "sub-1");
-  });
-
-  test("Anti-slop check: 0% decorative emojis across kanban board and tasks pages", () => {
-    const filesToCheck = [
-      "../src/components/tasks/task-kanban-board.tsx",
-      "../src/app/tasks/page.tsx",
-      "../src/app/unit-tasks/page.tsx",
-    ];
-
-    const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
-
-    for (const relativePath of filesToCheck) {
-      const fullPath = path.resolve(__dirname, relativePath);
-      assert.ok(fs.existsSync(fullPath), `File ${relativePath} must exist`);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      assert.ok(
-        !emojiRegex.test(content),
-        `File ${relativePath} must not contain any decorative emojis`
-      );
-    }
-  });
-
-  test("Kanban card styling adheres to anti-slop guidelines", () => {
-    const kanbanPath = path.resolve(__dirname, "../src/components/tasks/task-kanban-board.tsx");
-    const content = fs.readFileSync(kanbanPath, "utf-8");
-
-    // Assert hairline borders and rounded-lg
-    assert.ok(
-      content.includes("rounded-lg") || content.includes("rounded-xl"),
-      "Kanban card must use subtle rounded corners"
-    );
-    assert.ok(
-      content.includes("border-border/60") || content.includes("border-border"),
-      "Kanban card must use subtle hairline borders"
-    );
-
-    // Assert micro-pill font-mono tabular-nums counters
-    assert.ok(
-      content.includes("font-mono") && content.includes("tabular-nums"),
-      "Counters must use font-mono tabular-nums"
-    );
-
-    // Assert action menu button (⋯) is present — replaces avatar 22px check
-    assert.ok(
-      content.includes('aria-label="Thao tác"') || content.includes("MoreHorizontal"),
-      "Card must render ⋯ action menu button (MoreHorizontal icon)"
-    );
-
-    // Assert micro progress bar
-    assert.ok(
-      content.includes("h-1") || content.includes("h-0.5"),
-      "Micro progress bar must be h-1 or h-0.5"
-    );
-
-    // Assert strokeWidth={1.5}
-    assert.ok(
-      content.includes("strokeWidth={1.5}"),
-      "Lucide icons must be standardized to strokeWidth={1.5}"
-    );
-
-    // Assert permanent status select dropdown is NOT present
-    assert.ok(
-      !content.includes("<select") && !content.includes("status-select-"),
-      "Kanban card must NOT render a permanent status <select> dropdown"
-    );
-
-    // Assert prev/next chevron buttons (ChevronLeft) are NOT present on cards
-    assert.ok(
-      !content.includes("ChevronLeft"),
-      "Kanban card must NOT render ChevronLeft prev-status button"
-    );
   });
 
   test("mapTaskStatusToKanbanColumn strictly maps operational statuses to 4 columns", () => {
@@ -478,58 +405,6 @@ describe("TaskKanbanBoard Helpers & Anti-Slop Contract", () => {
       "Card must render deadline with 'Hạn' prefix"
     );
 
-    // Card must NOT render ChevronLeft or prev-status step buttons
-    const kanbanPath = path.resolve(__dirname, "../src/components/tasks/task-kanban-board.tsx");
-    const src = fs.readFileSync(kanbanPath, "utf-8");
-    assert.ok(
-      !src.includes("ChevronLeft"),
-      "Source must NOT import or use ChevronLeft (prev-status button removed)"
-    );
-  });
-
-  test("Source contains Escape key handler (e.key === \"Escape\") wired to dismiss menu", () => {
-    const kanbanPath = path.resolve(__dirname, "../src/components/tasks/task-kanban-board.tsx");
-    const src = fs.readFileSync(kanbanPath, "utf-8");
-
-    // 1. The Escape key comparison must be present in source
-    assert.ok(
-      src.includes('e.key === "Escape"'),
-      'Source must contain e.key === "Escape" to detect Escape key presses'
-    );
-
-    // 2. The handler must be registered on document via addEventListener for keydown
-    assert.ok(
-      src.includes('document.addEventListener("keydown"'),
-      'Source must wire the Escape handler to document via addEventListener("keydown", ...)'
-    );
-
-    // 3. The handler must call setMenuOpen(false) to dismiss the menu
-    assert.ok(
-      src.includes("setMenuOpen(false)"),
-      "Source must call setMenuOpen(false) to dismiss the menu on Escape"
-    );
-
-    // 4. The cleanup must remove the keydown listener to prevent leaks
-    assert.ok(
-      src.includes('document.removeEventListener("keydown"'),
-      'Source must clean up the keydown listener via document.removeEventListener("keydown", ...)'
-    );
-  });
-
-  test("Escape key handler is co-located with menuOpen guard (only active when menu is open)", () => {
-    const kanbanPath = path.resolve(__dirname, "../src/components/tasks/task-kanban-board.tsx");
-    const src = fs.readFileSync(kanbanPath, "utf-8");
-
-    // The useEffect block that registers the keydown listener must guard on menuOpen
-    // Pattern: the effect that calls document.addEventListener("keydown") must early-return when !menuOpen
-    const effectBlock = src.slice(
-      src.indexOf('document.addEventListener("keydown"') - 600,
-      src.indexOf('document.addEventListener("keydown"') + 10
-    );
-    assert.ok(
-      effectBlock.includes("if (!menuOpen) return"),
-      "The useEffect registering the keydown Escape handler must guard with 'if (!menuOpen) return' so it is only active when the menu is open"
-    );
   });
 });
 

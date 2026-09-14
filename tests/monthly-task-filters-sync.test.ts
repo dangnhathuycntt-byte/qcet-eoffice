@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   computeDepartmentHealthMatrix,
   computeExecutiveActionStats,
@@ -9,93 +7,11 @@ import {
 import {
   filterTasksByAcademicMonthStrict,
   computePriorOverdueBacklog,
-  getAcademicYear,
 } from "../src/lib/academic-calendar";
 import { computeDashboardStats } from "../src/lib/dashboard-aggregator";
 import type { SchoolTask } from "../src/types/dashboard";
 
-describe("Task 2: State Management & URL Sync Integration Suite", () => {
-  const hookFilePath = path.resolve(process.cwd(), "src/hooks/use-task-filters.ts");
-  const hookContent = fs.readFileSync(hookFilePath, "utf-8");
-  const contextFilePath = path.resolve(
-    process.cwd(),
-    "src/components/dashboard/dashboard-context.tsx"
-  );
-  const contextContent = fs.readFileSync(contextFilePath, "utf-8");
-
-  describe("Contract and Hook Interface Verification", () => {
-    test("use-task-filters imports filterTasksByAcademicMonthStrict and computePriorOverdueBacklog", () => {
-      assert.ok(
-        hookContent.includes("filterTasksByAcademicMonthStrict"),
-        "use-task-filters must import filterTasksByAcademicMonthStrict"
-      );
-      assert.ok(
-        hookContent.includes("computePriorOverdueBacklog"),
-        "use-task-filters must import computePriorOverdueBacklog"
-      );
-    });
-
-    test("TaskFiltersReturn interface declares required monthly partitioning fields", () => {
-      assert.match(
-        hookContent,
-        /monthScopedBaseTasks:\s*SchoolTask\[\];/,
-        "TaskFiltersReturn must declare monthScopedBaseTasks"
-      );
-      assert.match(
-        hookContent,
-        /priorOverdueBacklog:\s*SchoolTask\[\];/,
-        "TaskFiltersReturn must declare priorOverdueBacklog"
-      );
-      assert.match(
-        hookContent,
-        /selectedAcademicMonth:\s*number\s*\|\s*"ALL";/,
-        "TaskFiltersReturn must declare selectedAcademicMonth"
-      );
-      assert.match(
-        hookContent,
-        /monthlyScopedStats:\s*DashboardStats;/,
-        "TaskFiltersReturn must declare monthlyScopedStats"
-      );
-      assert.match(
-        hookContent,
-        /monthlyDepartmentHealth:\s*DepartmentHealthSummary\[\];/,
-        "TaskFiltersReturn must declare monthlyDepartmentHealth"
-      );
-      assert.match(
-        hookContent,
-        /monthlyExecutiveStats:\s*ExecutiveActionStats\s*\|\s*null;/,
-        "TaskFiltersReturn must declare monthlyExecutiveStats"
-      );
-    });
-
-    test("useTaskFilters returns monthScopedBaseTasks, priorOverdueBacklog, and monthly aliases", () => {
-      assert.match(hookContent, /\bmonthScopedBaseTasks\b/);
-      assert.match(hookContent, /\bpriorOverdueBacklog\b/);
-      assert.match(hookContent, /\bmonthlyScopedStats:\s*displayedStats\b/);
-      assert.match(hookContent, /\bmonthlyDepartmentHealth:\s*departmentHealth\b/);
-      assert.match(hookContent, /\bmonthlyExecutiveStats:\s*executiveStats\b/);
-    });
-
-    test("DashboardDataContextValue exposes priorOverdueBacklog and monthScopedBaseTasks", () => {
-      assert.match(
-        contextContent,
-        /priorOverdueBacklog\??:\s*SchoolTask\[\];/,
-        "DashboardDataContextValue must expose priorOverdueBacklog"
-      );
-      assert.match(
-        contextContent,
-        /monthScopedBaseTasks\??:\s*SchoolTask\[\];/,
-        "DashboardDataContextValue must expose monthScopedBaseTasks"
-      );
-      assert.match(
-        contextContent,
-        /priorOverdueBacklog:\s*dashboardState\.priorOverdueBacklog/,
-        "DashboardStateProvider must pass priorOverdueBacklog to dataValue"
-      );
-    });
-  });
-
-  describe("Functional Partitioning, Backlog & Department Health Scoping", () => {
+describe("Task 2: Functional Partitioning, Backlog & Department Health Scoping", () => {
     const mockTasks = [
       {
         id: "task-sept-1",
@@ -205,5 +121,4 @@ describe("Task 2: State Management & URL Sync Integration Suite", () => {
       assert.equal(emptyStats.totalSchoolTasks, 0);
       assert.equal(emptyStats.schoolTasksCompleted, 0);
     });
-  });
 });

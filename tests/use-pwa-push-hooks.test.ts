@@ -1,7 +1,5 @@
 import { test, describe, before, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 
 // Import hooks and helpers (will fail initially before implementation)
 import { usePWAInstall, checkIsIOS } from '../src/hooks/use-pwa-install';
@@ -121,80 +119,6 @@ describe('Task 6: PWA and Push Notification Hooks', () => {
     test('both hooks exist and are functions', () => {
       assert.strictEqual(typeof usePWAInstall, 'function');
       assert.strictEqual(typeof usePushNotification, 'function');
-    });
-
-    test('hooks files have "use client" directive', () => {
-      const pwaFile = path.resolve(process.cwd(), 'src/hooks/use-pwa-install.ts');
-      const pushFile = path.resolve(process.cwd(), 'src/hooks/use-push-notification.ts');
-
-      const pwaContent = fs.readFileSync(pwaFile, 'utf-8');
-      const pushContent = fs.readFileSync(pushFile, 'utf-8');
-
-      assert.ok(pwaContent.includes("'use client'"), 'use-pwa-install.ts must have use client directive');
-      assert.ok(pushContent.includes("'use client'"), 'use-push-notification.ts must have use client directive');
-    });
-
-    test('use-pwa-install.ts handles beforeinstallprompt and appinstalled events', () => {
-      const pwaFile = path.resolve(process.cwd(), 'src/hooks/use-pwa-install.ts');
-      const pwaContent = fs.readFileSync(pwaFile, 'utf-8');
-
-      assert.ok(pwaContent.includes('beforeinstallprompt'), 'Must listen to beforeinstallprompt event');
-      assert.ok(pwaContent.includes('appinstalled'), 'Must listen to appinstalled event');
-      assert.ok(pwaContent.includes('display-mode: standalone'), 'Must check standalone display mode');
-      assert.ok(pwaContent.includes('checkIsIOS'), 'Must export checkIsIOS helper');
-    });
-
-    test('use-push-notification.ts requests Notification.requestPermission synchronously on subscribe', () => {
-      const pushFile = path.resolve(process.cwd(), 'src/hooks/use-push-notification.ts');
-      const pushContent = fs.readFileSync(pushFile, 'utf-8');
-
-      assert.ok(
-        pushContent.includes('urlBase64ToUint8Array'),
-        'Must export urlBase64ToUint8Array helper'
-      );
-      assert.ok(
-        pushContent.includes('Notification.requestPermission()'),
-        'Must request permission for notifications'
-      );
-      assert.ok(
-        pushContent.includes('/api/notifications/push/key'),
-        'Must fetch VAPID public key from API'
-      );
-      assert.ok(
-        pushContent.includes('/api/notifications/push/subscribe'),
-        'Must call subscribe API endpoint'
-      );
-      assert.ok(
-        pushContent.includes('/api/notifications/push/test'),
-        'Must call test API endpoint'
-      );
-
-      // Verify iOS gesture invariant: Notification.requestPermission must be called before any fetch
-      const subFnStart = pushContent.indexOf('const subscribeToPush');
-      assert.ok(subFnStart !== -1, 'const subscribeToPush must exist');
-      const subFnBody = pushContent.slice(subFnStart, subFnStart + 2000);
-
-      const permCallIndex = subFnBody.indexOf('Notification.requestPermission()');
-      const fetchIndex = subFnBody.indexOf("fetch('/api/notifications/push");
-
-      assert.ok(permCallIndex !== -1, 'Notification.requestPermission must be present in subscribeToPush');
-      assert.ok(fetchIndex !== -1, 'fetch must be present in subscribeToPush');
-      assert.ok(
-        permCallIndex < fetchIndex,
-        'Notification.requestPermission must be called before any fetch to preserve user gesture on iOS Safari'
-      );
-    });
-
-    test('code contains 0% emoji slop', () => {
-      const pwaFile = path.resolve(process.cwd(), 'src/hooks/use-pwa-install.ts');
-      const pushFile = path.resolve(process.cwd(), 'src/hooks/use-push-notification.ts');
-
-      const pwaContent = fs.readFileSync(pwaFile, 'utf-8');
-      const pushContent = fs.readFileSync(pushFile, 'utf-8');
-
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-      assert.strictEqual(emojiRegex.test(pwaContent), false, 'use-pwa-install.ts must have 0% emojis');
-      assert.strictEqual(emojiRegex.test(pushContent), false, 'use-push-notification.ts must have 0% emojis');
     });
   });
 

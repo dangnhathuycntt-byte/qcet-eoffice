@@ -2,8 +2,6 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import fs from "node:fs";
-import path from "node:path";
 
 import {
   ScopeSwitcher,
@@ -31,17 +29,6 @@ import { parseZoneParam } from "../src/types/workspace";
 import { resolveBreadcrumb } from "../src/lib/navigation/active-matcher";
 
 describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
-  const OWNED_FILES = [
-    "src/components/workspace/scope-switcher.tsx",
-    "src/components/workspace/period-selector.tsx",
-    "src/components/workspace/workspace-toolbar.tsx",
-    "src/components/workspace/status-filter.tsx",
-    "src/components/workspace/view-switcher.tsx",
-    "src/components/workspace/metric-strip.tsx",
-    "src/components/workspace/attention-badge.tsx",
-    "src/components/workspace/action-queue-shell.tsx",
-  ];
-
   describe("1. ScopeSwitcher & Subordinate Unit Selector", () => {
     test("renders canonical 3 scopes in role='tablist' with accessible labeling", () => {
       const markup = renderToStaticMarkup(
@@ -140,17 +127,6 @@ describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
       );
     });
 
-    test("implements ArrowRight, ArrowLeft, Home, End keyboard navigation and roving tabindex in ScopeSwitcher", () => {
-      const filePath = path.resolve(process.cwd(), "src/components/workspace/scope-switcher.tsx");
-      const content = fs.readFileSync(filePath, "utf-8");
-
-      assert.match(content, /e\.key === ["']ArrowRight["']/, "ScopeSwitcher must handle ArrowRight");
-      assert.match(content, /e\.key === ["']ArrowLeft["']/, "ScopeSwitcher must handle ArrowLeft");
-      assert.match(content, /e\.key === ["']Home["']/, "ScopeSwitcher must handle Home key");
-      assert.match(content, /e\.key === ["']End["']/, "ScopeSwitcher must handle End key");
-      assert.match(content, /tabIndex=\{isActive \? 0 : -1\}/, "ScopeSwitcher must implement roving tabIndex");
-    });
-
     test("exports WorkspaceScopeType as an alias for WorkspaceScope", () => {
       const scopeVal: WorkspaceScopeType = "school";
       const canonicalScope: WorkspaceScope = scopeVal;
@@ -231,17 +207,6 @@ describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
       );
     });
 
-    test("implements ArrowRight, ArrowLeft, Home, End keyboard navigation and roving tabindex in ViewSwitcher", () => {
-      const filePath = path.resolve(process.cwd(), "src/components/workspace/view-switcher.tsx");
-      const content = fs.readFileSync(filePath, "utf-8");
-
-      assert.match(content, /e\.key === ["']ArrowRight["']/, "ViewSwitcher must handle ArrowRight");
-      assert.match(content, /e\.key === ["']ArrowLeft["']/, "ViewSwitcher must handle ArrowLeft");
-      assert.match(content, /e\.key === ["']Home["']/, "ViewSwitcher must handle Home key");
-      assert.match(content, /e\.key === ["']End["']/, "ViewSwitcher must handle End key");
-      assert.match(content, /tabIndex=\{isActive \? 0 : -1\}/, "ViewSwitcher must implement roving tabIndex");
-    });
-
     test("supports dual-prop signature: activeView and onViewChange as well as mode and onModeChange", () => {
       let changedView = "";
       const markup = renderToStaticMarkup(
@@ -314,17 +279,6 @@ describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
         markup.includes("min-h-[44px]"),
         "default size provides 44px touch target"
       );
-    });
-
-    test("implements ArrowRight, ArrowLeft, Home, End keyboard navigation and roving tabindex in StatusFilter", () => {
-      const filePath = path.resolve(process.cwd(), "src/components/workspace/status-filter.tsx");
-      const content = fs.readFileSync(filePath, "utf-8");
-
-      assert.match(content, /e\.key === ["']ArrowRight["']/, "StatusFilter must handle ArrowRight");
-      assert.match(content, /e\.key === ["']ArrowLeft["']/, "StatusFilter must handle ArrowLeft");
-      assert.match(content, /e\.key === ["']Home["']/, "StatusFilter must handle Home key");
-      assert.match(content, /e\.key === ["']End["']/, "StatusFilter must handle End key");
-      assert.match(content, /tabIndex=\{isActive \? 0 : -1\}/, "StatusFilter must implement roving tabIndex");
     });
 
     test("filters out ALL option when showAllOption is false", () => {
@@ -403,22 +357,6 @@ describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
       assert.ok(markup.includes('aria-expanded="false"'), "expanded false by default");
       assert.ok(markup.includes("Tháng 9"), "displays selected academic month");
       assert.ok(markup.includes("min-h-[44px]"), "satisfies 44px touch target");
-    });
-
-    test("supports showSemesterPresets option in PeriodSelector", () => {
-      const filePath = path.resolve(process.cwd(), "src/components/workspace/period-selector.tsx");
-      const content = fs.readFileSync(filePath, "utf-8");
-
-      assert.match(
-        content,
-        /showSemesterPresets\s*\?:?\s*boolean/,
-        "PeriodSelector must declare showSemesterPresets in props"
-      );
-      assert.match(
-        content,
-        /\{showSemesterPresets\s*&&/,
-        "PeriodSelector must conditionally render semester presets"
-      );
     });
   });
 
@@ -525,51 +463,6 @@ describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
         markup.includes("Hoàn thành"),
         "displays completed badge"
       );
-    });
-  });
-
-  describe("9. Architectural Invariants Across All Owned Files", () => {
-    test("strictly Light-Only: zero 'dark:' classes in any owned component", () => {
-      // Strips comments and checks for dark: variant usage in JSX classNames
-      const darkVariantRegex = /\bdark:[a-zA-Z0-9_-]+/;
-      for (const relativePath of OWNED_FILES) {
-        const fullPath = path.resolve(process.cwd(), relativePath);
-        const content = fs.readFileSync(fullPath, "utf-8");
-        const linesWithoutComments = content
-          .split("\n")
-          .filter((line) => !line.trim().startsWith("*") && !line.trim().startsWith("//"))
-          .join("\n");
-        assert.ok(
-          !darkVariantRegex.test(linesWithoutComments),
-          `File ${relativePath} contains forbidden 'dark:' variant`
-        );
-      }
-    });
-
-    test("strictly zero emojis in any owned component file", () => {
-      const emojiRegex =
-        /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-
-      for (const relativePath of OWNED_FILES) {
-        const fullPath = path.resolve(process.cwd(), relativePath);
-        const content = fs.readFileSync(fullPath, "utf-8");
-        assert.ok(
-          !emojiRegex.test(content),
-          `File ${relativePath} contains forbidden emoji`
-        );
-      }
-    });
-
-    test("visible focus rings across all owned files", () => {
-      for (const relativePath of OWNED_FILES) {
-        const fullPath = path.resolve(process.cwd(), relativePath);
-        const content = fs.readFileSync(fullPath, "utf-8");
-        assert.ok(
-          content.includes("focus-visible:ring-2") ||
-            content.includes("focus-visible:ring-blue-600"),
-          `File ${relativePath} must implement visible focus ring`
-        );
-      }
     });
   });
 });

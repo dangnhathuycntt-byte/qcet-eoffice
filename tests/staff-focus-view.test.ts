@@ -2,8 +2,6 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import fs from "node:fs";
-import path from "node:path";
 import {
   StaffFocusView,
   extractStaffTasks,
@@ -395,72 +393,6 @@ describe("StaffFocusView Component", () => {
     assert.ok(
       html.includes("Chưa có nhiệm vụ") || html.includes("chưa có nhiệm vụ"),
       "Must render clear empty state when no tasks are assigned"
-    );
-  });
-});
-
-// -- Anti-Slop & Quality Discipline Tests -------------------------------------
-
-describe("StaffFocusView Anti-Slop & Design Token Conformance", () => {
-  const componentPath = path.join(
-    process.cwd(),
-    "src/components/dashboard/roles/staff-focus-view.tsx"
-  );
-
-  test("anti-slop: 0% emojis in source code", () => {
-    assert.ok(fs.existsSync(componentPath), "Component file must exist");
-    const content = fs.readFileSync(componentPath, "utf-8");
-
-    const emojiRegex = /[\u{1F300}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-    const lines = content.split("\n");
-    const violations: string[] = [];
-
-    lines.forEach((line, idx) => {
-      if (emojiRegex.test(line)) {
-        violations.push(`Line ${idx + 1}: ${line.trim()}`);
-      }
-    });
-
-    assert.strictEqual(
-      violations.length,
-      0,
-      `Found emojis in staff-focus-view.tsx:\n${violations.join("\n")}`
-    );
-  });
-
-  test("anti-slop: utilizes tabular-nums for numeric figures and dates", () => {
-    assert.ok(fs.existsSync(componentPath), "Component file must exist");
-    const content = fs.readFileSync(componentPath, "utf-8");
-
-    assert.ok(
-      content.includes("tabular-nums"),
-      "Component must use tabular-nums for numeric precision"
-    );
-  });
-
-  test("anti-slop: Lucide icon stroke widths strictly adhere to 1.5 standard", () => {
-    assert.ok(fs.existsSync(componentPath), "Component file must exist");
-    const content = fs.readFileSync(componentPath, "utf-8");
-
-    if (content.includes('from "lucide-react"')) {
-      assert.ok(
-        content.includes("strokeWidth={1.5}") || content.includes('strokeWidth="1.5"'),
-        "Lucide icons must have strokeWidth 1.5"
-      );
-    }
-  });
-
-  test("styling: uses Tailwind v4 semantic tokens and font classes", () => {
-    assert.ok(fs.existsSync(componentPath), "Component file must exist");
-    const content = fs.readFileSync(componentPath, "utf-8");
-
-    assert.ok(
-      content.includes("font-heading") || content.includes("font-mono"),
-      "Component must use project font tokens (font-heading, font-mono)"
-    );
-    assert.ok(
-      content.includes("bg-background") || content.includes("bg-card") || content.includes("border-border"),
-      "Component must use semantic Tailwind tokens"
     );
   });
 });

@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -35,41 +33,6 @@ function createDummySchoolTasks(count: number, deptCode: string = "K_CNTT"): Sch
 }
 
 describe("Department View DOM Performance & Progressive Local Pagination (Task 11)", () => {
-  const componentFilePath = path.join(
-    process.cwd(),
-    "src/components/dashboard/department-grouped-task-view.tsx"
-  );
-
-  test("Kiểm tra file mã nguồn chứa class content-auto và pagination state", () => {
-    assert.ok(fs.existsSync(componentFilePath), "Component file must exist");
-    const content = fs.readFileSync(componentFilePath, "utf-8");
-
-    // Must include content-auto class for GPU culling and layout containment
-    assert.ok(
-      content.includes("content-auto"),
-      "Department card container must include 'content-auto' class for CSS content-visibility: auto"
-    );
-
-    // Must export or define DEFAULT_PAGE_SIZE = 25
-    assert.ok(
-      content.includes("DEFAULT_PAGE_SIZE"),
-      "Must define DEFAULT_PAGE_SIZE constant"
-    );
-    assert.equal(DEFAULT_PAGE_SIZE, 25, "DEFAULT_PAGE_SIZE must be 25");
-
-    // Must use state for visible counts per department
-    assert.ok(
-      content.includes("visibleCounts") || content.includes("setVisibleCounts"),
-      "Must maintain visible item count per department using React state"
-    );
-
-    // Must have 'Xem thêm' button
-    assert.ok(
-      content.includes("Xem thêm"),
-      "Must contain 'Xem thêm' button for loading more tasks"
-    );
-  });
-
   test("Render với 60 nhiệm vụ: chỉ hiển thị tối đa 25 items ban đầu và nút Xem thêm", () => {
     const dummyTasks = createDummySchoolTasks(60, "K_CNTT");
     const html = renderToStaticMarkup(

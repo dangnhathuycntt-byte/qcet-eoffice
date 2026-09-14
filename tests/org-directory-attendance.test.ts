@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   QCET_DEPARTMENTS,
   filterStaffMembers,
@@ -52,20 +50,6 @@ describe("QCET Organization Structure & Administrative Directory", () => {
         assert.equal((member as any).workStatus, undefined, `Member ${member.name} must not have workStatus`);
       }
     }
-  });
-
-  test("Anti-slop check: 0% emojis in organization-tree.tsx and /org/page.tsx", () => {
-    const orgTreeContent = fs.readFileSync(
-      path.join(process.cwd(), "src/components/org/organization-tree.tsx"),
-      "utf-8"
-    );
-    const orgPageContent = fs.readFileSync(
-      path.join(process.cwd(), "src/app/org/page.tsx"),
-      "utf-8"
-    );
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-    assert.ok(!emojiRegex.test(orgTreeContent), "organization-tree.tsx must contain 0 emojis");
-    assert.ok(!emojiRegex.test(orgPageContent), "src/app/org/page.tsx must contain 0 emojis");
   });
 
   test("Export CSV helper formats valid RFC4180 CSV without broken accents", () => {

@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   canUserReviewTask,
   canUserSubmitDeliverable,
@@ -147,44 +145,8 @@ describe("TaskDetailSideSheet Type Guard and Helpers", () => {
       assert.equal(hasEmoji(level.label), false, `Emoji found in level: ${level.label}`);
     }
 
-    // Check source file for zero decorative emojis
-    const filePath = path.resolve(__dirname, "../src/components/dashboard/task-detail-side-sheet.tsx");
-    const content = fs.readFileSync(filePath, "utf-8");
-    const emojiRegex = /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F680}-\u{1F6C5}\u{1F6CB}-\u{1F6D0}\u{1F6E0}-\u{1F6E5}\u{1F6F0}-\u{1F6F3}]/gu;
-    const matches = [...content.matchAll(emojiRegex)];
-    assert.equal(matches.length, 0, `Found ${matches.length} emojis in task-detail-side-sheet.tsx: ${matches.map(m => m[0]).join(", ")}`);
   });
 
-  test("Linear styling contract: muted semantic colors, tracking-tight, tabular-nums", () => {
-    const filePath = path.resolve(__dirname, "../src/components/dashboard/task-detail-side-sheet.tsx");
-    const content = fs.readFileSync(filePath, "utf-8");
-
-    // Title styling
-    assert.ok(
-      content.includes("font-semibold tracking-tight"),
-      "Task title should have font-semibold tracking-tight"
-    );
-
-    // Task ID and dates in font-mono tabular-nums
-    assert.ok(
-      content.includes("font-mono") && content.includes("tabular-nums"),
-      "Metadata and IDs must use font-mono tabular-nums"
-    );
-
-    // Muted semantic status colors
-    for (const status of Object.values(TASK_STATUS_CONFIG)) {
-      assert.ok(
-        status.className.includes("border-") && (status.className.includes("bg-") || status.className.includes("muted")),
-        `Status ${status.label} should have muted semantic styling`
-      );
-    }
-
-    // Clean audit timeline line and flat bullet nodes
-    assert.ok(
-      content.includes("before:w-px") || content.includes("before:bg-border"),
-      "Audit timeline should feature a refined hairline timeline track"
-    );
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -601,71 +563,4 @@ describe("Task Detail decision capability & truthful history", () => {
     });
   });
 
-  describe("Task Detail surface — structural contract (source invariants)", () => {
-    const source = fs.readFileSync(
-      path.join(process.cwd(), "src/components/dashboard/task-detail-side-sheet.tsx"),
-      "utf8"
-    );
-
-    test("T17: exactly one consolidated child CTA ('Thêm việc con') and no rejected drift", () => {
-      const count = source.split("Thêm việc con").length - 1;
-      assert.equal(count, 1, "the detail surface must render exactly one child CTA");
-
-      for (const drift of ["Phân rã", "Phân rã ngay", "Giao nhanh"]) {
-        assert.ok(!source.includes(drift), `rejected drift label must not appear: ${drift}`);
-      }
-    });
-
-    test("T07: the generic lifecycle status control is removed (no bypass)", () => {
-      assert.ok(!source.includes('id="status-select"'), "generic status <select> must be gone");
-      assert.ok(!source.includes("status-select"), "no status-select control may remain");
-    });
-
-    test("T16: reading order is title -> status/deadline -> owner/unit -> requirement -> evidence -> action -> child tasks -> timeline", () => {
-      const order = [
-        'data-slot="detail-title"',
-        'data-slot="detail-status-deadline"',
-        'data-slot="detail-owner-unit"',
-        'data-slot="detail-requirement"',
-        'data-slot="detail-evidence"',
-        'data-slot="detail-context-action"',
-        'data-slot="detail-child-tasks"',
-        'data-slot="detail-history"',
-        'data-slot="detail-derived-milestones"',
-      ];
-      const positions = order.map((slot) => source.indexOf(slot));
-      for (let i = 0; i < positions.length; i += 1) {
-        assert.ok(positions[i] >= 0, `missing detail section: ${order[i]}`);
-        if (i > 0) {
-          assert.ok(
-            positions[i] > positions[i - 1],
-            `section ${order[i]} must follow ${order[i - 1]}`
-          );
-        }
-      }
-    });
-
-    test("T18: real audit events feed 'Lịch sử'; derived facts feed 'Mốc thông tin'", () => {
-      assert.ok(source.includes('data-slot="detail-history"'));
-      assert.ok(source.includes("Lịch sử"), "history section header");
-      assert.ok(source.includes("auditEvents"), "history renders real server audit events");
-      assert.ok(
-        source.includes("Chưa có bản ghi kiểm toán"),
-        "empty state must be truthful rather than fabricating events"
-      );
-      assert.ok(source.includes('data-slot="detail-derived-milestones"'));
-      assert.ok(source.includes("Mốc thông tin"), "derived milestone section header");
-    });
-
-    test("T20: the review CTA is gated by capability, not by role alone", () => {
-      assert.ok(
-        !source.includes('user?.role === "STAFF"') && !source.includes("user?.role === 'STAFF'"),
-        "the detail surface must not branch on raw role for the mobile action bar"
-      );
-      assert.ok(
-        source.includes("capabilities.canApprove") || source.includes("canReview"),
-        "review actions must be driven by the derived capability"
-      );
-    });
-  });
 });

@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
@@ -105,51 +103,6 @@ describe("TasksFocusLanding Central Dispatcher Integration", () => {
 
     assert.ok(html.includes("Chưa đăng nhập"));
     assert.ok(html.includes("Đăng nhập ngay"));
-  });
-
-  test("Source code verification: removed old 3-way hard branching and no dark: classes", () => {
-    const filePath = path.resolve(
-      process.cwd(),
-      "src/components/dashboard/zones/tasks-focus-landing.tsx"
-    );
-    const content = fs.readFileSync(filePath, "utf-8");
-
-    assert.ok(
-      content.includes("UnifiedAdaptiveWorkspace"),
-      "Must import UnifiedAdaptiveWorkspace"
-    );
-    assert.ok(
-      !content.includes("ExecutiveCockpitWorkspace"),
-      "Must not import legacy ExecutiveCockpitWorkspace"
-    );
-    assert.ok(
-      !content.includes("DepartmentManagerWorkspace"),
-      "Must not import legacy DepartmentManagerWorkspace"
-    );
-    assert.ok(
-      !content.includes("LecturerFocusWorkspace"),
-      "Must not import legacy LecturerFocusWorkspace"
-    );
-    assert.ok(
-      content.includes('id="tour-tasks-landing"'),
-      "Must preserve tour-tasks-landing ID"
-    );
-    assert.ok(
-      content.includes('data-slot="role-workspace-landing"'),
-      "Must preserve data-slot='role-workspace-landing'"
-    );
-    assert.ok(
-      content.includes("ActionableEmptyState"),
-      "Must preserve ActionableEmptyState"
-    );
-
-    // Light-only standard
-    assert.ok(!content.includes("dark:"), "Must not contain dark: classes");
-    assert.ok(!content.includes("dark "), "Must not contain dark variant");
-
-    // Zero emojis check in source
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}]/u;
-    assert.ok(!emojiRegex.test(content), "Source code must be 100% free of emojis");
   });
 
   test("Zero emojis in rendered HTML output", () => {

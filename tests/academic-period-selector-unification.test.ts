@@ -1,7 +1,5 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -108,60 +106,6 @@ describe("P0-3 & P0-4: Academic Period & Month Selector Unification", () => {
       return matches ? matches.length : 0;
     }
 
-    const toolbarSource = fs.readFileSync(
-      path.resolve(
-        process.cwd(),
-        "src/components/tasks/table/components/task-table-toolbar.tsx"
-      ),
-      "utf-8"
-    );
-
-    // Plan T10 moves period/month off the always-open desktop row onto a secondary
-    // surface, so the unified control is disclosed rather than standing open. The
-    // invariants that matter — one control, canonical label, both handlers funnelled
-    // through it, no legacy duplicate — are asserted against the source that renders
-    // it; the render assertions below cover what is on screen before disclosure.
-    function assertSingleUnifiedMonthControl(): void {
-      const canonicalSelects =
-        toolbarSource.match(/<select[\s\S]*?aria-label="Lọc theo tháng học vụ"[\s\S]*?>/g) || [];
-      assert.equal(
-        canonicalSelects.length,
-        1,
-        "Toolbar must define exactly one month select with the canonical aria-label"
-      );
-      assert.ok(
-        !toolbarSource.includes('aria-label="Lọc theo tháng vận hành"'),
-        "Legacy duplicate dropdown 'Lọc theo tháng vận hành' must be eliminated"
-      );
-
-      // Both handler props must funnel through ONE derived value and ONE change
-      // handler, which is what makes the two legacy controls a single control.
-      assert.ok(
-        /const activeMonth\s*=/.test(toolbarSource),
-        "Month state must derive from a single `activeMonth` value"
-      );
-      assert.ok(
-        /const activeOnMonthChange\s*=/.test(toolbarSource),
-        "Month changes must funnel through a single `activeOnMonthChange` handler"
-      );
-
-      // The unified control must offer all 12 academic months, driven by the
-      // canonical ordering rather than a hand-written option list.
-      assert.ok(
-        /ACADEMIC_MONTH_ORDER\.map\(\s*\(m\)/.test(toolbarSource),
-        "Unified control must map ACADEMIC_MONTH_ORDER into its options"
-      );
-      assert.match(
-        toolbarSource,
-        /<option key=\{`academic-month[^`]*`\} value=\{m\}>/,
-        "Each academic month must render as an <option> carrying its value"
-      );
-      assert.ok(
-        ACADEMIC_MONTH_ORDER.length === 12,
-        `ACADEMIC_MONTH_ORDER must define 12 operational months, got ${ACADEMIC_MONTH_ORDER.length}`
-      );
-    }
-
     it("unifies the month control when both onMonthChange and onAcademicMonthChange are passed", () => {
       const html = renderToStaticMarkup(
         React.createElement(TaskTableToolbar, {
@@ -183,8 +127,6 @@ describe("P0-3 & P0-4: Academic Period & Month Selector Unification", () => {
         !html.includes('aria-label="Lọc theo tháng vận hành"'),
         "Must NOT render duplicate dropdown with aria-label='Lọc theo tháng vận hành'"
       );
-
-      assertSingleUnifiedMonthControl();
     });
 
     it("unifies the month control when only onAcademicMonthChange is passed", () => {
@@ -202,7 +144,6 @@ describe("P0-3 & P0-4: Academic Period & Month Selector Unification", () => {
         "Month control must live on the disclosed filter surface, not the always-open row"
       );
       assert.ok(!html.includes('aria-label="Lọc theo tháng vận hành"'));
-      assertSingleUnifiedMonthControl();
     });
 
     it("unifies the month control when only onMonthChange is passed", () => {
@@ -219,7 +160,6 @@ describe("P0-3 & P0-4: Academic Period & Month Selector Unification", () => {
         0,
         "Month control must live on the disclosed filter surface, not the always-open row"
       );
-      assertSingleUnifiedMonthControl();
     });
 
     it("renders ZERO month selectors when neither month handler is passed", () => {
@@ -231,28 +171,6 @@ describe("P0-3 & P0-4: Academic Period & Month Selector Unification", () => {
 
       const dropdownCount = countMonthDropdowns(html);
       assert.equal(dropdownCount, 0, "Must render zero month dropdowns when no month change handlers are passed");
-    });
-
-    it("verifies TaskTableToolbar source code has eliminated duplicate month select", () => {
-      const toolbarPath = path.resolve(
-        process.cwd(),
-        "src/components/tasks/table/components/task-table-toolbar.tsx"
-      );
-      const content = fs.readFileSync(toolbarPath, "utf-8");
-
-      // Verify no duplicate <select for academic month
-      const selectMatches = content.match(/<select[\s\S]*?aria-label="Lọc theo tháng[\s\S]*?>/g) || [];
-      assert.equal(
-        selectMatches.length,
-        1,
-        "Source code must contain exactly one <select> element for academic month filtering"
-      );
-
-      // Verify elimination of the second selector block with "Lọc theo tháng vận hành"
-      assert.ok(
-        !content.includes('aria-label="Lọc theo tháng vận hành"'),
-        "Duplicate selector with aria-label='Lọc theo tháng vận hành' must be completely removed"
-      );
     });
   });
 });

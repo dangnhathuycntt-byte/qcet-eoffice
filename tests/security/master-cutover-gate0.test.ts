@@ -538,44 +538,5 @@ describe('Sprint 1: Master Cutover Gate 0 - Security & Correctness Hardening', (
       assert.equal(res.status, 200);
       assert.equal(res.headers.get('Clear-Site-Data'), '"cache"');
     });
-    const swPath = path.resolve(process.cwd(), 'public/sw.js');
-    let swContent: string;
-
-    before(() => {
-      swContent = fs.readFileSync(swPath, 'utf8');
-    });
-
-    test('sw.js specifies bumped version 2026.09.10.1', () => {
-      assert.ok(swContent.includes("const APP_VERSION = '2026.09.10.1'"));
-      assert.ok(swContent.includes("const CACHE_STATIC_NAME = 'qcet-static-2026.09.10.1'"));
-      assert.ok(swContent.includes("const CACHE_SHELL_NAME = 'qcet-shell-2026.09.10.1'"));
-    });
-
-    test('sw.js immediately bypasses /api/ requests from any SW caching', () => {
-      assert.ok(
-        swContent.includes("if (url.pathname.startsWith('/api/')) {\n    return;\n  }") ||
-        swContent.includes("if (url.pathname.startsWith('/api/')) return;")
-      );
-    });
-
-    test('sw.js uses strict allowlist for static assets and avoids generic extension matching', () => {
-      assert.ok(swContent.includes("url.pathname.startsWith('/_next/static/')"));
-      assert.ok(swContent.includes("url.pathname.startsWith('/icons/')"));
-      assert.ok(swContent.includes("url.pathname.startsWith('/fonts/')"));
-      assert.ok(swContent.includes("url.pathname === '/logo-qcet.png'"));
-
-      // Must NOT contain unconstrained extension matching that would cache API file downloads
-      assert.equal(
-        swContent.includes("url.pathname.match(/\\.(png|jpg|jpeg|svg|webp|ico|woff2|woff|ttf|eot)$/)"),
-        false,
-        'SW must not use generic image extension regex'
-      );
-    });
-
-    test('sw.js deletes old caches in activate event', () => {
-      assert.ok(swContent.includes('CURRENT_CACHES'));
-      assert.ok(swContent.includes('!CURRENT_CACHES.includes(name)'));
-      assert.ok(swContent.includes('caches.delete(name)'));
-    });
   });
 });

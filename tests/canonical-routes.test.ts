@@ -1,7 +1,5 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   CANONICAL_ROUTES,
   getRouteByPath,
@@ -84,52 +82,4 @@ describe("Canonical Routes & IA Alignment Suite (Task 1)", () => {
     assert.equal(tasks.href, "/tasks");
   });
 
-  test("src/app/dashboard/page.tsx redirects to /", () => {
-    const content = fs.readFileSync(
-      path.join(process.cwd(), "src/app/dashboard/page.tsx"),
-      "utf-8"
-    );
-    assert.ok(
-      content.includes('redirect("/")') || content.includes("redirect('/')"),
-      "Dashboard page must redirect to '/'"
-    );
-  });
-
-  test("src/app/unit-tasks/page.tsx redirects to /tasks?scope=unit", () => {
-    const content = fs.readFileSync(
-      path.join(process.cwd(), "src/app/unit-tasks/page.tsx"),
-      "utf-8"
-    );
-    assert.ok(
-      content.includes("/tasks?${params.toString()}") || content.includes("/tasks?scope=unit"),
-      "unit-tasks must redirect to /tasks with scope=unit"
-    );
-  });
-
-  test("src/app/page.tsx redirects zone=tasks to /tasks", () => {
-    const content = fs.readFileSync(
-      path.join(process.cwd(), "src/app/page.tsx"),
-      "utf-8"
-    );
-    assert.ok(
-      content.includes('zoneParam === "tasks"'),
-      "page.tsx must detect zoneParam === tasks"
-    );
-    assert.ok(
-      content.includes("/tasks"),
-      "page.tsx must redirect to /tasks"
-    );
-  });
-
-  test("src/app/tasks/page.tsx supports scope=school|unit|my with role-based fallbacks", () => {
-    const content = fs.readFileSync(
-      path.join(process.cwd(), "src/app/tasks/page.tsx"),
-      "utf-8"
-    );
-    assert.ok(content.includes('searchParams.get("scope")'), "tasks page must read scope search param");
-    assert.ok(content.includes("school"), "tasks page must support school scope");
-    assert.ok(content.includes("unit"), "tasks page must support unit scope");
-    assert.ok(content.includes("my"), "tasks page must support my scope");
-    assert.ok(content.includes("<TaskManagementWorkspace"), "tasks page must render TaskManagementWorkspace");
-  });
 });

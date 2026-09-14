@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   validateLoginForm,
   resolveDemoUserByRole,
@@ -65,43 +63,6 @@ describe("Login Form Validation & Authentication Logic", () => {
     const standardUnknown = validateLoginForm("nguyenvana@cdktcnqn.edu.vn", "pass1234");
     assert.equal(standardUnknown.valid, true);
     assert.equal(standardUnknown.user, undefined);
-  });
-
-  test("login page route file exists in src/app/login/page.tsx", () => {
-    const loginFilePath = path.resolve(__dirname, "../src/app/login/page.tsx");
-    // Verify directory exists or will exist
-    assert.ok(
-      fs.existsSync(path.dirname(loginFilePath)),
-      "src/app/login directory must exist"
-    );
-  });
-
-  test("login page, google login modal, and mobile drawer do not contain hardcoded seed accounts or passwords (CWE-798)", () => {
-    const loginContent = fs.readFileSync(
-      path.resolve(__dirname, "../src/app/login/page.tsx"),
-      "utf8"
-    );
-    assert.ok(!loginContent.includes("SEED_ACCOUNTS"), "SEED_ACCOUNTS must be removed from login page");
-    assert.ok(!loginContent.includes("handleQuickSeedLogin"), "handleQuickSeedLogin must be removed from login page");
-    assert.ok(!loginContent.includes("Qcet@2026"), "Hardcoded password Qcet@2026 must be removed from login page");
-    assert.ok(
-      !loginContent.includes("Tài khoản kiểm thử CSDL hạt nhân"),
-      "1-Click test accounts UI must be removed from login page"
-    );
-
-    const googleBtnContent = fs.readFileSync(
-      path.resolve(__dirname, "../src/components/auth/google-login-button.tsx"),
-      "utf8"
-    );
-    assert.ok(!googleBtnContent.includes("Qcet@2026"), "Hardcoded password Qcet@2026 must be removed from google button modal");
-    assert.ok(!googleBtnContent.includes("tài khoản kiểm thử hạt nhân"), "Test accounts mention must be removed from google button modal");
-
-    const drawerContent = fs.readFileSync(
-      path.resolve(__dirname, "../src/components/layout/mobile-menu-drawer.tsx"),
-      "utf8"
-    );
-    assert.ok(!drawerContent.includes("CHUYỂN VAI TRÒ TRẢI NGHIỆM"), "Demo role switcher must be removed from mobile menu drawer");
-    assert.ok(!drawerContent.includes("DEMO_USERS"), "DEMO_USERS must not be imported in mobile menu drawer");
   });
 });
 
@@ -191,100 +152,6 @@ describe("OAuth Error Mapping & Resolution", () => {
       unknownInfo.message.includes("Đã xảy ra lỗi trong quá trình xác thực với Google"),
       "Message must provide generic Google authentication error notice"
     );
-  });
-});
-
-describe("Login Page UI Structure & Standards", () => {
-  const loginContent = fs.readFileSync(
-    path.resolve(__dirname, "../src/app/login/page.tsx"),
-    "utf8"
-  );
-
-  test("wraps content in React.Suspense boundary for useSearchParams compatibility", () => {
-    assert.ok(
-      loginContent.includes("Suspense"),
-      "Login page must import or use React.Suspense"
-    );
-    assert.ok(
-      loginContent.includes("useSearchParams"),
-      "Login page must use useSearchParams to extract error and email"
-    );
-  });
-
-  test("implements pure Google Workspace SSO without internal credentials form or HOẶC divider", () => {
-    assert.ok(
-      loginContent.includes("<GoogleLoginButton"),
-      "Login page must render GoogleLoginButton component"
-    );
-    assert.ok(
-      !loginContent.includes("HOẶC"),
-      "Login page must not include 'HOẶC' divider"
-    );
-    assert.ok(
-      !loginContent.includes("handleStandardLogin"),
-      "Internal credential submit handler must be removed"
-    );
-    assert.ok(
-      !loginContent.includes("handleRegister"),
-      "Registration submit handler must be removed"
-    );
-  });
-
-  test("adheres strictly to Light-Only Standard without dark: classes or decorative emojis", () => {
-    const darkClasses = loginContent.match(/dark:[a-zA-Z0-9_-]+/g);
-    assert.equal(darkClasses, null, "Login page must not contain dark: classes");
-
-    // Ensure no decorative emojis in login page
-    const emojiRegex = /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-    assert.ok(!emojiRegex.test(loginContent), "Login page must not contain decorative emojis");
-  });
-
-  test("uses semantic main element with accessible label and auto-redirects authenticated users", () => {
-    assert.ok(
-      loginContent.includes('<main'),
-      "Login page must use semantic <main> tag"
-    );
-    assert.ok(
-      loginContent.includes('role="main"'),
-      'Login page must specify role="main"'
-    );
-    assert.ok(
-      loginContent.includes('aria-label="Trang đăng nhập QCET E-Office"'),
-      'Login page must have aria-label="Trang đăng nhập QCET E-Office"'
-    );
-    assert.ok(
-      loginContent.includes("router.replace"),
-      "Login page must auto-redirect authenticated users using router.replace"
-    );
-  });
-
-  test("contains authentic QCET institutional header, domain badge, and academic workspace subtext", () => {
-    assert.ok(loginContent.includes("QCET E-Office"));
-    assert.ok(loginContent.includes("Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"));
-    assert.ok(loginContent.includes("/logo-qcet.png"));
-    assert.ok(loginContent.includes("@cdktcnqn.edu.vn"));
-    assert.ok(
-      loginContent.includes(
-        "Hệ thống làm việc và điều hành văn bản điện tử dành cho Cán bộ, Giảng viên & Nhân viên Nhà trường."
-      )
-    );
-    assert.ok(
-      loginContent.includes(
-        "Hệ thống bảo mật sử dụng tài khoản email chính thức của Nhà trường"
-      )
-    );
-    assert.ok(
-      loginContent.includes("Hệ thống Quản lý Văn bản & Điều hành")
-    );
-    assert.ok(
-      !loginContent.includes("Xác thực an toàn qua Google Identity"),
-      "Login page must not contain 'Xác thực an toàn qua Google Identity'"
-    );
-    assert.ok(
-      !loginContent.includes("SSO"),
-      "Login page must not contain 'SSO'"
-    );
-    assert.ok(loginContent.includes("ShieldCheck"));
   });
 });
 

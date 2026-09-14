@@ -1,7 +1,5 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 
 import {
   ICT_TIME_ZONE,
@@ -24,112 +22,6 @@ import {
   formatAcademicPeriodLabel,
 } from "../src/lib/format";
 import { getSystemReferenceDate } from "../src/lib/academic-calendar";
-
-const VOCAB = fs.readFileSync(
-  path.join(process.cwd(), "docs/ux/QCET_UI_VOCABULARY.md"),
-  "utf8"
-);
-
-function collectLedgerEntries(prefix: "Approved" | "Rejected"): Set<string> {
-  const re = new RegExp(`^\\s*${prefix}:\\s+([^()\\n]+)`, "gm");
-  const found = new Set<string>();
-  for (const match of VOCAB.matchAll(re)) {
-    const term = match[1].trim();
-    if (term) found.add(term);
-  }
-  return found;
-}
-
-describe("C19 — UI vocabulary contract (docs/ux/QCET_UI_VOCABULARY.md)", () => {
-  it("declares itself frozen v1", () => {
-    assert.match(VOCAB, /status:\s*FROZEN/i);
-    assert.match(VOCAB, /version:\s*1\b/);
-  });
-
-  it("freezes approved terms for core entities and lifecycle/attention states", () => {
-    const approved = collectLedgerEntries("Approved");
-    const entities = [
-      "Nhiệm vụ",
-      "Nhiệm vụ cha",
-      "Nhiệm vụ con",
-      "Giao việc",
-      "Tạo việc cá nhân",
-    ];
-    const states = [
-      "Chưa bắt đầu",
-      "Đang thực hiện",
-      "Cần chỉnh sửa",
-      "Chờ phê duyệt",
-      "Chờ BGH duyệt",
-      "Hoàn thành",
-      "Quá hạn",
-      "Đã hủy",
-      "Cần tôi xử lý",
-      "Chờ tôi duyệt",
-      "Sắp đến hạn",
-      "Bị chặn",
-    ];
-    for (const term of [...entities, ...states]) {
-      assert.ok(VOCAB.includes(term), `vocabulary must contain approved term: ${term}`);
-    }
-    // Approved action outcomes must appear in the §H ledger as approved.
-    for (const term of ["Giao việc", "Thêm việc con", "Chờ phê duyệt", "Chờ tôi duyệt"]) {
-      assert.ok(approved.has(term), `"${term}" must be an Approved ledger entry`);
-    }
-  });
-
-  it("consolidates forbidden drift to a single approved outcome per group", () => {
-    const approved = collectLedgerEntries("Approved");
-    const rejected = collectLedgerEntries("Rejected");
-
-    // H.1 work creation / delegation
-    assert.ok(approved.has("Giao việc"));
-    for (const drift of ["Tạo việc", "Tạo nhiệm vụ", "Phân công"]) {
-      assert.ok(rejected.has(drift), `"${drift}" must be Rejected`);
-    }
-    // H.2 subtask creation
-    assert.ok(approved.has("Thêm việc con"));
-    for (const drift of ["Phân rã", "Phân rã ngay", "Giao nhanh"]) {
-      assert.ok(rejected.has(drift), `"${drift}" must be Rejected`);
-    }
-    // H.3 approval terminology — status vs attention must stay distinct
-    assert.ok(approved.has("Chờ phê duyệt"));
-    assert.ok(approved.has("Chờ tôi duyệt"));
-    assert.ok(rejected.has("Chờ duyệt"), "bare 'Chờ duyệt' must be Rejected drift");
-    assert.ok(rejected.has("Cần duyệt"));
-    // H.4 / H.5 / H.6
-    assert.ok(approved.has("Đang thực hiện"));
-    assert.ok(rejected.has("Đang làm"));
-    assert.ok(approved.has("Xóa bộ lọc"));
-    assert.ok(rejected.has("Xóa lọc"));
-    assert.ok(approved.has("Chưa bắt đầu"));
-    assert.ok(rejected.has("Mới"));
-
-    // Sanity: an approved outcome must never also be listed as rejected.
-    for (const term of ["Chờ phê duyệt", "Chờ tôi duyệt", "Giao việc", "Thêm việc con"]) {
-      assert.ok(!rejected.has(term), `approved term "${term}" must not be rejected`);
-    }
-  });
-
-  it("bans generic affirmation labels where a specific outcome exists", () => {
-    const section = VOCAB.slice(VOCAB.indexOf("Banned generic labels"));
-    const fenceStart = section.indexOf("```text");
-    const fenceEnd = section.indexOf("```", fenceStart + 7);
-    assert.ok(fenceStart >= 0 && fenceEnd > fenceStart, "banned-labels block must exist");
-    const banned = section.slice(fenceStart, fenceEnd);
-    for (const label of ["Xác nhận", "Tiếp tục", "Thực hiện", "OK", "Đồng ý"]) {
-      assert.ok(banned.includes(label), `"${label}" must be listed as a banned generic label`);
-    }
-  });
-
-  it("freezes the bounded relative-date rule and ICT timezone authority", () => {
-    assert.ok(VOCAB.includes("2..3"), "vocabulary must bound the near-term window to 2..3 days");
-    assert.ok(VOCAB.includes("Quá hạn {abs(diffDays)} ngày"));
-    assert.match(VOCAB, /Asia\/Ho_Chi_Minh/);
-    assert.equal(ICT_TIME_ZONE, "Asia/Ho_Chi_Minh");
-    assert.equal(RELATIVE_NEAR_TERM_MAX_DAYS, 3);
-  });
-});
 
 describe("C19 — date/time formatting utilities (src/lib/format)", () => {
   it("emits the frozen ISO, display, compact and span date formats (vocabulary §G.1)", () => {

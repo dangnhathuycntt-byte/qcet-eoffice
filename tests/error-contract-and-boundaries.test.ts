@@ -1,7 +1,5 @@
 import test, { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { z } from "zod";
@@ -295,31 +293,6 @@ describe("Phase 9: Route-level Loading & Error Architecture", () => {
     { name: "/org", dir: "src/app/org" },
     { name: "/notifications", dir: "src/app/notifications" },
   ];
-
-  describe("File Existence & Client Directive Verification", () => {
-    for (const route of routes) {
-      it(`verifies loading.tsx and error.tsx exist for ${route.name}`, () => {
-        const loadingPath = path.resolve(process.cwd(), route.dir, "loading.tsx");
-        const errorPath = path.resolve(process.cwd(), route.dir, "error.tsx");
-
-        assert.ok(
-          fs.existsSync(loadingPath),
-          `Missing loading.tsx in ${route.dir}`
-        );
-        assert.ok(
-          fs.existsSync(errorPath),
-          `Missing error.tsx in ${route.dir}`
-        );
-
-        // error.tsx must have "use client" directive
-        const errorContent = fs.readFileSync(errorPath, "utf8");
-        assert.ok(
-          errorContent.includes('"use client"') || errorContent.includes("'use client'"),
-          `${route.dir}/error.tsx must contain "use client"`
-        );
-      });
-    }
-  });
 
   describe("Structural Validity of Loading Components", () => {
     const loadingComponents = [

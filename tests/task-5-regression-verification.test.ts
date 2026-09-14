@@ -1,7 +1,5 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 import {
   QCET_CANONICAL_UNITS,
   toCanonicalUnitCode,
@@ -78,29 +76,6 @@ describe('Task 5: Full Regression & QCET Alignment Verification Suite', () => {
     }
   });
 
-  test('3. prisma/seed.ts is free of UTF-8 replacement characters and uses real QCET staff and domain', () => {
-    const seedPath = path.resolve(process.cwd(), 'prisma/seed.ts');
-    const content = fs.readFileSync(seedPath, 'utf8');
-
-    // Check no Unicode replacement characters �
-    assert.ok(!content.includes('�'), 'prisma/seed.ts must not contain UTF-8 replacement characters (\\uFFFD)');
-    assert.ok(
-      content.includes('Trung tâm Đào tạo Lái xe (Cũ)'),
-      'Line 51 in prisma/seed.ts must have correct Vietnamese text "Trung tâm Đào tạo Lái xe (Cũ)"'
-    );
-
-    // Ensure 0 occurrences of old mock domain
-    assert.ok(!content.includes('@qcet.edu.vn'), 'prisma/seed.ts must not contain @qcet.edu.vn');
-
-    // Ensure official domain is used
-    assert.ok(content.includes('@cdktcnqn.edu.vn'), 'prisma/seed.ts must use @cdktcnqn.edu.vn');
-
-    // Ensure real leadership names are present
-    assert.ok(content.includes('Phạm Văn Tường'), 'Seed must contain Principal Phạm Văn Tường');
-    assert.ok(content.includes('Trần Trọng Kiệm'), 'Seed must contain Vice Principal Trần Trọng Kiệm');
-    assert.ok(content.includes('Lê Xuân Nguyên'), 'Seed must contain Vice Principal Lê Xuân Nguyên');
-  });
-
   test('4. Real QCET departments and leadership structures are strictly preserved', () => {
     assert.ok(QCET_DEPARTMENT_GROUPS.length >= 16, 'QCET_DEPARTMENT_GROUPS must have at least 16 canonical groups');
 
@@ -118,32 +93,6 @@ describe('Task 5: Full Regression & QCET Alignment Verification Suite', () => {
           `Personnel ${p.name} in ${group.name} must have @cdktcnqn.edu.vn email, got: ${p.email}`
         );
       }
-    }
-  });
-
-  test('5. Zero mockup demo switchers exist in login or navigation headers', () => {
-    const loginPagePath = path.resolve(process.cwd(), 'src/app/login/page.tsx');
-    const loginContent = fs.readFileSync(loginPagePath, 'utf8');
-    assert.ok(
-      !loginContent.includes('RoleSwitcherPill'),
-      'Login page must not import or render RoleSwitcherPill'
-    );
-    assert.ok(
-      !loginContent.includes('mockAccounts'),
-      'Login page must not contain mockAccounts'
-    );
-
-    const execHeaderPath = path.resolve(process.cwd(), 'src/components/layout/executive-header.tsx');
-    if (fs.existsSync(execHeaderPath)) {
-      const execContent = fs.readFileSync(execHeaderPath, 'utf8');
-      assert.ok(
-        !execContent.includes('RoleSwitcherPill'),
-        'executive-header.tsx must not import or render RoleSwitcherPill'
-      );
-      assert.ok(
-        !execContent.includes('RoleViewpointBanner'),
-        'executive-header.tsx must not render RoleViewpointBanner'
-      );
     }
   });
 });

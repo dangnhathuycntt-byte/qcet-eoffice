@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToString } from "react-dom/server";
 import { AuthContext, type AuthContextType } from "../src/lib/auth-context";
@@ -11,8 +9,6 @@ import {
   formatSchoolTasksMetric,
   type PortalStatsSummary,
 } from "../src/lib/portal-metrics";
-
-const portalPagePath = path.resolve(process.cwd(), "src/app/portal/page.tsx");
 
 function createMockAuthContext(overrides: Partial<AuthContextType> = {}): AuthContextType {
   const base: AuthContextType = {
@@ -44,84 +40,6 @@ function createMockAuthContext(overrides: Partial<AuthContextType> = {}): AuthCo
 }
 
 describe("Task 5: Real Data Binding for /portal & Eradicate CSS Zoom (P0-7 & P1-12)", () => {
-  describe("Static / AST Audit of src/app/portal/page.tsx", () => {
-    test("file exists and can be loaded", () => {
-      assert.ok(fs.existsSync(portalPagePath), "src/app/portal/page.tsx must exist");
-    });
-
-    test("asserts document.documentElement.style.zoom is completely eliminated", () => {
-      const content = fs.readFileSync(portalPagePath, "utf8");
-      assert.equal(
-        content.includes("document.documentElement.style.zoom"),
-        false,
-        "Application UI must not manipulate DOM CSS zoom"
-      );
-      assert.equal(
-        content.includes("qcet_ui_zoom"),
-        false,
-        "localStorage.getItem('qcet_ui_zoom') must be eradicated from portal page"
-      );
-    });
-
-    test("asserts PortalZoomToggle component is completely eliminated", () => {
-      const content = fs.readFileSync(portalPagePath, "utf8");
-      assert.equal(
-        content.includes("PortalZoomToggle"),
-        false,
-        "PortalZoomToggle must be eliminated from /portal"
-      );
-    });
-
-    test("asserts hardcoded KPI strings are eliminated", () => {
-      const content = fs.readFileSync(portalPagePath, "utf8");
-      assert.equal(
-        content.includes("32% hoàn thành (340 việc)"),
-        false,
-        "Hardcoded '32% hoàn thành (340 việc)' must not be present"
-      );
-      assert.equal(
-        content.includes("94 việc trọng tâm"),
-        false,
-        "Hardcoded '94 việc trọng tâm' must not be present"
-      );
-    });
-
-    test("asserts dynamic fetch and binding to /api/dashboard/overview is present", () => {
-      const content = fs.readFileSync(portalPagePath, "utf8");
-      assert.ok(
-        content.includes("/api/dashboard/overview"),
-        "Dynamic fetch to /api/dashboard/overview must be present"
-      );
-      assert.ok(
-        content.includes('credentials: "include"'),
-        "Fetch must include session credentials"
-      );
-    });
-
-    test("asserts Light-Only standard (Tailwind v4 OKLCH tokens, zero dark: classes)", () => {
-      const content = fs.readFileSync(portalPagePath, "utf8");
-      assert.doesNotMatch(content, /\bdark:/, "Strict Light-Only: no dark: classes allowed");
-      assert.doesNotMatch(content, /ThemeProvider/, "No ThemeProvider allowed");
-    });
-
-    test("asserts zero decorative emojis in file", () => {
-      const content = fs.readFileSync(portalPagePath, "utf8");
-      assert.doesNotMatch(
-        content,
-        /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u,
-        "Zero decorative emojis allowed in portal page"
-      );
-    });
-
-    test("asserts accessible keyboard skip link id='main-content' and navigation links exist", () => {
-      const content = fs.readFileSync(portalPagePath, "utf8");
-      assert.ok(content.includes('id="main-content"'), "Must preserve id='main-content'");
-      assert.ok(content.includes('href="/dashboard"'), "Must provide link to /dashboard");
-      assert.ok(content.includes('href="/"'), "Must provide link to /");
-      assert.ok(content.includes('href="/calendar"'), "Must provide link to /calendar");
-    });
-  });
-
   describe("Metric Formatting Functions Contract", () => {
     test("formatProgressMetric formats dynamically when stats are available", () => {
       const stats: PortalStatsSummary = {

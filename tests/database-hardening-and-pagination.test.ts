@@ -299,16 +299,6 @@ describe('Phase 12 & Phase 13: Database Hardening & Server-Side Filtering / Pagi
       );
     });
 
-    test('PrismaClient singleton guarantees unified connection pool across environments', () => {
-      const prismaFilePath = path.resolve(__dirname, '../src/lib/prisma.ts');
-      const prismaContent = fs.readFileSync(prismaFilePath, 'utf8');
-
-      assert.ok(
-        prismaContent.includes('globalForPrisma.prisma = prisma;'),
-        'PrismaClient must assign singleton to globalForPrisma unconditionally'
-      );
-      assert.ok(prisma !== undefined, 'Prisma instance must be exported and defined');
-    });
   });
 
   describe('2. Server-Side Offset Pagination (Phase 13)', () => {

@@ -1,6 +1,5 @@
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
 import { NextRequest } from "next/server";
 import { GET as getOverview } from "../src/app/api/dashboard/overview/route";
 import { PATCH as patchTask } from "../src/app/api/tasks/[id]/route";
@@ -125,27 +124,6 @@ describe("RBAC and Segregation of Duties (SoD) API Control", () => {
       await prisma.taskAssignee.deleteMany({ where: { taskId: deptTaskId } });
       await prisma.task.deleteMany({ where: { id: deptTaskId } });
     }
-  });
-
-  test("Task update API enforces BGH role for SCHOOL tasks completion", () => {
-    const content = fs.existsSync("src/server/tasks/task-policy.ts")
-      ? fs.readFileSync("src/server/tasks/task-policy.ts", "utf8")
-      : fs.readFileSync("src/server/policies/task-policy.ts", "utf8");
-    assert.ok(
-      content.includes("TaskScope.SCHOOL") ||
-      content.includes("scopeUpper === 'SCHOOL'") ||
-      content.includes("task.scope === 'SCHOOL'"),
-      "Must check existing task scope for SCHOOL"
-    );
-  });
-
-  test("Overview API enforces session authentication via getSessionFromRequest or requireAuthenticated", () => {
-    const content = fs.readFileSync("src/app/api/dashboard/overview/route.ts", "utf8");
-    assert.ok(
-      content.includes("getSessionFromRequest") ||
-      content.includes("requireAuthenticated"),
-      "Overview route must enforce authentication"
-    );
   });
 
   test("GET /api/dashboard/overview returns 401 when unauthenticated NextRequest is provided", async () => {

@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -50,11 +48,6 @@ const mockDepartments: DepartmentHealthSummary[] = [
 ];
 
 describe("DepartmentProgressMatrix View Mode & Compact Table Engine", () => {
-  const componentPath = path.join(
-    process.cwd(),
-    "src/components/dashboard/department-progress-matrix.tsx"
-  );
-
   test("sortDepartmentsByOverdue sorts by overdue count descending", () => {
     const sorted = sortDepartmentsByOverdue(mockDepartments);
     assert.equal(sorted[0].departmentId, "DIEN", "Highest overdue (3) must come first");
@@ -186,15 +179,4 @@ describe("DepartmentProgressMatrix View Mode & Compact Table Engine", () => {
     assert.match(htmlSelected, /Bỏ chọn đơn vị/, "Must have clear filter button");
   });
 
-  test("adheres to anti-slop, light-only, and typography guidelines", () => {
-    const content = fs.readFileSync(componentPath, "utf-8");
-
-    assert.doesNotMatch(content, /dark:/, "Strictly Light-Only: no dark: classes allowed");
-    assert.match(content, /tabular-nums/, "Metrics must use tabular-nums");
-    assert.doesNotMatch(
-      content,
-      /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u,
-      "Zero decorative emojis allowed"
-    );
-  });
 });

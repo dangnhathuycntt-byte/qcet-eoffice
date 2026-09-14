@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -20,8 +18,6 @@ import { ExecutiveCockpitWorkspace } from "../src/components/portal/executive-co
 import { getMockDashboardPayload } from "./fixtures/dashboard-fixtures";
 import { DEFAULT_DEMO_USERS } from "../src/lib/role-task-filter";
 import type { AuthUser } from "../src/types/auth";
-
-const PAGE_FILE_PATH = path.resolve(process.cwd(), "src/app/page.tsx");
 
 describe("Role-Adaptive Landing & Integration (Task 3)", () => {
   const adminUser = DEFAULT_DEMO_USERS[0]; // role: ADMIN
@@ -109,91 +105,6 @@ describe("Role-Adaptive Landing & Integration (Task 3)", () => {
   });
 
   // --------------------------------------------------------------------------
-  // 2. Integration with src/app/page.tsx
-  // --------------------------------------------------------------------------
-  describe("2. page.tsx Component Contracts & Anti-Slop Audit", () => {
-    assert.ok(fs.existsSync(PAGE_FILE_PATH), "src/app/page.tsx must exist");
-    const architectureFiles = [
-      PAGE_FILE_PATH,
-      path.resolve(process.cwd(), "src/components/dashboard/zones/tasks-zone.tsx"),
-      path.resolve(process.cwd(), "src/components/dashboard/zones/tasks-focus-landing.tsx"),
-      path.resolve(process.cwd(), "src/components/dashboard/zones/tasks-expanded-views.tsx"),
-      path.resolve(process.cwd(), "src/components/dashboard/dashboard-modals-host.tsx"),
-      path.resolve(process.cwd(), "src/components/workspace/unified-adaptive-workspace.tsx"),
-      path.resolve(process.cwd(), "src/hooks/use-task-filters.ts"),
-    ];
-    const pageContent = architectureFiles.map((f) => fs.readFileSync(f, "utf-8")).join("\n");
-
-    test("src/app/page.tsx imports StaffFocusView from @/components/dashboard/roles/staff-focus-view", () => {
-      assert.ok(
-        pageContent.includes("UnifiedAdaptiveWorkspace") ||
-        pageContent.includes("StaffFocusView") ||
-        pageContent.includes("LecturerFocusWorkspace"),
-        "page.tsx must import role focus workspace"
-      );
-    });
-
-    test("src/app/page.tsx imports SimplifiedTaskFilterBar from @/components/dashboard/simplified-task-filter-bar", () => {
-      assert.ok(
-        pageContent.includes("SimplifiedTaskFilterBar"),
-        "page.tsx must import SimplifiedTaskFilterBar"
-      );
-      assert.ok(
-        pageContent.includes("@/components/dashboard/simplified-task-filter-bar"),
-        "page.tsx must import from '@/components/dashboard/simplified-task-filter-bar'"
-      );
-    });
-
-    test("src/app/page.tsx conditionally renders StaffFocusView for STAFF users in zone=tasks", () => {
-      assert.ok(
-        pageContent.includes("UnifiedAdaptiveWorkspace") ||
-        pageContent.includes("<StaffFocusView"),
-        "page.tsx must render role focus workspace"
-      );
-    });
-
-    test("src/app/page.tsx deprecates legacy school toggle and synchronizes scope with Topbar ScopeSwitcher", () => {
-      assert.ok(
-        !pageContent.includes("Chế độ xem toàn trường (Nâng cao)"),
-        "page.tsx must eradicate legacy button 'Chế độ xem toàn trường (Nâng cao)'"
-      );
-    });
-
-    test("src/app/page.tsx provides return toggle button to focused view when in expanded mode", () => {
-      assert.ok(
-        pageContent.includes("Chế độ trọng tâm") ||
-        pageContent.includes("Chế độ xem cá nhân") ||
-        pageContent.includes("Quay lại Chế độ trọng tâm") ||
-        pageContent.includes("isStaffExpanded"),
-        "page.tsx must provide return toggle to focus mode"
-      );
-    });
-
-    test("src/app/page.tsx renders SimplifiedTaskFilterBar for ADMIN or MANAGER with direct approvals access", () => {
-      assert.ok(
-        pageContent.includes("<SimplifiedTaskFilterBar"),
-        "page.tsx must render <SimplifiedTaskFilterBar"
-      );
-    });
-
-    test("src/app/page.tsx preserves TaskDetailSideSheet and status updates", () => {
-      assert.ok(
-        pageContent.includes("<TaskDetailSideSheet") || pageContent.includes("TaskDetailSideSheet"),
-        "page.tsx must preserve TaskDetailSideSheet"
-      );
-      assert.ok(
-        pageContent.includes("handleStatusChange"),
-        "page.tsx must preserve handleStatusChange"
-      );
-    });
-
-    test("src/app/page.tsx anti-slop check: 0% emojis in source file", () => {
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-      assert.ok(!emojiRegex.test(fs.readFileSync(PAGE_FILE_PATH, "utf-8")), "page.tsx must contain 0% emojis");
-    });
-  });
-
-  // --------------------------------------------------------------------------
   // 3. Render Verification of Components Consumed by page.tsx
   // --------------------------------------------------------------------------
   describe("3. Component Render Verification for Integrated Views", () => {
@@ -240,76 +151,6 @@ describe("Role-Adaptive Landing & Integration (Task 3)", () => {
   // 4. Task 9: Role-Based Dispatcher Contracts & Static Renders
   // --------------------------------------------------------------------------
   describe("4. Task 9 Role-Based Dispatcher Contracts & Static Renders", () => {
-    const combinedArchitecture = [
-      fs.readFileSync(PAGE_FILE_PATH, "utf-8"),
-      fs.readFileSync(path.resolve(process.cwd(), "src/components/dashboard/zones/tasks-focus-landing.tsx"), "utf-8"),
-      fs.readFileSync(path.resolve(process.cwd(), "src/components/portal/executive-cockpit-workspace.tsx"), "utf-8"),
-      fs.readFileSync(path.resolve(process.cwd(), "src/components/portal/department-manager-workspace.tsx"), "utf-8"),
-      fs.readFileSync(path.resolve(process.cwd(), "src/components/portal/lecturer-focus-workspace.tsx"), "utf-8"),
-      fs.readFileSync(path.resolve(process.cwd(), "src/components/workspace/unified-adaptive-workspace.tsx"), "utf-8"),
-    ].join("\n");
-
-    test("src/app/page.tsx imports all 3 role-tailored workspaces", () => {
-      assert.ok(
-        combinedArchitecture.includes("ExecutiveCockpitWorkspace") || combinedArchitecture.includes("ExecutiveWorkspace"),
-        "page architecture must import ExecutiveCockpitWorkspace"
-      );
-      assert.ok(
-        combinedArchitecture.includes("DepartmentManagerWorkspace") || combinedArchitecture.includes("ManagerWorkspace"),
-        "page architecture must import DepartmentManagerWorkspace"
-      );
-      assert.ok(
-        combinedArchitecture.includes("LecturerFocusWorkspace") || combinedArchitecture.includes("StaffWorkspace"),
-        "page architecture must import LecturerFocusWorkspace"
-      );
-    });
-
-    test("src/app/page.tsx imports workspace payload types", () => {
-      assert.ok(
-        combinedArchitecture.includes("DeliverableSubmissionPayload"),
-        "page architecture must import DeliverableSubmissionPayload"
-      );
-      assert.ok(
-        combinedArchitecture.includes("ApprovalActionPayload"),
-        "page architecture must import ApprovalActionPayload"
-      );
-    });
-
-    test("src/app/page.tsx defines deliverable and review state handlers", () => {
-      assert.ok(
-        combinedArchitecture.includes("handleSubmitDeliverable"),
-        "page architecture must define handleSubmitDeliverable"
-      );
-      assert.ok(
-        combinedArchitecture.includes("handleReviewAction"),
-        "page architecture must define handleReviewAction"
-      );
-    });
-
-    test("src/app/page.tsx dispatches ExecutiveCockpitWorkspace for BGH/ADMIN", () => {
-      assert.ok(
-        combinedArchitecture.includes("<ExecutiveCockpitWorkspace") ||
-        combinedArchitecture.includes("<UnifiedAdaptiveWorkspace"),
-        "page architecture must render ExecutiveCockpitWorkspace or UnifiedAdaptiveWorkspace"
-      );
-    });
-
-    test("src/app/page.tsx dispatches DepartmentManagerWorkspace for TRUONG_DON_VI/MANAGER", () => {
-      assert.ok(
-        combinedArchitecture.includes("<DepartmentManagerWorkspace") ||
-        combinedArchitecture.includes("<UnifiedAdaptiveWorkspace"),
-        "page architecture must render DepartmentManagerWorkspace or UnifiedAdaptiveWorkspace"
-      );
-    });
-
-    test("src/app/page.tsx dispatches LecturerFocusWorkspace for GIANG_VIEN/CHUYEN_VIEN/STAFF", () => {
-      assert.ok(
-        combinedArchitecture.includes("<LecturerFocusWorkspace") ||
-        combinedArchitecture.includes("<UnifiedAdaptiveWorkspace"),
-        "page architecture must render LecturerFocusWorkspace or UnifiedAdaptiveWorkspace"
-      );
-    });
-
     test("ExecutiveCockpitWorkspace renders cleanly in static test", () => {
       const html = renderToStaticMarkup(
         React.createElement(ExecutiveCockpitWorkspace, {

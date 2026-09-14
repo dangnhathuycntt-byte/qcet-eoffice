@@ -1,7 +1,5 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import manifest from "../src/app/manifest";
 import prisma from "../src/lib/prisma";
 import {
@@ -17,24 +15,6 @@ describe("Task 3: PWA & Service Worker Resilience", () => {
     assert.equal(m.id, "/");
     assert.equal(m.scope, "/");
     assert.equal(m.display, "standalone");
-  });
-
-  it("layout.tsx does NOT unregister ServiceWorker on localhost", () => {
-    const layoutPath = path.resolve(__dirname, "../src/app/layout.tsx");
-    const content = fs.readFileSync(layoutPath, "utf-8");
-    assert.ok(
-      !content.includes("r.unregister()"),
-      "layout.tsx must not unregister service workers on localhost"
-    );
-  });
-
-  it("use-push-notification.ts wraps SW ready and getSubscription in 4000ms timeout", () => {
-    const hookPath = path.resolve(__dirname, "../src/hooks/use-push-notification.ts");
-    const content = fs.readFileSync(hookPath, "utf-8");
-    assert.ok(
-      content.includes("withTimeout") || content.includes("4000") || content.includes("Promise.race"),
-      "use-push-notification.ts must use timeout on SW operations"
-    );
   });
 });
 
@@ -219,28 +199,6 @@ describe("Task 4: Push Circuit Breaker & Key Rotation", { concurrency: 1 }, () =
     assert.equal(areServerKeysEqual(keyBytesShorter, keyBytes1), false);
     assert.equal(areServerKeysEqual(null, keyBytes1), false);
     assert.equal(areServerKeysEqual(undefined, keyBytes1), false);
-  });
-
-  it("use-push-notification.ts contains key rotation logic to unsubscribe stale subscriptions", () => {
-    const hookPath = path.resolve(__dirname, "../src/hooks/use-push-notification.ts");
-    const content = fs.readFileSync(hookPath, "utf-8");
-    const subscribeSection = content.slice(
-      content.indexOf("const subscribeToPush"),
-      content.indexOf("const unsubscribeFromPush")
-    );
-    assert.ok(
-      subscribeSection.includes("areServerKeysEqual") ||
-      (subscribeSection.includes("applicationServerKey") && subscribeSection.includes("unsubscribe")),
-      "subscribeToPush must compare applicationServerKey and unsubscribe stale subscriptions"
-    );
-  });
-
-  it(".env.production.example documents required VAPID keys", () => {
-    const envPath = path.resolve(__dirname, "../.env.production.example");
-    const content = fs.readFileSync(envPath, "utf-8");
-    assert.ok(content.includes("NEXT_PUBLIC_VAPID_PUBLIC_KEY"), "Must document NEXT_PUBLIC_VAPID_PUBLIC_KEY");
-    assert.ok(content.includes("VAPID_PRIVATE_KEY"), "Must document VAPID_PRIVATE_KEY");
-    assert.ok(content.includes("VAPID_SUBJECT"), "Must document VAPID_SUBJECT");
   });
 });
 

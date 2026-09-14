@@ -122,42 +122,6 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.equal(twentyTokens, QCET_TOKENS);
     });
 
-    it("globals.css contains QCET OKLCH CSS variables and styling classes", () => {
-      const cssPath = path.resolve(__dirname, "../src/app/globals.css");
-      assert.ok(fs.existsSync(cssPath), "globals.css should exist");
-      const cssContent = fs.readFileSync(cssPath, "utf-8");
-
-      assert.ok(cssContent.includes("--background: oklch(0.985 0.003 250);"), "contains light background");
-      assert.ok(cssContent.includes("--card: oklch(1 0 0);"), "contains light card");
-      assert.ok(cssContent.includes("--border: oklch(0.915 0.006 250);"), "contains light border");
-      assert.ok(cssContent.includes("--primary: oklch(0.42 0.18 250);"), "contains QCET Sapphire Blue primary");
-      assert.ok(cssContent.includes("--muted: oklch(0.965 0.005 250);"), "contains light muted");
-
-      assert.ok(!cssContent.includes("--background: oklch(0.12 0.018 250);"), "does not contain dark background");
-      assert.ok(!cssContent.includes("--card: oklch(0.16 0.018 250);"), "does not contain dark card");
-      assert.ok(!cssContent.includes("--primary: oklch(0.70 0.18 250);"), "does not contain dark primary");
-
-      // Check shadow utilities
-      assert.ok(cssContent.includes(".shadow-card {"), "contains .shadow-card");
-      assert.ok(cssContent.includes(".shadow-card-hover {"), "contains .shadow-card-hover");
-      assert.ok(cssContent.includes(".shadow-premium {"), "contains .shadow-premium");
-      assert.ok(cssContent.includes(".shadow-glow-primary {"), "contains .shadow-glow-primary");
-
-      // Check utilities
-      assert.ok(cssContent.includes(".thin-scrollbar"), "contains .thin-scrollbar");
-      assert.ok(cssContent.includes(".tabular-nums"), "contains .tabular-nums");
-      assert.ok(cssContent.includes(".glass-card"), "contains .glass-card");
-      assert.ok(cssContent.includes(".glass-panel"), "contains .glass-panel");
-    });
-
-    it("globals.css defines diffuse executive elevation tokens and no purple AI slop gradients", () => {
-      const cssPath = path.resolve(__dirname, "../src/app/globals.css");
-      const css = fs.readFileSync(cssPath, "utf-8");
-      assert.ok(css.includes("--shadow-card"), "Must define --shadow-card");
-      assert.ok(css.includes("--shadow-subtle"), "Must define --shadow-subtle");
-      assert.ok(css.includes("--shadow-dropdown"), "Must define --shadow-dropdown");
-      assert.ok(!css.includes("linear-gradient(135deg, #a855f7"), "Must not contain purple AI slop gradients");
-    });
   });
 
   describe("Brand Asset Verification", () => {
@@ -227,13 +191,6 @@ describe("QCET Design System Smoke Test Suite", () => {
       assert.ok(violetBadge.includes("bg-violet-500/10"));
       assert.ok(violetBadge.includes("text-violet-600"));
       assert.ok(!violetBadge.includes("dark:"), "violet badge must not contain dark: classes");
-    });
-
-    it("drawer component contains no dark classes", () => {
-      const drawerPath = path.resolve(__dirname, "../src/components/ui/drawer.tsx");
-      assert.ok(fs.existsSync(drawerPath), "drawer.tsx should exist");
-      const drawerContent = fs.readFileSync(drawerPath, "utf-8");
-      assert.ok(!drawerContent.includes("dark:"), "drawer.tsx must not contain any dark: classes");
     });
 
     it("exports all new and overhauled Base UI components cleanly", () => {

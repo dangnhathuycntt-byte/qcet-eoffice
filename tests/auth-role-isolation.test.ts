@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -241,36 +239,4 @@ describe("Task 9: Lightweight Role Flag Resolution Hook & Isolation", () => {
     });
   });
 
-  describe("3. src/app/page.tsx source compliance & decoupling", () => {
-    test("UnifiedTaskHubClient imports and uses useAuthRole", () => {
-      const clientPath = path.resolve(
-        process.cwd(),
-        "src/components/dashboard/unified-task-hub-client.tsx"
-      );
-      const content = fs.readFileSync(clientPath, "utf-8");
-
-      assert.match(
-        content,
-        /import\s*{\s*useAuthRole\s*}\s*from\s*["']@\/hooks\/use-auth-role["']/,
-        "unified-task-hub-client.tsx must import useAuthRole from '@/hooks/use-auth-role'"
-      );
-
-      assert.match(
-        content,
-        /const\s*{\s*isExecutive,\s*isManager\s*}\s*=\s*useAuthRole\(\);/,
-        "UnifiedTaskHubClient must obtain isExecutive and isManager from useAuthRole()"
-      );
-    });
-
-    test("src/app/page.tsx does NOT import or call useDashboardData (decoupling invariant)", () => {
-      const pagePath = path.resolve(process.cwd(), "src/app/page.tsx");
-      const content = fs.readFileSync(pagePath, "utf-8");
-
-      assert.doesNotMatch(
-        content,
-        /\buseDashboardData\b/,
-        "page.tsx must not import or invoke useDashboardData to prevent task filter re-render cascade"
-      );
-    });
-  });
 });

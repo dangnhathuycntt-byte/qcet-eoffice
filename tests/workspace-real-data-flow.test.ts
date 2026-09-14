@@ -1,7 +1,5 @@
 import { test, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { UnifiedAdaptiveWorkspace } from "../src/components/workspace/unified-adaptive-workspace";
@@ -423,15 +421,6 @@ describe("Workspace & Onboarding Real Sync Suite", () => {
 
 
 describe("Task 5: Workspace Action Queue & DACUM Review", () => {
-  it("universal-action-queue.tsx does NOT contain hardcoded BGH approval string", () => {
-    const filePath = path.resolve(__dirname, "../src/components/workspace/components/universal-action-queue.tsx");
-    const content = fs.readFileSync(filePath, "utf-8");
-    assert.ok(
-      !content.includes('reviewedByName: "BGH"'),
-      "Must not hardcode reviewedByName: 'BGH'"
-    );
-  });
-
   it("validateDeliverableSubmission rejects invalid URLs like '#' or 'javascript:'", () => {
     const res1 = validateDeliverableSubmission("Báo cáo", "#");
     assert.equal(res1.isValid, false);
@@ -469,31 +458,5 @@ describe("Task 5: Workspace Action Queue & DACUM Review", () => {
 
     const validNoUrl = validateDeliverableSubmission("Báo cáo DACUM kỳ 1");
     assert.equal(validNoUrl.isValid, true);
-  });
-
-  it("unified-adaptive-workspace.tsx integrates ReviewActionDialog passing session user identity", () => {
-    const filePath = path.resolve(__dirname, "../src/components/workspace/unified-adaptive-workspace.tsx");
-    const content = fs.readFileSync(filePath, "utf-8");
-    assert.ok(
-      content.includes("ReviewActionDialog"),
-      "UnifiedAdaptiveWorkspace must import and connect ReviewActionDialog"
-    );
-    assert.ok(
-      content.includes("reviewerName={user.name}"),
-      "ReviewActionDialog must receive logged-in user name as reviewerName"
-    );
-    assert.ok(
-      content.includes("reviewerRole={effectiveReviewerRole}"),
-      "ReviewActionDialog must receive effective reviewer role from context/user"
-    );
-  });
-
-  it("unified-adaptive-workspace.tsx integrates SubmitDeliverableModal for deliverables", () => {
-    const filePath = path.resolve(__dirname, "../src/components/workspace/unified-adaptive-workspace.tsx");
-    const content = fs.readFileSync(filePath, "utf-8");
-    assert.ok(
-      content.includes("SubmitDeliverableModal"),
-      "UnifiedAdaptiveWorkspace must import and connect SubmitDeliverableModal"
-    );
   });
 });

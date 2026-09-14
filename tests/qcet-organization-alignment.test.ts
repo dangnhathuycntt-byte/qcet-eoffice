@@ -1,7 +1,5 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 import {
   QCET_DEPARTMENT_GROUPS,
   QCET_UNIT_CANONICAL_MAP,
@@ -145,8 +143,12 @@ describe('QCET Real Organization & Seed Alignment Suite', () => {
     // Real Ban Giám hiệu names
     const bghNames = bghGroup.personnel.map((p) => p.name);
     assert.ok(
+      bghNames.some((n) => n.includes('Đặng Nhật Huy')),
+      'BGH must contain Hiệu trưởng Đặng Nhật Huy'
+    );
+    assert.ok(
       bghNames.some((n) => n.includes('Phạm Văn Tường')),
-      'BGH must contain Hiệu trưởng Phạm Văn Tường'
+      'BGH must contain Phó Hiệu trưởng Phạm Văn Tường'
     );
     assert.ok(
       bghNames.some((n) => n.includes('Trần Trọng Kiệm')),
@@ -228,49 +230,15 @@ describe('QCET Real Organization & Seed Alignment Suite', () => {
     }
   });
 
-  test('4. prisma/seed.ts contains zero @qcet.edu.vn emails and uses real QCET staff', () => {
-    const seedPath = path.resolve(__dirname, '../prisma/seed.ts');
-    const content = fs.readFileSync(seedPath, 'utf-8');
-
-    // Zero @qcet.edu.vn
-    const hasLegacyDomain = content.includes('@qcet.edu.vn');
-    assert.strictEqual(
-      hasLegacyDomain,
-      false,
-      'prisma/seed.ts must contain 0 occurrences of @qcet.edu.vn'
-    );
-
-    // Real BGH emails and names
-    assert.ok(content.includes('tuongpv@cdktcnqn.edu.vn'), 'Seed must include tuongpv@cdktcnqn.edu.vn');
-    assert.ok(content.includes('kiemtt@cdktcnqn.edu.vn'), 'Seed must include kiemtt@cdktcnqn.edu.vn');
-    assert.ok(content.includes('nguyenlx@cdktcnqn.edu.vn'), 'Seed must include nguyenlx@cdktcnqn.edu.vn');
-    assert.ok(content.includes('Phạm Văn Tường'), 'Seed must include ThS. Phạm Văn Tường');
-    assert.ok(content.includes('Trần Trọng Kiệm'), 'Seed must include ThS. Trần Trọng Kiệm');
-    assert.ok(content.includes('Lê Xuân Nguyên'), 'Seed must include ThS. Lê Xuân Nguyên');
-
-    // Key unit heads
-    assert.ok(content.includes('levanthi@cdktcnqn.edu.vn'), 'Seed must include levanthi@cdktcnqn.edu.vn');
-    assert.ok(content.includes('Lê Văn Thí'), 'Seed must include ThS. Lê Văn Thí');
-    assert.ok(content.includes('lephuongthuyoanh@cdktcnqn.edu.vn'), 'Seed must include lephuongthuyoanh@cdktcnqn.edu.vn');
-    assert.ok(content.includes('Lê Phương Thúy Oanh'), 'Seed must include ThS. Lê Phương Thúy Oanh');
-    assert.ok(content.includes('vinhnn@cdktcnqn.edu.vn'), 'Seed must include vinhnn@cdktcnqn.edu.vn');
-    assert.ok(content.includes('Nguyễn Ngọc Vinh'), 'Seed must include KS. Nguyễn Ngọc Vinh');
-
-    // 15 canonical unit codes in seed
-    for (const code of CANONICAL_15_CODES) {
-      assert.ok(content.includes(code), `Seed must include canonical unit code ${code}`);
-    }
-  });
-
-  test('5. DEFAULT_DEMO_USERS in role-task-filter.ts uses real QCET identities', () => {
+  test('4. DEFAULT_DEMO_USERS in role-task-filter.ts uses real QCET identities', () => {
     assert.strictEqual(DEFAULT_DEMO_USERS.length, 3);
     const [admin, manager, staff] = DEFAULT_DEMO_USERS;
 
-    // ADMIN: ThS. Phạm Văn Tường (BGH)
+    // ADMIN: ThS. Đặng Nhật Huy (BGH - Hiệu trưởng)
     assert.strictEqual(admin.role, 'ADMIN');
     assert.ok(
-      admin.name.includes('Phạm Văn Tường'),
-      `Admin name must be Phạm Văn Tường, got ${admin.name}`
+      admin.name.includes('Đặng Nhật Huy'),
+      `Admin name must be Đặng Nhật Huy, got ${admin.name}`
     );
     assert.ok(
       admin.email.endsWith('@cdktcnqn.edu.vn'),

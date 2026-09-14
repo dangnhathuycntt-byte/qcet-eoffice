@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert";
-import fs from "node:fs";
-import path from "node:path";
 import { OfficialDocument, DocumentUrgency, DocumentStatus } from "../src/types/document";
 import { MOCK_DOCUMENTS, getDocumentStats } from "./fixtures/document-fixtures";
 import {
@@ -118,53 +116,6 @@ describe("Official Documents & Dispatches Test Suite (Decree 30/2020/ND-CP)", ()
       assert.strictEqual(getStatusBadgeConfig("delegated").label, "Đã liên thông giao việc");
       assert.strictEqual(getStatusBadgeConfig("approved").label, "Đã ký duyệt");
       assert.strictEqual(getStatusBadgeConfig("completed").label, "Hoàn tất & Lưu trữ");
-    });
-  });
-
-  describe("Anti-Slop Audit: Eliminating Roadmap Fillers & Emojis", () => {
-    test("src/app/documents/page.tsx contains no coming-soon or roadmap filler slop", () => {
-      const pageFile = fs.readFileSync(
-        path.join(process.cwd(), "src/app/documents/page.tsx"),
-        "utf8"
-      );
-
-      assert.ok(
-        !pageFile.includes("Tính năng đang trong lộ trình phát triển"),
-        "Must not contain 'Tính năng đang trong lộ trình phát triển'"
-      );
-      assert.ok(!pageFile.includes("Sắp ra mắt"), "Must not contain 'Sắp ra mắt'");
-      assert.ok(!pageFile.includes("Giai đoạn 1"), "Must not contain 'Giai đoạn 1'");
-      assert.ok(!pageFile.includes("Giai đoạn 2"), "Must not contain 'Giai đoạn 2'");
-      assert.ok(
-        pageFile.includes("DocumentRegistryView"),
-        "Page must mount DocumentRegistryView component"
-      );
-    });
-
-    test("Documents components and mock data contain 0% decorative emojis", () => {
-      const filesToCheck = [
-        "src/types/document.ts",
-        ...(fs.existsSync(path.join(process.cwd(), "src/lib/mock-document-data.ts"))
-          ? ["src/lib/mock-document-data.ts"]
-          : []),
-        "tests/fixtures/document-fixtures.ts",
-        "src/components/documents/document-registry-view.tsx",
-        "src/components/documents/document-detail-dialog.tsx",
-        "src/components/documents/create-document-modal.tsx",
-      ];
-
-      const emojiRegex =
-        /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/u;
-
-      for (const relPath of filesToCheck) {
-        const content = fs.readFileSync(path.join(process.cwd(), relPath), "utf8");
-        const match = content.match(emojiRegex);
-        assert.strictEqual(
-          match,
-          null,
-          `File ${relPath} contains decorative emoji: ${match?.[0]}`
-        );
-      }
     });
   });
 

@@ -117,8 +117,8 @@ describe("RBAC Task Filter Engine", () => {
 
     // 1. ADMIN
     assert.equal(admin.role, "ADMIN");
-    assert.ok(admin.email === "bgh@cdktcnqn.edu.vn" || admin.email === "tuongpv@cdktcnqn.edu.vn");
-    assert.ok(admin.name.includes("Ban Giám hiệu") || admin.name.includes("Phạm Văn Tường") || admin.roleLabel.includes("Ban Giám hiệu"));
+    assert.ok(admin.email === "bgh@cdktcnqn.edu.vn" || admin.email === "dangnhathuy@cdktcnqn.edu.vn");
+    assert.ok(admin.name.includes("Ban Giám hiệu") || admin.name.includes("Đặng Nhật Huy") || admin.roleLabel.includes("Ban Giám hiệu"));
     assert.equal(canCreateSchoolTask(admin.role), true);
     assert.equal(canAssignUnitTask(admin.role), true);
 

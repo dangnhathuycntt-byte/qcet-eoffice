@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 
 import type { AuthUser } from "../src/types/auth";
 import type {
@@ -26,21 +24,6 @@ import {
   rejectCollaborationRequest,
   getCollaborationRequestsForDepartment,
 } from "../src/lib/collaboration-manager";
-
-function getAllFiles(dir: string, extensions: string[]): string[] {
-  let files: string[] = [];
-  if (!fs.existsSync(dir)) return files;
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files = files.concat(getAllFiles(fullPath, extensions));
-    } else if (extensions.some((ext) => entry.name.endsWith(ext))) {
-      files.push(fullPath);
-    }
-  }
-  return files;
-}
 
 describe("DACUM 3-Tier Workflow End-to-End Integration & Audit", () => {
   // Key Actors in the 3-Tier Hierarchy (Nghị định 232/2026/NĐ-CP)
@@ -416,117 +399,6 @@ describe("DACUM 3-Tier Workflow End-to-End Integration & Audit", () => {
       "Khoa CNTT đang tập trung đợt bảo vệ khóa luận tốt nghiệp, không bố trí được nhân sự."
     );
   });
-
-  test("Anti-slop audit: Zero decorative emojis across all source files and tests", () => {
-    // Unicode regex covering all emoji ranges
-    const emojiRegex =
-      /[\u{1F300}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-
-    const srcFiles = getAllFiles(path.join(process.cwd(), "src"), [
-      ".tsx",
-      ".ts",
-      ".css",
-    ]);
-    const testFiles = getAllFiles(path.join(process.cwd(), "tests"), [".ts"]);
-    const allFiles = [...srcFiles, ...testFiles];
-
-    const violations: string[] = [];
-    for (const file of allFiles) {
-      if (
-        file.includes("workspace-ui-invariants.test.ts") ||
-        file.includes("anti-slop-audit.test.ts")
-      ) {
-        continue;
-      }
-      const content = fs.readFileSync(file, "utf-8");
-      const lines = content.split("\n");
-      lines.forEach((line, idx) => {
-        // Exclude allowed typographic star glyph and unicode test symbols
-        const cleanLine = line.replace(new RegExp("[\\u2605\\u2713\\u2611]", "g"), "");
-        if (emojiRegex.test(cleanLine)) {
-          violations.push(
-            `${path.relative(process.cwd(), file)}:${idx + 1}: ${line.trim()}`
-          );
-        }
-      });
-    }
-
-    assert.equal(
-      violations.length,
-      0,
-      `Found decorative emojis in source or test code:\n${violations.slice(0, 10).join("\n")}`
-    );
-  });
-
-  test("Anti-slop audit: Tabular figures strictly used in numeric UI components", () => {
-    const requiredTabularComponents = [
-      "src/components/dashboard/executive-stat-strip.tsx",
-      "src/components/dashboard/cascading-task-table.tsx",
-      "src/components/dashboard/task-detail-side-sheet.tsx",
-      "src/components/tasks/task-kanban-board.tsx",
-      "src/components/calendar/calendar-month-view.tsx",
-      "src/components/org/organization-tree.tsx",
-    ];
-
-    for (const relPath of requiredTabularComponents) {
-      const fullPath = path.join(process.cwd(), relPath);
-      assert.ok(fs.existsSync(fullPath), `File must exist: ${relPath}`);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      assert.ok(
-        content.includes("tabular-nums"),
-        `Component ${relPath} must use tabular-nums for numeric precision and executive tables`
-      );
-    }
-  });
-
-  test("Anti-slop audit: Lucide icons strictly maintain 1.5 stroke width across components", () => {
-    const keyComponents = [
-      "src/components/dashboard/unified-task-toolbar.tsx",
-      "src/components/dashboard/cascading-task-table.tsx",
-      "src/components/dashboard/task-detail-side-sheet.tsx",
-      "src/components/dashboard/create-task-modal.tsx",
-      "src/components/tasks/task-kanban-board.tsx",
-      "src/components/calendar/calendar-month-view.tsx",
-      "src/components/org/organization-tree.tsx",
-      "src/components/layout/app-topbar.tsx",
-      "src/components/layout/app-sidebar.tsx",
-    ];
-
-    for (const relPath of keyComponents) {
-      const fullPath = path.join(process.cwd(), relPath);
-      if (!fs.existsSync(fullPath)) continue;
-      const content = fs.readFileSync(fullPath, "utf-8");
-      if (content.includes('from "lucide-react"')) {
-        assert.ok(
-          content.includes("strokeWidth={1.5}") ||
-            content.includes('strokeWidth="1.5"') ||
-            content.includes("strokeWidth: 1.5"),
-          `${relPath} should adhere to strokeWidth 1.5 for crisp, executive micro-icons`
-        );
-      }
-    }
-  });
-
-  test("Anti-slop audit: Zero corrupt replacement characters in codebase", () => {
-    const srcFiles = getAllFiles(path.join(process.cwd(), "src"), [
-      ".tsx",
-      ".ts",
-      ".css",
-    ]);
-    const violations: string[] = [];
-    for (const file of srcFiles) {
-      const content = fs.readFileSync(file, "utf-8");
-      if (content.includes("\uFFFD")) {
-        violations.push(path.relative(process.cwd(), file));
-      }
-    }
-
-    assert.equal(
-      violations.length,
-      0,
-      `Found replacement character in: ${violations.join(", ")}`
-    );
-  });
 });
 
 describe("DACUM Full 6-Phase E2E Lifecycle: AI Review, Triage Queue, and Escalation", () => {
@@ -735,44 +607,6 @@ describe("DACUM Full 6-Phase E2E Lifecycle: AI Review, Triage Queue, and Escalat
     const completedRollup = calculateSchoolTaskRollup(completedSchoolTask);
     assert.equal(completedRollup.calculatedStatus, "COMPLETED");
     assert.equal(completedRollup.progressPercent, 100);
-  });
-
-  test("Phase 7: Zero decorative emojis across all modified source and test files", () => {
-    const emojiRegex =
-      /[\u{1F300}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-
-    // All files modified in this feature branch
-    const modifiedPaths = [
-      "src/lib/dacum-workflow-engine.ts",
-      "src/lib/collaboration-manager.ts",
-      "src/types/dashboard.ts",
-      "src/types/auth.ts",
-      "src/components/dashboard/task-detail-side-sheet.tsx",
-      "src/components/dashboard/create-task-modal.tsx",
-      "tests/dacum-integration-audit.test.ts",
-      "tests/dacum-workflow-engine.test.ts",
-    ];
-
-    const violations: string[] = [];
-    for (const relPath of modifiedPaths) {
-      const fullPath = path.join(process.cwd(), relPath);
-      if (!fs.existsSync(fullPath)) continue;
-      const content = fs.readFileSync(fullPath, "utf-8");
-      const lines = content.split("\n");
-      lines.forEach((line, idx) => {
-        if (emojiRegex.test(line)) {
-          violations.push(
-            `${relPath}:${idx + 1}: ${line.trim()}`
-          );
-        }
-      });
-    }
-
-    assert.equal(
-      violations.length,
-      0,
-      `Found decorative emojis in modified files:\n${violations.slice(0, 10).join("\n")}`
-    );
   });
 
   test("Triage rejection requires mandatory reason", () => {

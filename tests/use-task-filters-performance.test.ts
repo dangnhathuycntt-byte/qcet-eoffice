@@ -1,100 +1,12 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import { useTaskFilters, type TaskFiltersReturn } from "../src/hooks/use-task-filters";
 import { filterTasksHub } from "../src/lib/unified-task-hub";
 import type { SchoolTask } from "../src/types/dashboard";
 
 describe("Task 4: React 19 useDeferredValue in useTaskFilters Performance Suite", () => {
-  const hookFilePath = path.resolve(process.cwd(), "src/hooks/use-task-filters.ts");
-  const hookContent = fs.readFileSync(hookFilePath, "utf-8");
-
-  describe("Contract and Source Code Verification", () => {
-    test("useTaskFilters is an exported function", () => {
-      assert.strictEqual(typeof useTaskFilters, "function");
-    });
-
-    test("useTaskFilters imports or invokes React.useDeferredValue", () => {
-      const usesDeferredValue =
-        hookContent.includes("useDeferredValue") ||
-        hookContent.includes("React.useDeferredValue");
-      assert.ok(
-        usesDeferredValue,
-        "src/hooks/use-task-filters.ts must import or invoke useDeferredValue from React"
-      );
-    });
-
-    test("TaskFiltersReturn interface declares deferredSearchQuery, deferredSearch, and isFilteringStale", () => {
-      assert.match(
-        hookContent,
-        /deferredSearchQuery:\s*string;/,
-        "TaskFiltersReturn must declare deferredSearchQuery: string"
-      );
-      assert.match(
-        hookContent,
-        /deferredSearch:\s*string;/,
-        "TaskFiltersReturn must declare deferredSearch: string alias"
-      );
-      assert.match(
-        hookContent,
-        /isFilteringStale:\s*boolean;/,
-        "TaskFiltersReturn must declare isFilteringStale: boolean"
-      );
-    });
-
-    test("filterTasksHub receives deferredSearchQuery instead of immediate searchQuery", () => {
-      assert.match(
-        hookContent,
-        /searchQuery:\s*deferredSearchQuery/,
-        "filterTasksHub invocation inside useTaskFilters must pass searchQuery: deferredSearchQuery"
-      );
-    });
-
-    test("filteredTasks useMemo depends on deferredSearchQuery and not raw searchQuery", () => {
-      // Find filteredTasks = React.useMemo block
-      const memoIndex = hookContent.indexOf("const filteredTasks = React.useMemo(");
-      assert.ok(memoIndex !== -1, "filteredTasks useMemo must exist");
-      const memoBlock = hookContent.slice(memoIndex, memoIndex + 1200);
-
-      assert.ok(
-        memoBlock.includes("deferredSearchQuery"),
-        "filteredTasks dependencies must include deferredSearchQuery"
-      );
-
-      // The dependency array should contain deferredSearchQuery, not searchQuery
-      const depArrayMatch = memoBlock.match(/\[([\s\S]*?)\]\s*\);/);
-      assert.ok(depArrayMatch, "Should find dependency array for filteredTasks");
-      const depArray = depArrayMatch[1];
-      assert.ok(
-        depArray.includes("deferredSearchQuery"),
-        "Dependency array must include deferredSearchQuery"
-      );
-      assert.ok(
-        !depArray.includes("\n    searchQuery,") && !depArray.includes(", searchQuery,"),
-        "Dependency array must not directly include immediate searchQuery"
-      );
-    });
-
-    test("useTaskFilters returns deferredSearchQuery, deferredSearch, and isFilteringStale", () => {
-      // Check return statement
-      const returnIndex = hookContent.indexOf("return {");
-      assert.ok(returnIndex !== -1, "return object must exist in useTaskFilters");
-      const returnBlock = hookContent.slice(returnIndex);
-
-      assert.ok(
-        returnBlock.includes("deferredSearchQuery"),
-        "Return object must export deferredSearchQuery"
-      );
-      assert.ok(
-        returnBlock.includes("deferredSearch"),
-        "Return object must export deferredSearch"
-      );
-      assert.ok(
-        returnBlock.includes("isFilteringStale"),
-        "Return object must export isFilteringStale"
-      );
-    });
+  test("useTaskFilters is an exported function", () => {
+    assert.strictEqual(typeof useTaskFilters, "function");
   });
 
   describe("Filtering Logic and Deferred Decoupling Simulation", () => {

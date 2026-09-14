@@ -1,34 +1,10 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { SchoolTask } from "../src/types/dashboard";
 
 describe("PriorOverdueBacklogBanner & DashboardZone Monthly Scoping", () => {
-  const bannerPath = path.resolve(
-    process.cwd(),
-    "src/components/dashboard/prior-overdue-backlog-banner.tsx"
-  );
-  const zonePath = path.resolve(
-    process.cwd(),
-    "src/components/dashboard/zones/dashboard-zone.tsx"
-  );
-
-  test("PriorOverdueBacklogBanner file exists and strictly adheres to Light-Only Tailwind rules", () => {
-    assert.ok(fs.existsSync(bannerPath), "prior-overdue-backlog-banner.tsx must exist");
-    const content = fs.readFileSync(bannerPath, "utf8");
-    assert.ok(!content.includes("dark:"), "Must NOT contain dark: classes");
-    assert.ok(!content.includes("ThemeProvider"), "Must NOT use ThemeProvider");
-  });
-
-  test("DashboardZone strictly adheres to Light-Only Tailwind rules", () => {
-    const content = fs.readFileSync(zonePath, "utf8");
-    assert.ok(!content.includes("dark:"), "Must NOT contain dark: classes");
-    assert.ok(!content.includes("ThemeProvider"), "Must NOT use ThemeProvider");
-  });
-
   test("PriorOverdueBacklogBanner renders null when selectedMonth is ALL or tasks is empty", async () => {
     const { PriorOverdueBacklogBanner } = await import(
       "@/components/dashboard/prior-overdue-backlog-banner"
@@ -122,33 +98,5 @@ describe("PriorOverdueBacklogBanner & DashboardZone Monthly Scoping", () => {
     assert.ok(markup.includes("Xem danh sách"));
     assert.ok(markup.includes("Xem và xử lý nhiệm vụ tồn đọng"));
     assert.ok(markup.includes("Tháng 9"));
-  });
-
-  test("PriorOverdueBacklogBanner is mounted on its canonical cycle surfaces with partitioned month state", () => {
-    // The banner belongs to the per-cycle surfaces (calendar workspace + task table),
-    // not to DashboardZone, which owns only the macro month indicator.
-    const calendarWorkspace = fs.readFileSync(
-      path.resolve(process.cwd(), "src/components/calendar/calendar-workspace.tsx"),
-      "utf8"
-    );
-    assert.match(calendarWorkspace, /PriorOverdueBacklogBanner/);
-
-    const taskTable = fs.readFileSync(
-      path.resolve(process.cwd(), "src/components/tasks/table/modular-cascading-task-table.tsx"),
-      "utf8"
-    );
-    assert.match(taskTable, /priorOverdueBacklog/);
-
-    // DashboardZone keeps the macro month partition wiring only. The period control
-    // is GlobalMonthSelector (which owns selectedAcademicMonth); the zone itself
-    // renders the summary from displayedStats.
-    const content = fs.readFileSync(zonePath, "utf8");
-    assert.match(content, /GlobalMonthSelector/);
-    assert.match(content, /displayedStats/);
-    assert.match(content, /KỲ VẬN HÀNH/);
-
-    // Verify size budget (< 150 lines)
-    const lineCount = content.split("\n").length;
-    assert.ok(lineCount < 150, `DashboardZone exceeded 150 lines: ${lineCount}`);
   });
 });

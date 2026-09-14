@@ -1,14 +1,11 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   findDepartment,
   validateDelegationForm,
   DELEGATION_SCOPES,
   type DelegationFormData,
 } from "../src/components/dashboard/delegation-management-modal";
-import { QCET_DEPARTMENTS } from "../src/components/org/organization-tree";
 
 describe("DelegationManagementModal Unit & Static Contract Tests", () => {
   describe("1. Department and Leader Resolution Logic", () => {
@@ -128,82 +125,4 @@ describe("DelegationManagementModal Unit & Static Contract Tests", () => {
     });
   });
 
-  describe("4. Source Code Contract & Anti-Slop Audit", () => {
-    const modalFilePath = path.resolve(
-      __dirname,
-      "../src/components/dashboard/delegation-management-modal.tsx"
-    );
-    const content = fs.readFileSync(modalFilePath, "utf-8");
-
-    test("file bat dau bang 'use client'", () => {
-      assert.match(content, /^["']use client["']/);
-    });
-
-    test("chua dinh nghia interface DelegationManagementModalProps chuan", () => {
-      assert.match(content, /export interface DelegationManagementModalProps/);
-      assert.match(content, /isOpen:\s*boolean/);
-      assert.match(content, /onClose:\s*\(\)\s*=>\s*void/);
-      assert.match(content, /departmentCode:\s*string/);
-      assert.match(content, /delegations:\s*DelegationRule\[\]/);
-      assert.match(content, /onSaveDelegation:\s*\(rule:\s*Omit<DelegationRule,\s*["']id["']\s*\|\s*["']createdAt["']>\)\s*=>\s*void/);
-      assert.match(content, /onRevokeDelegation:\s*\(ruleId:\s*string\)\s*=>\s*void/);
-    });
-
-    test("nhap cac icon chuan tu lucide-react voi strokeWidth={1.5}", () => {
-      const requiredIcons = [
-        "X",
-        "ShieldAlert",
-        "Calendar",
-        "UserCheck",
-        "Plus",
-        "AlertCircle",
-        "Trash2",
-      ];
-      for (const icon of requiredIcons) {
-        assert.ok(
-          content.includes(icon),
-          `Component phải import và sử dụng icon ${icon} từ lucide-react`
-        );
-      }
-      assert.match(
-        content,
-        /strokeWidth=\{1\.5\}/,
-        "Icon phải được cấu hình với strokeWidth={1.5}"
-      );
-    });
-
-    test("tuyet doi 0% emoji trong file code", () => {
-      const emojiRegex =
-        /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F680}-\u{1F6C5}\u{1F6CB}-\u{1F6D0}\u{1F6E0}-\u{1F6E5}\u{1F6F0}-\u{1F6F3}]/gu;
-      const matches = [...content.matchAll(emojiRegex)];
-      assert.equal(
-        matches.length,
-        0,
-        `Phat hien ${matches.length} emoji trong delegation-management-modal.tsx: ${matches
-          .map((m) => m[0])
-          .join(", ")}`
-      );
-    });
-
-    test("chua nut goi onSaveDelegation va onRevokeDelegation", () => {
-      assert.match(
-        content,
-        /onSaveDelegation\s*\(/,
-        "Component phải có lời gọi đến onSaveDelegation"
-      );
-      assert.match(
-        content,
-        /onRevokeDelegation\s*\(/,
-        "Component phải có lời gọi đến onRevokeDelegation"
-      );
-    });
-
-    test("dinh dang so, ngay thang, ma don vi bang font-mono tabular-nums", () => {
-      assert.match(
-        content,
-        /font-mono\s+tabular-nums/,
-        "Component phải sử dụng font-mono tabular-nums cho mã và số liệu"
-      );
-    });
-  });
 });

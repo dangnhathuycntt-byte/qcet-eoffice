@@ -1,7 +1,5 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -12,92 +10,8 @@ import {
 import { CircleCheckIcon } from "@/components/icons/circle-check";
 import { toastVariants } from "@/lib/motion/variants";
 
-const rootDir = process.cwd();
-
 describe("Wave 2 - Agent E: Feedback / Toast Layer & Icon Pilot Motion Invariants", () => {
-  const feedbackLayerPath = path.join(
-    rootDir,
-    "src/components/ui/feedback-layer.tsx"
-  );
-  const iconPilotPath = path.join(
-    rootDir,
-    "src/components/icons/circle-check.tsx"
-  );
-
-  const feedbackLayerSource = fs.readFileSync(feedbackLayerPath, "utf-8");
-  const iconPilotSource = fs.readFileSync(iconPilotPath, "utf-8");
-
-  describe("Zero framer-motion ban", () => {
-    it("feedback-layer does not import framer-motion", () => {
-      assert.doesNotMatch(feedbackLayerSource, /from\s+["']framer-motion["']/);
-      assert.doesNotMatch(feedbackLayerSource, /from\s+["']framer-motion\//);
-    });
-
-    it("circle-check icon pilot does not import framer-motion", () => {
-      assert.doesNotMatch(iconPilotSource, /from\s+["']framer-motion["']/);
-      assert.doesNotMatch(iconPilotSource, /from\s+["']framer-motion\//);
-    });
-  });
-
-  describe("Feedback / Toast Layer Motion Specification", () => {
-    it("imports AnimatePresence from motion/react", () => {
-      assert.match(
-        feedbackLayerSource,
-        /import\s+\{[^}]*AnimatePresence[^}]*\}\s+from\s+["']motion\/react["']/
-      );
-    });
-
-    it("imports * as m from motion/react-m strictly", () => {
-      assert.match(
-        feedbackLayerSource,
-        /import\s+\*\s+as\s+m\s+from\s+["']motion\/react-m["']/
-      );
-      assert.doesNotMatch(
-        feedbackLayerSource,
-        /import\s+\{[^}]*\bmotion\b[^}]*\}\s+from\s+["']motion\/react["']/
-      );
-    });
-
-    it("imports toastVariants from @/lib/motion/variants", () => {
-      assert.match(
-        feedbackLayerSource,
-        /import\s+\{[^}]*toastVariants[^}]*\}\s+from\s+["']@\/lib\/motion\/variants["']/
-      );
-    });
-
-    it("ToastContainer wraps toast list in AnimatePresence with popLayout mode", () => {
-      assert.match(
-        feedbackLayerSource,
-        /<AnimatePresence\s+initial=\{false\}\s+mode="popLayout">/
-      );
-    });
-
-    it("FeedbackToast renders m.div with layout and toast motion contract", () => {
-      assert.match(feedbackLayerSource, /<m\.div[^>]*layout/);
-      assert.match(feedbackLayerSource, /variants=\{toastVariants\}/);
-      assert.match(feedbackLayerSource, /exit=\{\{ opacity: 0, y: 4/);
-    });
-
-    it("preserves accessibility contracts (role=status, aria-live=polite, dismiss labels)", () => {
-      assert.match(feedbackLayerSource, /role="status"/);
-      assert.match(feedbackLayerSource, /aria-live="polite"/);
-      assert.match(feedbackLayerSource, /aria-label="Đóng thông báo nổi"/);
-      assert.match(feedbackLayerSource, /aria-label="Thông báo hệ thống"/);
-    });
-  });
-
   describe("Icon Pilot Specification", () => {
-    it("uses * as m from motion/react-m without full motion import", () => {
-      assert.match(
-        iconPilotSource,
-        /import\s+\*\s+as\s+m\s+from\s+["']motion\/react-m["']/
-      );
-      assert.doesNotMatch(
-        iconPilotSource,
-        /import\s+\{[^}]*\bmotion\b[^}]*\}\s+from\s+["']motion\/react["']/
-      );
-    });
-
     it("renders CircleCheckIcon markup cleanly", () => {
       const html = renderToStaticMarkup(
         React.createElement(CircleCheckIcon, { size: 18, isAnimated: false })

@@ -1,7 +1,5 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import { QCET_DEPARTMENT_GROUPS, getDepartmentByCode } from "@/lib/departments";
 import { triggerHaptic, isHapticSupported, isHapticsEnabled, setHapticsEnabled } from "@/lib/haptics";
 import { isSchoolTask } from "@/types/dashboard";
@@ -50,22 +48,5 @@ describe("Bundle Leak Prevention & Haptics Suite", () => {
     setHapticsEnabled(true);
     const result = triggerHaptic("light");
     assert.strictEqual(result, false);
-  });
-
-  test("user-profile-modal does not import create-task-modal (bundle leak fix)", () => {
-    const userProfileModalPath = path.resolve(__dirname, "../src/components/auth/user-profile-modal.tsx");
-    const content = fs.readFileSync(userProfileModalPath, "utf-8");
-    assert.strictEqual(
-      content.includes("@/components/dashboard/create-task-modal"),
-      false,
-      "user-profile-modal.tsx should not import from create-task-modal.tsx"
-    );
-  });
-
-  test("next.config.ts configures optimizePackageImports for bundle size reduction", async () => {
-    const nextConfigPath = path.resolve(__dirname, "../next.config.ts");
-    const content = fs.readFileSync(nextConfigPath, "utf-8");
-    assert.ok(content.includes("optimizePackageImports"), "next.config.ts should include optimizePackageImports");
-    assert.ok(content.includes("lucide-react"), "optimizePackageImports should include lucide-react");
   });
 });

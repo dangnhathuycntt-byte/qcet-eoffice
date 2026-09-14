@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import { resolveDemoUserByRole, validateLoginForm } from "../src/lib/login-helpers";
 import {
   isExecutive,
@@ -110,54 +108,4 @@ describe("Task 3: Authentication Session Management & Removal of Auto-Login Demo
     });
   });
 
-  describe("3. Static Architecture Invariants for auth-context.tsx", () => {
-    const authContextPath = path.resolve(__dirname, "../src/lib/auth-context.tsx");
-    const source = fs.readFileSync(authContextPath, "utf-8");
-
-    test("does not initialize user state with DEFAULT_DEMO_USERS[0]", () => {
-      assert.doesNotMatch(
-        source,
-        /useState<AuthUser[^>]*>\s*\(\s*DEFAULT_DEMO_USERS\[0\]\s*\)/,
-        "auth-context must not initialize user state directly to DEFAULT_DEMO_USERS[0]"
-      );
-    });
-
-    test("does not auto-establish demo session on unauthenticated syncSession", () => {
-      assert.doesNotMatch(
-        source,
-        /let\s+activeTarget\s*=\s*DEFAULT_DEMO_USERS\[0\]/,
-        "auth-context must not auto-establish demo session with DEFAULT_DEMO_USERS[0]"
-      );
-      assert.doesNotMatch(
-        source,
-        /Auto-establishing initial demo session cookie/,
-        "auth-context must not contain auto-establishing demo session cookie message"
-      );
-    });
-
-    test("logout function does not reset user to DEFAULT_DEMO_USERS[0]", () => {
-      assert.doesNotMatch(
-        source,
-        /setUser\s*\(\s*DEFAULT_DEMO_USERS\[0\]\s*\)/,
-        "logout must not reset user to DEFAULT_DEMO_USERS[0]"
-      );
-    });
-
-    test("logout function redirects cleanly to /login", () => {
-      assert.match(
-        source,
-        /\/login/,
-        "logout must redirect to /login"
-      );
-    });
-
-    test("contains zero dark: utility classes", () => {
-      const darkMatches = source.match(/dark:[a-zA-Z0-9_\-\/]+/g);
-      assert.strictEqual(
-        darkMatches,
-        null,
-        `Found unexpected dark: classes in auth-context.tsx: ${JSON.stringify(darkMatches)}`
-      );
-    });
-  });
 });

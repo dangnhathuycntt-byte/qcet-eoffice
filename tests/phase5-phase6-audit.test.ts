@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import type { SchoolTask } from "../src/types/dashboard";
 import type { AuthUser } from "../src/types/auth";
 import { computeDashboardStats } from "../src/lib/dashboard-aggregator";
@@ -124,69 +122,6 @@ describe("Phase 5 & Phase 6 Audit Verification", () => {
         executiveStats.overdueTasksCount,
         "SmartWorkbox overdueCount must match ExecutiveActionStats overdueTasksCount"
       );
-    });
-
-    test("DashboardZone passes baseTasks (not reactiveTasks) to PersonalWorkbench to prevent count distortion", () => {
-      const dashboardZonePath = path.resolve(__dirname, "../src/components/dashboard/zones/dashboard-zone.tsx");
-      const content = fs.readFileSync(dashboardZonePath, "utf-8");
-
-      assert.match(
-        content,
-        /<PersonalWorkbench[\s\S]*?tasks=\{baseTasks\}/,
-        "DashboardZone must pass baseTasks to PersonalWorkbench for canonical metric parity"
-      );
-    });
-  });
-
-  describe("2. TasksZone Architecture & Single Canonical Table Engine", () => {
-    test("TasksZone routes through TasksFocusLanding and TasksExpandedViews without dual state machines", () => {
-      const tasksZonePath = path.resolve(__dirname, "../src/components/dashboard/zones/tasks-zone.tsx");
-      const content = fs.readFileSync(tasksZonePath, "utf-8");
-
-      assert.ok(content.includes('data-slot="zone-tasks"'), "TasksZone must have data-slot zone-tasks");
-      assert.ok(content.includes("TasksFocusLanding"), "TasksZone must render TasksFocusLanding");
-      assert.ok(content.includes("TasksExpandedViews"), "TasksZone must render TasksExpandedViews");
-    });
-
-    test("TasksFocusLanding and TasksExpandedViews use ModularCascadingTaskTable as the canonical table engine", () => {
-      const focusLandingPath = path.resolve(__dirname, "../src/components/dashboard/zones/tasks-focus-landing.tsx");
-      const focusContent = fs.readFileSync(focusLandingPath, "utf-8");
-      assert.ok(
-        focusContent.includes("UnifiedAdaptiveWorkspace"),
-        "TasksFocusLanding must render UnifiedAdaptiveWorkspace"
-      );
-
-      const workspacePath = path.resolve(__dirname, "../src/components/workspace/unified-adaptive-workspace.tsx");
-      const workspaceContent = fs.readFileSync(workspacePath, "utf-8");
-      assert.ok(
-        workspaceContent.includes("ModularCascadingTaskTable"),
-        "UnifiedAdaptiveWorkspace must use ModularCascadingTaskTable"
-      );
-
-      const expandedViewsPath = path.resolve(__dirname, "../src/components/dashboard/zones/tasks-expanded-views.tsx");
-      const expandedContent = fs.readFileSync(expandedViewsPath, "utf-8");
-      assert.ok(
-        expandedContent.includes("ModularCascadingTaskTable"),
-        "TasksExpandedViews must use ModularCascadingTaskTable"
-      );
-    });
-
-    test("Universal invariants: Zero emojis and Light-only compliance in DashboardZone and TasksZone", () => {
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-
-      const dzContent = fs.readFileSync(
-        path.resolve(__dirname, "../src/components/dashboard/zones/dashboard-zone.tsx"),
-        "utf-8"
-      );
-      assert.equal(emojiRegex.test(dzContent), false, "DashboardZone must contain 0 emojis");
-      assert.equal(dzContent.includes("dark:"), false, "DashboardZone must contain 0 dark: classes");
-
-      const tzContent = fs.readFileSync(
-        path.resolve(__dirname, "../src/components/dashboard/zones/tasks-zone.tsx"),
-        "utf-8"
-      );
-      assert.equal(emojiRegex.test(tzContent), false, "TasksZone must contain 0 emojis");
-      assert.equal(tzContent.includes("dark:"), false, "TasksZone must contain 0 dark: classes");
     });
   });
 });

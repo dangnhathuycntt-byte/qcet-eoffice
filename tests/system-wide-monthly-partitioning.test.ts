@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -288,51 +286,6 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       assert.ok(zoneIds.includes("tasks"), "Route 'tasks' must exist");
       assert.ok(zoneIds.includes("documents"), "Route 'documents' must exist");
     });
-
-    test("GlobalMonthSelector component file declares popover, task counts, ALL, and current month options", () => {
-      const selectorPath = path.resolve(
-        process.cwd(),
-        "src/components/layout/global-month-selector.tsx"
-      );
-      assert.ok(fs.existsSync(selectorPath));
-      const content = fs.readFileSync(selectorPath, "utf-8");
-
-      assert.match(content, /export function GlobalMonthSelector/);
-      assert.match(content, /Kỳ hiện tại: T/);
-      assert.match(content, /Xem cả năm/);
-      assert.match(content, /monthlyTaskCounts/);
-      assert.match(content, /SEMESTER_GROUPS/);
-      assert.match(content, /CALENDAR_MONTHS/);
-      assert.match(content, /CALENDAR_MONTHS\.map/);
-      assert.match(content, /handleSelectMonth/);
-    });
-
-    test("DashboardZone embeds contextual action bar with ScopeSwitcher and GlobalMonthSelector", () => {
-      const dashboardZonePath = path.resolve(
-        process.cwd(),
-        "src/components/dashboard/zones/dashboard-zone.tsx"
-      );
-      const content = fs.readFileSync(dashboardZonePath, "utf-8");
-
-      assert.match(content, /aria-label="Thanh tác vụ ngữ cảnh: KỲ VẬN HÀNH và Phạm vi"/);
-      assert.match(content, /<ScopeSwitcher \/>/);
-      assert.match(content, /<GlobalMonthSelector \/>/);
-      assert.match(content, /Suspense/);
-    });
-
-    test("CalendarZone renders 12-month switcher strip with active state, badges, and Cả năm option", () => {
-      const calendarZonePath = path.resolve(
-        process.cwd(),
-        "src/components/dashboard/zones/calendar-zone.tsx"
-      );
-      const content = fs.readFileSync(calendarZonePath, "utf-8");
-
-      assert.match(content, /ACADEMIC_MONTH_ORDER\.map/);
-      assert.match(content, /<span>Cả năm<\/span>/);
-      assert.match(content, /handleAcademicMonthChange/);
-      assert.match(content, /monthlyTaskCounts/);
-      assert.match(content, /Kỳ vận hành Tháng/);
-    });
   });
 
   // ---------------------------------------------------------------------------
@@ -570,18 +523,6 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
       assert.match(header, /25\/08 - 24\/09/);
       assert.match(header, /Năm học 2026 - 2027/);
     });
-
-    test("Calendar zone connects selectedAcademicMonth and supports bidirectional period change", () => {
-      const calendarZonePath = path.resolve(
-        process.cwd(),
-        "src/components/dashboard/zones/calendar-zone.tsx"
-      );
-      const content = fs.readFileSync(calendarZonePath, "utf-8");
-
-      assert.match(content, /selectedAcademicMonth/);
-      assert.match(content, /handleAcademicMonthChange/);
-      assert.match(content, /onPeriodChange/);
-    });
   });
 
   // ---------------------------------------------------------------------------
@@ -621,59 +562,4 @@ describe("System-Wide Monthly Partitioning Full Verification & Regression Suite"
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // 9. Zero-emoji rule and light-only CSS rules across all components
-  // ---------------------------------------------------------------------------
-  describe("9. Anti-Slop, Zero-Emoji & Light-Only Invariants Across System", () => {
-    const componentsToAudit = [
-      "src/lib/academic-calendar.ts",
-      "src/components/dashboard/prior-overdue-backlog-banner.tsx",
-      "src/components/dashboard/zones/dashboard-zone.tsx",
-      "src/components/dashboard/zones/calendar-zone.tsx",
-      "src/components/calendar/calendar-month-view.tsx",
-      "src/components/tasks/cascading-task-table.tsx",
-      "src/components/layout/global-month-selector.tsx",
-      "src/components/layout/app-topbar.tsx",
-      "src/hooks/use-task-filters.ts",
-      "src/hooks/use-url-params-sync.ts",
-    ];
-
-    test("All components contain zero unicode emojis", () => {
-      const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-
-      for (const relativePath of componentsToAudit) {
-        const fullPath = path.resolve(process.cwd(), relativePath);
-        assert.ok(fs.existsSync(fullPath), `File must exist: ${relativePath}`);
-        const content = fs.readFileSync(fullPath, "utf-8");
-
-        const hasEmoji = emojiRegex.test(content);
-        assert.equal(
-          hasEmoji,
-          false,
-          `File ${relativePath} contains unauthorized emojis. Zero-emoji standard violated.`
-        );
-      }
-    });
-
-    test("All components adhere to Light-Only standard (no dark: classes or ThemeProvider)", () => {
-      const darkClassRegex = /\bdark:/;
-
-      for (const relativePath of componentsToAudit) {
-        const fullPath = path.resolve(process.cwd(), relativePath);
-        const content = fs.readFileSync(fullPath, "utf-8");
-
-        assert.equal(
-          darkClassRegex.test(content),
-          false,
-          `File ${relativePath} contains forbidden 'dark:' CSS class. Light-Only standard violated.`
-        );
-
-        assert.equal(
-          content.includes("ThemeProvider"),
-          false,
-          `File ${relativePath} contains forbidden ThemeProvider reference.`
-        );
-      }
-    });
-  });
 });

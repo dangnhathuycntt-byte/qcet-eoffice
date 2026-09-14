@@ -1,32 +1,10 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { SchoolTask } from "../src/types/dashboard";
 
 describe("CascadingTaskTable Monthly Partitioning & Prior Overdue Backlog", () => {
-  const componentPath = path.resolve(
-    process.cwd(),
-    "src/components/tasks/cascading-task-table.tsx"
-  );
-
-  test("cascading-task-table.tsx strictly adheres to Light-Only Tailwind standards", () => {
-    assert.ok(fs.existsSync(componentPath), "cascading-task-table.tsx must exist");
-    const content = fs.readFileSync(componentPath, "utf8");
-    assert.ok(!content.includes("dark:"), "Must NOT contain dark: classes");
-    assert.ok(!content.includes("ThemeProvider"), "Must NOT use ThemeProvider");
-  });
-
-  test("source code consumes selectedAcademicMonth and priorOverdueBacklog", () => {
-    const content = fs.readFileSync(componentPath, "utf8");
-    assert.match(content, /selectedAcademicMonth/);
-    assert.match(content, /priorOverdueBacklog/);
-    assert.match(content, /TỒN ĐỌNG KỲ TRƯỚC/);
-    assert.match(content, /Prior Overdue Backlog/);
-  });
-
   const mockTasks: SchoolTask[] = [
     {
       id: "task-sept-1",

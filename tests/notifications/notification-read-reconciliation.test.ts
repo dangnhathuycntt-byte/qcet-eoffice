@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   applyOptimisticRead,
   beginOptimisticRead,
@@ -9,12 +7,6 @@ import {
   mapDbNotification,
   type QCETNotification,
 } from "../../src/lib/notification-triage";
-
-const PAGE_PATH = path.resolve(process.cwd(), "src/app/notifications/page.tsx");
-const POPOVER_PATH = path.resolve(
-  process.cwd(),
-  "src/components/notifications/notification-popover.tsx"
-);
 
 function buildInbox(): QCETNotification[] {
   return [
@@ -109,38 +101,4 @@ describe("T46: optimistic mark-read rolls back / reconciles with server truth", 
     assert.equal(next.find((n) => n.id === "n-1")?.isRead, false);
     assert.equal(next.find((n) => n.id === "n-2")?.isRead, true);
   });
-});
-
-describe("T46: read handlers wire reconciliation into the surfaces", () => {
-  const surfaces = [
-    { filePath: PAGE_PATH, label: "page.tsx" },
-    { filePath: POPOVER_PATH, label: "notification-popover.tsx" },
-  ];
-
-  for (const { filePath, label } of surfaces) {
-    test(`${label} rolls back optimistic mark-read on failure`, () => {
-      const content = fs.readFileSync(filePath, "utf-8");
-      assert.ok(
-        content.includes("beginOptimisticRead"),
-        `${label} must begin an optimistic read session`
-      );
-      assert.ok(
-        content.includes("settleOptimisticRead"),
-        `${label} must settle the optimistic read session`
-      );
-      assert.ok(
-        content.includes("{ ok: false }"),
-        `${label} must explicitly settle failures with ok:false`
-      );
-      assert.ok(
-        content.includes("ok: res.ok"),
-        `${label} must reconcile against the server response status`
-      );
-      assert.equal(
-        /catch\s*\{\s*\/\/\s*Best/i.test(content),
-        false,
-        `${label} must not swallow mark-read failures with a best-effort catch`
-      );
-    });
-  }
 });

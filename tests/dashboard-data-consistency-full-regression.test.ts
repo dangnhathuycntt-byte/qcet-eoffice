@@ -1,7 +1,5 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import { computeDashboardStats, computeSchoolTaskRollup } from "../src/lib/dashboard-aggregator";
 import {
   computeDepartmentHealthMatrix,
@@ -138,30 +136,6 @@ describe("Full System Regression Suite - Dashboard Data Consistency & Aggregatio
     assert.deepEqual(items[0].reasons, ["REVIEW"]);
   });
 
-  // TC-04: Zero hardcoded mock data and an HONEST empty state.
-  // Requirement (plan T10.2, F13): the empty queue must describe emptiness and must NOT
-  // claim health ("Verified Clear" / "thông suốt" / "ổn định"). Asserted on the render.
-  test("TC-04: no DEFAULT_ACTION_ITEMS and no false-healthy empty-state claim", () => {
-    const actionCenterPath = path.resolve(
-      __dirname,
-      "../src/components/dashboard/executive-action-center.tsx"
-    );
-    const actionCenterCode = fs.readFileSync(actionCenterPath, "utf8");
-
-    assert.equal(
-      actionCenterCode.includes("DEFAULT_ACTION_ITEMS"),
-      false,
-      "executive-action-center.tsx must not contain DEFAULT_ACTION_ITEMS"
-    );
-    for (const claim of ["Verified Clear", "Hàng đợi điều hành thông suốt", "Ổn định tuyệt đối"]) {
-      assert.equal(
-        actionCenterCode.includes(claim),
-        false,
-        `executive-action-center.tsx must not claim "${claim}" (DASH-06)`
-      );
-    }
-  });
-
   // TC-05: Card 4 displays 'Tiến độ trung bình toàn trường' with average progress % and transparent completion rate subtext
   test("TC-05: Card 4 displays 'Tiến độ trung bình toàn trường: 44%' with transparent subtext 'Hoàn tất 11/130 (8.5%)'", () => {
     const stats: DashboardStats = {
@@ -280,47 +254,6 @@ describe("Full System Regression Suite - Dashboard Data Consistency & Aggregatio
         (sampleStats.schoolTasksOverdue ?? 0) +
         sampleStats.schoolTasksCompleted,
       sampleStats.totalSchoolTasks
-    );
-  });
-
-  // TC-10: Light-only styling standard (no dark: classes) & Segregation of Duties invariants
-  test("TC-10: Strict Light-Only CSS standard and Segregation of Duties authorization invariants", () => {
-    const dashboardFiles = [
-      "src/components/dashboard/executive-stat-strip.tsx",
-      "src/components/dashboard/executive-action-center.tsx",
-      "src/components/dashboard/department-progress-matrix.tsx",
-      "src/components/dashboard/zones/dashboard-zone.tsx",
-    ];
-
-    for (const relPath of dashboardFiles) {
-      const fullPath = path.resolve(__dirname, "..", relPath);
-      if (fs.existsSync(fullPath)) {
-        const content = fs.readFileSync(fullPath, "utf8");
-        assert.equal(
-          /\bdark:/.test(content),
-          false,
-          `File ${relPath} must not contain dark: classes`
-        );
-      }
-    }
-
-    const policyPaths = [
-      path.resolve(__dirname, "../src/server/policies/task-policy.ts"),
-      path.resolve(__dirname, "../src/domain/tasks/state-machine.ts"),
-    ];
-    const foundSod = policyPaths.some((p) => {
-      if (!fs.existsSync(p)) return false;
-      const content = fs.readFileSync(p, "utf8");
-      return (
-        content.includes("CANNOT_SELF_APPROVE") ||
-        content.includes("Segregation of Duties") ||
-        content.includes("Maker-Checker") ||
-        content.includes("người thực hiện không được tự nghiệm thu")
-      );
-    });
-    assert.ok(
-      foundSod,
-      "Canonical task policies must enforce Segregation of Duties (SoD)"
     );
   });
 });

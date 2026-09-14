@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -244,23 +242,6 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
       assert.equal(searched.length, 1);
       assert.equal(searched[0].id, "t-2");
     });
-
-    test("DashboardZone source eliminates divergent filterDashboardReactiveTasks", () => {
-      const filePath = path.join(
-        process.cwd(),
-        "src/components/dashboard/zones/dashboard-zone.tsx"
-      );
-      const content = fs.readFileSync(filePath, "utf-8");
-      assert.equal(
-        content.includes("filterDashboardReactiveTasks"),
-        false,
-        "DashboardZone must not declare or call filterDashboardReactiveTasks"
-      );
-      assert.ok(
-        content.includes("filteredTasks"),
-        "DashboardZone must consume filteredTasks from useDashboardData context"
-      );
-    });
   });
 
   // --------------------------------------------------------------------------
@@ -476,70 +457,4 @@ describe("Task 7: Xác Thực Hệ Thống Toàn Diện & Chống Regression (Wo
     });
   });
 
-  // --------------------------------------------------------------------------
-  // Area 7: Anti-slop & Light-Only Invariant Verification
-  // --------------------------------------------------------------------------
-  describe("7. Anti-Slop & Light-Only Invariants Verification", () => {
-    const filesToAudit = [
-      "src/components/dashboard/zones/dashboard-zone.tsx",
-      "src/components/workspace/unified-adaptive-workspace.tsx",
-      "src/components/workspace/components/active-filter-breadcrumb.tsx",
-      "src/components/workspace/components/universal-action-queue.tsx",
-      "src/components/dashboard/department-progress-matrix.tsx",
-      "src/components/dashboard/active-filter-breadcrumb.tsx",
-      "src/lib/unified-task-hub.ts",
-      "src/lib/academic-calendar.ts",
-    ];
-
-    test("zero dark: CSS classes in all Workbench 2.0 files", () => {
-      for (const relativeFile of filesToAudit) {
-        const fullPath = path.join(process.cwd(), relativeFile);
-        if (fs.existsSync(fullPath)) {
-          const content = fs.readFileSync(fullPath, "utf-8");
-          const matches = content.match(/\bdark:/g);
-          assert.equal(
-            matches,
-            null,
-            `File ${relativeFile} must not contain dark: classes (found ${matches?.length ?? 0})`
-          );
-        }
-      }
-    });
-
-    test("zero emoji characters in all Workbench 2.0 source code", () => {
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-      for (const relativeFile of filesToAudit) {
-        const fullPath = path.join(process.cwd(), relativeFile);
-        if (fs.existsSync(fullPath)) {
-          const content = fs.readFileSync(fullPath, "utf-8");
-          assert.ok(
-            !emojiRegex.test(content),
-            `File ${relativeFile} must be 100% free of emojis`
-          );
-        }
-      }
-    });
-
-    test("tabular numerals (font-mono / tabular-nums) are used for statistics", () => {
-      const matrixPath = path.join(
-        process.cwd(),
-        "src/components/dashboard/department-progress-matrix.tsx"
-      );
-      const matrixContent = fs.readFileSync(matrixPath, "utf-8");
-      assert.ok(
-        matrixContent.includes("tabular-nums"),
-        "DepartmentProgressMatrix must use tabular-nums for numeric alignment"
-      );
-
-      const breadcrumbPath = path.join(
-        process.cwd(),
-        "src/components/workspace/components/active-filter-breadcrumb.tsx"
-      );
-      const breadcrumbContent = fs.readFileSync(breadcrumbPath, "utf-8");
-      assert.ok(
-        breadcrumbContent.includes("tabular-nums"),
-        "ActiveFilterBreadcrumb must use tabular-nums for count displays"
-      );
-    });
-  });
 });

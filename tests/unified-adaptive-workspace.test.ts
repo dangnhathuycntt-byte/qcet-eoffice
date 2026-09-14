@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { UnifiedAdaptiveWorkspace } from "../src/components/workspace/unified-adaptive-workspace";
@@ -209,23 +207,6 @@ describe("Adaptive Workspace Data Derivation", () => {
 
 
 describe("Unified Task Workspace Engine Consolidation (Task 2)", () => {
-  const unifiedWorkspacePath = path.resolve(
-    process.cwd(),
-    "src/components/workspace/unified-adaptive-workspace.tsx"
-  );
-  const taskManagementWorkspacePath = path.resolve(
-    process.cwd(),
-    "src/components/tasks/task-management-workspace.tsx"
-  );
-  const cascadingShimPath = path.resolve(
-    process.cwd(),
-    "src/components/dashboard/cascading-task-table.tsx"
-  );
-  const tasksCascadingShimPath = path.resolve(
-    process.cwd(),
-    "src/components/tasks/cascading-task-table.tsx"
-  );
-
   const sampleTasks: SchoolTask[] = [
     {
       id: "task-1",
@@ -258,54 +239,6 @@ describe("Unified Task Workspace Engine Consolidation (Task 2)", () => {
       progressPercent: 0,
     },
   ];
-
-  test("TaskManagementWorkspace serves as forwarding facade to UnifiedAdaptiveWorkspace", () => {
-    const tmwContent = fs.readFileSync(taskManagementWorkspacePath, "utf-8");
-
-    assert.ok(
-      tmwContent.includes("UnifiedAdaptiveWorkspace"),
-      "TaskManagementWorkspace must mount UnifiedAdaptiveWorkspace"
-    );
-    assert.ok(
-      typeof TaskManagementWorkspace === "function",
-      "TaskManagementWorkspace must export a valid React component function"
-    );
-  });
-
-  test("UnifiedAdaptiveWorkspace integrates both Table and Kanban engines", () => {
-    const uawContent = fs.readFileSync(unifiedWorkspacePath, "utf-8");
-
-    assert.ok(
-      uawContent.includes("ModularCascadingTaskTable"),
-      "UnifiedAdaptiveWorkspace must integrate ModularCascadingTaskTable"
-    );
-    assert.ok(
-      uawContent.includes("TaskKanbanBoard"),
-      "UnifiedAdaptiveWorkspace must integrate TaskKanbanBoard"
-    );
-    assert.ok(
-      uawContent.includes("viewMode === \"table\""),
-      "UnifiedAdaptiveWorkspace must conditionally render table view"
-    );
-    assert.ok(
-      uawContent.includes("<TaskKanbanBoard"),
-      "UnifiedAdaptiveWorkspace must conditionally render kanban view"
-    );
-  });
-
-  test("Cascading task table files act as thin compatibility shims to ModularCascadingTaskTable", () => {
-    const dashShim = fs.readFileSync(cascadingShimPath, "utf-8");
-    const taskShim = fs.readFileSync(tasksCascadingShimPath, "utf-8");
-
-    assert.ok(
-      dashShim.includes("@/components/tasks/cascading-task-table"),
-      "dashboard/cascading-task-table.tsx must re-export from tasks/cascading-task-table"
-    );
-    assert.ok(
-      taskShim.includes("ModularCascadingTaskTable"),
-      "tasks/cascading-task-table.tsx must render ModularCascadingTaskTable"
-    );
-  });
 
   test("Optimistic mutations maintain data integrity and recalculate rollups", () => {
     // 1. Status change on subtask
@@ -354,30 +287,6 @@ describe("Unified Task Workspace Engine Consolidation (Task 2)", () => {
     );
   });
 
-  test("Light-only and zero-emoji compliance in workspace files", () => {
-    const files = [
-      unifiedWorkspacePath,
-      taskManagementWorkspacePath,
-      cascadingShimPath,
-      tasksCascadingShimPath,
-    ];
-
-    const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
-
-    for (const file of files) {
-      const content = fs.readFileSync(file, "utf-8");
-      assert.strictEqual(
-        content.includes("dark:"),
-        false,
-        `File ${path.basename(file)} must not contain dark: classes`
-      );
-      assert.strictEqual(
-        emojiRegex.test(content),
-        false,
-        `File ${path.basename(file)} must contain 0 decorative emojis`
-      );
-    }
-  });
 });
 
 

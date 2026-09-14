@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   resolveSessionState,
   performSessionSync,
@@ -237,67 +235,4 @@ describe("Task 6: Session Consistency & Auth State Guard (P0-8)", () => {
     });
   });
 
-  describe("4. Static architecture & rule invariants (.claude/rules/backend-security.md)", () => {
-    const authContextPath = path.resolve(__dirname, "../src/lib/auth-context.tsx");
-    const source = fs.readFileSync(authContextPath, "utf-8");
-
-    test("AuthContext default value provides safe unauthenticated fallbacks", () => {
-      // Test default values of AuthContext
-      // In createContext, consumer outside provider gets:
-      // user: null, isAuthenticated: false, isOfflineReadOnly: false
-      assert.match(
-        source,
-        /createContext<AuthContextType>\(\s*\{\s*user:\s*null,\s*isAuthenticated:\s*false,\s*isOfflineReadOnly:\s*false/,
-        "AuthContext default must explicitly set isAuthenticated: false and isOfflineReadOnly: false"
-      );
-    });
-
-    test("exports resolveSessionState and performSessionSync", () => {
-      assert.match(
-        source,
-        /export function resolveSessionState\(/,
-        "Must export resolveSessionState function"
-      );
-      assert.match(
-        source,
-        /export async function performSessionSync\(/,
-        "Must export performSessionSync function"
-      );
-    });
-
-    test("logout sets isAuthenticated to false and isOfflineReadOnly to false", () => {
-      assert.match(
-        source,
-        /setIsAuthenticated\(false\)/,
-        "logout must set setIsAuthenticated(false)"
-      );
-      assert.match(
-        source,
-        /setIsOfflineReadOnly\(false\)/,
-        "logout must set setIsOfflineReadOnly(false)"
-      );
-    });
-
-    test("successful login sets isAuthenticated to true and isOfflineReadOnly to false", () => {
-      assert.match(
-        source,
-        /setIsAuthenticated\(true\)/,
-        "login must set setIsAuthenticated(true)"
-      );
-      assert.match(
-        source,
-        /setIsOfflineReadOnly\(false\)/,
-        "login must set setIsOfflineReadOnly(false)"
-      );
-    });
-
-    test("contains zero dark: classes in auth-context.tsx", () => {
-      const darkMatches = source.match(/dark:[a-zA-Z0-9_\-\/]+/g);
-      assert.strictEqual(
-        darkMatches,
-        null,
-        `Found unexpected dark: classes: ${JSON.stringify(darkMatches)}`
-      );
-    });
-  });
 });

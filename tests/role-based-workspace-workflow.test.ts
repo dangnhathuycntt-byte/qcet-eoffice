@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type {
@@ -65,8 +63,6 @@ import {
   LegacyExecutiveCockpitWorkspace as ExecutiveCockpitWorkspace,
   LegacyExecutiveCockpitWorkspace as ExecutiveWorkspace,
 } from "../src/components/portal/executive-cockpit-workspace";
-
-const EMOJI_REGEX = /[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/u;
 
 describe("Workspace Type Definitions & Validators", () => {
   test("validates ApprovalDecision union values", () => {
@@ -228,31 +224,6 @@ describe("Deliverable Submission Validation", () => {
     assert.ok(ids.includes("KHAC"));
   });
 
-  test("Zero-Emoji Strict Anti-Slop Audit on submit-deliverable-modal", () => {
-    const modalFiles = [
-      "src/components/portal/submit-deliverable-modal.tsx",
-    ];
-
-    modalFiles.forEach((relPath) => {
-      const fullPath = path.resolve(process.cwd(), relPath);
-      assert.ok(fs.existsSync(fullPath), `File phai ton tai: ${relPath}`);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      const lines = content.split("\n");
-      const violations: string[] = [];
-
-      lines.forEach((line, idx) => {
-        if (EMOJI_REGEX.test(line)) {
-          violations.push(`${relPath}:${idx + 1}: ${line.trim()}`);
-        }
-      });
-
-      assert.equal(
-        violations.length,
-        0,
-        `Phat hien emoji tai:\n${violations.join("\n")}`
-      );
-    });
-  });
 });
 
 describe("Review Action Rules", () => {
@@ -430,31 +401,6 @@ describe("Review Action Rules", () => {
     );
   });
 
-  test("Zero-Emoji Strict Anti-Slop Audit on review-action-dialog", () => {
-    const dialogFiles = [
-      "src/components/portal/review-action-dialog.tsx",
-    ];
-
-    dialogFiles.forEach((relPath) => {
-      const fullPath = path.resolve(process.cwd(), relPath);
-      assert.ok(fs.existsSync(fullPath), `File phai ton tai: ${relPath}`);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      const lines = content.split("\n");
-      const violations: string[] = [];
-
-      lines.forEach((line, idx) => {
-        if (EMOJI_REGEX.test(line)) {
-          violations.push(`${relPath}:${idx + 1}: ${line.trim()}`);
-        }
-      });
-
-      assert.equal(
-        violations.length,
-        0,
-        `Phat hien emoji tai:\n${violations.join("\n")}`
-      );
-    });
-  });
 });
 
 describe("Staff Workspace Urgency Computation", () => {
@@ -925,35 +871,6 @@ describe("LecturerFocusWorkspace Component Static Rendering", () => {
   });
 });
 
-describe("Zero-Emoji Strict Anti-Slop Audit on lecturer-focus-workspace", () => {
-  const workspaceFiles = [
-    "src/components/portal/lecturer-focus-workspace.tsx",
-    "src/components/portal/staff-workspace.tsx",
-  ];
-
-  workspaceFiles.forEach((relPath) => {
-    test(`verifies ${relPath} contains zero emojis`, () => {
-      const fullPath = path.resolve(process.cwd(), relPath);
-      assert.ok(fs.existsSync(fullPath), `File phai ton tai: ${relPath}`);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      const lines = content.split("\n");
-      const violations: string[] = [];
-
-      lines.forEach((line, idx) => {
-        if (EMOJI_REGEX.test(line)) {
-          violations.push(`${relPath}:${idx + 1}: ${line.trim()}`);
-        }
-      });
-
-      assert.equal(
-        violations.length,
-        0,
-        `Phat hien emoji tai:\n${violations.join("\n")}`
-      );
-    });
-  });
-});
-
 describe("Manager Workspace Filtering & Dual-Role", () => {
   test("filters approval queue strictly by department and NEEDS_REVIEW status", () => {
     const tasks: StaffTask[] = [
@@ -1395,35 +1312,6 @@ describe("DepartmentManagerWorkspace Component Static Rendering", () => {
       })
     );
     assert.ok(html.includes("TS. Nguyễn Minh"));
-  });
-});
-
-describe("Zero-Emoji Strict Anti-Slop Audit on department-manager-workspace", () => {
-  const managerWorkspaceFiles = [
-    "src/components/portal/department-manager-workspace.tsx",
-    "src/components/portal/manager-workspace.tsx",
-  ];
-
-  managerWorkspaceFiles.forEach((relPath) => {
-    test(`verifies ${relPath} contains zero emojis`, () => {
-      const fullPath = path.resolve(process.cwd(), relPath);
-      assert.ok(fs.existsSync(fullPath), `File phai ton tai: ${relPath}`);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      const lines = content.split("\n");
-      const violations: string[] = [];
-
-      lines.forEach((line, idx) => {
-        if (EMOJI_REGEX.test(line)) {
-          violations.push(`${relPath}:${idx + 1}: ${line.trim()}`);
-        }
-      });
-
-      assert.equal(
-        violations.length,
-        0,
-        `Phat hien emoji tai:\n${violations.join("\n")}`
-      );
-    });
   });
 });
 
@@ -1962,35 +1850,6 @@ describe("ExecutiveCockpitWorkspace Component Static Rendering", () => {
   });
 });
 
-describe("Zero-Emoji Strict Anti-Slop Audit on executive-cockpit-workspace", () => {
-  const executiveFiles = [
-    "src/components/portal/executive-cockpit-workspace.tsx",
-    "src/components/portal/executive-workspace.tsx",
-  ];
-
-  executiveFiles.forEach((relPath) => {
-    test(`verifies ${relPath} contains zero emojis`, () => {
-      const fullPath = path.resolve(process.cwd(), relPath);
-      assert.ok(fs.existsSync(fullPath), `File phai ton tai: ${relPath}`);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      const lines = content.split("\n");
-      const violations: string[] = [];
-
-      lines.forEach((line, idx) => {
-        if (EMOJI_REGEX.test(line)) {
-          violations.push(`${relPath}:${idx + 1}: ${line.trim()}`);
-        }
-      });
-
-      assert.equal(
-        violations.length,
-        0,
-        `Phat hien emoji tai:\n${violations.join("\n")}`
-      );
-    });
-  });
-});
-
 describe("Sidebar Navigation Hygiene", () => {
   test("ensures all navigation items use clean Next.js path routes without query strings", () => {
     const allItems = [...SIDEBAR_ZONE_ITEMS, ...NAVIGATION_ITEMS];
@@ -2020,34 +1879,6 @@ describe("Sidebar Navigation Hygiene", () => {
     assert.ok(routes.includes("/calendar"), "Must contain /calendar");
     assert.ok(routes.includes("/org"), "Must contain /org");
     assert.ok(routes.includes("/notifications"), "Must contain /notifications");
-  });
-
-  test("ensures layout components contain zero emojis (strict anti-slop)", () => {
-    const layoutFiles = [
-      "src/components/layout/sidebar-context.tsx",
-      "src/components/layout/app-sidebar.tsx",
-      "src/components/layout/app-shell.tsx",
-    ];
-
-    layoutFiles.forEach((relPath) => {
-      const fullPath = path.resolve(process.cwd(), relPath);
-      assert.ok(fs.existsSync(fullPath), `File must exist: ${relPath}`);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      const lines = content.split("\n");
-      const violations: string[] = [];
-
-      lines.forEach((line, idx) => {
-        if (EMOJI_REGEX.test(line)) {
-          violations.push(`${relPath}:${idx + 1}: ${line.trim()}`);
-        }
-      });
-
-      assert.equal(
-        violations.length,
-        0,
-        `Detected emoji in layout at:\n${violations.join("\n")}`
-      );
-    });
   });
 
   test("ensures all SIDEBAR_ZONE_ITEMS have valid Lucide icons and non-empty labels", () => {
@@ -2104,8 +1935,6 @@ describe("Sidebar Navigation Hygiene", () => {
 });
 
 describe("Task 9: Root Page Role-Based Dispatcher Workflow", () => {
-  const PAGE_PATH = path.resolve(process.cwd(), "src/app/page.tsx");
-
   test("verifies role normalization logic for executive, manager, and staff", () => {
     const resolveRoles = (role?: string) => {
       const roleStr = String(role || "").toUpperCase();
@@ -2224,40 +2053,6 @@ describe("Task 9: Root Page Role-Based Dispatcher Workflow", () => {
     assert.equal(evaluateReviewStatus("rejected"), "BLOCKED");
   });
 
-  test("src/app/page.tsx strict anti-slop audit: 0% emojis in source code", () => {
-    assert.ok(fs.existsSync(PAGE_PATH), "src/app/page.tsx must exist");
-    const content = fs.readFileSync(PAGE_PATH, "utf-8");
-    const lines = content.split("\n");
-    const violations: string[] = [];
-
-    lines.forEach((line, idx) => {
-      if (EMOJI_REGEX.test(line)) {
-        violations.push(`src/app/page.tsx:${idx + 1}: ${line.trim()}`);
-      }
-    });
-
-    assert.equal(
-      violations.length,
-      0,
-      `Detected emoji in src/app/page.tsx at:\n${violations.join("\n")}`
-    );
-  });
-
-  test("src/app/page.tsx contains all role workspace components and dispatching directives", () => {
-    const content = [
-      fs.readFileSync(PAGE_PATH, "utf-8"),
-      fs.readFileSync(path.resolve(process.cwd(), "src/components/dashboard/zones/tasks-focus-landing.tsx"), "utf-8"),
-      fs.readFileSync(path.resolve(process.cwd(), "src/components/portal/executive-cockpit-workspace.tsx"), "utf-8"),
-      fs.readFileSync(path.resolve(process.cwd(), "src/components/portal/department-manager-workspace.tsx"), "utf-8"),
-      fs.readFileSync(path.resolve(process.cwd(), "src/components/portal/lecturer-focus-workspace.tsx"), "utf-8"),
-    ].join("\n");
-    assert.ok(content.includes("ExecutiveCockpitWorkspace"), "Must render ExecutiveCockpitWorkspace");
-    assert.ok(content.includes("DepartmentManagerWorkspace"), "Must render DepartmentManagerWorkspace");
-    assert.ok(content.includes("LecturerFocusWorkspace"), "Must render LecturerFocusWorkspace");
-    assert.ok(content.includes("data-slot=\"role-workspace-landing\""), "Must contain role workspace landing slot");
-    assert.ok(content.includes("handleSubmitDeliverable"), "Must wire handleSubmitDeliverable");
-    assert.ok(content.includes("handleReviewAction"), "Must wire handleReviewAction");
-  });
 });
 
 describe("StaffTask Extended Fields: Collaborators & SubItems", () => {

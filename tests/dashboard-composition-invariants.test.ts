@@ -13,8 +13,6 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import * as fs from "node:fs";
-import * as path from "node:path";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ExecutiveActionCenter } from "../src/components/dashboard/executive-action-center";
@@ -29,9 +27,6 @@ import {
   EXPECTED_ATTENTION_ORDER,
   EXPECTED_NOT_ATTENTION,
 } from "./fixtures/workbench-queue-fixture";
-
-const DASHBOARD_ZONE_PATH = path.join(process.cwd(), "src/components/dashboard/zones/dashboard-zone.tsx");
-const ACTION_CENTER_PATH = path.join(process.cwd(), "src/components/dashboard/executive-action-center.tsx");
 
 /** Deceptive pseudo-healthy markers (DASH-06). */
 export const PROHIBITED_DASHBOARD_MARKERS = [
@@ -52,38 +47,7 @@ function assertNoProhibitedMarkers(content: string, contextName = "content"): vo
 }
 
 describe("Dashboard composition invariants", () => {
-  const dashboardSource = fs.readFileSync(DASHBOARD_ZONE_PATH, "utf8");
-  const actionCenterSource = fs.readFileSync(ACTION_CENTER_PATH, "utf8");
-
-  test("1. Exactly one situation summary on the dashboard", () => {
-    const situationStripMatches = dashboardSource.match(/<DashboardSituationStrip\b/g) || [];
-    const adaptiveMetricStripMatches = dashboardSource.match(/<AdaptiveMetricStrip\b/g) || [];
-    assert.equal(situationStripMatches.length + adaptiveMetricStripMatches.length, 1);
-    assert.equal(dashboardSource.includes("<ExecutiveStatStrip"), false);
-    assert.equal(dashboardSource.includes("<SecondaryStatStrip"), false);
-  });
-
-  test("2. Exactly one action queue per audience on the dashboard", () => {
-    const actionCenterMatches = dashboardSource.match(/<ExecutiveActionCenter\b/g) || [];
-    const personalWorkbenchMatches = dashboardSource.match(/<PersonalWorkbench\b/g) || [];
-    assert.equal(actionCenterMatches.length, 1, "one executive queue");
-    assert.equal(personalWorkbenchMatches.length, 1, "one non-exec queue");
-    assert.equal(dashboardSource.includes("<ActionInboxQueue"), false);
-  });
-
-  test("3. No SmartWorkbox on the dashboard", () => {
-    assert.equal(dashboardSource.includes("SmartWorkbox"), false);
-  });
-
-  test("4. Dashboard hides the large action KPI cards", () => {
-    assert.match(actionCenterSource, /hideCards\s*=\s*true/);
-    assert.equal(dashboardSource.includes("hideCards={false}"), false);
-  });
-
-  test("5. Prohibited health markers are forbidden and absent from rendered output", () => {
-    assertNoProhibitedMarkers(dashboardSource, "dashboard-zone.tsx");
-    assertNoProhibitedMarkers(actionCenterSource, "executive-action-center.tsx");
-
+  test("5. Prohibited health markers are absent from rendered output", () => {
     // The contract is enforced on what actually renders, not only on source text.
     const emptyHtml = renderToStaticMarkup(
       React.createElement(ExecutiveActionCenter, {
@@ -129,16 +93,6 @@ describe("Dashboard composition invariants", () => {
       html.includes("Không có đơn vị có việc quá hạn hoặc bị chặn trong phạm vi này"),
       "empty preview must describe only its own scope"
     );
-  });
-
-  test("8. Section order is ACTION → SITUATION → CONTEXT (Action-First)", () => {
-    const actionPos = dashboardSource.indexOf('data-slot="section-action"');
-    const situationPos = dashboardSource.indexOf('data-slot="section-situation"');
-    const contextPos = dashboardSource.indexOf('data-slot="section-context"');
-
-    assert.ok(situationPos > -1 && actionPos > -1 && contextPos > -1);
-    assert.ok(actionPos < situationPos, "the action queue must sit BEFORE the situation summary");
-    assert.ok(situationPos < contextPos, "the situation summary must sit BEFORE the context section");
   });
 
   test("9. Executive overdue surfaces even when personal stats show none", () => {

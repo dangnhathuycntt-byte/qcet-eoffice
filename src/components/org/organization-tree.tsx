@@ -90,7 +90,7 @@ export const QCET_DEPARTMENTS: DepartmentNode[] = [
     location: "Tòa nhà Hiệu bộ - Tầng 3",
     phone: "0256 3846 478",
     email: "bgh@cdktcnqn.edu.vn",
-    leaderName: "ThS. Phạm Văn Tường",
+    leaderName: "ThS. Đặng Nhật Huy",
     leaderRole: "Hiệu trưởng",
     groupField: "Nhóm",
     members: [

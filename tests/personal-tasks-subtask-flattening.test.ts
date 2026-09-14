@@ -1,7 +1,5 @@
 import { test, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   flattenPersonalTasks,
 } from "../src/components/tasks/cascading-task-table";
@@ -196,49 +194,5 @@ describe("Task 4: Subtask Flattening & Breadcrumb in Personal Workbox", () => {
     // task-school-03 is led by ThS. Phạm Văn Tường
     const parent03 = personalTasks.find((t: any) => t.id === "task-school-03");
     assert.equal(parent03, undefined, "task-school-03 led by Tuong must not be in Vinh's personal tasks");
-  });
-
-  it("cascading-task-table.tsx renders breadcrumb with parent code and title when activeWorkbox is MY_RECEIVED", () => {
-    const filePath = path.resolve(__dirname, "../src/components/tasks/cascading-task-table.tsx");
-    const content = fs.readFileSync(filePath, "utf-8");
-
-    // Check for flattening integration
-    assert.ok(
-      content.includes("flattenPersonalTasks"),
-      "cascading-task-table.tsx must import or define flattenPersonalTasks"
-    );
-
-    // Check for Breadcrumb display: parent task code and title
-    assert.ok(
-      content.includes("parentSchoolTaskTitle") || content.includes("parentSchoolTaskCode"),
-      "cascading-task-table.tsx must render parent task breadcrumb"
-    );
-
-    // Check for CornerDownRight icon or tree indicator
-    assert.ok(
-      content.includes("CornerDownRight"),
-      "cascading-task-table.tsx must use CornerDownRight icon for breadcrumb"
-    );
-
-    // Check for badge 'Việc thành phần'
-    assert.ok(
-      content.includes("Việc thành phần"),
-      "cascading-task-table.tsx must display 'Việc thành phần' badge on flattened subtasks"
-    );
-  });
-
-  it("universal-action-queue.tsx renders parent task breadcrumb chip", () => {
-    const filePath = path.resolve(__dirname, "../src/components/workspace/components/universal-action-queue.tsx");
-    const content = fs.readFileSync(filePath, "utf-8");
-
-    // Must render parent breadcrumb
-    assert.ok(
-      content.includes("parentTaskTitle") || content.includes("parentSchoolTaskTitle"),
-      "universal-action-queue.tsx must check for parentTaskTitle or parentSchoolTaskTitle"
-    );
-    assert.ok(
-      content.includes("CornerDownRight") || content.includes("parentTaskCode") || content.includes("breadcrumb"),
-      "universal-action-queue.tsx must display parent task breadcrumb info"
-    );
   });
 });

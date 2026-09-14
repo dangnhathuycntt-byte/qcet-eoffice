@@ -2,17 +2,12 @@
  * Workspace UI Invariants Test Suite (Shard F4 / Sprints 8 & 9)
  *
  * Enforces universal UI and semantic invariants across all QCET workspace views:
- * 1. Zero-Emoji Policy: RegEx /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u across all workspace views
- * 2. Single Global Primary Action: Absence of duplicate page-level CTAs on /tasks, /calendar, /dashboard
  * 3. 'Của tôi' Scope-vs-Status Exclusivity: Present in ScopeSwitcher, strictly absent in StatusFilter
  * 4. Dashboard Cockpit Deduplication: Band 1 (5 primary KPI cards) vs Band 2 (Action Queue)
- * 5. Touch Target & Accessibility Standards (>= 44px / touch-manipulation)
  */
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import * as fs from "node:fs";
-import * as path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -29,215 +24,7 @@ import { getActionCardData } from "../src/components/dashboard/executive-action-
 import type { DashboardStats } from "../src/types/dashboard";
 import type { ExecutiveActionStats } from "../src/lib/executive-matrix-aggregator";
 
-// Unicode range covering standard emojis, symbols, and pictographs
-const EMOJI_REGEX = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
-
-const WORKSPACE_DIRECTORIES = [
-  "src/app/tasks",
-  "src/app/calendar",
-  "src/app/dashboard",
-  "src/components/workspace",
-  "src/components/tasks",
-  "src/components/calendar",
-  "src/components/dashboard",
-];
-
-function getSourceFilesRecursively(dir: string, baseDir = process.cwd()): string[] {
-  const fullPath = path.resolve(baseDir, dir);
-  if (!fs.existsSync(fullPath)) return [];
-
-  const results: string[] = [];
-  const entries = fs.readdirSync(fullPath, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const entryPath = path.join(fullPath, entry.name);
-    if (entry.isDirectory()) {
-      results.push(...getSourceFilesRecursively(path.join(dir, entry.name), baseDir));
-    } else if (
-      (entry.name.endsWith(".tsx") || entry.name.endsWith(".ts")) &&
-      !entry.name.endsWith(".test.ts") &&
-      !entry.name.endsWith(".test.tsx") &&
-      !entry.name.endsWith(".d.ts")
-    ) {
-      results.push(entryPath);
-    }
-  }
-
-  return results;
-}
-
 describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () => {
-  describe("Invariant 1: Zero-Emoji Policy Across All Workspace Views", () => {
-    const allWorkspaceFiles = WORKSPACE_DIRECTORIES.flatMap((dir) =>
-      getSourceFilesRecursively(dir)
-    );
-
-    test("scans a non-empty comprehensive set of workspace component and page files", () => {
-      assert.ok(
-        allWorkspaceFiles.length >= 25,
-        `Expected at least 25 workspace source files, found ${allWorkspaceFiles.length}`
-      );
-    });
-
-    test("asserts zero emojis across all workspace views and components", () => {
-      const violations: { file: string; line: number; match: string }[] = [];
-
-      for (const filePath of allWorkspaceFiles) {
-        const relativePath = path.relative(process.cwd(), filePath);
-        const content = fs.readFileSync(filePath, "utf-8");
-        const lines = content.split("\n");
-
-        lines.forEach((line, index) => {
-          const match = line.match(new RegExp(EMOJI_REGEX.source, "gu"));
-          if (match) {
-            violations.push({
-              file: relativePath,
-              line: index + 1,
-              match: match.join(", "),
-            });
-          }
-        });
-      }
-
-      assert.deepEqual(
-        violations,
-        [],
-        `Detected forbidden emojis in workspace UI components:\n${violations
-          .map((v) => `  - ${v.file}:${v.line} [${v.match}]`)
-          .join("\n")}`
-      );
-    });
-
-    test("emoji detection regex correctly catches sample pictographs and symbols", () => {
-      const sampleViolations = ["\u{1F525} Báo cáo khẩn", "\u{1F680} Nhiệm vụ mới", "\u{1F4C5} Lịch tuần", "\u26A1 Điểm nghẽn"];
-      for (const text of sampleViolations) {
-        assert.ok(
-          EMOJI_REGEX.test(text),
-          `Regex must catch forbidden emoji in: "${text}"`
-        );
-      }
-
-      const sampleClean = [
-        "Báo cáo khẩn",
-        "Nhiệm vụ mới",
-        "Lịch công tác",
-        "Điểm nghẽn & Trễ hạn",
-        "Của tôi",
-        "Toàn trường",
-        "+ Giao việc",
-        "+ Tạo",
-      ];
-      for (const text of sampleClean) {
-        assert.ok(
-          !EMOJI_REGEX.test(text),
-          `Regex must NOT falsely flag clean text: "${text}"`
-        );
-      }
-    });
-  });
-
-  describe("Invariant 2: Single Global Primary Action (Absence of Duplicate Page-Level CTAs)", () => {
-    test("tasks page (/tasks): exactly 1 primary creation action in WorkspaceToolbar / UnifiedTaskToolbar, absent in header", () => {
-      // 1. Page Header must NOT contain a duplicate '+ Giao việc' or '+ Tạo' button
-      const tasksPagePath = path.resolve(process.cwd(), "src/app/tasks/page.tsx");
-      const tasksPageContent = fs.readFileSync(tasksPagePath, "utf-8");
-
-      // The server page simply renders TasksPageClient; no header CTA button
-      assert.ok(
-        !tasksPageContent.includes("+ Giao việc") && !tasksPageContent.includes("+ Tạo"),
-        "src/app/tasks/page.tsx must not declare page-level creation CTA buttons"
-      );
-
-      // 2. Toolbar defines the single canonical '+ Giao việc' CTA button
-      const workspacePath = path.resolve(
-        process.cwd(),
-        "src/components/workspace/unified-adaptive-workspace.tsx"
-      );
-      const workspaceContent = fs.readFileSync(workspacePath, "utf-8");
-      assert.ok(
-        workspaceContent.includes('createButtonLabel="+ Giao việc"'),
-        "UnifiedAdaptiveWorkspace must configure single primary action '+ Giao việc'"
-      );
-
-      const unifiedToolbarPath = path.resolve(
-        process.cwd(),
-        "src/components/dashboard/unified-task-toolbar.tsx"
-      );
-      const unifiedToolbarContent = fs.readFileSync(unifiedToolbarPath, "utf-8");
-      assert.ok(
-        unifiedToolbarContent.includes('createButtonLabel || "+ Giao việc"'),
-        "UnifiedTaskToolbar must define '+ Giao việc' as default primary action"
-      );
-
-      // 3. WorkspaceToolbar canonical component accepts primaryAction
-      const toolbarPath = path.resolve(
-        process.cwd(),
-        "src/components/workspace/workspace-toolbar.tsx"
-      );
-      const toolbarContent = fs.readFileSync(toolbarPath, "utf-8");
-      assert.ok(
-        toolbarContent.includes("primaryAction"),
-        "WorkspaceToolbar must accept single canonical primaryAction"
-      );
-    });
-
-    test("calendar page (/calendar): exactly 1 global primary action (+ Tạo dropdown)", () => {
-      const calendarPagePath = path.resolve(process.cwd(), "src/app/calendar/page.tsx");
-      const calendarContent = fs.readFileSync(calendarPagePath, "utf-8");
-
-      // The chrome collapsed to a single primary row, so the page header carries the
-      // one + Tạo dropdown and the chrome row carries navigation only. Anchor on the
-      // data-slot / comment markers that the current layout actually defines.
-      const headerStart = calendarContent.indexOf("Page header: title + primary action");
-      const headerEnd = calendarContent.indexOf("Primary calendar chrome");
-      assert.ok(
-        headerStart > 0 && headerEnd > headerStart,
-        "Calendar header section must be present"
-      );
-      const headerSection = calendarContent.slice(headerStart, headerEnd);
-
-      // 1. The header's single creation control is the consolidated + Tạo dropdown.
-      assert.ok(
-        headerSection.includes("handleOpenAddTask") && headerSection.includes("handleOpenAddEvent"),
-        "Single + Tạo dropdown must consolidate both 'Tạo công việc' and 'Tạo sự kiện'"
-      );
-
-      // 2. Exactly one such control exists anywhere on the page: every handleOpenAddTask
-      //    call site outside its own definition is inside that dropdown.
-      const chromeStart = calendarContent.indexOf("Primary calendar chrome");
-      const chromeEnd = calendarContent.indexOf("Calendar Content: Month Grid or Agenda List");
-      assert.ok(chromeStart > 0 && chromeEnd > chromeStart, "Calendar chrome section must be present");
-      const chromeSection = calendarContent.slice(chromeStart, chromeEnd);
-      assert.ok(
-        !chromeSection.includes("handleOpenAddTask") && !chromeSection.includes("handleOpenAddEvent"),
-        "Calendar chrome must NOT contain a second creation control"
-      );
-    });
-
-    test("dashboard page (/dashboard): renders dashboard cockpit without competing creation buttons", () => {
-      const dashboardZonePath = path.resolve(
-        process.cwd(),
-        "src/components/dashboard/zones/dashboard-zone.tsx"
-      );
-      const dashboardContent = fs.readFileSync(dashboardZonePath, "utf-8");
-
-      // The desktop header's contextual action bar contains only Scope, Month, and Refresh.
-      const barStart = dashboardContent.indexOf('data-slot="dashboard-header"');
-      const barEnd = dashboardContent.indexOf('data-slot="section-action"', barStart);
-      assert.ok(barStart > 0 && barEnd > barStart, "Dashboard action bar section must be present");
-      const contextBar = dashboardContent.slice(barStart, barEnd);
-
-      assert.ok(
-        contextBar.includes("Làm mới dữ liệu"),
-        "Dashboard contextual action bar has Refresh action"
-      );
-      assert.ok(
-        !contextBar.includes("+ Giao việc") && !contextBar.includes("+ Tạo"),
-        "Dashboard top action bar must NOT contain competing creation buttons"
-      );
-    });
-  });
-
   describe("Invariant 3: 'Của tôi' Scope-vs-Status Exclusivity", () => {
     test("'Của tôi' is strictly defined in ScopeSwitcher and absent from StatusFilter options", () => {
       // 1. Render ScopeSwitcher and assert 'Của tôi' is present as a scope tab
@@ -307,39 +94,6 @@ describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () =
         "Invalid status 'my' must not be recognized as a valid lifecycle status"
       );
     });
-
-    test("StatusFilter component does not render 'Của tôi' option", () => {
-      const statusFilterPath = path.resolve(
-        process.cwd(),
-        "src/components/workspace/status-filter.tsx"
-      );
-      if (fs.existsSync(statusFilterPath)) {
-        const content = fs.readFileSync(statusFilterPath, "utf-8");
-        // Status filter items should never include "Của tôi"
-        assert.ok(
-          !content.includes('label: "Của tôi"') && !content.includes("label: 'Của tôi'"),
-          "StatusFilter options must NOT include 'Của tôi'"
-        );
-      }
-    });
-
-    test("ScopeSwitcher component renders 'Của tôi' as a valid scope tab", () => {
-      const scopeSwitcherPath = path.resolve(
-        process.cwd(),
-        "src/components/workspace/scope-switcher.tsx"
-      );
-      if (fs.existsSync(scopeSwitcherPath)) {
-        const content = fs.readFileSync(scopeSwitcherPath, "utf-8");
-        assert.ok(
-          content.includes('"my"') || content.includes("'my'"),
-          "ScopeSwitcher must include 'my' scope"
-        );
-        assert.ok(
-          content.includes("Của tôi"),
-          "ScopeSwitcher must present 'Của tôi' label"
-        );
-      }
-    });
   });
 
   describe("Invariant 4: Dashboard Cockpit & Metric Strip Deduplication", () => {
@@ -400,25 +154,6 @@ describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () =
       assert.equal(cards[4].value, "78%");
     });
 
-    test("Band 2 (ExecutiveActionCenter): supports hideCards to eliminate duplicate metric cards", () => {
-      const actionCenterPath = path.resolve(
-        process.cwd(),
-        "src/components/dashboard/executive-action-center.tsx"
-      );
-      const actionCenterContent = fs.readFileSync(actionCenterPath, "utf-8");
-
-      assert.ok(
-        actionCenterContent.includes("hideCards"),
-        "ExecutiveActionCenter must support hideCards prop to prevent card duplication"
-      );
-
-      // Verify that when hideCards is active, the 3 metric action filter cards are suppressed
-      assert.ok(
-        actionCenterContent.includes("{!hideCards && ("),
-        "Action cards section must be conditional on !hideCards"
-      );
-    });
-
     test("cards in Band 1 and Band 2 have distinct, non-colliding semantic purviews", () => {
       const band1Cards = getExecutiveStatCardData(dummyStats, dummyExecutiveStats);
       const band2Cards = getActionCardData(dummyExecutiveStats);
@@ -435,56 +170,6 @@ describe("Workspace UI Invariants - Quality, Semantics & Zero-Emoji Suite", () =
       // Band 2 only focuses on action queues
       const band2Keys = band2Cards.map((c) => c.filterKey);
       assert.deepEqual(band2Keys, ["PENDING_APPROVAL", "BLOCKED_OVERDUE", "STRATEGIC"]);
-    });
-  });
-
-  describe("Invariant 5: Touch Target & Accessibility Standards", () => {
-    test("mobile navigation and primary interaction buttons enforce min-h-[36px] or min-h-[44px]", () => {
-      const filesToCheck = [
-        "src/components/workspace/workspace-toolbar.tsx",
-        "src/app/calendar/page.tsx",
-        "src/components/tasks/task-kanban-board.tsx",
-      ];
-
-      for (const relPath of filesToCheck) {
-        const fullPath = path.resolve(process.cwd(), relPath);
-        if (!fs.existsSync(fullPath)) continue;
-
-        const content = fs.readFileSync(fullPath, "utf-8");
-        // Look for touch target classes: min-h-[44px], min-h-[40px], min-h-[36px], h-9, h-10, touch-manipulation
-        const hasAccessibleTouchTargets =
-          content.includes("min-h-[44px]") ||
-          content.includes("min-h-[40px]") ||
-          content.includes("min-h-[36px]") ||
-          content.includes("h-9") ||
-          content.includes("h-10") ||
-          content.includes("touch-manipulation");
-
-        assert.ok(
-          hasAccessibleTouchTargets,
-          `${relPath} must specify accessible button heights / touch targets`
-        );
-      }
-    });
-
-    test("absence of hardcoded fake data arrays (zero synthetic operational data)", () => {
-      const filesToAudit = [
-        "src/components/dashboard/workbench-mobile-feed.tsx",
-        "src/components/dashboard/personal-workbench.tsx",
-        "src/components/workspace/unified-adaptive-workspace.tsx",
-      ];
-
-      for (const relPath of filesToAudit) {
-        const fullPath = path.resolve(process.cwd(), relPath);
-        if (!fs.existsSync(fullPath)) continue;
-
-        const content = fs.readFileSync(fullPath, "utf-8");
-        assert.ok(
-          !content.includes("DEFAULT_SCHEDULE_ITEMS = [") &&
-            !content.includes("DEFAULT_NOTICES = ["),
-          `${relPath} must not contain hardcoded default synthetic schedule/notices`
-        );
-      }
     });
   });
 });

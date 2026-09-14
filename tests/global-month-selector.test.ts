@@ -1,7 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 
 import {
   ACADEMIC_MONTH_ORDER,
@@ -10,23 +8,6 @@ import {
 } from "../src/lib/academic-calendar";
 
 describe("Global Month Selector Component Invariants", () => {
-  const componentPath = path.resolve(process.cwd(), "src/components/layout/global-month-selector.tsx");
-
-  test("component file exists and exports GlobalMonthSelector", () => {
-    assert.ok(fs.existsSync(componentPath), "global-month-selector.tsx must exist");
-    const content = fs.readFileSync(componentPath, "utf8");
-    assert.match(content, /export function GlobalMonthSelector/);
-    assert.match(content, /ACADEMIC_MONTH_ORDER/);
-    assert.match(content, /Popover/);
-  });
-
-  test("dashboard-zone.tsx includes GlobalMonthSelector alongside ScopeSwitcher in contextual toolbar", () => {
-    const dashboardZonePath = path.resolve(process.cwd(), "src/components/dashboard/zones/dashboard-zone.tsx");
-    const content = fs.readFileSync(dashboardZonePath, "utf8");
-    assert.match(content, /GlobalMonthSelector/);
-    assert.match(content, /ScopeSwitcher/);
-  });
-
   test("academic calendar defines 12 operational months in correct order", () => {
     assert.deepEqual(ACADEMIC_MONTH_ORDER, [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8]);
   });

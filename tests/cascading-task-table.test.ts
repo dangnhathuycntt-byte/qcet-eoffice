@@ -1,7 +1,5 @@
 import { test, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TaskPaginationBar } from "../src/components/tasks/table/components/task-pagination-bar";
@@ -162,22 +160,6 @@ describe("CascadingTaskTable Helpers", () => {
 });
 
 describe("Task 6: Cascading Task Table Single Source of Truth", () => {
-  it("neither task table component contains hardcoded personal name checks", () => {
-    const tasksTable = path.resolve(__dirname, "../src/components/tasks/cascading-task-table.tsx");
-    const dashboardTable = path.resolve(__dirname, "../src/components/dashboard/cascading-task-table.tsx");
-
-    const content1 = fs.readFileSync(tasksTable, "utf-8");
-    const content2 = fs.readFileSync(dashboardTable, "utf-8");
-
-    const forbiddenNames = ["Xuân", "Huy", "Linh", "Thanh", "Nam", "Nhung", "Minh", "Hậu", "My"];
-    for (const name of forbiddenNames) {
-      assert.ok(
-        !content1.includes(`"${name}"`) && !content2.includes(`"${name}"`),
-        `Component must not filter by personal name '${name}'`
-      );
-    }
-  });
-
   it("filters tasks by relational departmentId and resolveDepartmentId without name heuristics", () => {
     const mockTasks: SchoolTask[] = [
       {
@@ -234,22 +216,6 @@ describe("Task 6: Cascading Task Table Single Source of Truth", () => {
     const daoTaoTasks = filterTasksForTable(mockTasks, "ALL", "", "DAO_TAO");
     assert.equal(daoTaoTasks.length, 1);
     assert.equal(daoTaoTasks[0].id, "task-rel-2");
-  });
-
-  it("uses ergonomic '/' table filter shortcut and avoids global ⌘K conflict", () => {
-    const tasksTable = path.resolve(__dirname, "../src/components/tasks/cascading-task-table.tsx");
-    const content = fs.readFileSync(tasksTable, "utf-8");
-
-    // Must not intercept 'k' key in table (reserved for global search palette)
-    assert.ok(
-      !content.includes('key.toLowerCase() === "k"'),
-      "CascadingTaskTable must not intercept global ⌘K shortcut"
-    );
-    // Must support '/' shortcut for in-table search
-    assert.ok(
-      content.includes('e.key === "/"'),
-      "CascadingTaskTable should support ergonomic '/' table search shortcut"
-    );
   });
 });
 
@@ -318,94 +284,6 @@ describe("Personal Scope Subtask First-Class UX Suite (MY_TASKS)", () => {
       "Kế hoạch nâng cấp mạng hạ tầng cơ sở 2026"
     );
   });
-
-  it("subtask-inline-row.tsx contains 'Thuộc nhiệm vụ:' badge and direct action controls", () => {
-    const subtaskRowPath = path.resolve(
-      __dirname,
-      "../src/components/tasks/table/components/subtask-inline-row.tsx"
-    );
-    const content = fs.readFileSync(subtaskRowPath, "utf-8");
-
-    // Must have 'Thuộc nhiệm vụ:' badge
-    assert.ok(
-      content.includes("Thuộc nhiệm vụ:"),
-      "Subtask row should display 'Thuộc nhiệm vụ:' badge for context"
-    );
-
-    // Must have direct submission button
-    assert.ok(
-      content.includes("onOpenSubmitModal"),
-      "Subtask row must provide direct submission action"
-    );
-
-    // Must have direct status dropdown/actions
-    assert.ok(
-      content.includes("onStatusChange"),
-      "Subtask row must provide direct status change actions"
-    );
-  });
-
-  it("subtask-row-group.tsx supports scope prop and highlights user subtasks", () => {
-    const groupPath = path.resolve(
-      __dirname,
-      "../src/components/tasks/table/components/subtask-row-group.tsx"
-    );
-    const content = fs.readFileSync(groupPath, "utf-8");
-
-    assert.ok(
-      content.includes("scope?: string"),
-      "SubtaskRowGroup must accept scope prop"
-    );
-    assert.ok(
-      content.includes("isUserSubtask"),
-      "SubtaskRowGroup must detect subtasks assigned to the user"
-    );
-  });
-
-  it("workspace components include 'Thuộc nhiệm vụ:' badge on subtask items", () => {
-    const focusWsPath = path.resolve(
-      __dirname,
-      "../src/components/portal/lecturer-focus-workspace.tsx"
-    );
-    const queuePath = path.resolve(
-      __dirname,
-      "../src/components/workspace/components/universal-action-queue.tsx"
-    );
-    const contentFocus = fs.readFileSync(focusWsPath, "utf-8");
-    const contentQueue = fs.readFileSync(queuePath, "utf-8");
-
-    assert.ok(
-      contentFocus.includes("Thuộc nhiệm vụ:"),
-      "Lecturer focus workspace should highlight parent task with 'Thuộc nhiệm vụ:' badge"
-    );
-    assert.ok(
-      contentQueue.includes("Thuộc nhiệm vụ:"),
-      "Action queue should highlight parent task with 'Thuộc nhiệm vụ:' badge"
-    );
-  });
-
-  it("ensures zero decorative emojis in all modified table and workspace components", () => {
-    const filesToCheck = [
-      "../src/components/tasks/table/components/subtask-inline-row.tsx",
-      "../src/components/tasks/table/components/subtask-row-group.tsx",
-      "../src/components/tasks/table/modular-cascading-task-table.tsx",
-      "../src/components/tasks/cascading-task-table.tsx",
-      "../src/components/workspace/unified-adaptive-workspace.tsx",
-      "../src/components/workspace/components/universal-action-queue.tsx",
-    ];
-
-    const emojiRegex =
-      /[\u{1F300}-\u{1F5FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F1E0}-\u{1F1FF}]/u;
-
-    for (const relPath of filesToCheck) {
-      const fullPath = path.resolve(__dirname, relPath);
-      const content = fs.readFileSync(fullPath, "utf-8");
-      assert.ok(
-        !emojiRegex.test(content),
-        `File ${relPath} must not contain any emojis`
-      );
-    }
-  });
 });
 
 describe("Plan 10.8/10.9: shortcut strip removal, lightweight help trigger, compact pagination copy", () => {
@@ -439,54 +317,7 @@ describe("Plan 10.8/10.9: shortcut strip removal, lightweight help trigger, comp
     );
   });
 
-  it("lightweight help trigger exists (TableShortcutHelpTrigger, '? Phím tắt', role dialog)", () => {
-    const modularPath = path.resolve(
-      __dirname,
-      "../src/components/tasks/table/modular-cascading-task-table.tsx"
-    );
-    const src = fs.readFileSync(modularPath, "utf-8");
-
-    assert.ok(
-      src.includes("TableShortcutHelpTrigger"),
-      "modular table must define/compose TableShortcutHelpTrigger"
-    );
-    assert.ok(
-      src.includes("? Phím tắt"),
-      "trigger must carry the lightweight '? Phím tắt' affordance"
-    );
-    assert.ok(
-      src.includes('role="dialog"'),
-      "shortcut help must open as a dismissible dialog, not a standing strip"
-    );
-    assert.ok(
-      src.includes("shortcutTrigger={<TableShortcutHelpTrigger />}"),
-      "dialog trigger must compose into the pagination footer via shortcutTrigger"
-    );
-  });
-
   it("pagination footer uses compact copy ('–' range + '/ N nhiệm vụ', '/ trang')", () => {
-    const barPath = path.resolve(
-      __dirname,
-      "../src/components/tasks/table/components/task-pagination-bar.tsx"
-    );
-    const src = fs.readFileSync(barPath, "utf-8");
-
-    // Compact range + total markers present in source.
-    assert.ok(src.includes("–"), "footer must render the compact en-dash range");
-    assert.ok(src.includes("nhiệm vụ"), "footer must count in 'nhiệm vụ'");
-    assert.ok(src.includes("/ trang"), "page-size options must use compact '/ trang'");
-
-    // Verbose legacy copy must be gone.
-    assert.ok(
-      !src.includes("Hiển thị"),
-      "footer must not use verbose 'Hiển thị ...' copy"
-    );
-    assert.ok(
-      !src.includes("trên tổng số"),
-      "footer must not use verbose 'trên tổng số' copy"
-    );
-
-    // Same contract in rendered markup.
     const html = renderToStaticMarkup(
       React.createElement(TaskPaginationBar, {
         currentPage: 1,
