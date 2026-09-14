@@ -881,8 +881,14 @@ export function UnifiedAdaptiveWorkspace({
     if (queryState.month !== undefined) {
       setCurrentMonth(queryState.month);
     }
-    if (queryState.view && (queryState.view === "table" || queryState.view === "kanban")) {
-      setInternalViewMode(queryState.view);
+    // View sync: only on first mount — after that, handleViewModeChange owns
+    // the state and writes back to URL. Continuous two-way sync causes Kanban
+    // to reset to "table" whenever any other queryState field changes.
+    if (!viewUrlSyncedRef.current) {
+      viewUrlSyncedRef.current = true;
+      if (queryState.view && (queryState.view === "table" || queryState.view === "kanban")) {
+        setInternalViewMode(queryState.view);
+      }
     }
   }, [
     workspaceQuery?.queryState.scope,
@@ -1461,6 +1467,8 @@ export function UnifiedAdaptiveWorkspace({
   // Mount hydration only: URL-sync of viewId on select is deferred to the
   // query layer (use-workspace-query does not round-trip viewId).
   const viewIdHydratedRef = React.useRef(false);
+  // Guards one-time URL→state view sync (see effect below)
+  const viewUrlSyncedRef = React.useRef(false);
   React.useEffect(() => {
     if (viewIdHydratedRef.current) return;
     if (activeViewId) {
