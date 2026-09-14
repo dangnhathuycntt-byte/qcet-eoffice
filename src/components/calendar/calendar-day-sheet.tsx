@@ -127,9 +127,17 @@ export function CalendarDaySheet({
   const [query, setQuery] = React.useState("");
   const [isCreateMenuOpen, setIsCreateMenuOpen] = React.useState(false);
   const createMenuRef = React.useRef<HTMLDivElement>(null);
+  const panelRef = React.useRef<HTMLElement>(null);
   const referenceDate = getSystemReferenceDate();
 
   React.useEffect(() => setMounted(true), []);
+
+  // Focus panel on open for keyboard and screen-reader users
+  React.useEffect(() => {
+    if (isOpen && panelRef.current) {
+      panelRef.current.focus();
+    }
+  }, [isOpen]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -178,6 +186,24 @@ export function CalendarDaySheet({
     );
   }, [filter, query, referenceDate, tasks]);
 
+  // Events always render unfiltered by attention state — they have real times, not deadlines.
+  // The attention quick-filters apply only to the "Nhiệm vụ đến hạn" section.
+  const visibleEvents = React.useMemo(() => {
+    const allEvents = tasks.filter((item) => item.isEvent);
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return allEvents;
+    return allEvents.filter((item) =>
+      [item.title, item.host, item.location, item.participants]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedQuery))
+    );
+  }, [query, tasks]);
+
+  const visibleDeadlines = React.useMemo(
+    () => visibleTasks.filter((item) => !item.isEvent),
+    [visibleTasks]
+  );
+
   if (!mounted) return null;
 
   const formattedDate = selectedDate ? formatDateVi(selectedDate) : "Chưa chọn ngày";
@@ -210,6 +236,8 @@ export function CalendarDaySheet({
       {isOpen && (
         <m.aside
           key="calendar-day-sheet-panel"
+          ref={panelRef}
+          tabIndex={-1}
           data-slot="calendar-day-sheet-panel"
           role="dialog"
           aria-modal="true"
@@ -219,7 +247,7 @@ export function CalendarDaySheet({
           animate="animate"
           exit="exit"
           className={cn(
-            "fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto z-50 flex h-full flex-col bg-card border-l border-border/70 shadow-2xl",
+            "fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto z-50 flex h-full flex-col bg-card border-l border-border/70 shadow-2xl outline-none",
             "w-full sm:w-[500px] md:w-[540px]",
             className
           )}
@@ -265,7 +293,7 @@ export function CalendarDaySheet({
                     onClick={() => setFilter(item.value)}
                     aria-pressed={filter === item.value}
                     className={cn(
-                      "min-h-8 rounded-lg border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
+                      "min-h-[44px] sm:min-h-8 rounded-lg border px-2.5 text-xs font-semibold transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
                       filter === item.value
                         ? "border-primary/40 bg-primary/10 text-primary"
                         : "border-border/60 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -299,7 +327,7 @@ export function CalendarDaySheet({
               "Không có lịch công tác"
             ) : (
               <span>
-                <strong className="font-mono tabular-nums text-foreground">{visibleTasks.length}</strong> đang hiển thị
+                <strong className="font-mono tabular-nums text-foreground">{visibleEvents.length + visibleDeadlines.length}</strong> đang hiển thị
                 {summary.attention > 0 && (
                   <span> · <strong className="text-rose-700">{summary.attention} cần xử lý</strong></span>
                 )}
@@ -336,7 +364,7 @@ export function CalendarDaySheet({
                     className="w-full min-h-[44px] sm:min-h-9 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-secondary transition-colors text-left font-medium"
                   >
                     <CheckSquare className="size-3.5 text-primary shrink-0" />
-                    <span>Tạo công việc ngày này</span>
+                    <span>Nhiệm vụ hạn ngày này</span>
                   </button>
                   <button
                     type="button"
@@ -348,7 +376,7 @@ export function CalendarDaySheet({
                     className="w-full min-h-[44px] sm:min-h-9 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-secondary transition-colors text-left font-medium"
                   >
                     <CalendarIcon className="size-3.5 text-sky-600 shrink-0" />
-                    <span>Tạo sự kiện ngày này</span>
+                    <span>Sự kiện ngày này</span>
                   </button>
                 </div>
               )}
@@ -397,7 +425,7 @@ export function CalendarDaySheet({
                 </div>
               )}
             </div>
-          ) : visibleTasks.length === 0 ? (
+          ) : visibleEvents.length === 0 && visibleDeadlines.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-6 text-center text-xs text-muted-foreground">
               Không có mục nào khớp bộ lọc hiện tại.
               <button type="button" onClick={() => { setFilter("all"); setQuery(""); }} className="ml-1 font-semibold text-primary hover:underline">
@@ -407,183 +435,153 @@ export function CalendarDaySheet({
           ) : (
             <div className="space-y-4">
               {/* Mục Sự kiện lịch biểu */}
-              {(() => {
-                const eventItems = visibleTasks.filter((item) => item.isEvent);
-                if (eventItems.length === 0) return null;
-                return (
-                  <section aria-label="Sự kiện lịch biểu" className="space-y-2">
-                    <div className="flex items-center justify-between pb-1 border-b border-border/40">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                        <CalendarIcon className="size-3.5 text-sky-600" strokeWidth={1.5} aria-hidden="true" />
-                        <span>Sự kiện lịch biểu</span>
-                      </h3>
-                      <span className="text-xs font-mono font-bold text-muted-foreground tabular-nums">
-                        {eventItems.length}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {eventItems.map((item) => {
-                        const state = getCalendarAttentionState(item, referenceDate);
-                        const isCompleted = state === "completed";
-                        return (
-                          <div
-                            key={item.id}
-                            className={cn(
-                              "w-full flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all",
-                              item.originalTask && "hover:border-primary/40 hover:shadow-card cursor-pointer",
-                              isCompleted && "opacity-70 bg-muted/20"
-                            )}
-                            onClick={() => item.originalTask && onSelectTask?.(item.originalTask)}
-                          >
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 text-sky-700 px-2 py-0.5 text-xs font-semibold">
-                                Sự kiện
-                              </span>
-                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                                <StateIcon state={state} isEvent={true} />
-                                {stateLabel(state, true)}
-                              </span>
-                            </div>
-                            <h4 className={cn("text-xs sm:text-sm font-semibold text-foreground leading-snug", isCompleted && "line-through text-muted-foreground")}>
-                              {item.title}
-                            </h4>
-                            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground pt-1 border-t border-border/40 flex-wrap">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <User className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                                <span className="truncate">Chủ trì: {item.host || item.assigneeName || "Ban Giám hiệu"}</span>
-                              </div>
-                              <div className="flex items-center gap-2 font-mono tabular-nums shrink-0">
-                                {item.time && (
-                                  <span className="inline-flex items-center gap-1 text-primary font-semibold">
-                                    <Clock className="size-3" strokeWidth={1.5} aria-hidden="true" />
-                                    {item.time}
-                                  </span>
-                                )}
-                                {item.location && (
-                                  <span className="inline-flex items-center gap-1 max-w-[150px]">
-                                    <MapPin className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                                    <span className="truncate">{item.location}</span>
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+              {visibleEvents.length > 0 && (
+                <section aria-label="Sự kiện lịch biểu" className="space-y-2">
+                  <div className="flex items-center justify-between pb-1 border-b border-border/40">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <CalendarIcon className="size-3.5 text-primary" strokeWidth={1.5} aria-hidden="true" />
+                      <span>Sự kiện lịch biểu</span>
+                    </h3>
+                    <span className="text-xs font-mono font-bold text-muted-foreground tabular-nums">
+                      {visibleEvents.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {visibleEvents.map((item) => {
+                      const state = getCalendarAttentionState(item, referenceDate);
+                      const isCompleted = state === "completed";
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => item.originalTask && onSelectTask?.(item.originalTask)}
+                          className={cn(
+                            "group w-full flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary min-h-[44px]",
+                            item.originalTask ? "hover:border-primary/40 hover:shadow-card cursor-pointer" : "cursor-default",
+                            isCompleted && "opacity-70 bg-muted/20"
+                          )}
+                          aria-label={item.originalTask ? `Xem chi tiết sự kiện ${item.title}` : item.title}
+                        >
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="inline-flex items-center rounded-md border border-primary/20 bg-primary/10 text-primary px-2 py-0.5 text-xs font-semibold">
+                              Sự kiện
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                              <StateIcon state={state} isEvent={true} />
+                              {stateLabel(state, true)}
+                            </span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })()}
-
-              {/* Mục Nhiệm vụ đến hạn */}
-              {(() => {
-                const deadlineItems = visibleTasks.filter((item) => !item.isEvent);
-                if (deadlineItems.length === 0) return null;
-                return (
-                  <section aria-label="Nhiệm vụ đến hạn" className="space-y-2">
-                    <div className="flex items-center justify-between pb-1 border-b border-border/40">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                        <CheckSquare className="size-3.5 text-primary" strokeWidth={1.5} aria-hidden="true" />
-                        <span>Nhiệm vụ đến hạn</span>
-                      </h3>
-                      <span className="text-xs font-mono font-bold text-muted-foreground tabular-nums">
-                        {deadlineItems.length}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      {deadlineItems.map((item) => {
-                        const state = getCalendarAttentionState(item, referenceDate);
-                        const isCompleted = state === "completed";
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => item.originalTask && onSelectTask?.(item.originalTask)}
-                            className={cn(
-                              "group w-full flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary min-h-[44px]",
-                              item.originalTask ? "hover:border-primary/40 hover:shadow-card cursor-pointer" : "cursor-default",
-                              isCompleted && "opacity-70 bg-muted/20"
-                            )}
-                            aria-label={item.originalTask ? `Xem chi tiết ${item.title}` : item.title}
-                          >
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-xs font-semibold text-foreground">
-                                  {item.level === "Trường" ? "Cấp Trường" : "Đơn vị"}
-                                </span>
-                                {item.categoryLabel && (
-                                  <span className="rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
-                                    {item.categoryLabel}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                                <StateIcon state={state} isEvent={false} />
-                                {stateLabel(state, false)}
-                              </span>
+                          <h4 className={cn("text-xs sm:text-sm font-semibold text-foreground leading-snug", isCompleted && "line-through text-muted-foreground")}>
+                            {item.title}
+                          </h4>
+                          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground pt-1 border-t border-border/40 flex-wrap">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <User className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                              <span className="truncate">Chủ trì: {item.host || item.assigneeName || "Ban Giám hiệu"}</span>
                             </div>
-
-                            <h4 className={cn("text-xs sm:text-sm font-semibold text-foreground leading-snug", isCompleted && "line-through text-muted-foreground")}>
-                              {item.title}
-                            </h4>
-
-                            {item.level === "Đơn vị" && item.parentSchoolTaskTitle && (
-                              <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                                <Layers className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                                <span className="truncate">Thuộc: {item.parentSchoolTaskTitle}</span>
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground pt-1 border-t border-border/40 flex-wrap">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <User className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                                <span className="truncate">{item.assigneeName || "Chưa gán phụ trách"}</span>
-                              </div>
-                              {typeof item.progressPercent === "number" && (
-                                <span className="font-mono tabular-nums text-xs font-semibold text-foreground">
-                                  Tiến độ: {item.progressPercent}%
+                            <div className="flex items-center gap-2 font-mono tabular-nums shrink-0">
+                              {item.time && (
+                                <span className="inline-flex items-center gap-1 text-primary font-semibold">
+                                  <Clock className="size-3" strokeWidth={1.5} aria-hidden="true" />
+                                  {item.time}
+                                </span>
+                              )}
+                              {item.location && (
+                                <span className="inline-flex items-center gap-1 max-w-[150px]">
+                                  <MapPin className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                                  <span className="truncate">{item.location}</span>
                                 </span>
                               )}
                             </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
-                );
-              })()}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {/* Mục Nhiệm vụ đến hạn */}
+              {visibleDeadlines.length > 0 && (
+                <section aria-label="Nhiệm vụ đến hạn" className="space-y-2">
+                  <div className="flex items-center justify-between pb-1 border-b border-border/40">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <CheckSquare className="size-3.5 text-primary" strokeWidth={1.5} aria-hidden="true" />
+                      <span>Nhiệm vụ đến hạn</span>
+                    </h3>
+                    <span className="text-xs font-mono font-bold text-muted-foreground tabular-nums">
+                      {visibleDeadlines.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {visibleDeadlines.map((item) => {
+                      const state = getCalendarAttentionState(item, referenceDate);
+                      const isCompleted = state === "completed";
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => item.originalTask && onSelectTask?.(item.originalTask)}
+                          className={cn(
+                            "group w-full flex flex-col gap-2 rounded-xl border border-border/60 bg-card p-3.5 text-left transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary min-h-[44px]",
+                            item.originalTask ? "hover:border-primary/40 hover:shadow-card cursor-pointer" : "cursor-default",
+                            isCompleted && "opacity-70 bg-muted/20"
+                          )}
+                          aria-label={item.originalTask ? `Xem chi tiết ${item.title}` : item.title}
+                        >
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-xs font-semibold text-foreground">
+                                {item.level === "Trường" ? "Cấp Trường" : "Đơn vị"}
+                              </span>
+                              {item.categoryLabel && (
+                                <span className="rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
+                                  {item.categoryLabel}
+                                </span>
+                              )}
+                            </div>
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                              <StateIcon state={state} isEvent={false} />
+                              {stateLabel(state, false)}
+                            </span>
+                          </div>
+
+                          <h4 className={cn("text-xs sm:text-sm font-semibold text-foreground leading-snug", isCompleted && "line-through text-muted-foreground")}>
+                            {item.title}
+                          </h4>
+
+                          {item.level === "Đơn vị" && item.parentSchoolTaskTitle && (
+                            <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                              <Layers className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                              <span className="truncate">Thuộc: {item.parentSchoolTaskTitle}</span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground pt-1 border-t border-border/40 flex-wrap">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <User className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                              <span className="truncate">{item.assigneeName || "Chưa gán phụ trách"}</span>
+                            </div>
+                            {typeof item.progressPercent === "number" && (
+                              <span className="font-mono tabular-nums text-xs font-semibold text-foreground">
+                                Tiến độ: {item.progressPercent}%
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
             </div>
           )}
         </div>
 
-        <footer className="border-t border-border/60 px-4 sm:px-5 py-3 bg-card/90 flex items-center justify-between gap-2">
+        <footer className="border-t border-border/60 px-4 sm:px-5 py-3 bg-card/90 flex items-center justify-end">
           <Button type="button" variant="outline" size="sm" onClick={onClose} className="text-xs min-h-[44px] sm:min-h-9 rounded-lg px-4">
             Đóng
           </Button>
-          {selectedDate && (
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => onAddTaskOnDate?.(selectedDate)}
-                className="text-xs min-h-[44px] sm:min-h-9 rounded-lg px-3 border-dashed"
-              >
-                <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
-                Thêm việc
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => onAddEventOnDate?.(selectedDate)}
-                className="text-xs min-h-[44px] sm:min-h-9 rounded-lg px-3 border-dashed"
-              >
-                <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
-                Thêm sự kiện
-              </Button>
-            </div>
-          )}
         </footer>
       </m.aside>
     )}

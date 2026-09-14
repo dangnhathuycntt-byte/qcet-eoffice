@@ -362,25 +362,27 @@ export function WorkCalendarCard({
           </div>
         </div>
 
-        <div className="mt-1.5 space-y-0.5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
-            <span>Tiến độ</span>
-            <span>{progressPercent}%</span>
+        {typeof progressPercent === "number" && (
+          <div className="mt-1.5 space-y-0.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
+              <span>Tiến độ</span>
+              <span>{progressPercent}%</span>
+            </div>
+            <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  progressPercent === 100
+                    ? "bg-emerald-500"
+                    : isOverdue
+                    ? "bg-rose-500"
+                    : "bg-primary"
+                )}
+                style={{ width: `${Math.min(100, Math.max(0, progressPercent ?? 0))}%` }}
+              />
+            </div>
           </div>
-          <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all",
-                progressPercent === 100
-                  ? "bg-emerald-500"
-                  : isOverdue
-                  ? "bg-rose-500"
-                  : "bg-primary"
-              )}
-              style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
-            />
-          </div>
-        </div>
+        )}
       </div>
     );
   }
@@ -437,25 +439,27 @@ export function WorkCalendarCard({
         </div>
       </div>
 
-      <div className="space-y-1 pt-1 border-t border-border/40">
-        <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
-          <span>Tiến độ thực hiện</span>
-          <span className="font-bold text-foreground">{progressPercent}%</span>
+      {typeof progressPercent === "number" && (
+        <div className="space-y-1 pt-1 border-t border-border/40">
+          <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
+            <span>Tiến độ thực hiện</span>
+            <span className="font-bold text-foreground">{progressPercent}%</span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all",
+                progressPercent === 100
+                  ? "bg-emerald-500"
+                  : isOverdue
+                  ? "bg-rose-500"
+                  : "bg-primary"
+              )}
+              style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
+            />
+          </div>
         </div>
-        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-          <div
-            className={cn(
-              "h-full rounded-full transition-all",
-              progressPercent === 100
-                ? "bg-emerald-500"
-                : isOverdue
-                ? "bg-rose-500"
-                : "bg-primary"
-            )}
-            style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -515,11 +519,11 @@ export function PriorOverdueBacklogBanner({
                     {item.code}
                   </span>
                 )}
-                <span className="font-semibold text-slate-800 truncate block">
+                <span className="font-semibold text-foreground truncate block">
                   {item.title}
                 </span>
               </div>
-              <div className="text-xs text-slate-500 truncate mt-0.5">
+              <div className="text-xs text-muted-foreground truncate mt-0.5">
                 {item.departmentName} • {item.assigneeName}
               </div>
             </div>
@@ -791,8 +795,8 @@ export function ExecutiveCalendarWorkspace({
               variant="ghost"
               size="sm"
               onClick={handlePrevWeek}
-              className="h-8 w-8 p-0 rounded-lg hover:bg-muted"
-              title="Tuần trước"
+              className="min-h-[44px] min-w-[44px] sm:h-8 sm:w-8 p-0 rounded-lg hover:bg-muted"
+              aria-label="Tuần trước"
             >
               <ChevronLeft className="size-4" strokeWidth={1.5} />
             </Button>
@@ -808,8 +812,8 @@ export function ExecutiveCalendarWorkspace({
               variant="ghost"
               size="sm"
               onClick={handleNextWeek}
-              className="h-8 w-8 p-0 rounded-lg hover:bg-muted"
-              title="Tuần sau"
+              className="min-h-[44px] min-w-[44px] sm:h-8 sm:w-8 p-0 rounded-lg hover:bg-muted"
+              aria-label="Tuần sau"
             >
               <ChevronRight className="size-4" strokeWidth={1.5} />
             </Button>
@@ -861,7 +865,7 @@ export function ExecutiveCalendarWorkspace({
               onClick={() => handleAddSlotClick()}
               className="gap-1.5 text-xs font-semibold rounded-xl h-8.5"
             >
-              <Plus className="size-3.5" />
+              <Plus className="size-3.5" strokeWidth={1.5} />
               <span className="hidden sm:inline">Thêm nhiệm vụ</span>
             </Button>
           )}
@@ -884,9 +888,10 @@ export function ExecutiveCalendarWorkspace({
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] sm:p-0.5 sm:min-h-0 sm:min-w-0 flex items-center justify-center"
+              aria-label="Xóa tìm kiếm"
             >
-              <X className="size-3" />
+              <X className="size-3" strokeWidth={1.5} />
             </button>
           )}
         </div>
@@ -1097,7 +1102,7 @@ export function ExecutiveCalendarWorkspace({
                   onClick={() => handleAddSlotClick()}
                   className="mt-2 text-xs rounded-xl"
                 >
-                  <Plus className="size-3.5 mr-1" />
+                  <Plus className="size-3.5 mr-1" strokeWidth={1.5} />
                   Tạo nhiệm vụ mới
                 </Button>
               )}
@@ -1139,7 +1144,7 @@ export function ExecutiveCalendarWorkspace({
                           onClick={() => handleAddSlotClick(d.dateString)}
                           className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
                         >
-                          <Plus className="size-3 mr-0.5" />
+                          <Plus className="size-3 mr-0.5" strokeWidth={1.5} />
                           Thêm việc
                         </Button>
                       )}
@@ -1170,21 +1175,27 @@ export function ExecutiveCalendarWorkspace({
 
       {/* 6. Preview Modal for Work Items */}
       {selectedPreviewItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="preview-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        >
           <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-lg space-y-4">
             <div className="flex items-start justify-between gap-2 border-b border-border/60 pb-3">
               <div>
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                   Chi tiết công việc
                 </span>
-                <h3 className="text-sm font-bold text-foreground leading-snug mt-1">
+                <h3 id="preview-modal-title" className="text-sm font-bold text-foreground leading-snug mt-1">
                   {selectedPreviewItem.title}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedPreviewItem(null)}
-                className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                aria-label="Đóng chi tiết công việc"
+                className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
               >
                 <X className="size-4" strokeWidth={1.5} />
               </button>
