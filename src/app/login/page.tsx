@@ -38,17 +38,17 @@ function LoginSkeleton() {
 
       {/* Right Login Area Skeleton (~54% on desktop, 100% on mobile) */}
       <div className="w-full lg:w-[54%] xl:w-[55%] flex flex-col items-center justify-center p-6 sm:p-12">
-        <div className="flex flex-col text-left max-w-[380px] sm:max-w-[400px] w-full space-y-7 -translate-y-2 sm:-translate-y-4">
-          <div className="flex items-center gap-3">
-            <div className="size-14 rounded-full bg-muted animate-pulse shrink-0" />
+        <div className="flex flex-col text-left max-w-[400px] w-full space-y-8 -translate-y-2 sm:-translate-y-4">
+          <div className="flex items-center gap-3.5">
+            <div className="size-14 sm:size-16 rounded-full bg-muted animate-pulse shrink-0" />
             <div className="space-y-1.5 flex-1">
-              <div className="h-4 w-28 bg-muted rounded-md animate-pulse" />
-              <div className="h-3 w-48 bg-muted/80 rounded-md animate-pulse" />
+              <div className="h-4.5 w-32 bg-muted rounded-md animate-pulse" />
+              <div className="h-3.5 w-52 bg-muted/80 rounded-md animate-pulse" />
             </div>
           </div>
           <div className="space-y-2">
-            <div className="h-8 w-56 bg-muted rounded-md animate-pulse" />
-            <div className="h-4 w-72 bg-muted/70 rounded-md animate-pulse" />
+            <div className="h-9 w-44 bg-muted rounded-md animate-pulse" />
+            <div className="h-5 w-80 bg-muted/70 rounded-md animate-pulse" />
           </div>
           <div className="h-12 w-full bg-muted rounded-md animate-pulse" />
           <div className="h-3.5 w-52 bg-muted rounded-md animate-pulse pt-1" />
@@ -112,11 +112,11 @@ function LoginFormContent() {
         aria-hidden="true"
         className="hidden lg:flex lg:w-[46%] xl:w-[45%] p-4 lg:p-5 xl:p-6 select-none"
       >
-        <div className="relative w-full h-full flex flex-col justify-end p-8 lg:p-10 xl:p-12 overflow-hidden rounded-3xl bg-slate-950 text-white shadow-xl border border-border/10">
-          {/* Campus Photo Background with Framer Motion gentle zoom entrance */}
+        <div className="relative w-full h-full flex flex-col justify-end p-8 lg:p-10 xl:p-12 overflow-hidden rounded-3xl bg-slate-950 text-white">
+          {/* Campus Photo Background with Framer Motion gentle zoom entrance - Closer focus on school architecture */}
           <m.div
-            initial={{ scale: 1.06, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
+            initial={{ scale: 1.08, opacity: 0 }}
+            animate={{ scale: 1.03, opacity: 1 }}
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             className="absolute inset-0 size-full"
           >
@@ -126,12 +126,12 @@ function LoginFormContent() {
               fill
               priority
               sizes="(min-width: 1024px) 46vw, 100vw"
-              className="object-cover object-[73%_center]"
+              className="object-cover object-[75%_65%]"
             />
           </m.div>
 
           {/* Brighter, clearer institutional gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/25 to-slate-900/30 z-1" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-slate-900/25 z-1" />
 
           {/* Lower Area: Institutional Statement & Footer */}
           <m.div
@@ -162,9 +162,9 @@ function LoginFormContent() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col text-left max-w-[380px] sm:max-w-[400px] w-full space-y-7 -translate-y-2 sm:-translate-y-4"
+          className="flex flex-col text-left max-w-[400px] w-full space-y-8 -translate-y-2 sm:-translate-y-4"
         >
-          {/* Top Lockup: Official School Logo, QCET E-Office, Full School Name */}
+          {/* Top Lockup: Official School Logo (56-64px), QCET E-Office, School Name */}
           <m.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -180,21 +180,21 @@ function LoginFormContent() {
               priority
             />
             <div className="space-y-0.5">
-              <p className="text-xs font-bold tracking-wider text-primary uppercase font-mono">
+              <p className="font-sans text-base sm:text-lg font-semibold text-foreground tracking-normal">
                 QCET E-Office
               </p>
-              <p className="text-xs text-muted-foreground font-medium line-clamp-1">
+              <p className="text-[13.5px] text-muted-foreground font-normal leading-snug">
                 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
               </p>
             </div>
           </m.div>
 
           {/* Heading & Direction Text */}
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight text-foreground font-heading leading-tight">
-              Đăng nhập QCET E-Office
+          <div>
+            <h1 className="text-[30px] font-semibold leading-[38px] tracking-tight text-foreground font-heading">
+              Đăng nhập
             </h1>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="mt-2 text-[15px] leading-[24px] text-muted-foreground">
               Sử dụng tài khoản Google đã được cấp quyền để tiếp tục.
             </p>
           </div>
@@ -237,8 +237,8 @@ function LoginFormContent() {
             </m.div>
           )}
 
-          {/* Official Google Sign-In Button (Large size ~380px) */}
-          <div className="w-full flex justify-start pt-0.5">
+          {/* Official Google Sign-In Button (400px width, flush left with content) */}
+          <div className="w-full flex justify-start pt-1">
             <GoogleLoginButton
               returnTo={targetUrl}
               onError={(msg) => setErrorMessage(msg)}
@@ -248,9 +248,9 @@ function LoginFormContent() {
             />
           </div>
 
-          {/* Accessible Technical Support Link */}
-          <div className="pt-1 text-xs text-muted-foreground">
-            <p className="text-xs">
+          {/* Accessible Technical Support Link (24px below button) */}
+          <div className="pt-0 text-[13.5px] text-muted-foreground">
+            <p>
               Không đăng nhập được?{" "}
               <a
                 href="mailto:support@cdktcnqn.edu.vn"
