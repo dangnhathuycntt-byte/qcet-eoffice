@@ -179,14 +179,26 @@ let _cachedServerEnv: ServerEnv | null = null;
  * Returns validated server environment configuration singleton.
  */
 function isTestingOrNonProduction(): boolean {
-  return (
-    process.env.NODE_ENV === "test" ||
-    !process.env.NODE_ENV ||
-    process.env.NODE_ENV === "development" ||
-    process.env.NODE_TEST_CONTEXT !== undefined ||
-    process.execArgv.includes("--test") ||
-    process.argv.some((arg) => arg.includes("test"))
-  );
+  const env = typeof process !== "undefined" ? process.env : ({} as Record<string, string | undefined>);
+  if (
+    env.NODE_ENV === "test" ||
+    !env.NODE_ENV ||
+    env.NODE_ENV === "development" ||
+    env.NODE_TEST_CONTEXT !== undefined
+  ) {
+    return true;
+  }
+  try {
+    const proc = typeof process !== "undefined" ? (process as unknown as Record<string, unknown>) : null;
+    const execArgv = proc && Array.isArray(proc["execArgv"]) ? (proc["execArgv"] as string[]) : [];
+    const argv = proc && Array.isArray(proc["argv"]) ? (proc["argv"] as string[]) : [];
+    return (
+      execArgv.includes("--test") ||
+      argv.some((arg) => typeof arg === "string" && arg.includes("test"))
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function getServerEnv(): ServerEnv {
