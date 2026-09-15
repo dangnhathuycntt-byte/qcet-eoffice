@@ -38,14 +38,14 @@ interface ColumnDefinition {
   widthClass?: string;
 }
 
-// Linear Columns: Checkbox | Name & Code | Health | Priority | Lead DRI | Target date | Subtasks | Progress | Actions
+// Linear Columns: Checkbox | Name & Code | Health | Priority | Lead | Target date | Subtasks | Progress | Actions
 const TABLE_COLUMNS: ColumnDefinition[] = [
   { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[340px] md:min-w-[440px] flex-1" },
   { id: "status", label: "Tình trạng", sortable: true, widthClass: "w-28" },
   { id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-20" },
-  { id: "leadAssignee", label: "Chủ trì DRI", sortable: true, widthClass: "w-32" },
+  { id: "leadAssignee", label: "Chủ trì", sortable: true, widthClass: "w-32" },
   { id: "dueDate", label: "Hạn chót", sortable: true, widthClass: "w-28" },
-  { id: "subtasks", label: "Việc con", sortable: false, widthClass: "w-16", align: "center" },
+  { id: "subtasks", label: "Việc con", sortable: false, widthClass: "w-20", align: "center" },
   { id: "progress", label: "Tiến độ", sortable: true, widthClass: "w-20" },
   { id: "actions", label: "", sortable: false, align: "right", widthClass: "w-8" },
 ];
@@ -99,7 +99,7 @@ export function TaskTableHeader({
         className
       )}
     >
-      <tr className={cn(rowHeightClass, "text-[10px] font-semibold text-slate-400 uppercase tracking-wider")}>
+      <tr className={cn(rowHeightClass, "text-xs font-medium text-slate-500")}>
         {/* Selection Checkbox */}
         {showSelection && (
           <th

@@ -748,7 +748,7 @@ export function LinearCreateTaskModal({
                       status === "IN_PROGRESS" ? "bg-blue-500" : "bg-slate-400"
                     )}
                   />
-                  <span>{status === "IN_PROGRESS" ? "Đang làm" : "Chưa làm"}</span>
+                  <span>{status === "IN_PROGRESS" ? "Đang thực hiện" : "Mới"}</span>
                   <ChevronDown className="size-2.5 text-slate-400" />
                 </button>
 
@@ -763,7 +763,7 @@ export function LinearCreateTaskModal({
                       className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-slate-50 text-slate-700"
                     >
                       <span className="size-1.5 rounded-full bg-blue-500" />
-                      <span>Đang làm</span>
+                      <span>Đang thực hiện</span>
                     </button>
                     <button
                       type="button"
@@ -774,7 +774,7 @@ export function LinearCreateTaskModal({
                       className="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-slate-50 text-slate-700"
                     >
                       <span className="size-1.5 rounded-full bg-slate-300" />
-                      <span>Chưa làm</span>
+                      <span>Mới</span>
                     </button>
                   </div>
                 )}

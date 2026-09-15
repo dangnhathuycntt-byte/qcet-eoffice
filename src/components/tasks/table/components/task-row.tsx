@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   AlertTriangle,
-  Box,
   Check,
   ChevronDown,
   ChevronRight,
@@ -180,7 +179,7 @@ function HealthIndicator({
     return (
       <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-600">
         <span className="size-1.5 rounded-full bg-amber-500 shrink-0" />
-        <span className="font-medium">Cần duyệt</span>
+        <span className="font-medium">Cần chỉnh sửa</span>
       </div>
     );
   }
@@ -188,22 +187,15 @@ function HealthIndicator({
     return (
       <div className="inline-flex items-center gap-1.5 text-[11px] text-blue-600">
         <span className="size-1.5 rounded-full bg-blue-500 shrink-0" />
-        <span className="font-medium">Đang làm</span>
+        <span className="font-medium">Đang thực hiện</span>
       </div>
     );
   }
-  if (status === "NOT_STARTED") {
-    return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-        <span className="size-1.5 rounded-full bg-slate-300 shrink-0" />
-        <span className="font-normal">Chưa làm</span>
-      </div>
-    );
-  }
+  // Mới (thay thế "Chưa làm")
   return (
-    <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
-      <span className="size-1.5 rounded-full bg-slate-300 shrink-0" />
-      <span className="font-normal">Chưa rõ</span>
+    <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
+      <span className="size-1.5 rounded-full bg-slate-400 shrink-0" />
+      <span className="font-medium">Mới</span>
     </div>
   );
 }
@@ -439,21 +431,17 @@ export const TaskRow = React.memo(function TaskRow({
             <span className="inline-flex size-5 shrink-0" aria-hidden="true" />
           )}
 
-          {/* Linear Box Icon */}
-          <Box className="size-3.5 text-slate-400 group-hover:text-primary transition-colors shrink-0" strokeWidth={1.5} />
+          {/* Linear Task Code + Title */}
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <span className="font-mono text-[11px] text-slate-400 shrink-0 select-none">
+              {taskCodeDisplay}
+            </span>
 
-          {/* Title & Code */}
-          <div className="flex items-center gap-2 min-w-0 flex-1">
             <span
               className="text-xs sm:text-[13px] font-medium text-slate-900 group-hover:text-primary transition-colors truncate"
               title={task.title}
             >
               {task.title}
-            </span>
-
-            {/* Task Code Badge */}
-            <span className="font-mono text-[10px] text-muted-foreground/60 shrink-0 font-medium">
-              {taskCodeDisplay}
             </span>
 
             {/* Due in month indicator */}
@@ -524,7 +512,7 @@ export const TaskRow = React.memo(function TaskRow({
       </td>
 
       {/* 7. Đầu việc con (Subtasks count) */}
-      <td className={cn("w-16 align-middle text-center whitespace-nowrap", paddingClass)}>
+      <td className={cn("w-20 align-middle text-center whitespace-nowrap", paddingClass)}>
         {hasSubtasks ? (
           <span
             className="rounded bg-slate-100/80 px-1 py-0.2 font-mono text-[10px] font-medium tabular-nums text-slate-500"

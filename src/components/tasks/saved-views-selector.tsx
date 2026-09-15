@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  Bookmark,
   Check,
   ChevronDown,
   MoreHorizontal,
@@ -208,9 +209,21 @@ export function SavedViewsSelector({
   const inlineViews = customViews.slice(0, 3);
   const overflowViews = customViews.slice(3);
 
+  const hasActiveFilters = React.useMemo(() => {
+    if (!currentCriteria) return false;
+    const isStatusActive =
+      currentCriteria.status &&
+      currentCriteria.status !== "all" &&
+      currentCriteria.status !== "ALL";
+    const isDeptActive = currentCriteria.dept && currentCriteria.dept !== "ALL";
+    const isWorkboxActive = currentCriteria.workbox && currentCriteria.workbox !== "ALL";
+    const isQueryActive = Boolean(currentCriteria.q && currentCriteria.q.trim().length > 0);
+    return Boolean(isStatusActive || isDeptActive || isWorkboxActive || isQueryActive);
+  }, [currentCriteria]);
+
   return (
     <div
-      className={cn("inline-flex items-center gap-0.5 shrink-0 select-none", className)}
+      className={cn("inline-flex items-center gap-1 shrink-0 select-none", className)}
       data-slot="saved-views-nav"
       role="navigation"
       aria-label="Góc nhìn công việc"
@@ -221,14 +234,16 @@ export function SavedViewsSelector({
         role="tab"
         aria-selected={isDefaultActive}
         onClick={handleSelectDefault}
+        title="Góc nhìn: Tất cả nhiệm vụ"
         className={cn(
-          "inline-flex h-7 items-center rounded-md px-2 text-xs font-medium transition-colors cursor-pointer",
+          "inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors cursor-pointer",
           isDefaultActive
-            ? "bg-slate-100 text-slate-900 font-semibold"
+            ? "bg-slate-100 text-slate-900 font-semibold shadow-2xs"
             : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
         )}
       >
-        Tất cả nhiệm vụ
+        <Bookmark className="size-3 text-slate-400 shrink-0" strokeWidth={1.5} />
+        <span>Tất cả nhiệm vụ</span>
       </button>
 
       {/* 2. User-Created Saved Views (Inline) */}
@@ -275,12 +290,13 @@ export function SavedViewsSelector({
               aria-selected={isActive}
               onClick={() => handleSelect(view)}
               className={cn(
-                "inline-flex h-7 items-center rounded-md px-2 text-xs font-medium transition-colors cursor-pointer",
+                "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors cursor-pointer",
                 isActive
-                  ? "bg-slate-100 text-slate-900 font-semibold"
+                  ? "bg-slate-100 text-slate-900 font-semibold shadow-2xs"
                   : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
               )}
             >
+              <span className="size-1.5 rounded-full bg-primary/60 shrink-0" />
               <span className="truncate max-w-[120px]">{cleanViewName(view.name)}</span>
             </button>
 
@@ -381,38 +397,46 @@ export function SavedViewsSelector({
             setIsCreateOpen((prev) => !prev);
             setNewViewName("");
           }}
-          aria-label="Tạo góc nhìn mới từ bộ lọc hiện tại"
-          title="Tạo góc nhìn mới từ bộ lọc hiện tại"
+          aria-label="Lưu bộ lọc thành góc nhìn mới"
+          title={hasActiveFilters ? "Lưu bộ lọc hiện tại thành góc nhìn mới" : "Tạo góc nhìn mới từ bộ lọc hiện tại"}
           className={cn(
-            "size-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer",
+            "h-7 flex items-center gap-1 rounded-md px-2 text-xs transition-colors cursor-pointer",
+            hasActiveFilters
+              ? "bg-primary/10 text-primary font-medium hover:bg-primary/15"
+              : "text-slate-400 hover:text-slate-700 hover:bg-slate-100",
             isCreateOpen && "bg-slate-100 text-slate-700"
           )}
         >
           <Plus className="size-3.5" strokeWidth={1.5} />
+          {hasActiveFilters ? (
+            <span>Lưu góc nhìn</span>
+          ) : (
+            <span className="hidden sm:inline text-[11px] text-slate-400">Lưu góc nhìn</span>
+          )}
         </button>
 
         {isCreateOpen && (
           <div
             role="dialog"
-            aria-label="Tạo góc nhìn mới"
-            className="absolute left-0 top-full mt-1 w-64 rounded-md border border-slate-200/90 bg-white p-3 shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+            aria-label="Lưu góc nhìn mới"
+            className="absolute left-0 top-full mt-1.5 w-72 rounded-md border border-slate-200/90 bg-white p-3 shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
           >
-            <div className="text-xs font-semibold text-slate-900 mb-1.5">
-              Tạo góc nhìn mới
+            <div className="text-xs font-semibold text-slate-900 mb-1">
+              Lưu góc nhìn mới
             </div>
+            <p className="text-[11px] text-slate-500 mb-2.5 leading-normal">
+              Lưu cấu hình bộ lọc hiện tại để xem lại bất cứ lúc nào.
+            </p>
             <form onSubmit={handleCreate}>
               <input
                 ref={inputRef}
                 type="text"
                 value={newViewName}
                 onChange={(e) => setNewViewName(e.target.value)}
-                placeholder="Tên góc nhìn..."
+                placeholder="VD: Việc gấp tuần này, NCKH..."
                 autoFocus
-                className="w-full h-7 px-2 text-xs rounded border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 mb-1.5"
+                className="w-full h-7 px-2 text-xs rounded border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 mb-3"
               />
-              <p className="text-[11px] text-slate-400 mb-3">
-                Lưu theo bộ lọc và điều kiện hiện tại
-              </p>
               <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100">
                 <button
                   type="button"
@@ -426,7 +450,7 @@ export function SavedViewsSelector({
                   disabled={!newViewName.trim()}
                   className="h-6.5 px-3 text-xs font-medium rounded bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-40 cursor-pointer transition-colors"
                 >
-                  Tạo
+                  Lưu
                 </button>
               </div>
             </form>

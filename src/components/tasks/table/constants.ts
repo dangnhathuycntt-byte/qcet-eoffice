@@ -84,7 +84,7 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
     oklchBg: "oklch(0.96 0.05 75)",
   },
   WAITING_APPROVAL: {
-    label: "Chờ phê duyệt",
+    label: "Cần chỉnh sửa",
     className: "border-amber-500/20 bg-amber-500/10 text-amber-700",
     variant: "amber",
     oklchColor: "oklch(0.74 0.17 75)",
@@ -119,7 +119,7 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
     oklchBg: "oklch(0.95 0.005 250)",
   },
   NOT_STARTED: {
-    label: "Chưa bắt đầu",
+    label: "Mới",
     className: "border-zinc-300 bg-zinc-100 text-zinc-600",
     variant: "outline",
     oklchColor: "oklch(0.55 0.01 250)",
@@ -344,7 +344,7 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
     oklchBg: "oklch(0.96 0.05 75)",
   },
   WAITING_APPROVAL: {
-    label: "Chờ phê duyệt",
+    label: "Cần chỉnh sửa",
     badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-700",
     borderClass: "border-amber-500/30",
     oklchColor: "oklch(0.74 0.17 75)",
@@ -372,7 +372,7 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
     oklchBg: "oklch(0.96 0.04 25)",
   },
   NOT_STARTED: {
-    label: "Chưa bắt đầu",
+    label: "Mới",
     badgeClass: "border-zinc-300 bg-zinc-100 text-zinc-600",
     borderClass: "border-zinc-300",
     oklchColor: "oklch(0.55 0.01 250)",

@@ -1903,7 +1903,7 @@ export function UnifiedAdaptiveWorkspace({
           onSearchChange={(q) => {
             setInternalSearch(q);
             onSearchChange?.(q);
-            workspaceQuery?.setSearchQuery(q, { replace: true });
+            workspaceQuery?.setSearchQuery(q, { shallow: true, replace: true });
           }}
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
@@ -1916,7 +1916,7 @@ export function UnifiedAdaptiveWorkspace({
           onDepartmentChange={(dept) => {
             setInternalDept(dept);
             onDepartmentChange?.(dept);
-            workspaceQuery?.setDept(dept, { replace: true });
+            workspaceQuery?.setDept(dept, { shallow: true, replace: true });
           }}
           selectedCategory={currentCategory}
           onCategoryChange={setCurrentCategory}
@@ -1925,7 +1925,7 @@ export function UnifiedAdaptiveWorkspace({
           selectedAcademicMonth={currentMonth}
           onAcademicMonthChange={(m) => {
             setCurrentMonth(m);
-            workspaceQuery?.setPeriod({ month: m !== "ALL" ? m : undefined }, { replace: true });
+            workspaceQuery?.setPeriod({ month: m !== "ALL" ? m : undefined }, { shallow: true, replace: true });
           }}
           onResetFilters={handleResetFilters}
           activeViewId={activeViewId}
