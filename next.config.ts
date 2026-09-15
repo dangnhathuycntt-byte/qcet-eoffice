@@ -51,8 +51,23 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/task",
+        destination: "/tasks",
+        permanent: true,
+      },
+      {
+        source: "/task/:id*",
+        destination: "/tasks/:id*",
+        permanent: true,
+      },
+      {
         source: "/dashboard",
-        destination: "/",
+        destination: "/tasks",
+        permanent: true,
+      },
+      {
+        source: "/portal",
+        destination: "/tasks",
         permanent: true,
       },
       {

@@ -18,6 +18,7 @@ import {
   usePWAOnboardingCoordinator,
 } from "@/lib/pwa/onboarding-coordinator";
 import { useAuth } from "@/lib/auth-context";
+import { sanitizeRedirectUrl } from "@/lib/login-helpers";
 import { cn } from "@/lib/utils";
 
 const CommandSearchModal = dynamic(
@@ -172,7 +173,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebarLayout();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   React.useEffect(() => {
     const handleOpen = () => setIsMobileMenuOpen(true);
@@ -180,8 +181,36 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("qcet:open-mobile-menu", handleOpen);
   }, []);
 
-  if (pathname === "/login" || pathname === "/portal") {
+  const isPublicRoute =
+    pathname === "/login" ||
+    pathname === "/portal" ||
+    (typeof window !== "undefined" &&
+      (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal")));
+
+  // Khi mất session hoặc chưa đăng nhập trên các trang bảo vệ: lập tức văng ra /login
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal")) {
+      return;
+    }
+    if (!isLoading && !isAuthenticated && !user && !isPublicRoute) {
+      const fullPath = `${window.location.pathname}${window.location.search}`;
+      const safeReturnTo = sanitizeRedirectUrl(fullPath);
+      const redirectUrl =
+        safeReturnTo && safeReturnTo !== "/tasks" && safeReturnTo !== "/"
+          ? `/login?returnTo=${encodeURIComponent(safeReturnTo)}`
+          : "/login";
+      window.location.replace(redirectUrl);
+    }
+  }, [isLoading, isAuthenticated, user, isPublicRoute]);
+
+  if (isPublicRoute) {
     return <>{children}</>;
+  }
+
+  // Khi chưa đăng nhập hoặc mất session trên protected route (đã xác nhận sau khi load xong)
+  if (!isLoading && !isAuthenticated && !user) {
+    return null;
   }
 
   return (

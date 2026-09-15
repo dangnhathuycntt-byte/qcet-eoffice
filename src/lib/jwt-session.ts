@@ -31,6 +31,8 @@ export function signSessionToken(payload: SessionPayload): string {
 }
 
 export function verifySessionToken(token: string): SessionPayload | null {
+  if (!token || typeof token !== "string") return null;
+
   try {
     const decoded = jwt.verify(token, getJwtSecret()) as SessionPayload;
     return decoded;

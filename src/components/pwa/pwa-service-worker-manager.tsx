@@ -124,6 +124,12 @@ export function setupControllerChangeListener(
     return undefined;
   }
 
+  const isProduction = clientEnv.NODE_ENV === "production";
+  const isDevEnabled = clientEnv.NEXT_PUBLIC_ENABLE_SW === "true";
+  if (!isProduction && !isDevEnabled) {
+    return undefined;
+  }
+
   let hadController = Boolean(navigator.serviceWorker.controller);
   let refreshing = false;
 
