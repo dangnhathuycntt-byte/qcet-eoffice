@@ -59,6 +59,7 @@ export function shouldShowLoginSkeleton({
  * Sanitizes redirect target URLs to prevent Open Redirect attacks (OWASP A01/A07).
  * Only allows safe relative paths starting with a single '/' and strictly disallows
  * protocol-relative URLs ('//'), backslashes ('/\'), URI schemes (http:, javascript:), and control characters.
+ * Also prevents redirect loops back to login/auth.
  */
 export function sanitizeRedirectUrl(url: string | null | undefined): string {
   if (!url) return "/tasks";
@@ -68,9 +69,13 @@ export function sanitizeRedirectUrl(url: string | null | undefined): string {
     !trimmed.startsWith("//") &&
     !trimmed.startsWith("/\\") &&
     !trimmed.includes("://") &&
-    !/[\r\n\t]/.test(trimmed)
+    !trimmed.includes("\\") &&
+    !/[\r\n\t\0]/.test(trimmed)
   ) {
-    if (trimmed === "/") return "/tasks";
+    const cleanPath = trimmed.split("?")[0];
+    if (cleanPath === "/" || cleanPath === "/login" || cleanPath.startsWith("/api/auth")) {
+      return "/tasks";
+    }
     return trimmed;
   }
   return "/tasks";

@@ -98,7 +98,11 @@ function LoginFormContent() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const targetUrl = React.useMemo(() => {
-    return sanitizeRedirectUrl(searchParams.get("redirect") || searchParams.get("callbackUrl"));
+    return sanitizeRedirectUrl(
+      searchParams.get("returnTo") ||
+      searchParams.get("redirect") ||
+      searchParams.get("callbackUrl")
+    );
   }, [searchParams]);
 
   // Auto-redirect once server-authenticated. Uses `isAuthenticated` (server

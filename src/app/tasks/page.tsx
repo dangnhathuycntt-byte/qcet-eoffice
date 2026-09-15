@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { getLiveDashboardData, type LiveDashboardOptions } from "@/lib/server/dashboard-service";
 import { TasksPageClient } from "./tasks-page-client";
 import { TaskManagementWorkspace, type WorkspaceScope, type ViewMode } from "@/components/tasks/task-management-workspace";
@@ -15,6 +16,11 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
   const initialView: ViewMode | undefined = rawView === "kanban" || rawView === "table" ? rawView : undefined;
   const cookieStore = await cookies();
   const session = verifySessionToken(cookieStore.get(SESSION_COOKIE_NAME)?.value || "");
+  if (!session) {
+    const qs = searchParams.toString();
+    const returnUrl = `/tasks${qs ? `?${qs}` : ""}`;
+    redirect(`/login?returnTo=${encodeURIComponent(returnUrl)}`);
+  }
   const isExec = session ? isUserExecutive(session as any) : false;
   const options: LiveDashboardOptions = {};
   if (!isExec) {
