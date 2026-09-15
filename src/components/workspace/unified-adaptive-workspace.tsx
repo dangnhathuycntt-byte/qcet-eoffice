@@ -635,7 +635,7 @@ export function UnifiedAdaptiveWorkspace({
   // Self-contained data fetching when tasks are not provided
   React.useEffect(() => {
     if (controlledTasks !== undefined) return;
-    if (initialTasks && initialTasks.length > 0) return;
+    if (initialTasks !== undefined) return;
 
     let isMounted = true;
     setIsInternalLoading(true);

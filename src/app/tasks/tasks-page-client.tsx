@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 import { isUserExecutive, isUserUnitHead } from "@/domain/tasks/attention-resolver";
 import { useWorkspaceQuery } from "@/hooks/use-workspace-query";
 import {
@@ -30,28 +30,25 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
 
   const isExec = user ? isUserExecutive(user as any) : false;
   const isHead = user ? isUserUnitHead(user as any) : false;
+  const isUnassigned = isUserUnassignedDepartment(user);
 
-  const fallback: WorkspaceScope = isExec ? "school" : isHead ? "unit" : "my";
+  const fallback: WorkspaceScope = isExec ? "school" : isUnassigned ? "my" : "unit";
   const rawScope = queryState.scope || initialScope || fallback;
 
-  // AUTH-03: Enforce scope authorization based on user capabilities:
-  // - Executive (Ban Giám hiệu): Toàn trường (school), Đơn vị (unit), Cá nhân (my)
-  // - Unit Head (Trưởng đơn vị): Đơn vị (unit), Cá nhân (my)
-  // - Staff (Chuyên viên / Giảng viên): Cá nhân (my)
   let authorizedScope: WorkspaceScope = rawScope;
   if (authorizedScope === "school" && !isExec) {
-    authorizedScope = isHead ? "unit" : "my";
+    authorizedScope = isUnassigned ? "my" : "unit";
   }
-  if (authorizedScope === "unit" && !isExec && !isHead) {
+  if (authorizedScope === "unit" && isUnassigned) {
     authorizedScope = "my";
   }
 
   const onScopeChange = (s: WorkspaceScope) => {
     let target = s;
     if (target === "school" && !isExec) {
-      target = isHead ? "unit" : "my";
+      target = isUnassigned ? "my" : "unit";
     }
-    if (target === "unit" && !isExec && !isHead) {
+    if (target === "unit" && isUnassigned) {
       target = "my";
     }
     setScope(target, { shallow: true, replace: true });

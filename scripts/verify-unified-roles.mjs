@@ -240,8 +240,55 @@ async function run() {
     });
     console.log("Staff Workspace (After Switching Back to My Scope):", JSON.stringify(staffPersonalWorkspace.result.value, null, 2));
 
-    // TEST 5: Account with unassigned / no department (Only 1 scope => scope switcher hidden)
-    console.log("\n=== TEST 5: Account with No Department (Single Scope => Hidden Switcher) ===");
+    // TEST 5: User dangnhathuycntt@gmail.com from Image #35
+    console.log("\n=== TEST 5: User dangnhathuycntt@gmail.com (From Image #35) ===");
+    const huyToken = jwt.sign(
+      {
+        id: "cmts38eqv000hviriuris9z3m",
+        email: "dangnhathuycntt@gmail.com",
+        name: "ThS. Đặng Nhật Huy",
+        role: "CHUYEN_VIEN",
+        departmentId: "CNTT",
+        title: "Chuyên viên",
+      },
+      JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+    await setSession(huyToken);
+    await send("Page.navigate", { url: "http://localhost:3001/tasks" });
+    await new Promise((r) => setTimeout(r, 2000));
+
+    const huyWorkspace = await send("Runtime.evaluate", {
+      expression: `(() => {
+        const errorAlert = document.querySelector('[data-slot="workspace-offline-alert"]')?.innerText;
+        const scopes = Array.from(document.querySelectorAll('[data-slot="adaptive-scope-header"] button')).map(b => b.innerText.trim().replace(/\\s+/g, ' '));
+        const activeScope = document.querySelector('[data-slot="adaptive-scope-header"] button[aria-selected="true"]')?.innerText.trim().replace(/\\s+/g, ' ');
+        return { hasErrorAlert: Boolean(errorAlert), errorAlert, scopes, activeScope };
+      })()`,
+      returnByValue: true,
+    });
+    console.log("Huy Workspace (Initial):", JSON.stringify(huyWorkspace.result.value, null, 2));
+
+    // Click on unit scope for Huy
+    console.log("-> Huy clicking on Unit scope button...");
+    await send("Runtime.evaluate", {
+      expression: `document.querySelector('[data-slot="adaptive-scope-header"] button[data-scope="unit"]')?.click()`,
+    });
+    await new Promise((r) => setTimeout(r, 1000));
+
+    const huyUnitWorkspace = await send("Runtime.evaluate", {
+      expression: `(() => {
+        const activeScopeAfter = document.querySelector('[data-slot="adaptive-scope-header"] button[aria-selected="true"]')?.innerText.trim().replace(/\\s+/g, ' ');
+        const activeDataScope = document.querySelector('[data-active-scope]')?.getAttribute('data-active-scope');
+        const errorAlert = document.querySelector('[data-slot="workspace-offline-alert"]')?.innerText;
+        return { activeScopeAfter, activeDataScope, hasErrorAlert: Boolean(errorAlert) };
+      })()`,
+      returnByValue: true,
+    });
+    console.log("Huy Workspace (After Switching to Unit):", JSON.stringify(huyUnitWorkspace.result.value, null, 2));
+
+    // TEST 6: Account with unassigned / no department (Only 1 scope => scope switcher hidden)
+    console.log("\n=== TEST 6: Account with No Department (Single Scope => Hidden Switcher) ===");
     const unassignedToken = jwt.sign(
       {
         id: "cmtwrlfk3000dvil9pzzw28zt",
