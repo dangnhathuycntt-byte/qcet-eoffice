@@ -147,7 +147,7 @@ export function GoogleLoginButton({
             type: "standard",
             text: "signin_with",
             shape: "rectangular",
-            logo_alignment: "left",
+            logo_alignment: "center",
             width: 400,
             locale: "vi",
           });
@@ -200,24 +200,24 @@ export function GoogleLoginButton({
         aria-hidden={!isGisRendered}
       />
 
-      {/* 2. Accessible institutional button fallback */}
+      {/* 2. Accessible institutional button fallback matching Google Sign-In Branding Guidelines */}
       {(!isGisRendered || isLoading) && (
         <button
           type="button"
           disabled={isLoading}
           onClick={handleStartOAuth}
           aria-label="Đăng nhập bằng Google (@cdktcnqn.edu.vn)"
-          className="flex h-12 w-full max-w-[400px] items-center justify-center gap-3 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 shadow-xs hover:bg-neutral-50 active:bg-neutral-100 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150"
+          className="flex h-11 sm:h-12 w-full max-w-[400px] items-center justify-center gap-2.5 rounded-[4px] border border-[#747775]/40 bg-white px-4 text-sm font-medium text-[#1F1F1F] shadow-xs hover:bg-[#F8FAFC] hover:border-[#747775] active:bg-[#F1F5F9] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150"
         >
           {isLoading ? (
             <>
               <Loader2 className="size-4.5 animate-spin text-primary" strokeWidth={1.5} />
-              <span className="text-sm font-medium text-neutral-800">Đang chuyển hướng...</span>
+              <span className="text-sm font-medium text-[#1F1F1F]">Đang chuyển hướng...</span>
             </>
           ) : (
             <>
               <GoogleIcon className="size-5 shrink-0" />
-              <span className="text-sm font-medium text-neutral-800">Đăng nhập bằng Google</span>
+              <span className="text-sm font-medium text-[#1F1F1F]">Đăng nhập bằng Google</span>
             </>
           )}
         </button>
