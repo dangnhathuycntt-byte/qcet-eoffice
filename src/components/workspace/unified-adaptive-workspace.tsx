@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import { Inbox, AlertTriangle, Loader2, Layers, X } from "lucide-react";
-import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope, ViewMode } from "./types";
+import { useRouter } from "next/navigation";
+import { Inbox, AlertTriangle, Loader2, Layers, X, ChevronRight, CircleAlert, Clock } from "lucide-react";
+import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope, ViewMode, UniversalActionQueueItems } from "./types";
 import {
   deriveAdaptiveWorkspaceData,
   countScopeTasks,
@@ -28,6 +29,7 @@ import {
   getSystemReferenceDate,
   isTaskPastDue,
 } from "@/lib/academic-calendar";
+import { formatDisplayDate } from "@/lib/format/date";
 import { AdaptiveMetricStrip } from "./components/adaptive-metric-strip";
 import { UniversalActionQueue } from "./components/universal-action-queue";
 import { ActionQueueShell } from "./action-queue-shell";
@@ -35,7 +37,9 @@ import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
 import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
 import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
-import { TaskDetailSideSheet, isSchoolTask } from "@/components/dashboard/task-detail-side-sheet";
+import { isSchoolTask } from "@/components/dashboard/task-detail-side-sheet";
+import { LinearTaskDetailView } from "@/components/tasks/detail/linear-task-detail-view";
+import { LinearPeekPreviewModal } from "@/components/tasks/preview/linear-peek-preview-modal";
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 import { Button } from "@/components/ui/button";
@@ -43,8 +47,8 @@ import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 
-const CreateTaskModal = dynamic(
-  () => import("@/components/dashboard/create-task-modal").then((mod) => mod.CreateTaskModal),
+const LinearCreateTaskModal = dynamic(
+  () => import("@/components/tasks/create/linear-create-task-modal").then((mod) => mod.LinearCreateTaskModal),
   { ssr: false }
 );
 
@@ -58,6 +62,7 @@ const SubmitDeliverableModal = dynamic(
   { ssr: false }
 );
 import { applyOptimisticStatusChange } from "./utils/task-workspace-mutations";
+import { updateTaskStatus } from "@/lib/tasks/task-actions";
 import type { CreateTaskSubmitResult } from "@/lib/adapters/create-task-mapper";
 import { cn } from "@/lib/utils";
 
@@ -226,6 +231,329 @@ export function filterDisplayedTasks({
   return result;
 }
 
+/* ---------------------------------------------------------------------------
+ * Executive Dashboard Inline Sections
+ * Renders ONLY when scope="school" AND user is BGH (executive).
+ * Placed between toolbar and task table in full-width layout.
+ * --------------------------------------------------------------------------- */
+
+interface ExecutiveDashboardSectionsProps {
+  metrics: {
+    totalTasks: number;
+    completedCount: number;
+    completedRate: number;
+    urgentOverdueCount: number;
+    waitingApprovalCount: number;
+  };
+  actionQueue: UniversalActionQueueItems;
+  displayedTasks: SchoolTask[];
+  onSelectTask: (task: SchoolTask | StaffTask) => void;
+  onReview?: (task: SchoolTask | StaffTask) => void;
+  onViewAllApprovals?: () => void;
+  onViewAllOverdue?: () => void;
+}
+
+function ExecutiveDashboardSections({
+  metrics,
+  actionQueue,
+  displayedTasks,
+  onSelectTask,
+  onReview,
+  onViewAllApprovals,
+  onViewAllOverdue,
+}: ExecutiveDashboardSectionsProps) {
+  const refDate = getSystemReferenceDate();
+  const MAX_ROWS = 5;
+
+  // Attention tasks: overdue and upcoming (due within 7 days)
+  const { overdueTasks, upcomingTasks } = React.useMemo(() => {
+    const now = new Date(refDate);
+    const sevenDaysLater = new Date(now);
+    sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+
+    const overdue: SchoolTask[] = [];
+    const upcoming: SchoolTask[] = [];
+
+    for (const t of displayedTasks) {
+      if (t.status === "COMPLETED" || t.status === "CANCELLED") continue;
+      if (!t.dueDate) continue;
+
+      if (isTaskPastDue(t.dueDate, refDate)) {
+        overdue.push(t);
+      } else {
+        const due = new Date(t.dueDate);
+        if (due <= sevenDaysLater) {
+          upcoming.push(t);
+        }
+      }
+    }
+
+    return { overdueTasks: overdue, upcomingTasks: upcoming };
+  }, [displayedTasks, refDate]);
+
+  const pendingApprovals = actionQueue.pendingApprovals;
+  const visibleApprovals = pendingApprovals.slice(0, MAX_ROWS);
+  const hasMoreApprovals = pendingApprovals.length > MAX_ROWS;
+
+  const statusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      NOT_STARTED: "Chưa bắt đầu",
+      IN_PROGRESS: "Đang thực hiện",
+      NEEDS_REVIEW: "Chờ duyệt",
+      WAITING_APPROVAL: "Chờ phê duyệt",
+      COMPLETED: "Hoàn thành",
+      CANCELLED: "Đã hủy",
+      OVERDUE: "Quá hạn",
+    };
+    return map[status] || status;
+  };
+
+  return (
+    <>
+      {/* A. Compact Metric Strip */}
+      <div
+        data-slot="executive-summary-strip"
+        className="flex flex-wrap items-center gap-x-0 gap-y-2 rounded-xl border border-border/60 bg-card px-4 py-2.5 text-sm"
+      >
+        <div className="flex items-center gap-1.5 px-3 py-1">
+          <span className="text-muted-foreground">Tổng nhiệm vụ:</span>
+          <span className="font-mono font-semibold tabular-nums text-foreground">
+            {metrics.totalTasks}
+          </span>
+        </div>
+        <div className="h-4 w-px bg-border/60 shrink-0 hidden sm:block" aria-hidden="true" />
+        <div className="flex items-center gap-1.5 px-3 py-1">
+          <span className="text-muted-foreground">Đã hoàn thành:</span>
+          <span className="font-mono font-semibold tabular-nums text-emerald-700">
+            {metrics.completedCount}/{metrics.totalTasks}
+          </span>
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">
+            ({metrics.completedRate}%)
+          </span>
+        </div>
+        <div className="h-4 w-px bg-border/60 shrink-0 hidden sm:block" aria-hidden="true" />
+        <div className="flex items-center gap-1.5 px-3 py-1">
+          <span className="text-muted-foreground">Quá hạn:</span>
+          <span
+            className={cn(
+              "font-mono font-semibold tabular-nums",
+              metrics.urgentOverdueCount > 0 ? "text-rose-700" : "text-foreground"
+            )}
+          >
+            {metrics.urgentOverdueCount}
+          </span>
+        </div>
+        <div className="h-4 w-px bg-border/60 shrink-0 hidden sm:block" aria-hidden="true" />
+        <div className="flex items-center gap-1.5 px-3 py-1">
+          <span className="text-muted-foreground">Chờ bạn duyệt:</span>
+          <span className="font-mono font-semibold tabular-nums text-foreground">
+            {metrics.waitingApprovalCount}
+          </span>
+        </div>
+      </div>
+
+      {/* B. Cần bạn xử lý — Pending Approval Table */}
+      <section data-slot="executive-action-table" className="space-y-3">
+        <h2 className="text-sm font-bold text-foreground">Cần bạn xử lý</h2>
+        {pendingApprovals.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-4">
+            Không có nhiệm vụ nào cần bạn xử lý
+          </p>
+        ) : (
+          <>
+            {/* Table header — hidden on mobile, shown as grid on sm+ */}
+            <div className="hidden sm:grid sm:grid-cols-[1fr_160px_120px_100px] gap-3 px-3 pb-1.5 text-xs font-medium text-muted-foreground border-b border-border/40">
+              <span>Nhiệm vụ</span>
+              <span>Đơn vị chủ trì</span>
+              <span>Hạn xử lý</span>
+              <span className="text-right">Thao tác</span>
+            </div>
+            <div className="divide-y divide-border/40">
+              {visibleApprovals.map((item) => {
+                const t = item.task;
+                const dept =
+                  ("leadDepartment" in t ? t.leadDepartment : undefined) ||
+                  ("department" in t ? t.department : undefined) ||
+                  "";
+                const dueDate = "dueDate" in t ? t.dueDate : undefined;
+
+                return (
+                  <div
+                    key={t.id}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_160px_120px_100px] gap-1 sm:gap-3 items-center px-3 py-2.5"
+                  >
+                    {/* Task title + submitter */}
+                    <div className="min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => onSelectTask(t)}
+                        className="text-left text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-2 block max-w-full min-h-[44px] sm:min-h-0 flex items-center"
+                      >
+                        {t.title}
+                      </button>
+                      {item.submittedBy && (
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {item.submittedBy}
+                        </p>
+                      )}
+                    </div>
+                    {/* Department */}
+                    <span className="text-xs text-muted-foreground truncate">
+                      {dept || "-"}
+                    </span>
+                    {/* Due date */}
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                      {formatDisplayDate(dueDate)}
+                    </span>
+                    {/* Review button */}
+                    <div className="sm:text-right">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onReview) {
+                            onReview(t);
+                          } else {
+                            onSelectTask(t);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer min-h-[44px] sm:min-h-0"
+                      >
+                        Xem xét
+                        <ChevronRight className="size-3.5" strokeWidth={1.5} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {hasMoreApprovals && (
+              <button
+                type="button"
+                onClick={() => onViewAllApprovals?.()}
+                className="text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer px-3 py-2 min-h-[44px] sm:min-h-0"
+              >
+                Xem tất cả {pendingApprovals.length} nhiệm vụ
+                <ChevronRight className="size-3 inline ml-0.5" strokeWidth={1.5} />
+              </button>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* C. Nhiệm vụ cần chú ý — Overdue + Upcoming */}
+      {(overdueTasks.length > 0 || upcomingTasks.length > 0) && (
+        <section data-slot="executive-attention-section" className="space-y-4">
+          <h2 className="text-sm font-bold text-foreground">Nhiệm vụ cần chú ý</h2>
+
+          {/* Quá hạn */}
+          {overdueTasks.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 px-1">
+                <CircleAlert className="size-3.5 text-rose-600" strokeWidth={1.5} />
+                <h3 className="text-xs font-semibold text-rose-700">
+                  Quá hạn ({overdueTasks.length})
+                </h3>
+              </div>
+              {/* Column headers */}
+              <div className="hidden sm:grid sm:grid-cols-[1fr_160px_120px_120px] gap-3 px-3 pb-1 text-xs font-medium text-muted-foreground border-b border-border/40">
+                <span>Nhiệm vụ</span>
+                <span>Đơn vị</span>
+                <span>Hạn</span>
+                <span>Trạng thái</span>
+              </div>
+              <div className="divide-y divide-border/40">
+                {overdueTasks.slice(0, MAX_ROWS).map((t) => (
+                  <div
+                    key={t.id}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_160px_120px_120px] gap-1 sm:gap-3 items-center px-3 py-2"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onSelectTask(t)}
+                      className="text-left text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-2 min-h-[44px] sm:min-h-0 flex items-center"
+                    >
+                      {t.title}
+                    </button>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {t.leadDepartment || t.department || "-"}
+                    </span>
+                    <span className="font-mono text-xs tabular-nums text-rose-700">
+                      {formatDisplayDate(t.dueDate)}
+                    </span>
+                    <span className="text-xs text-rose-600">{statusLabel(t.status)}</span>
+                  </div>
+                ))}
+              </div>
+              {overdueTasks.length > MAX_ROWS && (
+                <button
+                  type="button"
+                  onClick={() => onViewAllOverdue?.()}
+                  className="text-xs text-primary hover:text-primary/80 font-medium cursor-pointer px-3 py-1 min-h-[44px] sm:min-h-0"
+                >
+                  Xem tất cả {overdueTasks.length} nhiệm vụ quá hạn
+                  <ChevronRight className="size-3 inline ml-0.5" strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Sắp đến hạn */}
+          {upcomingTasks.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 px-1">
+                <Clock className="size-3.5 text-amber-600" strokeWidth={1.5} />
+                <h3 className="text-xs font-semibold text-amber-700">
+                  Sắp đến hạn ({upcomingTasks.length})
+                </h3>
+              </div>
+              {/* Column headers */}
+              <div className="hidden sm:grid sm:grid-cols-[1fr_160px_120px_120px] gap-3 px-3 pb-1 text-xs font-medium text-muted-foreground border-b border-border/40">
+                <span>Nhiệm vụ</span>
+                <span>Đơn vị</span>
+                <span>Hạn</span>
+                <span>Trạng thái</span>
+              </div>
+              <div className="divide-y divide-border/40">
+                {upcomingTasks.slice(0, MAX_ROWS).map((t) => (
+                  <div
+                    key={t.id}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_160px_120px_120px] gap-1 sm:gap-3 items-center px-3 py-2"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onSelectTask(t)}
+                      className="text-left text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer line-clamp-2 min-h-[44px] sm:min-h-0 flex items-center"
+                    >
+                      {t.title}
+                    </button>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {t.leadDepartment || t.department || "-"}
+                    </span>
+                    <span className="font-mono text-xs tabular-nums text-amber-700">
+                      {formatDisplayDate(t.dueDate)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{statusLabel(t.status)}</span>
+                  </div>
+                ))}
+              </div>
+              {upcomingTasks.length > MAX_ROWS && (
+                <button
+                  type="button"
+                  onClick={() => onViewAllOverdue?.()}
+                  className="text-xs text-primary hover:text-primary/80 font-medium cursor-pointer px-3 py-1 min-h-[44px] sm:min-h-0"
+                >
+                  Xem tất cả {upcomingTasks.length} nhiệm vụ sắp đến hạn
+                  <ChevronRight className="size-3 inline ml-0.5" strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+    </>
+  );
+}
+
 export function UnifiedAdaptiveWorkspace({
   user: initialUser,
   tasks: controlledTasks,
@@ -307,7 +635,7 @@ export function UnifiedAdaptiveWorkspace({
   // Self-contained data fetching when tasks are not provided
   React.useEffect(() => {
     if (controlledTasks !== undefined) return;
-    if (initialTasks && initialTasks.length > 0) return;
+    if (initialTasks !== undefined) return;
 
     let isMounted = true;
     setIsInternalLoading(true);
@@ -358,7 +686,9 @@ export function UnifiedAdaptiveWorkspace({
       role === "MANAGER" ||
       role === "TRUONG_PHONG" ||
       role === "TRUONG_DON_VI" ||
-      role === "TRUONG_KHOA"
+      role === "TRUONG_KHOA" ||
+      Boolean(user?.department) ||
+      Boolean(user?.departmentCode)
     ) {
       return "unit";
     }
@@ -390,28 +720,50 @@ export function UnifiedAdaptiveWorkspace({
     }
   }, [forcedScope, propScope, initialScope]);
 
+  const isManager = isManagerUser(user) || isExecutive;
+
   const handleScopeChange = React.useCallback(
     (newScope: WorkspaceScope) => {
       let target = newScope;
       if (target === "school" && !isExecutive) {
-        target = "my";
+        target = "unit";
       }
       setActiveScope(target);
       onScopeChange?.(target);
-      workspaceQuery?.setScope(target, { replace: true });
+      workspaceQuery?.setScope(target, { shallow: true, replace: true });
     },
     [isExecutive, onScopeChange, workspaceQuery]
   );
 
   // View mode management (Table vs Kanban)
-  // Precedence: explicit URL ?view= > saved view layout > persisted preference > default "table"
+  // Precedence: explicit URL ?view= > persisted preference > default "table"
   const [internalViewMode, setInternalViewMode] = React.useState<ViewMode>(() => {
     if (controlledViewMode) return controlledViewMode;
+    if (typeof window !== "undefined") {
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        const urlView = sp.get("view");
+        if (urlView === "table" || urlView === "kanban") {
+          return urlView;
+        }
+      } catch {
+        // ignore
+      }
+    }
     if (
       workspaceQuery?.queryState.view &&
       (workspaceQuery.queryState.view === "table" || workspaceQuery.queryState.view === "kanban")
     ) {
-      return workspaceQuery.queryState.view;
+      if (typeof window !== "undefined") {
+        try {
+          const sp = new URLSearchParams(window.location.search);
+          if (sp.has("view")) {
+            return workspaceQuery.queryState.view;
+          }
+        } catch {
+          // ignore
+        }
+      }
     }
     if (typeof window !== "undefined") {
       try {
@@ -438,7 +790,7 @@ export function UnifiedAdaptiveWorkspace({
     (mode: ViewMode) => {
       setInternalViewMode(mode);
       onViewModeChange?.(mode);
-      workspaceQuery?.setView(mode, { replace: true });
+      workspaceQuery?.setView(mode, { replace: true, shallow: true });
       if (typeof window !== "undefined") {
         try {
           window.localStorage.setItem("qcet_task_view_mode", mode);
@@ -478,16 +830,22 @@ export function UnifiedAdaptiveWorkspace({
   // Action queue drawer open state for full-width layout mode
   const [isActionQueueOpen, setIsActionQueueOpen] = React.useState(false);
 
+  const router = useRouter();
+
   const handleSelectTask = React.useCallback(
     (task: SchoolTask | StaffTask) => {
+      if (onSelectTask) {
+        onSelectTask(task);
+        return;
+      }
       setInternalSelectedTask(task);
       setIsDetailOpen(true);
       const taskIdOrCode =
         (task as any).code || (task as any).taskCode || task.id;
       workspaceQuery?.setSelectedTask(taskIdOrCode, { replace: true });
-      onSelectTask?.(task);
+      router.push(`/tasks/${task.id}`);
     },
-    [onSelectTask, workspaceQuery]
+    [onSelectTask, workspaceQuery, router]
   );
 
   const handleCloseDetail = React.useCallback(() => {
@@ -495,6 +853,9 @@ export function UnifiedAdaptiveWorkspace({
     setInternalSelectedTask(null);
     workspaceQuery?.setSelectedTask(null, { replace: true });
   }, [workspaceQuery]);
+
+  // Peek preview modal state (Linear Image #8)
+  const [peekTask, setPeekTask] = React.useState<SchoolTask | StaffTask | null>(null);
 
   // Filter state synchronized with props
   const [internalDept, setInternalDept] = React.useState<string | undefined>(selectedDepartment);
@@ -505,7 +866,7 @@ export function UnifiedAdaptiveWorkspace({
   const [currentCategory, setCurrentCategory] = React.useState<string>("ALL");
   const [currentPriority, setCurrentPriority] = React.useState<string>("ALL");
   const [currentMonth, setCurrentMonth] = React.useState<number | "ALL">("ALL");
-  const [tableDensity, setTableDensity] = React.useState<TableDensity>("comfortable");
+  const [tableDensity, setTableDensity] = React.useState<TableDensity>("compact");
   const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -557,8 +918,19 @@ export function UnifiedAdaptiveWorkspace({
     if (queryState.month !== undefined) {
       setCurrentMonth(queryState.month);
     }
+    // View sync: only sync from URL if URL explicitly contains the view parameter
+    // (avoid resetting to "table" when URL has no view parameter or when queryState defaults)
     if (queryState.view && (queryState.view === "table" || queryState.view === "kanban")) {
-      setInternalViewMode(queryState.view);
+      if (typeof window !== "undefined") {
+        try {
+          const sp = new URLSearchParams(window.location.search);
+          if (sp.has("view")) {
+            setInternalViewMode(queryState.view);
+          }
+        } catch {
+          // ignore
+        }
+      }
     }
   }, [
     workspaceQuery?.queryState.scope,
@@ -801,22 +1173,97 @@ export function UnifiedAdaptiveWorkspace({
   }, [currentWorkbox, currentOverdue, currentStatus]);
 
   const handleFilterCanvasFromWorkbox = React.useCallback(
-    (filterType: "approvals" | "submissions" | "overdue" | "all") => {
+    (
+      filterType:
+        | "approvals"
+        | "submissions"
+        | "overdue"
+        | "all"
+        | "today"
+        | "waiting_approval"
+        | "pending_submission"
+        | "my"
+        | string,
+      navOptions?: { replace?: boolean }
+    ) => {
       setIsActionQueueOpen(false);
-      if (filterType === "approvals") {
+
+      // Determine whether we are already in this filter state to avoid adding duplicate history entries
+      let isSameState = false;
+      if (
+        filterType === "approvals" ||
+        filterType === "waiting_approval" ||
+        filterType === "review"
+      ) {
+        isSameState =
+          currentStatus === "waiting_approval" &&
+          (currentWorkbox === "my_pending_approval" ||
+            workspaceQuery?.queryState.attention === "requires_my_approval");
+      } else if (
+        filterType === "submissions" ||
+        filterType === "pending_submission"
+      ) {
+        isSameState =
+          currentStatus === "pending_submission" &&
+          (currentWorkbox === "my_pending_submission" ||
+            workspaceQuery?.queryState.attention === "requires_my_action");
+      } else if (filterType === "overdue") {
+        isSameState =
+          Boolean(currentOverdue) &&
+          (currentStatus === "overdue" ||
+            workspaceQuery?.queryState.attention === "overdue");
+      } else if (filterType === "all" || filterType === "ALL") {
+        isSameState =
+          (!currentStatus || currentStatus === "ALL" || currentStatus === "all") &&
+          (!workspaceQuery?.queryState.attention ||
+            workspaceQuery?.queryState.attention === "ALL") &&
+          !currentOverdue;
+      } else if (filterType === "my") {
+        isSameState = activeScope === "my";
+      } else if (filterType === "today") {
+        isSameState = currentStatus === "today";
+      } else {
+        isSameState = currentStatus === filterType;
+      }
+
+      // Intentional drill-down creates a new history entry (push); selecting the same state replaces
+      const shouldReplace = navOptions?.replace ?? (isSameState ? true : false);
+
+      if (
+        filterType === "approvals" ||
+        filterType === "waiting_approval" ||
+        filterType === "review"
+      ) {
         setInternalStatus("waiting_approval");
         setInternalWorkbox("my_pending_approval");
         setInternalOverdue(false);
         onStatusFilterChange?.("waiting_approval");
         onWorkboxChange?.("my_pending_approval");
         onOverdueFilterChange?.(false);
-      } else if (filterType === "submissions") {
+        workspaceQuery?.updateWorkspaceQuery(
+          {
+            status: "WAITING_APPROVAL",
+            attention: "requires_my_approval",
+          },
+          { replace: shouldReplace }
+        );
+      } else if (
+        filterType === "submissions" ||
+        filterType === "pending_submission"
+      ) {
         setInternalStatus("pending_submission");
         setInternalWorkbox("my_pending_submission");
         setInternalOverdue(false);
         onStatusFilterChange?.("pending_submission");
         onWorkboxChange?.("my_pending_submission");
         onOverdueFilterChange?.(false);
+        workspaceQuery?.updateWorkspaceQuery(
+          {
+            status: "IN_PROGRESS",
+            attention: "requires_my_action",
+          },
+          { replace: shouldReplace }
+        );
       } else if (filterType === "overdue") {
         setInternalStatus("overdue");
         setInternalWorkbox("overdue");
@@ -824,16 +1271,84 @@ export function UnifiedAdaptiveWorkspace({
         onStatusFilterChange?.("overdue");
         onWorkboxChange?.("overdue");
         onOverdueFilterChange?.(true);
-      } else {
+        workspaceQuery?.updateWorkspaceQuery(
+          {
+            status: "ALL",
+            attention: "overdue",
+          },
+          { replace: shouldReplace }
+        );
+      } else if (filterType === "today") {
+        setInternalStatus("today");
+        setInternalWorkbox("ALL");
+        setInternalOverdue(false);
+        onStatusFilterChange?.("today");
+        onWorkboxChange?.("ALL");
+        onOverdueFilterChange?.(false);
+        workspaceQuery?.updateWorkspaceQuery(
+          {
+            status: "ALL",
+            attention: undefined,
+          },
+          { replace: shouldReplace }
+        );
+      } else if (filterType === "all" || filterType === "ALL") {
         setInternalStatus(undefined);
         setInternalWorkbox("ALL");
         setInternalOverdue(false);
         onStatusFilterChange?.(undefined);
         onWorkboxChange?.("ALL");
         onOverdueFilterChange?.(false);
+        workspaceQuery?.updateWorkspaceQuery(
+          {
+            status: "ALL",
+            attention: undefined,
+          },
+          { replace: shouldReplace }
+        );
+      } else if (filterType === "my") {
+        handleScopeChange("my");
+        setInternalStatus(undefined);
+        setInternalWorkbox("ALL");
+        setInternalOverdue(false);
+        onStatusFilterChange?.(undefined);
+        onWorkboxChange?.("ALL");
+        onOverdueFilterChange?.(false);
+        workspaceQuery?.updateWorkspaceQuery(
+          {
+            scope: "my",
+            status: "ALL",
+            attention: undefined,
+          },
+          { replace: shouldReplace }
+        );
+      } else {
+        setInternalStatus(filterType);
+        setInternalWorkbox("ALL");
+        setInternalOverdue(false);
+        onStatusFilterChange?.(filterType);
+        onWorkboxChange?.("ALL");
+        onOverdueFilterChange?.(false);
+        workspaceQuery?.updateWorkspaceQuery(
+          {
+            status: (filterType as any) || "ALL",
+            attention: undefined,
+          },
+          { replace: shouldReplace }
+        );
       }
     },
-    [onStatusFilterChange, onWorkboxChange, onOverdueFilterChange]
+    [
+      currentStatus,
+      currentWorkbox,
+      currentOverdue,
+      activeScope,
+      onStatusFilterChange,
+      onWorkboxChange,
+      onOverdueFilterChange,
+      workspaceQuery,
+      handleScopeChange,
+    ]
   );
 
   // Filter tasks based on search, smart status, workbox, category, priority, month, and overdue criteria
@@ -861,6 +1376,73 @@ export function UnifiedAdaptiveWorkspace({
     user,
   ]);
 
+  const handlePeekNext = React.useCallback(() => {
+    if (!peekTask || displayedTasks.length === 0) return;
+    const currentIndex = displayedTasks.findIndex((t) => t.id === peekTask.id);
+    if (currentIndex >= 0 && currentIndex < displayedTasks.length - 1) {
+      setPeekTask(displayedTasks[currentIndex + 1]);
+    }
+  }, [peekTask, displayedTasks]);
+
+  const handlePeekPrev = React.useCallback(() => {
+    if (!peekTask || displayedTasks.length === 0) return;
+    const currentIndex = displayedTasks.findIndex((t) => t.id === peekTask.id);
+    if (currentIndex > 0) {
+      setPeekTask(displayedTasks[currentIndex - 1]);
+    }
+  }, [peekTask, displayedTasks]);
+
+  // Hook Space key on table row to open LinearPeekPreviewModal
+  React.useEffect(() => {
+    const handleGlobalSpaceKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== " " && e.key !== "Spacebar") return;
+
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const tagName = target.tagName.toLowerCase();
+      if (
+        tagName === "input" ||
+        tagName === "textarea" ||
+        tagName === "select" ||
+        tagName === "button" ||
+        target.isContentEditable ||
+        target.getAttribute("role") === "checkbox" ||
+        target.getAttribute("role") === "button"
+      ) {
+        return;
+      }
+
+      // Check if target or parent has data-task-id
+      const rowEl = target.closest("[data-task-id]");
+      if (!rowEl) return;
+      const taskId = rowEl.getAttribute("data-task-id");
+      if (!taskId) return;
+
+      const found = displayedTasks.find(
+        (t) => t.id === taskId || (t as any).code === taskId || (t as any).taskCode === taskId
+      );
+      if (found) {
+        e.preventDefault();
+        e.stopPropagation();
+        setPeekTask(found);
+      }
+    };
+
+    const handleCustomPeek = (e: Event) => {
+      const customEvt = e as CustomEvent<{ task: SchoolTask | StaffTask }>;
+      if (customEvt.detail?.task) {
+        setPeekTask(customEvt.detail.task);
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalSpaceKeyDown);
+    window.addEventListener("qcet:peek-task", handleCustomPeek);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalSpaceKeyDown);
+      window.removeEventListener("qcet:peek-task", handleCustomPeek);
+    };
+  }, [displayedTasks]);
+
   const handleResetFilters = React.useCallback(() => {
     setActiveViewId(null);
     setInternalDept(undefined);
@@ -870,7 +1452,8 @@ export function UnifiedAdaptiveWorkspace({
     setInternalWorkbox("ALL");
     setCurrentCategory("ALL");
     setCurrentPriority("ALL");
-    setCurrentMonth("ALL");
+    // Giữ nguyên currentMonth — kỳ công tác có điều khiển đổi kỳ riêng
+    // "Xóa bộ lọc" không âm thầm chuyển sang dữ liệu cả năm hoặc mở rộng scope
     if (onResetFilters) onResetFilters();
     if (onDepartmentChange) onDepartmentChange("ALL");
     if (onStatusFilterChange) onStatusFilterChange(undefined);
@@ -878,7 +1461,7 @@ export function UnifiedAdaptiveWorkspace({
     if (onOverdueFilterChange) onOverdueFilterChange(false);
     if (onWorkboxChange) onWorkboxChange("ALL");
     if (onAction) onAction("RESET_FILTERS");
-    workspaceQuery?.resetFilters({ replace: true, preserveScope: true });
+    workspaceQuery?.resetFilters({ replace: true, preserveScope: true, preservePeriod: true, preserveView: true });
   }, [
     onResetFilters,
     onDepartmentChange,
@@ -1168,33 +1751,8 @@ export function UnifiedAdaptiveWorkspace({
       const previousData = internalTasks;
       setInternalTasks((prev) => applyOptimisticStatusChange(prev, taskId, newStatus));
 
-      let actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
-      let actionBody: any = { note };
-
-      if (newStatus === "IN_PROGRESS") {
-        actionUrl = `/api/tasks/${taskId}/actions/start`;
-        actionBody = { note };
-      } else if (newStatus === "COMPLETED") {
-        actionUrl = `/api/tasks/${taskId}/actions/approve`;
-        actionBody = { note: note || "Phê duyệt hoàn thành nhiệm vụ" };
-      } else if (newStatus === "CANCELLED") {
-        actionUrl = `/api/tasks/${taskId}/actions/cancel`;
-        actionBody = { reason: note || "Hủy nhiệm vụ" };
-      } else if (newStatus === "NEEDS_REVIEW" || newStatus === "WAITING_APPROVAL") {
-        actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
-        actionBody = { note: note || "Nộp kết quả chờ phê duyệt", completionRate: 100 };
-      }
-
-      try {
-        const res = await fetch(actionUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(actionBody),
-        });
-        if (!res.ok) {
-          throw new Error("Lỗi cập nhật trạng thái");
-        }
-      } catch (err) {
+      const res = await updateTaskStatus(taskId, newStatus, note);
+      if (!res.ok) {
         setInternalTasks(previousData);
       }
     },
@@ -1281,9 +1839,58 @@ export function UnifiedAdaptiveWorkspace({
         </aside>
       )}
 
-      {/* 1. Unified Task Toolbar: Single Unified Surface (Scope, Search, Smart Pills, Popover, View, Density) */}
-      {!hideScopeSwitcher && (
-        <UnifiedTaskToolbar
+      {/* Main Canvas Surface: Linear Task Detail (when task selected) OR Workspace List/Table View */}
+      {!disableInternalDetail && isDetailOpen && internalSelectedTask ? (
+        <div data-slot="in-canvas-linear-detail" className="w-full">
+          <LinearTaskDetailView
+            task={internalSelectedTask}
+            onBack={handleCloseDetail}
+            onStatusChange={handleStatusChange}
+            onPriorityChange={async (taskId, priority) => {
+              const pVal = priority === "MEDIUM" ? "NORMAL" : priority;
+              setInternalTasks((prev) =>
+                prev.map((t) => (t.id === taskId ? { ...t, priority: pVal } : t))
+              );
+            }}
+            onAddSubTask={(parentId) => {
+              openCreateModal("DON_VI", parentId);
+            }}
+            onSelectSubTask={(subTaskOrId) => {
+              if (typeof subTaskOrId === "string") {
+                const isMatch = (t: SchoolTask | StaffTask) =>
+                  t.id === subTaskOrId ||
+                  (t as any).code === subTaskOrId ||
+                  (t as any).taskCode === subTaskOrId;
+
+                const foundSchool = displayedTasks.find(isMatch);
+                if (foundSchool) {
+                  handleSelectTask(foundSchool);
+                  return;
+                }
+                for (const t of displayedTasks) {
+                  const sub = t.subTasks?.find(isMatch);
+                  if (sub) {
+                    handleSelectTask(sub);
+                    return;
+                  }
+                }
+              } else {
+                handleSelectTask(subTaskOrId);
+              }
+            }}
+            currentUser={user}
+            onRefresh={handleRefresh}
+            onSubmitDeliverable={
+              onSubmitDeliverable ? (task) => setSubmittingTask(task) : undefined
+            }
+            onReview={onReview ? (task) => setReviewingTask(task) : undefined}
+          />
+        </div>
+      ) : (
+        <>
+          {/* 1. Unified Task Toolbar: Single Unified Surface (Scope, Search, Smart Pills, Popover, View, Density) */}
+          {!hideScopeSwitcher && (
+            <UnifiedTaskToolbar
           scope={activeScope}
           onScopeChange={handleScopeChange}
           user={user}
@@ -1295,70 +1902,20 @@ export function UnifiedAdaptiveWorkspace({
           onSearchChange={(q) => {
             setInternalSearch(q);
             onSearchChange?.(q);
-            workspaceQuery?.setSearchQuery(q, { replace: true });
+            workspaceQuery?.setSearchQuery(q, { shallow: true, replace: true });
           }}
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
           canCreateTask={true}
-          createButtonLabel="+ Giao việc"
+          createButtonLabel="Tạo việc"
           activeTab={effectiveActiveTab}
-          onTabChange={(tab) => {
-            if (tab === "all") {
-              setInternalStatus(undefined);
-              setInternalWorkbox("ALL");
-              setInternalOverdue(false);
-              onStatusFilterChange?.(undefined);
-              onWorkboxChange?.("ALL");
-              onOverdueFilterChange?.(false);
-              workspaceQuery?.setStatus("ALL", { replace: true });
-              workspaceQuery?.setAttention(null, { replace: true });
-            } else if (tab === "waiting_approval" || tab === "review") {
-              setInternalStatus(tab);
-              setInternalWorkbox("my_pending_approval");
-              setInternalOverdue(false);
-              onStatusFilterChange?.(tab);
-              onWorkboxChange?.("my_pending_approval");
-              onOverdueFilterChange?.(false);
-              workspaceQuery?.setAttention("requires_my_approval", { replace: true });
-            } else if (tab === "pending_submission") {
-              setInternalStatus(tab);
-              setInternalWorkbox("my_pending_submission");
-              setInternalOverdue(false);
-              onStatusFilterChange?.(tab);
-              onWorkboxChange?.("my_pending_submission");
-              onOverdueFilterChange?.(false);
-              workspaceQuery?.setAttention("requires_my_action", { replace: true });
-            } else if (tab === "my") {
-              // 'Của tôi' is strictly a scope dimension; switch active scope to 'my'
-              handleScopeChange("my");
-              setInternalStatus(undefined);
-              setInternalWorkbox("ALL");
-              setInternalOverdue(false);
-              onStatusFilterChange?.(undefined);
-              onWorkboxChange?.("ALL");
-              onOverdueFilterChange?.(false);
-              workspaceQuery?.setStatus("ALL", { replace: true });
-              workspaceQuery?.setAttention(null, { replace: true });
-            } else if (tab === "overdue") {
-              setInternalStatus(tab);
-              setInternalWorkbox("overdue");
-              setInternalOverdue(true);
-              onStatusFilterChange?.(tab);
-              onWorkboxChange?.("overdue");
-              onOverdueFilterChange?.(true);
-              workspaceQuery?.setAttention("overdue", { replace: true });
-            } else {
-              setInternalStatus(tab);
-              onStatusFilterChange?.(tab);
-              workspaceQuery?.setStatus((tab as any) || "ALL", { replace: true });
-            }
-          }}
+          onTabChange={(tab) => handleFilterCanvasFromWorkbox(tab)}
           tabCounts={tabCounts}
           selectedDepartment={currentDept || "ALL"}
           onDepartmentChange={(dept) => {
             setInternalDept(dept);
             onDepartmentChange?.(dept);
-            workspaceQuery?.setDept(dept, { replace: true });
+            workspaceQuery?.setDept(dept, { shallow: true, replace: true });
           }}
           selectedCategory={currentCategory}
           onCategoryChange={setCurrentCategory}
@@ -1367,7 +1924,7 @@ export function UnifiedAdaptiveWorkspace({
           selectedAcademicMonth={currentMonth}
           onAcademicMonthChange={(m) => {
             setCurrentMonth(m);
-            workspaceQuery?.setPeriod({ month: m !== "ALL" ? m : undefined }, { replace: true });
+            workspaceQuery?.setPeriod({ month: m !== "ALL" ? m : undefined }, { shallow: true, replace: true });
           }}
           onResetFilters={handleResetFilters}
           activeViewId={activeViewId}
@@ -1508,6 +2065,19 @@ export function UnifiedAdaptiveWorkspace({
                         ? (st) => setSubmittingTask(st)
                         : undefined
                     }
+                    emptyStateProps={{
+                      searchQuery: currentSearch,
+                      activeTab: effectiveActiveTab,
+                      attention: workspaceQuery?.queryState.attention,
+                      status: currentStatus !== "ALL" ? currentStatus : undefined,
+                      department: currentDept !== "ALL" ? currentDept : undefined,
+                      category: currentCategory !== "ALL" ? currentCategory : undefined,
+                      priority: currentPriority !== "ALL" ? currentPriority : undefined,
+                      academicMonth: currentMonth,
+                      onResetFilters: handleResetFilters,
+                      onAddTask: () =>
+                        openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG"),
+                    }}
                   />
                 ) : (
                   <TaskKanbanBoard
@@ -1659,6 +2229,19 @@ export function UnifiedAdaptiveWorkspace({
                       ? (st) => setSubmittingTask(st)
                       : undefined
                   }
+                  emptyStateProps={{
+                    searchQuery: currentSearch,
+                    activeTab: effectiveActiveTab,
+                    attention: workspaceQuery?.queryState.attention,
+                    status: currentStatus !== "ALL" ? currentStatus : undefined,
+                    department: currentDept !== "ALL" ? currentDept : undefined,
+                    category: currentCategory !== "ALL" ? currentCategory : undefined,
+                    priority: currentPriority !== "ALL" ? currentPriority : undefined,
+                    academicMonth: currentMonth,
+                    onResetFilters: handleResetFilters,
+                    onAddTask: () =>
+                      openCreateModal(activeScope === "unit" ? "DON_VI" : "TRUONG"),
+                  }}
                 />
               ) : (
                 <TaskKanbanBoard
@@ -1678,6 +2261,8 @@ export function UnifiedAdaptiveWorkspace({
           )}
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Action Queue Slide-Over Drawer (in Full-Width Mode) */}
@@ -1700,30 +2285,40 @@ export function UnifiedAdaptiveWorkspace({
             role="region"
             aria-label="Hàng đợi xử lý công việc"
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-card/90">
-              <div className="flex items-center gap-2">
-                <Layers className="size-4 text-primary" strokeWidth={1.5} />
-                <h3 className="text-sm font-bold text-foreground">
-                  Hàng đợi xử lý công việc
-                </h3>
-              </div>
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-white">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Hàng đợi xử lý công việc
+              </h3>
               <button
                 type="button"
                 onClick={() => setIsActionQueueOpen(false)}
-                className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+                className="size-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 aria-label="Đóng hàng đợi"
               >
                 <X className="size-4" strokeWidth={1.5} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 thin-scrollbar">
-              <AdaptiveMetricStrip metrics={metrics} scope={activeScope} />
-              <ActionQueueShell
-                title="Hàng đợi hành động"
-                totalCount={actionQueueTotal}
-                collapsible={false}
-                className="border-border/70"
-              >
+            <div className="flex-1 overflow-y-auto thin-scrollbar">
+              {/* Summary Metrics - Clean Typography & Alignment */}
+              <div className="px-5 py-4 space-y-1 text-xs">
+                <div className="font-medium text-slate-900">
+                  <span className="font-semibold tabular-nums">{metrics?.totalTasks ?? 0}</span> nhiệm vụ {activeScope === "school" ? "toàn trường" : activeScope === "unit" ? "đơn vị" : "cá nhân"}
+                </div>
+                <div className={cn(metrics?.urgentOverdueCount && metrics.urgentOverdueCount > 0 ? "text-rose-600 font-medium" : "text-slate-500")}>
+                  <span className="font-semibold tabular-nums">{metrics?.urgentOverdueCount ?? 0}</span> quá hạn
+                </div>
+                <div className={cn(metrics?.waitingApprovalCount && metrics.waitingApprovalCount > 0 ? "text-amber-600 font-medium" : "text-slate-500")}>
+                  <span className="font-semibold tabular-nums">{metrics?.waitingApprovalCount ?? 0}</span> chờ phân công/duyệt
+                </div>
+                <div className="text-slate-500">
+                  <span className="font-semibold tabular-nums text-slate-700">{typeof metrics?.completedRate === "number" ? `${metrics.completedRate}%` : "0%"}</span> tiến độ
+                </div>
+              </div>
+
+              <div className="h-px bg-slate-100 mx-5" />
+
+              {/* Actionable items list */}
+              <div className="p-5">
                 <UniversalActionQueue
                   actionQueue={actionQueue}
                   onSelectTask={handleSelectTask}
@@ -1745,75 +2340,46 @@ export function UnifiedAdaptiveWorkspace({
                       : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
                   }
                 />
-              </ActionQueueShell>
+              </div>
             </div>
           </aside>
         </>
       )}
 
-      {/* 3. Detail Side Sheet (shown when task selected) */}
-      {!disableInternalDetail && (
-        <TaskDetailSideSheet
-          task={internalSelectedTask}
-          isOpen={Boolean(isDetailOpen && internalSelectedTask)}
-          onClose={handleCloseDetail}
-          onStatusChange={handleStatusChange}
-          onAddSubTask={(parentId) => {
-            openCreateModal("DON_VI", parentId);
-          }}
-          onSelectSubTask={(subTaskOrId) => {
-            if (typeof subTaskOrId === "string") {
-              const isMatch = (t: SchoolTask | StaffTask) =>
-                t.id === subTaskOrId ||
-                (t as any).code === subTaskOrId ||
-                (t as any).taskCode === subTaskOrId;
+      {/* 3. Linear Peek Preview Modal (Spacebar Quick Look) */}
+      <LinearPeekPreviewModal
+        task={peekTask}
+        isOpen={Boolean(peekTask)}
+        onClose={() => setPeekTask(null)}
+        onOpenDetail={(t) => {
+          setPeekTask(null);
+          handleSelectTask(t);
+        }}
+        onNavigateNext={handlePeekNext}
+        onNavigatePrev={handlePeekPrev}
+        hasNext={
+          peekTask
+            ? displayedTasks.findIndex((t) => t.id === peekTask.id) < displayedTasks.length - 1
+            : false
+        }
+        hasPrev={
+          peekTask
+            ? displayedTasks.findIndex((t) => t.id === peekTask.id) > 0
+            : false
+        }
+      />
 
-              const foundSchool = displayedTasks.find(isMatch);
-              if (foundSchool) {
-                handleSelectTask(foundSchool);
-                return;
-              }
-              for (const t of displayedTasks) {
-                const sub = t.subTasks?.find(isMatch);
-                if (sub) {
-                  handleSelectTask(sub);
-                  return;
-                }
-              }
-            } else {
-              handleSelectTask(subTaskOrId);
-            }
-          }}
-          parentSchoolTaskTitle={
-            internalSelectedTask && !isSchoolTask(internalSelectedTask)
-              ? (internalSelectedTask as StaffTask).parentSchoolTaskTitle ||
-                displayedTasks.find((t) =>
-                  t.subTasks?.some((s) => s.id === internalSelectedTask.id)
-                )?.title
-              : undefined
-          }
-          currentUser={user}
-        />
-      )}
-
-      {/* 4. Task Creation Modal */}
-      <CreateTaskModal
+      {/* 4. Linear Task Creation Modal */}
+      <LinearCreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreateTaskSubmit}
-        schoolTasks={displayedTasks}
+        onSubmitSuccess={async () => {
+          setIsCreateModalOpen(false);
+          await handleRefresh();
+        }}
         initialLevel={createInitialLevel}
         initialParentTaskId={createInitialParentId}
-        initialParentTaskTitle={
-          createInitialParentId
-            ? displayedTasks.find((t) => t.id === createInitialParentId)?.title
-            : undefined
-        }
-        initialParentTaskDueDate={
-          createInitialParentId
-            ? displayedTasks.find((t) => t.id === createInitialParentId)?.dueDate
-            : undefined
-        }
+        initialDepartmentCode={currentDept !== "ALL" ? currentDept : undefined}
       />
 
       {/* 5. Authenticated Review Action Dialog */}

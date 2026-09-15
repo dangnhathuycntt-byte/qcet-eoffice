@@ -38,11 +38,11 @@ export interface ScopeSwitcherProps {
 
 const DEFAULT_SCOPES: ScopeTabItem[] = [
   {
-    id: "school",
-    label: "Toàn trường",
-    shortLabel: "Trường",
-    icon: School,
-    description: "Nhiệm vụ trọng tâm và chỉ đạo điều hành toàn trường",
+    id: "my",
+    label: "Cá nhân",
+    shortLabel: "Cá nhân",
+    icon: User,
+    description: "Nhiệm vụ trực tiếp phụ trách và cần xử lý cá nhân",
   },
   {
     id: "unit",
@@ -52,11 +52,11 @@ const DEFAULT_SCOPES: ScopeTabItem[] = [
     description: "Nhiệm vụ phân bổ và giám sát theo Khoa / Phòng / Ban",
   },
   {
-    id: "my",
-    label: "Của tôi",
-    shortLabel: "Cá nhân",
-    icon: User,
-    description: "Nhiệm vụ trực tiếp phụ trách và cần xử lý cá nhân",
+    id: "school",
+    label: "Toàn trường",
+    shortLabel: "Trường",
+    icon: School,
+    description: "Nhiệm vụ trọng tâm và chỉ đạo điều hành toàn trường",
   },
 ];
 

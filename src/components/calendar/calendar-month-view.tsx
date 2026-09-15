@@ -500,7 +500,7 @@ export function getEventParticipants(item: CalendarTaskItem): { host: string; pa
     orig?.host ||
     orig?.leadAssigneeName ||
     item.assigneeName ||
-    "TS. Lê Doãn Cường";
+    "(Chưa xác định)";
   const participants =
     (orig?.attendees && orig.attendees.length > 0 ? orig.attendees.join(", ") : "") ||
     (orig?.coAssignees && orig.coAssignees.length > 0 ? orig.coAssignees.join(", ") : "") ||
@@ -1398,11 +1398,15 @@ export function CalendarMonthView({
                         {item.assigneeAvatar ? (
                           <img
                             src={item.assigneeAvatar}
-                            alt={item.assigneeName}
+                            alt=""
+                            aria-hidden="true"
                             className="size-4.5 rounded-full object-cover shrink-0 border border-border"
                           />
                         ) : (
-                          <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground border border-border">
+                          <span
+                            aria-hidden="true"
+                            className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground border border-border"
+                          >
                             {getInitials(item.assigneeName)}
                           </span>
                         )}

@@ -27,6 +27,7 @@ import type {
 } from "./executive-cockpit-workspace";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { cn } from "@/lib/utils";
 
 export interface ExecutiveBriefingModalProps {
@@ -53,21 +54,14 @@ export function ExecutiveBriefingModal({
   const [mounted, setMounted] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
 
+  const dialogRef = useFocusTrap<HTMLDivElement>({
+    isOpen: mounted && isOpen,
+    onClose,
+  });
+
   React.useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Handle ESC key
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
 
   // Sort departments by completion rate descending for briefing review
   const sortedDepartments = React.useMemo(() => {
@@ -178,6 +172,7 @@ export function ExecutiveBriefingModal({
 
   return createPortal(
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="briefing-modal-title"
@@ -335,7 +330,7 @@ export function ExecutiveBriefingModal({
                         <td className="py-2.5 px-3 text-center font-medium tabular-nums">
                           {dept.totalTasks}
                         </td>
-                        <td className="py-2.5 px-3 text-center text-emerald-600 font-semibold tabular-nums">
+                        <td className="py-2.5 px-3 text-center text-emerald-700 font-semibold tabular-nums">
                           {dept.completedTasks}
                         </td>
                         <td className="py-2.5 px-3 text-center tabular-nums">
@@ -352,9 +347,9 @@ export function ExecutiveBriefingModal({
                             className={cn(
                               "font-bold tabular-nums",
                               dept.completionRate >= 80
-                                ? "text-emerald-600"
+                                ? "text-emerald-700"
                                 : dept.completionRate >= 50
-                                  ? "text-amber-600"
+                                  ? "text-amber-700"
                                   : "text-rose-600"
                             )}
                           >
@@ -503,8 +498,8 @@ export function ExecutiveBriefingModal({
             >
               {copied ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-emerald-600 font-semibold">Đã sao chép</span>
+                  <Check className="w-3.5 h-3.5 text-emerald-700" />
+                  <span className="text-emerald-700 font-semibold">Đã sao chép</span>
                 </>
               ) : (
                 <>

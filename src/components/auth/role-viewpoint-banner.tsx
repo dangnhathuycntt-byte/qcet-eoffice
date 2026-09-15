@@ -12,7 +12,7 @@ export function getViewpointText(user: AuthUser): string {
     return "Góc nhìn Ban Giám hiệu: Giám sát toàn trường (11 đơn vị trực thuộc)";
   }
   if (user.role === "MANAGER") {
-    return `Góc nhìn Lãnh đạo Đơn vị: ${user.department || "Đơn vị"} — Phụ trách: ${user.name}`;
+    return `Góc nhìn Lãnh đạo Đơn vị: ${user.department || "Đơn vị"} - Phụ trách: ${user.name}`;
   }
   return `Nhiệm vụ trực tiếp: Các công việc được phân công cho ${user.name}`;
 }

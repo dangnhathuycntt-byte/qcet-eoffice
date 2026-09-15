@@ -406,14 +406,17 @@ export function AppTopbar() {
                     <span>Hướng dẫn sử dụng hệ thống</span>
                   </button>
 
-                  <Link
-                    href="/login"
-                    onClick={() => setIsProfileDropdownOpen(false)}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      logout();
+                    }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer text-left active:scale-[0.98]"
                   >
                     <User size={14} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
                     <span>Đổi tài khoản / Đăng nhập khác</span>
-                  </Link>
+                  </button>
                 </div>
 
                 {/* Dev-only: Role Switcher */}

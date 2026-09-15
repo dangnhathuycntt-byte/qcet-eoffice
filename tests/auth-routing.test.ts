@@ -1,0 +1,129 @@
+import { test, describe } from "node:test";
+import assert from "node:assert/strict";
+import { NextRequest } from "next/server";
+import { middleware } from "../src/middleware";
+import { signSessionToken, SESSION_COOKIE_NAME } from "../src/lib/jwt-session";
+import { sanitizeRedirectUrl } from "../src/lib/login-helpers";
+
+describe("QCET Authentication Routing & Middleware Invariants", () => {
+  const validToken = signSessionToken({
+    id: "user-test-123",
+    email: "test@cdktcnqn.edu.vn",
+    name: "Nguyễn Văn Test",
+    role: "ADMIN",
+    departmentId: "BGH",
+  });
+
+  const createRequest = (url: string, cookieToken?: string) => {
+    const headers: Record<string, string> = {};
+    if (cookieToken) {
+      headers["cookie"] = `${SESSION_COOKIE_NAME}=${cookieToken}`;
+    }
+    const req = new NextRequest(new URL(url, "https://eoffice.qcet.edu.vn"), {
+      headers,
+    });
+    return req;
+  };
+
+  describe("1. Unauthenticated users accessing protected routes", () => {
+    test("unauthenticated access to /tasks redirects to /login", () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/tasks");
+      const res = middleware(req);
+
+      assert.equal(res?.status, 307);
+      const location = res?.headers.get("location");
+      assert.ok(location, "Must have location header");
+      assert.equal(new URL(location).pathname, "/login");
+    });
+
+    test("unauthenticated access to /tasks?scope=my preserves returnTo", () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/tasks?scope=my");
+      const res = middleware(req);
+
+      assert.equal(res?.status, 307);
+      const location = res?.headers.get("location");
+      assert.ok(location);
+      const targetUrl = new URL(location);
+      assert.equal(targetUrl.pathname, "/login");
+      assert.equal(targetUrl.searchParams.get("returnTo"), "/tasks?scope=my");
+    });
+
+    test("unauthenticated access to /documents/abc-123 preserves returnTo", () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/documents/abc-123");
+      const res = middleware(req);
+
+      assert.equal(res?.status, 307);
+      const location = res?.headers.get("location");
+      assert.ok(location);
+      const targetUrl = new URL(location);
+      assert.equal(targetUrl.pathname, "/login");
+      assert.equal(targetUrl.searchParams.get("returnTo"), "/documents/abc-123");
+    });
+  });
+
+  describe("2. Authenticated users opening /login", () => {
+    test("authenticated user accessing /login redirects directly to /tasks", () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/login", validToken);
+      const res = middleware(req);
+
+      assert.equal(res?.status, 307);
+      const location = res?.headers.get("location");
+      assert.ok(location);
+      assert.equal(new URL(location).pathname, "/tasks");
+    });
+
+    test("unauthenticated user accessing /login is allowed through", () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/login");
+      const res = middleware(req);
+
+      assert.equal(res?.status, 200);
+      assert.equal(res?.headers.get("location"), null);
+    });
+  });
+
+  describe("3. Root route '/' routing", () => {
+    test("authenticated user accessing '/' redirects to /tasks", () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/", validToken);
+      const res = middleware(req);
+
+      assert.equal(res?.status, 307);
+      const location = res?.headers.get("location");
+      assert.ok(location);
+      assert.equal(new URL(location).pathname, "/tasks");
+    });
+
+    test("unauthenticated user accessing '/' redirects to /login", () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/");
+      const res = middleware(req);
+
+      assert.equal(res?.status, 307);
+      const location = res?.headers.get("location");
+      assert.ok(location);
+      assert.equal(new URL(location).pathname, "/login");
+    });
+  });
+
+  describe("4. Open Redirect Protection on returnTo", () => {
+    test("sanitizeRedirectUrl sanitizes dangerous returnTo parameters", () => {
+      assert.equal(sanitizeRedirectUrl("https://attacker.com"), "/tasks");
+      assert.equal(sanitizeRedirectUrl("//attacker.com"), "/tasks");
+      assert.equal(sanitizeRedirectUrl("/\\attacker.com"), "/tasks");
+      assert.equal(sanitizeRedirectUrl("javascript:alert(1)"), "/tasks");
+      assert.equal(sanitizeRedirectUrl("/login"), "/tasks");
+      assert.equal(sanitizeRedirectUrl("/api/auth/google"), "/tasks");
+      assert.equal(sanitizeRedirectUrl("/tasks?view=kanban"), "/tasks?view=kanban");
+    });
+
+    test("unauthenticated request with dangerous target does not create open redirect", () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/calendar");
+      const res = middleware(req);
+
+      const location = res?.headers.get("location");
+      assert.ok(location);
+      const targetUrl = new URL(location);
+      const returnTo = targetUrl.searchParams.get("returnTo");
+      assert.equal(returnTo, "/calendar");
+      assert.equal(sanitizeRedirectUrl(returnTo), "/calendar");
+    });
+  });
+});

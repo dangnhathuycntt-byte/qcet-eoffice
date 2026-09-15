@@ -1367,7 +1367,7 @@ export function LegacyExecutiveCockpitWorkspace({
           className={cn(
             "flex flex-col justify-between rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer min-h-[110px] hover:-translate-y-0.5 hover:shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1",
             activeTab === "STRATEGIC_TASKS"
-              ? "border-blue-500/60 bg-blue-500/15 shadow-xs ring-1 ring-blue-500/30 text-blue-600"
+              ? "border-indigo-500/60 bg-indigo-500/15 shadow-xs ring-1 ring-indigo-500/30 text-indigo-600"
               : "border-border/80 bg-muted/30 text-foreground hover:bg-muted/50 hover:border-border"
           )}
         >
@@ -1378,7 +1378,7 @@ export function LegacyExecutiveCockpitWorkspace({
             >
               Tổng số nhiệm vụ đang triển khai
             </span>
-            <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-600">
+            <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-600">
               <Layers className="w-4 h-4" strokeWidth={1.5} />
             </div>
           </div>
@@ -1552,7 +1552,7 @@ export function LegacyExecutiveCockpitWorkspace({
                 <CheckCircle2 className="w-8 h-8" strokeWidth={1.5} />
               </div>
               <h3 className="text-base font-bold text-foreground">
-                Tất cả 11 đơn vị đang vận hành thông suốt — 0 điểm nghẽn
+                Tất cả 11 đơn vị đang vận hành thông suốt, 0 điểm nghẽn
               </h3>
               <p className="text-xs text-muted-foreground max-w-lg mt-1.5">
                 Không có nhiệm vụ nào bị chậm hạn hoặc ách tắc cần Ban Giám hiệu chỉ đạo tháo gỡ.

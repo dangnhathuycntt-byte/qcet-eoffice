@@ -234,11 +234,11 @@ export function DocumentQuickEntryModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
     >
       <div
-        className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-xl border border-slate-200 bg-white shadow-2xl text-slate-900 overflow-hidden"
+        className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl text-foreground overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
               <FilePlus className="h-5 w-5" strokeWidth={1.5} />
@@ -247,7 +247,7 @@ export function DocumentQuickEntryModal({
               <h2 id="quick-entry-modal-title" className="text-base font-semibold">
                 Vào sổ văn bản cấp tốc (&lt;60s)
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Chuẩn hóa quy trình đăng ký văn bản theo Nghị định 30/2020/NĐ-CP
               </p>
             </div>
@@ -256,7 +256,7 @@ export function DocumentQuickEntryModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-muted-foreground"
             aria-label="Đóng biểu mẫu"
           >
             <X className="h-5 w-5" strokeWidth={1.5} />
@@ -267,7 +267,7 @@ export function DocumentQuickEntryModal({
         <div className="overflow-y-auto p-5 space-y-4 flex-1">
           {/* Document Type Toggle */}
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1.5">
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
               Loại sổ văn bản
             </label>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -277,7 +277,7 @@ export function DocumentQuickEntryModal({
                 className={`flex items-center justify-center gap-2 rounded-lg border p-2.5 text-xs font-medium transition-colors ${
                   docType === "VAN_BAN_DEN"
                     ? "border-sky-500 bg-sky-50 text-sky-700"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted"
                 }`}
               >
                 <ArrowDownLeft className="h-4 w-4 shrink-0 text-sky-500" strokeWidth={1.5} />
@@ -290,7 +290,7 @@ export function DocumentQuickEntryModal({
                 className={`flex items-center justify-center gap-2 rounded-lg border p-2.5 text-xs font-medium transition-colors ${
                   docType === "VAN_BAN_DI"
                     ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted"
                 }`}
               >
                 <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-500" strokeWidth={1.5} />
@@ -303,7 +303,7 @@ export function DocumentQuickEntryModal({
                 className={`col-span-2 sm:col-span-1 flex items-center justify-center gap-2 rounded-lg border p-2.5 text-xs font-medium transition-colors ${
                   docType === "TO_TRINH_NOI_BO"
                     ? "border-amber-500 bg-amber-50 text-amber-700"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted"
                 }`}
               >
                 <FileText className="h-4 w-4 shrink-0 text-amber-500" strokeWidth={1.5} />
@@ -315,7 +315,7 @@ export function DocumentQuickEntryModal({
           {/* Core Row 1: Original Number & Issued Date */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-muted-foreground">
                 Số ký hiệu văn bản gốc <span className="text-rose-500">*</span>
               </label>
               <input
@@ -324,20 +324,20 @@ export function DocumentQuickEntryModal({
                 value={originalNumber}
                 onChange={(e) => setOriginalNumber(e.target.value)}
                 placeholder="VD: 125/TCGDNN-VP hoặc 89/CĐKTCN-ĐT"
-                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-muted-foreground">
                 Ngày ban hành <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
                 value={issuedDate}
                 onChange={(e) => setIssuedDate(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
                 required
               />
             </div>
@@ -346,10 +346,10 @@ export function DocumentQuickEntryModal({
           {/* Issuing Authority with Quick Presets */}
           <div>
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-muted-foreground">
                 Cơ quan ban hành <span className="text-rose-500">*</span>
               </label>
-              <span className="text-xs text-slate-400">Gợi ý nhanh</span>
+              <span className="text-xs text-muted-foreground">Gợi ý nhanh</span>
             </div>
             <input
               type="text"
@@ -357,7 +357,7 @@ export function DocumentQuickEntryModal({
               onChange={(e) => setIssuingAuthority(e.target.value)}
               placeholder="Nhập hoặc chọn cơ quan ban hành..."
               list="common-authorities-list"
-              className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               required
             />
             <datalist id="common-authorities-list">
@@ -373,7 +373,7 @@ export function DocumentQuickEntryModal({
                   key={auth}
                   type="button"
                   onClick={() => setIssuingAuthority(auth)}
-                  className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-100"
+                  className="rounded-md border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
                 >
                   {auth}
                 </button>
@@ -384,13 +384,13 @@ export function DocumentQuickEntryModal({
           {/* Category & Urgency */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-muted-foreground">
                 Thể loại văn bản <span className="text-rose-500">*</span>
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 {COMMON_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -401,13 +401,13 @@ export function DocumentQuickEntryModal({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-muted-foreground">
                 Mức độ khẩn
               </label>
               <select
                 value={urgency}
                 onChange={(e) => setUrgency(e.target.value as DocumentUrgency)}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="THUONG">Thường</option>
                 <option value="KHAN">Khẩn</option>
@@ -419,7 +419,7 @@ export function DocumentQuickEntryModal({
 
           {/* Summary Input */}
           <div>
-            <label className="block text-xs font-medium text-slate-700">
+            <label className="block text-xs font-medium text-muted-foreground">
               Trích yếu nội dung <span className="text-rose-500">*</span>
             </label>
             <textarea
@@ -427,7 +427,7 @@ export function DocumentQuickEntryModal({
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               placeholder="VD: Về việc hướng dẫn kiểm định chất lượng chương trình đào tạo nghề..."
-              className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1.5 w-full rounded-lg border border-border bg-card p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               required
             />
           </div>
@@ -435,13 +435,13 @@ export function DocumentQuickEntryModal({
           {/* Department & Due Date */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-muted-foreground">
                 {docType === "VAN_BAN_DI" ? "Đơn vị soạn thảo" : "Đơn vị xử lý / chủ trì"}
               </label>
               <select
                 value={leadDepartmentId}
                 onChange={(e) => setLeadDepartmentId(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 {departments.map((dept) => (
                   <option key={dept.id} value={dept.id}>
@@ -452,35 +452,35 @@ export function DocumentQuickEntryModal({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700">
+              <label className="block text-xs font-medium text-muted-foreground">
                 Hạn giải quyết (nếu có)
               </label>
               <input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="mt-1.5 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               />
               {/* Quick Due Date buttons */}
               <div className="mt-1 flex gap-1">
                 <button
                   type="button"
                   onClick={() => handleAddDaysToDueDate(3)}
-                  className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-100"
+                  className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted"
                 >
                   +3d
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAddDaysToDueDate(5)}
-                  className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-100"
+                  className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted"
                 >
                   +5d
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAddDaysToDueDate(7)}
-                  className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-100"
+                  className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted"
                 >
                   +7d
                 </button>
@@ -490,9 +490,9 @@ export function DocumentQuickEntryModal({
 
           {/* Outgoing specific fields */}
           {docType === "VAN_BAN_DI" && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 border-t border-slate-100 pt-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 border-t border-border pt-3">
               <div>
-                <label className="block text-xs font-medium text-slate-700">
+                <label className="block text-xs font-medium text-muted-foreground">
                   Người ký ban hành
                 </label>
                 <input
@@ -500,12 +500,12 @@ export function DocumentQuickEntryModal({
                   value={signerName}
                   onChange={(e) => setSignerName(e.target.value)}
                   placeholder="TS. Lê Doãn Cường"
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:border-ring focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700">
+                <label className="block text-xs font-medium text-muted-foreground">
                   Chức vụ người ký
                 </label>
                 <input
@@ -513,12 +513,12 @@ export function DocumentQuickEntryModal({
                   value={signerTitle}
                   onChange={(e) => setSignerTitle(e.target.value)}
                   placeholder="Hiệu trưởng"
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:border-ring focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700">
+                <label className="block text-xs font-medium text-muted-foreground">
                   Nơi nhận
                 </label>
                 <input
@@ -526,7 +526,7 @@ export function DocumentQuickEntryModal({
                   value={recipientList}
                   onChange={(e) => setRecipientList(e.target.value)}
                   placeholder="Tổng cục GDNN; UBND Tỉnh..."
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground focus:border-ring focus:outline-none"
                 />
               </div>
             </div>
@@ -534,10 +534,10 @@ export function DocumentQuickEntryModal({
 
           {/* Attachment Scan File Dropzone */}
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1.5">
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
               Tệp quét PDF đính kèm (Scan có dấu đỏ)
             </label>
-            <div className="relative rounded-lg border-2 border-dashed border-slate-200 p-4 text-center hover:border-indigo-400 transition-colors">
+            <div className="relative rounded-lg border-2 border-dashed border-border p-4 text-center hover:border-indigo-400 transition-colors">
               <input
                 type="file"
                 accept=".pdf,application/pdf"
@@ -549,17 +549,17 @@ export function DocumentQuickEntryModal({
                 <div className="flex items-center justify-center gap-2 text-xs text-emerald-600">
                   <File className="h-5 w-5" strokeWidth={1.5} />
                   <span className="font-medium">{attachmentFile.name}</span>
-                  <span className="text-slate-400">
+                  <span className="text-muted-foreground">
                     ({(attachmentFile.size / 1024).toFixed(0)} KB)
                   </span>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center gap-1 text-slate-500">
-                  <UploadCloud className="h-6 w-6 text-slate-400" strokeWidth={1.5} />
+                <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground">
+                  <UploadCloud className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
                   <span className="text-xs font-medium">
                     Kéo thả tệp PDF hoặc bấm để chọn tệp quét
                   </span>
-                  <span className="text-xs text-slate-400">Hỗ trợ PDF tối đa 25MB</span>
+                  <span className="text-xs text-muted-foreground">Hỗ trợ PDF tối đa 25MB</span>
                 </div>
               )}
             </div>
@@ -582,11 +582,11 @@ export function DocumentQuickEntryModal({
         </div>
 
         {/* Modal Action Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-5 py-3.5 bg-slate-50/50">
+        <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-3.5 bg-muted/50">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
           >
             Hủy
           </button>

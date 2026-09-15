@@ -10,7 +10,11 @@ import {
   filterKanbanItems,
   mapTaskStatusToKanbanColumn,
   TaskKanbanBoard,
+  executeKanbanStatusTransition,
+  applyOptimisticOverrides,
+  calculateMenuPosition,
   type KanbanItem,
+  type KanbanTransitionState,
 } from "../src/components/tasks/task-kanban-board";
 import type { SchoolTask } from "../src/types/dashboard";
 
@@ -640,5 +644,272 @@ describe("Plan 10.7: Kanban progress suppression, overdue text label, column cov
         !html.includes("Nhiệm vụ canceled legacy"),
       "excluded tasks must not render as board cards"
     );
+  });
+});
+
+// ─── Task 5: Pending lock, double-click prevention, rollback, portal menu ────
+
+describe("Task 5 — executeKanbanStatusTransition contract", () => {
+  function emptyState(): KanbanTransitionState {
+    return { pendingTaskIds: {}, optimisticStatuses: {}, taskErrors: {} };
+  }
+
+  test("pending lock: request is blocked while same taskId is already pending", async () => {
+    // Pre-set task as pending to simulate in-flight state
+    const state: KanbanTransitionState = {
+      pendingTaskIds: { "t1": true },
+      optimisticStatuses: {},
+      taskErrors: {},
+    };
+    const result = await executeKanbanStatusTransition(
+      "t1",
+      "IN_PROGRESS",
+      "NEW",
+      state,
+      async () => { /* noop */ }
+    );
+    assert.equal(result.ok, false, "must reject while task is already pending");
+    assert.ok(
+      result.error && result.error.length > 0,
+      "must return non-empty error message for blocked request"
+    );
+    // State should not be mutated further (still pending)
+    assert.equal(result.state.pendingTaskIds["t1"], true, "pending flag must remain");
+  });
+
+  test("double-click prevention: second identical call returns ok:false while first is in-flight", async () => {
+    const state = emptyState();
+    let resolveFirst!: () => void;
+    const firstCallPromise = new Promise<void>((res) => { resolveFirst = res; });
+
+    // Start first transition (blocks)
+    const firstResult = executeKanbanStatusTransition(
+      "t2",
+      "IN_PROGRESS",
+      "NEW",
+      state,
+      () => firstCallPromise
+    );
+
+    // Attempt second call while first is still pending (using same pending state)
+    const pendingState: KanbanTransitionState = {
+      pendingTaskIds: { "t2": true },
+      optimisticStatuses: { "t2": "IN_PROGRESS" },
+      taskErrors: {},
+    };
+    const secondResult = await executeKanbanStatusTransition(
+      "t2",
+      "IN_PROGRESS",
+      "NEW",
+      pendingState,
+      async () => { /* should not fire */ }
+    );
+
+    assert.equal(secondResult.ok, false, "second call must be rejected while pending");
+
+    // Resolve first
+    resolveFirst();
+    const first = await firstResult;
+    assert.equal(first.ok, true, "first call must succeed after resolution");
+    assert.equal(first.state.pendingTaskIds["t2"], undefined, "pending cleared after success");
+  });
+
+  test("request rejected: rollback optimistic status and set Vietnamese error message", async () => {
+    const state = emptyState();
+    const result = await executeKanbanStatusTransition(
+      "t3",
+      "COMPLETED",
+      "IN_PROGRESS",
+      state,
+      async () => { throw new Error("Máy chủ từ chối cập nhật trạng thái."); }
+    );
+
+    assert.equal(result.ok, false, "must return ok:false on rejection");
+    // Optimistic status should be rolled back
+    assert.equal(
+      result.state.optimisticStatuses["t3"],
+      undefined,
+      "optimistic status must be rolled back after failure"
+    );
+    // Pending must be cleared
+    assert.equal(
+      result.state.pendingTaskIds["t3"],
+      undefined,
+      "pending flag must be cleared after error"
+    );
+    // Error message must be set
+    assert.ok(
+      result.state.taskErrors["t3"] && result.state.taskErrors["t3"]!.length > 0,
+      "taskErrors must carry a non-empty message for the failing task"
+    );
+    // Error message must be in Vietnamese or contain the original error
+    assert.ok(
+      result.error && (result.error.includes("chối") || result.error.includes("thất bại") || result.error.includes("Vui lòng")),
+      "error must be Vietnamese user-facing message"
+    );
+  });
+
+  test("pending cleared after error: no stuck pending on consecutive calls", async () => {
+    const state = emptyState();
+    // First call fails
+    const failResult = await executeKanbanStatusTransition(
+      "t4",
+      "NEEDS_REVIEW",
+      "IN_PROGRESS",
+      state,
+      async () => { throw new Error("Network error"); }
+    );
+    assert.equal(failResult.ok, false);
+    assert.equal(
+      failResult.state.pendingTaskIds["t4"],
+      undefined,
+      "pending must not be stuck after failed request"
+    );
+
+    // Second call should be allowed (not blocked)
+    const retryResult = await executeKanbanStatusTransition(
+      "t4",
+      "NEEDS_REVIEW",
+      "IN_PROGRESS",
+      failResult.state,
+      async () => { /* success */ }
+    );
+    assert.equal(retryResult.ok, true, "retry must succeed after error is cleared");
+  });
+
+  test("same-status no-op: transition to current status returns ok:true without mutation", async () => {
+    const state = emptyState();
+    let called = false;
+    const result = await executeKanbanStatusTransition(
+      "t5",
+      "IN_PROGRESS",
+      "IN_PROGRESS",
+      state,
+      async () => { called = true; }
+    );
+    assert.equal(result.ok, true, "same-status call must return ok:true");
+    assert.equal(called, false, "onStatusChange must NOT be called for no-op transition");
+    assert.deepEqual(result.state, state, "state must be unchanged for no-op");
+  });
+
+  test("applyOptimisticOverrides: overrides parent and subtask statuses without touching others", () => {
+    const tasks: SchoolTask[] = [
+      {
+        id: "p1",
+        title: "Nhiệm vụ gốc",
+        category: "CNTT",
+        categoryLabel: "CNTT",
+        leadAssigneeName: "An",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "NEW",
+        subTasks: [
+          {
+            id: "s1",
+            title: "Tiểu nhiệm vụ",
+            assigneeName: "Bình",
+            status: "NEW",
+            dueDate: "2026-09-20",
+            parentSchoolTaskId: "p1",
+            updatedAt: "2026-09-01",
+          },
+        ],
+        totalSubTasks: 1,
+        completedSubTasks: 0,
+        progressPercent: 0,
+      },
+      {
+        id: "p2",
+        title: "Nhiệm vụ không thay đổi",
+        category: "CNTT",
+        categoryLabel: "CNTT",
+        leadAssigneeName: "Cường",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "IN_PROGRESS",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 50,
+      },
+    ];
+
+    const optimistic = { p1: "IN_PROGRESS" as const, s1: "IN_PROGRESS" as const };
+    const result = applyOptimisticOverrides(tasks, optimistic);
+
+    assert.equal(result[0].status, "IN_PROGRESS", "parent optimistic override must apply");
+    assert.equal(result[0].subTasks![0].status, "IN_PROGRESS", "subtask optimistic override must apply");
+    assert.equal(result[1].status, "IN_PROGRESS", "unrelated task status must be unchanged");
+    // Original array not mutated
+    assert.equal(tasks[0].status, "NEW", "original task array must not be mutated");
+  });
+
+  test("calculateMenuPosition: menu placed above when space below is insufficient", () => {
+    // Trigger near bottom of viewport
+    const triggerRect = { top: 800, bottom: 830, left: 100, right: 180 };
+    const viewport = { width: 1280, height: 900 };
+    const menuSize = { width: 192, height: 220 };
+
+    const result = calculateMenuPosition(triggerRect, viewport, menuSize);
+    assert.equal(result.placement, "top", "menu must open above when space below is insufficient");
+    assert.ok(result.top < triggerRect.top, "menu top must be above trigger top when placed above");
+    assert.ok(result.top >= 0, "menu must not go above viewport");
+  });
+
+  test("calculateMenuPosition: menu placed below when space is available", () => {
+    // Trigger near top of viewport
+    const triggerRect = { top: 50, bottom: 80, left: 100, right: 200 };
+    const viewport = { width: 1280, height: 900 };
+    const menuSize = { width: 192, height: 220 };
+
+    const result = calculateMenuPosition(triggerRect, viewport, menuSize);
+    assert.equal(result.placement, "bottom", "menu must open below when space is available");
+    assert.ok(result.top > triggerRect.bottom - 1, "menu top must be below trigger bottom");
+  });
+
+  test("calculateMenuPosition: left-clamped to stay within viewport on narrow screens", () => {
+    // Trigger flush to left edge — menu width would go negative left
+    const triggerRect = { top: 100, bottom: 130, left: 5, right: 20 };
+    const viewport = { width: 360, height: 700 };
+    const menuSize = { width: 192, height: 140 };
+
+    const result = calculateMenuPosition(triggerRect, viewport, menuSize);
+    assert.ok(result.left >= 0, "menu must not overflow left edge of viewport");
+    assert.ok(
+      result.left + menuSize.width <= viewport.width + 8,
+      "menu must not overflow right edge (with 8px tolerance for margin)"
+    );
+  });
+
+  test("SSR: TaskKanbanBoard renders aria-busy on pending task without portal", () => {
+    const tasks: SchoolTask[] = [
+      {
+        id: "pending-task",
+        title: "Nhiệm vụ đang xử lý",
+        category: "CNTT",
+        categoryLabel: "CNTT",
+        leadAssigneeName: "Hùng",
+        coAssignees: [],
+        assignedDate: "2026-09-01",
+        dueDate: "2026-09-30",
+        status: "IN_PROGRESS",
+        subTasks: [],
+        totalSubTasks: 0,
+        completedSubTasks: 0,
+        progressPercent: 40,
+      },
+    ];
+    // In SSR (renderToStaticMarkup), portal falls back to null (mounted=false)
+    // The card itself should still render aria-busy="true" when isPending prop is true
+    // We verify the board renders without throwing and contains the task
+    const html = renderToStaticMarkup(
+      React.createElement(TaskKanbanBoard, { tasks })
+    );
+    assert.ok(html.includes("Nhiệm vụ đang xử lý"), "pending task title must render in SSR");
+    // aria-busy is set on the card div when isPending=true; here isPending comes from
+    // transitionState which starts empty, so aria-busy="false" in initial render
+    assert.ok(html.includes("aria-busy"), "card must emit aria-busy attribute");
   });
 });

@@ -1,0 +1,782 @@
+<title>Motion Accessibility and Performance</title>
+<style>
+  :root {
+    --bg-primary: #0f1117;
+    --bg-secondary: #161b26;
+    --bg-card: #1c2333;
+    --bg-card-hover: #232c3f;
+    --border-subtle: #2d3748;
+    --border-accent: #3b82f6;
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --accent-blue: #38bdf8;
+    --accent-cyan: #06b6d4;
+    --accent-emerald: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-rose: #f43f5e;
+    --code-bg: #090d16;
+    --code-border: #1e293b;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  :root[data-theme="light"] {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #f1f5f9;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f8fafc;
+    --border-subtle: #e2e8f0;
+    --border-accent: #2563eb;
+    --text-main: #0f172a;
+    --text-muted: #475569;
+    --text-dim: #94a3b8;
+    --accent-blue: #0284c7;
+    --accent-cyan: #0891b2;
+    --accent-emerald: #059669;
+    --accent-amber: #d97706;
+    --accent-rose: #e11d48;
+    --code-bg: #f8fafc;
+    --code-border: #cbd5e1;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f8fafc;
+      --border-subtle: #e2e8f0;
+      --border-accent: #2563eb;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-dim: #94a3b8;
+      --accent-blue: #0284c7;
+      --accent-cyan: #0891b2;
+      --accent-emerald: #059669;
+      --accent-amber: #d97706;
+      --accent-rose: #e11d48;
+      --code-bg: #f8fafc;
+      --code-border: #cbd5e1;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--bg-primary);
+    color: var(--text-main);
+    line-height: 1.65;
+    padding-inline: 24px;
+    padding-block: 40px;
+    max-width: 1040px;
+    margin-inline: auto;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 28px;
+    margin-bottom: 40px;
+  }
+
+  .badge-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .badge {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .badge.a11y { background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.3); }
+  .badge.perf { background: rgba(56, 189, 248, 0.1); color: var(--accent-blue); border-color: rgba(56, 189, 248, 0.3); }
+  .badge.spec { background: rgba(245, 158, 11, 0.1); color: var(--accent-amber); border-color: rgba(245, 158, 11, 0.3); }
+
+  h1 {
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+    color: var(--text-main);
+  }
+
+  .subtitle {
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    max-width: 800px;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-top: 48px;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-top: 28px;
+    margin-bottom: 12px;
+    color: var(--accent-blue);
+  }
+
+  p {
+    margin-bottom: 16px;
+    color: var(--text-muted);
+  }
+
+  p strong, li strong {
+    color: var(--text-main);
+  }
+
+  ul, ol {
+    margin-bottom: 20px;
+    padding-left: 24px;
+    color: var(--text-muted);
+  }
+
+  li {
+    margin-bottom: 8px;
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin-block: 24px;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .card.danger {
+    border-left: 4px solid var(--accent-rose);
+  }
+
+  .card.success {
+    border-left: 4px solid var(--accent-emerald);
+  }
+
+  .card.warning {
+    border-left: 4px solid var(--accent-amber);
+  }
+
+  .card h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-main);
+  }
+
+  .code-block {
+    background-color: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 6px;
+    padding: 16px;
+    margin-block: 16px;
+    overflow-x: auto;
+  }
+
+  pre {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-main);
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background: rgba(148, 163, 184, 0.12);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    margin-block: 24px;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    text-align: left;
+  }
+
+  th {
+    background: var(--bg-secondary);
+    color: var(--text-main);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-weight: 600;
+  }
+
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  .tag-green { color: var(--accent-emerald); font-weight: 600; }
+  .tag-red { color: var(--accent-rose); font-weight: 600; }
+  .tag-amber { color: var(--accent-amber); font-weight: 600; }
+
+  /* Interactive Demo Box */
+  .demo-container {
+    background: var(--bg-secondary);
+    border: 1px dashed var(--border-subtle);
+    border-radius: 8px;
+    padding: 24px;
+    margin-block: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .demo-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border-accent);
+    background: var(--bg-card);
+    color: var(--accent-blue);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: background 0.15s ease;
+  }
+
+  .btn:hover {
+    background: var(--bg-card-hover);
+  }
+
+  .pipeline-flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-block: 12px;
+  }
+
+  .pipeline-step {
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .step-cpu { background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: var(--accent-rose); }
+  .step-gpu { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: var(--accent-emerald); }
+  .step-arrow { color: var(--text-dim); font-size: 1.2rem; }
+
+  .callout {
+    background: rgba(56, 189, 248, 0.08);
+    border-left: 3px solid var(--accent-blue);
+    padding: 16px;
+    border-radius: 4px;
+    margin-block: 16px;
+    font-size: 0.95rem;
+  }
+</style>
+
+<header>
+  <div class="badge-row">
+    <span class="badge a11y">WCAG 2.2 Spec</span>
+    <span class="badge perf">Browser Compositor Engine</span>
+    <span class="badge spec">React 19 & Next.js 15</span>
+  </div>
+  <h1>Kỹ thuật Motion Accessibility (a11y) & GPU Compositing Performance</h1>
+  <p class="subtitle">
+    Hướng dẫn toàn diện về kiến trúc chuyển động số: từ cơ chế y sinh học theo tiêu chuẩn WCAG 2.2 đến tối ưu hóa đường ống Render Engine 120fps và quản lý vòng đời bộ nhớ trong React 19.
+  </p>
+</header>
+
+<main>
+  <!-- PHẦN 1 -->
+  <section>
+    <h2>1. Tiêu chuẩn WCAG 2.2: Motion Accessibility</h2>
+    <p>
+      Chuyển động trên giao diện không chỉ đơn thuần là vấn đề thẩm mỹ. Đối với người dùng mắc hội chứng <strong>rối loạn tiền đình (Vestibular Disorders)</strong>, các hiệu ứng chuyển động như di chuyển nhanh, giật, zoom hoặc thị sai (parallax) có thể kích hoạt chứng chóng mặt, mất thăng bằng, đau đầu nghiêm trọng và buồn nôn (motion sickness).
+    </p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>SC 2.3.3: Animation from Interactions (Level AAA)</h4>
+        <p>
+          Quy định: Các hoạt ảnh chuyển động kích hoạt từ tương tác của người dùng (như cuộn trang, di chuột, click, kéo thả) <strong>bắt buộc phải tắt được</strong>, trừ khi hoạt ảnh đó là cốt lõi không thể thiếu (essential) với tính năng hoặc thông tin hiển thị.
+        </p>
+        <p><strong>Mục tiêu:</strong> Ngăn ngừa kích thích tiền đình từ hiệu ứng tương tác.</p>
+      </div>
+
+      <div class="card">
+        <h4>SC 2.2.2: Pause, Stop, Hide (Level A)</h4>
+        <p>
+          Quy định: Mọi nội dung di chuyển, nhấp nháy hoặc tự động cuộn (1) bắt đầu tự động, (2) kéo dài hơn 5 giây, và (3) hiển thị song song cùng nội dung khác, <strong>phải có cơ chế để người dùng Tạm dừng (Pause), Dừng (Stop) hoặc Ẩn (Hide)</strong>.
+        </p>
+        <p><strong>Mục tiêu:</strong> Bảo vệ người dùng khiếm khuyết tập trung (ADHD), suy giảm nhận thức.</p>
+      </div>
+    </div>
+
+    <h3>Quy định kỹ thuật về prefers-reduced-motion</h3>
+    <p>
+      Truy vấn truyền thông <code>prefers-reduced-motion</code> phản ánh trực tiếp cấu hình trợ năng từ hệ điều hành (macOS: <em>Reduce motion</em>, Windows: <em>Animation effects = Off</em>, iOS, Android). Có hai giá trị chuẩn:
+    </p>
+    <ul>
+      <li><code>no-preference</code>: Người dùng chưa thiết lập hoặc cho phép hiển thị chuyển động đầy đủ.</li>
+      <li><code>reduce</code>: Người dùng yêu cầu giảm thiểu hoặc loại bỏ các chuyển động không thiết yếu.</li>
+    </ul>
+
+    <h3>Chiến lược thiết kế Fallback tinh tế: Không tắt mù quáng (Zero Motion Anti-pattern)</h3>
+    <div class="card danger">
+      <h4>Cảnh báo: Lỗi phổ biến "Blank Screen Anti-Pattern"</h4>
+      <p>
+        Nhiều lập trình viên áp dụng đoạn reset thô thiển:
+        <code>* { animation: none !important; transition: none !important; }</code>. Nếu một phần tử được khởi tạo với <code>opacity: 0</code> và chờ animation để hiện ra, việc ép tắt animation ngay lập tức sẽ khiến phần tử mãi mãi ở <code>opacity: 0</code>, làm toàn bộ trang trắng tinh đối với người dùng bật trợ năng!
+      </p>
+    </div>
+
+    <p>
+      <strong>Chiến lược đúng:</strong> Thay vì tắt hoàn toàn, hãy chuyển đổi từ <em>Spatial Motion (chuyển dịch không gian: translateY, translateX, scale, rotate, parallax)</em> sang <em>Non-vestibular Feedback (hiệu ứng không gây kích thích tiền đình: opacity fade, màu sắc, hoặc trạng thái tức thì)</em>.
+    </p>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Loại chuyển động</th>
+            <th>Trạng thái bình thường (Default)</th>
+            <th>Fallback tinh tế (prefers-reduced-motion: reduce)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Page Entrance / Hero Reveal</strong></td>
+            <td>TranslateY(30px) + FadeIn (600ms)</td>
+            <td><strong>Chỉ Opacity FadeIn (150ms)</strong> hoặc hiển thị tức thì (Instant)</td>
+          </tr>
+          <tr>
+            <td><strong>Parallax Scrolling</strong></td>
+            <td>Nền trôi theo tốc độ khác nội dung</td>
+            <td><strong>Cố định vị trí (translate: 0)</strong>, cuộn phẳng thông thường</td>
+          </tr>
+          <tr>
+            <td><strong>Loading Spinner</strong></td>
+            <td>Xoay liên tục 360 độ (rotate infinite)</td>
+            <td><strong>Chớp mờ (Opacity Pulse: 1 &harr; 0.4)</strong> hoặc thanh tiến trình tĩnh</td>
+          </tr>
+          <tr>
+            <td><strong>Dialog / Modal Opening</strong></td>
+            <td>Scale từ 0.7 &rarr; 1.0 kèm Zoom</td>
+            <td><strong>Fade In thuần túy</strong> trong 100-150ms</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="code-block">
+      <pre><code>/* Kiến trúc 2 tầng chuẩn mực trong CSS */
+/* Tầng 1: Cho phép chuyển động không gian khi người dùng HOAN NGHÊNH motion */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-reveal {
+    animation: heroEnter 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes heroEnter {
+    from {
+      opacity: 0;
+      transform: translateY(24px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
+
+/* Tầng 2: Fallback tinh tế chỉ dùng Opacity cho người dùng Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .hero-reveal {
+    animation: subtleFade 200ms ease-out forwards;
+  }
+
+  @keyframes subtleFade {
+    from { opacity: 0; transform: none; }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* Spinner thay vì xoay rotate thì chỉ pulse opacity */
+  .spinner {
+    animation: spinnerPulse 1.5s ease-in-out infinite !important;
+  }
+  @keyframes spinnerPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+}</code></pre>
+    </div>
+  </section>
+
+  <!-- PHẦN 2 -->
+  <section>
+    <h2>2. Web Performance & GPU Compositing (60fps / 120fps)</h2>
+    <p>
+      Để đạt được tốc độ mượt mà 60fps (16.6ms mỗi frame) hoặc 120fps (8.3ms mỗi frame trên màn hình ProMotion / Gaming), trình duyệt bắt buộc phải tính toán và dựng hình cực nhanh. Hiểu rõ đường ống đồ họa (Pixel Pipeline) là chìa khóa.
+    </p>
+
+    <div class="pipeline-flow">
+      <div class="pipeline-step step-cpu">1. JavaScript (DOM/State)</div>
+      <div class="step-arrow">&rarr;</div>
+      <div class="pipeline-step step-cpu">2. Style (CSSOM)</div>
+      <div class="step-arrow">&rarr;</div>
+      <div class="pipeline-step step-cpu">3. Layout (Reflow)</div>
+      <div class="step-arrow">&rarr;</div>
+      <div class="pipeline-step step-cpu">4. Paint (Raster)</div>
+      <div class="step-arrow">&rarr;</div>
+      <div class="pipeline-step step-gpu">5. Composite (GPU)</div>
+    </div>
+
+    <h3>Chỉ duy nhất 2 thuộc tính an toàn cho Compositor: `transform` và `opacity`</h3>
+    <p>
+      Tại sao chỉ có <code>transform</code> và <code>opacity</code>?
+    </p>
+    <ul>
+      <li>
+        <strong>Tái sử dụng Texture trên GPU:</strong> Khi một phần tử có layer riêng, nội dung pixel của nó đã được CPU nướng (rasterize) thành một tấm texture lưu trong VRAM của GPU.
+      </li>
+      <li>
+        <strong>Xử lý hoàn toàn trên Compositor Thread:</strong> Thay đổi <code>transform</code> chỉ là một phép nhân ma trận (Matrix Multiplication). Thay đổi <code>opacity</code> chỉ là nhân hệ số kênh Alpha. GPU thực hiện các phép toán này trong phần cứng gần như tức thì mà <em>không làm bẩn (dirty)</em> layout hay paint.
+      </li>
+      <li>
+        <strong>Thoát khỏi Main Thread:</strong> Ngay cả khi Main Thread đang bận tính toán logic JavaScript nặng, hiệu ứng chuyển động của <code>transform</code> và <code>opacity</code> vẫn tiếp tục chạy mượt mà 120fps trên Compositor Thread mà không hề bị nghẽn giật (jank-free).
+      </li>
+    </ul>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Thuộc tính</th>
+            <th>Giai đoạn kích hoạt</th>
+            <th>Chi phí tài nguyên</th>
+            <th>Hậu quả hiệu năng</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>transform</code>, <code>opacity</code></td>
+            <td><span class="tag-green">Chỉ Composite</span></td>
+            <td>Rất thấp (GPU Matrix)</td>
+            <td>Đạt chuẩn 60fps / 120fps mượt mà, không phụ thuộc Main Thread</td>
+          </tr>
+          <tr>
+            <td><code>background-color</code>, <code>box-shadow</code></td>
+            <td><span class="tag-amber">Paint &rarr; Composite</span></td>
+            <td>Trung bình (CPU Raster)</td>
+            <td>CPU phải vẽ lại từng pixel mỗi frame, nguy cơ tụt fps cao</td>
+          </tr>
+          <tr>
+            <td><code>width</code>, <code>height</code>, <code>top</code>, <code>left</code>, <code>margin</code></td>
+            <td><span class="tag-red">Layout &rarr; Paint &rarr; Composite</span></td>
+            <td>Rất nặng (Full Pipeline)</td>
+            <td>Gây <strong>Reflow toàn trang</strong>, Layout Thrashing, giật khựng nghiêm trọng</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <strong>Hiện tượng Layout Thrashing (Cưỡng bức tính toán layout):</strong><br>
+      Xảy ra khi code JavaScript xen kẽ giữa việc ghi thuộc tính layout (Write) và đọc thuộc tính hình học (Read) trong cùng 1 frame:
+      <pre><code>// ❌ NGUY HIỂM: Layout Thrash lặp đi lặp lại
+elements.forEach(el => {
+  const h = el.offsetHeight; // READ -> ép browser chạy Layout ngay lập tức
+  el.style.height = (h + 10) + 'px'; // WRITE -> làm bẩn layout
+});
+
+// ✅ GIẢI PHÁP: Tách pha (Batching) hoặc chuyển sang transform: scaleY()
+const heights = elements.map(el => el.offsetHeight); // Batch READ
+elements.forEach((el, i) => {
+  el.style.transform = `scaleY(${(heights[i] + 10) / heights[i]})`; // GPU Transform
+});</code></pre>
+    </div>
+  </section>
+
+  <!-- PHẦN 3 -->
+  <section>
+    <h2>3. Tối ưu Bundle Size: Framer Motion / Motion.dev trong Next.js 15</h2>
+    <p>
+      Gói mặc định của <code>motion/react</code> (Framer Motion) có kích thước xấp xỉ <strong>~34kB gzipped</strong> vì nó mang theo toàn bộ tính năng: engine vật lý lò xo (springs), layout projection engine (<code>layoutId</code>), cử chỉ kéo thả (pan/drag), và SVG path morphing.
+    </p>
+
+    <h3>Kiến trúc LazyMotion: Giảm từ ~34kB xuống ~4.6kB Initial Render</h3>
+    <p>
+      Sử dụng thành phần <code>&lt;LazyMotion&gt;</code> kết hợp với thẻ đại diện siêu nhẹ <code>&lt;m.*&gt;</code> thay cho <code>&lt;motion.*&gt;</code>.
+    </p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>1. Gói `domAnimation` (~15kB)</h4>
+        <p>Hỗ trợ: Basic animation, variants, exit animation (AnimatePresence), tap, hover, focus.</p>
+        <p><strong>Khuyến nghị:</strong> Đủ cho 90% giao diện web ứng dụng thông thường.</p>
+      </div>
+
+      <div class="card">
+        <h4>2. Gói `domMax` (~32kB)</h4>
+        <p>Hỗ trợ: Toàn bộ domAnimation + Layout animations (<code>layout</code>, <code>layoutId</code>) + Pan & Drag gestures.</p>
+        <p><strong>Khuyến nghị:</strong> Chỉ tải khi cần kéo thả Kanban hoặc hiệu ứng Morphing thẻ layout.</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <pre><code>// app/providers/MotionProvider.tsx
+"use client";
+
+import React from "react";
+import { LazyMotion, MotionConfig } from "motion/react";
+
+// Tải bất đồng bộ sau khi trang đã Hydrate xong - giải phóng Critical Path
+const loadFeatures = () =>
+  import("motion/react").then((res) => res.domAnimation);
+
+export function MotionProvider({ children }: { children: React.ReactNode }) {
+  return (
+    // MotionConfig tự động liên kết với thiết lập prefers-reduced-motion của OS
+    <MotionConfig reducedMotion="user">
+      <LazyMotion features={loadFeatures} strict>
+        {children}
+      </LazyMotion>
+    </MotionConfig>
+  );
+}</code></pre>
+    </div>
+
+    <div class="code-block">
+      <pre><code>// components/AccessibleCard.tsx
+"use client";
+
+import * as m from "motion/react-m"; // Sử dụng 'm' thay vì 'motion' để tránh kéo toàn bộ bundle
+
+export function AccessibleCard() {
+  return (
+    &lt;m.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -16 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className="p-6 bg-slate-800 rounded-lg shadow-lg"
+    &gt;
+      &lt;h3&gt;Thẻ thông minh&lt;/h3&gt;
+      &lt;p&gt;Khi bật reduce motion, y sẽ tự động bỏ qua và chỉ chạy opacity.&lt;/p&gt;
+    &lt;/m.div&gt;
+  );
+}</code></pre>
+    </div>
+  </section>
+
+  <!-- PHẦN 4 -->
+  <section>
+    <h2>4. Quản lý Bộ nhớ & Cleanup trong React 19 / Next.js 15 Turbopack</h2>
+    <p>
+      Trong kiến trúc React 19 và Next.js 15 App Router với <em>Concurrent Rendering</em> và cơ chế chuyển trang Client-side mượt mà, các component liên tục được Mount, Unmount và Re-mount.
+    </p>
+
+    <div class="card-grid">
+      <div class="card danger">
+        <h4>Hiểm họa Memory Leak & Layer Explosion</h4>
+        <ul>
+          <li><strong>Tween tích tụ:</strong> Animation chưa bị hủy tiếp tục chạy ngầm trong bộ nhớ, giữ lại tham chiếu DOM node đã bị React tháo dỡ (Detached DOM Leak).</li>
+          <li><strong>Treo Layer GPU:</strong> Việc lạm dụng <code>will-change: transform</code> mà không dọn dẹp làm VRAM phình to, dẫn đến GPU Thrashing và tụt fps toàn trình duyệt.</li>
+          <li><strong>Xung đột SSR & React StrictMode:</strong> Kích hoạt animation đo đạc DOM trước khi Hydration hoàn tất gây ra Hydration Mismatch và giật layout (CLS).</li>
+        </ul>
+      </div>
+
+      <div class="card success">
+        <h4>Giải pháp Chuẩn mực trong React 19</h4>
+        <ul>
+          <li><strong>GSAP:</strong> Luôn dùng <code>useGSAP()</code> scoped với container <code>useRef</code> để tự động <code>revert()</code> toàn bộ Timeline/ScrollTrigger khi unmount.</li>
+          <li><strong>Dọn will-change:</strong> Luôn đặt <code>clearProps: "willChange"</code> khi animation kết thúc để giải phóng GPU Layer VRAM.</li>
+          <li><strong>Web Animations API (WAAPI):</strong> Luôn gọi <code>animation.cancel()</code> trong hàm return của <code>useEffect</code>.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Code mẫu: Quản lý Lifecycle & Trợ năng hoàn hảo với GSAP trong Next.js 15</h3>
+    <div class="code-block">
+      <pre><code>"use client";
+
+import { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+// Đăng ký plugin ở phạm vi module
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(useGSAP, ScrollTrigger);
+}
+
+export function AnimatedDashboardWidget() {
+  const containerRef = useRef&lt;HTMLDivElement&gt;(null);
+
+  useGSAP(
+    () => {
+      // Tích hợp kiểm tra Media Query trực tiếp trong GSAP
+      const mm = gsap.matchMedia();
+
+      // Cấu hình khi người dùng HOAN NGHÊNH chuyển động
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.from(".widget-card", {
+          opacity: 0,
+          y: 40,
+          duration: 0.6,
+          stagger: 0.1,
+          ease: "power2.out",
+          willChange: "transform, opacity",
+          clearProps: "willChange", // GIẢI PHÓNG VRAM GPU sau khi diễn xong!
+        });
+      });
+
+      // Cấu hình khi người dùng yêu cầu GIẢM chuyển động (WCAG 2.3.3)
+      mm.add("(prefers-reduced-motion: reduce)", () => {
+        gsap.from(".widget-card", {
+          opacity: 0,
+          duration: 0.2, // Chỉ fade nhẹ, triệt tiêu toàn bộ trục di chuyển y
+          clearProps: "all",
+        });
+      });
+    },
+    {
+      scope: containerRef, // Giới hạn bộ chọn trong containerRef, không dò toàn DOM
+      revertOnUpdate: true, // Revert và tạo lại an toàn khi dependencies thay đổi
+    }
+  );
+
+  return (
+    &lt;div ref={containerRef} className="dashboard-grid"&gt;
+      &lt;div className="widget-card"&gt;Khối phân tích 1&lt;/div&gt;
+      &lt;div className="widget-card"&gt;Khối dữ liệu 2&lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+    </div>
+
+    <h3>Code mẫu: Clean-up an toàn với Web Animations API (Native WAAPI)</h3>
+    <div class="code-block">
+      <pre><code>"use client";
+
+import { useEffect, useRef } from "react";
+
+export function NativeAnimatedPulse() {
+  const elementRef = useRef&lt;HTMLDivElement&gt;(null);
+
+  useEffect(() => {
+    const el = elementRef.current;
+    if (!el) return;
+
+    // Kiểm tra trợ năng Native
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const isReduced = mediaQuery.matches;
+
+    // Cấu hình Keyframes dựa trên sở thích chuyển động
+    const keyframes = isReduced
+      ? [{ opacity: 1 }, { opacity: 0.3 }, { opacity: 1 }] // Subtle Opacity Pulse
+      : [{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }];
+
+    const animation = el.animate(keyframes, {
+      duration: isReduced ? 1500 : 800,
+      iterations: Infinity,
+      easing: "ease-in-out",
+    });
+
+    // BẮT BUỘC: Cleanup hook hủy animation khi unmount để tránh Memory Leak
+    return () => {
+      animation.cancel();
+    };
+  }, []);
+
+  return &lt;div ref={elementRef} className="badge-pulse"&gt;Live Status&lt;/div&gt;;
+}</code></pre>
+    </div>
+  </section>
+
+  <!-- PHẦN 5: Checklist -->
+  <section>
+    <h2>5. Bảng tổng hợp Kiểm toán (Production Audit Checklist)</h2>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Hạng mục</th>
+            <th>Tiêu chí kỹ thuật</th>
+            <th>Cách kiểm tra nhanh</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>WCAG 2.3.3</strong></td>
+            <td>Không có chuyển động vị trí lớn (parallax, slide-in) khi bật reduced-motion. Không màn hình trắng.</td>
+            <td>Chrome DevTools &rarr; Rendering &rarr; Emulate CSS media feature <code>prefers-reduced-motion: reduce</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>WCAG 2.2.2</strong></td>
+            <td>Mọi slider, ticker, carousel chạy liên tục &gt; 5s phải có nút Pause/Stop hiển thị rõ ràng.</td>
+            <td>Dùng phím Tab định vị nút tạm dừng, kiểm tra dừng đúng animation timeline.</td>
+          </tr>
+          <tr>
+            <td><strong>GPU 60/120fps</strong></td>
+            <td>Chỉ dùng <code>transform</code> và <code>opacity</code>. Số Layout/Paint events trong animation = 0.</td>
+            <td>DevTools &rarr; Performance &rarr; Record. Kiểm tra Main thread chỉ có <code>Composite Layers</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Layer Memory</strong></td>
+            <td>Không giữ <code>will-change</code> cố định trong CSS stylesheet; dọn sạch sau animation.</td>
+            <td>DevTools &rarr; More tools &rarr; Layers &rarr; Kiểm tra tổng số compositor layers &lt; 50-100.</td>
+          </tr>
+          <tr>
+            <td><strong>Bundle Size</strong></td>
+            <td>Dùng <code>LazyMotion</code> + <code>domAnimation</code> thay cho <code>motion</code> gốc.</td>
+            <td>Kiểm tra Next.js build analyzer, chunk animation không vượt quá 15-20kB.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>

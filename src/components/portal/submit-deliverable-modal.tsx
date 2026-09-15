@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useVirtualKeyboard, scrollActiveInputIntoView } from "@/hooks/use-virtual-keyboard";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 // ============================================================================
 // 1. Constants & Helper Utilities
@@ -171,6 +172,7 @@ export function SubmitDeliverableModal({
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const nameInputRef = React.useRef<HTMLInputElement>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>({ isOpen, onClose });
 
   React.useEffect(() => {
     setMounted(true);
@@ -400,6 +402,7 @@ export function SubmitDeliverableModal({
 
   const modalContent = (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby="submit-deliverable-modal-title"
@@ -490,7 +493,7 @@ export function SubmitDeliverableModal({
 
             {/* Drag & Drop Upload Zone */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+              <label htmlFor="deliverable-file-upload" className="text-xs font-semibold text-foreground flex items-center justify-between">
                 <span>Tải lên tệp minh chứng</span>
                 <span className="text-xs font-normal text-muted-foreground">Tùy chọn đính kèm</span>
               </label>
@@ -518,6 +521,7 @@ export function SubmitDeliverableModal({
               >
                 <input
                   ref={fileInputRef}
+                  id="deliverable-file-upload"
                   type="file"
                   onChange={handleFileInputChange}
                   className="hidden"
@@ -563,7 +567,7 @@ export function SubmitDeliverableModal({
             {/* Field 1: Deliverable Name (Required) */}
             <div className="space-y-1.5">
               <label
-                htmlFor="deliverable-name-input"
+                htmlFor="deliverable-title"
                 className="text-xs font-semibold text-foreground flex items-center gap-1.5"
               >
                 <FileText className="size-3.5 text-primary" strokeWidth={1.5} />
@@ -571,7 +575,7 @@ export function SubmitDeliverableModal({
               </label>
               <input
                 ref={nameInputRef}
-                id="deliverable-name-input"
+                id="deliverable-title"
                 type="text"
                 value={deliverableName}
                 onChange={handleNameChange}
@@ -619,7 +623,7 @@ export function SubmitDeliverableModal({
               {/* Online URL */}
               <div className="space-y-1.5">
                 <label
-                  htmlFor="url-input"
+                  htmlFor="deliverable-link"
                   className="text-xs font-semibold text-foreground flex items-center justify-between"
                 >
                   <span className="flex items-center gap-1.5">
@@ -629,7 +633,7 @@ export function SubmitDeliverableModal({
                   <span className="text-xs font-normal text-muted-foreground">Tùy chọn</span>
                 </label>
                 <input
-                  id="url-input"
+                  id="deliverable-link"
                   type="text"
                   value={url}
                   onChange={handleUrlChange}
@@ -643,14 +647,14 @@ export function SubmitDeliverableModal({
             {/* Field 4: Note / Message */}
             <div className="space-y-1.5">
               <label
-                htmlFor="deliverable-note"
+                htmlFor="deliverable-summary"
                 className="text-xs font-semibold text-foreground flex items-center justify-between"
               >
                 <span>Nội dung giải trình / Ghi chú gửi cấp phê duyệt</span>
                 <span className="text-xs font-normal text-muted-foreground">Tùy chọn</span>
               </label>
               <textarea
-                id="deliverable-note"
+                id="deliverable-summary"
                 rows={3}
                 value={note}
                 onChange={handleNoteChange}

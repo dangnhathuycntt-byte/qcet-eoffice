@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   Plus,
   Calendar,
@@ -184,6 +185,157 @@ export function getPrevStatus(status: TaskStatus): TaskStatus | null {
   return STATUS_ORDER[index - 1];
 }
 
+export interface MenuPositionResult {
+  top: number;
+  left: number;
+  placement: "top" | "bottom";
+}
+
+/**
+ * Calculates collision-aware fixed viewport coordinates for portal action menus.
+ * Places menu above trigger when vertical space below is insufficient.
+ * Keeps menu within viewport bounds horizontally and vertically.
+ */
+export function calculateMenuPosition(
+  triggerRect: { top: number; bottom: number; left: number; right: number },
+  viewport: { width: number; height: number },
+  menuSize = { width: 192, height: 220 }
+): MenuPositionResult {
+  const margin = 8;
+  const gap = 4;
+
+  const spaceBelow = viewport.height - triggerRect.bottom;
+  const placeAbove = spaceBelow < menuSize.height && triggerRect.top > menuSize.height;
+
+  let top: number;
+  let placement: "top" | "bottom";
+  if (placeAbove) {
+    top = Math.max(margin, triggerRect.top - menuSize.height - gap);
+    placement = "top";
+  } else {
+    top = Math.min(
+      triggerRect.bottom + gap,
+      Math.max(margin, viewport.height - menuSize.height - margin)
+    );
+    placement = "bottom";
+  }
+
+  const preferredLeft = triggerRect.right - menuSize.width;
+  const left = Math.max(margin, Math.min(preferredLeft, viewport.width - menuSize.width - margin));
+
+  return { top, left, placement };
+}
+
+export interface KanbanTransitionState {
+  pendingTaskIds: Record<string, boolean>;
+  optimisticStatuses: Record<string, TaskStatus>;
+  taskErrors: Record<string, string | null>;
+  lastAttemptedStatuses?: Record<string, TaskStatus | null>;
+}
+
+/**
+ * Executes status transition with double-invocation prevention, optimistic update,
+ * and rollback with Vietnamese error message on failure.
+ */
+export async function executeKanbanStatusTransition(
+  taskId: string,
+  newStatus: TaskStatus,
+  currentStatus: TaskStatus,
+  state: KanbanTransitionState,
+  onStatusChange?: (taskId: string, newStatus: TaskStatus) => Promise<unknown> | void
+): Promise<{
+  state: KanbanTransitionState;
+  ok: boolean;
+  error?: string;
+}> {
+  // Prevent double click while operation is already pending
+  if (state.pendingTaskIds[taskId]) {
+    return { state, ok: false, error: "Thao tác đang xử lý, vui lòng chờ." };
+  }
+
+  if (currentStatus === newStatus) {
+    return { state, ok: true };
+  }
+
+  // Pre-set pending and optimistic status before dispatching
+  const pendingState: KanbanTransitionState = {
+    pendingTaskIds: { ...state.pendingTaskIds, [taskId]: true },
+    optimisticStatuses: { ...state.optimisticStatuses, [taskId]: newStatus },
+    taskErrors: { ...state.taskErrors, [taskId]: null },
+    lastAttemptedStatuses: { ...state.lastAttemptedStatuses },
+  };
+
+  try {
+    const result = await Promise.resolve(onStatusChange?.(taskId, newStatus));
+    if (
+      result &&
+      typeof result === "object" &&
+      "success" in result &&
+      !(result as { success: boolean }).success
+    ) {
+      throw new Error((result as { error?: string }).error || "Cập nhật trạng thái thất bại.");
+    }
+    const { [taskId]: _, ...remainingPending } = pendingState.pendingTaskIds;
+    const { [taskId]: _err, ...remainingErrors } = pendingState.taskErrors;
+    const { [taskId]: _las, ...remainingLastAttempted } = pendingState.lastAttemptedStatuses ?? {};
+    return {
+      state: {
+        ...pendingState,
+        pendingTaskIds: remainingPending,
+        taskErrors: remainingErrors,
+        lastAttemptedStatuses: remainingLastAttempted,
+      },
+      ok: true,
+    };
+  } catch (err: unknown) {
+    const { [taskId]: _opt, ...remainingOptimistic } = pendingState.optimisticStatuses;
+    const { [taskId]: _pend, ...remainingPending } = pendingState.pendingTaskIds;
+    const errorMessage =
+      err instanceof Error && err.message
+        ? err.message
+        : "Cập nhật trạng thái thất bại. Vui lòng thử lại.";
+
+    return {
+      state: {
+        pendingTaskIds: remainingPending,
+        optimisticStatuses: remainingOptimistic,
+        taskErrors: {
+          ...pendingState.taskErrors,
+          [taskId]: errorMessage,
+        },
+        lastAttemptedStatuses: {
+          ...pendingState.lastAttemptedStatuses,
+          [taskId]: newStatus,
+        },
+      },
+      ok: false,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Overrides task statuses with optimistic in-flight values without mutating other fields.
+ */
+export function applyOptimisticOverrides(
+  tasks: SchoolTask[],
+  optimisticStatuses: Record<string, TaskStatus>
+): SchoolTask[] {
+  if (Object.keys(optimisticStatuses).length === 0) return tasks;
+  return tasks.map((st) => {
+    const parentStatus = optimisticStatuses[st.id] ?? (st.status as TaskStatus);
+    const updatedSubTasks = st.subTasks?.map((sub) => {
+      const subStatus = optimisticStatuses[sub.id] ?? sub.status;
+      return subStatus !== sub.status ? { ...sub, status: subStatus } : sub;
+    });
+    return {
+      ...st,
+      status: parentStatus,
+      subTasks: updatedSubTasks,
+    };
+  });
+}
+
 /**
  * Extracts and flattens all SchoolTasks and their StaffTasks into unified KanbanItems.
  */
@@ -323,7 +475,7 @@ export function groupTasksByStatus(
 }
 
 function formatDate(dateStr?: string): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
@@ -351,24 +503,70 @@ const STATUS_LABELS: Record<string, string> = {
 
 interface KanbanCardProps {
   item: KanbanItem;
+  isPending?: boolean;
+  errorMessage?: string | null;
+  lastAttemptedStatus?: TaskStatus | null;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
-  onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
+  onStatusChange?: (taskId: string, newStatus: TaskStatus) => Promise<unknown> | void;
 }
 
-function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
+function KanbanCard({
+  item,
+  isPending = false,
+  errorMessage = null,
+  lastAttemptedStatus = null,
+  onSelectTask,
+  onStatusChange,
+}: KanbanCardProps) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [statusSubmenuOpen, setStatusSubmenuOpen] = React.useState(false);
+  const [menuCoords, setMenuCoords] = React.useState<MenuPositionResult | null>(null);
+  const [mounted, setMounted] = React.useState(false);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const overdue =
     isOverdue(item.dueDate, item.status) || item.status === "OVERDUE";
   const effectiveColId = mapTaskStatusToKanbanColumn(item.status);
 
+  const updateCoords = React.useCallback(() => {
+    if (!triggerRef.current || typeof window === "undefined") return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const estimatedHeight = statusSubmenuOpen ? 240 : 140;
+    const coords = calculateMenuPosition(
+      rect,
+      { width: window.innerWidth, height: window.innerHeight },
+      { width: 192, height: estimatedHeight }
+    );
+    setMenuCoords(coords);
+  }, [statusSubmenuOpen]);
+
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    updateCoords();
+    window.addEventListener("scroll", updateCoords, true);
+    window.addEventListener("resize", updateCoords);
+    return () => {
+      window.removeEventListener("scroll", updateCoords, true);
+      window.removeEventListener("resize", updateCoords);
+    };
+  }, [menuOpen, updateCoords]);
+
   // Close menu on outside mousedown or Escape keydown
   React.useEffect(() => {
     if (!menuOpen) return;
     function handleOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(target) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(target)
+      ) {
         setMenuOpen(false);
         setStatusSubmenuOpen(false);
       }
@@ -377,6 +575,7 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
       if (e.key === "Escape") {
         setMenuOpen(false);
         setStatusSubmenuOpen(false);
+        triggerRef.current?.focus();
       }
     }
     document.addEventListener("mousedown", handleOutside);
@@ -393,15 +592,18 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
 
   function handleMenuToggle(e: React.MouseEvent) {
     e.stopPropagation();
+    if (isPending) return;
     setMenuOpen((prev) => !prev);
     setStatusSubmenuOpen(false);
   }
 
-  function handleStatusChange(newStatus: TaskStatus) {
+  async function handleStatusChange(newStatus: TaskStatus) {
+    if (isPending) return;
     triggerHaptic("selection");
-    onStatusChange?.(item.id, newStatus);
     setMenuOpen(false);
     setStatusSubmenuOpen(false);
+    // Do not stopPropagation here — caller handles card click separately
+    await onStatusChange?.(item.id, newStatus);
   }
 
   function handleOpenDetail(e: React.MouseEvent) {
@@ -413,9 +615,11 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
   return (
     <div
       onClick={handleCardClick}
+      aria-busy={isPending}
       className={cn(
         "group relative flex flex-col gap-1.5 rounded-lg border border-border/60 bg-card py-2.5 px-3 text-card-foreground transition-all duration-150 cursor-pointer shadow-2xs",
         "hover:border-primary/40 hover:shadow-subtle hover:-translate-y-[1px] active:translate-y-0",
+        isPending && "opacity-75",
         item.level === "TRUONG"
           ? "border-l-2 border-l-blue-500/70"
           : "border-l-2 border-l-indigo-500/70"
@@ -439,38 +643,64 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
         </div>
 
         {/* ⋯ Action menu button */}
-        <div ref={menuRef} className="relative shrink-0">
+        <div className="relative shrink-0">
           <button
+            ref={triggerRef}
             type="button"
             onClick={handleMenuToggle}
             aria-label="Thao tác"
             aria-expanded={menuOpen}
             aria-haspopup="menu"
+            disabled={isPending}
             data-slot="kanban-action-menu-trigger"
             data-actions="status-transition"
-            className="size-7 min-h-[44px] sm:min-h-[28px] flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 touch-manipulation"
+            className="size-7 min-h-[44px] sm:min-h-[28px] flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 touch-manipulation disabled:opacity-50"
           >
             <MoreHorizontal strokeWidth={1.5} className="size-4" />
           </button>
 
-          {/* Action menu popover */}
-          {menuOpen && (
+          {/* Action menu popover via portal to avoid overflow clipping */}
+          {mounted && menuOpen && menuCoords && typeof document !== "undefined" && createPortal(
             <div
+              ref={menuRef}
               role="menu"
               data-slot="kanban-action-menu"
               aria-label="Thao tác nhiệm vụ"
+              style={{
+                position: "fixed",
+                top: `${menuCoords.top}px`,
+                left: `${menuCoords.left}px`,
+                zIndex: 9999,
+              }}
+              onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => {
                 if (e.key === "Escape") {
+                  e.stopPropagation();
                   setMenuOpen(false);
                   setStatusSubmenuOpen(false);
+                  triggerRef.current?.focus();
+                } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const items = Array.from(
+                    menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') || []
+                  );
+                  if (items.length === 0) return;
+                  const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+                  const nextIndex =
+                    e.key === "ArrowDown"
+                      ? (currentIndex + 1) % items.length
+                      : (currentIndex - 1 + items.length) % items.length;
+                  items[nextIndex]?.focus();
                 }
               }}
-              className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl border border-border/80 bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100"
+              className="w-48 rounded-xl border border-border/80 bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100"
             >
               {/* Mở chi tiết */}
               <button
                 type="button"
                 role="menuitem"
+                autoFocus
                 onClick={handleOpenDetail}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px] text-left"
               >
@@ -501,9 +731,9 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
                 />
               </button>
 
-              {/* Inline status options */}
+              {/* Submenu status options */}
               {statusSubmenuOpen && (
-                <div className="pb-1">
+                <div className="pb-1 px-1 space-y-0.5 bg-muted/30 rounded-lg mx-1 my-0.5 border border-border/40">
                   {KANBAN_COLUMNS.map((col) => {
                     const isCurrent = col.id === effectiveColId;
                     return (
@@ -511,15 +741,15 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
                         key={col.id}
                         type="button"
                         role="menuitem"
-                        disabled={isCurrent}
+                        disabled={isCurrent || isPending}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!isCurrent) handleStatusChange(col.id);
                         }}
                         className={cn(
-                          "w-full flex items-center gap-2 pl-6 pr-3 py-1.5 text-xs transition-colors cursor-pointer min-h-[40px] sm:min-h-[32px] text-left",
+                          "w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors cursor-pointer min-h-[40px] sm:min-h-[32px] text-left",
                           isCurrent
-                            ? "text-primary font-semibold cursor-default"
+                            ? "text-primary font-semibold cursor-default bg-primary/10"
                             : "text-foreground hover:bg-muted/60"
                         )}
                       >
@@ -528,8 +758,8 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
                         />
                         {STATUS_LABELS[col.id] ?? col.title}
                         {isCurrent && (
-                          <span className="ml-auto text-muted-foreground font-normal">
-                            Hiện tại
+                          <span className="ml-auto text-primary font-bold">
+                            ✓
                           </span>
                         )}
                       </button>
@@ -548,16 +778,44 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
                   e.stopPropagation();
                   setMenuOpen(false);
                   setStatusSubmenuOpen(false);
+                  triggerRef.current?.focus();
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-muted/60 transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px] text-left"
               >
                 <X strokeWidth={1.5} className="size-3" />
                 Đóng
               </button>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>
+
+      {/* Row 1.5: Pending indicator & error message */}
+      {isPending && (
+        <div className="flex items-center gap-1.5 text-xs text-primary font-medium bg-primary/5 px-2 py-0.5 rounded">
+          <Clock className="size-3 animate-spin shrink-0" />
+          <span>Đang cập nhật…</span>
+        </div>
+      )}
+      {errorMessage && (
+        <div className="flex items-center gap-1.5 text-xs text-destructive bg-destructive/10 px-2 py-0.5 rounded">
+          <AlertCircle className="size-3 shrink-0" />
+          <span className="truncate flex-1">{errorMessage}</span>
+          {lastAttemptedStatus && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onStatusChange?.(item.id, lastAttemptedStatus);
+              }}
+              className="shrink-0 underline underline-offset-2 hover:no-underline cursor-pointer"
+            >
+              Thử lại
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Row 2: Category (unit) · Assignee */}
       <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
@@ -622,7 +880,7 @@ function KanbanCard({ item, onSelectTask, onStatusChange }: KanbanCardProps) {
 export interface TaskKanbanBoardProps {
   tasks: SchoolTask[];
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
-  onStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
+  onStatusChange?: (taskId: string, newStatus: TaskStatus) => Promise<unknown> | void;
   onAddTask?: (
     initialLevel?: "TRUONG" | "DON_VI",
     initialParentTaskId?: string
@@ -644,6 +902,44 @@ export function TaskKanbanBoard({
   className,
 }: TaskKanbanBoardProps) {
   const deferredSearchQuery = React.useDeferredValue(searchQuery);
+  const [transitionState, setTransitionState] = React.useState<KanbanTransitionState>({
+    pendingTaskIds: {},
+    optimisticStatuses: {},
+    taskErrors: {},
+    lastAttemptedStatuses: {},
+  });
+  // Keep a ref so handleStatusChangeInternal always reads latest state
+  // without stale closure, enabling correct concurrent pending guards.
+  const transitionStateRef = React.useRef(transitionState);
+  transitionStateRef.current = transitionState;
+
+  // Reconcile external tasks to clear obsolete optimistic overrides
+  React.useEffect(() => {
+    setTransitionState((prev) => {
+      let changed = false;
+      const nextOpt = { ...prev.optimisticStatuses };
+      for (const st of tasks) {
+        if (nextOpt[st.id] && nextOpt[st.id] === st.status) {
+          delete nextOpt[st.id];
+          changed = true;
+        }
+        if (st.subTasks) {
+          for (const sub of st.subTasks) {
+            if (nextOpt[sub.id] && nextOpt[sub.id] === sub.status) {
+              delete nextOpt[sub.id];
+              changed = true;
+            }
+          }
+        }
+      }
+      return changed ? { ...prev, optimisticStatuses: nextOpt } : prev;
+    });
+  }, [tasks]);
+
+  const effectiveTasks = React.useMemo(() => {
+    return applyOptimisticOverrides(tasks, transitionState.optimisticStatuses);
+  }, [tasks, transitionState.optimisticStatuses]);
+
   const [colLimits, setColLimits] = React.useState<Record<TaskStatus, number>>({
     NEW: 30,
     NOT_STARTED: 30,
@@ -684,21 +980,90 @@ export function TaskKanbanBoard({
 
   const groupedTasks = React.useMemo(() => {
     return groupTasksByStatus(
-      tasks,
+      effectiveTasks,
       levelFilter,
       categoryFilter,
       deferredSearchQuery
     );
-  }, [tasks, levelFilter, categoryFilter, deferredSearchQuery]);
+  }, [effectiveTasks, levelFilter, categoryFilter, deferredSearchQuery]);
 
   const allFilteredItems = React.useMemo(() => {
     return filterKanbanItems(
-      tasks,
+      effectiveTasks,
       levelFilter,
       categoryFilter,
       deferredSearchQuery
     );
-  }, [tasks, levelFilter, categoryFilter, deferredSearchQuery]);
+  }, [effectiveTasks, levelFilter, categoryFilter, deferredSearchQuery]);
+
+  const handleStatusChangeInternal = React.useCallback(
+    async (taskId: string, newStatus: TaskStatus) => {
+      // Read latest state from ref to avoid stale closure with concurrent transitions
+      const latestState = transitionStateRef.current;
+      if (latestState.pendingTaskIds[taskId]) return;
+
+      const targetItem = allFilteredItems.find((i) => i.id === taskId);
+      const currentStatus = targetItem?.status ?? "NEW";
+      if (currentStatus === newStatus) return;
+
+      // 1. Immediately set pending & optimistic state in React state and ref
+      const inFlightState: KanbanTransitionState = {
+        ...latestState,
+        pendingTaskIds: { ...latestState.pendingTaskIds, [taskId]: true },
+        optimisticStatuses: { ...latestState.optimisticStatuses, [taskId]: newStatus },
+        taskErrors: { ...latestState.taskErrors, [taskId]: null },
+        lastAttemptedStatuses: { ...latestState.lastAttemptedStatuses },
+      };
+      transitionStateRef.current = inFlightState;
+      setTransitionState(inFlightState);
+
+      // 2. Perform transition
+      const transitionResult = await executeKanbanStatusTransition(
+        taskId,
+        newStatus,
+        currentStatus,
+        latestState,
+        onStatusChange
+      );
+
+      // 3. Update state with functional updater and proper key deletion
+      setTransitionState((prev) => {
+        const nextPending = { ...prev.pendingTaskIds };
+        delete nextPending[taskId];
+
+        const nextOptimistic = { ...prev.optimisticStatuses };
+        if (!transitionResult.ok) {
+          delete nextOptimistic[taskId];
+        } else {
+          nextOptimistic[taskId] = newStatus;
+        }
+
+        const nextErrors = { ...prev.taskErrors };
+        if (transitionResult.ok) {
+          delete nextErrors[taskId];
+        } else if (transitionResult.error) {
+          nextErrors[taskId] = transitionResult.error;
+        }
+
+        const nextLastAttempted = { ...prev.lastAttemptedStatuses };
+        if (transitionResult.ok) {
+          delete nextLastAttempted[taskId];
+        } else {
+          nextLastAttempted[taskId] = newStatus;
+        }
+
+        const next: KanbanTransitionState = {
+          pendingTaskIds: nextPending,
+          optimisticStatuses: nextOptimistic,
+          taskErrors: nextErrors,
+          lastAttemptedStatuses: nextLastAttempted,
+        };
+        transitionStateRef.current = next;
+        return next;
+      });
+    },
+    [allFilteredItems, onStatusChange]
+  );
 
   const totalExtractedCount = allFilteredItems.length;
   const totalVisibleCount =
@@ -771,7 +1136,7 @@ export function TaskKanbanBoard({
                 columnRefs.current[idx] = el;
               }}
               className={cn(
-                "w-[86vw] max-w-[340px] shrink-0 snap-center flex flex-col md:w-auto md:max-w-none rounded-2xl border border-border/60 bg-muted/20 backdrop-blur-xs p-3.5 transition-all",
+                "w-[86vw] max-w-[340px] shrink-0 snap-center flex flex-col md:w-auto md:max-w-none rounded-2xl border border-border/60 bg-muted/30 p-3.5 transition-all",
                 col.bgClass
               )}
             >
@@ -819,8 +1184,11 @@ export function TaskKanbanBoard({
                       <KanbanCard
                         key={item.id}
                         item={item}
+                        isPending={Boolean(transitionState.pendingTaskIds[item.id])}
+                        errorMessage={transitionState.taskErrors[item.id]}
+                        lastAttemptedStatus={transitionState.lastAttemptedStatuses?.[item.id] ?? null}
                         onSelectTask={onSelectTask}
-                        onStatusChange={onStatusChange}
+                        onStatusChange={handleStatusChangeInternal}
                       />
                     ))}
                     {colTasks.length > limit && (

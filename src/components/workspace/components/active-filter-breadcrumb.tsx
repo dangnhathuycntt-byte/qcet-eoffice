@@ -302,7 +302,7 @@ export function ActiveFilterBreadcrumb({
           type="button"
           data-slot="clear-all-filters"
           onClick={handleClearAll}
-          className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 transition-colors focus:outline-hidden touch-manipulation cursor-pointer"
+          className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 active:scale-[0.96] border border-rose-200/80 transition-all focus:outline-hidden touch-manipulation cursor-pointer"
         >
           <RotateCcw className="size-3" strokeWidth={1.5} />
           <span>Xóa lọc</span>

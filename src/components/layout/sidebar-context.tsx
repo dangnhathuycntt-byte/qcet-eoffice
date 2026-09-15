@@ -91,12 +91,12 @@ export interface SidebarItem {
 export const MODULE_NAV_ITEMS: Record<NavigationModule, SidebarItem[]> = {
   work: [
     {
-      id: "desk",
-      label: "Bàn làm việc",
-      href: "/",
-      icon: LayoutDashboard,
-      section: "personal",
-      badgeKey: "myFocus",
+      id: "tasks",
+      label: "Nhiệm vụ",
+      href: "/tasks",
+      icon: CheckSquare,
+      section: "workspace",
+      badgeKey: "allTasks",
     },
     {
       id: "calendar",
@@ -113,14 +113,6 @@ export const MODULE_NAV_ITEMS: Record<NavigationModule, SidebarItem[]> = {
       icon: Bell,
       section: "personal",
       badgeKey: "notifications",
-    },
-    {
-      id: "tasks",
-      label: "Kho nhiệm vụ",
-      href: "/tasks",
-      icon: CheckSquare,
-      section: "workspace",
-      badgeKey: "allTasks",
     },
   ],
   documents: [
@@ -420,8 +412,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
 ];
 
 export const SIDEBAR_ZONE_ITEMS: NavigationItem[] = [
-  { href: "/", label: "Bàn làm việc", icon: LayoutDashboard, zone: "dashboard" },
-  { href: "/tasks", label: "Kho nhiệm vụ", icon: CheckSquare, zone: "tasks" },
+  { href: "/tasks", label: "Nhiệm vụ", icon: CheckSquare, zone: "tasks" },
   { href: "/calendar", label: "Lịch công tác", icon: Calendar, zone: "calendar" },
   { href: "/documents", label: "Sổ văn bản đến/đi", icon: FileText, zone: "documents" },
   { href: "/org", label: "Sơ đồ tổ chức & Nhân sự", icon: Network, zone: "org" },

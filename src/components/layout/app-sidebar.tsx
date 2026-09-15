@@ -277,7 +277,7 @@ export function AppSidebar() {
         {/* Brand Header: 48px height (h-12) */}
         {isCollapsed ? (
           <div className="h-12 border-b border-border/50 flex items-center justify-center shrink-0 w-full">
-            <Link href="/" className="flex items-center justify-center" aria-label="QCET Trang chủ">
+            <Link href="/tasks" className="flex items-center justify-center" aria-label="QCET Trang chủ">
               <Image
                 src="/logo-qcet.png"
                 alt="QCET Logo"
@@ -290,7 +290,7 @@ export function AppSidebar() {
           </div>
         ) : (
           <div className="h-12 border-b border-border/50 px-3 flex items-center shrink-0 min-w-0">
-            <Link href="/" className="flex items-center gap-2.5 min-w-0 group" aria-label="QCET Trang chủ">
+            <Link href="/tasks" className="flex items-center gap-2.5 min-w-0 group" aria-label="QCET Trang chủ">
               <Image
                 src="/logo-qcet.png"
                 alt="QCET Logo"

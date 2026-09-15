@@ -87,13 +87,13 @@ function StatusIcon({ state, className }: { state: CalendarAttentionState; class
     case "overdue":
       return <AlertTriangle className={cn(common, "text-rose-600")} aria-hidden="true" />;
     case "waiting":
-      return <Clock3 className={cn(common, "text-amber-600")} aria-hidden="true" />;
+      return <Clock3 className={cn(common, "text-amber-700")} aria-hidden="true" />;
     case "due_today":
       return <Clock3 className={cn(common, "text-orange-600")} aria-hidden="true" />;
     case "in_progress":
       return <CircleDot className={cn(common, "text-blue-600")} aria-hidden="true" />;
     case "completed":
-      return <CheckCircle2 className={cn(common, "text-emerald-600")} aria-hidden="true" />;
+      return <CheckCircle2 className={cn(common, "text-emerald-700")} aria-hidden="true" />;
     default:
       return <CircleDot className={cn(common, "text-muted-foreground")} aria-hidden="true" />;
   }
@@ -504,9 +504,9 @@ export function CalendarMonthGrid({
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-t border-border/50 bg-muted/20 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">Trạng thái:</span>
           <div className="flex flex-wrap items-center gap-4">
-            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="size-3.5 text-emerald-600" aria-hidden="true" />Hoàn thành</span>
+            <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="size-3.5 text-emerald-700" aria-hidden="true" />Hoàn thành</span>
             <span className="inline-flex items-center gap-1.5"><CircleDot className="size-3.5 text-blue-600" aria-hidden="true" />Đang thực hiện</span>
-            <span className="inline-flex items-center gap-1.5"><Clock3 className="size-3.5 text-amber-600" aria-hidden="true" />Chờ xét duyệt</span>
+            <span className="inline-flex items-center gap-1.5"><Clock3 className="size-3.5 text-amber-700" aria-hidden="true" />Chờ xét duyệt</span>
             <span className="inline-flex items-center gap-1.5"><AlertTriangle className="size-3.5 text-rose-600" aria-hidden="true" />Quá hạn</span>
             <span className="inline-flex items-center gap-1.5"><CalendarIcon className="size-3.5 text-sky-600" aria-hidden="true" />Sự kiện</span>
           </div>

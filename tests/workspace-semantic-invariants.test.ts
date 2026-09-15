@@ -514,8 +514,8 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
         "Của tôi must correspond to scope-tab-my"
       );
       assert.ok(
-        rendered.includes("Của tôi"),
-        "ScopeSwitcher must include 'Của tôi' label"
+        rendered.includes("Cá nhân") || rendered.includes("Của tôi"),
+        "ScopeSwitcher must include 'Cá nhân' or 'Của tôi' label"
       );
     });
 
@@ -854,10 +854,10 @@ describe("Workspace Semantic Invariants - Dimension Orthogonality", () => {
         })
       );
 
-      // Verify 'Của tôi' is present in ScopeSwitcher
+      // Verify 'Cá nhân' / 'Của tôi' is present in ScopeSwitcher
       assert.ok(
-        scopeMarkup.includes("Của tôi"),
-        "ScopeSwitcher must include 'Của tôi' label"
+        scopeMarkup.includes("Cá nhân") || scopeMarkup.includes("Của tôi"),
+        "ScopeSwitcher must include 'Cá nhân' or 'Của tôi' label"
       );
       assert.ok(
         scopeMarkup.includes('id="scope-tab-my"'),

@@ -4,6 +4,7 @@ import { Landmark, Building2, User, ArrowRightLeft } from "lucide-react";
 import { UserRole } from "@/types/auth";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
+import { clientEnv } from "@/config/env.client";
 
 export interface RoleConfigItem {
   role: UserRole;
@@ -35,7 +36,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfigItem> = {
     role: "STAFF",
     label: "Chuyên viên",
     shortLabel: "Chuyên viên",
-    description: "Gi��ng viên / Chuyên viên thực hiện",
+    description: "Giảng viên / Chuyên viên thực hiện",
     icon: User,
     color: "text-emerald-700 bg-emerald-500/10 border-emerald-500/30",
   },
@@ -51,7 +52,7 @@ export const ROLE_ORDER: UserRole[] = ["ADMIN", "MANAGER", "STAFF"];
  * Chỉ hiển thị khi NODE_ENV === 'development'.
  */
 export function RoleSwitcherPill({ className }: { className?: string }) {
-  if (process.env.NODE_ENV !== "development") return null;
+  if (clientEnv.NODE_ENV !== "development") return null;
 
   return <RoleSwitcherPillInner className={className} />;
 }

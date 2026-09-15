@@ -47,24 +47,24 @@ describe("C19 — date/time formatting utilities (src/lib/format)", () => {
   });
 
   it("emits the fallback for missing or invalid input", () => {
-    assert.equal(formatDisplayDate(null), "—");
-    assert.equal(formatDisplayDate("not-a-date"), "—");
-    assert.equal(formatDateTime(undefined), "—");
-    assert.equal(formatDateSpan("2026-08-25", null), "—");
+    assert.equal(formatDisplayDate(null), "-");
+    assert.equal(formatDisplayDate("not-a-date"), "-");
+    assert.equal(formatDateTime(undefined), "-");
+    assert.equal(formatDateSpan("2026-08-25", null), "-");
   });
 
   it("rejects out-of-range components instead of rendering a fabricated date", () => {
     // Shape-valid but calendar-impossible values must fall back rather than render.
     assert.equal(toIctDateTimeParts("2026-13-40"), null);
     assert.equal(toIctDateTimeParts("2026-09-00"), null);
-    assert.equal(formatDisplayDate("2026-13-40"), "—");
-    assert.equal(formatIsoDate("2026-09-00"), "—");
-    assert.equal(formatDisplayDate("2026-02-30"), "—");
-    assert.equal(formatCompactDate("2026-13-40"), "—");
-    assert.equal(formatRelativeDate("2026-13-40", "2026-09-09"), "—");
+    assert.equal(formatDisplayDate("2026-13-40"), "-");
+    assert.equal(formatIsoDate("2026-09-00"), "-");
+    assert.equal(formatDisplayDate("2026-02-30"), "-");
+    assert.equal(formatCompactDate("2026-13-40"), "-");
+    assert.equal(formatRelativeDate("2026-13-40", "2026-09-09"), "-");
     // Naive datetime with out-of-range time components fails the same way.
-    assert.equal(formatDateTime("2026-09-25T25:99"), "—");
-    assert.equal(formatTime("2026-09-25T24:00"), "—");
+    assert.equal(formatDateTime("2026-09-25T25:99"), "-");
+    assert.equal(formatTime("2026-09-25T24:00"), "-");
     // A valid value of the same shape still parses (no over-rejection).
     assert.notEqual(toIctDateTimeParts("2026-09-25"), null);
     assert.equal(formatDisplayDate("2026-09-25"), "25/09/2026");
@@ -72,8 +72,8 @@ describe("C19 — date/time formatting utilities (src/lib/format)", () => {
 
   it("falls back when a date-only value is passed to a time renderer (no misleading 00:00)", () => {
     // A DB date-only value (e.g. dueDate 'YYYY-MM-DD') carries no time-of-day.
-    assert.equal(formatTime("2026-09-25"), "—");
-    assert.equal(formatDateTime("2026-09-25"), "—");
+    assert.equal(formatTime("2026-09-25"), "-");
+    assert.equal(formatDateTime("2026-09-25"), "-");
     // A genuine ICT-midnight instant does carry a time-of-day and still renders 00:00.
     const midnightIct = new Date("2026-09-24T17:00:00Z"); // 00:00 ICT on 25/09
     assert.equal(formatTime(midnightIct), "00:00");
@@ -101,7 +101,7 @@ describe("C19 — date/time formatting utilities (src/lib/format)", () => {
     const sysRef = getSystemReferenceDate();
     assert.equal(formatRelativeDate(sysRef), "Hôm nay");
     assert.equal(daysUntil(sysRef), 0);
-    assert.equal(formatRelativeDate(null), "—");
+    assert.equal(formatRelativeDate(null), "-");
   });
 });
 

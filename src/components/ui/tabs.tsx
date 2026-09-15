@@ -188,7 +188,7 @@ function TabsTrigger({
         <m.div
           layoutId={layoutId}
           data-slot="tabs-indicator"
-          transition={motionTransition.micro}
+          transition={motionTransition.snappySpring}
           className={cn(
             "absolute pointer-events-none",
             variant === "line"

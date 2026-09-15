@@ -133,7 +133,7 @@ describe("Task Table Engine - Foundations & Utilities", () => {
       const formatted = formatTableDate("2026-09-09");
       assert.ok(formatted.includes("09") || formatted.includes("9"));
       assert.ok(formatted.includes("2026"));
-      assert.equal(formatTableDate("invalid-date"), "—");
+      assert.equal(formatTableDate("invalid-date"), "-");
     });
 
     it("getDaysDifference calculates days remaining or overdue correctly", () => {
@@ -1203,8 +1203,8 @@ describe("Task Table Presentation Components - Unit & Behavior Suite", () => {
 
     it("formats table dates cleanly to DD/MM/YYYY", () => {
       assert.equal(formatTableDate("2026-09-30"), "30/09/2026");
-      assert.equal(formatTableDate(null), "—");
-      assert.equal(formatTableDate(""), "—");
+      assert.equal(formatTableDate(null), "-");
+      assert.equal(formatTableDate(""), "-");
     });
   });
 

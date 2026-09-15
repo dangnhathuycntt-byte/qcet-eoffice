@@ -86,8 +86,9 @@ export const QCET_TOKENS = {
     glowPrimary: "shadow-glow-primary",
   },
   typography: {
-    fontSans: "var(--font-sans), 'Be Vietnam Pro', 'Plus Jakarta Sans', system-ui, sans-serif",
-    fontMono: "var(--font-mono), 'JetBrains Mono', monospace",
+    fontSans: "var(--font-sans), 'Be Vietnam Pro', system-ui, sans-serif",
+    fontHeading: "var(--font-heading), var(--font-sans), 'Be Vietnam Pro', system-ui, sans-serif",
+    fontMono: "var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
   },
 } as const;
 

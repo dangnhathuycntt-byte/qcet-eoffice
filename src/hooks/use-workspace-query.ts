@@ -33,6 +33,8 @@ export interface SetScopeOptions extends NavigationOptions {
 
 export interface ResetFiltersOptions extends NavigationOptions {
   preserveScope?: boolean;
+  preservePeriod?: boolean;
+  preserveView?: boolean;
 }
 
 export interface UseWorkspaceQueryReturn {
@@ -88,8 +90,8 @@ export function useWorkspaceQuery(
   const rawPathname = React.useContext(PathnameContext);
 
   const searchParams = React.useMemo(() => {
-    if (rawSearchParams) return new URLSearchParams(rawSearchParams);
     if (typeof window !== "undefined") return new URLSearchParams(window.location.search);
+    if (rawSearchParams) return new URLSearchParams(rawSearchParams);
     return new URLSearchParams();
   }, [rawSearchParams]);
 
@@ -115,7 +117,7 @@ export function useWorkspaceQuery(
   // Memoized parsing of active search parameters, reacting to Next.js searchParams or browser popstate
   const queryState = React.useMemo(() => {
     const effectiveParams =
-      typeof window !== "undefined" && popstateCount > 0
+      typeof window !== "undefined"
         ? new URLSearchParams(window.location.search)
         : searchParams;
     return parseWorkspaceQuery(effectiveParams, {
@@ -132,7 +134,7 @@ export function useWorkspaceQuery(
       navOptions?: NavigationOptions
     ) => {
       const effectiveSearchParams =
-        typeof window !== "undefined" && popstateCount > 0
+        typeof window !== "undefined"
           ? new URLSearchParams(window.location.search)
           : searchParams;
 
@@ -147,6 +149,14 @@ export function useWorkspaceQuery(
       const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
       const shouldReplace = navOptions?.replace ?? true;
 
+      // Do not add duplicate history entry if targetUrl matches current browser URL
+      if (!shouldReplace && typeof window !== "undefined") {
+        const currentTarget = `${window.location.pathname}${window.location.search || ""}`;
+        if (targetUrl === currentTarget) {
+          return;
+        }
+      }
+
       // Native shallow routing via history API if requested
       if (navOptions?.shallow && typeof window !== "undefined") {
         if (shouldReplace) {
@@ -154,6 +164,7 @@ export function useWorkspaceQuery(
         } else {
           window.history.pushState(null, "", targetUrl);
         }
+        window.dispatchEvent(new Event("popstate"));
         setPopstateCount((c) => c + 1);
         return;
       }
@@ -214,7 +225,7 @@ export function useWorkspaceQuery(
         }
       }
 
-      dispatchUpdate(patch, navOptions);
+      dispatchUpdate(patch, { shallow: true, replace: true, ...navOptions });
     },
     [queryState, dispatchUpdate, unitParamKey]
   );
@@ -307,7 +318,7 @@ export function useWorkspaceQuery(
           ...queryState,
           view,
         },
-        navOptions
+        { shallow: true, replace: true, ...navOptions }
       );
     },
     [queryState, dispatchUpdate]
@@ -346,17 +357,21 @@ export function useWorkspaceQuery(
   const resetFilters = React.useCallback(
     (navOptions?: ResetFiltersOptions) => {
       const preserveScope = navOptions?.preserveScope ?? false;
+      const preservePeriod = navOptions?.preservePeriod ?? false;
+      const preserveView = navOptions?.preserveView ?? false;
 
       const resetState: Partial<WorkspaceFilterState> = {
         scope: preserveScope ? queryState.scope : (defaultScope ?? "school"),
         dept: preserveScope ? queryState.dept : undefined,
         unit: preserveScope ? queryState.unit : undefined,
         unitId: preserveScope ? queryState.unitId : undefined,
-        month: "ALL",
-        date: undefined,
+        month: preservePeriod ? queryState.month : "ALL",
+        date: preservePeriod ? queryState.date : undefined,
         status: "ALL",
         attention: undefined,
-        view: defaultView ?? (isCalendar ? "month" : "table"),
+        view: preserveView
+          ? (queryState.view || defaultView || (isCalendar ? "month" : "table"))
+          : (defaultView ?? (isCalendar ? "month" : "table")),
         q: undefined,
         query: undefined,
         taskId: undefined,

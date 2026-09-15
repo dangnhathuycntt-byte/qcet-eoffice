@@ -3,67 +3,54 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import {
-  ShieldCheck,
-  AlertCircle,
-  AlertTriangle,
-  Info,
-  X,
-  ArrowRight,
-} from "lucide-react";
+import * as m from "motion/react-m";
+import { AlertCircle, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
-import { resolveOAuthError, sanitizeRedirectUrl } from "@/lib/login-helpers";
-import { cn } from "@/lib/utils";
+import {
+  resolveOAuthError,
+  sanitizeRedirectUrl,
+  shouldShowLoginSkeleton,
+} from "@/lib/login-helpers";
 
-/**
- * Pixel-perfect Skeleton that mirrors LoginFormContent geometry 1:1
- * Guarantees zero Cumulative Layout Shift (CLS) during SSR/CSR hydration.
- */
 function LoginSkeleton() {
   return (
-    <div className="relative flex min-h-[100dvh] w-full flex-col justify-between bg-background">
-      {/* Background patterns */}
-      <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] opacity-35 pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,rgba(14,83,180,0.05),transparent_70%)] pointer-events-none" />
-
-      {/* Top Header Skeleton */}
-      <header className="relative z-10 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="size-9 rounded-full bg-secondary/60 animate-pulse" />
-            <div className="space-y-1">
-              <div className="h-3 w-56 bg-secondary/50 rounded-md animate-pulse" />
-              <div className="h-3.5 w-28 bg-secondary/70 rounded-md animate-pulse" />
-            </div>
-          </div>
-          <div className="h-3.5 w-32 bg-secondary/30 rounded-md animate-pulse hidden sm:block" />
-        </div>
-      </header>
-
-      {/* Center Card Skeleton */}
-      <div className="relative z-10 flex flex-1 items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-[420px] rounded-2xl border border-border/80 bg-card/95 p-6 sm:p-7 shadow-xs space-y-5">
-          <div className="space-y-2 text-center flex flex-col items-center">
-            <div className="h-6 w-44 bg-secondary/70 rounded-lg animate-pulse" />
-            <div className="h-4 w-64 bg-secondary/40 rounded-md animate-pulse" />
-          </div>
-          <div className="h-12 w-full bg-secondary/50 rounded-xl animate-pulse" />
-          <div className="h-4 w-48 mx-auto bg-secondary/40 rounded-md animate-pulse" />
-          <div className="pt-2 border-t border-border/60">
-            <div className="h-3.5 w-56 mx-auto bg-secondary/30 rounded-md animate-pulse" />
+    <main
+      id="main-content"
+      tabIndex={-1}
+      role="main"
+      aria-label="Đang tải trang đăng nhập"
+      className="flex min-h-screen w-full bg-background outline-none"
+    >
+      {/* Left Branding Panel Skeleton (~46% desktop) */}
+      <div
+        aria-hidden="true"
+        className="hidden lg:flex lg:w-[46%] xl:w-[45%] p-4 lg:p-5 xl:p-6 select-none"
+      >
+        <div className="w-full h-full flex flex-col justify-end p-8 lg:p-10 xl:p-12 rounded-3xl bg-slate-900">
+          <div className="space-y-3">
+            <div className="h-7 w-64 bg-slate-800 rounded animate-pulse" />
+            <div className="h-4 w-48 bg-slate-800/60 rounded animate-pulse" />
+            <div className="h-3 w-48 bg-slate-800/40 rounded animate-pulse pt-4" />
           </div>
         </div>
       </div>
 
-      {/* Bottom Footer Skeleton */}
-      <footer className="relative z-10 w-full border-t border-border/60 bg-background/80 backdrop-blur-md py-3 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="h-3.5 w-64 bg-secondary/40 rounded-md animate-pulse" />
-          <div className="h-3.5 w-48 bg-secondary/30 rounded-md animate-pulse hidden sm:block" />
+      {/* Right Login Area Skeleton (~54% on desktop, 100% on mobile) */}
+      <div className="w-full lg:w-[54%] xl:w-[55%] flex flex-col items-center justify-center p-6 sm:p-12">
+        <div className="flex flex-col items-center text-center max-w-[360px] w-full px-6 sm:px-0 -translate-y-6">
+          <div className="size-16 rounded-full bg-muted animate-pulse" />
+          <div className="mt-3 space-y-1 flex flex-col items-center">
+            <div className="h-4 w-28 bg-muted rounded-md animate-pulse" />
+            <div className="h-4 w-48 bg-muted/80 rounded-md animate-pulse" />
+          </div>
+          <div className="mt-7 h-8 w-64 bg-muted rounded-md animate-pulse" />
+          <div className="mt-2 h-4 w-56 bg-muted/70 rounded-md animate-pulse" />
+          <div className="mt-6 h-12 w-full bg-muted rounded-md animate-pulse" />
+          <div className="mt-6 h-3.5 w-44 bg-muted rounded-md animate-pulse" />
         </div>
-      </footer>
-    </div>
+      </div>
+    </main>
   );
 }
 
@@ -71,25 +58,24 @@ function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const targetUrl = React.useMemo(() => {
-    return sanitizeRedirectUrl(searchParams.get("redirect") || searchParams.get("callbackUrl"));
+    return sanitizeRedirectUrl(
+      searchParams.get("returnTo") ||
+      searchParams.get("redirect") ||
+      searchParams.get("callbackUrl")
+    );
   }, [searchParams]);
 
-  // Auto-redirect once server-authenticated. Uses `isAuthenticated` (server
-  // session confirmed) rather than `user` (which can be a stale offline-cached
-  // identity after logout). router.refresh() flushes the Next.js RSC router
-  // cache so the target page sees the new session cookie immediately — without
-  // it, a stale unauthenticated render may linger and the server can redirect
-  // back to /login even though the cookie is already set.
+  // Auto-redirect if already authenticated
   React.useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      router.refresh();
-      router.replace(targetUrl);
+      window.location.href = targetUrl;
     }
-  }, [isLoading, isAuthenticated, user, router, targetUrl]);
+  }, [isLoading, isAuthenticated, user, targetUrl]);
 
-  // OAuth Error handling from URL params
+  // OAuth Error handling from URL query parameters
   const errorParam = searchParams.get("error");
   const emailParam = searchParams.get("email");
   const [dismissedOAuthError, setDismissedOAuthError] = React.useState(false);
@@ -104,162 +90,191 @@ function LoginFormContent() {
     }
   }, [errorParam]);
 
-  if (isLoading || user) {
+  // Only show skeleton if already authenticated and redirecting
+  if (isAuthenticated && Boolean(user)) {
     return <LoginSkeleton />;
   }
 
   return (
     <main
       id="main-content"
+      tabIndex={-1}
       role="main"
       aria-label="Trang đăng nhập QCET E-Office"
-      className="relative flex min-h-[100dvh] w-full flex-col justify-between bg-background selection:bg-primary/15 selection:text-primary"
+      className="flex min-h-screen w-full bg-background selection:bg-primary/15 selection:text-primary outline-none"
     >
-      {/* Blueprint Grid & Academic Blue Ambient Glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] opacity-35 pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_15%,rgba(14,83,180,0.05),transparent_70%)] pointer-events-none" />
-
-      {/* 1. TOP HEADER (Line mỏng, nằm hẳn phía trên) */}
-      <header className="relative z-10 w-full border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* Brand Left: Logo + Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn + QCET E-Office */}
-          <div className="flex items-center gap-3">
+      {/* Desktop Left: Institutional Campus Photography & Brand Statement (~46% desktop, hidden below 1024px / mobile) */}
+      <div
+        aria-hidden="true"
+        className="hidden lg:flex lg:w-[46%] xl:w-[45%] p-4 lg:p-5 xl:p-6 select-none"
+      >
+        <div className="relative w-full h-full flex flex-col justify-end p-8 lg:p-10 xl:p-12 overflow-hidden rounded-3xl bg-slate-950 text-white">
+          {/* Campus Photo Background with Framer Motion gentle zoom entrance - Closer focus on school architecture */}
+          <m.div
+            initial={{ scale: 1.08, opacity: 0 }}
+            animate={{ scale: 1.03, opacity: 1 }}
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-0 size-full"
+          >
             <Image
-              src="/logo-qcet.png"
-              alt="Logo QCET"
-              width={36}
-              height={36}
-              className="size-9 object-contain"
+              src="/campus-qcet.jpg"
+              alt="Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
+              fill
               priority
+              sizes="(min-width: 1024px) 46vw, 100vw"
+              className="object-cover object-[75%_65%]"
             />
-            <div className="flex flex-col justify-center">
-              <span className="text-xs font-semibold text-muted-foreground leading-tight">
-                Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
-              </span>
-              <span className="text-sm font-bold tracking-tight text-foreground font-heading leading-tight">
-                QCET E-Office
-              </span>
-            </div>
-          </div>
+          </m.div>
 
-          {/* Right: Clean text identity, zero decorative pills */}
-          <div className="hidden sm:block text-xs font-medium text-muted-foreground">
-            Hệ thống Quản lý Văn bản & Điều hành
-          </div>
-        </div>
-      </header>
+          {/* Brighter, clearer institutional gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-slate-900/25 z-1" />
 
-      {/* 2. CENTER CONTENT (Chỉ có Login Card ở giữa) */}
-      <div className="relative z-10 flex flex-1 items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-[420px] space-y-4">
-          {/* OAuth Error Alert if any */}
-          {oauthError && !dismissedOAuthError && (
-            <div
-              role={oauthError.variant === "neutral" ? "status" : "alert"}
-              className={cn(
-                "rounded-xl border p-3.5 text-xs shadow-xs animate-in fade-in transition-all",
-                oauthError.variant === "amber" &&
-                  "border-amber-300/80 bg-amber-50/90 text-amber-950",
-                oauthError.variant === "red" &&
-                  "border-red-200 bg-red-50/90 text-red-950",
-                oauthError.variant === "neutral" &&
-                  "border-border/80 bg-secondary/60 text-secondary-foreground"
-              )}
-            >
-              <div className="flex items-start gap-2.5">
-                {oauthError.variant === "amber" && (
-                  <AlertTriangle
-                    className="size-4 shrink-0 text-amber-600 mt-0.5"
-                    strokeWidth={1.5}
-                  />
-                )}
-                {oauthError.variant === "red" && (
-                  <AlertCircle
-                    className="size-4 shrink-0 text-red-600 mt-0.5"
-                    strokeWidth={1.5}
-                  />
-                )}
-                {oauthError.variant === "neutral" && (
-                  <Info
-                    className="size-4 shrink-0 text-muted-foreground mt-0.5"
-                    strokeWidth={1.5}
-                  />
-                )}
-
-                <div className="flex-1 space-y-1 text-left">
-                  <div className="font-semibold text-xs">{oauthError.title}</div>
-                  <div className="leading-relaxed opacity-90 text-xs">{oauthError.message}</div>
-
-                  {oauthError.email && (
-                    <div className="pt-0.5">
-                      <span className="inline-block rounded bg-amber-100 px-2 py-0.5 font-mono text-xs font-semibold text-amber-900">
-                        {oauthError.email}
-                      </span>
-                    </div>
-                  )}
-
-                  {oauthError.actionText && oauthError.actionHref && (
-                    <div className="pt-1.5">
-                      <a
-                        href={oauthError.actionHref}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-700 transition-colors shadow-xs"
-                      >
-                        <span>{oauthError.actionText}</span>
-                        <ArrowRight className="size-3" strokeWidth={1.5} />
-                      </a>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setDismissedOAuthError(true)}
-                  className="shrink-0 p-1 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                  aria-label="Đóng thông báo"
-                >
-                  <X className="size-3.5" strokeWidth={1.5} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Centralized Login Card */}
-          <div className="rounded-2xl border border-border/80 bg-card/95 p-6 sm:p-7 shadow-xs backdrop-blur-sm space-y-5">
-            <div className="space-y-1.5 text-center">
-              <h1 className="text-xl font-bold tracking-tight text-foreground font-heading">
-                Đăng nhập hệ thống
-              </h1>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Hệ thống làm việc và điều hành văn bản điện tử dành cho Cán bộ, Giảng viên & Nhân viên Nhà trường.
+          {/* Lower Area: Institutional Statement & Footer */}
+          <m.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 space-y-6"
+          >
+            <div className="space-y-2 max-w-sm">
+              <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-white font-heading leading-snug">
+                Không gian làm việc số của nhà trường
+              </h2>
+              <p className="text-xs xl:text-sm text-white/85 font-medium">
+                Nhiệm vụ · Văn bản · Lịch công tác
               </p>
             </div>
 
-            <GoogleLoginButton />
-
-            <div className="text-center text-xs text-muted-foreground">
-              <span>Áp dụng cho tài khoản email </span>
-              <span className="font-mono font-semibold text-primary">@cdktcnqn.edu.vn</span>
+            <div className="text-[11px] text-white/60 font-medium border-t border-white/10 pt-4">
+              © 2026 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
             </div>
-
-            <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-border/60 text-xs text-muted-foreground">
-              <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" strokeWidth={1.5} />
-              <span>Hệ thống bảo mật sử dụng tài khoản email chính thức của Nhà trường</span>
-            </div>
-          </div>
+          </m.div>
         </div>
       </div>
 
-      {/* 3. BOTTOM FOOTER (Line mỏng, chia đều không dồn nội dung) */}
-      <footer className="relative z-10 w-full border-t border-border/60 bg-background/80 backdrop-blur-md py-3 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
-          <p className="text-center sm:text-left">
-            Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
-          </p>
-          <p className="text-center sm:text-right">
-            Hỗ trợ kỹ thuật: Trung tâm Số & Truyền thông
-          </p>
-        </div>
-      </footer>
+      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (~54% desktop, 100% mobile) */}
+      <div className="w-full lg:w-[54%] xl:w-[55%] flex flex-col items-center justify-center p-6 sm:p-12">
+        <m.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col items-center text-center max-w-[360px] w-full px-6 sm:px-0 -translate-y-6"
+        >
+          {/* 1. Logo gốc 64px */}
+          <m.div
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Image
+              src="/logo-qcet.png"
+              alt="Logo Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
+              width={144}
+              height={144}
+              className="size-16 object-contain select-none"
+              priority
+            />
+          </m.div>
+
+          {/* 2. Tên trường hai dòng (cách logo 12px) */}
+          <m.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-3"
+          >
+            <p className="text-[13.5px] leading-snug text-muted-foreground font-medium">
+              Trường Cao đẳng<br />Kỹ thuật Công nghệ Quy Nhơn
+            </p>
+          </m.div>
+
+          {/* 3. Tiêu đề “Đăng nhập QCET E-Office”, 28px semibold (cách tên trường 28px) */}
+          <m.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-7"
+          >
+            <h1 className="text-[28px] font-semibold tracking-tight text-foreground font-heading leading-tight">
+              Đăng nhập QCET E-Office
+            </h1>
+          </m.div>
+
+          {/* 4. Mô tả 14px: “Sử dụng tài khoản Google được cấp quyền.” (cách tiêu đề 8px) */}
+          <m.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-2"
+          >
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              Sử dụng tài khoản Google được cấp quyền.
+            </p>
+          </m.div>
+
+          {/* OAuth Error / Warning Notice */}
+          {oauthError && !dismissedOAuthError && (
+            <m.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              role="alert"
+              className="mt-5 flex items-start gap-2.5 w-full rounded-lg border border-red-200 bg-red-50/90 p-3 text-xs text-red-900 text-left"
+            >
+              <AlertCircle className="size-4 shrink-0 text-red-600 mt-0.5" strokeWidth={1.5} />
+              <div className="flex-1 space-y-1">
+                <p className="font-semibold">{oauthError.title}</p>
+                <p className="text-[11px] leading-relaxed text-red-800">{oauthError.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDismissedOAuthError(true)}
+                className="shrink-0 p-0.5 text-red-700 hover:text-red-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-xs cursor-pointer transition-colors"
+                aria-label="Đóng thông báo"
+              >
+                <X className="size-3.5" strokeWidth={1.5} />
+              </button>
+            </m.div>
+          )}
+
+          {errorMessage && (
+            <m.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              role="alert"
+              className="mt-5 flex items-start gap-2.5 w-full rounded-lg border border-red-200 bg-red-50/90 p-3 text-xs text-red-900 text-left"
+            >
+              <AlertCircle className="size-4 shrink-0 text-red-600 mt-0.5" strokeWidth={1.5} />
+              <p className="flex-1 text-[11px] leading-relaxed">{errorMessage}</p>
+            </m.div>
+          )}
+
+          {/* 5. Nút Google rộng 100% (cách mô tả 24px) */}
+          <div className="w-full flex justify-center mt-6">
+            <GoogleLoginButton
+              returnTo={targetUrl}
+              onError={(msg) => setErrorMessage(msg)}
+              onSuccess={(url) => {
+                window.location.href = url;
+              }}
+            />
+          </div>
+
+          {/* 6. Dòng hỗ trợ 13px: “Cần trợ giúp? Liên hệ hỗ trợ” (cách nút 24px) */}
+          <div className="mt-6 text-[13px] text-muted-foreground">
+            <p>
+              Cần trợ giúp?{" "}
+              <a
+                href="mailto:support@cdktcnqn.edu.vn"
+                className="text-foreground font-medium underline underline-offset-4 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 rounded-xs transition-colors"
+              >
+                Liên hệ hỗ trợ
+              </a>
+            </p>
+          </div>
+        </m.div>
+      </div>
     </main>
   );
 }

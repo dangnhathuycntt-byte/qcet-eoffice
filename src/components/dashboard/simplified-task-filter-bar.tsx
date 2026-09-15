@@ -247,10 +247,10 @@ export function SimplifiedTaskFilterBar({
                 onClick={() => onStatusChange(pill.id)}
                 aria-pressed={isActive}
                 className={cn(
-                  "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                  "px-3 py-1 text-xs font-medium rounded-md transition-all active:scale-[0.96]",
                   isActive
                     ? "bg-background text-foreground shadow-xs font-heading font-bold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/50 active:bg-background/70"
                 )}
               >
                 {pill.label}
@@ -277,10 +277,10 @@ export function SimplifiedTaskFilterBar({
             aria-expanded={isOpen}
             aria-haspopup="dialog"
             className={cn(
-              "inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors",
+              "inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all active:scale-[0.97]",
               isOpen || activeFilterCount > 0
                 ? "bg-primary/10 border-primary/30 text-primary font-heading font-bold"
-                : "bg-background border-input text-foreground hover:bg-muted/50"
+                : "bg-background border-input text-foreground hover:bg-muted/50 active:bg-muted"
             )}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -403,7 +403,7 @@ export function SimplifiedTaskFilterBar({
               <button
                 type="button"
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground active:text-foreground/70 transition-colors rounded-md px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.5} />
                 <span>Đặt lại bộ lọc</span>
@@ -412,7 +412,7 @@ export function SimplifiedTaskFilterBar({
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                className="px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:bg-primary/80 active:scale-[0.97] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
               >
                 Áp dụng
               </button>

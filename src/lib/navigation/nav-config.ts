@@ -21,10 +21,11 @@ export interface NavItemConfig {
 
 export const NAV_ITEMS: NavItemConfig[] = [
   {
-    id: "desk",
-    label: "Bàn làm việc",
-    href: "/",
-    icon: LayoutDashboard,
+    id: "tasks",
+    label: "Nhiệm vụ",
+    href: "/tasks",
+    icon: CheckSquare,
+    aliases: ["/unit-tasks", "/dashboard", "/workbench"],
   },
   {
     id: "calendar",
@@ -39,13 +40,6 @@ export const NAV_ITEMS: NavItemConfig[] = [
     href: "/notifications",
     icon: Bell,
     badgeKey: "notifications",
-  },
-  {
-    id: "tasks",
-    label: "Quản lý nhiệm vụ",
-    href: "/tasks",
-    icon: CheckSquare,
-    aliases: ["/unit-tasks"],
   },
   {
     id: "documents",

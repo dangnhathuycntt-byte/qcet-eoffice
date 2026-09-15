@@ -1,17 +1,9 @@
 "use client";
 
 import * as React from "react";
-import {
-  ShieldAlert,
-  X,
-  Database,
-  ArrowRight,
-  Loader2,
-  Copy,
-  Check,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 import { clientEnv } from "@/config/env.client";
+import { cn } from "@/lib/utils";
 
 // Official Google Multi-Color SVG Icon
 export function GoogleIcon({ className = "size-5" }: { className?: string }) {
@@ -20,6 +12,7 @@ export function GoogleIcon({ className = "size-5" }: { className?: string }) {
       className={className}
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
     >
       <path
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -43,196 +36,192 @@ export function GoogleIcon({ className = "size-5" }: { className?: string }) {
 
 interface GoogleLoginButtonProps {
   className?: string;
+  returnTo?: string;
+  onError?: (errorMsg: string) => void;
+  onSuccess?: (returnUrl: string) => void;
 }
 
-export function GoogleLoginButton({ className }: GoogleLoginButtonProps) {
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: {
+            client_id: string;
+            callback: (response: { credential: string }) => void;
+            auto_select?: boolean;
+            hd?: string;
+            use_fedcm_for_prompt?: boolean;
+          }) => void;
+          renderButton: (
+            parent: HTMLElement,
+            options: {
+              type?: "standard" | "icon";
+              theme?: "outline" | "filled_blue" | "filled_black";
+              size?: "large" | "medium" | "small";
+              text?: "signin_with" | "signup_with" | "continue_with" | "signin";
+              shape?: "rectangular" | "pill" | "circle" | "square";
+              logo_alignment?: "left" | "center";
+              width?: number;
+              locale?: string;
+            }
+          ) => void;
+        };
+      };
+    };
+  }
+}
+
+export function GoogleLoginButton({
+  className,
+  returnTo,
+  onError,
+  onSuccess,
+}: GoogleLoginButtonProps) {
   const [isLoading, setIsLoading] = React.useState(false);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [copied, setCopied] = React.useState(false);
+  const [isGisRendered, setIsGisRendered] = React.useState(false);
+  const gisContainerRef = React.useRef<HTMLDivElement>(null);
 
   const googleClientId = clientEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const isDev = clientEnv.NODE_ENV === "development";
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3001";
-  const callbackUrl = `${origin}/api/auth/callback/google`;
+  // Handle GIS Credential response (ID Token)
+  const handleCredentialResponse = React.useCallback(
+    async (response: { credential: string }) => {
+      if (!response.credential) return;
+      setIsLoading(true);
 
+      try {
+        const res = await fetch("/api/auth/google/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            credential: response.credential,
+            returnTo,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          setIsLoading(false);
+          onError?.(data.error || "Đăng nhập Google không thành công");
+          return;
+        }
+
+        const target = data.returnTo || returnTo || "/tasks";
+        if (onSuccess) {
+          onSuccess(target);
+        } else {
+          window.location.href = target;
+        }
+      } catch {
+        setIsLoading(false);
+        onError?.("Không thể kết nối đến máy chủ xác thực");
+      }
+    },
+    [returnTo, onError, onSuccess]
+  );
+
+  // Initialize Google Identity Services / FedCM
+  React.useEffect(() => {
+    if (!googleClientId || typeof window === "undefined") return;
+
+    let isMounted = true;
+
+    const initGIS = () => {
+      if (!window.google?.accounts?.id || !gisContainerRef.current) return;
+
+      try {
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleCredentialResponse,
+          auto_select: false, // Do not enable automatic account selection per security requirement
+          hd: "cdktcnqn.edu.vn",
+          use_fedcm_for_prompt: true, // Google Identity Services / FedCM standard
+        });
+
+        if (gisContainerRef.current) {
+          gisContainerRef.current.innerHTML = "";
+          window.google.accounts.id.renderButton(gisContainerRef.current, {
+            theme: "outline",
+            size: "large",
+            type: "standard",
+            text: "signin_with",
+            shape: "rectangular",
+            logo_alignment: "center",
+            width: 360,
+            locale: "vi",
+          });
+          if (isMounted) {
+            setIsGisRendered(true);
+          }
+        }
+      } catch {
+        // Fallback to standard redirect button if GIS fails
+      }
+    };
+
+    if (window.google?.accounts?.id) {
+      initGIS();
+    } else {
+      const scriptId = "google-jssdk";
+      if (!document.getElementById(scriptId)) {
+        const script = document.createElement("script");
+        script.id = scriptId;
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = initGIS;
+        document.head.appendChild(script);
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [googleClientId, handleCredentialResponse]);
+
+  // Standard OAuth 2.0 fallback handler
   const handleStartOAuth = () => {
     setIsLoading(true);
-    if (typeof window !== "undefined") {
-      window.location.href = "/api/auth/google";
+    const params = new URLSearchParams();
+    if (returnTo && returnTo !== "/tasks" && returnTo !== "/") {
+      params.set("returnTo", returnTo);
     }
-  };
-
-  const handleClick = () => {
-    if (isDev && !googleClientId) {
-      setIsModalOpen(true);
-      return;
-    }
-    handleStartOAuth();
-  };
-
-  const handleCopyCallback = async () => {
-    try {
-      await navigator.clipboard.writeText(callbackUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard write failed or not supported in current environment
-    }
+    const qs = params.toString();
+    window.location.href = `/api/auth/google${qs ? `?${qs}` : ""}`;
   };
 
   return (
-    <>
-      {/* Google Login Trigger Button */}
-      <button
-        type="button"
-        disabled={isLoading}
-        onClick={handleClick}
-        aria-label="Đăng nhập bằng email trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (@cdktcnqn.edu.vn)"
-        className={cn(
-          "relative flex h-12 w-full select-none items-center justify-center gap-3 rounded-xl border border-border/90 bg-card px-4 text-sm font-semibold text-foreground shadow-xs transition-colors hover:bg-secondary/70 hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed",
-          className
-        )}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="size-5 shrink-0 animate-spin text-primary" strokeWidth={1.5} />
-            <span className="font-semibold text-foreground whitespace-nowrap">
-              Đang chuyển hướng đăng nhập...
-            </span>
-          </>
-        ) : (
-          <>
-            <GoogleIcon className="size-5 shrink-0" />
-            <span className="font-semibold text-foreground whitespace-nowrap">
-              Đăng nhập bằng Email công vụ Nhà trường
-            </span>
-          </>
-        )}
-      </button>
+    <div className={cn("flex flex-col items-center justify-center w-full", className)}>
+      {/* 1. Google Identity Services Container */}
+      <div
+        ref={gisContainerRef}
+        className={cn("min-h-[44px] flex items-center justify-center w-full", !isGisRendered && "hidden")}
+        aria-hidden={!isGisRendered}
+      />
 
-      {/* Guidance Dialog when GOOGLE_CLIENT_ID is unconfigured in development */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs">
-          <div
-            className="fixed inset-0"
-            onClick={() => setIsModalOpen(false)}
-            aria-hidden="true"
-          />
-
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="google-dialog-title"
-            className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150"
-          >
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="absolute right-4 top-4 rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
-              aria-label="Đóng thông báo"
-            >
-              <X className="size-4" strokeWidth={1.5} />
-            </button>
-
-            <div className="flex items-start gap-3.5 mb-4">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                <ShieldAlert className="size-5" strokeWidth={1.5} />
-              </div>
-              <div>
-                <h3
-                  id="google-dialog-title"
-                  className="text-sm font-bold text-foreground"
-                >
-                  Cấu hình dịch vụ đăng nhập Google
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Dịch vụ xác thực tài khoản tập trung dành cho Nhà trường
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs leading-relaxed text-foreground">
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 text-amber-900">
-                <p className="font-semibold">
-                  Môi trường phát triển chưa cấu hình NEXT_PUBLIC_GOOGLE_CLIENT_ID trong tệp .env.local.
-                </p>
-                <p className="mt-1 text-amber-800">
-                  Vui lòng đăng ký OAuth 2.0 Client ID trên Google Cloud Console với Authorized redirect URI bên dưới:
-                </p>
-              </div>
-
-              {/* Callback URL Box with Copy Button */}
-              <div className="rounded-xl border border-border/80 bg-secondary/30 p-3 space-y-1.5">
-                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                  <span>Authorized redirect URI (Callback URL):</span>
-                </div>
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-background p-2">
-                  <code className="flex-1 font-mono text-xs text-foreground select-all break-all">
-                    {callbackUrl}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={handleCopyCallback}
-                    className="flex items-center gap-1 shrink-0 rounded-md bg-secondary px-2.5 py-1 text-xs font-medium text-foreground hover:bg-secondary/80 transition-colors cursor-pointer"
-                    title="Sao chép địa chỉ callback"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="size-3.5 text-emerald-600" strokeWidth={1.5} />
-                        <span className="text-emerald-600 font-semibold">Đã sao chép</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                        <span>Sao chép</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/80 bg-secondary/30 p-3 space-y-2">
-                <div className="flex items-center gap-2 font-medium text-foreground">
-                  <Database className="size-4 text-primary shrink-0" strokeWidth={1.5} />
-                  <span>Quy định tài khoản đăng nhập:</span>
-                </div>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1 text-xs">
-                  <li>
-                    Đăng nhập bằng tài khoản email trường do Nhà trường quản lý.
-                  </li>
-                  <li>
-                    Tài khoản cán bộ, giảng viên có đuôi @cdktcnqn.edu.vn được tự động phân quyền theo đơn vị công tác.
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  handleStartOAuth();
-                }}
-                className="flex items-center gap-1.5 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium text-foreground hover:bg-secondary transition-colors cursor-pointer"
-              >
-                <span>Tiếp tục kết nối xác thực Google</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
-              >
-                <span>Đóng thông báo</span>
-                <ArrowRight className="size-3.5" strokeWidth={1.5} />
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* 2. Accessible institutional button fallback matching Google Sign-In Branding Guidelines */}
+      {(!isGisRendered || isLoading) && (
+        <button
+          type="button"
+          disabled={isLoading}
+          onClick={handleStartOAuth}
+          aria-label="Đăng nhập bằng Google (@cdktcnqn.edu.vn)"
+          className="flex h-11 sm:h-12 w-full max-w-[360px] items-center justify-center gap-2.5 rounded-[4px] border border-[#747775]/40 bg-white px-4 text-sm font-medium text-[#1F1F1F] shadow-xs hover:bg-[#F8FAFC] hover:border-[#747775] active:bg-[#F1F5F9] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all duration-150"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="size-4.5 animate-spin text-primary" strokeWidth={1.5} />
+              <span className="text-sm font-medium text-[#1F1F1F]">Đang chuyển hướng...</span>
+            </>
+          ) : (
+            <>
+              <GoogleIcon className="size-5 shrink-0" />
+              <span className="text-sm font-medium text-[#1F1F1F]">Đăng nhập bằng Google</span>
+            </>
+          )}
+        </button>
       )}
-    </>
+    </div>
   );
 }

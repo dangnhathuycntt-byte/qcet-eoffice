@@ -269,10 +269,10 @@ export function DocumentDetailDialog({
               </p>
               <div className="pt-1 flex items-center justify-end">
                 <Link
-                  href={`/?taskId=${doc.linkedTaskId}`}
+                  href={`/tasks?taskId=${doc.linkedTaskId}`}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:underline"
                 >
-                  <span>Chuyển tới Bàn làm việc</span>
+                  <span>Xem trong Nhiệm vụ</span>
                   <ArrowRight className="size-3.5" strokeWidth={1.5} />
                 </Link>
               </div>

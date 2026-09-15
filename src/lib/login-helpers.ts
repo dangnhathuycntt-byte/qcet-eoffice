@@ -37,23 +37,48 @@ export function resolveDemoUserByRole(_role: UserRole): AuthUser | undefined {
 }
 
 /**
+ * Determines whether the login screen should render the skeleton loading state.
+ * Prevents the critical bug where an unauthenticated visitor with a stale offline-cached
+ * identity (user !== null, isAuthenticated === false) gets trapped in an infinite skeleton loop.
+ */
+export function shouldShowLoginSkeleton({
+  isLoading,
+  isAuthenticated,
+  user,
+}: {
+  isLoading?: boolean;
+  isAuthenticated?: boolean;
+  user?: unknown;
+}): boolean {
+  if (isLoading) return true;
+  if (isAuthenticated && Boolean(user)) return true;
+  return false;
+}
+
+/**
  * Sanitizes redirect target URLs to prevent Open Redirect attacks (OWASP A01/A07).
  * Only allows safe relative paths starting with a single '/' and strictly disallows
  * protocol-relative URLs ('//'), backslashes ('/\'), URI schemes (http:, javascript:), and control characters.
+ * Also prevents redirect loops back to login/auth.
  */
 export function sanitizeRedirectUrl(url: string | null | undefined): string {
-  if (!url) return "/";
+  if (!url) return "/tasks";
   const trimmed = url.trim();
   if (
     trimmed.startsWith("/") &&
     !trimmed.startsWith("//") &&
     !trimmed.startsWith("/\\") &&
     !trimmed.includes("://") &&
-    !/[\r\n\t]/.test(trimmed)
+    !trimmed.includes("\\") &&
+    !/[\r\n\t\0]/.test(trimmed)
   ) {
+    const cleanPath = trimmed.split("?")[0];
+    if (cleanPath === "/" || cleanPath === "/login" || cleanPath.startsWith("/api/auth")) {
+      return "/tasks";
+    }
     return trimmed;
   }
-  return "/";
+  return "/tasks";
 }
 
 export type OAuthErrorVariant = "amber" | "red" | "neutral";

@@ -397,7 +397,7 @@ export function ExecutiveStatStrip({
             className={cn(
               "group relative flex flex-col justify-between p-4 sm:p-5 transition-all duration-200 text-left w-full disabled:cursor-default",
               isClickable &&
-                "cursor-pointer select-none hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:z-20",
+                "cursor-pointer select-none hover:bg-muted/30 active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset focus-visible:z-20",
               !isClickable && "hover:bg-muted/15",
               isActive && (
                 isOverdueAlert

@@ -84,7 +84,7 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
     oklchBg: "oklch(0.96 0.05 75)",
   },
   WAITING_APPROVAL: {
-    label: "Chờ phê duyệt",
+    label: "Cần chỉnh sửa",
     className: "border-amber-500/20 bg-amber-500/10 text-amber-700",
     variant: "amber",
     oklchColor: "oklch(0.74 0.17 75)",
@@ -119,7 +119,7 @@ export const STATUS_BADGE_CONFIGS: Record<string, StatusBadgeConfig> = {
     oklchBg: "oklch(0.95 0.005 250)",
   },
   NOT_STARTED: {
-    label: "Chưa bắt đầu",
+    label: "Mới",
     className: "border-zinc-300 bg-zinc-100 text-zinc-600",
     variant: "outline",
     oklchColor: "oklch(0.55 0.01 250)",
@@ -288,14 +288,14 @@ export const DENSITY_CONFIGS: Record<TableDensity, TableDensityConfig> = {
   },
 };
 
-export const DEFAULT_DENSITY: TableDensity = "comfortable";
+export const DEFAULT_DENSITY: TableDensity = "compact";
 
 /**
- * Cấu hình phân trang mặc định
+ * Cấu hình phân trang mặc định (Linear Standard: 20 rows/page on desktop)
  */
-export const DEFAULT_PAGE_SIZE = 10;
-export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
-export const DEFAULT_PAGE_SIZES = [10, 20, 50, 100];
+export const DEFAULT_PAGE_SIZE = 20;
+export const PAGE_SIZE_OPTIONS = [20, 50, 100];
+export const DEFAULT_PAGE_SIZES = [20, 50, 100];
 
 /**
  * Density mapping compatible with numeric/string row heights
@@ -344,7 +344,7 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
     oklchBg: "oklch(0.96 0.05 75)",
   },
   WAITING_APPROVAL: {
-    label: "Chờ phê duyệt",
+    label: "Cần chỉnh sửa",
     badgeClass: "border-amber-500/20 bg-amber-500/10 text-amber-700",
     borderClass: "border-amber-500/30",
     oklchColor: "oklch(0.74 0.17 75)",
@@ -372,7 +372,7 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
     oklchBg: "oklch(0.96 0.04 25)",
   },
   NOT_STARTED: {
-    label: "Chưa bắt đầu",
+    label: "Mới",
     badgeClass: "border-zinc-300 bg-zinc-100 text-zinc-600",
     borderClass: "border-zinc-300",
     oklchColor: "oklch(0.55 0.01 250)",

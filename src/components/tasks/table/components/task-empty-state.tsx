@@ -15,8 +15,13 @@ export interface TaskEmptyStateProps {
   description?: string;
   searchQuery?: string;
   activeTab?: SmartFilterTab | string;
+  /** attention/workbox filter (e.g. "requires_my_approval", "overdue") — used to determine hasFilterActive */
+  attention?: string;
+  status?: string;
+  academicMonth?: number | "ALL";
   department?: string;
   category?: string;
+  priority?: string;
   userName?: string;
   onResetFilters?: () => void;
   onAddTask?: () => void;
@@ -29,8 +34,12 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   description,
   searchQuery,
   activeTab,
+  attention,
+  status,
+  academicMonth,
   department,
   category,
+  priority,
   userName,
   onResetFilters,
   onAddTask,
@@ -41,6 +50,19 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
   let displayTitle = title;
   let displayDescription = description;
   let isSearchEmpty = Boolean(searchQuery && searchQuery.trim().length > 0);
+
+  const hasFilterActive = Boolean(
+    isSearchEmpty ||
+    (department && department !== "ALL") ||
+    (category && category !== "ALL") ||
+    (priority && priority !== "ALL") ||
+    (status && status !== "ALL" && status !== "all") ||
+    (attention && attention !== "ALL" && attention !== "all") ||
+    (academicMonth !== undefined && academicMonth !== "ALL") ||
+    (activeTab &&
+      activeTab !== "all" &&
+      activeTab !== "ALL")
+  );
 
   if (!displayTitle) {
     if (isSearchEmpty) {
@@ -56,6 +78,24 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       displayTitle = "Không có nhiệm vụ nào quá hạn";
       displayDescription =
         "Tuyệt vời! Tất cả các nhiệm vụ đều đang đúng tiến độ hoặc đã được giải quyết.";
+    } else if (
+      status === "WAITING_APPROVAL" ||
+      status === "waiting_approval" ||
+      status === "approvals" ||
+      activeTab === "waiting_approval" ||
+      activeTab === "review"
+    ) {
+      displayTitle = "Không có nhiệm vụ nào chờ phê duyệt";
+      displayDescription =
+        "Hiện tại không có nhiệm vụ hoặc báo cáo nào đang chờ duyệt từ bạn.";
+    } else if (status === "COMPLETED" || activeTab === "completed") {
+      displayTitle = "Chưa có nhiệm vụ hoàn thành";
+      displayDescription =
+        "Chưa có nhiệm vụ nào được đánh dấu hoàn thành trong phạm vi hiển thị.";
+    } else if (academicMonth !== undefined && academicMonth !== "ALL") {
+      displayTitle = `Không có nhiệm vụ trong Tháng ${academicMonth}`;
+      displayDescription =
+        `Không có nhiệm vụ nào được lên lịch hoặc giao trong tháng ${academicMonth}.`;
     } else if (activeTab === "due_this_month") {
       displayTitle = "Không có nhiệm vụ nào đến hạn trong tháng này";
       displayDescription =
@@ -64,19 +104,16 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       displayTitle = `Đơn vị "${department}" chưa có nhiệm vụ`;
       displayDescription =
         "Không có nhiệm vụ nào được phân công hoặc đăng ký cho đơn vị này theo các tiêu chí hiện tại.";
+    } else if (hasFilterActive) {
+      displayTitle = "Không có nhiệm vụ phù hợp";
+      displayDescription =
+        "Không có nhiệm vụ nào phù hợp với bộ lọc hiện thời. Thầy/Cô có thể xóa bộ lọc để mở rộng kết quả tìm kiếm.";
     } else {
       displayTitle = "Chưa có nhiệm vụ nào trong danh sách";
       displayDescription =
-        "Hệ thống chưa ghi nhận nhiệm vụ nào phù hợp với bộ lọc và điều kiện hiển thị hiện thời.";
+        "Hệ thống chưa ghi nhận nhiệm vụ nào phù hợp với phạm vi hiển thị hiện thời.";
     }
   }
-
-  const hasFilterActive = Boolean(
-    isSearchEmpty ||
-    (department && department !== "ALL") ||
-    (category && category !== "ALL") ||
-    (activeTab && activeTab !== "all")
-  );
 
   return (
     <div
@@ -88,11 +125,11 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       )}
     >
       {/* Icon Container with subtle layered circle styling */}
-      <div className="relative mb-4 flex size-14 items-center justify-center rounded-2xl bg-slate-100/90 border border-slate-200/80 shadow-2xs">
+      <div className="relative mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted/60 border border-border/80 shadow-2xs">
         {isSearchEmpty ? (
-          <SearchX className="size-6 text-slate-500" strokeWidth={1.5} />
+          <SearchX className="size-6 text-muted-foreground" strokeWidth={1.5} />
         ) : (
-          <Inbox className="size-6 text-slate-500" strokeWidth={1.5} />
+          <Inbox className="size-6 text-muted-foreground" strokeWidth={1.5} />
         )}
       </div>
 
@@ -112,10 +149,12 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
           <button
             type="button"
             onClick={onResetFilters}
-            className="inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-foreground cursor-pointer active:scale-95 transition-all"
+            title="Đặt lại bộ lọc"
+            aria-label="Xóa bộ lọc"
+            className="inline-flex items-center gap-1.5 h-8.5 px-3.5 rounded-lg border border-border bg-card text-xs font-semibold text-foreground shadow-2xs hover:bg-muted hover:text-foreground cursor-pointer active:scale-95 transition-all"
           >
-            <RotateCcw className="size-3.5 text-slate-500" strokeWidth={1.5} />
-            <span>Đặt lại bộ lọc</span>
+            <RotateCcw className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
+            <span>Xóa bộ lọc</span>
           </button>
         )}
 

@@ -555,10 +555,10 @@ export function DocumentRegistryView() {
           className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2.5"
         >
           <Link
-            href="/"
+            href="/tasks"
             className="transition-colors hover:text-foreground hover:underline underline-offset-4"
           >
-            Trang chủ
+            Nhiệm vụ
           </Link>
           <ChevronRight className="size-3 text-muted-foreground/60" strokeWidth={1.5} />
           <span className="font-medium text-foreground">Văn bản &amp; Quản lý Công văn</span>

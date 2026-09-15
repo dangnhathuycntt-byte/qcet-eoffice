@@ -62,7 +62,7 @@ describe("Role Pages Filtering Integration", () => {
     assert.equal(getViewpointIcon(manager.role), Building2);
     assert.equal(
       getViewpointText(manager),
-      `Góc nhìn Lãnh đạo Đơn vị: ${manager.department} — Phụ trách: ${manager.name}`
+      `Góc nhìn Lãnh đạo Đơn vị: ${manager.department} - Phụ trách: ${manager.name}`
     );
   });
 

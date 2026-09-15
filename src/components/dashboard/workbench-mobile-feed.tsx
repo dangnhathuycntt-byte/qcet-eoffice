@@ -340,7 +340,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
     >
       {/* HEADER: Chào hỏi ân cần & Ngày tháng & Chip vai trò */}
       <header
-        className="rounded-2xl border border-border/70 bg-card p-4 shadow-subtle space-y-2.5"
+        className="rounded-2xl border border-border/70 bg-card p-4 shadow-subtle space-y-3"
         data-section="mobile-workbench-header"
       >
         <div className="flex items-center justify-between gap-2">
@@ -367,6 +367,26 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
               : "Tập trung hoàn thành nhiệm vụ và nộp minh chứng đúng hạn"}
           </p>
         </div>
+
+        {/* Progress summary bar */}
+        {stats && stats.totalSchoolTasks > 0 && (
+          <div className="space-y-1 pt-0.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Tiến độ chung</span>
+              <span className="font-mono tabular-nums font-semibold text-foreground">
+                {stats.averageSchoolProgressPercent ?? Math.round((stats.schoolTasksCompleted / stats.totalSchoolTasks) * 100)}%
+              </span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{
+                  width: `${Math.min(100, stats.averageSchoolProgressPercent ?? Math.round((stats.schoolTasksCompleted / stats.totalSchoolTasks) * 100))}%`
+                }}
+              />
+            </div>
+          </div>
+        )}
       </header>
 
       {/* STALE: a background refresh is in flight over already-loaded data */}
@@ -426,7 +446,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
       >
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-rose-500" />
+            <AlertTriangle size={13} strokeWidth={2} className="text-rose-500 shrink-0" />
             <h2 className="font-heading font-bold text-sm text-foreground">
               Cần xử lý ngay
             </h2>
@@ -583,7 +603,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
       >
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary" />
+            <Layers size={13} strokeWidth={2} className="text-primary shrink-0" />
             <h2 className="font-heading font-bold text-sm text-foreground">
               Nhiệm vụ trọng tâm
             </h2>
@@ -692,7 +712,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
       >
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-indigo-500" />
+            <CalendarIcon size={13} strokeWidth={2} className="text-indigo-500 shrink-0" />
             <h2 className="font-heading font-bold text-sm text-foreground">
               Lịch công tác hôm nay
             </h2>
@@ -752,7 +772,7 @@ export function WorkbenchMobileFeed(props: WorkbenchMobileFeedProps) {
       >
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-amber-500" />
+            <Bell size={13} strokeWidth={2} className="text-amber-500 shrink-0" />
             <h2 className="font-heading font-bold text-sm text-foreground">
               Thông báo điều hành mới
             </h2>

@@ -291,7 +291,7 @@ export function DepartmentGroupedTaskView({
           return (
             <div
               key={group.departmentId}
-              className="rounded-xl border border-border/80 bg-card/60 backdrop-blur-xs transition-all shadow-xs overflow-hidden content-auto"
+              className="rounded-xl border border-border/80 bg-card/95 transition-all shadow-xs overflow-hidden content-auto"
             >
               {/* Header của Đơn vị */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-muted/40 transition-colors">

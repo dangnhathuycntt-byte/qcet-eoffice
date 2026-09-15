@@ -9,7 +9,9 @@ import {
   useDashboardData,
   useDashboardActions,
   useDashboardModal,
+  useDashboardNav,
 } from "@/components/dashboard/dashboard-context";
+import type { TaskViewMode } from "@/components/dashboard/unified-task-toolbar";
 
 function TasksFocusLandingComponent() {
   const router = useRouter();
@@ -19,6 +21,7 @@ function TasksFocusLandingComponent() {
     effectiveManagerUser,
     isRefreshing,
   } = useDashboardData();
+  const { viewMode, handleViewModeChange } = useDashboardNav();
 
   const {
     handleReviewAction,
@@ -52,6 +55,8 @@ function TasksFocusLandingComponent() {
         <UnifiedAdaptiveWorkspace
           user={effectiveManagerUser || user}
           tasks={tasks}
+          viewMode={viewMode === "kanban" ? "kanban" : "table"}
+          onViewModeChange={(m) => handleViewModeChange(m as TaskViewMode)}
           onSelectTask={(task) => openTaskDetail(task)}
           onReview={handleReviewAction}
           onSubmitDeliverable={handleSubmitDeliverable}

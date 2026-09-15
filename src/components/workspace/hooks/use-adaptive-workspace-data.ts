@@ -8,6 +8,7 @@ import type {
 import { matchesUser } from "@/lib/role-task-filter";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 import { isTaskPastDue } from "@/lib/academic-calendar";
+import { resolveDepartmentId } from "@/lib/executive-matrix-aggregator";
 
 export type {
   WorkspaceScope,
@@ -74,22 +75,53 @@ export function countScopeTasks(
   selectedDepartment?: string
 ): number {
   if (scope === "school") return tasks.length;
-  const userDept = selectedDepartment || user?.departmentCode || user?.department || "";
+  const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
   if (scope === "unit") {
+    const canonicalDept = resolveDepartmentId(userDept) || userDept;
     return tasks.filter((t) => {
+      const taskDept =
+        t.departmentCode ||
+        t.department ||
+        t.leadDepartmentCode ||
+        t.leadDepartment ||
+        t.departmentId ||
+        t.leadDepartmentId;
+
       const matchParent =
         Boolean(userDept) &&
-        (t.departmentCode?.toUpperCase() === userDept.toUpperCase() ||
-          t.department?.toLowerCase() === userDept.toLowerCase() ||
-          t.leadDepartmentCode?.toUpperCase() === userDept.toUpperCase() ||
-          t.leadDepartment?.toLowerCase() === userDept.toLowerCase());
+        ((taskDept && (
+          taskDept.toUpperCase() === userDept.toUpperCase() ||
+          taskDept.toLowerCase() === userDept.toLowerCase() ||
+          taskDept === canonicalDept ||
+          resolveDepartmentId(taskDept) === canonicalDept
+        )) ||
+        t.coDepartmentCodes?.some(
+          (code) =>
+            code.toUpperCase() === userDept.toUpperCase() ||
+            code === canonicalDept ||
+            resolveDepartmentId(code) === canonicalDept
+        ) ||
+        t.coDepartments?.some(
+          (dept) =>
+            dept.toLowerCase() === userDept.toLowerCase() ||
+            dept === canonicalDept ||
+            resolveDepartmentId(dept) === canonicalDept
+        ));
+
       const matchChild =
         Boolean(userDept) &&
-        t.subTasks?.some(
-          (st) =>
-            st.departmentCode?.toUpperCase() === userDept.toUpperCase() ||
-            st.department?.toLowerCase() === userDept.toLowerCase()
-        );
+        t.subTasks?.some((st) => {
+          const subDept = st.departmentCode || st.department || st.departmentId;
+          return (
+            subDept && (
+              subDept.toUpperCase() === userDept.toUpperCase() ||
+              subDept.toLowerCase() === userDept.toLowerCase() ||
+              subDept === canonicalDept ||
+              resolveDepartmentId(subDept) === canonicalDept
+            )
+          );
+        });
+
       return Boolean(matchParent || matchChild);
     }).length;
   }
@@ -106,7 +138,7 @@ export function deriveAdaptiveWorkspaceData({
   scope,
   selectedDepartment,
 }: DeriveWorkspaceDataOptions): DerivedWorkspaceData {
-  const userDept = selectedDepartment || user?.departmentCode || user?.department || "";
+  const userDept = selectedDepartment || user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : "");
   const isExecutive = isExecutiveUser(user);
   const isManager = isManagerUser(user);
 
@@ -115,20 +147,51 @@ export function deriveAdaptiveWorkspaceData({
   if (scope === "school") {
     scopedTasks = tasks;
   } else if (scope === "unit") {
+    const canonicalDept = resolveDepartmentId(userDept) || userDept;
     scopedTasks = tasks.filter((t) => {
+      const taskDept =
+        t.departmentCode ||
+        t.department ||
+        t.leadDepartmentCode ||
+        t.leadDepartment ||
+        t.departmentId ||
+        t.leadDepartmentId;
+
       const matchParent =
         Boolean(userDept) &&
-        (t.departmentCode?.toUpperCase() === userDept.toUpperCase() ||
-          t.department?.toLowerCase() === userDept.toLowerCase() ||
-          t.leadDepartmentCode?.toUpperCase() === userDept.toUpperCase() ||
-          t.leadDepartment?.toLowerCase() === userDept.toLowerCase());
+        ((taskDept && (
+          taskDept.toUpperCase() === userDept.toUpperCase() ||
+          taskDept.toLowerCase() === userDept.toLowerCase() ||
+          taskDept === canonicalDept ||
+          resolveDepartmentId(taskDept) === canonicalDept
+        )) ||
+        t.coDepartmentCodes?.some(
+          (code) =>
+            code.toUpperCase() === userDept.toUpperCase() ||
+            code === canonicalDept ||
+            resolveDepartmentId(code) === canonicalDept
+        ) ||
+        t.coDepartments?.some(
+          (dept) =>
+            dept.toLowerCase() === userDept.toLowerCase() ||
+            dept === canonicalDept ||
+            resolveDepartmentId(dept) === canonicalDept
+        ));
+
       const matchChild =
         Boolean(userDept) &&
-        t.subTasks?.some(
-          (st) =>
-            st.departmentCode?.toUpperCase() === userDept.toUpperCase() ||
-            st.department?.toLowerCase() === userDept.toLowerCase()
-        );
+        t.subTasks?.some((st) => {
+          const subDept = st.departmentCode || st.department || st.departmentId;
+          return (
+            subDept && (
+              subDept.toUpperCase() === userDept.toUpperCase() ||
+              subDept.toLowerCase() === userDept.toLowerCase() ||
+              subDept === canonicalDept ||
+              resolveDepartmentId(subDept) === canonicalDept
+            )
+          );
+        });
+
       return Boolean(matchParent || matchChild);
     });
   } else {

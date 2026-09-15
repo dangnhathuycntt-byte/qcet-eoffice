@@ -434,7 +434,15 @@ export function serializeWorkspaceQuery(
   }
 
   // 2. Department / Unit
-  const deptVal = state.unit || state.dept || state.unitId;
+  let deptVal: string | undefined;
+  if (state.dept && state.unit && state.dept !== state.unit) {
+    deptVal =
+      (options?.unitParamKey === "unit" || state._unitParamKey === "unit")
+        ? state.unit
+        : state.dept;
+  } else {
+    deptVal = state.dept || state.unit || state.unitId;
+  }
   if (deptVal && deptVal !== "ALL" && deptVal !== "all" && deptVal.trim().length > 0) {
     const trimmed = deptVal.trim();
     if (options?.unitParamKey) {

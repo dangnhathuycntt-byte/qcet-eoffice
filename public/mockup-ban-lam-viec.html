@@ -1,0 +1,1557 @@
+<title>Bàn Làm Việc QCET - Cải Tiến UI/UX Hiện Tại</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ==========================================================================
+     DESIGN TOKENS & RESET (MATCHING EXACT QCET APP STYLING & WORLD-CLASS SYSTEM)
+     ========================================================================== */
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Base Palette */
+    --color-bg: #f8fafc;
+    --color-sidebar: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-subtle: #f8fafc;
+    --color-surface-hover: #f1f5f9;
+
+    --color-border: #e2e8f0;
+    --color-border-subtle: #f1f5f9;
+    --color-border-strong: #cbd5e1;
+
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-text-tertiary: #94a3b8;
+
+    /* Semantic Primary (QCET Executive Blue) */
+    --color-primary: #0284c7;
+    --color-primary-hover: #0369a1;
+    --color-primary-subtle: #f0f9ff;
+    --color-primary-active-nav: #e0f2fe;
+
+    /* Semantic Status */
+    --color-success: #10b981;
+    --color-success-subtle: #ecfdf5;
+    --color-success-text: #047857;
+
+    --color-warning: #f59e0b;
+    --color-warning-subtle: #fffbeb;
+    --color-warning-text: #b45309;
+
+    --color-danger: #ef4444;
+    --color-danger-subtle: #fef2f2;
+    --color-danger-text: #b91c1c;
+
+    --radius-lg: 12px;
+    --radius-md: 8px;
+    --radius-sm: 6px;
+    --radius-pill: 9999px;
+
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07);
+    --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08);
+
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Dark Mode Support */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --color-bg: #090d16;
+      --color-sidebar: #0f172a;
+      --color-surface: #131b2e;
+      --color-surface-subtle: #182238;
+      --color-surface-hover: #1e293b;
+
+      --color-border: #1e293b;
+      --color-border-subtle: #162032;
+      --color-border-strong: #334155;
+
+      --color-text-primary: #f8fafc;
+      --color-text-secondary: #94a3b8;
+      --color-text-tertiary: #64748b;
+
+      --color-primary: #38bdf8;
+      --color-primary-hover: #7dd3fc;
+      --color-primary-subtle: rgba(56, 189, 248, 0.12);
+      --color-primary-active-nav: rgba(56, 189, 248, 0.16);
+
+      --color-success: #34d399;
+      --color-success-subtle: rgba(52, 211, 153, 0.12);
+      --color-success-text: #a7f3d0;
+
+      --color-warning: #fbbf24;
+      --color-warning-subtle: rgba(251, 191, 36, 0.12);
+      --color-warning-text: #fde68a;
+
+      --color-danger: #f87171;
+      --color-danger-subtle: rgba(248, 113, 113, 0.12);
+      --color-danger-text: #fecaca;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --color-bg: #090d16;
+    --color-sidebar: #0f172a;
+    --color-surface: #131b2e;
+    --color-surface-subtle: #182238;
+    --color-surface-hover: #1e293b;
+
+    --color-border: #1e293b;
+    --color-border-subtle: #162032;
+    --color-border-strong: #334155;
+
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #94a3b8;
+    --color-text-tertiary: #64748b;
+
+    --color-primary: #38bdf8;
+    --color-primary-hover: #7dd3fc;
+    --color-primary-subtle: rgba(56, 189, 248, 0.12);
+    --color-primary-active-nav: rgba(56, 189, 248, 0.16);
+
+    --color-success: #34d399;
+    --color-success-subtle: rgba(52, 211, 153, 0.12);
+    --color-success-text: #a7f3d0;
+
+    --color-warning: #fbbf24;
+    --color-warning-subtle: rgba(251, 191, 36, 0.12);
+    --color-warning-text: #fde68a;
+
+    --color-danger: #f87171;
+    --color-danger-subtle: rgba(248, 113, 113, 0.12);
+    --color-danger-text: #fecaca;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--color-bg);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Comparison Banner at Top */
+  .diff-mode-banner {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    border-bottom: 1px solid #334155;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .diff-switch-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #1e293b;
+    padding: 3px;
+    border-radius: var(--radius-pill);
+    border: 1px solid #475569;
+  }
+
+  .diff-btn {
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 80ms;
+  }
+
+  .diff-btn.active {
+    background: #0284c7;
+    color: #ffffff;
+  }
+
+  /* Full Screen App Shell */
+  .app-shell {
+    display: flex;
+    min-height: calc(100vh - 41px);
+    width: 100vw;
+  }
+
+  /* ==========================================================================
+     1. SIDEBAR (1:1 KHỚP ẢNH HIỆN TẠI)
+     ========================================================================== */
+  .app-sidebar {
+    width: 244px;
+    background: var(--color-sidebar);
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  .sidebar-header {
+    padding: 16px 16px 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .sidebar-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  .sidebar-nav-body {
+    padding: 14px 10px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .sidebar-group-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 10px 4px 10px;
+  }
+
+  .sidebar-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 60ms;
+  }
+
+  .sidebar-menu-item:hover {
+    background: var(--color-surface-subtle);
+    color: var(--color-text-primary);
+  }
+
+  .sidebar-menu-item.active {
+    background: var(--color-primary-active-nav);
+    color: #0369a1;
+  }
+
+  :root[data-theme="dark"] .sidebar-menu-item.active {
+    color: #38bdf8;
+  }
+
+  .sidebar-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .badge-notify-count {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: var(--radius-pill);
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .badge-coming-soon {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--color-surface-subtle);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-tertiary);
+  }
+
+  .sidebar-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--color-border);
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ==========================================================================
+     2. TOPBAR (1:1 KHỚP ẢNH HIỆN TẠI)
+     ========================================================================== */
+  .app-main-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: calc(100vh - 41px);
+    overflow-y: auto;
+  }
+
+  .app-topbar {
+    height: 52px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .search-box-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 320px;
+    padding: 6px 12px;
+    background: var(--color-surface-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-tertiary);
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .icon-btn-round {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    position: relative;
+  }
+
+  .icon-btn-round:hover {
+    background: var(--color-surface-subtle);
+    color: var(--color-text-primary);
+  }
+
+  .bell-indicator-red {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 0 2px var(--color-surface);
+  }
+
+  .user-badge-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    cursor: pointer;
+  }
+
+  .user-avatar-circle {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #0284c7;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* ==========================================================================
+     3. WORKBENCH VIEWPORT (TITLE & FILTER BAR)
+     ========================================================================== */
+  .workbench-page-body {
+    max-width: 1440px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px 24px 40px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .page-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .page-h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-text-primary);
+  }
+
+  .btn-primary-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius-md);
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 12.5px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-xs);
+    cursor: pointer;
+    transition: all 80ms;
+  }
+
+  .btn-primary-action:hover {
+    background: #0369a1;
+  }
+
+  .btn-primary-action:active {
+    transform: translateY(1px) scale(0.98);
+  }
+
+  /* Filter Toolbar Strip (1:1 Khớp thanh điều khiển trong ảnh) */
+  .filter-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xs);
+    flex-wrap: wrap;
+  }
+
+  .filter-left-pills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .selector-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    cursor: pointer;
+  }
+
+  .selector-pill:hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .telemetry-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+
+  /* ==========================================================================
+     4. SECTION 1: CẦN BẠN XỬ LÝ (ACTION HUB)
+     ========================================================================== */
+  .section-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
+  }
+
+  .card-top-strip {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .card-heading-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .card-heading-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .filter-pill-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .tab-pill-btn {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-subtle);
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 80ms;
+  }
+
+  .tab-pill-btn.active {
+    background: #e0f2fe;
+    color: #0369a1;
+    border-color: #bae6fd;
+  }
+
+  :root[data-theme="dark"] .tab-pill-btn.active {
+    background: rgba(56, 189, 248, 0.16);
+    color: #38bdf8;
+    border-color: rgba(56, 189, 248, 0.3);
+  }
+
+  /* Action Rows in Section 1 */
+  .action-row-item {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    transition: background-color 60ms;
+    cursor: pointer;
+  }
+
+  .action-row-item:last-child {
+    border-bottom: none;
+  }
+
+  .action-row-item:hover {
+    background: var(--color-surface-hover);
+  }
+
+  .action-info-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .status-label-gold {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 700;
+    color: #b45309;
+    letter-spacing: 0.01em;
+  }
+
+  :root[data-theme="dark"] .status-label-gold {
+    color: #fbbf24;
+  }
+
+  .task-main-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    line-height: 1.35;
+  }
+
+  .task-sub-meta {
+    font-size: 12px;
+    color: var(--color-text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn-examine-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 80ms;
+  }
+
+  .btn-examine-action:hover {
+    background: var(--color-surface-subtle);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-strong);
+  }
+
+  /* Improved Action Button Pair (World-Class Mode) */
+  .world-class-action-pair {
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-quick-sign {
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 80ms;
+  }
+
+  .btn-quick-sign:hover {
+    background: #0369a1;
+  }
+
+  /* ==========================================================================
+     5. SECTION 2: DUAL COLUMN (SẮP ĐẾN HẠN + ĐƠN VỊ & HOẠT ĐỘNG)
+     ========================================================================== */
+  .dual-column-layout {
+    display: grid;
+    grid-template-columns: 7fr 5fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 1024px) {
+    .dual-column-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Due Column Rows */
+  .due-row-record {
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    transition: background-color 60ms;
+    cursor: pointer;
+  }
+
+  .due-row-record:hover {
+    background: var(--color-surface-hover);
+  }
+
+  .due-tags-and-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .pill-tag-school {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1.5px 6px;
+    border-radius: 4px;
+    background: #e0f2fe;
+    color: #0369a1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .pill-tag-overdue {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1.5px 6px;
+    border-radius: 4px;
+    background: #fee2e2;
+    color: #b91c1c;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .due-task-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .assignee-right-text {
+    font-size: 11.5px;
+    color: var(--color-text-tertiary);
+    flex-shrink: 0;
+  }
+
+  /* Sub-right widgets */
+  .right-widgets-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Empty state */
+  .empty-banner-inner {
+    padding: 24px;
+    color: var(--color-text-tertiary);
+    font-size: 12.5px;
+    text-align: center;
+  }
+
+  /* Activity Feed */
+  .activity-item-line {
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .activity-item-line:last-child {
+    border-bottom: none;
+  }
+
+  .avatar-badge-feed {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-surface-subtle);
+    border: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+  }
+
+  /* ==========================================================================
+     ENHANCED WORLD-CLASS OVERLAYS (WHEN WORLD-CLASS TOGGLE IS ON)
+     ========================================================================== */
+  body.mode-world-class .world-class-action-pair {
+    display: flex;
+  }
+  body.mode-world-class .original-action-btn {
+    display: none;
+  }
+  body.mode-world-class .empty-state-enhanced {
+    display: flex !important;
+  }
+  body.mode-world-class .empty-state-original {
+    display: none !important;
+  }
+
+  /* Interactive Drawer for Detail */
+  .sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(3px);
+    z-index: 120;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms var(--ease-out);
+  }
+
+  .sheet-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sheet-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 460px;
+    max-width: 90vw;
+    background: var(--color-surface);
+    border-left: 1px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    z-index: 121;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 220ms var(--ease-out);
+  }
+
+  .sheet-backdrop.open .sheet-panel {
+    transform: translateX(0);
+  }
+
+  /* Toast */
+  .toast-alert {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 200;
+    transform: translateY(20px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 180ms var(--ease-out);
+  }
+
+  .toast-alert.show {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+</style>
+
+<!-- TOP TOGGLE TO COMPARE CURRENT VS WORLD-CLASS ENHANCED -->
+<div class="diff-mode-banner">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <span style="font-weight: 700; color: #38bdf8;">QCET WORKBENCH UX:</span>
+    <span style="color: #cbd5e1;">Mô phỏng trực quan trên chính giao diện hiện tại của bạn</span>
+  </div>
+
+  <div class="diff-switch-group">
+    <button class="diff-btn" id="btnModeOriginal" onclick="setMode('original')">Giao diện gốc (Hiện tại)</button>
+    <button class="diff-btn active" id="btnModeEnhanced" onclick="setMode('world-class')">Cải tiến World-Class</button>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <!-- ========================================================================
+       SIDEBAR NAVIGATION (1:1 VỚI GIAO DIỆN HIỆN TẠI)
+       ======================================================================== -->
+  <aside class="app-sidebar">
+    <div>
+      <div class="sidebar-header">
+        <div class="sidebar-logo">QC</div>
+        <div>
+          <div style="font-size: 12px; font-weight: 700; color: var(--color-text-primary); line-height: 1.2;">CỔNG ĐIỀU HÀNH QCET</div>
+          <div style="font-size: 10.5px; color: var(--color-text-tertiary);">Năm học 2026–2027</div>
+        </div>
+      </div>
+
+      <div class="sidebar-nav-body">
+        <div>
+          <div class="sidebar-group-title">CÔNG VIỆC</div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <a class="sidebar-menu-item active">
+              <span class="sidebar-item-left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                <span>Bàn làm việc</span>
+              </span>
+            </a>
+
+            <a class="sidebar-menu-item">
+              <span class="sidebar-item-left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span>Quản lý nhiệm vụ</span>
+              </span>
+            </a>
+
+            <a class="sidebar-menu-item">
+              <span class="sidebar-item-left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>Lịch công tác</span>
+              </span>
+            </a>
+
+            <a class="sidebar-menu-item">
+              <span class="sidebar-item-left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                <span>Thông báo &amp; Nhắc việc</span>
+              </span>
+              <span class="badge-notify-count font-mono">19</span>
+            </a>
+
+            <a class="sidebar-menu-item">
+              <span class="sidebar-item-left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span>Văn bản &amp; Công vụ</span>
+              </span>
+              <span class="badge-coming-soon">Sắp có</span>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <div class="sidebar-group-title">TỔ CHỨC</div>
+          <a class="sidebar-menu-item">
+            <span class="sidebar-item-left">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M9 9h6M9 15h6"/></svg>
+              <span>Cơ cấu &amp; Danh bạ</span>
+            </span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <a class="sidebar-menu-item" style="padding: 4px 0;">
+        <span class="sidebar-item-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Cài đặt</span>
+        </span>
+      </a>
+      <div style="display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary);">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span>
+        <span>Notion: Đang kết nối</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========================================================================
+       MAIN APP STAGE
+       ======================================================================== -->
+  <div class="app-main-view">
+
+    <!-- Topbar (1:1 với ảnh hiện tại) -->
+    <header class="app-topbar">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="icon-btn-round" title="Thu gọn menu">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+
+        <div class="search-box-top" id="topSearchBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Tìm nhanh công việc, nhân sự...</span>
+          <span style="font-size: 11px; font-weight: 600; margin-left: auto; padding: 1px 5px; border-radius: 4px; background: var(--color-surface); border: 1px solid var(--color-border);" class="font-mono">⌘K</span>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <!-- Live Clock in Enhanced Mode -->
+        <div id="enhancedClock" style="display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--color-text-secondary); margin-right: 4px;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--color-success);"></span>
+          <span class="font-mono" id="liveClockVal">14:52:08</span>
+          <span style="font-size: 10px; font-weight: 700; color: var(--color-text-tertiary);">ICT</span>
+        </div>
+
+        <button class="icon-btn-round" title="Thông báo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span class="bell-indicator-red"></span>
+        </button>
+
+        <div class="user-badge-header">
+          <div class="user-avatar-circle">TT</div>
+          <span>ThS. Đặng Nhật Huy...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- WORKBENCH BODY -->
+    <main class="workbench-page-body">
+
+      <!-- Title & CTA Row -->
+      <div class="page-title-row">
+        <h1 class="page-h1">Bàn làm việc</h1>
+
+        <!-- Button CTA: In Original says "+ Tạo nhiệm vụ", in Enhanced says "+ Giao việc mới" -->
+        <button class="btn-primary-action" id="mainCtaBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span id="ctaBtnLabel">Giao việc mới</span>
+        </button>
+      </div>
+
+      <!-- Filter Toolbar Strip -->
+      <div class="filter-strip">
+        <div class="filter-left-pills">
+          <button class="selector-pill">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/></svg>
+            <span>Phạm vi: Toàn trường (BGH QCET)</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+
+          <button class="selector-pill">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>Tháng 9/2026</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+        </div>
+
+        <div class="telemetry-right">
+          <!-- In World-Class, we add an inline micro progress bar -->
+          <div id="enhancedProgressBar" style="display: flex; align-items: center; gap: 8px;">
+            <strong style="color: var(--color-primary);" class="font-mono">12% tiến độ</strong>
+            <div style="width: 56px; height: 5px; background: var(--color-surface-subtle); border-radius: 99px; overflow: hidden; border: 1px solid var(--color-border);">
+              <div style="width: 12%; height: 100%; background: var(--color-primary); border-radius: 99px;"></div>
+            </div>
+          </div>
+          <span style="color: var(--color-border);">|</span>
+          <span class="font-mono"><strong>374</strong> nhiệm vụ</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor: pointer;" onclick="refreshSpin(this)" title="Làm mới"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           SECTION 1: CẦN BẠN XỬ LÝ (5 NHIỆM VỤ)
+           ==================================================================== -->
+      <section class="section-card">
+        <div class="card-top-strip">
+          <div class="card-heading-group">
+            <span class="card-heading-title">Cần bạn xử lý</span>
+            <span style="font-size: 11.5px; color: var(--color-text-tertiary); font-weight: 600;" class="font-mono">5 nhiệm vụ</span>
+          </div>
+
+          <div class="filter-pill-tabs">
+            <button class="tab-pill-btn active">Tất cả <span class="font-mono">5</span></button>
+            <button class="tab-pill-btn">Chờ duyệt <span class="font-mono">5</span></button>
+            <button class="tab-pill-btn">Vướng mắc &amp; Quá hạn <span class="font-mono">0</span></button>
+          </div>
+        </div>
+
+        <!-- Task 1: Ứng phó bão lũ -->
+        <div class="action-row-item" onclick="openSheet('NV-BaoLu', 'Nhiệm vụ Ứng phó Bão Lũ Khẩn cấp', 'Khoa Công nghệ Thông tin Test', 'Trần Thị B (Giảng viên Dịch vụ)', '10/09/2026')">
+          <div class="action-info-col">
+            <span class="status-label-gold">Chờ duyệt</span>
+            <div class="task-main-title">Nhiệm vụ Ứng phó Bão Lũ Khẩn cấp</div>
+            <div class="task-sub-meta">
+              <span>Khoa Công nghệ Thông tin Test</span>
+              <span>&bull;</span>
+              <span>Chủ trì: <strong>Trần Thị B</strong> (Giảng viên Dịch vụ)</span>
+              <span>&bull;</span>
+              <!-- Standardized DD/MM/YYYY in Enhanced -->
+              <span class="font-mono" style="color: var(--color-danger); font-weight: 600;">Hạn: <span class="meta-date-label">10/09/2026</span></span>
+            </div>
+          </div>
+
+          <div class="action-right-actions">
+            <!-- Original Single Button -->
+            <button class="btn-examine-action original-action-btn">
+              <span>Xem xét</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+
+            <!-- World-Class Enhanced Action Pair -->
+            <div class="world-class-action-pair">
+              <button class="btn-quick-sign" onclick="event.stopPropagation(); toastAction('Đã ký duyệt nhanh Nhiệm vụ Ứng phó Bão Lũ');">Ký duyệt nhanh</button>
+              <button class="btn-examine-action">
+                <span>Xem xét</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task 2: Kiểm thử V2 ...83521 -->
+        <div class="action-row-item" onclick="openSheet('NV-V2-01', 'Nhiệm vụ kiểm thử V2 1789019483521', 'Ban Giám hiệu', 'Người Chịu Trách Nhiệm DRI', '17/09/2026')">
+          <div class="action-info-col">
+            <span class="status-label-gold">Chờ duyệt</span>
+            <div class="task-main-title">Nhiệm vụ kiểm thử V2 1789019483521</div>
+            <div class="task-sub-meta">
+              <span>Ban Giám hiệu</span>
+              <span>&bull;</span>
+              <span>Chủ trì: <strong>Người Chịu Trách Nhiệm DRI</strong></span>
+              <span>&bull;</span>
+              <span class="font-mono">Hạn: <span class="meta-date-label">17/09/2026</span></span>
+            </div>
+          </div>
+
+          <div class="action-right-actions">
+            <button class="btn-examine-action original-action-btn">
+              <span>Xem xét</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+            <div class="world-class-action-pair">
+              <button class="btn-quick-sign" onclick="event.stopPropagation(); toastAction('Đã ký duyệt Nhiệm vụ kiểm thử V2');">Ký duyệt nhanh</button>
+              <button class="btn-examine-action">
+                <span>Xem xét</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task 3: Kiểm thử V2 ...96943 -->
+        <div class="action-row-item" onclick="openSheet('NV-V2-02', 'Nhiệm vụ kiểm thử V2 1789019496943', 'Ban Giám hiệu', 'Người Chịu Trách Nhiệm DRI', '17/09/2026')">
+          <div class="action-info-col">
+            <span class="status-label-gold">Chờ duyệt</span>
+            <div class="task-main-title">Nhiệm vụ kiểm thử V2 1789019496943</div>
+            <div class="task-sub-meta">
+              <span>Ban Giám hiệu</span>
+              <span>&bull;</span>
+              <span>Chủ trì: <strong>Người Chịu Trách Nhiệm DRI</strong></span>
+              <span>&bull;</span>
+              <span class="font-mono">Hạn: <span class="meta-date-label">17/09/2026</span></span>
+            </div>
+          </div>
+
+          <div class="action-right-actions">
+            <button class="btn-examine-action original-action-btn">
+              <span>Xem xét</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+            <div class="world-class-action-pair">
+              <button class="btn-quick-sign" onclick="event.stopPropagation(); toastAction('Đã ký duyệt Nhiệm vụ kiểm thử V2');">Ký duyệt nhanh</button>
+              <button class="btn-examine-action">
+                <span>Xem xét</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task 4: Kiểm thử V2 ...532832 -->
+        <div class="action-row-item" onclick="openSheet('NV-V2-03', 'Nhiệm vụ kiểm thử V2 1789019532832', 'Ban Giám hiệu', 'Người Chịu Trách Nhiệm DRI', '17/09/2026')">
+          <div class="action-info-col">
+            <span class="status-label-gold">Chờ duyệt</span>
+            <div class="task-main-title">Nhiệm vụ kiểm thử V2 1789019532832</div>
+            <div class="task-sub-meta">
+              <span>Ban Giám hiệu</span>
+              <span>&bull;</span>
+              <span>Chủ trì: <strong>Người Chịu Trách Nhiệm DRI</strong></span>
+              <span>&bull;</span>
+              <span class="font-mono">Hạn: <span class="meta-date-label">17/09/2026</span></span>
+            </div>
+          </div>
+
+          <div class="action-right-actions">
+            <button class="btn-examine-action original-action-btn">
+              <span>Xem xét</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+            <div class="world-class-action-pair">
+              <button class="btn-quick-sign" onclick="event.stopPropagation(); toastAction('Đã ký duyệt Nhiệm vụ kiểm thử V2');">Ký duyệt nhanh</button>
+              <button class="btn-examine-action">
+                <span>Xem xét</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task 5: CSVC và TKB HK1 -->
+        <div class="action-row-item" onclick="openSheet('NV-CSVC', 'Kiểm tra công tác chuẩn bị cơ sở vật chất và thời khóa biểu học kỳ 1 năm học 2026–2027', 'Phòng Đào tạo (Cũ)', 'ThS. Lê Văn Thí (Trưởng phòng QLĐT)', '19/09/2026')">
+          <div class="action-info-col">
+            <span class="status-label-gold">Chờ duyệt</span>
+            <div class="task-main-title">Kiểm tra công tác chuẩn bị cơ sở vật chất và thời khóa biểu học kỳ 1 năm học 2026–2027</div>
+            <div class="task-sub-meta">
+              <span>Phòng Đào tạo (Cũ)</span>
+              <span>&bull;</span>
+              <span>Chủ trì: <strong>ThS. Lê Văn Thí</strong> (Trưởng phòng QLĐT)</span>
+              <span>&bull;</span>
+              <span class="font-mono">Hạn: <span class="meta-date-label">19/09/2026</span></span>
+            </div>
+          </div>
+
+          <div class="action-right-actions">
+            <button class="btn-examine-action original-action-btn">
+              <span>Xem xét</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+            <div class="world-class-action-pair">
+              <button class="btn-quick-sign" onclick="event.stopPropagation(); toastAction('Đã phê duyệt công tác CSVC');">Ký duyệt nhanh</button>
+              <button class="btn-examine-action">
+                <span>Xem xét</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           SECTION 2: DUAL COLUMN (SẮP ĐẾN HẠN + ĐƠN VỊ & HOẠT ĐỘNG)
+           ==================================================================== -->
+      <div class="dual-column-layout">
+
+        <!-- CỘT TRÁI: SẮP ĐẾN HẠN -->
+        <div class="section-card">
+          <div class="card-top-strip">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 700; color: var(--color-text-primary);">Sắp đến hạn</div>
+              <div style="font-size: 11px; color: var(--color-text-tertiary); margin-top: 1px;">7 ngày tới &bull; Ưu tiên xử lý</div>
+            </div>
+            <a style="font-size: 12px; font-weight: 600; color: var(--color-primary); cursor: pointer;" class="font-mono">Xem tất cả (20) &gt;</a>
+          </div>
+
+          <!-- Items list -->
+          <div>
+            <div class="due-row-record" onclick="openSheet('NV-ATK', 'Attacker Task', 'Khoa CNTT', 'Chưa phân công', 'Quá hạn 4 ngày')">
+              <div class="due-tags-and-title">
+                <span class="pill-tag-school">🏛️ Trường</span>
+                <span class="pill-tag-overdue font-mono">⚠️ Quá hạn 4 ngày</span>
+                <span class="due-task-text">Attacker Task</span>
+              </div>
+              <span class="assignee-right-text">👤 Chưa phân công</span>
+            </div>
+
+            <div class="due-row-record" onclick="openSheet('NV-BaoLu-2', 'Nhiệm vụ Ứng phó Bão Lũ Khẩn cấp', 'Khoa CNTT', 'TV Trần Thị B...', 'Quá hạn 4 ngày')">
+              <div class="due-tags-and-title">
+                <span class="pill-tag-school">🏛️ Trường</span>
+                <span class="pill-tag-overdue font-mono">⚠️ Quá hạn 4 ngày</span>
+                <span class="due-task-text">Nhiệm vụ Ứng phó Bão Lũ Khẩn cấp</span>
+              </div>
+              <span class="assignee-right-text">TV Trần Thị B (Giảng viên...</span>
+            </div>
+
+            <div class="due-row-record" onclick="openSheet('NV-UB-1', 'Updated by User B 1788976221847', 'Khoa CNTT', 'Chưa phân công', 'Quá hạn 3 ngày')">
+              <div class="due-tags-and-title">
+                <span class="pill-tag-school">🏛️ Trường</span>
+                <span class="pill-tag-overdue font-mono">⚠️ Quá hạn 3 ngày</span>
+                <span class="due-task-text">Updated by User B 1788976221847</span>
+              </div>
+              <span class="assignee-right-text">👤 Chưa phân công</span>
+            </div>
+
+            <div class="due-row-record" onclick="openSheet('NV-OCC', 'Task OCC Match Test 1788976221847', 'Phòng Đào tạo', 'Chưa phân công', 'Quá hạn 3 ngày')">
+              <div class="due-tags-and-title">
+                <span class="pill-tag-school">🏛️ Trường</span>
+                <span class="pill-tag-overdue font-mono">⚠️ Quá hạn 3 ngày</span>
+                <span class="due-task-text">Task OCC Match Test 1788976221847</span>
+              </div>
+              <span class="assignee-right-text">👤 Chưa phân công</span>
+            </div>
+
+            <div class="due-row-record" onclick="openSheet('NV-UB-2', 'Updated by User B 1788976324785', 'Khoa CNTT', 'Chưa phân công', 'Quá hạn 3 ngày')">
+              <div class="due-tags-and-title">
+                <span class="pill-tag-school">🏛️ Trường</span>
+                <span class="pill-tag-overdue font-mono">⚠️ Quá hạn 3 ngày</span>
+                <span class="due-task-text">Updated by User B 1788976324785</span>
+              </div>
+              <span class="assignee-right-text">👤 Chưa phân công</span>
+            </div>
+          </div>
+
+          <div style="padding: 10px 18px; border-top: 1px solid var(--color-border-subtle); display: flex; align-items: center; justify-content: space-between; font-size: 12px;">
+            <a style="font-weight: 600; color: var(--color-primary); cursor: pointer;">Mở lịch công tác &gt;</a>
+            <span style="color: var(--color-text-tertiary); cursor: pointer;" class="font-mono">Hiện thêm 15 nhiệm vụ ⌄</span>
+          </div>
+        </div>
+
+        <!-- CỘT PHẢI: ĐƠN VỊ & HOẠT ĐỘNG -->
+        <div class="right-widgets-stack">
+
+          <!-- Card: Đơn vị cần chú ý -->
+          <div class="section-card">
+            <div class="card-top-strip">
+              <div style="font-size: 13.5px; font-weight: 700; color: var(--color-text-primary); display: flex; align-items: center; gap: 6px;">
+                <span>🏛️ Đơn vị cần chú ý</span>
+              </div>
+            </div>
+
+            <!-- Original plain empty state -->
+            <div class="empty-banner-inner empty-state-original">
+              Không có đơn vị có việc quá hạn hoặc bị chặn trong phạm vi này
+            </div>
+
+            <!-- World-Class Enhanced Empty State -->
+            <div class="empty-state-enhanced" style="display: none; padding: 22px 18px; flex-direction: column; align-items: center; text-align: center; gap: 6px;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-success-subtle); color: var(--color-success); display: flex; align-items: center; justify-content: center;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              </div>
+              <div style="font-size: 13px; font-weight: 600; color: var(--color-text-primary);">
+                Tất cả 11 đơn vị đạt tiến độ an toàn
+              </div>
+              <div style="font-size: 11px; color: var(--color-text-tertiary); max-width: 280px;">
+                Không có đơn vị có việc quá hạn nghiêm trọng hoặc điểm nghẽn bị chặn trong phạm vi này.
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: Hoạt động vừa cập nhật -->
+          <div class="section-card">
+            <div class="card-top-strip">
+              <div>
+                <div style="font-size: 13.5px; font-weight: 700; color: var(--color-text-primary);">Hoạt động vừa cập nhật</div>
+                <div style="font-size: 11px; color: var(--color-text-tertiary); margin-top: 1px;">Ghi nhận theo thời gian thực</div>
+              </div>
+            </div>
+
+            <div>
+              <div class="activity-item-line">
+                <div class="avatar-badge-feed" style="background: #e0f2fe; color: #0284c7;">QO</div>
+                <div style="flex: 1;">
+                  <div><strong>Quản trị hệ thống QCET</strong> đã phân công nhiệm vụ <strong>Task Overdue Query Rec...</strong></div>
+                  <div style="font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px;" class="font-mono">🕒 14/09/2026 20:46</div>
+                </div>
+              </div>
+
+              <div class="activity-item-line">
+                <div class="avatar-badge-feed" style="background: #e0f2fe; color: #0284c7;">QO</div>
+                <div style="flex: 1;">
+                  <div><strong>Quản trị hệ thống QCET</strong> đã phân công nhiệm vụ <strong>Subtask with Invalid D...</strong></div>
+                  <div style="font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px;" class="font-mono">🕒 14/09/2026 20:46</div>
+                </div>
+              </div>
+
+              <div class="activity-item-line">
+                <div class="avatar-badge-feed" style="background: #ecfdf5; color: #059669;">TT</div>
+                <div style="flex: 1;">
+                  <div><strong>ThS. Phạm Văn Tường (Hiệu trưởng)</strong> đã phân công nhiệm vụ <strong>Task OCC If-Match Mism...</strong></div>
+                  <div style="font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px;" class="font-mono">🕒 14/09/2026 20:46</div>
+                </div>
+              </div>
+
+              <div class="activity-item-line">
+                <div class="avatar-badge-feed" style="background: #e0f2fe; color: #0284c7;">QO</div>
+                <div style="flex: 1;">
+                  <div><strong>Quản trị hệ thống QCET</strong> đã phân công nhiệm vụ <strong>Valid Subtask of Root...</strong></div>
+                  <div style="font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px;" class="font-mono">🕒 14/09/2026 20:46</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding: 10px 18px; border-top: 1px solid var(--color-border-subtle); text-align: center; font-size: 12px; color: var(--color-primary); cursor: pointer; font-weight: 600;">
+              Xem thêm 9 hoạt động ⌄
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+<!-- ========================================================================
+     INTERACTIVE SLIDE-OVER DETAIL SHEET (WORLD-CLASS DRAWER)
+     ======================================================================== -->
+<div class="sheet-backdrop" id="drawerSheet" onclick="closeSheet(event)">
+  <div class="sheet-panel" onclick="event.stopPropagation()">
+    <div style="padding: 14px 18px; border-bottom: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <span class="font-mono" id="sheetId" style="font-size: 11.5px; font-weight: 700; color: var(--color-primary);">NV-BaoLu</span>
+        <h3 id="sheetTitle" style="font-size: 14.5px; font-weight: 700; margin-top: 2px;">Nhiệm vụ Ứng phó Bão Lũ Khẩn cấp</h3>
+      </div>
+      <button style="background: none; border: none; font-size: 18px; color: var(--color-text-secondary); cursor: pointer;" onclick="closeSheet()">&times;</button>
+    </div>
+
+    <div style="padding: 18px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+      <div>
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--color-text-tertiary); margin-bottom: 4px;">Đơn vị &amp; Người chủ trì</div>
+        <div style="font-size: 13px; font-weight: 600;" id="sheetDept">Khoa Công nghệ Thông tin Test</div>
+        <div style="font-size: 12px; color: var(--color-text-secondary);" id="sheetLead">Chủ trì: Trần Thị B (Giảng viên Dịch vụ)</div>
+      </div>
+
+      <div>
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--color-text-tertiary); margin-bottom: 4px;">Hạn xử lý (ICT)</div>
+        <div class="font-mono" style="font-size: 13px; font-weight: 600; color: var(--color-danger);" id="sheetDueDate">10/09/2026 - 17:00 (UTC+7)</div>
+      </div>
+
+      <div style="border-top: 1px solid var(--color-border); padding-top: 14px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--color-text-tertiary); margin-bottom: 6px;">Ý kiến chỉ đạo nhanh của BGH</div>
+        <textarea id="sheetDirectiveText" style="width: 100%; height: 72px; padding: 8px 10px; font-family: inherit; font-size: 13px; background: var(--color-surface-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-text-primary); resize: none;" placeholder="Nhập ý kiến chỉ đạo hoặc phê duyệt hồ sơ..."></textarea>
+        <div id="sheetDirectiveError" style="font-size: 11px; color: var(--color-danger); margin-top: 4px; display: none;">Vui lòng nhập tối thiểu 5 ký tự để ban hành chỉ đạo.</div>
+      </div>
+    </div>
+
+    <div style="padding: 12px 18px; border-top: 1px solid var(--color-border); background: var(--color-surface-subtle); display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+      <button class="btn-examine-action" onclick="closeSheet()">Đóng</button>
+      <button class="btn-primary-action" id="btnSubmitDirective">Ký duyệt &amp; Chỉ đạo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast with Undo -->
+<div class="toast-alert" id="appToast">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+  <span id="toastMsg">Thao tác thành công</span>
+  <button style="font-size: 11.5px; font-weight: 700; color: var(--color-primary); background: none; border: none; cursor: pointer;" onclick="document.getElementById('appToast').classList.remove('show'); alert('Đã hoàn tác thao tác!');">Hoàn tác</button>
+</div>
+
+<script>
+  // 1. Clock
+  function updateLiveTime() {
+    const el = document.getElementById('liveClockVal');
+    if (el) {
+      el.textContent = new Date().toLocaleTimeString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      });
+    }
+  }
+  setInterval(updateLiveTime, 1000);
+  updateLiveTime();
+
+  // 2. Mode Switching (Original vs World-Class Enhanced)
+  function setMode(mode) {
+    const isWc = mode === 'world-class';
+    document.body.classList.toggle('mode-world-class', isWc);
+    document.getElementById('btnModeOriginal').classList.toggle('active', !isWc);
+    document.getElementById('btnModeEnhanced').classList.toggle('active', isWc);
+
+    // Label difference
+    document.getElementById('ctaBtnLabel').textContent = isWc ? 'Giao việc mới' : 'Tạo nhiệm vụ';
+    document.getElementById('enhancedProgressBar').style.display = isWc ? 'flex' : 'none';
+
+    // Date formatting: ISO in original, DD/MM/YYYY in world-class
+    const dateLabels = document.querySelectorAll('.meta-date-label');
+    dateLabels.forEach(el => {
+      const txt = el.textContent.trim();
+      if (isWc) {
+        if (txt.includes('-')) {
+          const parts = txt.split('-');
+          el.textContent = parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+      } else {
+        if (txt.includes('/')) {
+          const parts = txt.split('/');
+          el.textContent = parts[2] + '-' + parts[1] + '-' + parts[0];
+        }
+      }
+    });
+
+    toastAction(isWc ? 'Đã chuyển sang chế độ Cải tiến World-Class' : 'Đã quay lại Giao diện gốc hiện tại');
+  }
+
+  // Initial setup as World-Class
+  document.body.classList.add('mode-world-class');
+
+  // 3. Spin refresh
+  function refreshSpin(icon) {
+    icon.style.transition = 'transform 600ms';
+    icon.style.transform = 'rotate(360deg)';
+    setTimeout(() => {
+      icon.style.transition = 'none';
+      icon.style.transform = 'rotate(0deg)';
+    }, 600);
+    toastAction('Đã làm mới dữ liệu Bàn làm việc');
+  }
+
+  // 4. Detail Drawer
+  function openSheet(id, title, dept, lead, date) {
+    document.getElementById('sheetId').textContent = id;
+    document.getElementById('sheetTitle').textContent = title;
+    document.getElementById('sheetDept').textContent = dept;
+    document.getElementById('sheetLead').textContent = lead;
+    document.getElementById('sheetDueDate').textContent = date;
+    document.getElementById('drawerSheet').classList.add('open');
+  }
+
+  function closeSheet(e) {
+    if (e && e.target !== document.getElementById('drawerSheet')) return;
+    document.getElementById('drawerSheet').classList.remove('open');
+  }
+
+  // 5. Toast
+  let toastTimeout;
+  function toastAction(msg) {
+    const toast = document.getElementById('appToast');
+    document.getElementById('toastMsg').textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => toast.classList.remove('show'), 3800);
+  }
+
+  // 6. Directive Form (Reward early, punish late)
+  const dirText = document.getElementById('sheetDirectiveText');
+  const dirErr = document.getElementById('sheetDirectiveError');
+  let dirDirty = false;
+
+  dirText.addEventListener('blur', () => {
+    dirDirty = true;
+    if (dirText.value.trim().length > 0 && dirText.value.trim().length < 5) {
+      dirErr.style.display = 'block';
+      dirText.style.borderColor = 'var(--color-danger)';
+    } else {
+      dirErr.style.display = 'none';
+      dirText.style.borderColor = 'var(--color-border)';
+    }
+  });
+
+  dirText.addEventListener('input', () => {
+    if (dirDirty && (dirText.value.trim().length >= 5 || dirText.value.trim().length === 0)) {
+      dirErr.style.display = 'none';
+      dirText.style.borderColor = 'var(--color-border)';
+    }
+  });
+
+  document.getElementById('btnSubmitDirective').addEventListener('click', () => {
+    if (dirText.value.trim().length < 5) {
+      dirErr.style.display = 'block';
+      dirText.style.borderColor = 'var(--color-danger)';
+      dirText.focus();
+      return;
+    }
+    toastAction('Đã ban hành chỉ đạo và phê duyệt thành công!');
+    closeSheet();
+    dirText.value = '';
+    dirDirty = false;
+  });
+
+  // 7. Keyboard Esc & ⌘K
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSheet();
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      toastAction('Đã kích hoạt thanh lệnh nhanh (Command Palette)');
+    }
+  });
+</script>

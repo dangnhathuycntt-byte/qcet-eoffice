@@ -156,40 +156,40 @@ describe("OAuth Error Mapping & Resolution", () => {
 });
 
 describe("Open Redirect Protection (OWASP A01)", () => {
-  test("allows legitimate relative URLs", () => {
-    assert.equal(sanitizeRedirectUrl("/"), "/");
-    assert.equal(sanitizeRedirectUrl("/?zone=tasks"), "/?zone=tasks");
-    assert.equal(sanitizeRedirectUrl("/dashboard"), "/dashboard");
+  test("allows legitimate relative URLs and normalizes root to /tasks", () => {
+    assert.equal(sanitizeRedirectUrl("/"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("/tasks?scope=my"), "/tasks?scope=my");
+    assert.equal(sanitizeRedirectUrl("/documents"), "/documents");
     assert.equal(sanitizeRedirectUrl("/settings/profile?tab=security"), "/settings/profile?tab=security");
   });
 
   test("blocks external protocol-relative URLs", () => {
-    assert.equal(sanitizeRedirectUrl("//evil.com"), "/");
-    assert.equal(sanitizeRedirectUrl("//google.com/phishing"), "/");
+    assert.equal(sanitizeRedirectUrl("//evil.com"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("//google.com/phishing"), "/tasks");
   });
 
   test("blocks backslash bypasses", () => {
-    assert.equal(sanitizeRedirectUrl("/\\evil.com"), "/");
-    assert.equal(sanitizeRedirectUrl("\\evil.com"), "/");
+    assert.equal(sanitizeRedirectUrl("/\\evil.com"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("\\evil.com"), "/tasks");
   });
 
   test("blocks absolute URLs with schemes", () => {
-    assert.equal(sanitizeRedirectUrl("https://evil.com"), "/");
-    assert.equal(sanitizeRedirectUrl("http://evil.com"), "/");
-    assert.equal(sanitizeRedirectUrl("javascript:alert(1)"), "/");
-    assert.equal(sanitizeRedirectUrl("data:text/html,<script>alert(1)</script>"), "/");
+    assert.equal(sanitizeRedirectUrl("https://evil.com"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("http://evil.com"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("javascript:alert(1)"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("data:text/html,<script>alert(1)</script>"), "/tasks");
   });
 
   test("blocks control characters and CRLF injection", () => {
-    assert.equal(sanitizeRedirectUrl("/path\r\nevil"), "/");
-    assert.equal(sanitizeRedirectUrl("/path\tfoo"), "/");
+    assert.equal(sanitizeRedirectUrl("/path\r\nevil"), "/tasks");
+    assert.equal(sanitizeRedirectUrl("/path\tfoo"), "/tasks");
   });
 
   test("handles null, undefined, and empty string safely", () => {
-    assert.equal(sanitizeRedirectUrl(null), "/");
-    assert.equal(sanitizeRedirectUrl(undefined), "/");
-    assert.equal(sanitizeRedirectUrl(""), "/");
-    assert.equal(sanitizeRedirectUrl("   "), "/");
+    assert.equal(sanitizeRedirectUrl(null), "/tasks");
+    assert.equal(sanitizeRedirectUrl(undefined), "/tasks");
+    assert.equal(sanitizeRedirectUrl(""), "/tasks");
+    assert.equal(sanitizeRedirectUrl("   "), "/tasks");
   });
 });
 

@@ -219,7 +219,7 @@ export function SmartWorkbox({
                   item.colorVariant === "rose" && item.count > 0
                     ? "text-rose-500"
                     : item.colorVariant === "amber" && item.count > 0
-                    ? "text-amber-600"
+                    ? "text-amber-700"
                     : item.colorVariant === "blue" && item.count > 0
                     ? "text-blue-600"
                     : "text-muted-foreground"

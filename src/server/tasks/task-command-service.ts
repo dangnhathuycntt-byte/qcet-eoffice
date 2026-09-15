@@ -386,6 +386,24 @@ export class TaskCommandService {
     const newTask = await prisma.$transaction(async (tx) => {
       const effectiveCreatorId = isPrivilegedUser(user) && creatorId ? creatorId : user.id;
 
+      // Resolve valid department ID against database to guarantee foreign key integrity
+      let validDepartmentId: string = effectiveDepartmentId;
+      const dept = await tx.department.findFirst({
+        where: {
+          OR: [
+            { id: effectiveDepartmentId },
+            { id: effectiveDepartmentId.toUpperCase() },
+            { id: effectiveDepartmentId.toLowerCase() },
+            { shortName: effectiveDepartmentId },
+            { name: effectiveDepartmentId },
+          ],
+        },
+        select: { id: true },
+      });
+      if (dept) {
+        validDepartmentId = dept.id;
+      }
+
       // Sinh mã tự động atomic O(1)
       const code =
         customCode ||
@@ -393,7 +411,7 @@ export class TaskCommandService {
           year: curYear,
           month: monthNum,
           scope: taskScope,
-          departmentCode: effectiveDepartmentId,
+          departmentCode: validDepartmentId,
         }));
 
       const task = await tx.task.create({
@@ -401,7 +419,7 @@ export class TaskCommandService {
           code,
           title,
           description: description || null,
-          departmentId: effectiveDepartmentId,
+          departmentId: validDepartmentId,
           dueDate: new Date(dueDate),
           academicMonth: monthNum,
           academicYear: yearStr,

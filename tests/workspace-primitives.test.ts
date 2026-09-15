@@ -48,7 +48,7 @@ describe("Shared Workspace Primitives (F3) - Comprehensive Suite", () => {
       assert.ok(markup.includes('id="scope-tab-my"'), "has my tab");
       assert.ok(markup.includes("Toàn trường"), "has Toàn trường label");
       assert.ok(markup.includes("Đơn vị"), "has Đơn vị label");
-      assert.ok(markup.includes("Của tôi"), "has Của tôi label");
+      assert.ok(markup.includes("Cá nhân") || markup.includes("Của tôi"), "has Cá nhân label");
     });
 
     test("active tab receives aria-selected='true' and tabIndex=0; inactive receive -1", () => {
@@ -491,7 +491,7 @@ describe("AdaptiveScopeHeader Component", () => {
     );
 
     assert.ok(html.includes("Toàn trường"), "Should display Toàn trường option");
-    assert.ok(html.includes("Của tôi"), "Should display Của tôi option");
+    assert.ok(html.includes("Cá nhân") || html.includes("Của tôi"), "Should display Cá nhân option");
     assert.ok(html.includes("data-slot=\"adaptive-scope-header\""));
   });
 

@@ -105,27 +105,47 @@ export function ActivityFeedWidget({
   auditLogHref,
 }: ActivityFeedWidgetProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
-  const displayedActivities = initialLimit && !isExpanded ? activities.slice(0, initialLimit) : activities;
+
+  // Deduplicate consecutive identical activities (same actor + action + target within close timeframe)
+  const uniqueActivities = React.useMemo(() => {
+    const list: ActivityEvent[] = [];
+    const seen = new Set<string>();
+
+    for (const act of activities) {
+      // Key consists of actor, action, target and minute timestamp to prevent spammy identical events
+      const timeKey = act.timestamp ? act.timestamp.slice(0, 16) : "";
+      const key = `${act.actorName}|${act.action}|${act.targetTitle}|${timeKey}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push(act);
+      }
+    }
+    return list;
+  }, [activities]);
+
+  const displayedActivities = initialLimit && !isExpanded ? uniqueActivities.slice(0, initialLimit) : uniqueActivities;
 
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card p-3.5 sm:p-4 text-card-foreground transition-colors",
+        "flex flex-col overflow-hidden rounded-2xl bg-card p-4 sm:p-5 text-card-foreground shadow-card border border-border/40",
         className
       )}
     >
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <History className="size-4 text-muted-foreground" strokeWidth={1.5} />
+          <div className="flex size-7 items-center justify-center rounded-lg bg-violet-500/10 shrink-0">
+            <History className="size-3.5 text-violet-600" strokeWidth={1.5} />
+          </div>
           <div>
-            <h3 className="font-sans text-sm font-bold text-foreground tracking-tight">
+            <h3 className="font-heading text-sm font-bold text-foreground tracking-tight">
               Hoạt động vừa cập nhật
             </h3>
             <p className="text-xs text-muted-foreground">
-              {activities.length > initialLimit && !isExpanded
+              {uniqueActivities.length > initialLimit && !isExpanded
                 ? `Hiển thị ${displayedActivities.length} hoạt động gần nhất`
-                : "Dòng nhật ký tương tác và tiến độ gần nhất"}
+                : "Ghi nhận theo thời gian thực"}
             </p>
           </div>
         </div>
@@ -146,10 +166,13 @@ export function ActivityFeedWidget({
       </div>
 
       {/* Activity Timeline List */}
-      <div className="flex flex-col divide-y divide-border/50 pt-1">
+      <div className="flex flex-col divide-y divide-border/40 pt-1">
         {displayedActivities.length === 0 ? (
-          <div className="py-8 text-center text-xs text-muted-foreground">
-            Chưa có hoạt động mới nào được ghi nhận
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <div className="flex size-8 items-center justify-center rounded-full bg-muted/60">
+              <Activity className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
+            </div>
+            <p className="text-xs text-muted-foreground">Chưa có hoạt động mới nào được ghi nhận</p>
           </div>
         ) : (
           displayedActivities.map((item) => {
@@ -160,27 +183,27 @@ export function ActivityFeedWidget({
             return (
               <div
                 key={item.id}
-                className="group flex items-start gap-2.5 py-2 sm:py-2.5 transition-colors first:pt-2 last:pb-1 min-h-[44px]"
+                className="group flex items-start gap-2.5 py-2 px-1.5 rounded-xl transition-colors hover:bg-muted/40 min-h-[38px]"
               >
-                {/* Actor Avatar / Initials with action micro-badge */}
+                {/* Actor Avatar / Initials */}
                 <div className="relative shrink-0 mt-0.5">
-                  <div className="flex size-7 sm:size-8 items-center justify-center rounded-full bg-secondary font-sans text-xs font-bold text-secondary-foreground ring-1 ring-border/50">
+                  <div className="flex size-6 items-center justify-center rounded-full bg-secondary font-sans text-2xs font-semibold text-secondary-foreground ring-1 ring-border/50">
                     {initials}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-card ring-1 ring-border/60 shadow-xs">
-                    <ActionIcon className="size-2.5 text-foreground/80" strokeWidth={1.5} />
+                  <div className="absolute -bottom-0.5 -right-0.5 flex size-3 items-center justify-center rounded-full bg-card ring-1 ring-border/50">
+                    <ActionIcon className="size-2 text-foreground/80" strokeWidth={1.5} />
                   </div>
                 </div>
 
                 {/* Event details */}
                 <div className="flex flex-col min-w-0 flex-1 gap-0.5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs leading-snug">
+                    <div className="text-xs leading-snug line-clamp-1">
                       <span className="font-semibold text-foreground">{item.actorName}</span>{" "}
                       <span className="text-muted-foreground font-normal">{item.action}</span>
                     </div>
                     {item.category && item.category !== "KHAC" && (
-                      <span className="shrink-0 inline-flex items-center rounded-md bg-secondary/80 px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
+                      <span className="shrink-0 inline-flex items-center rounded bg-secondary/80 px-1 py-0 text-2xs font-medium text-muted-foreground">
                         {item.category}
                       </span>
                     )}
@@ -188,14 +211,14 @@ export function ActivityFeedWidget({
 
                   {/* Target title */}
                   <div
-                    className="text-xs font-medium text-foreground/90 line-clamp-1 group-hover:text-primary transition-colors"
+                    className="text-xs text-foreground/80 line-clamp-1 group-hover:text-primary transition-colors"
                     title={item.targetTitle}
                   >
                     {item.targetTitle}
                   </div>
 
                   {/* Timestamp */}
-                  <div className="flex items-center gap-1 pt-0.5 text-xs text-muted-foreground font-mono">
+                  <div className="flex items-center gap-1 text-2xs text-muted-foreground/75 font-mono">
                     <Clock className="size-2.5 opacity-70" strokeWidth={1.5} />
                     <span>{formatDateTime(item.timestamp)}</span>
                   </div>
@@ -207,22 +230,22 @@ export function ActivityFeedWidget({
       </div>
 
       {/* Expand / Collapse Footer */}
-      {activities.length > initialLimit && (
-        <div className="pt-3 mt-1 border-t border-border/40 text-center">
+      {uniqueActivities.length > initialLimit && (
+        <div className="pt-2 mt-1 border-t border-border/40 text-center">
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
             aria-expanded={isExpanded}
           >
             {isExpanded ? (
               <>
-                <span>Thu gọn (hiển thị {initialLimit} mục)</span>
+                <span>Thu gọn</span>
                 <ChevronUp className="size-3.5" strokeWidth={1.5} />
               </>
             ) : (
               <>
-                <span>Xem tất cả {activities.length} hoạt động</span>
+                <span>Xem tất cả {uniqueActivities.length} hoạt động</span>
                 <ChevronDown className="size-3.5" strokeWidth={1.5} />
               </>
             )}

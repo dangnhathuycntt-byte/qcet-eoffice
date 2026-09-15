@@ -6,12 +6,18 @@ import {
   AlertCircle,
   ArrowRight,
   ArrowUpRight,
+  Check,
   CheckCircle2,
   Clock,
   ExternalLink,
   FileCheck,
+  Plus,
   RefreshCw,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
   Users,
+  X,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, DashboardStats } from "@/types/dashboard";
 import type { ExecutiveActionStats } from "@/lib/executive-matrix-aggregator";
@@ -36,6 +42,11 @@ import { QCET_DEPARTMENTS } from "@/components/org/organization-tree";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  useOptionalDashboardData,
+  useOptionalDashboardActions,
+} from "@/components/dashboard/dashboard-context";
 
 // ============================================================================
 // Types & Contracts
@@ -77,6 +88,7 @@ export interface StaffWorkloadItem {
 export interface PersonalWorkbenchProps {
   tasks?: SchoolTask[];
   filteredTasks?: SchoolTask[];
+  allTasks?: SchoolTask[];
   user?: AuthUser | null;
   role?: WorkbenchRole;
   isExecutive?: boolean;
@@ -96,23 +108,83 @@ export interface PersonalWorkbenchProps {
   className?: string;
 }
 
+export type WorkbenchFilterTab = "urgent" | "assigned_by_me" | "monitoring" | "all";
+
 // ============================================================================
 // Pure Calculation Helpers
 // ============================================================================
 
 /**
- * Pure builder function extracting the top 5–7 attention items adapted by role.
+ * Checks if a task was assigned, initiated, or delegated by the user.
+ */
+export function isTaskAssignedByMe(task: SchoolTask | StaffTask, user?: AuthUser | null): boolean {
+  if (!user) return false;
+  const anyTask = task as unknown as Record<string, unknown>;
+  const userId = user.id;
+  const userName = user.name;
+  const userEmail = user.email;
+
+  if (anyTask.createdById && (anyTask.createdById === userId || anyTask.createdById === userEmail)) return true;
+  if (anyTask.assignerId && (anyTask.assignerId === userId || anyTask.assignerId === userEmail)) return true;
+  if (anyTask.assignedById && (anyTask.assignedById === userId || anyTask.assignedById === userEmail)) return true;
+  if (anyTask.createdBy && (anyTask.createdBy === userId || anyTask.createdBy === userName)) return true;
+  if (anyTask.assignedBy && (anyTask.assignedBy === userName || anyTask.assignedBy === userId)) return true;
+
+  // Subtasks assigned to other members
+  if ("subTasks" in anyTask && Array.isArray(anyTask.subTasks)) {
+    const subTasks = anyTask.subTasks as Array<Record<string, unknown>>;
+    const hasSubtasksForOthers = subTasks.some(
+      (st) =>
+        (st.assigneeName && st.assigneeName !== userName) ||
+        (st.assigneeId && st.assigneeId !== userId)
+    );
+    if (
+      (anyTask.leadAssigneeName === userName || anyTask.leadAssigneeId === userId) &&
+      hasSubtasksForOthers
+    ) {
+      return true;
+    }
+  }
+
+  // Manager: unit tasks assigned to staff
+  const userRole = user.role;
+  const userDept = user.departmentCode || user.department;
+  if (
+    userRole === "MANAGER" &&
+    userDept &&
+    (anyTask.departmentCode === userDept || anyTask.leadDepartmentCode === userDept)
+  ) {
+    const assignee = anyTask.leadAssigneeName || anyTask.assignedTo || anyTask.assigneeName;
+    if (assignee && assignee !== userName) return true;
+  }
+
+  // Executive/Admin: school-wide tasks assigned to others
+  if (userRole === "ADMIN" || (userRole as string) === "EXECUTIVE") {
+    const assignee = anyTask.leadAssigneeName || anyTask.assignedTo || anyTask.assigneeName;
+    if (assignee && assignee !== userName) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Pure builder function extracting attention items adapted by role.
  * Standardizes the "What needs my attention?" model (aligned with Linear / Plane 'Your Work').
  * Role ONLY changes priority, order, and data — not the underlying UI card architecture.
+ *
+ * CRITICAL POLICY: Must NOT let monthly filters hide overdue tasks from prior months!
+ * When allTasks is supplied, overdue candidates are sourced from allTasks.
  */
 export function buildRoleAttentionQueue({
   tasks = [],
+  allTasks,
   user,
   role = "STAFF",
   referenceDate = getSystemReferenceDateStr(),
-  limit = 7,
+  limit = 50,
 }: {
   tasks?: SchoolTask[];
+  allTasks?: SchoolTask[];
   user?: AuthUser | null;
   role?: WorkbenchRole;
   referenceDate?: string;
@@ -129,14 +201,14 @@ export function buildRoleAttentionQueue({
     actionBadgeVariant: "destructive" | "warning" | "default" | "secondary"
   ): AttentionQueueItem => ({
     id: t.id,
-    code: t.code,
+    code: t.code || t.taskCode,
     title: t.title,
-    departmentCode: t.departmentCode,
-    departmentName: t.department,
+    departmentCode: t.departmentCode || t.leadDepartmentCode,
+    departmentName: t.department || t.departmentName || t.leadDepartment,
     assigneeName: t.leadAssigneeName || t.assignedTo || "Chưa phân công",
     dueDate: t.dueDate,
     isOverdue: Boolean(t.dueDate && isTaskPastDue(t.dueDate, referenceDate)),
-    progressPercent: t.progressPercent ?? 0,
+    progressPercent: t.progressPercent ?? t.progress ?? 0,
     priority: t.priority ?? "NORMAL",
     status: t.status,
     statusLabel:
@@ -148,6 +220,8 @@ export function buildRoleAttentionQueue({
         ? "Đang làm"
         : t.status === "COMPLETED"
         ? "Hoàn thành"
+        : t.status === "NOT_STARTED"
+        ? "Chưa bắt đầu"
         : "Cần xử lý",
     actionType,
     actionLabel,
@@ -156,22 +230,25 @@ export function buildRoleAttentionQueue({
     rawTask: t,
   });
 
+  // Source for overdue tasks: MUST prioritize allTasks so monthly filters do not hide past-due tasks
+  const overdueSourceTasks = allTasks && allTasks.length > 0 ? allTasks : tasks;
+
   if (role === "STAFF") {
     // ------------------------------------------------------------------------
     // Staff Priorities:
-    // 1. Overdue personal tasks (highest urgency)
+    // 1. Overdue personal tasks (highest urgency, sourced across all months)
     // 2. Tasks due today
     // 3. My submissions awaiting supervisor review
     // 4. In-progress personal tasks due soonest
     // ------------------------------------------------------------------------
-    const userTasks = tasks.filter((t) => {
+    const overduePersonalTasks = overdueSourceTasks.filter((t) => {
       if (t.status === "COMPLETED") return false;
       if (!user) return true;
       return isTaskAssignedToUser(t, user);
     });
 
-    // 1. Overdue
-    for (const t of userTasks) {
+    // 1. Overdue (quét toàn bộ allTasks - không bao giờ bị mất do bộ lọc tháng)
+    for (const t of overduePersonalTasks) {
       if (items.length >= limit) break;
       if (seenIds.has(t.id)) continue;
       if (isTaskOverdueOrHasOverdueSubtask(t, referenceDate)) {
@@ -180,8 +257,14 @@ export function buildRoleAttentionQueue({
       }
     }
 
+    const currentScopeTasks = tasks.filter((t) => {
+      if (t.status === "COMPLETED") return false;
+      if (!user) return true;
+      return isTaskAssignedToUser(t, user);
+    });
+
     // 2. Due today
-    for (const t of userTasks) {
+    for (const t of currentScopeTasks) {
       if (items.length >= limit) break;
       if (seenIds.has(t.id)) continue;
       if (t.dueDate && t.dueDate.startsWith(referenceDate)) {
@@ -191,7 +274,7 @@ export function buildRoleAttentionQueue({
     }
 
     // 3. Submissions awaiting review
-    for (const t of userTasks) {
+    for (const t of currentScopeTasks) {
       if (items.length >= limit) break;
       if (seenIds.has(t.id)) continue;
       if (isTaskWaitingApproval(t.status)) {
@@ -201,7 +284,7 @@ export function buildRoleAttentionQueue({
     }
 
     // 4. In-progress active tasks
-    for (const t of userTasks) {
+    for (const t of currentScopeTasks) {
       if (items.length >= limit) break;
       if (seenIds.has(t.id)) continue;
       if (isActiveTaskStatus(t.status)) {
@@ -213,10 +296,20 @@ export function buildRoleAttentionQueue({
     // ------------------------------------------------------------------------
     // Manager Priorities:
     // 1. Pending unit approvals (L1 sign-off needed from manager)
-    // 2. Overdue unit tasks & at-risk tasks
+    // 2. Overdue unit tasks & at-risk tasks (sourced across all months)
     // 3. Urgent / high priority unit deliverables
     // 4. Active unit tasks
     // ------------------------------------------------------------------------
+    const overdueUnitTasks = overdueSourceTasks.filter((t) => {
+      if (t.status === "COMPLETED") return false;
+      if (!userDept) return true;
+      return (
+        t.departmentCode === userDept ||
+        t.department === userDept ||
+        isTaskAssignedToUserOrUnit(t, user)
+      );
+    });
+
     const unitTasks = tasks.filter((t) => {
       if (t.status === "COMPLETED") return false;
       if (!userDept) return true;
@@ -237,8 +330,8 @@ export function buildRoleAttentionQueue({
       }
     }
 
-    // 2. Overdue unit tasks
-    for (const t of unitTasks) {
+    // 2. Overdue unit tasks (quét toàn bộ allTasks - không bao giờ bị mất do bộ lọc tháng)
+    for (const t of overdueUnitTasks) {
       if (items.length >= limit) break;
       if (seenIds.has(t.id)) continue;
       if (isTaskOverdueOrHasOverdueSubtask(t, referenceDate)) {
@@ -270,10 +363,11 @@ export function buildRoleAttentionQueue({
     // ------------------------------------------------------------------------
     // Executive (BGH) Priorities:
     // 1. School-wide approvals (L2 sign-off from Board of Rectors)
-    // 2. Strategic roadblocks & overdue school tasks
+    // 2. Strategic roadblocks & overdue school tasks (sourced across all months)
     // 3. Key institutional focus tasks
     // 4. General active tasks
     // ------------------------------------------------------------------------
+    const overdueSchoolTasks = overdueSourceTasks.filter((t) => t.status !== "COMPLETED");
     const schoolTasks = tasks.filter((t) => t.status !== "COMPLETED");
 
     // 1. Executive approvals (L2 sign-off)
@@ -289,8 +383,8 @@ export function buildRoleAttentionQueue({
       }
     }
 
-    // 2. Strategic roadblocks & overdue
-    for (const t of schoolTasks) {
+    // 2. Strategic roadblocks & overdue (quét toàn bộ allTasks - không bao giờ bị mất do bộ lọc tháng)
+    for (const t of overdueSchoolTasks) {
       if (items.length >= limit) break;
       if (seenIds.has(t.id)) continue;
       if (isTaskOverdueOrHasOverdueSubtask(t, referenceDate)) {
@@ -468,6 +562,7 @@ function ManagerStaffWorkloadWidget({
 export function PersonalWorkbench({
   tasks = [],
   filteredTasks,
+  allTasks,
   user,
   role = "STAFF",
   isExecutive,
@@ -523,16 +618,110 @@ export function PersonalWorkbench({
       ? "Điều phối công việc đơn vị, thẩm định minh chứng L1 và kiểm soát tiến độ nhiệm vụ"
       : "Nhiệm vụ cá nhân hôm nay, việc chờ nộp minh chứng và lịch công tác cần xử lý";
 
-  // Build role-adapted attention queue (capped at 7 to guarantee clean 1-2 viewport desktop height)
-  const baseTasks = tasks.length > 0 ? tasks : filteredTasks || [];
-  const attentionQueue = buildRoleAttentionQueue({
-    tasks: baseTasks,
-    user,
-    role: effectiveRole,
-    referenceDate,
-    limit: 7,
-  });
+  // Context access for state updates and unified full task set
+  const dashboardData = useOptionalDashboardData();
+  const dashboardActions = useOptionalDashboardActions();
 
+  // Unified full task set ensuring overdue tasks from previous months are included
+  const fullUnfilteredTasks = allTasks || dashboardData?.tasks || tasks;
+  const baseTasks = tasks.length > 0 ? tasks : filteredTasks || [];
+
+  // Local interaction states
+  const [activeTab, setActiveTab] = React.useState<WorkbenchFilterTab>("urgent");
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null);
+  const [revisionTaskId, setRevisionTaskId] = React.useState<string | null>(null);
+  const [revisionText, setRevisionText] = React.useState("");
+  const [actionFeedback, setActionFeedback] = React.useState<Record<string, string>>({});
+  const [showAllItems, setShowAllItems] = React.useState(false);
+
+  // Build role-adapted attention queue with limit=100 so in-place tabs have rich data
+  const attentionQueue = React.useMemo(() => {
+    return buildRoleAttentionQueue({
+      tasks: baseTasks,
+      allTasks: fullUnfilteredTasks,
+      user,
+      role: effectiveRole,
+      referenceDate,
+      limit: 100,
+    });
+  }, [baseTasks, fullUnfilteredTasks, user, effectiveRole, referenceDate]);
+
+  // Tab categorization
+  const urgentItems = React.useMemo(() => {
+    return attentionQueue.filter(
+      (item) =>
+        item.isOverdue ||
+        item.actionType === "OVERDUE" ||
+        item.actionType === "TODAY" ||
+        item.actionType === "APPROVAL" ||
+        item.status === "WAITING_APPROVAL" ||
+        item.status === "PENDING_EXECUTIVE_APPROVAL"
+    );
+  }, [attentionQueue]);
+
+  const assignedByMeItems = React.useMemo(() => {
+    return attentionQueue.filter((item) => isTaskAssignedByMe(item.rawTask, user));
+  }, [attentionQueue, user]);
+
+  const monitoringItems = React.useMemo(() => {
+    return attentionQueue.filter(
+      (item) =>
+        item.status === "IN_PROGRESS" ||
+        isActiveTaskStatus(item.status as TaskStatus) ||
+        item.actionType === "SUBMIT"
+    );
+  }, [attentionQueue]);
+
+  const tabCounts = React.useMemo(
+    () => ({
+      urgent: urgentItems.length,
+      assigned_by_me: assignedByMeItems.length,
+      monitoring: monitoringItems.length,
+      all: attentionQueue.length,
+    }),
+    [urgentItems.length, assignedByMeItems.length, monitoringItems.length, attentionQueue.length]
+  );
+
+  // Filter items based on active tab
+  const tabFilteredItems = React.useMemo(() => {
+    switch (activeTab) {
+      case "urgent":
+        return urgentItems;
+      case "assigned_by_me":
+        return assignedByMeItems;
+      case "monitoring":
+        return monitoringItems;
+      case "all":
+      default:
+        return attentionQueue;
+    }
+  }, [activeTab, urgentItems, assignedByMeItems, monitoringItems, attentionQueue]);
+
+  // Apply real-time search query
+  const searchFilteredItems = React.useMemo(() => {
+    if (!searchQuery.trim()) return tabFilteredItems;
+    const query = searchQuery.trim().toLowerCase();
+    return tabFilteredItems.filter((item) => {
+      const title = item.title.toLowerCase();
+      const code = (item.code || "").toLowerCase();
+      const assignee = (item.assigneeName || "").toLowerCase();
+      const dept = (item.departmentName || item.departmentCode || "").toLowerCase();
+      return (
+        title.includes(query) ||
+        code.includes(query) ||
+        assignee.includes(query) ||
+        dept.includes(query)
+      );
+    });
+  }, [tabFilteredItems, searchQuery]);
+
+  const MAX_VISIBLE_DEFAULT = 7;
+  const displayedItems = showAllItems
+    ? searchFilteredItems
+    : searchFilteredItems.slice(0, MAX_VISIBLE_DEFAULT);
+
+  // Staff Workload for Managers
   const staffWorkload =
     effectiveRole === "MANAGER"
       ? computeStaffWorkloadDistribution({
@@ -548,6 +737,117 @@ export function PersonalWorkbench({
       : effectiveRole === "MANAGER"
       ? `/tasks?scope=unit${user?.departmentCode ? `&dept=${encodeURIComponent(user.departmentCode)}` : ""}`
       : "/tasks?scope=my";
+
+  // Actions Handlers
+  const notifyFeedback = (taskId: string, message: string) => {
+    setActionFeedback((prev) => ({ ...prev, [taskId]: message }));
+    setTimeout(() => {
+      setActionFeedback((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
+    }, 3500);
+  };
+
+  // 1. Quick progress update (+10%, +25%)
+  const handleQuickProgress = async (item: AttentionQueueItem, delta: number) => {
+    const currentP = item.progressPercent ?? 0;
+    const targetP = Math.min(100, currentP + delta);
+    setUpdatingId(item.id);
+
+    try {
+      if (targetP >= 100) {
+        if (dashboardActions?.handleStatusChange) {
+          dashboardActions.handleStatusChange(item.id, "COMPLETED");
+        }
+        notifyFeedback(item.id, "Đã hoàn thành 100%!");
+      } else {
+        if (item.status === "NOT_STARTED" && dashboardActions?.handleStatusChange) {
+          dashboardActions.handleStatusChange(item.id, "IN_PROGRESS");
+        }
+        const res = await fetch(`/api/tasks/${encodeURIComponent(item.id)}/actions/update-progress`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ progressPercent: targetP }),
+        });
+        if (res.ok) {
+          notifyFeedback(item.id, `Tiến độ: ${targetP}%`);
+          if (dashboardActions?.handleManualRefresh) {
+            dashboardActions.handleManualRefresh();
+          }
+        } else {
+          notifyFeedback(item.id, "Lỗi cập nhật tiến độ");
+        }
+      }
+    } catch {
+      notifyFeedback(item.id, "Không thể kết nối máy chủ");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // 2. Mark complete
+  const handleQuickComplete = (item: AttentionQueueItem) => {
+    setUpdatingId(item.id);
+    try {
+      if (dashboardActions?.handleStatusChange) {
+        dashboardActions.handleStatusChange(item.id, "COMPLETED");
+        notifyFeedback(item.id, "Đã đánh d���u hoàn thành!");
+      }
+    } catch {
+      notifyFeedback(item.id, "Lỗi cập nhật");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // 3. Quick approve (L1 or L2)
+  const handleQuickApprove = async (item: AttentionQueueItem) => {
+    setUpdatingId(item.id);
+    try {
+      if (dashboardActions?.handleReviewAction) {
+        await dashboardActions.handleReviewAction({
+          taskId: item.id,
+          decision: "approved",
+          comment:
+            effectiveRole === "EXECUTIVE"
+              ? "Ban Giám hiệu phê duyệt L2"
+              : "Trưởng đơn vị phê duyệt L1",
+          reviewedByRole: user?.role || (effectiveRole === "EXECUTIVE" ? "ADMIN" : "MANAGER"),
+          reviewedByName: user?.name || "Người duyệt",
+        });
+        notifyFeedback(item.id, "Đã phê duyệt thành công!");
+      }
+    } catch {
+      notifyFeedback(item.id, "Lỗi phê duyệt nhiệm vụ");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // 4. Request revision
+  const handleQuickRequestRevision = async (item: AttentionQueueItem) => {
+    setUpdatingId(item.id);
+    try {
+      if (dashboardActions?.handleReviewAction) {
+        await dashboardActions.handleReviewAction({
+          taskId: item.id,
+          decision: "revision_requested",
+          comment: revisionText.trim() || "Yêu cầu chỉnh sửa và bổ sung minh chứng",
+          reviewedByRole: user?.role || (effectiveRole === "EXECUTIVE" ? "ADMIN" : "MANAGER"),
+          reviewedByName: user?.name || "Người duyệt",
+        });
+        notifyFeedback(item.id, "Đã gửi yêu cầu chỉnh sửa!");
+      }
+    } catch {
+      notifyFeedback(item.id, "Lỗi gửi yêu cầu chỉnh sửa");
+    } finally {
+      setUpdatingId(null);
+      setRevisionTaskId(null);
+      setRevisionText("");
+    }
+  };
 
   return (
     <div
@@ -629,7 +929,7 @@ export function PersonalWorkbench({
                     CẦN XỬ LÝ
                   </h2>
                   <Badge variant="secondary" className="text-xs font-mono tabular-nums px-2 py-0">
-                    {attentionQueue.length}
+                    {searchFilteredItems.length}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
@@ -650,117 +950,350 @@ export function PersonalWorkbench({
               </Link>
             </div>
 
+            {/* In-place Filter Tabs */}
+            <div
+              className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border/50 overflow-x-auto no-scrollbar"
+              role="tablist"
+              aria-label="Lọc nhanh danh sách cần xử lý"
+            >
+              {[
+                { key: "urgent" as const, label: "Cần xử lý ngay", count: tabCounts.urgent },
+                { key: "assigned_by_me" as const, label: "Tôi giao việc", count: tabCounts.assigned_by_me },
+                { key: "monitoring" as const, label: "Đang theo dõi", count: tabCounts.monitoring },
+                { key: "all" as const, label: "Tất cả", count: tabCounts.all },
+              ].map((tab) => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => {
+                      setActiveTab(tab.key);
+                      setShowAllItems(false);
+                    }}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                      isActive
+                        ? "bg-card text-foreground font-semibold shadow-2xs border border-border/70"
+                        : "text-muted-foreground hover:text-foreground hover:bg-card/50"
+                    )}
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className={cn(
+                        "text-[11px] font-mono tabular-nums px-1.5 py-0.2 rounded-full",
+                        isActive ? "bg-primary/10 text-primary font-semibold" : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* In-place Quick Search Input */}
+            <div className="relative">
+              <Search size={14} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm nhanh nhiệm vụ theo tên, mã, người chủ trì..."
+                className="pl-8 pr-8 h-8 text-xs rounded-lg border-border/60 bg-muted/20 focus:bg-card"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Xóa tìm kiếm"
+                >
+                  <X size={13} strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+
             {/* Attention Items List */}
-            {attentionQueue.length === 0 ? (
+            {displayedItems.length === 0 ? (
               <div
                 className="p-4 rounded-xl border border-border/60 bg-muted/20 text-xs text-foreground/80 flex items-center gap-3"
                 data-slot="action-empty-state"
               >
                 <CheckCircle2 size={16} className="text-muted-foreground shrink-0" strokeWidth={1.5} />
                 <div className="space-y-0.5">
-                  <p className="font-semibold">Không có việc cần bạn xử lý</p>
+                  <p className="font-semibold">
+                    {searchQuery
+                      ? "Không tìm thấy nhiệm vụ phù hợp"
+                      : "Không có việc trong mục này"}
+                  </p>
                   <p className="text-muted-foreground">
-                    Các hàng đợi hiện đã được giải quyết.
+                    {searchQuery
+                      ? "Thử tìm với từ khóa khác hoặc chuyển sang tab khác."
+                      : "Các hàng đợi tương ứng hiện đã được giải quyết hoặc chưa có việc."}
                   </p>
                 </div>
               </div>
             ) : (
               <div className="space-y-2.5">
-                {attentionQueue.map((item) => (
-                  <div
-                    key={item.id}
-                    data-slot="attention-queue-card"
-                    className="p-3 sm:p-3.5 rounded-xl border border-border/70 bg-card hover:border-primary/40 hover:bg-muted/10 transition-all space-y-2"
-                  >
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <Badge
-                          variant={item.actionBadgeVariant}
-                          className={cn(
-                            "text-xs font-sans font-medium px-2 py-0.5 rounded-md",
-                            item.actionType === "APPROVAL"
-                              ? "bg-amber-500/15 text-amber-900 border-amber-500/30"
-                              : item.actionType === "OVERDUE"
-                              ? "bg-rose-500/15 text-rose-900 border-rose-500/30"
-                              : item.actionType === "TODAY"
-                              ? "bg-blue-500/15 text-blue-900 border-blue-500/30"
-                              : ""
-                          )}
-                        >
-                          {item.actionLabel}
-                        </Badge>
-                        {item.priority === "URGENT" && (
-                          <Badge variant="destructive" className="text-xs px-1.5 py-0">
-                            Khẩn
+                {displayedItems.map((item) => {
+                  const isItemUpdating = updatingId === item.id;
+                  const feedback = actionFeedback[item.id];
+                  const canReview =
+                    (effectiveRole === "MANAGER" &&
+                      (item.status === "WAITING_APPROVAL" || item.actionType === "APPROVAL")) ||
+                    (effectiveRole === "EXECUTIVE" &&
+                      (item.status === "PENDING_EXECUTIVE_APPROVAL" ||
+                        item.status === "WAITING_APPROVAL" ||
+                        item.actionType === "APPROVAL"));
+                  const isRevisionOpen = revisionTaskId === item.id;
+
+                  return (
+                    <div
+                      key={item.id}
+                      data-slot="attention-queue-card"
+                      className={cn(
+                        "p-3 sm:p-3.5 rounded-xl border bg-card transition-all space-y-2.5 relative",
+                        item.isOverdue
+                          ? "border-rose-500/40 bg-rose-500/[0.02] hover:border-rose-500/60"
+                          : "border-border/70 hover:border-primary/40 hover:bg-muted/10"
+                      )}
+                    >
+                      {/* Card Header Tags */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge
+                            variant={item.actionBadgeVariant}
+                            className={cn(
+                              "text-xs font-sans font-medium px-2 py-0.5 rounded-md",
+                              item.actionType === "APPROVAL"
+                                ? "bg-amber-500/15 text-amber-900 border-amber-500/30"
+                                : item.actionType === "OVERDUE"
+                                ? "bg-rose-500/15 text-rose-900 border-rose-500/30"
+                                : item.actionType === "TODAY"
+                                ? "bg-blue-500/15 text-blue-900 border-blue-500/30"
+                                : ""
+                            )}
+                          >
+                            {item.actionLabel}
                           </Badge>
-                        )}
-                        {item.departmentCode && effectiveRole !== "STAFF" && (
-                          <span className="text-xs text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded">
-                            {item.departmentCode}
+                          {item.priority === "URGENT" && (
+                            <Badge variant="destructive" className="text-xs px-1.5 py-0">
+                              Khẩn
+                            </Badge>
+                          )}
+                          {item.departmentCode && effectiveRole !== "STAFF" && (
+                            <span className="text-xs text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded">
+                              {item.departmentCode}
+                            </span>
+                          )}
+                          {feedback && (
+                            <span className="text-xs text-emerald-800 bg-emerald-500/15 px-2 py-0.5 rounded-md font-medium animate-fade-in">
+                              {feedback}
+                            </span>
+                          )}
+                        </div>
+
+                        {item.dueDate && (
+                          <span
+                            className={cn(
+                              "text-xs font-mono tabular-nums shrink-0",
+                              item.isOverdue ? "text-rose-700 font-semibold" : "text-muted-foreground"
+                            )}
+                          >
+                            Hạn: {item.dueDate}
+                            {item.isOverdue ? " (Trễ hạn)" : ""}
                           </span>
                         )}
                       </div>
 
-                      {item.dueDate && (
-                        <span
-                          className={cn(
-                            "text-xs font-mono tabular-nums shrink-0",
-                            item.isOverdue ? "text-rose-700 font-semibold" : "text-muted-foreground"
-                          )}
+                      {/* Title */}
+                      <div>
+                        <Link
+                          href={item.targetUrl}
+                          onClick={(e) => {
+                            if (onSelectTask) {
+                              e.preventDefault();
+                              onSelectTask(item.rawTask);
+                            }
+                          }}
+                          className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary transition-colors line-clamp-1 group inline-flex items-center gap-1"
                         >
-                          Hạn: {item.dueDate}
-                          {item.isOverdue ? " (Trễ hạn)" : ""}
-                        </span>
+                          {item.code && <span className="font-mono text-muted-foreground">[{item.code}]</span>}
+                          <span>{item.title}</span>
+                          <ArrowUpRight
+                            size={13}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-primary shrink-0"
+                          />
+                        </Link>
+                      </div>
+
+                      {/* Assignee & Progress */}
+                      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                        <span className="truncate">Chủ trì: {item.assigneeName}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all duration-300",
+                                item.isOverdue ? "bg-rose-500" : "bg-primary"
+                              )}
+                              style={{ width: `${Math.min(100, item.progressPercent)}%` }}
+                            />
+                          </div>
+                          <span className="font-mono tabular-nums text-foreground/70">{item.progressPercent}%</span>
+                        </div>
+                      </div>
+
+                      {/* Inline Quick Actions Bar */}
+                      <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-2 flex-wrap text-xs">
+                        {/* Left action group: Progress Quick Adjust */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] text-muted-foreground font-medium mr-0.5">Tiến độ:</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isItemUpdating || item.status === "COMPLETED"}
+                            onClick={() => handleQuickProgress(item, 10)}
+                            className="h-6 px-1.5 text-[11px] font-mono rounded hover:bg-primary/10 hover:text-primary"
+                            title="Tăng 10% tiến độ"
+                          >
+                            +10%
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isItemUpdating || item.status === "COMPLETED"}
+                            onClick={() => handleQuickProgress(item, 25)}
+                            className="h-6 px-1.5 text-[11px] font-mono rounded hover:bg-primary/10 hover:text-primary"
+                            title="Tăng 25% tiến độ"
+                          >
+                            +25%
+                          </Button>
+                          {item.status !== "COMPLETED" && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={isItemUpdating}
+                              onClick={() => handleQuickComplete(item)}
+                              className="h-6 px-2 text-[11px] rounded text-emerald-800 hover:bg-emerald-500/10 hover:text-emerald-900"
+                              title="Đánh dấu hoàn thành 100%"
+                            >
+                              <CheckCircle2 size={12} strokeWidth={1.5} className="mr-1" />
+                              <span>Hoàn thành</span>
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Right action group: Review Actions (For Manager / Executive) */}
+                        {canReview && (
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              type="button"
+                              variant="default"
+                              size="sm"
+                              disabled={isItemUpdating}
+                              onClick={() => handleQuickApprove(item)}
+                              className="h-6 px-2 text-[11px] font-medium rounded-md bg-emerald-700 hover:bg-emerald-800 text-white gap-1"
+                            >
+                              <Check size={12} strokeWidth={1.5} />
+                              <span>{effectiveRole === "EXECUTIVE" ? "Duyệt L2" : "Duyệt L1"}</span>
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={isItemUpdating}
+                              onClick={() => {
+                                setRevisionTaskId(isRevisionOpen ? null : item.id);
+                                setRevisionText("");
+                              }}
+                              className={cn(
+                                "h-6 px-2 text-[11px] font-medium rounded-md gap-1",
+                                isRevisionOpen
+                                  ? "bg-amber-500/15 text-amber-900 border-amber-500/30"
+                                  : "hover:bg-amber-500/10 hover:text-amber-900 text-muted-foreground"
+                              )}
+                            >
+                              <RotateCcw size={11} strokeWidth={1.5} />
+                              <span>Yêu cầu sửa</span>
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Inline Revision Input Drawer */}
+                      {isRevisionOpen && (
+                        <div className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/[0.04] space-y-2 animate-fade-in">
+                          <div className="flex items-center justify-between text-xs text-amber-900 font-medium">
+                            <span>Ghi chú yêu cầu chỉnh sửa/bổ sung minh chứng:</span>
+                            <button
+                              type="button"
+                              onClick={() => setRevisionTaskId(null)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <X size={12} strokeWidth={1.5} />
+                            </button>
+                          </div>
+                          <Input
+                            type="text"
+                            value={revisionText}
+                            onChange={(e) => setRevisionText(e.target.value)}
+                            placeholder="Ví dụ: Bổ sung biên bản nghiệm thu hoặc làm rõ số liệu..."
+                            className="h-7 text-xs rounded border-border/80 bg-card"
+                            autoFocus
+                          />
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setRevisionTaskId(null)}
+                              className="h-6 px-2 text-xs"
+                            >
+                              Hủy
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="default"
+                              size="sm"
+                              disabled={isItemUpdating}
+                              onClick={() => handleQuickRequestRevision(item)}
+                              className="h-6 px-2.5 text-xs bg-amber-700 hover:bg-amber-800 text-white"
+                            >
+                              Gửi yêu cầu sửa
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     </div>
-
-                    {/* Title */}
-                    <div>
-                      <Link
-                        href={item.targetUrl}
-                        onClick={(e) => {
-                          if (onSelectTask) {
-                            e.preventDefault();
-                            onSelectTask(item.rawTask);
-                          }
-                        }}
-                        className="font-semibold text-xs sm:text-sm text-foreground hover:text-primary transition-colors line-clamp-1 group inline-flex items-center gap-1"
-                      >
-                        {item.code && <span className="font-mono text-muted-foreground">[{item.code}]</span>}
-                        <span>{item.title}</span>
-                        <ArrowUpRight
-                          size={13}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-primary shrink-0"
-                        />
-                      </Link>
-                    </div>
-
-                    {/* Assignee & Progress */}
-                    <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                      <span className="truncate">Chủ trì: {item.assigneeName}</span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={cn(
-                              "h-full rounded-full transition-all",
-                              item.isOverdue ? "bg-rose-500" : "bg-primary"
-                            )}
-                            style={{ width: `${Math.min(100, item.progressPercent)}%` }}
-                          />
-                        </div>
-                        <span className="font-mono tabular-nums">{item.progressPercent}%</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
-            {/* Bottom link to Tasks */}
-            <div className="pt-2 border-t border-border/40 text-center sm:text-right">
+            {/* Expand / Collapse and Bottom link to Tasks */}
+            <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-3 flex-wrap">
+              {searchFilteredItems.length > MAX_VISIBLE_DEFAULT && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllItems(!showAllItems)}
+                  className="text-xs text-muted-foreground hover:text-foreground font-medium underline underline-offset-2 cursor-pointer"
+                >
+                  {showAllItems
+                    ? "Thu gọn"
+                    : `Xem thêm ${searchFilteredItems.length - MAX_VISIBLE_DEFAULT} việc khác`}
+                </button>
+              )}
               <Link
                 href={viewAllTasksUrl}
-                className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-[32px] items-center"
+                className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1.5 min-h-[36px] items-center ml-auto"
               >
                 <span>Mở bảng nhiệm vụ đầy đủ ({baseTasks.length} nhiệm vụ)</span>
                 <ArrowRight size={13} strokeWidth={1.5} />
@@ -772,40 +1305,44 @@ export function PersonalWorkbench({
         {/* Right Column: Operational Context & Supporting Widgets (~40% desktop width) — omitted in attentionOnly mode */}
         {!attentionOnly && (
           <div className="lg:col-span-5 space-y-4">
-          {/* Executive Widgets */}
-          {effectiveRole === "EXECUTIVE" && departmentHealth.length > 0 && (
-            <div className="space-y-4">
-              <DepartmentProgressMatrix
-                departments={departmentHealth}
-                defaultViewMode="ranking"
+            {/* Executive Widgets */}
+            {effectiveRole === "EXECUTIVE" && departmentHealth.length > 0 && (
+              <div className="space-y-4">
+                <DepartmentProgressMatrix
+                  departments={departmentHealth}
+                  defaultViewMode="ranking"
+                />
+              </div>
+            )}
+
+            {/* Manager Workload Widget */}
+            {effectiveRole === "MANAGER" && staffWorkload.length > 0 && (
+              <ManagerStaffWorkloadWidget
+                workload={staffWorkload}
+                departmentName={user?.department}
               />
-            </div>
-          )}
+            )}
 
-          {/* Manager Workload Widget */}
-          {effectiveRole === "MANAGER" && staffWorkload.length > 0 && (
-            <ManagerStaffWorkloadWidget
-              workload={staffWorkload}
-              departmentName={user?.department}
-            />
-          )}
+            {/* Upcoming Deadlines Widget */}
+            {upcomingItems.length > 0 && (
+              <UpcomingDeadlinesWidget
+                items={upcomingItems.slice(0, 5)}
+                onSelectTask={
+                  onSelectTask
+                    ? (item) => {
+                        const found = baseTasks.find((t) => t.id === item.id || t.id === item.taskId);
+                        if (found) onSelectTask(found);
+                      }
+                    : undefined
+                }
+              />
+            )}
 
-          {/* Upcoming Deadlines Widget */}
-          {upcomingItems.length > 0 && (
-            <UpcomingDeadlinesWidget
-              items={upcomingItems.slice(0, 5)}
-              onSelectTask={onSelectTask ? (item) => {
-                const found = baseTasks.find((t) => t.id === item.id || t.id === item.taskId);
-                if (found) onSelectTask(found);
-              } : undefined}
-            />
-          )}
-
-          {/* Activity Feed Widget */}
-          {activities.length > 0 && (
-            <ActivityFeedWidget activities={activities.slice(0, 5)} />
-          )}
-        </div>
+            {/* Activity Feed Widget */}
+            {activities.length > 0 && (
+              <ActivityFeedWidget activities={activities.slice(0, 5)} />
+            )}
+          </div>
         )}
       </div>
     </div>

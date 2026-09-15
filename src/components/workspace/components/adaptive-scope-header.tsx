@@ -102,27 +102,25 @@ export function AdaptiveScopeHeader({
     visible: boolean;
   }> = [
     {
+      id: "my",
+      label: "Cá nhân",
+      shortLabel: "Cá nhân",
+      icon: User,
+      visible: true,
+    },
+    {
+      id: "unit",
+      label: "Đơn vị",
+      shortLabel: isUnassigned ? "Chưa chọn đ/vị" : "Đơn vị",
+      icon: isUnassigned ? AlertTriangle : Building2,
+      visible: !isUnassigned,
+    },
+    {
       id: "school",
       label: "Toàn trường",
       shortLabel: "Trường",
       icon: School,
       visible: isExecutive,
-    },
-    {
-      id: "unit",
-      label: unitLabel,
-      shortLabel: isUnassigned
-        ? "Chưa chọn đ/vị"
-        : (user.departmentCode || (unitLabel.length > 18 ? "Đơn vị" : unitLabel)),
-      icon: isUnassigned ? AlertTriangle : Building2,
-      visible: true,
-    },
-    {
-      id: "my",
-      label: "Việc của tôi",
-      shortLabel: "Của tôi",
-      icon: User,
-      visible: true,
     },
   ];
 
