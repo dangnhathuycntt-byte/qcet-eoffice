@@ -21,10 +21,10 @@ function LoginSkeleton() {
       aria-label="Đang tải trang đăng nhập"
       className="flex min-h-screen w-full bg-background outline-none"
     >
-      {/* Left Branding Panel Skeleton (Desktop only ~42%) */}
+      {/* Left Branding Panel Skeleton (Desktop ~40%) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[42%] xl:w-[40%] flex-col justify-between bg-slate-900 p-12 select-none"
+        className="hidden lg:flex lg:w-[40%] xl:w-[38%] flex-col justify-between bg-slate-900 p-12 select-none"
       >
         <div className="flex items-center gap-3">
           <div className="size-10 rounded-full bg-slate-800 animate-pulse" />
@@ -40,17 +40,17 @@ function LoginSkeleton() {
         </div>
       </div>
 
-      {/* Right Login Area (~58% on desktop, 100% on mobile) */}
-      <div className="w-full lg:w-[58%] xl:w-[60%] flex flex-col items-center justify-center p-6 sm:p-12">
-        <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
-          <div className="size-[72px] sm:size-20 rounded-full bg-muted animate-pulse" />
-          <div className="space-y-2 flex flex-col items-center">
-            <div className="h-7 w-52 bg-muted rounded-md animate-pulse" />
-            <div className="h-4 w-68 bg-muted rounded-md animate-pulse" />
+      {/* Right Login Area Skeleton (~60% on desktop, 100% on mobile) */}
+      <div className="w-full lg:w-[60%] xl:w-[62%] flex flex-col items-center justify-center p-6 sm:p-12">
+        <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-7">
+          {/* Mobile-only branding skeleton */}
+          <div className="flex lg:hidden flex-col items-center space-y-2">
+            <div className="size-16 rounded-full bg-muted animate-pulse" />
+            <div className="h-5 w-40 bg-muted rounded-md animate-pulse" />
           </div>
-          <div className="h-4 w-60 bg-muted rounded-md animate-pulse pt-1" />
+          <div className="h-7 w-64 bg-muted rounded-md animate-pulse" />
           <div className="h-12 w-[340px] sm:w-[360px] bg-muted rounded-md animate-pulse" />
-          <div className="space-y-2 flex flex-col items-center pt-2">
+          <div className="space-y-2 flex flex-col items-center pt-1">
             <div className="h-3.5 w-56 bg-muted rounded-md animate-pulse" />
             <div className="h-3.5 w-52 bg-muted rounded-md animate-pulse" />
           </div>
@@ -109,10 +109,10 @@ function LoginFormContent() {
       aria-label="Trang đăng nhập QCET E-Office"
       className="flex min-h-screen w-full bg-background selection:bg-primary/15 selection:text-primary outline-none"
     >
-      {/* Desktop Left: Institutional Campus Photography & Brand Panel (~40-42% width) */}
+      {/* Desktop Left: Institutional Campus Photography & Brand Panel (~40% desktop, hidden below 900px / mobile) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[42%] xl:w-[40%] relative flex-col justify-between p-12 select-none overflow-hidden bg-slate-950 text-white"
+        className="hidden lg:flex lg:w-[40%] xl:w-[38%] relative flex-col justify-between p-12 select-none overflow-hidden bg-slate-950 text-white"
       >
         {/* Campus Photo Background */}
         <Image
@@ -120,7 +120,7 @@ function LoginFormContent() {
           alt="Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
           fill
           priority
-          sizes="(min-width: 1024px) 45vw, 100vw"
+          sizes="(min-width: 1024px) 40vw, 100vw"
           className="object-cover object-center"
         />
 
@@ -140,7 +140,7 @@ function LoginFormContent() {
           </div>
           <div className="space-y-0.5">
             <p className="text-xs font-bold text-white tracking-tight">QCET E-Office</p>
-            <p className="text-[11px] text-white/80 font-medium">Trường CĐ Kỹ thuật Công nghệ Quy Nhơn</p>
+            <p className="text-[11px] text-white/80 font-medium">Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn</p>
           </div>
         </div>
 
@@ -161,32 +161,32 @@ function LoginFormContent() {
         </div>
       </div>
 
-      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (~58-60% width) */}
-      <div className="w-full lg:w-[58%] xl:w-[60%] flex flex-col items-center justify-center p-6 sm:p-12">
-        <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
-          {/* Branding: Official High-Resolution School Logo (~76-80px), QCET E-Office, Full School Name */}
-          <div className="flex flex-col items-center space-y-3">
+      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (~60% desktop, 100% mobile) */}
+      <div className="w-full lg:w-[60%] xl:w-[62%] flex flex-col items-center justify-center p-6 sm:p-12">
+        <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-7">
+          {/* Mobile Only: Compact School Logo & Branding Lockup */}
+          <div className="flex lg:hidden flex-col items-center space-y-2.5">
             <Image
               src="/logo-qcet.png"
               alt="Logo Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
-              width={160}
-              height={160}
-              className="size-[72px] sm:size-20 object-contain select-none"
+              width={128}
+              height={128}
+              className="size-16 object-contain select-none"
               priority
             />
-            <div className="space-y-1">
-              <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight text-foreground font-heading">
+            <div className="space-y-0.5">
+              <h1 className="text-xl font-bold tracking-tight text-foreground font-heading">
                 QCET E-Office
               </h1>
-              <p className="text-xs sm:text-[14.5px] text-muted-foreground font-medium">
+              <p className="text-xs text-muted-foreground font-medium">
                 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
               </p>
             </div>
           </div>
 
-          {/* Single Concise Login Heading */}
-          <div className="pt-0.5">
-            <h2 className="text-sm sm:text-base font-semibold text-foreground">
+          {/* Login Heading (Desktop primary heading & Mobile action title) */}
+          <div className="pt-1">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
               Đăng nhập bằng tài khoản công vụ
             </h2>
           </div>
