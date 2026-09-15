@@ -283,16 +283,24 @@ export function filterTasksByScope(
     if (!user) return tasks;
     return tasks.filter((t) => {
       const isLead =
-        t.leadAssigneeName === user.name || matchesUser(t.leadAssigneeName, user);
+        t.leadAssigneeName === user.name ||
+        matchesUser(t.leadAssigneeName, user) ||
+        (user.id && (t.leadAssigneeId === user.id || t.assignedTo === user.id));
       const hasSub = t.subTasks?.some(
-        (s) => s.assigneeName === user.name || matchesUser(s.assigneeName, user)
+        (s) =>
+          s.assigneeName === user.name ||
+          matchesUser(s.assigneeName, user) ||
+          (user.id && (s.assigneeId === user.id || s.assignedTo === user.id))
       );
-      return isLead || hasSub;
+      const isCo = Boolean(
+        t.coAssignees?.some((ca) => matchesUser(ca, user))
+      );
+      return Boolean(isLead || hasSub || isCo);
     });
   }
 
   if (scope === "SCHOOL_TASKS") {
-    if (!user || user.role === "ADMIN") {
+    if (!user || user.role === "ADMIN" || isExecutiveUser(user)) {
       return [...tasks];
     }
     return filterTasksByRole(tasks, user);
@@ -302,9 +310,7 @@ export function filterTasksByScope(
     const targetDept =
       departmentCode && departmentCode !== "ALL"
         ? departmentCode
-        : user && user.role !== "ADMIN"
-        ? user.departmentCode
-        : undefined;
+        : user?.departmentCode || user?.department || (isExecutiveUser(user) ? "BGH" : undefined);
 
     if (targetDept && targetDept !== "ALL") {
       return filterTasksForTable(tasks, "ALL", "", targetDept);
