@@ -24,10 +24,10 @@ function LoginSkeleton() {
       {/* Left Branding Panel (Desktop only ~40%) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[40%] xl:w-[38%] flex-col justify-between border-r border-slate-200/80 bg-slate-50/70 p-12 select-none"
+        className="hidden lg:flex lg:w-[40%] xl:w-[38%] flex-col justify-between border-r border-slate-200/40 bg-slate-50/50 p-12 select-none"
       >
         <div />
-        <div className="my-auto py-12 space-y-2">
+        <div className="pt-[14vh] pb-8 space-y-2.5">
           <div className="h-7 w-64 bg-muted rounded animate-pulse" />
           <div className="h-4 w-48 bg-muted/60 rounded animate-pulse" />
         </div>
@@ -36,17 +36,17 @@ function LoginSkeleton() {
 
       {/* Right Login Area (~60% on desktop, 100% on mobile) */}
       <div className="w-full lg:w-[60%] xl:w-[62%] flex flex-col items-center justify-center p-6 sm:p-12">
-        <div className="flex flex-col items-center text-center max-w-[360px] sm:max-w-[380px] w-full space-y-8">
-          <div className="size-16 sm:size-[72px] rounded-full bg-muted animate-pulse" />
+        <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
+          <div className="size-[72px] sm:size-20 rounded-full bg-muted animate-pulse" />
           <div className="space-y-2 flex flex-col items-center">
-            <div className="h-7 w-48 bg-muted rounded-md animate-pulse" />
-            <div className="h-4 w-64 bg-muted rounded-md animate-pulse" />
+            <div className="h-7 w-52 bg-muted rounded-md animate-pulse" />
+            <div className="h-4 w-68 bg-muted rounded-md animate-pulse" />
           </div>
-          <div className="h-4 w-56 bg-muted rounded-md animate-pulse pt-1" />
-          <div className="h-12 w-[340px] sm:w-[350px] bg-muted rounded-md animate-pulse" />
+          <div className="h-4 w-60 bg-muted rounded-md animate-pulse pt-1" />
+          <div className="h-12 w-[340px] sm:w-[360px] bg-muted rounded-md animate-pulse" />
           <div className="space-y-2 flex flex-col items-center pt-2">
             <div className="h-3.5 w-56 bg-muted rounded-md animate-pulse" />
-            <div className="h-3.5 w-48 bg-muted rounded-md animate-pulse" />
+            <div className="h-3.5 w-52 bg-muted rounded-md animate-pulse" />
           </div>
         </div>
       </div>
@@ -106,12 +106,12 @@ function LoginFormContent() {
       {/* Desktop Left: Institutional Brand Panel (~40% width) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[40%] xl:w-[38%] relative flex-col justify-between border-r border-slate-200/80 bg-slate-50/70 p-12 select-none overflow-hidden"
+        className="hidden lg:flex lg:w-[40%] xl:w-[38%] relative flex-col justify-between border-r border-slate-200/40 bg-slate-50/50 p-12 select-none overflow-hidden"
       >
         <div />
 
-        {/* Center: Simplified Institutional Statement */}
-        <div className="relative z-10 my-auto py-12 max-w-sm space-y-2">
+        {/* Branding copy positioned slightly upward */}
+        <div className="relative z-10 pt-[14vh] pb-8 max-w-sm space-y-2.5">
           <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-slate-900 font-heading leading-snug">
             Không gian làm việc số của Nhà trường
           </h2>
@@ -120,7 +120,7 @@ function LoginFormContent() {
           </p>
         </div>
 
-        {/* Watermark: ~320-380px, 3.5% opacity, anchored toward bottom-right of left panel */}
+        {/* Watermark: ~320-380px, 3.5% opacity, anchored bottom-right */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -bottom-10 -right-10 select-none opacity-[0.035] grayscale z-0"
@@ -140,24 +140,24 @@ function LoginFormContent() {
         </div>
       </div>
 
-      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (~60% width) */}
+      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (~60% width, ~8-12% enlarged scale) */}
       <div className="w-full lg:w-[60%] xl:w-[62%] flex flex-col items-center justify-center p-6 sm:p-12">
-        <div className="flex flex-col items-center text-center max-w-[360px] sm:max-w-[380px] w-full space-y-8">
-          {/* Branding: High-Resolution School Logo, QCET E-Office, Full School Name */}
+        <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
+          {/* Branding: Official High-Resolution School Logo (~76-80px), QCET E-Office, Full School Name */}
           <div className="flex flex-col items-center space-y-3">
             <Image
               src="/logo-qcet.png"
               alt="Logo Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
               width={160}
               height={160}
-              className="size-16 sm:size-[72px] object-contain select-none"
+              className="size-[72px] sm:size-20 object-contain select-none"
               priority
             />
             <div className="space-y-1">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground font-heading">
+              <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight text-foreground font-heading">
                 QCET E-Office
               </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+              <p className="text-xs sm:text-[14.5px] text-muted-foreground font-medium">
                 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
               </p>
             </div>
@@ -202,7 +202,7 @@ function LoginFormContent() {
             </div>
           )}
 
-          {/* Official Google Sign-In Button (Large size ~340-350px) */}
+          {/* Official Google Sign-In Button (Large size ~360px) */}
           <div className="w-full flex justify-center pt-0.5">
             <GoogleLoginButton
               returnTo={targetUrl}
@@ -214,18 +214,18 @@ function LoginFormContent() {
             />
           </div>
 
-          {/* Shortened Domain Note & Accessible Technical Support Link */}
+          {/* Domain Note & Accessible Technical Support Link */}
           <div className="space-y-2 pt-1 text-center text-xs text-muted-foreground">
             <p className="text-xs">
               Dành cho tài khoản <span className="font-mono font-medium text-foreground">@cdktcnqn.edu.vn</span>
             </p>
             <p className="text-xs">
-              Hỗ trợ kỹ thuật:{" "}
+              Không đăng nhập được?{" "}
               <a
                 href="mailto:support@cdktcnqn.edu.vn"
                 className="text-foreground font-medium underline underline-offset-4 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 rounded-xs transition-colors"
               >
-                Trung tâm Số &amp; Truyền thông
+                Liên hệ hỗ trợ
               </a>
             </p>
           </div>
