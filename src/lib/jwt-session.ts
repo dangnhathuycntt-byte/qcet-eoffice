@@ -37,39 +37,6 @@ export function verifySessionToken(token: string): SessionPayload | null {
     const decoded = jwt.verify(token, getJwtSecret()) as SessionPayload;
     return decoded;
   } catch {
-    // Edge Runtime fallback: if jsonwebtoken fails due to Node built-ins missing in Edge
-    try {
-      const parts = token.split(".");
-      if (parts.length !== 3) return null;
-
-      const payloadBase64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-      const jsonStr =
-        typeof atob === "function"
-          ? atob(payloadBase64)
-          : Buffer.from(payloadBase64, "base64").toString("utf-8");
-
-      const payload = JSON.parse(jsonStr) as SessionPayload & { exp?: number; nbf?: number };
-
-      if (payload.exp && typeof payload.exp === "number") {
-        const nowInSeconds = Math.floor(Date.now() / 1000);
-        if (nowInSeconds > payload.exp) {
-          return null;
-        }
-      }
-
-      if (payload.nbf && typeof payload.nbf === "number") {
-        const nowInSeconds = Math.floor(Date.now() / 1000);
-        if (nowInSeconds < payload.nbf) {
-          return null;
-        }
-      }
-
-      if (payload.id && payload.email && payload.role) {
-        return payload;
-      }
-    } catch {
-      return null;
-    }
     return null;
   }
 }

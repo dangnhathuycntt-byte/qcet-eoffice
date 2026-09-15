@@ -42,7 +42,19 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  // 3. Handle /dashboard and /portal legacy routes -> /tasks
+  // 3. Handle singular /task and /task/:id* routes -> /tasks
+  if (pathname === '/task') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/tasks';
+    return NextResponse.redirect(url, 308);
+  }
+  if (pathname.startsWith('/task/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.replace(/^\/task/, '/tasks');
+    return NextResponse.redirect(url, 308);
+  }
+
+  // 4. Handle /dashboard and /portal legacy routes -> /tasks
   if (pathname === '/dashboard' || pathname === '/portal') {
     const url = request.nextUrl.clone();
     url.pathname = '/tasks';

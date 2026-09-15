@@ -59,6 +59,49 @@ describe("QCET Authentication Routing & Middleware Invariants", () => {
       assert.equal(targetUrl.pathname, "/login");
       assert.equal(targetUrl.searchParams.get("returnTo"), "/documents/abc-123");
     });
+
+    test("access to singular /task redirects to /tasks (308)", () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/task");
+      const res = middleware(req);
+
+      assert.equal(res?.status, 308);
+      const location = res?.headers.get("location");
+      assert.ok(location);
+      const targetUrl = new URL(location);
+      assert.equal(targetUrl.pathname, "/tasks");
+    });
+
+    test("access to singular /task/task-123 redirects to /tasks/task-123 (308)", () => {
+      const req = createRequest("https://eoffice.qcet.edu.vn/task/task-123");
+      const res = middleware(req);
+
+      assert.equal(res?.status, 308);
+      const location = res?.headers.get("location");
+      assert.ok(location);
+      const targetUrl = new URL(location);
+      assert.equal(targetUrl.pathname, "/tasks/task-123");
+    });
+  });
+
+  describe("2. Cryptographic JWT Verification & Invalid Token Handling", () => {
+    test("verifySessionToken strictly rejects tampered/invalid signature tokens", () => {
+      const { verifySessionToken } = require("../src/lib/jwt-session");
+      // Create a forged/tampered token with an invalid signature
+      const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+      const payload = Buffer.from(
+        JSON.stringify({
+          id: "hacker-1",
+          email: "hacker@cdktcnqn.edu.vn",
+          role: "ADMIN",
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        })
+      ).toString("base64url");
+      const fakeSignature = "invalid_signature_here_12345";
+      const forgedToken = `${header}.${payload}.${fakeSignature}`;
+
+      const verified = verifySessionToken(forgedToken);
+      assert.equal(verified, null, "Forged token with bad signature must return null");
+    });
   });
 
   describe("2. Authenticated users opening /login", () => {
