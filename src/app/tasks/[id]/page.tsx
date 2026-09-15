@@ -18,7 +18,7 @@ export default async function Page({ params }: TaskDetailPageParams) {
   }
 
   const cookieStore = await cookies();
-  const session = getSessionFromRequest({ cookies: cookieStore });
+  const session = await getSessionFromRequest({ cookies: cookieStore });
 
   const currentUser =
     session && session.id

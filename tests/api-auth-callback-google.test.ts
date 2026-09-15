@@ -250,7 +250,7 @@ describe("GET /api/auth/callback/google", () => {
     const res = await googleCallbackGet(req);
 
     assert.strictEqual(res.status, 307);
-    assert.strictEqual(new URL(res.headers.get("location")!).pathname, "/");
+    assert.strictEqual(new URL(res.headers.get("location")!).pathname, "/tasks");
     assert.strictEqual(updatedAvatar, "https://avatar.url/pic.jpg");
 
     // Check session cookie
@@ -333,7 +333,7 @@ describe("GET /api/auth/callback/google", () => {
     const res = await googleCallbackGet(req);
 
     assert.strictEqual(res.status, 307);
-    assert.strictEqual(new URL(res.headers.get("location")!).pathname, "/");
+    assert.strictEqual(new URL(res.headers.get("location")!).pathname, "/tasks");
     assert.ok(createdAccountData);
     assert.strictEqual(createdAccountData.userId, "user-link-999");
     assert.strictEqual(createdAccountData.providerAccountId, "google-link-sub");
@@ -409,7 +409,7 @@ describe("GET /api/auth/callback/google", () => {
     const res = await googleCallbackGet(req);
 
     assert.strictEqual(res.status, 307);
-    assert.strictEqual(new URL(res.headers.get("location")!).pathname, "/");
+    assert.strictEqual(new URL(res.headers.get("location")!).pathname, "/tasks");
 
     // Verify created user data
     assert.ok(createdUserData, "User should be created in DB");

@@ -15,7 +15,7 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
   const rawView = searchParams.get("view");
   const initialView: ViewMode | undefined = rawView === "kanban" || rawView === "table" ? rawView : undefined;
   const cookieStore = await cookies();
-  const session = getSessionFromRequest({ cookies: cookieStore });
+  const session = await getSessionFromRequest({ cookies: cookieStore });
   if (!session) {
     const qs = searchParams.toString();
     const returnUrl = `/tasks${qs ? `?${qs}` : ""}`;

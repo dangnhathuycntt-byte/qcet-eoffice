@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { decode } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 import {
   getJwtSecret,
@@ -117,6 +118,41 @@ export async function resolveCurrentSession(request: RequestLike): Promise<Curre
   } catch (err: any) {
     if (err?.name === 'TokenExpiredError') {
       throw new AuthenticationError('Phiên làm việc đã hết hạn', 'SESSION_INVALID');
+    }
+
+    // Try decoding as NextAuth / Auth.js JWE token
+    try {
+      const secret = getJwtSecret();
+      for (const salt of [
+        SESSION_COOKIE_NAME,
+        SECURE_SESSION_COOKIE_NAME,
+        'next-auth.session-token',
+        '__Secure-next-auth.session-token',
+      ]) {
+        const decodedJwe = await decode({
+          token: token.trim(),
+          secret,
+          salt,
+        });
+        if (decodedJwe && (decodedJwe.id || decodedJwe.sub || decodedJwe.email)) {
+          decoded = {
+            id: decodedJwe.id || decodedJwe.sub,
+            email: decodedJwe.email,
+            name: decodedJwe.name || '',
+            role: decodedJwe.role || 'CHUYEN_VIEN',
+            departmentId: decodedJwe.departmentId || null,
+            title: decodedJwe.title || null,
+            isActive: decodedJwe.isActive !== false,
+            exp: decodedJwe.exp,
+            iat: decodedJwe.iat,
+            jti: decodedJwe.jti,
+          };
+          isJwt = true;
+          break;
+        }
+      }
+    } catch {
+      // Continue to DB session check
     }
   }
 

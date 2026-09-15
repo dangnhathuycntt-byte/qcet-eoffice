@@ -163,7 +163,7 @@ export async function getApiContext(
 
   const rawToken = extractTokenFromRequest(request);
   if (rawToken) {
-    const legacySession = getSessionFromRequest(request as any);
+    const legacySession = await getSessionFromRequest(request as any);
     const sessionId = (legacySession as any)?.sessionId || (legacySession ? `session_${legacySession.id}` : undefined);
     const userId = legacySession?.id;
 

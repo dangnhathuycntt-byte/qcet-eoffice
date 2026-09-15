@@ -46,7 +46,9 @@ export async function middleware(request: NextRequest) {
       targetPath = '/calendar';
     } else if (zone === 'org') {
       targetPath = '/org';
-    } else if (zone === 'tasks' || zone === 'portal' || zone === 'dashboard') {
+    } else if (zone === 'portal') {
+      targetPath = '/portal';
+    } else if (zone === 'tasks' || zone === 'dashboard') {
       targetPath = '/tasks';
     }
 
@@ -66,8 +68,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  // 4. Handle /dashboard and /portal legacy routes -> /tasks
-  if (pathname === '/dashboard' || pathname === '/portal') {
+  // 4. Handle /dashboard legacy route -> /tasks
+  if (pathname === '/dashboard') {
     const url = request.nextUrl.clone();
     url.pathname = '/tasks';
     return NextResponse.redirect(url, 308);

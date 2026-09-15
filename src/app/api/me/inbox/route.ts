@@ -7,7 +7,7 @@ import { ActionInboxService } from '@/server/services/action-inbox-service';
 export async function GET(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
   try {
-    const session = getSessionFromRequest(req as any);
+    const session = await getSessionFromRequest(req as any);
     if (!session || !session.id) {
       return apiError(new AuthenticationError('Chưa xác thực người dùng', 'UNAUTHORIZED'), requestId);
     }

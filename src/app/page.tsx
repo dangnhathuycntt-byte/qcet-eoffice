@@ -9,7 +9,7 @@ interface RootPageProps {
 export default async function RootPage({ searchParams }: RootPageProps) {
   const resolvedParams = searchParams ? await searchParams : {};
   const cookieStore = await cookies();
-  const session = getSessionFromRequest({ cookies: cookieStore });
+  const session = await getSessionFromRequest({ cookies: cookieStore });
 
   // Preserve authentication / onboarding redirects
   if (!session) {

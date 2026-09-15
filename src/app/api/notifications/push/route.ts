@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const publicKey = getVapidPublicKey();
-    const session = getSessionFromRequest(request);
+    const session = await getSessionFromRequest(request);
 
     if (!session?.id) {
       return NextResponse.json({
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = getSessionFromRequest(request);
+    const session = await getSessionFromRequest(request);
     if (!session?.id) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json().catch(() => null);
-    const session = getSessionFromRequest(request);
+    const session = await getSessionFromRequest(request);
     if (!session?.id) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },

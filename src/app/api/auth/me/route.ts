@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     requestId = context.requestId;
 
     // Verify server session truth using getSessionFromRequest(req) supporting cookies and Authorization: Bearer <token>
-    const session = getSessionFromRequest(req as any) || (context.user ? { id: context.user.id } : null);
+    const session = (await getSessionFromRequest(req as any)) || (context.user ? { id: context.user.id } : null);
 
     if (!session || !session.id) {
       return apiSuccess(

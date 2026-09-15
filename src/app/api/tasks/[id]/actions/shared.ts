@@ -133,7 +133,7 @@ export async function resolveActionContext(
   request: NextRequest,
   context: ActionRouteContext
 ): Promise<{ session: SessionPayload; taskId: string; body: any }> {
-  const session = getSessionFromRequest(request);
+  const session = await getSessionFromRequest(request);
   if (!session) {
     throw new AuthenticationError("Yêu cầu xác thực tài khoản", "AUTH_REQUIRED");
   }

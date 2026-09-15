@@ -14,6 +14,14 @@ const COOKIES_TO_CLEAR = [
   LEGACY_SESSION_COOKIE_NAME,
   "next-auth.session-token",
   "__Secure-next-auth.session-token",
+  "authjs.csrf-token",
+  "__Host-authjs.csrf-token",
+  "authjs.callback-url",
+  "__Secure-authjs.callback-url",
+  "next-auth.csrf-token",
+  "__Host-next-auth.csrf-token",
+  "next-auth.callback-url",
+  "__Secure-next-auth.callback-url",
   "qcet_oauth_state",
   "qcet_return_to",
 ];
@@ -24,7 +32,7 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
     if (token) {
       await revokeSession(token);
     }
-    const session = getSessionFromRequest(req as any);
+    const session = await getSessionFromRequest(req as any);
     if (session?.id) {
       const sessionId = (session as any).sessionId || (session as any).jti || `session_${session.id}`;
       await revokeSession(sessionId);
