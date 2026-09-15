@@ -21,21 +21,27 @@ function LoginSkeleton() {
       aria-label="Đang tải trang đăng nhập"
       className="flex min-h-screen w-full bg-background outline-none"
     >
-      {/* Left Branding Panel (Desktop only ~40%) */}
+      {/* Left Branding Panel Skeleton (Desktop only ~42%) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[40%] xl:w-[38%] flex-col justify-between border-r border-slate-200/40 bg-slate-50/50 p-12 select-none"
+        className="hidden lg:flex lg:w-[42%] xl:w-[40%] flex-col justify-between bg-slate-900 p-12 select-none"
       >
-        <div />
-        <div className="pt-[14vh] pb-8 space-y-2.5">
-          <div className="h-7 w-64 bg-muted rounded animate-pulse" />
-          <div className="h-4 w-48 bg-muted/60 rounded animate-pulse" />
+        <div className="flex items-center gap-3">
+          <div className="size-10 rounded-full bg-slate-800 animate-pulse" />
+          <div className="space-y-1">
+            <div className="h-3 w-28 bg-slate-800 rounded animate-pulse" />
+            <div className="h-2.5 w-44 bg-slate-800/60 rounded animate-pulse" />
+          </div>
         </div>
-        <div className="h-3 w-48 bg-muted/40 rounded animate-pulse" />
+        <div className="space-y-3">
+          <div className="h-7 w-64 bg-slate-800 rounded animate-pulse" />
+          <div className="h-4 w-48 bg-slate-800/60 rounded animate-pulse" />
+          <div className="h-3 w-48 bg-slate-800/40 rounded animate-pulse pt-4" />
+        </div>
       </div>
 
-      {/* Right Login Area (~60% on desktop, 100% on mobile) */}
-      <div className="w-full lg:w-[60%] xl:w-[62%] flex flex-col items-center justify-center p-6 sm:p-12">
+      {/* Right Login Area (~58% on desktop, 100% on mobile) */}
+      <div className="w-full lg:w-[58%] xl:w-[60%] flex flex-col items-center justify-center p-6 sm:p-12">
         <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
           <div className="size-[72px] sm:size-20 rounded-full bg-muted animate-pulse" />
           <div className="space-y-2 flex flex-col items-center">
@@ -103,45 +109,60 @@ function LoginFormContent() {
       aria-label="Trang đăng nhập QCET E-Office"
       className="flex min-h-screen w-full bg-background selection:bg-primary/15 selection:text-primary outline-none"
     >
-      {/* Desktop Left: Institutional Brand Panel (~40% width) */}
+      {/* Desktop Left: Institutional Campus Photography & Brand Panel (~40-42% width) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[40%] xl:w-[38%] relative flex-col justify-between border-r border-slate-200/40 bg-slate-50/50 p-12 select-none overflow-hidden"
+        className="hidden lg:flex lg:w-[42%] xl:w-[40%] relative flex-col justify-between p-12 select-none overflow-hidden bg-slate-950 text-white"
       >
-        <div />
+        {/* Campus Photo Background */}
+        <Image
+          src="/campus-qcet.jpg"
+          alt="Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
+          fill
+          priority
+          sizes="(min-width: 1024px) 45vw, 100vw"
+          className="object-cover object-center"
+        />
 
-        {/* Branding copy positioned slightly upward */}
-        <div className="relative z-10 pt-[14vh] pb-8 max-w-sm space-y-2.5">
-          <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-slate-900 font-heading leading-snug">
-            Không gian làm việc số của Nhà trường
-          </h2>
-          <p className="text-xs xl:text-sm text-slate-500 font-medium">
-            Nhiệm vụ · Văn bản · Lịch công tác
-          </p>
+        {/* Sophisticated Dark Institutional Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/50 to-slate-950/60 z-1" />
+
+        {/* Top: School Badge Lockup */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="size-10 rounded-full bg-white/95 p-1 flex items-center justify-center shadow-xs">
+            <Image
+              src="/logo-qcet.png"
+              alt=""
+              width={36}
+              height={36}
+              className="size-8 object-contain"
+            />
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-xs font-bold text-white tracking-tight">QCET E-Office</p>
+            <p className="text-[11px] text-white/80 font-medium">Trường CĐ Kỹ thuật Công nghệ Quy Nhơn</p>
+          </div>
         </div>
 
-        {/* Watermark: ~320-380px, 3.5% opacity, anchored bottom-right */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-10 -right-10 select-none opacity-[0.035] grayscale z-0"
-        >
-          <Image
-            src="/logo-qcet.png"
-            alt=""
-            width={360}
-            height={360}
-            className="size-[340px] xl:size-[360px] object-contain"
-          />
-        </div>
+        {/* Lower Area: Institutional Statement & Footer */}
+        <div className="relative z-10 space-y-6 pt-12">
+          <div className="space-y-2 max-w-sm">
+            <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-white font-heading leading-snug">
+              Không gian làm việc số của Nhà trường
+            </h2>
+            <p className="text-xs xl:text-sm text-white/80 font-medium">
+              Nhiệm vụ · Văn bản · Lịch công tác
+            </p>
+          </div>
 
-        {/* Bottom: Institutional Footer Copyright */}
-        <div className="relative z-10 text-[11px] text-slate-400 font-medium">
-          © 2026 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
+          <div className="text-[11px] text-white/60 font-medium border-t border-white/10 pt-4">
+            © 2026 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
+          </div>
         </div>
       </div>
 
-      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (~60% width, ~8-12% enlarged scale) */}
-      <div className="w-full lg:w-[60%] xl:w-[62%] flex flex-col items-center justify-center p-6 sm:p-12">
+      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (~58-60% width) */}
+      <div className="w-full lg:w-[58%] xl:w-[60%] flex flex-col items-center justify-center p-6 sm:p-12">
         <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
           {/* Branding: Official High-Resolution School Logo (~76-80px), QCET E-Office, Full School Name */}
           <div className="flex flex-col items-center space-y-3">
