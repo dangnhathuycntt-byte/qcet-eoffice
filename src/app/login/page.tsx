@@ -21,20 +21,20 @@ function LoginSkeleton() {
       aria-label="Đang tải trang đăng nhập"
       className="flex min-h-screen w-full flex-col items-center justify-center p-6 bg-background outline-none"
     >
-      <div className="flex flex-col items-center text-center max-w-[360px] sm:max-w-[380px] w-full space-y-7">
-        <div className="size-18 rounded-full bg-muted animate-pulse" />
+      <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
+        <div className="size-16 sm:size-20 rounded-full bg-muted animate-pulse" />
         <div className="space-y-2 flex flex-col items-center">
-          <div className="h-6 w-44 bg-muted rounded-md animate-pulse" />
-          <div className="h-3.5 w-60 bg-muted rounded-md animate-pulse" />
+          <div className="h-7 w-48 bg-muted rounded-md animate-pulse" />
+          <div className="h-4 w-64 bg-muted rounded-md animate-pulse" />
         </div>
         <div className="space-y-1.5 flex flex-col items-center pt-1">
-          <div className="h-4 w-28 bg-muted rounded-md animate-pulse" />
-          <div className="h-3.5 w-64 bg-muted rounded-md animate-pulse" />
+          <div className="h-4 w-32 bg-muted rounded-md animate-pulse" />
+          <div className="h-3.5 w-72 bg-muted rounded-md animate-pulse" />
         </div>
-        <div className="h-12 w-[320px] bg-muted rounded-md animate-pulse" />
+        <div className="h-12 w-[320px] sm:w-[340px] bg-muted rounded-md animate-pulse" />
         <div className="space-y-2 flex flex-col items-center pt-2">
-          <div className="h-3.5 w-52 bg-muted rounded-md animate-pulse" />
-          <div className="h-3.5 w-44 bg-muted rounded-md animate-pulse" />
+          <div className="h-3.5 w-56 bg-muted rounded-md animate-pulse" />
+          <div className="h-3.5 w-48 bg-muted rounded-md animate-pulse" />
         </div>
       </div>
     </main>
@@ -90,19 +90,19 @@ function LoginFormContent() {
       aria-label="Trang đăng nhập QCET E-Office"
       className="flex min-h-screen w-full flex-col items-center justify-center p-6 bg-background selection:bg-primary/15 selection:text-primary outline-none"
     >
-      <div className="flex flex-col items-center text-center max-w-[360px] sm:max-w-[380px] w-full space-y-7">
-        {/* Branding: School Logo, QCET E-Office, School Name */}
-        <div className="flex flex-col items-center space-y-2.5">
+      <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
+        {/* Branding: High-Resolution School Logo, QCET E-Office, Full School Name */}
+        <div className="flex flex-col items-center space-y-3">
           <Image
             src="/logo-qcet.png"
             alt="Logo Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
-            width={72}
-            height={72}
-            className="size-16 sm:size-18 object-contain select-none"
+            width={160}
+            height={160}
+            className="size-16 sm:size-20 object-contain select-none"
             priority
           />
-          <div className="space-y-0.5">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground font-heading">
               QCET E-Office
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground font-medium">
@@ -112,8 +112,8 @@ function LoginFormContent() {
         </div>
 
         {/* Section Heading & Instruction */}
-        <div className="space-y-1">
-          <h2 className="text-sm font-semibold text-foreground">
+        <div className="space-y-1.5">
+          <h2 className="text-sm sm:text-base font-semibold text-foreground">
             Đăng nhập
           </h2>
           <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
@@ -165,7 +165,7 @@ function LoginFormContent() {
           />
         </div>
 
-        {/* Domain Note & Technical Support Link */}
+        {/* Shortened Domain Note & Technical Support Link */}
         <div className="space-y-2 pt-1 text-center text-xs text-muted-foreground">
           <p className="text-xs">
             Dành cho tài khoản <span className="font-mono font-medium text-foreground">@cdktcnqn.edu.vn</span>
