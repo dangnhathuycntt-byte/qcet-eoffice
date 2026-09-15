@@ -145,7 +145,7 @@ export function GoogleLoginButton({
             theme: "outline",
             size: "large",
             type: "standard",
-            text: "continue_with",
+            text: "signin_with",
             shape: "rectangular",
             logo_alignment: "left",
             width: 360,
@@ -206,7 +206,7 @@ export function GoogleLoginButton({
           type="button"
           disabled={isLoading}
           onClick={handleStartOAuth}
-          aria-label="Tiếp tục với Google (@cdktcnqn.edu.vn)"
+          aria-label="Đăng nhập bằng Google (@cdktcnqn.edu.vn)"
           className="flex h-12 w-[340px] sm:w-[360px] max-w-full items-center justify-center gap-3 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 shadow-xs hover:bg-neutral-50 active:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-colors"
         >
           {isLoading ? (
@@ -217,7 +217,7 @@ export function GoogleLoginButton({
           ) : (
             <>
               <GoogleIcon className="size-5 shrink-0" />
-              <span className="text-sm font-medium text-neutral-800">Tiếp tục với Google</span>
+              <span className="text-sm font-medium text-neutral-800">Đăng nhập bằng Google</span>
             </>
           )}
         </button>

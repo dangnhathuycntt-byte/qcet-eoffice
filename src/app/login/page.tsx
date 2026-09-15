@@ -21,10 +21,10 @@ function LoginSkeleton() {
       aria-label="Đang tải trang đăng nhập"
       className="flex min-h-screen w-full bg-background outline-none"
     >
-      {/* Left Branding Panel Skeleton (Desktop ~42%) */}
+      {/* Left Branding Panel Skeleton (Desktop 50%) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[42%] xl:w-[40%] flex-col justify-between bg-slate-900 p-10 xl:p-12 select-none"
+        className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-slate-900 p-10 xl:p-12 select-none"
       >
         <div className="flex items-center gap-3">
           <div className="size-10 rounded-full bg-slate-800 animate-pulse" />
@@ -40,8 +40,8 @@ function LoginSkeleton() {
         </div>
       </div>
 
-      {/* Right Login Area Skeleton (~58% on desktop, 100% on mobile) */}
-      <div className="w-full lg:w-[58%] xl:w-[60%] flex flex-col items-center justify-center p-6 sm:p-12">
+      {/* Right Login Area Skeleton (50% on desktop, 100% on mobile) */}
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-12">
         <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-7">
           {/* Mobile-only branding skeleton */}
           <div className="flex lg:hidden flex-col items-center space-y-2">
@@ -109,10 +109,10 @@ function LoginFormContent() {
       aria-label="Trang đăng nhập QCET E-Office"
       className="flex min-h-screen w-full bg-background selection:bg-primary/15 selection:text-primary outline-none"
     >
-      {/* Desktop Left: Institutional Campus Photography & Brand Panel (~40-42% desktop, hidden below 900px / mobile) */}
+      {/* Desktop Left: Institutional Campus Photography & Brand Panel (50% desktop, hidden below 1024px / mobile) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[42%] xl:w-[40%] relative flex-col justify-between p-10 xl:p-12 select-none overflow-hidden bg-slate-950 text-white"
+        className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-10 xl:p-12 select-none overflow-hidden bg-slate-950 text-white"
       >
         {/* Campus Photo Background */}
         <Image
@@ -120,8 +120,8 @@ function LoginFormContent() {
           alt="Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
           fill
           priority
-          sizes="(min-width: 1024px) 45vw, 100vw"
-          className="object-cover object-[center_35%]"
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          className="object-cover object-[70%_center]"
         />
 
         {/* Sophisticated Dark Institutional Overlay */}
@@ -148,7 +148,7 @@ function LoginFormContent() {
         <div className="relative z-10 space-y-6 pt-12">
           <div className="space-y-2 max-w-sm">
             <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-white font-heading leading-snug">
-              Không gian làm việc số của Nhà trường
+              Không gian làm việc số của nhà trường
             </h2>
             <p className="text-xs xl:text-sm text-white/80 font-medium">
               Nhiệm vụ · Văn bản · Lịch công tác
@@ -161,8 +161,8 @@ function LoginFormContent() {
         </div>
       </div>
 
-      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (~58-60% desktop, 100% mobile) */}
-      <div className="w-full lg:w-[58%] xl:w-[60%] flex flex-col items-center justify-center p-6 sm:p-12">
+      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (50% desktop, 100% mobile) */}
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-12">
         <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-7">
           {/* Mobile Only: Compact School Logo & Branding Lockup */}
           <div className="flex lg:hidden flex-col items-center space-y-2.5">
