@@ -19,10 +19,10 @@ function LoginSkeleton() {
       tabIndex={-1}
       role="main"
       aria-label="Đang tải trang đăng nhập"
-      className="flex min-h-screen w-full flex-col items-center justify-center p-6 bg-background outline-none"
+      className="relative flex min-h-screen w-full flex-col items-center justify-center p-6 bg-background overflow-hidden outline-none"
     >
       <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
-        <div className="size-16 sm:size-20 rounded-full bg-muted animate-pulse" />
+        <div className="size-16 sm:size-[72px] rounded-full bg-muted animate-pulse" />
         <div className="space-y-2 flex flex-col items-center">
           <div className="h-7 w-48 bg-muted rounded-md animate-pulse" />
           <div className="h-4 w-64 bg-muted rounded-md animate-pulse" />
@@ -88,17 +88,33 @@ function LoginFormContent() {
       tabIndex={-1}
       role="main"
       aria-label="Trang đăng nhập QCET E-Office"
-      className="flex min-h-screen w-full flex-col items-center justify-center p-6 bg-background selection:bg-primary/15 selection:text-primary outline-none"
+      className="relative flex min-h-screen w-full flex-col items-center justify-center p-6 bg-background selection:bg-primary/15 selection:text-primary overflow-hidden outline-none"
     >
-      <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
+      {/* Subtle Institutional Watermark (Decorative only, hidden on mobile, 3% opacity, monochrome) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none opacity-0 sm:opacity-[0.03] grayscale hidden sm:block z-0"
+      >
+        <Image
+          src="/logo-qcet.png"
+          alt=""
+          width={480}
+          height={480}
+          className="size-[460px] sm:size-[480px] object-contain"
+          priority
+        />
+      </div>
+
+      {/* Main Content Composition */}
+      <div className="relative z-10 flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-8">
         {/* Branding: High-Resolution School Logo, QCET E-Office, Full School Name */}
         <div className="flex flex-col items-center space-y-3">
           <Image
             src="/logo-qcet.png"
             alt="Logo Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
-            width={160}
-            height={160}
-            className="size-16 sm:size-20 object-contain select-none"
+            width={144}
+            height={144}
+            className="size-16 sm:size-[72px] object-contain select-none"
             priority
           />
           <div className="space-y-1">
