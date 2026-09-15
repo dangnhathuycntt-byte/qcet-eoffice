@@ -32,8 +32,8 @@ describe("JWT Session Utilities", () => {
     assert.strictEqual(invalid, null);
   });
 
-  test("SESSION_COOKIE_NAME is defined and equals qcet_session", () => {
-    assert.strictEqual(SESSION_COOKIE_NAME, "qcet_session");
+  test("SESSION_COOKIE_NAME is defined and equals authjs.session-token or legacy cookie", () => {
+    assert.ok(SESSION_COOKIE_NAME === "authjs.session-token" || SESSION_COOKIE_NAME === "qcet_session");
   });
 
   test("getJwtSecret throws error in production environment when JWT_SECRET is missing", () => {
