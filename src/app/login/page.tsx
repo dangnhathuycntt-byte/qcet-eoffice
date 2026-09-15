@@ -19,14 +19,23 @@ function LoginSkeleton() {
       tabIndex={-1}
       role="main"
       aria-label="Đang tải trang đăng nhập"
-      className="flex min-h-screen w-full flex-col items-center justify-center p-4 bg-background outline-none"
+      className="flex min-h-screen w-full flex-col items-center justify-center p-6 bg-background outline-none"
     >
-      <div className="flex flex-col items-center text-center max-w-sm w-full space-y-4">
-        <div className="size-16 rounded-full bg-muted animate-pulse" />
-        <div className="h-4 w-52 bg-muted rounded-md animate-pulse" />
-        <div className="h-3 w-40 bg-muted rounded-md animate-pulse" />
-        <div className="h-9 w-64 bg-muted rounded-md animate-pulse pt-2" />
-        <div className="h-3 w-48 bg-muted rounded-md animate-pulse" />
+      <div className="flex flex-col items-center text-center max-w-[360px] sm:max-w-[380px] w-full space-y-7">
+        <div className="size-18 rounded-full bg-muted animate-pulse" />
+        <div className="space-y-2 flex flex-col items-center">
+          <div className="h-6 w-44 bg-muted rounded-md animate-pulse" />
+          <div className="h-3.5 w-60 bg-muted rounded-md animate-pulse" />
+        </div>
+        <div className="space-y-1.5 flex flex-col items-center pt-1">
+          <div className="h-4 w-28 bg-muted rounded-md animate-pulse" />
+          <div className="h-3.5 w-64 bg-muted rounded-md animate-pulse" />
+        </div>
+        <div className="h-12 w-[320px] bg-muted rounded-md animate-pulse" />
+        <div className="space-y-2 flex flex-col items-center pt-2">
+          <div className="h-3.5 w-52 bg-muted rounded-md animate-pulse" />
+          <div className="h-3.5 w-44 bg-muted rounded-md animate-pulse" />
+        </div>
       </div>
     </main>
   );
@@ -81,22 +90,22 @@ function LoginFormContent() {
       aria-label="Trang đăng nhập QCET E-Office"
       className="flex min-h-screen w-full flex-col items-center justify-center p-6 bg-background selection:bg-primary/15 selection:text-primary outline-none"
     >
-      <div className="flex flex-col items-center text-center max-w-sm w-full space-y-6">
-        {/* Branding: Logo, QCET E-Office, School Name */}
-        <div className="flex flex-col items-center space-y-2">
+      <div className="flex flex-col items-center text-center max-w-[360px] sm:max-w-[380px] w-full space-y-7">
+        {/* Branding: School Logo, QCET E-Office, School Name */}
+        <div className="flex flex-col items-center space-y-2.5">
           <Image
             src="/logo-qcet.png"
             alt="Logo Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
-            width={64}
-            height={64}
-            className="size-16 object-contain select-none"
+            width={72}
+            height={72}
+            className="size-16 sm:size-18 object-contain select-none"
             priority
           />
           <div className="space-y-0.5">
-            <h1 className="text-lg font-bold tracking-tight text-foreground font-heading">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
               QCET E-Office
             </h1>
-            <p className="text-xs text-muted-foreground font-medium">
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium">
               Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
             </p>
           </div>
@@ -107,12 +116,12 @@ function LoginFormContent() {
           <h2 className="text-sm font-semibold text-foreground">
             Đăng nhập
           </h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
             Sử dụng tài khoản Google Workspace được Nhà trường cấp để truy cập hệ thống.
           </p>
         </div>
 
-        {/* Error Notice */}
+        {/* OAuth Error / Warning Notice */}
         {oauthError && !dismissedOAuthError && (
           <div
             role="alert"
@@ -126,7 +135,7 @@ function LoginFormContent() {
             <button
               type="button"
               onClick={() => setDismissedOAuthError(true)}
-              className="shrink-0 p-0.5 text-red-700 hover:text-red-950 cursor-pointer"
+              className="shrink-0 p-0.5 text-red-700 hover:text-red-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-xs cursor-pointer transition-colors"
               aria-label="Đóng thông báo"
             >
               <X className="size-3.5" strokeWidth={1.5} />
@@ -144,8 +153,8 @@ function LoginFormContent() {
           </div>
         )}
 
-        {/* Google SSO Button */}
-        <div className="w-full flex justify-center pt-1">
+        {/* Official Google Sign-In Button (Large size) */}
+        <div className="w-full flex justify-center pt-0.5">
           <GoogleLoginButton
             returnTo={targetUrl}
             onError={(msg) => setErrorMessage(msg)}
@@ -156,16 +165,16 @@ function LoginFormContent() {
           />
         </div>
 
-        {/* Eligibility Note & Technical Support */}
-        <div className="space-y-2 pt-2 text-center text-xs text-muted-foreground">
-          <p className="text-[11px]">
-            Chỉ áp dụng cho tài khoản thuộc miền <span className="font-mono font-medium text-foreground">@cdktcnqn.edu.vn</span>
+        {/* Domain Note & Technical Support Link */}
+        <div className="space-y-2 pt-1 text-center text-xs text-muted-foreground">
+          <p className="text-xs">
+            Dành cho tài khoản <span className="font-mono font-medium text-foreground">@cdktcnqn.edu.vn</span>
           </p>
-          <p className="text-[11px]">
+          <p className="text-xs">
             Hỗ trợ kỹ thuật:{" "}
             <a
               href="mailto:support@cdktcnqn.edu.vn"
-              className="text-foreground hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
+              className="text-foreground font-medium underline underline-offset-4 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 rounded-xs transition-colors"
             >
               Trung tâm Số &amp; Truyền thông
             </a>

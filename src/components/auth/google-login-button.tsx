@@ -148,7 +148,7 @@ export function GoogleLoginButton({
             text: "continue_with",
             shape: "rectangular",
             logo_alignment: "left",
-            width: 280,
+            width: 320,
             locale: "vi",
           });
           if (isMounted) {
@@ -207,16 +207,16 @@ export function GoogleLoginButton({
           disabled={isLoading}
           onClick={handleStartOAuth}
           aria-label="Tiếp tục với Google (@cdktcnqn.edu.vn)"
-          className="flex h-11 w-[280px] items-center justify-center gap-3 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 shadow-xs hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-colors"
+          className="flex h-12 w-[320px] max-w-full items-center justify-center gap-3 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 shadow-xs hover:bg-neutral-50 active:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-colors"
         >
           {isLoading ? (
             <>
-              <Loader2 className="size-4 animate-spin text-primary" strokeWidth={1.5} />
-              <span className="text-xs font-medium text-neutral-800">Đang chuyển hướng...</span>
+              <Loader2 className="size-4.5 animate-spin text-primary" strokeWidth={1.5} />
+              <span className="text-sm font-medium text-neutral-800">Đang chuyển hướng...</span>
             </>
           ) : (
             <>
-              <GoogleIcon className="size-4.5 shrink-0" />
+              <GoogleIcon className="size-5 shrink-0" />
               <span className="text-sm font-medium text-neutral-800">Tiếp tục với Google</span>
             </>
           )}
