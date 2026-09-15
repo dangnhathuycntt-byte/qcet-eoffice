@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getLiveDashboardData, type LiveDashboardOptions } from "@/lib/server/dashboard-service";
 import { TasksPageClient } from "./tasks-page-client";
 import { TaskManagementWorkspace, type WorkspaceScope, type ViewMode } from "@/components/tasks/task-management-workspace";
-import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
+import { getSessionFromRequest } from "@/lib/jwt-session";
 import { isUserExecutive } from "@/domain/tasks/attention-resolver";
 
 export default async function TasksPage(props: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
@@ -15,7 +15,7 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
   const rawView = searchParams.get("view");
   const initialView: ViewMode | undefined = rawView === "kanban" || rawView === "table" ? rawView : undefined;
   const cookieStore = await cookies();
-  const session = verifySessionToken(cookieStore.get(SESSION_COOKIE_NAME)?.value || "");
+  const session = getSessionFromRequest({ cookies: cookieStore });
   if (!session) {
     const qs = searchParams.toString();
     const returnUrl = `/tasks${qs ? `?${qs}` : ""}`;

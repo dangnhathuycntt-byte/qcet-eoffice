@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
+import { getSessionFromRequest } from "@/lib/jwt-session";
 
 interface RootPageProps {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -9,7 +9,7 @@ interface RootPageProps {
 export default async function RootPage({ searchParams }: RootPageProps) {
   const resolvedParams = searchParams ? await searchParams : {};
   const cookieStore = await cookies();
-  const session = verifySessionToken(cookieStore.get(SESSION_COOKIE_NAME)?.value || "");
+  const session = getSessionFromRequest({ cookies: cookieStore });
 
   // Preserve authentication / onboarding redirects
   if (!session) {

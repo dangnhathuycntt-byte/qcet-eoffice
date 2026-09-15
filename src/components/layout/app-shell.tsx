@@ -203,17 +203,24 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         safeReturnTo && safeReturnTo !== "/tasks" && safeReturnTo !== "/"
           ? `/login?returnTo=${encodeURIComponent(safeReturnTo)}`
           : "/login";
-      router.replace(redirectUrl);
+      window.location.replace(redirectUrl);
     }
-  }, [isLoading, isAuthenticated, user, isPublicRoute, router]);
+  }, [isLoading, isAuthenticated, user, isPublicRoute]);
 
   if (isPublicRoute) {
     return <>{children}</>;
   }
 
-  // Khi chưa đăng nhập hoặc mất session trên protected route (đã xác nhận sau khi load xong)
+  // Khi chưa đăng nhập hoặc mất session trên protected route: hiển thị trạng thái chuyển hướng
   if (!isLoading && !isAuthenticated && !user) {
-    return null;
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground font-medium">Đang chuyển hướng đến trang đăng nhập...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

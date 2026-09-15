@@ -2,7 +2,7 @@ import * as React from "react";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
+import { getSessionFromRequest } from "@/lib/jwt-session";
 import { mapPrismaTaskToSchoolTask, mapPrismaTaskToStaffTask } from "@/lib/adapters/task-db-adapter";
 import { TaskDetailPage } from "@/components/tasks/task-detail-page";
 import type { SchoolTask, StaffTask } from "@/types/dashboard";
@@ -18,8 +18,7 @@ export default async function Page({ params }: TaskDetailPageParams) {
   }
 
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value || "";
-  const session = verifySessionToken(sessionToken);
+  const session = getSessionFromRequest({ cookies: cookieStore });
 
   const currentUser =
     session && session.id
