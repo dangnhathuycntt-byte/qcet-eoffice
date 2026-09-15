@@ -364,16 +364,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Sync session with server /api/auth/me on mount.
-  // retryOnUnauthenticated handles the Google OAuth redirect race: the session
-  // cookie may not yet be committed to the browser jar when the first fetch fires.
   useEffect(() => {
     let isMounted = true;
 
     async function syncSession() {
       const storage = typeof window !== "undefined" ? localStorage : null;
-      const resolution = await performSessionSync(fetch, storage, {
-        retryOnUnauthenticated: true,
-      });
+      const resolution = await performSessionSync(fetch, storage);
       if (!isMounted) return;
       applyResolution(resolution);
     }

@@ -208,8 +208,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Khi chưa đăng nhập hoặc mất session trên protected route, không render shell hay topbar
-  if (!isAuthenticated && !user) {
+  // Khi chưa đăng nhập hoặc mất session trên protected route (đã xác nhận sau khi load xong)
+  if (!isLoading && !isAuthenticated && !user) {
     return null;
   }
 
