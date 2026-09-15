@@ -1903,7 +1903,7 @@ export function UnifiedAdaptiveWorkspace({
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
           canCreateTask={true}
-          createButtonLabel="+ Giao việc"
+          createButtonLabel="Giao việc"
           activeTab={effectiveActiveTab}
           onTabChange={(tab) => handleFilterCanvasFromWorkbox(tab)}
           tabCounts={tabCounts}

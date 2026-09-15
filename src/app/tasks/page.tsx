@@ -22,8 +22,6 @@ export default async function TasksPage(props: { searchParams?: Promise<Record<s
     ? await getLiveDashboardData({ userId: session.id, departmentId: isExec ? undefined : session.departmentId || undefined })
     : { tasks: [] };
   return (
-    <React.Suspense fallback={<TaskManagementWorkspace scope="school" initialViewMode={initialView ?? "table"} />}>
-      <TasksPageClient initialTasks={tasks} initialScope={scope} initialView={initialView} />
-    </React.Suspense>
+    <TasksPageClient initialTasks={tasks} initialScope={scope} initialView={initialView} />
   );
 }

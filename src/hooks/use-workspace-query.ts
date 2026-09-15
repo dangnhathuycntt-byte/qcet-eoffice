@@ -225,7 +225,7 @@ export function useWorkspaceQuery(
         }
       }
 
-      dispatchUpdate(patch, navOptions);
+      dispatchUpdate(patch, { shallow: true, replace: true, ...navOptions });
     },
     [queryState, dispatchUpdate, unitParamKey]
   );

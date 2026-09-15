@@ -564,14 +564,38 @@ export function UnifiedTaskToolbar({
   // 2. Global "/" and "⌘K" Keyboard Shortcut for Search Focus
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) &&
-        document.activeElement?.tagName !== "INPUT" &&
-        document.activeElement?.tagName !== "TEXTAREA" &&
-        !(document.activeElement as HTMLElement)?.isContentEditable
-      ) {
+      // Do not intercept if a modal or dialog is open
+      if (document.querySelector('[role="dialog"]')) {
+        return;
+      }
+
+      if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) {
+        // Do not intercept during active IME composition
+        if (e.isComposing || e.keyCode === 229) return;
+
+        const activeEl = document.activeElement as HTMLElement | null;
+        const targetEl = e.target as HTMLElement | null;
+
+        const isEditable = (el: HTMLElement | null) => {
+          if (!el) return false;
+          const tag = el.tagName.toLowerCase();
+          return (
+            tag === "input" ||
+            tag === "textarea" ||
+            tag === "select" ||
+            el.isContentEditable ||
+            el.getAttribute("role") === "textbox" ||
+            el.getAttribute("contenteditable") === "true"
+          );
+        };
+
+        if (isEditable(activeEl) || isEditable(targetEl)) {
+          return;
+        }
+
         e.preventDefault();
         searchInputRef.current?.focus();
+        searchInputRef.current?.select();
       }
     };
 
@@ -653,7 +677,7 @@ export function UnifiedTaskToolbar({
 
   // Primary action callback
   const handlePrimaryAction = onNewTaskClick || onCreateTask || onAddTask;
-  const primaryActionLabel = createButtonLabel || "+ Giao việc";
+  const primaryActionLabel = (createButtonLabel || "Giao việc").replace(/^\+\s*/, "");
 
   // Scope badge counts fallback to tabCounts for scopes if badgeCounts is omitted
   const effectiveScopeBadgeCounts = badgeCounts || {
@@ -948,10 +972,6 @@ export function UnifiedTaskToolbar({
           >
             <Plus className="size-3.5 shrink-0" strokeWidth={1.5} />
             <span>{primaryActionLabel}</span>
-            <kbd className="hidden sm:inline-flex items-center gap-0.5 ml-1 px-1 py-0.2 text-[9px] font-mono font-medium text-primary-foreground/90 bg-primary-foreground/20 rounded border border-primary-foreground/20 select-none pointer-events-none">
-              <span>N</span>
-              <span className="opacity-60">P</span>
-            </kbd>
           </button>
         )}
       </div>

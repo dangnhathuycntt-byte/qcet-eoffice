@@ -376,46 +376,45 @@ export function LinearTaskAgentPanel({
   return (
     <aside
       className={cn(
-        "w-full md:w-[340px] lg:w-[360px] border-t md:border-t-0 md:border-l border-slate-100 bg-white shrink-0",
+        "w-full md:w-[320px] lg:w-[340px] border-t md:border-t-0 md:border-l border-slate-100 bg-white shrink-0",
         "flex flex-col h-full overflow-hidden text-slate-900 transition-all duration-200",
         "animate-in slide-in-from-right-4"
       )}
-      aria-label="Khung trợ lý soạn thảo nhiệm vụ AI"
+      aria-label="Khung trợ lý soạn thảo nhiệm vụ"
     >
       {/* Panel Top Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-white shrink-0">
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="size-3.5 text-slate-500" strokeWidth={1.5} />
-          <h3 className="text-xs font-semibold text-slate-800">
-            Trợ lý soạn thảo
-          </h3>
-        </div>
+      <header className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-white shrink-0">
+        <h3 className="text-xs font-semibold text-slate-700">
+          Trợ lý soạn thảo
+        </h3>
 
         <div className="flex items-center gap-0.5">
           <button
             type="button"
             onClick={onCollapse}
-            className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="size-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             aria-label="Thu gọn khung trợ lý"
+            title="Thu gọn"
           >
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-3.5" />
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="size-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             aria-label="Đóng khung trợ lý"
+            title="Đóng"
           >
-            <X className="size-4" strokeWidth={1.5} />
+            <X className="size-3.5" strokeWidth={1.5} />
           </button>
         </div>
       </header>
 
       {/* Main Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Prompt Pills */}
-        <div className="space-y-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {/* Lightweight Prompt Suggestions */}
+        <div className="space-y-1">
+          <span className="text-[10px] font-medium text-slate-400 select-none">
             Gợi ý cấu trúc
           </span>
           <div className="flex flex-wrap gap-1">
@@ -428,14 +427,9 @@ export function LinearTaskAgentPanel({
                   handleGenerate(pill.prompt);
                 }}
                 disabled={isGenerating}
-                className={cn(
-                  "px-2 py-1 rounded text-[11px] font-medium border transition-colors text-left cursor-pointer",
-                  "bg-slate-50/60 border-slate-200/80 text-slate-600 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900",
-                  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary",
-                  "disabled:opacity-50 disabled:pointer-events-none"
-                )}
+                className="inline-flex items-center px-2 py-0.5 rounded text-[11px] text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors text-left cursor-pointer disabled:opacity-40 disabled:pointer-events-none select-none"
               >
-                {pill.label}
+                <span>{pill.label}</span>
               </button>
             ))}
           </div>

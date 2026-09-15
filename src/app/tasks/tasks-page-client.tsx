@@ -45,7 +45,7 @@ export function TasksPageClient({ initialTasks, initialScope, initialView }: Tas
     if (target === "school" && !isExec) {
       target = isHead ? "unit" : "my";
     }
-    setScope(target);
+    setScope(target, { shallow: true, replace: true });
   };
 
   const handleViewChange = (v: ViewMode) => {
