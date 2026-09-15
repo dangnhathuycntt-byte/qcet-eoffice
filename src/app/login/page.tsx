@@ -48,10 +48,9 @@ function LoginSkeleton() {
             <div className="size-16 rounded-full bg-muted animate-pulse" />
             <div className="h-5 w-40 bg-muted rounded-md animate-pulse" />
           </div>
-          <div className="h-7 w-64 bg-muted rounded-md animate-pulse" />
+          <div className="h-7 w-36 bg-muted rounded-md animate-pulse" />
           <div className="h-12 w-[340px] sm:w-[360px] bg-muted rounded-md animate-pulse" />
-          <div className="space-y-2 flex flex-col items-center pt-1">
-            <div className="h-3.5 w-56 bg-muted rounded-md animate-pulse" />
+          <div className="flex flex-col items-center pt-1">
             <div className="h-3.5 w-52 bg-muted rounded-md animate-pulse" />
           </div>
         </div>
@@ -183,10 +182,10 @@ function LoginFormContent() {
             </div>
           </div>
 
-          {/* Login Heading (Desktop primary heading & Mobile action title) */}
+          {/* Login Heading */}
           <div className="pt-1">
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
-              Đăng nhập bằng tài khoản công vụ
+              Đăng nhập
             </h2>
           </div>
 
@@ -233,11 +232,8 @@ function LoginFormContent() {
             />
           </div>
 
-          {/* Domain Note & Accessible Technical Support Link */}
-          <div className="space-y-2 pt-1 text-center text-xs text-muted-foreground">
-            <p className="text-xs">
-              Dành cho tài khoản <span className="font-mono font-medium text-foreground">@cdktcnqn.edu.vn</span>
-            </p>
+          {/* Accessible Technical Support Link */}
+          <div className="pt-1 text-center text-xs text-muted-foreground">
             <p className="text-xs">
               Không đăng nhập được?{" "}
               <a
