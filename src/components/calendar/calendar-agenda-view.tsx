@@ -443,6 +443,20 @@ export function CalendarAgendaView({
     (levelFilter && levelFilter !== "ALL")
   );
 
+  // Tự động cuộn đến ngày hôm nay khi không có filter active
+  React.useEffect(() => {
+    if (!isFilterActive) {
+      const todayEl = document.getElementById("agenda-today");
+      if (todayEl) {
+        // Cho một chút delay để layout ổn định sau initial render
+        const timer = setTimeout(() => {
+          todayEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isFilterActive]);
+
   return (
     <div className={cn("space-y-0", className)} data-slot="calendar-agenda-view">
       {sortedDates.length === 0 ? (
@@ -489,6 +503,8 @@ export function CalendarAgendaView({
             return (
               <section
                 key={dateString}
+                id={isToday ? "agenda-today" : undefined}
+                data-today={isToday ? "true" : undefined}
                 className={cn(
                   "transition-all",
                   isToday && "ring-1 ring-inset ring-primary/20",
@@ -602,7 +618,7 @@ export function CalendarAgendaView({
                           [dateString]: !prev[dateString],
                         }))
                       }
-                      className="w-full min-h-[40px] flex items-center gap-2 px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                      className="w-full min-h-[44px] flex items-center gap-2 px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                       aria-expanded={isCompletedExpanded}
                       aria-controls={`completed-${dateString}`}
                     >

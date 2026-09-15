@@ -230,6 +230,7 @@ export interface KanbanTransitionState {
   pendingTaskIds: Record<string, boolean>;
   optimisticStatuses: Record<string, TaskStatus>;
   taskErrors: Record<string, string | null>;
+  lastAttemptedStatuses?: Record<string, TaskStatus | null>;
 }
 
 /**
@@ -261,6 +262,7 @@ export async function executeKanbanStatusTransition(
     pendingTaskIds: { ...state.pendingTaskIds, [taskId]: true },
     optimisticStatuses: { ...state.optimisticStatuses, [taskId]: newStatus },
     taskErrors: { ...state.taskErrors, [taskId]: null },
+    lastAttemptedStatuses: { ...state.lastAttemptedStatuses },
   };
 
   try {
@@ -274,10 +276,14 @@ export async function executeKanbanStatusTransition(
       throw new Error((result as { error?: string }).error || "Cập nhật trạng thái thất bại.");
     }
     const { [taskId]: _, ...remainingPending } = pendingState.pendingTaskIds;
+    const { [taskId]: _err, ...remainingErrors } = pendingState.taskErrors;
+    const { [taskId]: _las, ...remainingLastAttempted } = pendingState.lastAttemptedStatuses ?? {};
     return {
       state: {
         ...pendingState,
         pendingTaskIds: remainingPending,
+        taskErrors: remainingErrors,
+        lastAttemptedStatuses: remainingLastAttempted,
       },
       ok: true,
     };
@@ -296,6 +302,10 @@ export async function executeKanbanStatusTransition(
         taskErrors: {
           ...pendingState.taskErrors,
           [taskId]: errorMessage,
+        },
+        lastAttemptedStatuses: {
+          ...pendingState.lastAttemptedStatuses,
+          [taskId]: newStatus,
         },
       },
       ok: false,
@@ -495,6 +505,7 @@ interface KanbanCardProps {
   item: KanbanItem;
   isPending?: boolean;
   errorMessage?: string | null;
+  lastAttemptedStatus?: TaskStatus | null;
   onSelectTask?: (task: SchoolTask | StaffTask) => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => Promise<unknown> | void;
 }
@@ -503,6 +514,7 @@ function KanbanCard({
   item,
   isPending = false,
   errorMessage = null,
+  lastAttemptedStatus = null,
   onSelectTask,
   onStatusChange,
 }: KanbanCardProps) {
@@ -590,6 +602,7 @@ function KanbanCard({
     triggerHaptic("selection");
     setMenuOpen(false);
     setStatusSubmenuOpen(false);
+    // Do not stopPropagation here — caller handles card click separately
     await onStatusChange?.(item.id, newStatus);
   }
 
@@ -606,7 +619,7 @@ function KanbanCard({
       className={cn(
         "group relative flex flex-col gap-1.5 rounded-lg border border-border/60 bg-card py-2.5 px-3 text-card-foreground transition-all duration-150 cursor-pointer shadow-2xs",
         "hover:border-primary/40 hover:shadow-subtle hover:-translate-y-[1px] active:translate-y-0",
-        isPending && "opacity-75 pointer-events-none",
+        isPending && "opacity-75",
         item.level === "TRUONG"
           ? "border-l-2 border-l-blue-500/70"
           : "border-l-2 border-l-indigo-500/70"
@@ -768,13 +781,25 @@ function KanbanCard({
       {isPending && (
         <div className="flex items-center gap-1.5 text-xs text-primary font-medium bg-primary/5 px-2 py-0.5 rounded">
           <Clock className="size-3 animate-spin shrink-0" />
-          <span>Đang cập nhật...</span>
+          <span>Đang cập nhật…</span>
         </div>
       )}
       {errorMessage && (
         <div className="flex items-center gap-1.5 text-xs text-destructive bg-destructive/10 px-2 py-0.5 rounded">
           <AlertCircle className="size-3 shrink-0" />
-          <span className="truncate">{errorMessage}</span>
+          <span className="truncate flex-1">{errorMessage}</span>
+          {lastAttemptedStatus && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onStatusChange?.(item.id, lastAttemptedStatus);
+              }}
+              className="shrink-0 underline underline-offset-2 hover:no-underline cursor-pointer"
+            >
+              Thử lại
+            </button>
+          )}
         </div>
       )}
 
@@ -867,7 +892,12 @@ export function TaskKanbanBoard({
     pendingTaskIds: {},
     optimisticStatuses: {},
     taskErrors: {},
+    lastAttemptedStatuses: {},
   });
+  // Keep a ref so handleStatusChangeInternal always reads latest state
+  // without stale closure, enabling correct concurrent pending guards.
+  const transitionStateRef = React.useRef(transitionState);
+  transitionStateRef.current = transitionState;
 
   // Reconcile external tasks to clear obsolete optimistic overrides
   React.useEffect(() => {
@@ -954,7 +984,9 @@ export function TaskKanbanBoard({
 
   const handleStatusChangeInternal = React.useCallback(
     async (taskId: string, newStatus: TaskStatus) => {
-      if (transitionState.pendingTaskIds[taskId]) return;
+      // Read latest state from ref to avoid stale closure with concurrent transitions
+      const latestState = transitionStateRef.current;
+      if (latestState.pendingTaskIds[taskId]) return;
 
       const targetItem = allFilteredItems.find((i) => i.id === taskId);
       const currentStatus = targetItem?.status ?? "NEW";
@@ -963,7 +995,7 @@ export function TaskKanbanBoard({
         taskId,
         newStatus,
         currentStatus,
-        transitionState,
+        latestState,
         onStatusChange
       );
 
@@ -972,9 +1004,10 @@ export function TaskKanbanBoard({
         pendingTaskIds: { ...prev.pendingTaskIds, ...transitionResult.state.pendingTaskIds },
         optimisticStatuses: { ...prev.optimisticStatuses, ...transitionResult.state.optimisticStatuses },
         taskErrors: { ...prev.taskErrors, ...transitionResult.state.taskErrors },
+        lastAttemptedStatuses: { ...prev.lastAttemptedStatuses, ...transitionResult.state.lastAttemptedStatuses },
       }));
     },
-    [transitionState, allFilteredItems, onStatusChange]
+    [allFilteredItems, onStatusChange]
   );
 
   const totalExtractedCount = allFilteredItems.length;
@@ -1098,6 +1131,7 @@ export function TaskKanbanBoard({
                         item={item}
                         isPending={Boolean(transitionState.pendingTaskIds[item.id])}
                         errorMessage={transitionState.taskErrors[item.id]}
+                        lastAttemptedStatus={transitionState.lastAttemptedStatuses?.[item.id] ?? null}
                         onSelectTask={onSelectTask}
                         onStatusChange={handleStatusChangeInternal}
                       />

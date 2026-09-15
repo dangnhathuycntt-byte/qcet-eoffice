@@ -113,7 +113,7 @@ export const CATEGORY_OPTIONS: { id: TaskCategory; label: string; color: string 
   { id: "ATTT", label: "An toàn thông tin", color: "bg-rose-500" },
   { id: "THU_VIEN", label: "Thư viện & Học liệu", color: "bg-amber-500" },
   { id: "BAO_CAO", label: "Báo cáo & Tổng hợp", color: "bg-cyan-500" },
-  { id: "KHAC", label: "Khác", color: "bg-slate-500" },
+  { id: "KHAC", label: "Khác", color: "bg-muted-foreground" },
 ];
 
 export interface ApiPersonnel {
@@ -432,6 +432,47 @@ export function takeFormSnapshot(formData: CreateTaskFormData): CreateTaskFormDa
     ...formData,
     coAssignees: [...(formData.coAssignees || [])],
   };
+}
+
+/**
+ * Pure combobox keyboard navigation helper (Task 4 — bàn phím).
+ *
+ * Tính activeOptionIndex mới từ phím bấm và tổng số kết quả.
+ * Không chọn khi danh sách rỗng hoặc đang IME composition.
+ *
+ * @returns next index (số nguyên trong [0, total-1]), hoặc null nếu không thay đổi.
+ */
+export function resolveComboboxNavigation(
+  key: "ArrowDown" | "ArrowUp",
+  currentIndex: number,
+  total: number
+): number | null {
+  if (total === 0) return null;
+  if (key === "ArrowDown") return (currentIndex + 1) % total;
+  return (currentIndex - 1 + total) % total;
+}
+
+/**
+ * Pure guard: kiểm tra điều kiện để chọn option bằng Enter trong combobox.
+ *
+ * Trả về false nếu:
+ *   - Đang IME composition (sẽ confirm chữ tiếng Trung/Nhật/Hàn, không phải chọn option)
+ *   - Không có kết quả nào trong danh sách
+ *   - activeIndex nằm ngoài danh sách
+ *
+ * @param isComposing  giá trị từ nativeEvent.isComposing
+ * @param total        số kết quả hiện tại (flatSearchedMembers.length)
+ * @param activeIndex  chỉ số option đang focus
+ */
+export function canSelectOnEnter(
+  isComposing: boolean,
+  total: number,
+  activeIndex: number
+): boolean {
+  if (isComposing) return false;
+  if (total === 0) return false;
+  if (activeIndex < 0 || activeIndex >= total) return false;
+  return true;
 }
 
 export function isFormDirty(
@@ -1436,26 +1477,34 @@ export function CreateTaskModal({
                                 onChange={(e) => setAssigneeSearchQuery(e.target.value)}
                                 onFocus={() => scrollActiveInputIntoView()}
                                 onKeyDown={(e) => {
-                                  if (e.nativeEvent.isComposing) return;
+                                  const isComposing = Boolean(e.nativeEvent.isComposing);
+                                  if (isComposing) return;
                                   if (e.key === "ArrowDown") {
                                     e.preventDefault();
-                                    setActiveOptionIndex((prev) =>
-                                      flatSearchedMembers.length > 0 ? (prev + 1) % flatSearchedMembers.length : 0
+                                    const next = resolveComboboxNavigation(
+                                      "ArrowDown",
+                                      activeOptionIndex,
+                                      flatSearchedMembers.length
                                     );
+                                    if (next !== null) setActiveOptionIndex(next);
                                   } else if (e.key === "ArrowUp") {
                                     e.preventDefault();
-                                    setActiveOptionIndex((prev) =>
-                                      flatSearchedMembers.length > 0
-                                        ? (prev - 1 + flatSearchedMembers.length) % flatSearchedMembers.length
-                                        : 0
+                                    const next = resolveComboboxNavigation(
+                                      "ArrowUp",
+                                      activeOptionIndex,
+                                      flatSearchedMembers.length
                                     );
+                                    if (next !== null) setActiveOptionIndex(next);
                                   } else if (e.key === "Enter") {
+                                    // Enter in search field must not submit the form
                                     e.preventDefault();
                                     e.stopPropagation();
                                     if (
-                                      flatSearchedMembers.length > 0 &&
-                                      activeOptionIndex >= 0 &&
-                                      activeOptionIndex < flatSearchedMembers.length
+                                      canSelectOnEnter(
+                                        isComposing,
+                                        flatSearchedMembers.length,
+                                        activeOptionIndex
+                                      )
                                     ) {
                                       handleAssigneeSelect(flatSearchedMembers[activeOptionIndex].name);
                                       comboboxTriggerRef.current?.focus();

@@ -431,7 +431,12 @@ export function ModularCascadingTaskTable({
   const [isBacklogExpanded, setIsBacklogExpanded] = React.useState<boolean>(true);
 
   // 5. Data Filtering
+  // When hideToolbar=true, the parent workspace has already filtered the task list.
+  // Do NOT filter again to avoid double-filtering pre-filtered data from the parent.
   const filteredTasks = React.useMemo(() => {
+    if (hideToolbar) {
+      return tasks;
+    }
     return filterTasks(tasks, {
       searchQuery: activeSearch,
       smartTab: activeTab,
@@ -444,6 +449,7 @@ export function ModularCascadingTaskTable({
       month: activeMonth,
     });
   }, [
+    hideToolbar,
     tasks,
     activeSearch,
     activeTab,
