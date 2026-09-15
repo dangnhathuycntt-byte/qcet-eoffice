@@ -24,13 +24,24 @@ function LoginSkeleton() {
       {/* Left Branding Panel (Desktop only ~44%) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[44%] items-center justify-center border-r border-border/60 bg-muted/15 p-12 select-none"
+        className="hidden lg:flex lg:w-[44%] xl:w-[42%] flex-col justify-between border-r border-slate-200/80 bg-slate-50/70 p-12 select-none"
       >
-        <div className="size-[380px] rounded-full bg-muted/30 animate-pulse" />
+        <div className="flex items-center gap-3">
+          <div className="size-9 rounded-full bg-muted animate-pulse" />
+          <div className="space-y-1">
+            <div className="h-3 w-28 bg-muted rounded animate-pulse" />
+            <div className="h-2.5 w-44 bg-muted/60 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="my-auto py-12 space-y-3">
+          <div className="h-7 w-72 bg-muted rounded animate-pulse" />
+          <div className="h-4 w-80 bg-muted/60 rounded animate-pulse" />
+        </div>
+        <div className="h-3 w-48 bg-muted/40 rounded animate-pulse" />
       </div>
 
       {/* Right Login Area (~56% on desktop, 100% on mobile) */}
-      <div className="w-full lg:w-[56%] flex flex-col items-center justify-center p-6 sm:p-12">
+      <div className="w-full lg:w-[56%] xl:w-[58%] flex flex-col items-center justify-center p-6 sm:p-12">
         <div className="flex flex-col items-center text-center max-w-[360px] sm:max-w-[380px] w-full space-y-8">
           <div className="size-16 sm:size-[72px] rounded-full bg-muted animate-pulse" />
           <div className="space-y-2 flex flex-col items-center">
@@ -101,23 +112,58 @@ function LoginFormContent() {
       aria-label="Trang đăng nhập QCET E-Office"
       className="flex min-h-screen w-full bg-background selection:bg-primary/15 selection:text-primary outline-none"
     >
-      {/* Desktop Left: Subtle Institutional Branding Panel (~44% width) */}
+      {/* Desktop Left: Institutional Brand Anchor Panel (~44% width) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[44%] relative items-center justify-center border-r border-border/60 bg-muted/15 p-12 overflow-hidden select-none pointer-events-none"
+        className="hidden lg:flex lg:w-[44%] xl:w-[42%] relative flex-col justify-between border-r border-slate-200/80 bg-slate-50/70 p-12 select-none overflow-hidden"
       >
-        <Image
-          src="/logo-qcet.png"
-          alt=""
-          width={400}
-          height={400}
-          className="size-[380px] xl:size-[420px] object-contain opacity-[0.05] grayscale"
-          priority
-        />
+        {/* Top: School Badge Lockup */}
+        <div className="flex items-center gap-3 relative z-10">
+          <Image
+            src="/logo-qcet.png"
+            alt=""
+            width={40}
+            height={40}
+            className="size-10 object-contain"
+          />
+          <div className="space-y-0.5">
+            <p className="text-xs font-bold text-slate-900 tracking-tight">QCET E-Office</p>
+            <p className="text-[11px] text-slate-500 font-medium">Trường CĐ Kỹ thuật Công nghệ Quy Nhơn</p>
+          </div>
+        </div>
+
+        {/* Center: Institutional Mission & Digital Workplace Headline */}
+        <div className="relative z-10 my-auto py-12 max-w-sm space-y-3">
+          <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-slate-900 font-heading leading-snug">
+            Không gian làm việc số và điều hành tác nghiệp tập trung
+          </h2>
+          <p className="text-xs xl:text-sm text-slate-600 leading-relaxed">
+            Hệ thống quản lý nhiệm vụ, văn bản điện tử và lịch công tác dành cho toàn thể Cán bộ, Giảng viên Nhà trường.
+          </p>
+        </div>
+
+        {/* Decorative Emblem Watermark (Placed on Left Panel) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-[-15%] top-1/2 -translate-y-1/2 select-none opacity-[0.045] grayscale z-0"
+        >
+          <Image
+            src="/logo-qcet.png"
+            alt=""
+            width={440}
+            height={440}
+            className="size-[420px] object-contain"
+          />
+        </div>
+
+        {/* Bottom: Institutional Footer Copyright */}
+        <div className="relative z-10 text-[11px] text-slate-400 font-medium">
+          © 2026 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
+        </div>
       </div>
 
       {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (~56% width) */}
-      <div className="w-full lg:w-[56%] flex flex-col items-center justify-center p-6 sm:p-12">
+      <div className="w-full lg:w-[56%] xl:w-[58%] flex flex-col items-center justify-center p-6 sm:p-12">
         <div className="flex flex-col items-center text-center max-w-[360px] sm:max-w-[380px] w-full space-y-8">
           {/* Branding: High-Resolution School Logo, QCET E-Office, Full School Name */}
           <div className="flex flex-col items-center space-y-3">
