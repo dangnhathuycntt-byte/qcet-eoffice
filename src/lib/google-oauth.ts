@@ -22,13 +22,28 @@ export interface GoogleUserInfo {
 export const OFFICIAL_DOMAIN = INSTITUTION_CONFIG.domain || "cdktcnqn.edu.vn";
 
 /**
- * Kiểm tra địa chỉ email có thuộc tên miền Google Workspace chính thức của trường hay không.
- * Yêu cầu: Email bắt buộc kết thúc bằng @cdktcnqn.edu.vn
+ * Kiểm tra tài khoản có thuộc Google Workspace của trường (@cdktcnqn.edu.vn) hay không
+ * dựa trên Google Workspace `hd` (hosted domain) claim và xác thực định danh email trên server.
  */
-export function isAllowedDomain(email?: string | null, _hd?: string | null): boolean {
-  if (!email || typeof email !== "string") return false;
-  const normalized = email.trim().toLowerCase();
-  return normalized.endsWith(`@${OFFICIAL_DOMAIN}`);
+export function isAllowedDomain(email?: string | null, hd?: string | null): boolean {
+  const officialDomain = OFFICIAL_DOMAIN.trim().toLowerCase();
+
+  // 1. Kiểm tra Google Workspace Hosted Domain (`hd`) claim
+  if (hd && typeof hd === "string") {
+    if (hd.trim().toLowerCase() === officialDomain) {
+      return true;
+    }
+  }
+
+  // 2. Xác thực email suffix đối chiếu với tên miền chính thức của nhà trường
+  if (email && typeof email === "string") {
+    const normalized = email.trim().toLowerCase();
+    if (normalized.endsWith(`@${officialDomain}`)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -131,4 +146,60 @@ export async function fetchGoogleUserInfo(accessToken: string): Promise<GoogleUs
   }
 
   return res.json();
+}
+
+/**
+ * Xác thực Google ID Token (JWT) từ Google Identity Services / FedCM trên server
+ * và bắt buộc kiểm tra claim `hd === "cdktcnqn.edu.vn"`.
+ */
+export async function verifyGoogleIdToken(
+  idToken: string,
+  clientId?: string
+): Promise<GoogleUserInfo | null> {
+  try {
+    const res = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
+      {
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const payload = await res.json();
+
+    // 1. Kiểm tra Client ID nếu được cung cấp
+    if (clientId && payload.aud !== clientId) {
+      return null;
+    }
+
+    // 2. Bắt buộc kiểm tra Google Workspace Hosted Domain (hd) claim
+    const officialDomain = OFFICIAL_DOMAIN.trim().toLowerCase();
+    const isDomainAllowed =
+      payload.hd && typeof payload.hd === "string"
+        ? payload.hd.trim().toLowerCase() === officialDomain
+        : false;
+
+    if (!isDomainAllowed && !isAllowedDomain(payload.email, payload.hd)) {
+      return null;
+    }
+
+    // 3. Email phải được Google xác thực
+    if (payload.email_verified !== "true" && payload.email_verified !== true) {
+      return null;
+    }
+
+    return {
+      sub: payload.sub,
+      email: payload.email,
+      email_verified: true,
+      name: payload.name || payload.email,
+      picture: payload.picture,
+      hd: payload.hd,
+    };
+  } catch {
+    return null;
+  }
 }

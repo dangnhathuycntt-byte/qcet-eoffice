@@ -6,6 +6,7 @@ import {
   fetchGoogleUserInfo,
 } from "@/lib/google-oauth";
 import { signSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/jwt-session";
+import { sanitizeRedirectUrl } from "@/lib/login-helpers";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 import { serverEnv } from "@/config/env.server";
@@ -207,7 +208,9 @@ export async function GET(req: NextRequest) {
       title: user.title ?? undefined,
     });
 
-    const response = NextResponse.redirect(new URL("/", baseUrl));
+    const returnToCookie = req.cookies.get("qcet_return_to")?.value;
+    const targetPath = sanitizeRedirectUrl(returnToCookie);
+    const response = NextResponse.redirect(new URL(targetPath, baseUrl));
 
     response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
       httpOnly: true,
@@ -218,12 +221,14 @@ export async function GET(req: NextRequest) {
     });
 
     response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
+    response.cookies.delete({ name: "qcet_return_to", path: "/api/auth" });
 
     return response;
   } catch (error) {
     console.error("[Google OAuth Callback Error]", error);
     const response = NextResponse.redirect(new URL("/login?error=oauth_failed", baseUrl));
     response.cookies.delete({ name: "qcet_oauth_state", path: "/api/auth" });
+    response.cookies.delete({ name: "qcet_return_to", path: "/api/auth" });
     return response;
   }
 }
