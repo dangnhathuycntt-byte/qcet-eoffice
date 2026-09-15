@@ -31,22 +31,23 @@ export interface TaskTableHeaderProps {
 }
 
 interface ColumnDefinition {
-  id: TaskSortField | "actions";
+  id: TaskSortField | "subtasks" | "actions";
   label: string;
   sortable?: boolean;
   align?: "left" | "center" | "right";
   widthClass?: string;
 }
 
-// Plan T12 (table hierarchy): Task | Owner | Unit | Due | Status | Progress | Actions.
+// Linear Columns: Checkbox | Name & Code | Health | Priority | Lead DRI | Target date | Subtasks | Progress | Actions
 const TABLE_COLUMNS: ColumnDefinition[] = [
-  { id: "title", label: "Nhiệm vụ", sortable: true },
-  { id: "leadAssignee", label: "Người chủ trì", sortable: true, widthClass: "w-36" },
-  { id: "department", label: "Đơn vị", sortable: true, widthClass: "w-36 sm:w-40" },
-  { id: "dueDate", label: "Hạn", sortable: true, widthClass: "w-32" },
-  { id: "status", label: "Trạng thái", sortable: true, widthClass: "w-28" },
-  { id: "progress", label: "Tiến độ", sortable: true, widthClass: "w-28" },
-  { id: "actions", label: "Thao tác", sortable: false, align: "right", widthClass: "w-24 sm:w-28" },
+  { id: "title", label: "Nhiệm vụ", sortable: true, widthClass: "min-w-[340px] md:min-w-[440px] flex-1" },
+  { id: "status", label: "Tình trạng", sortable: true, widthClass: "w-28" },
+  { id: "priority", label: "Ưu tiên", sortable: true, widthClass: "w-20" },
+  { id: "leadAssignee", label: "Chủ trì DRI", sortable: true, widthClass: "w-32" },
+  { id: "dueDate", label: "Hạn chót", sortable: true, widthClass: "w-28" },
+  { id: "subtasks", label: "Việc con", sortable: false, widthClass: "w-16", align: "center" },
+  { id: "progress", label: "Tiến độ", sortable: true, widthClass: "w-20" },
+  { id: "actions", label: "", sortable: false, align: "right", widthClass: "w-8" },
 ];
 
 export function TaskTableHeader({
@@ -75,30 +76,30 @@ export function TaskTableHeader({
   const renderSortIndicator = (colId: TaskSortField) => {
     if (sortField === colId) {
       return sortDirection === "asc" ? (
-        <ChevronUp className="size-3.5 text-primary shrink-0 transition-transform" strokeWidth={1.5} />
+        <ChevronUp className="size-3 text-primary shrink-0 transition-transform" strokeWidth={1.5} />
       ) : (
-        <ChevronDown className="size-3.5 text-primary shrink-0 transition-transform" strokeWidth={1.5} />
+        <ChevronDown className="size-3 text-primary shrink-0 transition-transform" strokeWidth={1.5} />
       );
     }
     return (
       <ArrowUpDown
-        className="size-3 text-muted-foreground/40 opacity-0 group-hover/th:opacity-100 transition-opacity shrink-0"
+        className="size-3 text-muted-foreground/30 opacity-0 group-hover/th:opacity-100 transition-opacity shrink-0"
         strokeWidth={1.5}
       />
     );
   };
 
-  const rowHeightClass = density === "compact" ? "h-9" : "h-11";
-  const paddingClass = density === "compact" ? "px-2.5 py-1.5" : "px-3.5 py-2.5";
+  const rowHeightClass = "h-8";
+  const paddingClass = "px-2 py-1";
 
   return (
     <thead
       className={cn(
-        "sticky top-0 z-10 border-b border-border/70 bg-card/95 select-none",
+        "sticky top-0 z-10 border-b border-border/40 bg-white/95 backdrop-blur-xs select-none",
         className
       )}
     >
-      <tr className={cn(rowHeightClass, "text-xs font-semibold text-muted-foreground")}>
+      <tr className={cn(rowHeightClass, "text-[10px] font-semibold text-slate-400 uppercase tracking-wider")}>
         {/* Selection Checkbox */}
         {showSelection && (
           <th
@@ -112,7 +113,7 @@ export function TaskTableHeader({
                 checked={allSelected}
                 disabled={!hasTasks}
                 onChange={(e) => onToggleSelectAll?.(e.target.checked)}
-                className="size-4 rounded border-slate-300 text-primary focus:ring-2 focus:ring-primary/25 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
                 aria-label="Chọn tất cả nhiệm vụ hiển thị"
               />
             </div>
@@ -121,7 +122,7 @@ export function TaskTableHeader({
 
         {/* Data Columns */}
         {TABLE_COLUMNS.map((col) => {
-          const isSortable = col.sortable && col.id !== "actions";
+          const isSortable = col.sortable && col.id !== "actions" && col.id !== "subtasks";
           const isSorted = isSortable && sortField === col.id;
           const ariaSortValue = isSorted
             ? sortDirection === "asc"
@@ -137,7 +138,7 @@ export function TaskTableHeader({
               scope="col"
               aria-sort={ariaSortValue}
               className={cn(
-                "align-middle font-semibold transition-colors group/th",
+                "align-middle font-medium transition-colors group/th",
                 col.widthClass,
                 col.align === "right"
                   ? "text-right"
@@ -150,7 +151,8 @@ export function TaskTableHeader({
               <div
                 className={cn(
                   "flex items-center gap-1.5",
-                  col.align === "right" && "justify-end"
+                  col.align === "right" && "justify-end",
+                  col.align === "center" && "justify-center"
                 )}
               >
                 {col.id === "title" && showExpandAll && onToggleExpandAll && (
@@ -161,14 +163,14 @@ export function TaskTableHeader({
                       onToggleExpandAll();
                     }}
                     disabled={!hasTasks}
-                    className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-slate-200/70 hover:text-foreground cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors mr-1 shrink-0"
+                    className="inline-flex size-4 items-center justify-center rounded text-muted-foreground/70 hover:bg-slate-200/70 hover:text-foreground cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors mr-1 shrink-0"
                     title={isAllExpanded ? "Thu gọn tất cả việc con" : "Mở rộng tất cả việc con"}
                     aria-label={isAllExpanded ? "Thu gọn tất cả việc con" : "Mở rộng tất cả việc con"}
                   >
                     {isAllExpanded ? (
-                      <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                      <ChevronDown className="size-3" strokeWidth={1.5} />
                     ) : (
-                      <ChevronRight className="size-3.5" strokeWidth={1.5} />
+                      <ChevronRight className="size-3" strokeWidth={1.5} />
                     )}
                   </button>
                 )}
@@ -177,7 +179,7 @@ export function TaskTableHeader({
                   <button
                     type="button"
                     onClick={() => onSort?.(col.id as TaskSortField)}
-                    className="group/sort inline-flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer select-none"
+                    className="group/sort inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer select-none"
                   >
                     <span>{col.label}</span>
                     {renderSortIndicator(col.id as TaskSortField)}

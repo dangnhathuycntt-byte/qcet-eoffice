@@ -445,6 +445,10 @@ export function UnifiedTaskToolbar({
   const [isDisplayOpen, setIsDisplayOpen] = React.useState(false);
   const displayMenuRef = React.useRef<HTMLDivElement>(null);
 
+  // Month selector dropdown menu state
+  const [isMonthOpen, setIsMonthOpen] = React.useState(false);
+  const monthMenuRef = React.useRef<HTMLDivElement>(null);
+
   // Resolve Month props (supporting compatibility aliases)
   const effectiveMonth = selectedMonth !== undefined ? selectedMonth : selectedAcademicMonth;
   const handleEffectiveMonthChange = onMonthChange || onAcademicMonthChange;
@@ -547,8 +551,8 @@ export function UnifiedTaskToolbar({
     {
       id: "my",
       legacyId: "MY_TASKS",
-      label: "Của tôi",
-      shortLabel: "Của tôi",
+      label: "Cá nhân",
+      shortLabel: "Cá nhân",
       icon: User,
       isAuthorized: true,
     },
@@ -557,11 +561,11 @@ export function UnifiedTaskToolbar({
   // Only keep authorized scopes
   const authorizedScopes = scopeOptions.filter((opt) => opt.isAuthorized);
 
-  // 2. Global "/" Keyboard Shortcut for Search Focus
+  // 2. Global "/" and "⌘K" Keyboard Shortcut for Search Focus
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
-        e.key === "/" &&
+        (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) &&
         document.activeElement?.tagName !== "INPUT" &&
         document.activeElement?.tagName !== "TEXTAREA" &&
         !(document.activeElement as HTMLElement)?.isContentEditable
@@ -622,6 +626,30 @@ export function UnifiedTaskToolbar({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isDisplayOpen]);
+
+  // Month options popover outside click and Esc listener
+  React.useEffect(() => {
+    if (!isMonthOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (monthMenuRef.current && !monthMenuRef.current.contains(e.target as Node)) {
+        setIsMonthOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsMonthOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMonthOpen]);
 
   // Primary action callback
   const handlePrimaryAction = onNewTaskClick || onCreateTask || onAddTask;
@@ -841,11 +869,11 @@ export function UnifiedTaskToolbar({
         className="flex items-center justify-between gap-2"
       >
         {/* Left: Scope Switcher (Only Authorized Scopes) + Integrated Action Queue */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+        <div className="flex items-center gap-0.5 shrink-0 flex-wrap">
           <div
             data-slot="adaptive-scope-header"
             data-scope-switcher="true"
-            className="inline-flex items-center rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs shrink-0"
+            className="inline-flex items-center gap-0.5 shrink-0"
             role="tablist"
             aria-label="Phạm vi công việc"
           >
@@ -863,21 +891,21 @@ export function UnifiedTaskToolbar({
                   aria-selected={isActive}
                   onClick={() => handleScopeSelect(opt.id)}
                   className={cn(
-                    "inline-flex min-h-[44px] sm:min-h-[34px] items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all cursor-pointer select-none",
+                    "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors cursor-pointer select-none",
                     isActive
-                      ? "bg-background text-foreground border border-border/80 font-semibold shadow-2xs"
-                      : "text-muted-foreground hover:text-foreground hover:bg-card/60"
+                      ? "bg-slate-100 text-slate-900 font-semibold"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                   )}
                 >
-                  <Icon className="size-3.5 shrink-0" strokeWidth={1.5} />
+                  <Icon className="size-3.5 shrink-0 text-slate-400" strokeWidth={1.5} />
                   <span className="hidden sm:inline">{opt.label}</span>
                   <span className="sm:hidden">{opt.shortLabel}</span>
 
                   {typeof count === "number" && count > 0 && (
                     <span
                       className={cn(
-                        "inline-flex items-center justify-center rounded-full px-1.5 py-0.2 text-xs font-mono tabular-nums font-semibold",
-                        isActive ? "bg-muted text-foreground" : "bg-muted/60 text-muted-foreground"
+                        "inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums",
+                        isActive ? "bg-slate-200/80 text-slate-700 font-semibold" : "text-slate-400"
                       )}
                     >
                       {count}
@@ -897,13 +925,13 @@ export function UnifiedTaskToolbar({
                 type="button"
                 data-slot="action-queue-trigger"
                 onClick={onOpenActionQueue || onActionQueueClick}
-                className="inline-flex min-h-[44px] sm:min-h-[34px] items-center gap-1.5 rounded-xl border border-primary/25 bg-primary/5 hover:bg-primary/10 text-primary px-3 py-1.5 text-xs font-semibold cursor-pointer transition-colors shadow-2xs shrink-0 select-none"
+                className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer shrink-0 select-none"
                 aria-label="Mở hàng đợi xử lý công việc"
                 title="Mở hàng đợi xử lý công việc"
               >
-                <Layers className="size-3.5 shrink-0" strokeWidth={1.5} />
+                <Layers className="size-3.5 shrink-0 text-slate-400" strokeWidth={1.5} />
                 <span className="hidden sm:inline">Cần xử lý</span>
-                <span className="inline-flex items-center justify-center rounded-full px-1.5 py-0.2 text-xs font-mono tabular-nums font-bold bg-primary text-primary-foreground leading-none">
+                <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-slate-200/80 text-slate-700 leading-none">
                   {actionQueueCount}
                 </span>
               </button>
@@ -916,10 +944,14 @@ export function UnifiedTaskToolbar({
           <button
             type="button"
             onClick={() => handlePrimaryAction()}
-            className="inline-flex h-9 min-h-[44px] sm:min-h-[36px] items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 cursor-pointer shrink-0"
+            className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-2xs transition-colors hover:bg-primary/90 cursor-pointer shrink-0"
           >
             <Plus className="size-3.5 shrink-0" strokeWidth={1.5} />
             <span>{primaryActionLabel}</span>
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 ml-1 px-1 py-0.2 text-[9px] font-mono font-medium text-primary-foreground/90 bg-primary-foreground/20 rounded border border-primary-foreground/20 select-none pointer-events-none">
+              <span>N</span>
+              <span className="opacity-60">P</span>
+            </kbd>
           </button>
         )}
       </div>
@@ -1028,9 +1060,9 @@ export function UnifiedTaskToolbar({
         )}
 
         {/* Center: Search Input */}
-        <div className="relative w-full sm:w-auto sm:flex-1 min-w-[160px]">
+        <div className="relative flex-1 min-w-[160px]">
           <Search
-            className="size-4 sm:size-3.5 text-muted-foreground pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+            className="size-3.5 text-slate-400 pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
             strokeWidth={1.5}
           />
           <input
@@ -1046,12 +1078,12 @@ export function UnifiedTaskToolbar({
                 : searchPlaceholder || "Tìm nhiệm vụ... /"
             }
             aria-label="Tìm nhiệm vụ"
-            className="h-11 sm:h-9 min-h-[44px] sm:min-h-[36px] w-full rounded-xl border border-border/80 bg-background pl-9 pr-10 text-xs text-foreground placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs transition-colors"
+            className="h-7.5 w-full rounded-md border border-slate-200/80 bg-white pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none transition-colors"
           />
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {loading && (
               <Loader2
-                className="size-3.5 animate-spin text-muted-foreground"
+                className="size-3.5 animate-spin text-slate-400"
                 aria-label="Đang tải dữ liệu"
               />
             )}
@@ -1060,60 +1092,20 @@ export function UnifiedTaskToolbar({
                 type="button"
                 onClick={() => onSearchChange("")}
                 aria-label="Xóa từ khóa tìm kiếm"
-                className="min-h-[36px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground p-1 rounded cursor-pointer touch-manipulation"
+                className="size-5 flex items-center justify-center text-slate-400 hover:text-slate-700 p-0.5 rounded cursor-pointer"
               >
-                <X className="size-4 sm:size-3.5" strokeWidth={1.5} />
+                <X className="size-3" strokeWidth={1.5} />
               </button>
             ) : (
-              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-xs font-mono font-medium text-muted-foreground bg-muted border border-border/80 rounded select-none pointer-events-none">
+              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.2 text-[10px] font-mono text-slate-400 bg-slate-50 border border-slate-200/60 rounded select-none pointer-events-none">
                 /
               </kbd>
             )}
           </div>
         </div>
 
-        {/* Quick Filter Group [Lọc nhanh] */}
-        <div
-          role="group"
-          aria-label="Lọc nhanh"
-          className="inline-flex items-center gap-1 rounded-xl border border-border/80 bg-muted/40 p-1 shadow-2xs shrink-0 flex-wrap sm:flex-nowrap"
-        >
-          {quickFilterPills.map((pill) => (
-            <button
-              key={pill.id}
-              type="button"
-              aria-pressed={pill.isActive ? "true" : "false"}
-              onClick={() => onTabChange?.(pill.id)}
-              className={cn(
-                "inline-flex min-h-[44px] sm:min-h-[32px] sm:h-8 items-center gap-1.5 rounded-lg px-2.5 sm:px-2 text-xs font-medium transition-all cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary touch-manipulation active:scale-95",
-                pill.isActive
-                  ? "bg-card text-foreground font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-card/40"
-              )}
-            >
-              <span>{pill.label}</span>
-              {typeof pill.count === "number" && (
-                <span
-                  className={cn(
-                    "inline-flex items-center justify-center rounded-md px-1.5 py-0.2 text-xs font-mono font-semibold tabular-nums",
-                    pill.isActive
-                      ? pill.id === "overdue" && pill.count > 0
-                        ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
-                        : "bg-primary/10 text-primary"
-                      : pill.id === "overdue" && pill.count > 0
-                      ? "bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400"
-                      : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {pill.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
         {/* Right: Filter + Display controls */}
-        <div className="flex items-center gap-2 shrink-0 relative">
+        <div className="flex items-center gap-1 shrink-0 relative">
           {/* 1. Advanced Filter Popover Trigger */}
           <div className="relative" ref={popoverRef}>
             <button
@@ -1122,54 +1114,70 @@ export function UnifiedTaskToolbar({
               aria-expanded={isFilterOpen}
               onClick={() => setIsFilterOpen((prev) => !prev)}
               className={cn(
-                "inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-1.5 rounded-xl border border-border/80 px-3 sm:px-2.5 text-xs font-medium transition-all cursor-pointer shadow-2xs touch-manipulation active:scale-95",
+                "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
                 isFilterOpen || activeAdvancedFilterCount > 0
-                  ? "bg-primary/10 text-primary border-primary/40 font-semibold"
-                  : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  ? "bg-slate-100 text-slate-900 font-semibold"
+                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
               )}
             >
-              <Filter className="size-3.5" strokeWidth={1.5} />
+              <Filter className="size-3.5 text-slate-400" strokeWidth={1.5} />
               <span>Bộ lọc</span>
               {activeAdvancedFilterCount > 0 && (
-                <span className="inline-flex min-w-4.5 h-4.5 px-1 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground font-mono tabular-nums">
+                <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-slate-200/80 text-slate-700">
                   {activeAdvancedFilterCount}
                 </span>
               )}
             </button>
 
-            {/* Desktop Popover Dropdown Panel (sm:block) */}
+            {/* Desktop Popover Dropdown Panel (sm:block) - Flat Property Rows */}
             {isFilterOpen && (
               <div
-                className="hidden sm:block absolute right-0 top-full mt-1.5 z-50 w-72 rounded-2xl border border-border/80 bg-card p-4 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
+                className="hidden sm:block absolute right-0 top-full mt-1.5 z-50 w-80 rounded-md border border-slate-200/90 bg-white p-3 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
                 role="dialog"
                 aria-label="Bộ lọc nâng cao"
               >
-                <div className="flex items-center justify-between pb-2 mb-3 border-b border-border/60">
-                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Filter className="size-3.5 text-primary" strokeWidth={1.5} />
-                    Bộ lọc nâng cao
-                  </span>
+                <div className="flex items-center justify-between pb-2 mb-1 border-b border-slate-100">
+                  <span className="text-xs font-semibold text-slate-900">Bộ lọc</span>
                   <button
                     type="button"
                     onClick={() => setIsFilterOpen(false)}
                     aria-label="Đóng bộ lọc"
-                    className="text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+                    className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
                   >
                     <X className="size-3.5" strokeWidth={1.5} />
                   </button>
                 </div>
 
-                <div className="space-y-3">
-                  {/* Department Select */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground">
-                      Đơn vị phòng ban
-                    </label>
+                <div className="divide-y divide-slate-100">
+                  {/* Trạng thái / Tiến độ */}
+                  <div className="flex items-center justify-between h-8.5 text-xs">
+                    <span className="text-slate-500 shrink-0">Trạng thái</span>
+                    <select
+                      value={activeTab || "all"}
+                      onChange={(e) => onTabChange?.(e.target.value)}
+                      aria-label="Lọc theo trạng thái"
+                      className="text-right text-xs text-slate-800 font-medium bg-transparent border-0 outline-none cursor-pointer hover:text-slate-900 max-w-[190px] truncate"
+                    >
+                      <option value="all">Tất cả trạng thái</option>
+                      <option value={isExecutiveRole ? "waiting_approval" : "review"}>
+                        {isExecutiveRole ? "Cần tôi duyệt" : "Chờ duyệt"}
+                      </option>
+                      <option value="overdue">Quá hạn</option>
+                      <option value="pending_submission">Chờ nộp minh chứng</option>
+                      <option value="today">Hạn hôm nay</option>
+                      <option value="in_progress">Đang thực hiện</option>
+                      <option value="completed">Đã hoàn thành</option>
+                    </select>
+                  </div>
+
+                  {/* Đơn vị */}
+                  <div className="flex items-center justify-between h-8.5 text-xs">
+                    <span className="text-slate-500 shrink-0">Đơn vị</span>
                     <select
                       value={selectedDepartment}
                       onChange={(e) => onDepartmentChange?.(e.target.value)}
                       aria-label="Lọc theo đơn vị phòng ban"
-                      className="w-full rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs text-foreground font-medium outline-none focus:border-primary cursor-pointer"
+                      className="text-right text-xs text-slate-800 font-medium bg-transparent border-0 outline-none cursor-pointer hover:text-slate-900 max-w-[190px] truncate"
                     >
                       {availableDepartments.map((dept) => (
                         <option key={dept.code} value={dept.code}>
@@ -1179,16 +1187,14 @@ export function UnifiedTaskToolbar({
                     </select>
                   </div>
 
-                  {/* Category Select */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground">
-                      Danh mục DACUM
-                    </label>
+                  {/* Danh mục DACUM */}
+                  <div className="flex items-center justify-between h-8.5 text-xs">
+                    <span className="text-slate-500 shrink-0">Danh mục DACUM</span>
                     <select
                       value={selectedCategory}
                       onChange={(e) => onCategoryChange?.(e.target.value)}
                       aria-label="Lọc theo danh mục DACUM"
-                      className="w-full rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs text-foreground font-medium outline-none focus:border-primary cursor-pointer"
+                      className="text-right text-xs text-slate-800 font-medium bg-transparent border-0 outline-none cursor-pointer hover:text-slate-900 max-w-[190px] truncate"
                     >
                       {CATEGORY_FILTER_OPTIONS.map((cat) => (
                         <option key={cat.id} value={cat.id}>
@@ -1198,16 +1204,14 @@ export function UnifiedTaskToolbar({
                     </select>
                   </div>
 
-                  {/* Priority Select */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground">
-                      Mức độ ưu tiên
-                    </label>
+                  {/* Độ ưu tiên */}
+                  <div className="flex items-center justify-between h-8.5 text-xs">
+                    <span className="text-slate-500 shrink-0">Độ ưu tiên</span>
                     <select
                       value={selectedPriority}
                       onChange={(e) => onPriorityChange?.(e.target.value)}
                       aria-label="Lọc theo mức độ ưu tiên"
-                      className="w-full rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs text-foreground font-medium outline-none focus:border-primary cursor-pointer"
+                      className="text-right text-xs text-slate-800 font-medium bg-transparent border-0 outline-none cursor-pointer hover:text-slate-900 max-w-[190px] truncate"
                     >
                       {PRIORITY_FILTER_OPTIONS.map((prio) => (
                         <option key={prio.id} value={prio.id}>
@@ -1217,11 +1221,9 @@ export function UnifiedTaskToolbar({
                     </select>
                   </div>
 
-                  {/* Month Select */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground">
-                      Tháng học kỳ ({academicYear})
-                    </label>
+                  {/* Tháng học kỳ */}
+                  <div className="flex items-center justify-between h-8.5 text-xs">
+                    <span className="text-slate-500 shrink-0">Tháng học kỳ</span>
                     <select
                       value={effectiveMonth}
                       onChange={(e) =>
@@ -1230,7 +1232,7 @@ export function UnifiedTaskToolbar({
                         )
                       }
                       aria-label="Lọc theo tháng học kỳ"
-                      className="w-full rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs text-foreground font-medium outline-none focus:border-primary cursor-pointer"
+                      className="text-right text-xs text-slate-800 font-medium bg-transparent border-0 outline-none cursor-pointer hover:text-slate-900 max-w-[190px] truncate"
                     >
                       <option value="ALL">Cả năm học ({academicYear})</option>
                       {academicMonths.map((period) => (
@@ -1242,19 +1244,19 @@ export function UnifiedTaskToolbar({
                   </div>
                 </div>
 
-                {/* Reset Action */}
-                <div className="mt-4 pt-2.5 border-t border-border/60 flex items-center justify-between">
+                {/* Reset & Apply */}
+                <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
                   <button
                     type="button"
                     onClick={handleResetFilters}
-                    className="text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer underline-offset-2 hover:underline"
+                    className="text-xs font-medium text-slate-500 hover:text-slate-900 cursor-pointer"
                   >
-                    Đặt lại bộ lọc
+                    Đặt lại
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsFilterOpen(false)}
-                    className="inline-flex h-7 items-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                    className="h-6.5 px-3 rounded bg-slate-900 text-xs font-medium text-white hover:bg-slate-800 cursor-pointer transition-colors"
                   >
                     Áp dụng
                   </button>
@@ -1437,8 +1439,8 @@ export function UnifiedTaskToolbar({
             )}
           </div>
 
-          {/* 2. Display / Presentation Options Popover (Hiển thị: Bảng/Kanban, Mật độ Gọn/Chuẩn) */}
-          {(onViewModeChange || onDensityChange) && (
+          {/* 2. Display / Presentation Options Popover (Hiển thị: Bảng / Kanban) */}
+          {onViewModeChange && (
             <div className="relative" ref={displayMenuRef}>
               <button
                 type="button"
@@ -1446,177 +1448,79 @@ export function UnifiedTaskToolbar({
                 aria-expanded={isDisplayOpen}
                 onClick={() => setIsDisplayOpen((prev) => !prev)}
                 className={cn(
-                  "inline-flex min-h-[44px] sm:min-h-8 sm:h-8 items-center gap-1.5 rounded-xl border border-border/80 px-2.5 sm:px-2 text-xs font-medium transition-all cursor-pointer shadow-2xs touch-manipulation active:scale-95",
+                  "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors cursor-pointer touch-manipulation",
                   isDisplayOpen
-                    ? "bg-secondary text-foreground border-border font-semibold"
-                    : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "bg-slate-100 text-slate-900 font-semibold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                 )}
               >
-                <SlidersHorizontal className="size-3.5" strokeWidth={1.5} />
+                <SlidersHorizontal className="size-3.5 text-slate-400" strokeWidth={1.5} />
                 <span>Hiển thị</span>
                 <ChevronDown
-                  className={cn("size-3 text-muted-foreground transition-transform", isDisplayOpen && "rotate-180")}
+                  className={cn("size-3 text-slate-400 transition-transform", isDisplayOpen && "rotate-180")}
                   strokeWidth={1.5}
                 />
               </button>
 
-              {/* Display Controls Dropdown Panel */}
+              {/* Display Controls Dropdown Panel - Minimal Clean List */}
               <div
                 className={cn(
-                  "absolute right-0 top-full mt-1.5 z-50 w-56 rounded-2xl border border-border/80 bg-card p-3 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 space-y-3",
+                  "absolute right-0 top-full mt-1.5 z-50 w-40 rounded-md border border-slate-200/90 bg-white py-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100",
                   !isDisplayOpen && "hidden"
                 )}
                 role="dialog"
                 aria-label="Tùy chọn hiển thị"
               >
-                {onViewModeChange && (
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-semibold text-muted-foreground">
-                      Chế độ xem
-                    </span>
-                    <div
-                      className="grid grid-cols-2 gap-1 rounded-xl border border-border/80 bg-muted/40 p-1"
-                      role="group"
-                      aria-label="Chế độ xem không gian làm việc"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onViewModeChange("table");
-                          setIsDisplayOpen(false);
-                        }}
-                        aria-pressed={viewMode === "table"}
-                        className={cn(
-                          "inline-flex h-7 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
-                          viewMode === "table"
-                            ? "bg-card text-foreground shadow-xs font-semibold"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                        title="Xem dạng Bảng danh sách"
-                      >
-                        <List className="size-3.5" strokeWidth={1.5} />
-                        <span>Bảng</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onViewModeChange("kanban");
-                          setIsDisplayOpen(false);
-                        }}
-                        aria-pressed={viewMode === "kanban"}
-                        className={cn(
-                          "inline-flex h-7 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
-                          viewMode === "kanban"
-                            ? "bg-card text-foreground shadow-xs font-semibold"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                        title="Xem dạng Kanban"
-                      >
-                        <Kanban className="size-3.5" strokeWidth={1.5} />
-                        <span>Kanban</span>
-                      </button>
-                    </div>
+                <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Hiển thị
+                </div>
+                <div className="h-px bg-slate-100 my-0.5" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    onViewModeChange("table");
+                    setIsDisplayOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors text-left cursor-pointer",
+                    viewMode === "table"
+                      ? "text-slate-900 font-semibold bg-slate-50"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <List className="size-3.5 text-slate-400" strokeWidth={1.5} />
+                    <span>Bảng</span>
                   </div>
-                )}
+                  {viewMode === "table" && <Check className="size-3.5 text-slate-700" strokeWidth={2} />}
+                </button>
 
-                {onDensityChange && (
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-semibold text-muted-foreground">
-                      Mật độ hiển thị
-                    </span>
-                    <div
-                      className="grid grid-cols-2 gap-1 rounded-xl border border-border/80 bg-muted/40 p-1"
-                      role="group"
-                      aria-label="Mật độ hiển thị bảng"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onDensityChange("compact");
-                          setIsDisplayOpen(false);
-                        }}
-                        aria-pressed={density === "compact"}
-                        aria-label="Chế độ hiển thị gọn"
-                        className={cn(
-                          "inline-flex h-7 items-center justify-center rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
-                          density === "compact"
-                            ? "bg-card text-foreground shadow-xs font-semibold"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                        title="Hiển thị gọn (Compact)"
-                      >
-                        <span>Gọn</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onDensityChange("comfortable");
-                          setIsDisplayOpen(false);
-                        }}
-                        aria-pressed={density === "comfortable"}
-                        aria-label="Chế độ hiển thị tiêu chuẩn"
-                        className={cn(
-                          "inline-flex h-7 items-center justify-center rounded-lg px-2 text-xs font-medium transition-all cursor-pointer select-none",
-                          density === "comfortable"
-                            ? "bg-card text-foreground shadow-xs font-semibold"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                        title="Hiển thị tiêu chuẩn (Comfortable)"
-                      >
-                        <span>Chuẩn</span>
-                      </button>
-                    </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onViewModeChange("kanban");
+                    setIsDisplayOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-1.5 text-xs transition-colors text-left cursor-pointer",
+                    viewMode === "kanban"
+                      ? "text-slate-900 font-semibold bg-slate-50"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Kanban className="size-3.5 text-slate-400" strokeWidth={1.5} />
+                    <span>Kanban</span>
                   </div>
-                )}
+                  {viewMode === "kanban" && <Check className="size-3.5 text-slate-700" strokeWidth={2} />}
+                </button>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* ==================================================================== */}
-      {/* ACTIVE FILTER CHIPS ROW (Only when active criteria exist)            */}
-      {/* ==================================================================== */}
-      {activeFilterChips.length > 0 && (
-        <div
-          data-slot="active-filter-chips-row"
-          className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/30"
-        >
-          <div
-            className="flex flex-wrap items-center gap-1.5 min-w-0"
-            role="group"
-            aria-label="Bộ lọc đang áp dụng"
-          >
-            {activeFilterChips.map((chip) => (
-              <span
-                key={chip.id}
-                className="inline-flex min-h-[28px] items-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 py-0.5 text-xs text-foreground shadow-2xs font-medium"
-              >
-                <span>{chip.label}</span>
-                <button
-                  type="button"
-                  onClick={chip.onRemove}
-                  aria-label={`Xóa tiêu chí ${chip.label}`}
-                  className="inline-flex size-4 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
-                >
-                  <X className="size-3" strokeWidth={1.5} />
-                </button>
-              </span>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleResetFilters}
-            className="inline-flex min-h-[32px] items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer underline-offset-2 hover:underline transition-colors shrink-0"
-          >
-            <RotateCcw className="size-3" strokeWidth={1.5} />
-            <span>Xóa bộ lọc</span>
-          </button>
-        </div>
-      )}
+      {/* Active filter chips row removed to eliminate duplicate stacked banner with ActiveFilterBreadcrumb */}
     </div>
   );
 }

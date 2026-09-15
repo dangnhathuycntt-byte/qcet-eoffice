@@ -37,6 +37,25 @@ export function resolveDemoUserByRole(_role: UserRole): AuthUser | undefined {
 }
 
 /**
+ * Determines whether the login screen should render the skeleton loading state.
+ * Prevents the critical bug where an unauthenticated visitor with a stale offline-cached
+ * identity (user !== null, isAuthenticated === false) gets trapped in an infinite skeleton loop.
+ */
+export function shouldShowLoginSkeleton({
+  isLoading,
+  isAuthenticated,
+  user,
+}: {
+  isLoading?: boolean;
+  isAuthenticated?: boolean;
+  user?: unknown;
+}): boolean {
+  if (isLoading) return true;
+  if (isAuthenticated && Boolean(user)) return true;
+  return false;
+}
+
+/**
  * Sanitizes redirect target URLs to prevent Open Redirect attacks (OWASP A01/A07).
  * Only allows safe relative paths starting with a single '/' and strictly disallows
  * protocol-relative URLs ('//'), backslashes ('/\'), URI schemes (http:, javascript:), and control characters.

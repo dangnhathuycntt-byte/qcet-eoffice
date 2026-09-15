@@ -288,14 +288,14 @@ export const DENSITY_CONFIGS: Record<TableDensity, TableDensityConfig> = {
   },
 };
 
-export const DEFAULT_DENSITY: TableDensity = "comfortable";
+export const DEFAULT_DENSITY: TableDensity = "compact";
 
 /**
- * Cấu hình phân trang mặc định
+ * Cấu hình phân trang mặc định (Linear Standard: 20 rows/page on desktop)
  */
-export const DEFAULT_PAGE_SIZE = 10;
-export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
-export const DEFAULT_PAGE_SIZES = [10, 20, 50, 100];
+export const DEFAULT_PAGE_SIZE = 20;
+export const PAGE_SIZE_OPTIONS = [20, 50, 100];
+export const DEFAULT_PAGE_SIZES = [20, 50, 100];
 
 /**
  * Density mapping compatible with numeric/string row heights

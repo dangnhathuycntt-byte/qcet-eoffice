@@ -90,8 +90,8 @@ export function useWorkspaceQuery(
   const rawPathname = React.useContext(PathnameContext);
 
   const searchParams = React.useMemo(() => {
-    if (rawSearchParams) return new URLSearchParams(rawSearchParams);
     if (typeof window !== "undefined") return new URLSearchParams(window.location.search);
+    if (rawSearchParams) return new URLSearchParams(rawSearchParams);
     return new URLSearchParams();
   }, [rawSearchParams]);
 
@@ -117,7 +117,7 @@ export function useWorkspaceQuery(
   // Memoized parsing of active search parameters, reacting to Next.js searchParams or browser popstate
   const queryState = React.useMemo(() => {
     const effectiveParams =
-      typeof window !== "undefined" && popstateCount > 0
+      typeof window !== "undefined"
         ? new URLSearchParams(window.location.search)
         : searchParams;
     return parseWorkspaceQuery(effectiveParams, {
@@ -134,7 +134,7 @@ export function useWorkspaceQuery(
       navOptions?: NavigationOptions
     ) => {
       const effectiveSearchParams =
-        typeof window !== "undefined" && popstateCount > 0
+        typeof window !== "undefined"
           ? new URLSearchParams(window.location.search)
           : searchParams;
 
@@ -164,6 +164,7 @@ export function useWorkspaceQuery(
         } else {
           window.history.pushState(null, "", targetUrl);
         }
+        window.dispatchEvent(new Event("popstate"));
         setPopstateCount((c) => c + 1);
         return;
       }

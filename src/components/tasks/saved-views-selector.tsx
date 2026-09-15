@@ -2,12 +2,11 @@
 
 import * as React from "react";
 import {
-  Bookmark,
-  BookmarkPlus,
   Check,
   ChevronDown,
-  Layers,
+  MoreHorizontal,
   Pencil,
+  Plus,
   Trash2,
   X,
 } from "lucide-react";
@@ -17,8 +16,6 @@ import {
   type SavedTaskView,
   type TaskViewCriteria,
   useSavedViews,
-  getRolePresetViews,
-  resolveUserSavedViewRole,
   cleanViewName,
 } from "@/lib/saved-views/saved-views-store";
 
@@ -30,7 +27,6 @@ export interface SavedViewsSelectorProps {
   onSaveView?: (newView: SavedTaskView) => void;
   onDeleteView?: (viewId: string) => void;
   onRenameView?: (viewId: string, newName: string) => void;
-  /** Label shown on the trigger button when no view is active. Defaults to "Góc nhìn". */
   defaultLabel?: string;
   className?: string;
 }
@@ -43,23 +39,23 @@ export function SavedViewsSelector({
   onSaveView,
   onDeleteView,
   onRenameView,
-  defaultLabel = "Góc nhìn: Tất cả nhiệm vụ",
   className,
 }: SavedViewsSelectorProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [newViewName, setNewViewName] = React.useState("");
+  const [activeMenuId, setActiveMenuId] = React.useState<string | null>(null);
   const [editingViewId, setEditingViewId] = React.useState<string | null>(null);
   const [editingName, setEditingName] = React.useState("");
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [isOverflowOpen, setIsOverflowOpen] = React.useState(false);
+
+  const createPopoverRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const overflowRef = React.useRef<HTMLDivElement>(null);
 
   const {
-    presetViews,
     customViews,
-    allViews,
     activeViewId: internalActiveViewId,
-    activeView,
-    isCurrentCriteriaMatching,
     saveCurrentView,
     renameView,
     deleteView,
@@ -82,45 +78,94 @@ export function SavedViewsSelector({
   }, [controlledActiveViewId, setActiveViewId]);
 
   const effectiveActiveViewId = controlledActiveViewId ?? internalActiveViewId;
-  const effectiveActiveView =
-    allViews.find((v) => v.id === effectiveActiveViewId) || activeView;
 
-  // Outside click & Escape listener
+  // Canonical default view: "Tất cả nhiệm vụ"
+  const defaultTaskView = React.useMemo<SavedTaskView>(() => ({
+    id: "default-all",
+    name: "Tất cả nhiệm vụ",
+    isPreset: true,
+    criteria: {
+      scope: currentCriteria?.scope || "school",
+      dept: "ALL",
+      status: "all",
+      workbox: "ALL",
+      academicMonth: "ALL",
+      q: "",
+      viewMode: currentCriteria?.viewMode || "table",
+      density: "compact",
+    },
+  }), [currentCriteria?.scope, currentCriteria?.viewMode]);
+
+  const isDefaultActive =
+    !effectiveActiveViewId ||
+    effectiveActiveViewId === "default-all" ||
+    !customViews.some((v) => v.id === effectiveActiveViewId);
+
+  // Outside click & Escape listener for create popover
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isCreateOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setIsOpen(false);
-        setEditingViewId(null);
+        setIsCreateOpen(false);
       }
     };
 
-    const handlePointerDown = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-        setEditingViewId(null);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (createPopoverRef.current && !createPopoverRef.current.contains(e.target as Node)) {
+        setIsCreateOpen(false);
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isCreateOpen]);
+
+  // Outside click for view action menu
+  React.useEffect(() => {
+    if (!activeMenuId) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActiveMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [activeMenuId]);
+
+  // Outside click for overflow menu
+  React.useEffect(() => {
+    if (!isOverflowOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+        setIsOverflowOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOverflowOpen]);
+
+  const handleSelectDefault = () => {
+    applyView(defaultTaskView);
+    onSelectView?.(defaultTaskView);
+    setActiveViewId(null);
+  };
 
   const handleSelect = (view: SavedTaskView) => {
     applyView(view);
     onSelectView?.(view);
-    setIsOpen(false);
+    setIsOverflowOpen(false);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = newViewName.trim();
     if (!trimmed) return;
@@ -129,13 +174,14 @@ export function SavedViewsSelector({
     onSaveView?.(saved);
     onSelectView?.(saved);
     setNewViewName("");
-    setIsOpen(false);
+    setIsCreateOpen(false);
   };
 
   const handleStartRename = (view: SavedTaskView, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingViewId(view.id);
     setEditingName(view.name);
+    setActiveMenuId(null);
   };
 
   const handleConfirmRename = (id: string, e: React.MouseEvent | React.FormEvent) => {
@@ -149,285 +195,244 @@ export function SavedViewsSelector({
     setEditingViewId(null);
   };
 
-  const handleCancelRename = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingViewId(null);
-  };
-
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     deleteView(id);
     onDeleteView?.(id);
+    setActiveMenuId(null);
+    if (effectiveActiveViewId === id) {
+      handleSelectDefault();
+    }
   };
 
-  const getScopeBadge = (scope: "school" | "unit" | "my") => {
-    if (scope === "school") {
-      return (
-        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-muted text-foreground border border-border/80">
-          Trường
-        </span>
-      );
-    }
-    if (scope === "unit") {
-      return (
-        <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-muted text-foreground border border-border/80">
-          Đơn vị
-        </span>
-      );
-    }
-    return (
-      <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-muted text-foreground border border-border/80">
-        Cá nhân
-      </span>
-    );
-  };
+  const inlineViews = customViews.slice(0, 3);
+  const overflowViews = customViews.slice(3);
 
   return (
     <div
-      ref={containerRef}
-      className={cn("relative inline-block text-left", className)}
-      data-slot="saved-views-selector"
+      className={cn("inline-flex items-center gap-0.5 shrink-0 select-none", className)}
+      data-slot="saved-views-nav"
+      role="navigation"
+      aria-label="Góc nhìn công việc"
     >
-      {/* Trigger Button */}
+      {/* 1. Default View: Tất cả nhiệm vụ */}
       <button
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-        aria-label="Chọn hoặc lưu góc nhìn nhiệm vụ"
+        role="tab"
+        aria-selected={isDefaultActive}
+        onClick={handleSelectDefault}
         className={cn(
-          "inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-[36px] sm:h-9 px-3 sm:px-2.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer select-none",
-          effectiveActiveView
-            ? "border-primary/40 bg-primary/5 text-foreground hover:bg-primary/10 shadow-2xs font-semibold"
-            : "border-border/80 bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          "inline-flex h-7 items-center rounded-md px-2 text-xs font-medium transition-colors cursor-pointer",
+          isDefaultActive
+            ? "bg-slate-100 text-slate-900 font-semibold"
+            : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
         )}
       >
-        <Bookmark
-          className={cn(
-            "size-3.5 shrink-0",
-            effectiveActiveView ? "text-primary" : "text-muted-foreground"
-          )}
-          strokeWidth={1.5}
-        />
-        <span className="truncate max-w-[130px] sm:max-w-[160px] text-left">
-          {effectiveActiveView
-            ? effectiveActiveView.name.startsWith("Góc nhìn")
-              ? cleanViewName(effectiveActiveView.name)
-              : `Góc nhìn: ${cleanViewName(effectiveActiveView.name)}`
-            : defaultLabel}
-        </span>
-        <ChevronDown
-          className={cn(
-            "size-3 shrink-0 text-muted-foreground transition-transform duration-150",
-            isOpen && "rotate-180"
-          )}
-        />
+        Tất cả nhiệm vụ
       </button>
 
-      {/* Popover Dropdown */}
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-label="Quản lý góc nhìn nhiệm vụ"
-          className="absolute right-0 sm:left-0 sm:right-auto mt-1.5 w-[310px] sm:w-[340px] z-50 rounded-2xl border border-border/80 bg-card p-3 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between pb-2 border-b border-border/60">
-            <div className="flex items-center gap-1.5">
-              <Layers className="size-3.5 text-primary" strokeWidth={1.5} />
-              <h3 className="text-xs font-semibold text-foreground">
-                Góc nhìn nhiệm vụ
-              </h3>
-            </div>
+      {/* 2. User-Created Saved Views (Inline) */}
+      {inlineViews.map((view) => {
+        const isActive = effectiveActiveViewId === view.id;
+        const isEditing = editingViewId === view.id;
+
+        if (isEditing) {
+          return (
+            <form
+              key={view.id}
+              onSubmit={(e) => handleConfirmRename(view.id, e)}
+              className="inline-flex items-center gap-1"
+            >
+              <input
+                type="text"
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                autoFocus
+                className="h-7 w-28 px-1.5 text-xs rounded border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                type="submit"
+                className="size-6 flex items-center justify-center rounded text-slate-600 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+              >
+                <Check className="size-3" strokeWidth={2} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingViewId(null)}
+                className="size-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="size-3" strokeWidth={1.5} />
+              </button>
+            </form>
+          );
+        }
+
+        return (
+          <div key={view.id} className="relative group inline-flex items-center">
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
-              aria-label="Đóng bảng chọn góc nhìn"
-              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted min-h-[32px] min-w-[32px] flex items-center justify-center cursor-pointer"
-            >
-              <X className="size-3.5" />
-            </button>
-          </div>
-
-          <div className="max-h-[340px] overflow-y-auto py-2 space-y-3.5">
-            {/* Section 1: Role Presets */}
-            <div>
-              <div className="flex items-center justify-between px-1 mb-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  Mặc định cho vai trò
-                </span>
-                <span className="text-xs text-muted-foreground">Mặc định</span>
-              </div>
-              <div className="space-y-1">
-                {presetViews.map((preset) => {
-                  const isActive = effectiveActiveViewId === preset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => handleSelect(preset)}
-                      className={cn(
-                        "w-full flex items-center justify-between gap-2 p-2 rounded-xl text-left text-xs transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px]",
-                        isActive
-                          ? "bg-primary/10 border border-primary/30 text-primary font-semibold"
-                          : "hover:bg-muted/70 text-foreground border border-transparent"
-                      )}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate">{cleanViewName(preset.name)}</span>
-                          {getScopeBadge(preset.criteria.scope)}
-                        </div>
-                        {preset.description && (
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {preset.description}
-                          </p>
-                        )}
-                      </div>
-                      {isActive && (
-                        <Check className="size-4 shrink-0 text-primary" strokeWidth={1.5} />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Section 2: Custom Saved Views */}
-            <div className="pt-2 border-t border-border/60">
-              <div className="flex items-center justify-between px-1 mb-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  Góc nhìn tùy chỉnh
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {customViews.length}
-                </span>
-              </div>
-
-              {customViews.length === 0 ? (
-                <div className="px-2 py-3 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border/60">
-                  Chưa có góc nhìn tùy chỉnh nào.
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {customViews.map((view) => {
-                    const isActive = effectiveActiveViewId === view.id;
-                    const isEditing = editingViewId === view.id;
-
-                    if (isEditing) {
-                      return (
-                        <form
-                          key={view.id}
-                          onSubmit={(e) => handleConfirmRename(view.id, e)}
-                          className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border"
-                        >
-                          <input
-                            id="saved-view-rename-input"
-                            aria-label="Tên góc nhìn"
-                            type="text"
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            className="flex-1 min-h-[44px] sm:min-h-[36px] px-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                            autoFocus
-                          />
-                          <button
-                            type="submit"
-                            aria-label="Xác nhận đổi tên"
-                            className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
-                          >
-                            <Check className="size-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleCancelRename}
-                            aria-label="Hủy đổi tên"
-                            className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] flex items-center justify-center rounded-lg bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
-                          >
-                            <X className="size-3.5" />
-                          </button>
-                        </form>
-                      );
-                    }
-
-                    return (
-                      <div
-                        key={view.id}
-                        onClick={() => handleSelect(view)}
-                        className={cn(
-                          "group w-full flex items-center justify-between gap-2 p-2 rounded-xl text-left text-xs transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px]",
-                          isActive
-                            ? "bg-primary/10 border border-primary/30 text-primary font-semibold"
-                            : "hover:bg-muted/70 text-foreground border border-transparent"
-                        )}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="truncate">{cleanViewName(view.name)}</span>
-                            {getScopeBadge(view.criteria.scope)}
-                          </div>
-                        </div>
-
-                        {/* Inline actions */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          {isActive && (
-                            <Check className="size-4 text-primary mr-0.5" strokeWidth={1.5} />
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => handleStartRename(view, e)}
-                            aria-label={`Đổi tên góc nhìn ${view.name}`}
-                            className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center cursor-pointer opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Pencil className="size-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => handleDelete(view.id, e)}
-                            aria-label={`Xóa góc nhìn ${view.name}`}
-                            className="min-h-[44px] min-w-[44px] sm:min-h-[32px] sm:min-w-[32px] p-1 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center cursor-pointer opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Trash2 className="size-3" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section 3: Save Current View Form */}
-          <form
-            onSubmit={handleSave}
-            className="pt-2.5 mt-1 border-t border-border/60 flex items-center gap-1.5"
-          >
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Lưu bộ lọc hiện tại..."
-              value={newViewName}
-              onChange={(e) => setNewViewName(e.target.value)}
-              aria-label="Tên góc nhìn mới"
-              className="flex-1 min-h-[44px] sm:min-h-[34px] px-2.5 rounded-xl border border-border/80 bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 focus:border-primary"
-            />
-            <button
-              type="submit"
-              disabled={!newViewName.trim()}
-              aria-label="Lưu góc nhìn hiện tại"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => handleSelect(view)}
               className={cn(
-                "inline-flex items-center justify-center gap-1 min-h-[44px] sm:min-h-[34px] px-3 rounded-xl text-xs font-semibold shrink-0 transition-colors select-none",
-                newViewName.trim()
-                  ? "bg-primary text-primary-foreground hover:bg-primary/95 shadow-xs cursor-pointer active:scale-98"
-                  : "bg-muted text-muted-foreground border border-border/60 cursor-not-allowed"
+                "inline-flex h-7 items-center rounded-md px-2 text-xs font-medium transition-colors cursor-pointer",
+                isActive
+                  ? "bg-slate-100 text-slate-900 font-semibold"
+                  : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
               )}
             >
-              <BookmarkPlus className="size-3.5" />
-              <span>Lưu</span>
+              <span className="truncate max-w-[120px]">{cleanViewName(view.name)}</span>
             </button>
-          </form>
+
+            {/* View options button (visible on hover or active) */}
+            <button
+              type="button"
+              aria-label={`Tùy chọn góc nhìn ${view.name}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveMenuId(activeMenuId === view.id ? null : view.id);
+              }}
+              className={cn(
+                "size-5 -ml-1 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 cursor-pointer transition-opacity",
+                isActive || activeMenuId === view.id
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100"
+              )}
+            >
+              <MoreHorizontal className="size-3" strokeWidth={1.5} />
+            </button>
+
+            {/* Context menu for this view */}
+            {activeMenuId === view.id && (
+              <div
+                ref={menuRef}
+                className="absolute left-0 top-full mt-1 w-32 rounded-md border border-slate-200/90 bg-white py-1 shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100 text-xs"
+              >
+                <button
+                  type="button"
+                  onClick={(e) => handleStartRename(view, e)}
+                  className="w-full flex items-center gap-2 px-2.5 py-1 text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-left cursor-pointer"
+                >
+                  <Pencil className="size-3 text-slate-400" />
+                  <span>Đổi tên</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handleDelete(view.id, e)}
+                  className="w-full flex items-center gap-2 px-2.5 py-1 text-rose-600 hover:bg-rose-50 text-left cursor-pointer"
+                >
+                  <Trash2 className="size-3 text-rose-500" />
+                  <span>Xóa góc nhìn</span>
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* 3. Overflow views dropdown if user created > 3 views */}
+      {overflowViews.length > 0 && (
+        <div className="relative inline-block" ref={overflowRef}>
+          <button
+            type="button"
+            onClick={() => setIsOverflowOpen((prev) => !prev)}
+            className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs text-slate-500 hover:text-slate-900 hover:bg-slate-50 cursor-pointer"
+            aria-label="Xem thêm góc nhìn đã lưu"
+          >
+            <span>+{overflowViews.length}</span>
+            <ChevronDown className="size-3 text-slate-400" />
+          </button>
+
+          {isOverflowOpen && (
+            <div className="absolute left-0 top-full mt-1 w-44 rounded-md border border-slate-200/90 bg-white py-1 shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100 text-xs">
+              {overflowViews.map((view) => {
+                const isActive = effectiveActiveViewId === view.id;
+                return (
+                  <div
+                    key={view.id}
+                    className={cn(
+                      "group flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-50 cursor-pointer",
+                      isActive && "bg-slate-50 font-semibold text-slate-900"
+                    )}
+                    onClick={() => handleSelect(view)}
+                  >
+                    <span className="truncate flex-1">{cleanViewName(view.name)}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDelete(view.id, e)}
+                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 p-0.5 rounded"
+                      title="Xóa góc nhìn"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
+
+      {/* 4. [+] Create new saved view button & lightweight popover */}
+      <div className="relative inline-block" ref={createPopoverRef}>
+        <button
+          type="button"
+          onClick={() => {
+            setIsCreateOpen((prev) => !prev);
+            setNewViewName("");
+          }}
+          aria-label="Tạo góc nhìn mới từ bộ lọc hiện tại"
+          title="Tạo góc nhìn mới từ bộ lọc hiện tại"
+          className={cn(
+            "size-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer",
+            isCreateOpen && "bg-slate-100 text-slate-700"
+          )}
+        >
+          <Plus className="size-3.5" strokeWidth={1.5} />
+        </button>
+
+        {isCreateOpen && (
+          <div
+            role="dialog"
+            aria-label="Tạo góc nhìn mới"
+            className="absolute left-0 top-full mt-1 w-64 rounded-md border border-slate-200/90 bg-white p-3 shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+          >
+            <div className="text-xs font-semibold text-slate-900 mb-1.5">
+              Tạo góc nhìn mới
+            </div>
+            <form onSubmit={handleCreate}>
+              <input
+                ref={inputRef}
+                type="text"
+                value={newViewName}
+                onChange={(e) => setNewViewName(e.target.value)}
+                placeholder="Tên góc nhìn..."
+                autoFocus
+                className="w-full h-7 px-2 text-xs rounded border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 mb-1.5"
+              />
+              <p className="text-[11px] text-slate-400 mb-3">
+                Lưu theo bộ lọc và điều kiện hiện tại
+              </p>
+              <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateOpen(false)}
+                  className="h-6.5 px-2.5 text-xs text-slate-500 hover:text-slate-800 rounded hover:bg-slate-50 cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newViewName.trim()}
+                  className="h-6.5 px-3 text-xs font-medium rounded bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-40 cursor-pointer transition-colors"
+                >
+                  Tạo
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

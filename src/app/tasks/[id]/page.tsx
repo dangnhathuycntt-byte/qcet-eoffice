@@ -21,6 +21,17 @@ export default async function Page({ params }: TaskDetailPageParams) {
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value || "";
   const session = verifySessionToken(sessionToken);
 
+  const currentUser =
+    session && session.id
+      ? {
+          id: session.id,
+          name: session.name || "Người dùng",
+          role: session.role || "STAFF",
+          email: session.email || "",
+          department: session.departmentId || "",
+        }
+      : null;
+
   // Fetch full task entity with all related data
   const rawTask = await prisma.task.findUnique({
     where: { id },
@@ -87,5 +98,11 @@ export default async function Page({ params }: TaskDetailPageParams) {
     description: res.directiveNote || undefined,
   }));
 
-  return <TaskDetailPage task={mappedTask} auditEvents={auditEvents} />;
+  return (
+    <TaskDetailPage
+      task={mappedTask}
+      auditEvents={auditEvents}
+      currentUser={currentUser}
+    />
+  );
 }

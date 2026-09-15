@@ -202,10 +202,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         {/* Centralized safe-area bottom clearance on main */}
         <main
           id="main-content"
-          className="flex-1 py-4 md:py-8 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-8"
+          className="flex-1 py-3 md:py-5 pb-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] md:pb-6"
           tabIndex={-1}
         >
-          <div className="max-w-[1440px] w-full mx-auto px-3.5 sm:px-6">
+          <div className="max-w-[1600px] w-full mx-auto px-3.5 sm:px-6">
             {children}
           </div>
         </main>

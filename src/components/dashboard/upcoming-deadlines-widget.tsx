@@ -141,15 +141,17 @@ export function UpcomingDeadlinesWidget({
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-border/50">
         <div className="flex items-center gap-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-            <Calendar className="size-4 text-primary" strokeWidth={1.5} />
+          <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+            <Calendar className="size-3.5 text-primary" strokeWidth={1.5} />
           </div>
           <div>
             <h3 className="font-heading text-sm font-bold text-foreground tracking-tight">
               Sắp đến hạn
             </h3>
             <p className="text-xs text-muted-foreground">
-              7 ngày tới · Ưu tiên xử lý
+              {windowTotal > initialLimit && !isExpanded
+                ? `Hiển thị ${displayedItems.length} nhiệm vụ sát hạn nhất`
+                : "7 ngày tới · Ưu tiên xử lý"}
             </p>
           </div>
         </div>
@@ -158,19 +160,20 @@ export function UpcomingDeadlinesWidget({
             href={viewAllHref}
             className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
             data-slot="upcoming-view-all"
-            title="Xem tất cả nhiệm vụ hạn chót"
+            title={`Xem tất cả ${windowTotal} nhiệm vụ hạn chót`}
           >
-            <span>Xem tất cả ({windowTotal})</span>
+            <span className="hidden sm:inline">Xem tất cả {windowTotal} nhiệm vụ hạn chót</span>
+            <span className="sm:hidden">Xem tất cả ({windowTotal})</span>
             <ChevronRight className="size-3" strokeWidth={1.5} />
           </Link>
         </div>
       </div>
 
       {/* List content */}
-      <div className="flex flex-col gap-0.5 pt-2">
+      <div className="flex flex-col divide-y divide-border/40 pt-1">
         {displayedItems.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <div className="flex size-9 items-center justify-center rounded-full bg-muted/60">
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <div className="flex size-8 items-center justify-center rounded-full bg-muted/60">
               <Calendar className="size-4 text-muted-foreground/60" strokeWidth={1.5} />
             </div>
             <p className="text-xs text-muted-foreground">Không có nhiệm vụ nào có hạn chót trong 7 ngày tới</p>
@@ -180,11 +183,7 @@ export function UpcomingDeadlinesWidget({
             const overdue = item.isOverdue || isDateOverdue(item.dueDate);
             const relativeDistance = formatDeadlineDistance(item.dueDate);
             const displayDate = formatDisplayDate(item.dueDate);
-            const isRelativeClear = relativeDistance === "Hôm nay" || relativeDistance === "Ngày mai";
             const isSchool = item.level === "Trường";
-            const levelBg = isSchool
-              ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
-              : "bg-violet-500/10 text-violet-600 border-violet-500/20";
 
             return (
               <div
@@ -198,103 +197,78 @@ export function UpcomingDeadlinesWidget({
                   }
                 }}
                 className={cn(
-                  "group flex flex-col justify-center gap-1.5 px-2.5 py-2.5 rounded-xl transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring min-h-[44px]",
+                  "group flex items-center justify-between gap-3 py-2.5 px-2 rounded-xl transition-colors min-h-[40px]",
                   onSelectTask
-                    ? "cursor-pointer hover:bg-muted/50 active:bg-muted/70 active:scale-[0.99]"
-                    : "bg-muted/20"
+                    ? "cursor-pointer hover:bg-muted/40 active:bg-muted/60"
+                    : "bg-muted/10"
                 )}
                 role={onSelectTask ? "button" : undefined}
                 aria-label={onSelectTask ? `Chi tiết hạn chót: ${item.title}` : undefined}
               >
-                {/* Top row: Badges & metadata */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {/* Level Badge with soft colored icon background */}
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-xs px-2 py-0.5 font-semibold h-5 rounded-md border gap-1",
-                        levelBg
-                      )}
-                    >
-                      {isSchool ? (
-                        <Building2 className="size-3" strokeWidth={1.5} />
-                      ) : (
-                        <Layers className="size-3" strokeWidth={1.5} />
-                      )}
-                      {item.level}
-                    </Badge>
-
-                    {/* Overdue Alert or Relative Due Date Badge */}
-                    {overdue ? (
-                      <Badge
-                        variant="rose"
-                        className="text-xs px-1.5 py-0.5 font-semibold h-5 rounded-md gap-1"
-                      >
-                        <AlertTriangle className="size-3" strokeWidth={1.5} />
-                        {relativeDistance.startsWith("Quá hạn")
-                          ? relativeDistance
-                          : `Quá hạn · ${relativeDistance}`}
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant={isRelativeClear ? "amber" : "outline"}
-                        className="text-xs px-1.5 py-0.5 font-medium h-5 rounded-md gap-1"
-                      >
-                        <Clock className="size-3 opacity-75" strokeWidth={1.5} />
-                        {relativeDistance}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Absolute date moved to title tooltip; shown only in badge title attr */}
-                  {!isRelativeClear && (
-                    <span className="sr-only">{displayDate}</span>
-                  )}
-                </div>
-
-                {/* Title and Assignee compact row */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                {/* Left side: Title & metadata */}
+                <div className="min-w-0 flex-1 space-y-0.5">
                   <h4
-                    className="text-xs font-semibold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors flex-1"
+                    className="text-xs sm:text-sm font-medium text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors"
                     title={`${item.title} (Hạn: ${displayDate})`}
                   >
                     {item.title}
                   </h4>
-
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-                    {item.assigneeAvatar ? (
-                      <img
-                        src={item.assigneeAvatar}
-                        alt=""
-                        aria-hidden="true"
-                        width={16}
-                        height={16}
-                        loading="lazy"
-                        className="size-4 rounded-full object-cover shrink-0 ring-1 ring-border/50"
-                      />
-                    ) : item.assigneeName === "Chưa phân công" ? (
-                      <div
-                        aria-hidden="true"
-                        className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted/60 text-muted-foreground"
-                      >
-                        <UserMinus className="size-2.5 opacity-70" strokeWidth={1.5} />
-                      </div>
-                    ) : (
-                      <div
-                        aria-hidden="true"
-                        className="flex size-4 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-xs font-semibold text-secondary-foreground ring-1 ring-border/50"
-                      >
-                        {getInitials(item.assigneeName)}
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                     <span className={cn(
-                      "truncate max-w-[140px] font-medium",
-                      item.assigneeName === "Chưa phân công" ? "text-muted-foreground italic text-2xs" : "text-foreground/80"
+                      "font-semibold text-2xs px-1.5 py-0.2 rounded",
+                      isSchool ? "bg-blue-500/10 text-blue-600" : "bg-violet-500/10 text-violet-600"
                     )}>
-                      {item.assigneeName}
+                      {item.level}
                     </span>
+                    <span aria-hidden="true" className="text-border">·</span>
+                    {overdue ? (
+                      <span className="text-rose-600 font-semibold inline-flex items-center gap-1">
+                        <span className="size-1.5 rounded-full bg-rose-500 shrink-0" />
+                        {relativeDistance.startsWith("Quá hạn") ? relativeDistance : `Quá hạn · ${relativeDistance}`}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-muted-foreground">
+                        <Clock className="size-2.5 opacity-70" strokeWidth={1.5} />
+                        {relativeDistance}
+                      </span>
+                    )}
                   </div>
+                </div>
+
+                {/* Right side: Assignee */}
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                  {item.assigneeAvatar ? (
+                    <img
+                      src={item.assigneeAvatar}
+                      alt=""
+                      aria-hidden="true"
+                      width={16}
+                      height={16}
+                      loading="lazy"
+                      className="size-4 rounded-full object-cover shrink-0 ring-1 ring-border/50"
+                    />
+                  ) : item.assigneeName === "Chưa phân công" ? (
+                    <div
+                      aria-hidden="true"
+                      className="flex size-4 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                      title="Chưa phân công"
+                    >
+                      <UserMinus className="size-2.5 opacity-70" strokeWidth={1.5} />
+                    </div>
+                  ) : (
+                    <div
+                      aria-hidden="true"
+                      className="flex size-4 shrink-0 items-center justify-center rounded-full bg-secondary font-sans text-2xs font-semibold text-secondary-foreground ring-1 ring-border/50"
+                    >
+                      {getInitials(item.assigneeName)}
+                    </div>
+                  )}
+                  <span className={cn(
+                    "truncate max-w-[120px] font-medium hidden sm:inline",
+                    item.assigneeName === "Chưa phân công" ? "text-muted-foreground/70 italic text-2xs" : "text-foreground/80"
+                  )}>
+                    {item.assigneeName}
+                  </span>
                 </div>
               </div>
             );
@@ -303,7 +277,7 @@ export function UpcomingDeadlinesWidget({
       </div>
 
       {/* Expand / Collapse & Calendar Link Footer */}
-      <div className="pt-2.5 mt-1 border-t border-border/40 flex items-center justify-between text-xs">
+      <div className="pt-2 mt-1 border-t border-border/40 flex items-center justify-between text-xs">
         <Link
           href="/calendar"
           className="inline-flex items-center gap-1 font-medium text-primary hover:underline transition-colors"
@@ -316,7 +290,7 @@ export function UpcomingDeadlinesWidget({
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
             aria-expanded={isExpanded}
           >
             {isExpanded ? (
@@ -326,7 +300,7 @@ export function UpcomingDeadlinesWidget({
               </>
             ) : (
               <>
-                <span>Hiện thêm {windowTotal - initialLimit} nhiệm vụ</span>
+                <span>Xem tất cả {windowTotal} nhiệm vụ hạn chót</span>
                 <ChevronDown className="size-3.5" strokeWidth={1.5} />
               </>
             )}

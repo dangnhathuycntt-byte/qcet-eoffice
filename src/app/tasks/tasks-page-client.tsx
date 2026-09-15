@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { isUserExecutive, isUserUnitHead } from "@/domain/tasks/attention-resolver";
 import { useWorkspaceQuery } from "@/hooks/use-workspace-query";
@@ -9,18 +10,23 @@ import {
   type ViewMode,
   type WorkspaceScope,
 } from "@/components/tasks/task-management-workspace";
-import type { SchoolTask } from "@/types/dashboard";
+import type { SchoolTask, StaffTask } from "@/types/dashboard";
 
 export type { ViewMode, WorkspaceScope };
 
 export interface TasksPageClientProps {
   initialTasks?: SchoolTask[];
   initialScope?: WorkspaceScope;
+  initialView?: ViewMode;
 }
 
-export function TasksPageClient({ initialTasks, initialScope }: TasksPageClientProps) {
+export function TasksPageClient({ initialTasks, initialScope, initialView }: TasksPageClientProps) {
+  const router = useRouter();
   const { user } = useAuth();
-  const { queryState, setScope, setView } = useWorkspaceQuery();
+  const { queryState, setScope, setView } = useWorkspaceQuery({
+    defaultView: initialView,
+    defaultScope: initialScope,
+  });
 
   const isExec = user ? isUserExecutive(user as any) : false;
   const isHead = user ? isUserUnitHead(user as any) : false;
@@ -46,12 +52,26 @@ export function TasksPageClient({ initialTasks, initialScope }: TasksPageClientP
     setView(v, { shallow: true, replace: true });
   };
 
+  const handleSelectTask = React.useCallback(
+    (task: SchoolTask | StaffTask) => {
+      router.push(`/tasks/${task.id}`);
+    },
+    [router]
+  );
+
+  const activeView: ViewMode =
+    queryState.view === "kanban" || queryState.view === "table"
+      ? queryState.view
+      : (initialView ?? "table");
+
   return (
     <TaskManagementWorkspace
       scope={authorizedScope}
       onScopeChange={onScopeChange}
-      viewMode={queryState.view === "kanban" ? "kanban" : "table"}
+      viewMode={activeView}
+      initialViewMode={initialView ?? "table"}
       onViewModeChange={handleViewChange}
+      onSelectTask={handleSelectTask}
       initialTasks={initialTasks}
     />
   );

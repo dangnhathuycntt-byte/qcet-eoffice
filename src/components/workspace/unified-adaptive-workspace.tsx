@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { Inbox, AlertTriangle, Loader2, Layers, X, ChevronRight, CircleAlert, Clock } from "lucide-react";
 import type { UnifiedAdaptiveWorkspaceProps, WorkspaceScope, ViewMode, UniversalActionQueueItems } from "./types";
 import {
@@ -36,7 +37,9 @@ import { ActiveFilterBreadcrumb } from "./components/active-filter-breadcrumb";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
 import { TaskKanbanBoard } from "@/components/tasks/task-kanban-board";
 import type { CreateTaskFormData } from "@/components/dashboard/create-task-modal";
-import { TaskDetailSideSheet, isSchoolTask } from "@/components/dashboard/task-detail-side-sheet";
+import { isSchoolTask } from "@/components/dashboard/task-detail-side-sheet";
+import { LinearTaskDetailView } from "@/components/tasks/detail/linear-task-detail-view";
+import { LinearPeekPreviewModal } from "@/components/tasks/preview/linear-peek-preview-modal";
 import { UnassignedDepartmentState } from "./components/unassigned-department-state";
 import { isExecutiveUser, isManagerUser } from "@/components/layout/scope-switcher";
 import { Button } from "@/components/ui/button";
@@ -44,8 +47,8 @@ import type { SchoolTask, StaffTask, TaskStatus } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { useAuth, isUserUnassignedDepartment } from "@/lib/auth-context";
 
-const CreateTaskModal = dynamic(
-  () => import("@/components/dashboard/create-task-modal").then((mod) => mod.CreateTaskModal),
+const LinearCreateTaskModal = dynamic(
+  () => import("@/components/tasks/create/linear-create-task-modal").then((mod) => mod.LinearCreateTaskModal),
   { ssr: false }
 );
 
@@ -59,6 +62,7 @@ const SubmitDeliverableModal = dynamic(
   { ssr: false }
 );
 import { applyOptimisticStatusChange } from "./utils/task-workspace-mutations";
+import { updateTaskStatus } from "@/lib/tasks/task-actions";
 import type { CreateTaskSubmitResult } from "@/lib/adapters/create-task-mapper";
 import { cn } from "@/lib/utils";
 
@@ -822,16 +826,22 @@ export function UnifiedAdaptiveWorkspace({
   // Action queue drawer open state for full-width layout mode
   const [isActionQueueOpen, setIsActionQueueOpen] = React.useState(false);
 
+  const router = useRouter();
+
   const handleSelectTask = React.useCallback(
     (task: SchoolTask | StaffTask) => {
+      if (onSelectTask) {
+        onSelectTask(task);
+        return;
+      }
       setInternalSelectedTask(task);
       setIsDetailOpen(true);
       const taskIdOrCode =
         (task as any).code || (task as any).taskCode || task.id;
       workspaceQuery?.setSelectedTask(taskIdOrCode, { replace: true });
-      onSelectTask?.(task);
+      router.push(`/tasks/${task.id}`);
     },
-    [onSelectTask, workspaceQuery]
+    [onSelectTask, workspaceQuery, router]
   );
 
   const handleCloseDetail = React.useCallback(() => {
@@ -839,6 +849,9 @@ export function UnifiedAdaptiveWorkspace({
     setInternalSelectedTask(null);
     workspaceQuery?.setSelectedTask(null, { replace: true });
   }, [workspaceQuery]);
+
+  // Peek preview modal state (Linear Image #8)
+  const [peekTask, setPeekTask] = React.useState<SchoolTask | StaffTask | null>(null);
 
   // Filter state synchronized with props
   const [internalDept, setInternalDept] = React.useState<string | undefined>(selectedDepartment);
@@ -849,7 +862,7 @@ export function UnifiedAdaptiveWorkspace({
   const [currentCategory, setCurrentCategory] = React.useState<string>("ALL");
   const [currentPriority, setCurrentPriority] = React.useState<string>("ALL");
   const [currentMonth, setCurrentMonth] = React.useState<number | "ALL">("ALL");
-  const [tableDensity, setTableDensity] = React.useState<TableDensity>("comfortable");
+  const [tableDensity, setTableDensity] = React.useState<TableDensity>("compact");
   const [activeViewId, setActiveViewId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -1359,6 +1372,73 @@ export function UnifiedAdaptiveWorkspace({
     user,
   ]);
 
+  const handlePeekNext = React.useCallback(() => {
+    if (!peekTask || displayedTasks.length === 0) return;
+    const currentIndex = displayedTasks.findIndex((t) => t.id === peekTask.id);
+    if (currentIndex >= 0 && currentIndex < displayedTasks.length - 1) {
+      setPeekTask(displayedTasks[currentIndex + 1]);
+    }
+  }, [peekTask, displayedTasks]);
+
+  const handlePeekPrev = React.useCallback(() => {
+    if (!peekTask || displayedTasks.length === 0) return;
+    const currentIndex = displayedTasks.findIndex((t) => t.id === peekTask.id);
+    if (currentIndex > 0) {
+      setPeekTask(displayedTasks[currentIndex - 1]);
+    }
+  }, [peekTask, displayedTasks]);
+
+  // Hook Space key on table row to open LinearPeekPreviewModal
+  React.useEffect(() => {
+    const handleGlobalSpaceKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== " " && e.key !== "Spacebar") return;
+
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const tagName = target.tagName.toLowerCase();
+      if (
+        tagName === "input" ||
+        tagName === "textarea" ||
+        tagName === "select" ||
+        tagName === "button" ||
+        target.isContentEditable ||
+        target.getAttribute("role") === "checkbox" ||
+        target.getAttribute("role") === "button"
+      ) {
+        return;
+      }
+
+      // Check if target or parent has data-task-id
+      const rowEl = target.closest("[data-task-id]");
+      if (!rowEl) return;
+      const taskId = rowEl.getAttribute("data-task-id");
+      if (!taskId) return;
+
+      const found = displayedTasks.find(
+        (t) => t.id === taskId || (t as any).code === taskId || (t as any).taskCode === taskId
+      );
+      if (found) {
+        e.preventDefault();
+        e.stopPropagation();
+        setPeekTask(found);
+      }
+    };
+
+    const handleCustomPeek = (e: Event) => {
+      const customEvt = e as CustomEvent<{ task: SchoolTask | StaffTask }>;
+      if (customEvt.detail?.task) {
+        setPeekTask(customEvt.detail.task);
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalSpaceKeyDown);
+    window.addEventListener("qcet:peek-task", handleCustomPeek);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalSpaceKeyDown);
+      window.removeEventListener("qcet:peek-task", handleCustomPeek);
+    };
+  }, [displayedTasks]);
+
   const handleResetFilters = React.useCallback(() => {
     setActiveViewId(null);
     setInternalDept(undefined);
@@ -1667,33 +1747,8 @@ export function UnifiedAdaptiveWorkspace({
       const previousData = internalTasks;
       setInternalTasks((prev) => applyOptimisticStatusChange(prev, taskId, newStatus));
 
-      let actionUrl = `/api/tasks/${taskId}/actions/update-progress`;
-      let actionBody: any = { note };
-
-      if (newStatus === "IN_PROGRESS") {
-        actionUrl = `/api/tasks/${taskId}/actions/start`;
-        actionBody = { note };
-      } else if (newStatus === "COMPLETED") {
-        actionUrl = `/api/tasks/${taskId}/actions/approve`;
-        actionBody = { note: note || "Phê duyệt hoàn thành nhiệm vụ" };
-      } else if (newStatus === "CANCELLED") {
-        actionUrl = `/api/tasks/${taskId}/actions/cancel`;
-        actionBody = { reason: note || "Hủy nhiệm vụ" };
-      } else if (newStatus === "NEEDS_REVIEW" || newStatus === "WAITING_APPROVAL") {
-        actionUrl = `/api/tasks/${taskId}/actions/submit-result`;
-        actionBody = { note: note || "Nộp kết quả chờ phê duyệt", completionRate: 100 };
-      }
-
-      try {
-        const res = await fetch(actionUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(actionBody),
-        });
-        if (!res.ok) {
-          throw new Error("Lỗi cập nhật trạng thái");
-        }
-      } catch (err) {
+      const res = await updateTaskStatus(taskId, newStatus, note);
+      if (!res.ok) {
         setInternalTasks(previousData);
       }
     },
@@ -1780,9 +1835,58 @@ export function UnifiedAdaptiveWorkspace({
         </aside>
       )}
 
-      {/* 1. Unified Task Toolbar: Single Unified Surface (Scope, Search, Smart Pills, Popover, View, Density) */}
-      {!hideScopeSwitcher && (
-        <UnifiedTaskToolbar
+      {/* Main Canvas Surface: Linear Task Detail (when task selected) OR Workspace List/Table View */}
+      {!disableInternalDetail && isDetailOpen && internalSelectedTask ? (
+        <div data-slot="in-canvas-linear-detail" className="w-full">
+          <LinearTaskDetailView
+            task={internalSelectedTask}
+            onBack={handleCloseDetail}
+            onStatusChange={handleStatusChange}
+            onPriorityChange={async (taskId, priority) => {
+              const pVal = priority === "MEDIUM" ? "NORMAL" : priority;
+              setInternalTasks((prev) =>
+                prev.map((t) => (t.id === taskId ? { ...t, priority: pVal } : t))
+              );
+            }}
+            onAddSubTask={(parentId) => {
+              openCreateModal("DON_VI", parentId);
+            }}
+            onSelectSubTask={(subTaskOrId) => {
+              if (typeof subTaskOrId === "string") {
+                const isMatch = (t: SchoolTask | StaffTask) =>
+                  t.id === subTaskOrId ||
+                  (t as any).code === subTaskOrId ||
+                  (t as any).taskCode === subTaskOrId;
+
+                const foundSchool = displayedTasks.find(isMatch);
+                if (foundSchool) {
+                  handleSelectTask(foundSchool);
+                  return;
+                }
+                for (const t of displayedTasks) {
+                  const sub = t.subTasks?.find(isMatch);
+                  if (sub) {
+                    handleSelectTask(sub);
+                    return;
+                  }
+                }
+              } else {
+                handleSelectTask(subTaskOrId);
+              }
+            }}
+            currentUser={user}
+            onRefresh={handleRefresh}
+            onSubmitDeliverable={
+              onSubmitDeliverable ? (task) => setSubmittingTask(task) : undefined
+            }
+            onReview={onReview ? (task) => setReviewingTask(task) : undefined}
+          />
+        </div>
+      ) : (
+        <>
+          {/* 1. Unified Task Toolbar: Single Unified Surface (Scope, Search, Smart Pills, Popover, View, Density) */}
+          {!hideScopeSwitcher && (
+            <UnifiedTaskToolbar
           scope={activeScope}
           onScopeChange={handleScopeChange}
           user={user}
@@ -2043,7 +2147,7 @@ export function UnifiedAdaptiveWorkspace({
           className="w-full space-y-3 min-w-0"
         >
           {/* Executive Dashboard: inline sections for BGH at school scope */}
-          {activeScope === "school" && isExecutive && !initialLoading && !isLoading && !isInternalLoading && (
+          {activeScope === "school" && isExecutive && viewMode === "table" && !initialLoading && !isLoading && !isInternalLoading && (
             <ExecutiveDashboardSections
               metrics={metrics}
               actionQueue={actionQueue}
@@ -2167,6 +2271,8 @@ export function UnifiedAdaptiveWorkspace({
           </div>
         </div>
       )}
+        </>
+      )}
 
       {/* Action Queue Slide-Over Drawer (in Full-Width Mode) */}
       {!enableSplitCockpit && (
@@ -2188,30 +2294,40 @@ export function UnifiedAdaptiveWorkspace({
             role="region"
             aria-label="Hàng đợi xử lý công việc"
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-card/90">
-              <div className="flex items-center gap-2">
-                <Layers className="size-4 text-primary" strokeWidth={1.5} />
-                <h3 className="text-sm font-bold text-foreground">
-                  Hàng đợi xử lý công việc
-                </h3>
-              </div>
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-white">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Hàng đợi xử lý công việc
+              </h3>
               <button
                 type="button"
                 onClick={() => setIsActionQueueOpen(false)}
-                className="inline-flex min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
+                className="size-7 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 aria-label="Đóng hàng đợi"
               >
                 <X className="size-4" strokeWidth={1.5} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 thin-scrollbar">
-              <AdaptiveMetricStrip metrics={metrics} scope={activeScope} />
-              <ActionQueueShell
-                title="Hàng đợi hành động"
-                totalCount={actionQueueTotal}
-                collapsible={false}
-                className="border-border/70"
-              >
+            <div className="flex-1 overflow-y-auto thin-scrollbar">
+              {/* Summary Metrics - Clean Typography & Alignment */}
+              <div className="px-5 py-4 space-y-1 text-xs">
+                <div className="font-medium text-slate-900">
+                  <span className="font-semibold tabular-nums">{metrics?.totalTasks ?? 0}</span> nhiệm vụ {activeScope === "school" ? "toàn trường" : activeScope === "unit" ? "đơn vị" : "cá nhân"}
+                </div>
+                <div className={cn(metrics?.urgentOverdueCount && metrics.urgentOverdueCount > 0 ? "text-rose-600 font-medium" : "text-slate-500")}>
+                  <span className="font-semibold tabular-nums">{metrics?.urgentOverdueCount ?? 0}</span> quá hạn
+                </div>
+                <div className={cn(metrics?.waitingApprovalCount && metrics.waitingApprovalCount > 0 ? "text-amber-600 font-medium" : "text-slate-500")}>
+                  <span className="font-semibold tabular-nums">{metrics?.waitingApprovalCount ?? 0}</span> chờ phân công/duyệt
+                </div>
+                <div className="text-slate-500">
+                  <span className="font-semibold tabular-nums text-slate-700">{typeof metrics?.completedRate === "number" ? `${metrics.completedRate}%` : "0%"}</span> tiến độ
+                </div>
+              </div>
+
+              <div className="h-px bg-slate-100 mx-5" />
+
+              {/* Actionable items list */}
+              <div className="p-5">
                 <UniversalActionQueue
                   actionQueue={actionQueue}
                   onSelectTask={handleSelectTask}
@@ -2233,75 +2349,46 @@ export function UnifiedAdaptiveWorkspace({
                       : (taskId) => handleUrge(taskId, taskId, "Người phụ trách")
                   }
                 />
-              </ActionQueueShell>
+              </div>
             </div>
           </aside>
         </>
       )}
 
-      {/* 3. Detail Side Sheet (shown when task selected) */}
-      {!disableInternalDetail && (
-        <TaskDetailSideSheet
-          task={internalSelectedTask}
-          isOpen={Boolean(isDetailOpen && internalSelectedTask)}
-          onClose={handleCloseDetail}
-          onStatusChange={handleStatusChange}
-          onAddSubTask={(parentId) => {
-            openCreateModal("DON_VI", parentId);
-          }}
-          onSelectSubTask={(subTaskOrId) => {
-            if (typeof subTaskOrId === "string") {
-              const isMatch = (t: SchoolTask | StaffTask) =>
-                t.id === subTaskOrId ||
-                (t as any).code === subTaskOrId ||
-                (t as any).taskCode === subTaskOrId;
+      {/* 3. Linear Peek Preview Modal (Spacebar Quick Look) */}
+      <LinearPeekPreviewModal
+        task={peekTask}
+        isOpen={Boolean(peekTask)}
+        onClose={() => setPeekTask(null)}
+        onOpenDetail={(t) => {
+          setPeekTask(null);
+          handleSelectTask(t);
+        }}
+        onNavigateNext={handlePeekNext}
+        onNavigatePrev={handlePeekPrev}
+        hasNext={
+          peekTask
+            ? displayedTasks.findIndex((t) => t.id === peekTask.id) < displayedTasks.length - 1
+            : false
+        }
+        hasPrev={
+          peekTask
+            ? displayedTasks.findIndex((t) => t.id === peekTask.id) > 0
+            : false
+        }
+      />
 
-              const foundSchool = displayedTasks.find(isMatch);
-              if (foundSchool) {
-                handleSelectTask(foundSchool);
-                return;
-              }
-              for (const t of displayedTasks) {
-                const sub = t.subTasks?.find(isMatch);
-                if (sub) {
-                  handleSelectTask(sub);
-                  return;
-                }
-              }
-            } else {
-              handleSelectTask(subTaskOrId);
-            }
-          }}
-          parentSchoolTaskTitle={
-            internalSelectedTask && !isSchoolTask(internalSelectedTask)
-              ? (internalSelectedTask as StaffTask).parentSchoolTaskTitle ||
-                displayedTasks.find((t) =>
-                  t.subTasks?.some((s) => s.id === internalSelectedTask.id)
-                )?.title
-              : undefined
-          }
-          currentUser={user}
-        />
-      )}
-
-      {/* 4. Task Creation Modal */}
-      <CreateTaskModal
+      {/* 4. Linear Task Creation Modal */}
+      <LinearCreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreateTaskSubmit}
-        schoolTasks={displayedTasks}
+        onSubmitSuccess={async () => {
+          setIsCreateModalOpen(false);
+          await handleRefresh();
+        }}
         initialLevel={createInitialLevel}
         initialParentTaskId={createInitialParentId}
-        initialParentTaskTitle={
-          createInitialParentId
-            ? displayedTasks.find((t) => t.id === createInitialParentId)?.title
-            : undefined
-        }
-        initialParentTaskDueDate={
-          createInitialParentId
-            ? displayedTasks.find((t) => t.id === createInitialParentId)?.dueDate
-            : undefined
-        }
+        initialDepartmentCode={currentDept !== "ALL" ? currentDept : undefined}
       />
 
       {/* 5. Authenticated Review Action Dialog */}

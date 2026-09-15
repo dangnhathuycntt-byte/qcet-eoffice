@@ -10,10 +10,20 @@ import {
   Info,
   X,
   ArrowRight,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
-import { resolveOAuthError, sanitizeRedirectUrl } from "@/lib/login-helpers";
+import {
+  resolveOAuthError,
+  sanitizeRedirectUrl,
+  shouldShowLoginSkeleton,
+  validateLoginForm,
+} from "@/lib/login-helpers";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,13 +57,18 @@ function LoginSkeleton() {
 
       {/* Center Card Skeleton */}
       <div className="relative z-10 flex flex-1 items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-[420px] rounded-2xl border border-border/80 bg-card/95 p-6 sm:p-7 shadow-xs space-y-5">
+        <div className="w-full max-w-[420px] rounded-2xl border border-border/80 bg-card/95 p-6 sm:p-7 shadow-xs space-y-4">
           <div className="space-y-2 text-center flex flex-col items-center">
             <div className="h-6 w-44 bg-secondary/70 rounded-lg animate-pulse" />
             <div className="h-4 w-64 bg-secondary/40 rounded-md animate-pulse" />
           </div>
           <div className="h-12 w-full bg-secondary/50 rounded-xl animate-pulse" />
-          <div className="h-4 w-48 mx-auto bg-secondary/40 rounded-md animate-pulse" />
+          <div className="h-3 w-48 mx-auto bg-secondary/30 rounded-md animate-pulse" />
+          <div className="space-y-3 pt-1">
+            <div className="h-10 w-full bg-secondary/40 rounded-xl animate-pulse" />
+            <div className="h-10 w-full bg-secondary/40 rounded-xl animate-pulse" />
+            <div className="h-11 w-full bg-secondary/60 rounded-xl animate-pulse" />
+          </div>
           <div className="pt-2 border-t border-border/60">
             <div className="h-3.5 w-56 mx-auto bg-secondary/30 rounded-md animate-pulse" />
           </div>
@@ -74,7 +89,13 @@ function LoginSkeleton() {
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, login } = useAuth();
+
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const targetUrl = React.useMemo(() => {
     return sanitizeRedirectUrl(searchParams.get("redirect") || searchParams.get("callbackUrl"));
@@ -108,7 +129,34 @@ function LoginFormContent() {
     }
   }, [errorParam]);
 
-  if (isLoading || user) {
+  const handleStandardLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    const validation = validateLoginForm(email, password);
+    if (!validation.valid) {
+      setErrorMessage(validation.error || "Vui lòng nhập địa chỉ email và mật khẩu hợp lệ");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await login(email.trim().toLowerCase(), password);
+      if (!res.success) {
+        setErrorMessage(res.error || "Email hoặc mật khẩu không chính xác");
+        setIsSubmitting(false);
+        return;
+      }
+
+      router.refresh();
+      router.replace(targetUrl);
+    } catch {
+      setErrorMessage("Không thể kết nối đến máy chủ xác thực. Vui lòng thử lại.");
+      setIsSubmitting(false);
+    }
+  };
+
+  if (shouldShowLoginSkeleton({ isLoading, isAuthenticated, user })) {
     return <LoginSkeleton />;
   }
 
@@ -227,7 +275,7 @@ function LoginFormContent() {
           )}
 
           {/* Centralized Login Card */}
-          <div className="rounded-2xl border border-border/80 bg-card/95 p-6 sm:p-7 shadow-xs backdrop-blur-sm space-y-5">
+          <div className="rounded-2xl border border-border/80 bg-card/95 p-6 sm:p-7 shadow-xs backdrop-blur-sm space-y-4">
             <div className="space-y-1.5 text-center">
               <h1 className="text-xl font-bold tracking-tight text-foreground font-heading">
                 Đăng nhập hệ thống
@@ -237,7 +285,179 @@ function LoginFormContent() {
               </p>
             </div>
 
+            {/* Phương thức 1: Google SSO */}
             <GoogleLoginButton />
+
+            {/* Đường phân cách phương thức */}
+            <div className="relative my-3">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border/70" />
+              </div>
+              <div className="relative flex justify-center text-xs font-medium">
+                <span className="bg-card px-2.5 text-muted-foreground text-xs">
+                  Hoặc đăng nhập bằng tài khoản công vụ
+                </span>
+              </div>
+            </div>
+
+            {/* Thông báo lỗi đăng nhập mật khẩu */}
+            {errorMessage && (
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/90 p-3 text-xs text-red-950 animate-in fade-in"
+              >
+                <AlertCircle className="size-4 shrink-0 text-red-600 mt-0.5" strokeWidth={1.5} />
+                <div className="flex-1 leading-relaxed text-left">{errorMessage}</div>
+              </div>
+            )}
+
+            {/* Phương thức 2: Đăng nhập Email & Mật khẩu công vụ */}
+            <form onSubmit={handleStandardLogin} className="space-y-3">
+              <div className="space-y-1 text-left">
+                <label
+                  htmlFor="loginEmail"
+                  className="block text-xs font-semibold text-foreground"
+                >
+                  Email công vụ
+                </label>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+                    <Mail className="size-4" strokeWidth={1.5} />
+                  </div>
+                  <input
+                    id="loginEmail"
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="username"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="vidu: bgh@cdktcnqn.edu.vn"
+                    className="block w-full rounded-xl border border-border/80 bg-background pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1 text-left">
+                <label
+                  htmlFor="loginPassword"
+                  className="block text-xs font-semibold text-foreground"
+                >
+                  Mật khẩu
+                </label>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+                    <Lock className="size-4" strokeWidth={1.5} />
+                  </div>
+                  <input
+                    id="loginPassword"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Nhập mật khẩu"
+                    className="block w-full rounded-xl border border-border/80 bg-background pl-9 pr-10 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="size-4" strokeWidth={1.5} />
+                    ) : (
+                      <Eye className="size-4" strokeWidth={1.5} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="size-4 shrink-0 animate-spin" strokeWidth={1.5} />
+                    <span>Đang xác thực tài khoản...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Đăng nhập hệ thống</span>
+                    <ArrowRight className="size-3.5" strokeWidth={1.5} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Tài khoản thử nghiệm nhanh (Môi trường phát triển / Nội bộ) */}
+            <div className="rounded-xl border border-border/70 bg-secondary/30 p-3 space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Tài khoản thử nghiệm nhanh:</span>
+                <span className="font-mono text-[11px]">Mật khẩu: Qcet@2026</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-left">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail("dangnhathuy@cdktcnqn.edu.vn");
+                    setPassword("Qcet@2026");
+                    setErrorMessage(null);
+                  }}
+                  className="flex flex-col rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs hover:border-primary/50 hover:bg-primary/5 transition-all text-left cursor-pointer"
+                >
+                  <span className="font-semibold text-foreground text-[11px] leading-tight">ThS. Đặng Nhật Huy</span>
+                  <span className="text-[10px] text-muted-foreground font-mono truncate">dangnhathuy@cdktcnqn.edu.vn</span>
+                  <span className="text-[10px] text-primary font-medium mt-0.5">Ban Giám hiệu (Hiệu trưởng)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail("bgh@cdktcnqn.edu.vn");
+                    setPassword("Qcet@2026");
+                    setErrorMessage(null);
+                  }}
+                  className="flex flex-col rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs hover:border-primary/50 hover:bg-primary/5 transition-all text-left cursor-pointer"
+                >
+                  <span className="font-semibold text-foreground text-[11px] leading-tight">Ban Giám hiệu</span>
+                  <span className="text-[10px] text-muted-foreground font-mono truncate">bgh@cdktcnqn.edu.vn</span>
+                  <span className="text-[10px] text-primary font-medium mt-0.5">Tài khoản đơn vị BGH</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail("daotao@cdktcnqn.edu.vn");
+                    setPassword("Qcet@2026");
+                    setErrorMessage(null);
+                  }}
+                  className="flex flex-col rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs hover:border-primary/50 hover:bg-primary/5 transition-all text-left cursor-pointer"
+                >
+                  <span className="font-semibold text-foreground text-[11px] leading-tight">Phòng QL Đào tạo</span>
+                  <span className="text-[10px] text-muted-foreground font-mono truncate">daotao@cdktcnqn.edu.vn</span>
+                  <span className="text-[10px] text-muted-foreground font-medium mt-0.5">Trưởng đơn vị</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail("admin@cdktcnqn.edu.vn");
+                    setPassword("Qcet@123456");
+                    setErrorMessage(null);
+                  }}
+                  className="flex flex-col rounded-lg border border-border/80 bg-background px-2.5 py-1.5 text-xs hover:border-primary/50 hover:bg-primary/5 transition-all text-left cursor-pointer"
+                >
+                  <span className="font-semibold text-foreground text-[11px] leading-tight">Quản trị hệ thống</span>
+                  <span className="text-[10px] text-muted-foreground font-mono truncate">admin@cdktcnqn.edu.vn</span>
+                  <span className="text-[10px] text-muted-foreground font-medium mt-0.5">Qcet@123456</span>
+                </button>
+              </div>
+            </div>
 
             <div className="text-center text-xs text-muted-foreground">
               <span>Áp dụng cho tài khoản email </span>

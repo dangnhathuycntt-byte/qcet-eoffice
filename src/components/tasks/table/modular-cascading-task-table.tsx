@@ -10,6 +10,7 @@ import type {
   SchoolTask,
   StaffTask,
   TaskCategory,
+  TaskPriority,
   TaskStatus,
 } from "@/types/dashboard";
 import { useAuth } from "@/lib/auth-context";
@@ -48,6 +49,9 @@ import { useTaskKeyboardNav } from "./hooks/use-task-keyboard-nav";
 
 import { TaskTableHeader } from "./components/task-table-header";
 import { TaskRow } from "./components/task-row";
+import { TaskContextMenu } from "./task-context-menu";
+import { LinearPeekPreviewModal } from "@/components/tasks/preview/linear-peek-preview-modal";
+import { shouldIgnoreSpaceKey } from "@/lib/shortcuts/guards";
 import { SubtaskRowGroup } from "./components/subtask-row-group";
 import { TaskPaginationBar } from "./components/task-pagination-bar";
 import { TaskEmptyState, type TaskEmptyStateProps } from "./components/task-empty-state";
@@ -115,6 +119,9 @@ export interface ModularCascadingTaskTableProps {
   onBulkExtendDeadline?: (newDueDate: string) => Promise<void> | void;
   onBulkReassign?: (newAssigneeId: string) => Promise<void> | void;
   onBulkDelete?: (taskIds: string[]) => Promise<void> | void;
+  onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
+  onDueDateChange?: (taskId: string, newDueDate: string) => Promise<void> | void;
+  onDeleteTask?: (taskId: string) => Promise<void> | void;
   onExportExcel?: () => void;
   selectedTaskId?: string;
   emptyStateProps?: Partial<TaskEmptyStateProps>;
@@ -256,6 +263,9 @@ export function ModularCascadingTaskTable({
   onBulkExtendDeadline,
   onBulkReassign,
   onBulkDelete,
+  onPriorityChange,
+  onDueDateChange,
+  onDeleteTask,
   onExportExcel,
   selectedTaskId,
   emptyStateProps,
@@ -429,6 +439,100 @@ export function ModularCascadingTaskTable({
 
   // 4. Backlog State
   const [isBacklogExpanded, setIsBacklogExpanded] = React.useState<boolean>(true);
+
+  // 4b. Context Menu State (Linear Image #7)
+  const [contextMenu, setContextMenu] = React.useState<{
+    isOpen: boolean;
+    position: { x: number; y: number } | null;
+    task: SchoolTask | null;
+    triggerElement: HTMLElement | null;
+  }>({
+    isOpen: false,
+    position: null,
+    task: null,
+    triggerElement: null,
+  });
+
+  const handleRowContextMenu = React.useCallback(
+    (task: SchoolTask, e: React.MouseEvent) => {
+      e.preventDefault();
+      const targetEl = (e.currentTarget || e.target) as HTMLElement | null;
+      setContextMenu({
+        isOpen: true,
+        position: { x: e.clientX, y: e.clientY },
+        task,
+        triggerElement: targetEl,
+      });
+    },
+    []
+  );
+
+  const handleCloseContextMenu = React.useCallback(() => {
+    setContextMenu((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  // 4c. Peek Preview Modal State (REQ-09 / REQ-10)
+  const [previewTask, setPreviewTask] = React.useState<SchoolTask | null>(null);
+  const [previewTriggerEl, setPreviewTriggerEl] = React.useState<HTMLElement | null>(null);
+
+  const handleClosePeekPreview = React.useCallback(() => {
+    setPreviewTask(null);
+  }, []);
+
+  const handleContextMenuPriorityChange = React.useCallback(
+    async (taskId: string, newPriority: TaskPriority) => {
+      if (onPriorityChange) {
+        await onPriorityChange(taskId, newPriority);
+      }
+      const target = tasks.find((t) => t.id === taskId);
+      if (target) {
+        target.priority = newPriority === "MEDIUM" ? "NORMAL" : newPriority;
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("qcet:task-priority-changed", {
+            detail: { taskId, priority: newPriority },
+          })
+        );
+      }
+    },
+    [onPriorityChange, tasks]
+  );
+
+  const handleContextMenuDueDateChange = React.useCallback(
+    async (taskId: string, newDueDate: string) => {
+      if (onDueDateChange) {
+        await onDueDateChange(taskId, newDueDate);
+      } else if (onBulkExtendDeadline) {
+        await onBulkExtendDeadline(newDueDate);
+      }
+      const target = tasks.find((t) => t.id === taskId);
+      if (target) {
+        target.dueDate = newDueDate;
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("qcet:task-due-date-changed", {
+            detail: { taskId, dueDate: newDueDate },
+          })
+        );
+      }
+    },
+    [onDueDateChange, onBulkExtendDeadline, tasks]
+  );
+
+  const handleContextMenuDelete = React.useCallback(
+    async (taskId: string) => {
+      if (onDeleteTask) {
+        await onDeleteTask(taskId);
+      } else if (onBulkDelete) {
+        await onBulkDelete([taskId]);
+      } else if (onStatusChange) {
+        await onStatusChange(taskId, "CANCELLED");
+      }
+    },
+    [onDeleteTask, onBulkDelete, onStatusChange]
+  );
 
   // 5. Data Filtering
   // When hideToolbar=true, the parent workspace has already filtered the task list.
@@ -670,6 +774,44 @@ export function ModularCascadingTaskTable({
     onRefresh: onRefresh ? async () => { await onRefresh(); } : undefined,
   });
 
+  // 11b. Keyboard navigation wrapper with Space peek preview (REQ-09 / REQ-10)
+  const handleTableKeyDown = React.useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === " ") {
+        if (!shouldIgnoreSpaceKey(e.nativeEvent)) {
+          let targetTask: SchoolTask | undefined = undefined;
+          if (keyboardNav.activeId) {
+            targetTask = paginatedResult.items.find((t) => t.id === keyboardNav.activeId);
+          } else if (
+            keyboardNav.activeIndex >= 0 &&
+            keyboardNav.activeIndex < paginatedResult.items.length
+          ) {
+            targetTask = paginatedResult.items[keyboardNav.activeIndex];
+          } else {
+            const focusedEl = document.activeElement as HTMLElement | null;
+            const taskId = focusedEl
+              ?.closest?.("[data-task-id]")
+              ?.getAttribute("data-task-id");
+            if (taskId) {
+              targetTask = paginatedResult.items.find((t) => t.id === taskId);
+            }
+          }
+
+          if (targetTask) {
+            e.preventDefault();
+            e.stopPropagation();
+            setPreviewTask(targetTask);
+            setPreviewTriggerEl(document.activeElement as HTMLElement | null);
+            return;
+          }
+        }
+      }
+
+      keyboardNav.handleKeyDown(e);
+    },
+    [keyboardNav, paginatedResult.items]
+  );
+
   // 12. Month Period & Indicator
   const monthPeriod = React.useMemo(() => {
     if (typeof selectedAcademicMonth === "number") {
@@ -696,7 +838,7 @@ export function ModularCascadingTaskTable({
       aria-label="Bảng điều hành phân cấp nhiệm vụ"
       tabIndex={0}
       data-slot="cascading-task-table"
-      onKeyDown={keyboardNav.handleKeyDown}
+      onKeyDown={handleTableKeyDown}
       className={cn(
         "flex flex-col gap-3.5 outline-hidden select-text transition-colors",
         className
@@ -727,175 +869,159 @@ export function ModularCascadingTaskTable({
         </div>
       )}
 
-      {/* 2. Prior Overdue Backlog Collapsible Section */}
+      {/* 2. Prior Overdue Backlog Collapsible Section (Linear streamlined hairline group) */}
       {selectedAcademicMonth !== "ALL" &&
         priorOverdueBacklog &&
         priorOverdueBacklog.length > 0 && (
           <section
             aria-label="Nhiệm vụ tồn đọng kỳ trước"
-            className="rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-2xs space-y-3 transition-all"
+            className="border-b border-amber-200/80 bg-amber-50/30 text-xs transition-all select-none"
           >
-            {/* Section Header */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="flex size-7 items-center justify-center rounded-xl bg-amber-500/20 text-amber-900 border border-amber-500/30">
-                  <RotateCcw className="size-4" strokeWidth={1.5} />
-                </span>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-xs sm:text-sm font-bold text-amber-950">
-                    TỒN ĐỌNG KỲ TRƯỚC ({priorOverdueBacklog.length})
-                  </h3>
-                  <Badge variant="rose" className="text-xs font-semibold">
-                    Prior Overdue Backlog
-                  </Badge>
-                </div>
-                <span className="text-xs text-amber-900/80 font-medium hidden lg:inline">
-                  Nhiệm vụ quá hạn từ các kỳ trước chuyển sang kỳ này cần ưu tiên xử lý
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsBacklogExpanded(!isBacklogExpanded)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 min-h-[32px] rounded-lg border border-amber-300/80 bg-white/80 hover:bg-white text-xs font-semibold text-amber-950 transition-colors cursor-pointer"
-                aria-expanded={isBacklogExpanded}
-                aria-label={
-                  isBacklogExpanded
-                    ? "Thu gọn tồn đọng kỳ trước"
-                    : "Mở rộng tồn đọng kỳ trước"
-                }
-              >
-                <span>{isBacklogExpanded ? "Thu gọn" : "Xem chi tiết"}</span>
+            {/* Sleek Hairline Section Header */}
+            <div
+              onClick={() => setIsBacklogExpanded(!isBacklogExpanded)}
+              className="flex items-center justify-between py-2 px-3 hover:bg-amber-100/40 cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-2">
                 <ChevronDown
                   className={cn(
-                    "size-3.5 transition-transform duration-200",
-                    isBacklogExpanded && "rotate-180"
+                    "size-3.5 text-amber-700 transition-transform duration-200",
+                    !isBacklogExpanded && "-rotate-90"
                   )}
                   strokeWidth={1.5}
                 />
-              </button>
+                <span className="font-semibold text-amber-950 tracking-wide">
+                  TỒN ĐỌNG KỲ TRƯỚC
+                </span>
+                <span className="inline-flex items-center justify-center rounded-full bg-amber-200/80 text-amber-900 px-1.5 py-0.2 font-mono text-[10px] font-bold">
+                  {priorOverdueBacklog.length}
+                </span>
+                <span className="text-[11px] text-amber-800/80 hidden sm:inline">
+                  (Cần ưu tiên xử lý dứt điểm)
+                </span>
+              </div>
+              <span className="text-[11px] font-medium text-amber-800">
+                {isBacklogExpanded ? "Thu gọn" : "Xem chi tiết"}
+              </span>
             </div>
 
-            {/* Collapsible Backlog Content */}
+            {/* Collapsible Flush Backlog Content */}
             {isBacklogExpanded && (
-              <div className="space-y-2 pt-1 border-t border-amber-200/70">
+              <div className="border-t border-amber-200/60 bg-white/70">
                 {/* Desktop Backlog Table */}
-                <div className="hidden md:block overflow-hidden rounded-xl border border-amber-200/80 bg-white/90 shadow-2xs">
-                  <div className="overflow-x-auto thin-scrollbar">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="h-9 border-b border-amber-200/60 bg-amber-100/40 text-xs font-semibold text-amber-900 uppercase">
-                          <th className="w-24 px-3 py-1.5">Mã NV</th>
-                          <th className="px-3 py-1.5">Nhiệm vụ tồn đọng</th>
-                          <th className="px-3 py-1.5">Chủ trì</th>
-                          <th className="px-3 py-1.5">Hạn ban đầu</th>
-                          <th className="px-3 py-1.5">Tiến độ</th>
-                          <th className="w-52 px-3 py-1.5 text-right">
-                            Trạng thái &amp; Thao tác
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-amber-100/80">
-                        {priorOverdueBacklog.map((task) => (
-                          <tr
-                            key={task.id}
-                            tabIndex={0}
-                            onClick={() => handleEffectiveSelectTask(task)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                handleEffectiveSelectTask(task);
-                              }
-                            }}
-                            className="group cursor-pointer hover:bg-amber-100/30 transition-colors h-11 text-xs"
-                            data-backlog-task-id={task.id}
-                          >
-                            <td className="px-3 py-2 font-mono font-bold text-amber-900 tabular-nums">
-                              {task.taskCode || "NV-QCET"}
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                                {task.title}
-                              </div>
-                              {task.categoryLabel && (
-                                <span className="text-xs text-muted-foreground font-medium">
-                                  {task.categoryLabel}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-muted-foreground font-medium">
-                              {task.leadAssigneeName}
-                            </td>
-                            <td className="px-3 py-2">
-                              <span className="font-mono font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-xs tabular-nums">
-                                {task.dueDate ? formatTableDate(task.dueDate) : "Quá hạn"}
+                <div className="hidden md:block overflow-x-auto thin-scrollbar">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="h-8 border-b border-amber-200/50 bg-amber-100/30 text-[11px] font-medium text-amber-900/80 uppercase">
+                        <th className="w-24 px-3 py-1">Mã NV</th>
+                        <th className="px-3 py-1">Nhiệm vụ tồn đọng</th>
+                        <th className="px-3 py-1">Chủ trì</th>
+                        <th className="px-3 py-1">Hạn ban đầu</th>
+                        <th className="px-3 py-1">Tiến độ</th>
+                        <th className="w-48 px-3 py-1 text-right">Trạng thái &amp; Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100/70">
+                      {priorOverdueBacklog.map((task) => (
+                        <tr
+                          key={task.id}
+                          tabIndex={0}
+                          onClick={() => handleEffectiveSelectTask(task)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleEffectiveSelectTask(task);
+                            }
+                          }}
+                          className="group cursor-pointer hover:bg-amber-100/30 transition-colors h-10 text-xs"
+                          data-backlog-task-id={task.id}
+                        >
+                          <td className="px-3 py-1.5 font-mono font-bold text-amber-900 tabular-nums">
+                            {task.taskCode || "NV-QCET"}
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <div className="font-medium text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                              {task.title}
+                            </div>
+                            {task.categoryLabel && (
+                              <span className="text-[11px] text-muted-foreground">
+                                {task.categoryLabel}
                               </span>
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <div className="relative h-1.5 w-12 overflow-hidden rounded-full bg-secondary/80">
-                                  <div
-                                    className="h-full bg-amber-500"
-                                    style={{
-                                      width: `${task.progressPercent || 0}%`,
-                                    }}
-                                  />
-                                </div>
-                                <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">
-                                  {task.progressPercent || 0}%
-                                </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-1.5 text-muted-foreground font-medium">
+                            {task.leadAssigneeName}
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <span className="font-mono font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 text-xs tabular-nums">
+                              {task.dueDate ? formatTableDate(task.dueDate) : "Quá hạn"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="relative h-1.5 w-12 overflow-hidden rounded-full bg-secondary/80">
+                                <div
+                                  className="h-full bg-amber-500"
+                                  style={{
+                                    width: `${task.progressPercent || 0}%`,
+                                  }}
+                                />
                               </div>
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {onStatusChange && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onStatusChange(
-                                        task.id,
-                                        task.status === "COMPLETED"
-                                          ? "IN_PROGRESS"
-                                          : "COMPLETED"
-                                      );
-                                    }}
-                                    className="inline-flex h-6 items-center px-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-semibold cursor-pointer shadow-2xs transition-colors"
-                                  >
-                                    Duyệt nhanh
-                                  </button>
-                                )}
-                                <Badge
-                                  variant="rose"
-                                  className="h-5.5 px-2 text-xs font-semibold tabular-nums shrink-0"
+                              <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">
+                                {task.progressPercent || 0}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-1.5 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {onStatusChange && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onStatusChange(
+                                      task.id,
+                                      task.status === "COMPLETED"
+                                        ? "IN_PROGRESS"
+                                        : "COMPLETED"
+                                    );
+                                  }}
+                                  className="inline-flex h-6 items-center px-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-medium cursor-pointer transition-colors"
                                 >
-                                  Tồn đọng
-                                </Badge>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                                  Duyệt nhanh
+                                </button>
+                              )}
+                              <Badge
+                                variant="rose"
+                                className="h-5 px-1.5 text-[11px] font-semibold tabular-nums shrink-0"
+                              >
+                                Tồn đọng
+                              </Badge>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
 
                 {/* Mobile Backlog Cards */}
-                <div className="md:hidden space-y-2">
+                <div className="md:hidden p-2 space-y-1.5">
                   {priorOverdueBacklog.map((task) => (
                     <div
                       key={task.id}
                       onClick={() => handleEffectiveSelectTask(task)}
-                      className="rounded-xl border border-amber-200/90 bg-white/90 p-3 shadow-2xs space-y-2 cursor-pointer active:bg-amber-50"
+                      className="rounded-lg border border-amber-200/80 bg-white/90 p-2.5 space-y-1.5 cursor-pointer active:bg-amber-50"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-mono text-xs font-bold text-amber-900 tabular-nums">
                           {task.taskCode || "NV-QCET"}
                         </span>
-                        <Badge variant="rose" className="text-xs font-semibold">
+                        <Badge variant="rose" className="text-[10px] font-semibold">
                           Tồn đọng
                         </Badge>
                       </div>
-                      <h4 className="text-xs font-bold text-foreground line-clamp-2">
+                      <h4 className="text-xs font-semibold text-foreground line-clamp-2">
                         {task.title}
                       </h4>
                       <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-amber-100">
@@ -951,10 +1077,10 @@ export function ModularCascadingTaskTable({
         />
       ) : (
         <div className="space-y-3">
-          {/* Desktop Table View (>= 768px) */}
-          <div className="hidden md:block overflow-hidden rounded-xl border border-border/80 bg-card shadow-2xs">
+          {/* Desktop Table View (>= 768px) - Flush on canvas */}
+          <div className="hidden md:block overflow-hidden border-t border-border/40 bg-transparent">
             <div className="overflow-x-auto thin-scrollbar">
-              <table className="w-full text-left">
+              <table className="w-full text-left border-collapse">
                 <TaskTableHeader
                   allSelected={tableState.allVisibleSelected}
                   indeterminate={tableState.someVisibleSelected}
@@ -981,7 +1107,7 @@ export function ModularCascadingTaskTable({
                   }}
                   hasTasks={paginatedResult.items.length > 0}
                 />
-                <tbody className="divide-y divide-border/60">
+                <tbody className="divide-y divide-border/40">
                   {paginatedResult.items.map((task, index) => {
                     const isExpanded = tableState.isExpanded(task.id);
                     const isSelected = tableState.isSelected(task.id);
@@ -1000,6 +1126,7 @@ export function ModularCascadingTaskTable({
                           isExpanded={isExpanded}
                           isSelected={isSelected}
                           isActive={isRowActive}
+                          isPreviewing={previewTask?.id === task.id}
                           density={tableState.density}
                           selectedAcademicMonth={selectedAcademicMonth}
                           activeCategory={activeCategory}
@@ -1008,6 +1135,7 @@ export function ModularCascadingTaskTable({
                           onToggleExpand={() => tableState.toggleExpand(task.id)}
                           onToggleSelect={() => tableState.toggleSelect(task.id)}
                           onClick={handleEffectiveSelectTask}
+                          onContextMenu={handleRowContextMenu}
                           onStatusChange={onStatusChange}
                           onUrge={onUrge}
                         />
@@ -1017,7 +1145,7 @@ export function ModularCascadingTaskTable({
                             scope={scope}
                             isExpanded={isExpanded}
                             density={tableState.density}
-                            colSpan={8}
+                            colSpan={9}
                             selectedAcademicMonth={selectedAcademicMonth}
                             onSelectSubTask={(sub) => handleEffectiveSelectTask(sub)}
                             onStatusChange={onStatusChange}
@@ -1083,6 +1211,69 @@ export function ModularCascadingTaskTable({
         onBulkDelete={onBulkDelete}
         onExportExcel={onExportExcel}
         allowedLifecycleTargets={allowedLifecycleTargets}
+      />
+
+      {/* 6. Context Menu (Linear Image #7) */}
+      <TaskContextMenu
+        task={contextMenu.task}
+        position={contextMenu.position}
+        isOpen={contextMenu.isOpen}
+        onClose={handleCloseContextMenu}
+        triggerElement={contextMenu.triggerElement}
+        onOpenDetail={handleEffectiveSelectTask}
+        onStatusChange={onStatusChange}
+        onPriorityChange={handleContextMenuPriorityChange}
+        onDueDateChange={handleContextMenuDueDateChange}
+        onDeleteTask={handleContextMenuDelete}
+      />
+
+      {/* 7. Peek Preview Modal (REQ-09 / REQ-10 / REQ-23) */}
+      <LinearPeekPreviewModal
+        task={previewTask}
+        isOpen={Boolean(previewTask)}
+        onClose={handleClosePeekPreview}
+        triggerElement={previewTriggerEl}
+        onOpenDetail={(task) => {
+          handleClosePeekPreview();
+          handleEffectiveSelectTask(task);
+        }}
+        onNavigateNext={() => {
+          if (!previewTask) return;
+          const currentIndex = paginatedResult.items.findIndex(
+            (t) => t.id === previewTask.id
+          );
+          if (
+            currentIndex >= 0 &&
+            currentIndex < paginatedResult.items.length - 1
+          ) {
+            const nextTask = paginatedResult.items[currentIndex + 1];
+            setPreviewTask(nextTask);
+            keyboardNav.setActiveIndex(currentIndex + 1);
+          }
+        }}
+        onNavigatePrev={() => {
+          if (!previewTask) return;
+          const currentIndex = paginatedResult.items.findIndex(
+            (t) => t.id === previewTask.id
+          );
+          if (currentIndex > 0) {
+            const prevTask = paginatedResult.items[currentIndex - 1];
+            setPreviewTask(prevTask);
+            keyboardNav.setActiveIndex(currentIndex - 1);
+          }
+        }}
+        hasPrev={
+          previewTask
+            ? paginatedResult.items.findIndex((t) => t.id === previewTask.id) >
+              0
+            : false
+        }
+        hasNext={
+          previewTask
+            ? paginatedResult.items.findIndex((t) => t.id === previewTask.id) <
+              paginatedResult.items.length - 1
+            : false
+        }
       />
     </div>
   );

@@ -3,23 +3,22 @@
 import * as React from "react";
 import {
   AlertTriangle,
-  Bell,
+  Box,
   Check,
   ChevronDown,
   ChevronRight,
+  Circle,
   Clock,
-  Eye,
   MoreHorizontal,
-  Plus,
+  Signal,
+  SignalHigh,
+  SignalMedium,
+  SignalLow,
+  Eye,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { SchoolTask, TaskStatus } from "@/types/dashboard";
+import type { SchoolTask, TaskPriority, TaskStatus } from "@/types/dashboard";
 import type { TableDensity } from "../types";
-import {
-  getCategoryBadgeConfig,
-  getStatusBadgeConfig,
-} from "../constants";
 import {
   formatTableDate,
   getSlaBadgeStatus,
@@ -32,6 +31,7 @@ export interface TaskRowProps {
   isSelected?: boolean;
   isExpanded?: boolean;
   isActive?: boolean;
+  isPreviewing?: boolean;
   density?: TableDensity;
   showSelection?: boolean;
   canAssign?: boolean;
@@ -42,6 +42,7 @@ export interface TaskRowProps {
   onToggleSelect?: (taskId: string, e?: React.MouseEvent | React.ChangeEvent) => void;
   onToggleExpand?: (taskId: string, e?: React.MouseEvent) => void;
   onClick?: (task: SchoolTask) => void;
+  onContextMenu?: (task: SchoolTask, e: React.MouseEvent) => void;
   onStatusChange?: (taskId: string, newStatus: TaskStatus) => Promise<void> | void;
   onUrge?: (taskId: string, taskTitle: string, assigneeName: string) => Promise<void> | void;
   onAddSubTask?: (parentTaskOrId: SchoolTask | string) => void;
@@ -67,14 +68,12 @@ export function parseLeadAssignee(
   let cleaned = rawName.trim();
   let parenthetical = "";
 
-  // Extract trailing parenthetical notes, e.g. "ThS. Nguyễn Tiến Phong (Trưởng phòng TC-ĐBCL)"
   const parenMatch = cleaned.match(/\s*\(([^)]+)\)\s*$/);
   if (parenMatch) {
     parenthetical = parenMatch[1].trim();
     cleaned = cleaned.slice(0, parenMatch.index).trim();
   }
 
-  // Extract academic & administrative title prefixes, e.g. "TT ThS.", "ThS.", "TS.", "PGS.TS."
   const prefixMatch = cleaned.match(
     /^(?:(TT|TP|PP|CVP|P\.CVP|HT|PHT|GV|CVC|CV|Tổ trưởng|Trưởng phòng|Phó phòng|Trưởng khoa|Phó khoa)\.?\s*)?(?:(GS\.TS|PGS\.TS|GS|PGS|TS|ThS|CN|KS|BS|KTS)\.?\s*)?/i
   );
@@ -108,6 +107,149 @@ function getInitials(name?: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+/**
+ * Priority Indicator
+ * Khẩn cấp    → strongest semantic emphasis (icon + red)
+ * Cao         → noticeable (icon + amber)
+ * Bình thường → quiet neutral metadata (plain muted text, no icon)
+ * Thấp        → quietest (plain muted text, no icon)
+ */
+function PriorityIndicator({ priority }: { priority?: TaskPriority | string }) {
+  const p = (priority || "NORMAL").toUpperCase();
+
+  if (p === "URGENT") {
+    return (
+      <div className="inline-flex items-center gap-1 text-rose-600" title="Độ ưu tiên: Khẩn cấp">
+        <AlertTriangle className="size-3.5 shrink-0" strokeWidth={1.5} />
+        <span className="text-[11px] font-medium hidden lg:inline">Khẩn cấp</span>
+      </div>
+    );
+  }
+  if (p === "HIGH") {
+    return (
+      <div className="inline-flex items-center gap-1 text-amber-600" title="Độ ưu tiên: Cao">
+        <SignalHigh className="size-3.5 shrink-0" strokeWidth={1.5} />
+        <span className="text-[11px] font-medium hidden lg:inline">Cao</span>
+      </div>
+    );
+  }
+  if (p === "LOW") {
+    return (
+      <div className="inline-flex items-center text-slate-400" title="Độ ưu tiên: Thấp">
+        <span className="text-[11px] hidden lg:inline">Thấp</span>
+      </div>
+    );
+  }
+  return (
+    <div className="inline-flex items-center text-slate-500" title="Độ ưu tiên: Bình thường">
+      <span className="text-[11px] hidden lg:inline">Bình thường</span>
+    </div>
+  );
+}
+
+/**
+ * Health Badge Indicator (Linear Health style: On track / At risk / Off track)
+ * Refined: restrained dot indicator without bulky container chrome
+ */
+function HealthIndicator({
+  status,
+  isOverdue,
+  isWaitingApproval,
+}: {
+  status: TaskStatus;
+  isOverdue: boolean;
+  isWaitingApproval: boolean;
+}) {
+  if (status === "COMPLETED") {
+    return (
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700">
+        <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+        <span className="font-medium">Hoàn thành</span>
+      </div>
+    );
+  }
+  if (isOverdue) {
+    return (
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-rose-600">
+        <span className="size-1.5 rounded-full bg-rose-500 shrink-0 animate-pulse" />
+        <span className="font-medium">Quá hạn</span>
+      </div>
+    );
+  }
+  if (isWaitingApproval) {
+    return (
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-amber-600">
+        <span className="size-1.5 rounded-full bg-amber-500 shrink-0" />
+        <span className="font-medium">Cần duyệt</span>
+      </div>
+    );
+  }
+  if (status === "IN_PROGRESS") {
+    return (
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-blue-600">
+        <span className="size-1.5 rounded-full bg-blue-500 shrink-0" />
+        <span className="font-medium">Đang làm</span>
+      </div>
+    );
+  }
+  if (status === "NOT_STARTED") {
+    return (
+      <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
+        <span className="size-1.5 rounded-full bg-slate-300 shrink-0" />
+        <span className="font-normal">Chưa làm</span>
+      </div>
+    );
+  }
+  return (
+    <div className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
+      <span className="size-1.5 rounded-full bg-slate-300 shrink-0" />
+      <span className="font-normal">Chưa rõ</span>
+    </div>
+  );
+}
+
+/**
+ * Circular Progress Ring (Linear style)
+ */
+function CircularProgressRing({ percent }: { percent: number }) {
+  const bounded = Math.min(100, Math.max(0, percent || 0));
+  const radius = 5.5;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (circumference * bounded) / 100;
+
+  return (
+    <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-slate-700">
+      <svg className="size-3.5 shrink-0 -rotate-90" viewBox="0 0 16 16">
+        <circle
+          cx="8"
+          cy="8"
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="text-slate-200"
+        />
+        <circle
+          cx="8"
+          cy="8"
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          className={cn(
+            "transition-all duration-300",
+            bounded === 100 ? "text-emerald-500" : bounded > 0 ? "text-primary" : "text-transparent"
+          )}
+        />
+      </svg>
+      <span>{bounded}%</span>
+    </div>
+  );
+}
+
 export function areTaskRowPropsEqual(
   prev: Readonly<TaskRowProps>,
   next: Readonly<TaskRowProps>
@@ -129,6 +271,7 @@ export function areTaskRowPropsEqual(
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.isExpanded !== next.isExpanded) return false;
   if (prev.isActive !== next.isActive) return false;
+  if (prev.isPreviewing !== next.isPreviewing) return false;
   if (prev.density !== next.density) return false;
   if (prev.showSelection !== next.showSelection) return false;
   if (prev.canAssign !== next.canAssign) return false;
@@ -137,6 +280,7 @@ export function areTaskRowPropsEqual(
   if (prev.activeCategory !== next.activeCategory) return false;
   if (prev.suppressCategory !== next.suppressCategory) return false;
   if (prev.onAddSubTask !== next.onAddSubTask) return false;
+  if (prev.onContextMenu !== next.onContextMenu) return false;
   return true;
 }
 
@@ -145,6 +289,7 @@ export const TaskRow = React.memo(function TaskRow({
   isSelected = false,
   isExpanded = false,
   isActive = false,
+  isPreviewing = false,
   density = "comfortable",
   showSelection = true,
   canAssign = false,
@@ -155,13 +300,12 @@ export const TaskRow = React.memo(function TaskRow({
   onToggleSelect,
   onToggleExpand,
   onClick,
+  onContextMenu,
   onStatusChange,
   onUrge,
   onAddSubTask,
   className,
 }: TaskRowProps) {
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-
   const hasSubtasks = Boolean(task.subTasks && task.subTasks.length > 0);
   const totalSubTasks = task.totalSubTasks ?? task.subTasks?.length ?? 0;
   const completedSubTasks =
@@ -169,17 +313,12 @@ export const TaskRow = React.memo(function TaskRow({
     task.subTasks?.filter((s) => s.status === "COMPLETED").length ??
     0;
 
-  const categoryConfig = getCategoryBadgeConfig(task.category);
-  const statusConfig = getStatusBadgeConfig(task.status);
   const slaStatus = getSlaBadgeStatus(
     task.dueDate,
     task.status,
     typeof referenceDate === "string" ? referenceDate : referenceDate.toISOString().slice(0, 10)
   );
-  const shouldSuppressCategory =
-    suppressCategory ||
-    (Boolean(activeCategory) && activeCategory !== "ALL") ||
-    task.category === "KHAC";
+
   const driInfo = parseLeadAssignee(task.leadAssigneeName, task.department);
 
   const isWaitingApproval =
@@ -198,25 +337,12 @@ export const TaskRow = React.memo(function TaskRow({
         ).length || 0
       : 0;
 
-  // Lắng nghe Escape để đóng overflow menu
-  React.useEffect(() => {
-    if (!isMenuOpen) return;
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        setIsMenuOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [isMenuOpen]);
-
   const handleRowClick = () => {
     onClick?.(task);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
+    if (e.key === "Enter") {
       e.preventDefault();
       onClick?.(task);
     }
@@ -232,13 +358,15 @@ export const TaskRow = React.memo(function TaskRow({
     onToggleExpand?.(task.id, e);
   };
 
-  const handleToggleMenu = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsMenuOpen((prev) => !prev);
+  const handleRightClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onContextMenu?.(task, e);
   };
 
-  const paddingClass = density === "compact" ? "py-1.5 px-2.5" : "py-2.5 px-3.5";
-  const rowHeightClass = density === "compact" ? "h-[38px]" : "h-[48px]";
+  const paddingClass = "py-1 px-2";
+  const rowHeightClass = "h-8 sm:h-8.5";
+
+  const taskCodeDisplay = (task.code || task.taskCode || task.id).toUpperCase();
 
   return (
     <tr
@@ -246,15 +374,24 @@ export const TaskRow = React.memo(function TaskRow({
       tabIndex={0}
       onClick={handleRowClick}
       onKeyDown={handleKeyDown}
+      onContextMenu={handleRightClick}
       data-task-id={task.id}
       data-task-tier="1"
       aria-selected={isSelected}
       className={cn(
-        "group cursor-pointer transition-colors border-b border-border/70 select-none hover:bg-muted/50 focus-visible:outline-hidden",
+        "group cursor-pointer transition-all border-b border-border/40 select-none bg-white text-slate-900",
         rowHeightClass,
-        isSelected && "bg-primary/[0.04]",
-        isExpanded && "bg-muted/30",
-        isActive && "ring-1 ring-inset ring-primary/40 bg-primary/[0.04]",
+        // State 1: Hovered
+        "hover:bg-slate-50/90",
+        // State 2: Focused (WCAG 2.2 AA Focus visible)
+        "focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-inset focus-visible:bg-slate-50/90 focus-visible:outline-none",
+        // State 3: Selected
+        isSelected && "bg-primary/[0.05] border-l-2 border-l-primary",
+        // State 4: Previewing (Peek preview)
+        isPreviewing && "bg-blue-50/70 ring-1 ring-inset ring-blue-500/40",
+        // State 5: Opened / Active detail
+        isActive && !isPreviewing && "ring-1 ring-inset ring-primary/40 bg-primary/[0.08]",
+        isExpanded && "bg-slate-50/40",
         className
       )}
     >
@@ -269,80 +406,85 @@ export const TaskRow = React.memo(function TaskRow({
               type="checkbox"
               checked={isSelected}
               onChange={(e) => onToggleSelect?.(task.id, e)}
-              className="size-4 rounded border-input text-primary focus:ring-2 focus:ring-primary/25 cursor-pointer transition-colors"
+              className="size-3.5 rounded border-slate-300 text-primary focus:ring-1 focus:ring-primary/25 cursor-pointer transition-colors"
               aria-label={`Chọn nhiệm vụ ${task.taskCode || task.id}`}
             />
           </div>
         </td>
       )}
 
-      {/* 2. Nhiệm vụ (Title leads, secondary muted mono Code, subtask rollup) */}
-      <td className={cn("align-middle text-sm font-medium text-foreground leading-snug", paddingClass)}>
+      {/* 2. Nhiệm vụ (Box icon + Title + Code + Expand) - Dominant Column */}
+      <td className={cn("align-middle min-w-[340px] md:min-w-[440px] flex-1", paddingClass)}>
         <div className="flex items-center gap-2">
-          {/* Hierarchical Expand/Collapse Caret or Indent Spacer (Plan Carbon: no meaningless dot) */}
+          {/* Subtask Expand Toggle */}
           {hasSubtasks ? (
             <button
               type="button"
               onClick={handleExpandClick}
-              className="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-muted/80 hover:text-foreground cursor-pointer shrink-0"
+              className="inline-flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-slate-200/70 hover:text-foreground cursor-pointer shrink-0 transition-colors"
               aria-expanded={isExpanded}
               aria-label={
                 isExpanded
-                  ? "Thu gọn nhiệm vụ thành phần"
-                  : "Mở rộng nhiệm vụ thành phần"
+                  ? "Thu gọn nhiệm vụ con"
+                  : "Mở rộng nhiệm vụ con"
               }
             >
               {isExpanded ? (
-                <ChevronDown className="size-3.5" strokeWidth={1.5} />
+                <ChevronDown className="size-3" strokeWidth={1.5} />
               ) : (
-                <ChevronRight className="size-3.5" strokeWidth={1.5} />
+                <ChevronRight className="size-3" strokeWidth={1.5} />
               )}
             </button>
           ) : (
-            <span className="inline-flex size-6 shrink-0" aria-hidden="true" />
+            <span className="inline-flex size-5 shrink-0" aria-hidden="true" />
           )}
 
-          {/* Task Info: Title on primary line, Task Code on secondary line (Carbon standard) */}
-          <div className="flex flex-col min-w-0 flex-1 gap-0.5">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span
-                className="line-clamp-1 text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate"
-                title={task.title}
-              >
-                {task.title}
-              </span>
+          {/* Linear Box Icon */}
+          <Box className="size-3.5 text-slate-400 group-hover:text-primary transition-colors shrink-0" strokeWidth={1.5} />
 
-              {/* Subtask Rollup Indicator */}
-              {hasSubtasks && (
-                <span
-                  className="rounded bg-muted/70 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground border border-border/60 shrink-0"
-                  title={`Hoàn thành ${completedSubTasks} trên tổng số ${totalSubTasks} việc thành phần`}
-                >
-                  [{completedSubTasks}/{totalSubTasks}]
-                </span>
-              )}
-
-              {/* Due in month indicator */}
-              {dueInMonthCount > 0 && (
-                <span
-                  className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums shrink-0"
-                  title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
-                >
-                  Hạn trong kỳ T{selectedAcademicMonth} ({dueInMonthCount})
-                </span>
-              )}
-            </div>
-
-            {/* Secondary line: Task Code in lighter muted mono */}
-            <span className="font-mono text-xs text-muted-foreground/80 tabular-nums">
-              {(task.code || task.taskCode || task.id).toUpperCase()}
+          {/* Title & Code */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span
+              className="text-xs sm:text-[13px] font-medium text-slate-900 group-hover:text-primary transition-colors truncate"
+              title={task.title}
+            >
+              {task.title}
             </span>
+
+            {/* Task Code Badge */}
+            <span className="font-mono text-[10px] text-muted-foreground/60 shrink-0 font-medium">
+              {taskCodeDisplay}
+            </span>
+
+            {/* Due in month indicator */}
+            {dueInMonthCount > 0 && (
+              <span
+                className="rounded bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.2 font-mono text-[10px] font-semibold tabular-nums shrink-0"
+                title={`${dueInMonthCount} nhiệm vụ con đến hạn trong Kỳ Tháng ${selectedAcademicMonth}`}
+              >
+                T{selectedAcademicMonth} ({dueInMonthCount})
+              </span>
+            )}
           </div>
         </div>
       </td>
 
-      {/* 3. DRI (single clean avatar / initials + name) */}
-      <td className={cn("w-36 align-middle whitespace-nowrap", paddingClass)}>
+      {/* 3. Tình trạng (Health) */}
+      <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
+        <HealthIndicator
+          status={task.status}
+          isOverdue={Boolean(slaStatus.isOverdue)}
+          isWaitingApproval={isWaitingApproval}
+        />
+      </td>
+
+      {/* 4. Độ ưu tiên (Priority - Wave/Signal) */}
+      <td className={cn("w-20 align-middle whitespace-nowrap", paddingClass)}>
+        <PriorityIndicator priority={task.priority} />
+      </td>
+
+      {/* 5. Người chủ trì (Lead DRI) */}
+      <td className={cn("w-32 align-middle whitespace-nowrap", paddingClass)}>
         <div
           className="flex items-center gap-1.5 min-w-0"
           title={`${driInfo.primaryName}${driInfo.subtext ? ` (${driInfo.subtext})` : ""}`}
@@ -352,246 +494,72 @@ export const TaskRow = React.memo(function TaskRow({
               src={task.leadAssigneeAvatar}
               alt=""
               aria-hidden="true"
-              width={22}
-              height={22}
+              width={18}
+              height={18}
               loading="lazy"
-              className="size-5.5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
+              className="size-4.5 rounded-full object-cover shrink-0 ring-1 ring-border/40"
             />
           ) : (
-            <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums text-muted-foreground border border-border">
+            <span className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-semibold tabular-nums text-slate-600 border border-border/60">
               {getInitials(driInfo.primaryName)}
             </span>
           )}
-          <span className="text-xs font-medium text-foreground/90 truncate">
+          <span className="text-xs font-medium text-slate-800 truncate">
             {driInfo.primaryName}
           </span>
         </div>
       </td>
 
-      {/* 4. Đơn vị (Department tag) */}
-      <td className={cn("w-36 sm:w-40 align-middle whitespace-nowrap", paddingClass)}>
-        <div className="flex flex-col gap-0.5 justify-center">
-          <span
-            className="text-xs font-medium text-foreground truncate max-w-[150px]"
-            title={task.department || "Toàn trường"}
-          >
-            {task.department || "Toàn trường"}
-          </span>
-          {!shouldSuppressCategory && categoryConfig && (
-            <span
-              className="text-xs text-muted-foreground truncate max-w-[150px]"
-              title={categoryConfig.label}
-            >
-              {categoryConfig.label}
-            </span>
-          )}
-        </div>
-      </td>
-
-      {/* 5. Hạn (SLA formatted date, highlighted if overdue; SLA badge only when urgent) */}
-      <td className={cn("w-32 align-middle whitespace-nowrap", paddingClass)}>
-        <div className="flex items-center gap-1.5">
-          <span
-            className={cn(
-              "font-mono tabular-nums text-xs font-semibold",
-              slaStatus.isOverdue ? "text-rose-700 font-bold" : "text-muted-foreground"
-            )}
-          >
-            {formatTableDate(task.dueDate)}
-          </span>
-          {slaStatus.label && task.status !== "COMPLETED" && task.status !== "CANCELLED" && (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold border tabular-nums",
-                slaStatus.colorClass
-              )}
-            >
-              {slaStatus.isOverdue ? (
-                <AlertTriangle className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-              ) : (
-                <Clock className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-              )}
-              {slaStatus.label}
-            </span>
-          )}
-        </div>
-      </td>
-
-      {/* 6. Trạng thái (single clear scanning status badge with standard UI font) */}
+      {/* 6. Hạn hoàn thành (Target date) */}
       <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
-        <Badge
-          variant={statusConfig.variant}
+        <span
           className={cn(
-            "h-5.5 px-2 text-xs font-sans font-medium leading-none shrink-0",
-            statusConfig.className
+            "font-mono tabular-nums text-xs",
+            slaStatus.isOverdue ? "text-rose-600 font-semibold" : "text-slate-600"
           )}
+          title="Hạn hoàn thành"
         >
-          {statusConfig.label}
-        </Badge>
+          {formatTableDate(task.dueDate)}
+        </span>
       </td>
 
-      {/* 7. Tiến độ (compact progress bar when 0 < progress < 100, suppressed bar at 0% and completed 100%) */}
-      <td className={cn("w-28 align-middle whitespace-nowrap", paddingClass)}>
-        {task.progressPercent > 0 && task.progressPercent < 100 ? (
-          <div className="flex items-center gap-2">
-            <div className="relative flex h-1.5 w-14 overflow-hidden rounded-full bg-muted/80">
-              <div
-                className="h-full bg-emerald-500 transition-all duration-300 ease-out"
-                style={{
-                  width: `${task.progressPercent}%`,
-                }}
-              />
-            </div>
-            <span className="font-mono text-xs font-semibold tabular-nums text-foreground/80">
-              {task.progressPercent}%
-            </span>
-          </div>
-        ) : task.progressPercent === 100 && task.status !== "COMPLETED" ? (
-          <div className="flex items-center gap-2">
-            <div className="relative flex h-1.5 w-14 overflow-hidden rounded-full bg-muted/80">
-              <div className="h-full w-full bg-emerald-500" />
-            </div>
-            <span className="font-mono text-xs font-semibold tabular-nums text-amber-700">
-              100%
-            </span>
-          </div>
-        ) : (
-          <span className="font-mono text-xs tabular-nums text-muted-foreground/60">
-            {task.progressPercent === 100 ? "100%" : "0%"}
+      {/* 7. Đầu việc con (Subtasks count) */}
+      <td className={cn("w-16 align-middle text-center whitespace-nowrap", paddingClass)}>
+        {hasSubtasks ? (
+          <span
+            className="rounded bg-slate-100/80 px-1 py-0.2 font-mono text-[10px] font-medium tabular-nums text-slate-500"
+            title={`Hoàn thành ${completedSubTasks}/${totalSubTasks} đầu vi��c con`}
+          >
+            {completedSubTasks}/{totalSubTasks}
           </span>
+        ) : (
+          <span className="text-muted-foreground/30 text-xs">-</span>
         )}
       </td>
 
-      {/* 8. Actions (maximum 1 contextual CTA if required + ... overflow dropdown menu) */}
+      {/* 8. Tiến độ (Status / Progress %) */}
+      <td className={cn("w-20 align-middle whitespace-nowrap", paddingClass)}>
+        <CircularProgressRing percent={task.progressPercent || 0} />
+      </td>
+
+      {/* 9. Thao tác (Context button `...` - Mobile/Touch overflow) */}
       <td
-        className={cn("w-24 sm:w-28 align-middle text-right whitespace-nowrap", paddingClass)}
+        className={cn("w-8 align-middle text-right whitespace-nowrap", paddingClass)}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative flex items-center justify-end gap-1.5">
-          {/* Contextual CTA: Inline [Xem xét] if WAITING_APPROVAL (Carbon standard: softened visual prominence) */}
-          {isWaitingApproval && onStatusChange && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onStatusChange(task.id, "COMPLETED");
-              }}
-              className="inline-flex h-6.5 items-center gap-1 rounded-md border border-emerald-600/30 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40 px-2 text-xs font-medium cursor-pointer active:scale-95 transition-all"
-              title="Xem xét / Phê duyệt nhiệm vụ"
-              aria-label={`Xem xét nhiệm vụ ${task.taskCode || task.id}`}
-            >
-              <Check className="size-3" strokeWidth={1.5} />
-              <span>Xem xét</span>
-            </button>
-          )}
-
-          {/* Secondary Actions: Overflow Menu (...) */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handleToggleMenu}
-              className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/80 hover:text-foreground cursor-pointer transition-colors"
-              aria-expanded={isMenuOpen}
-              aria-label="Thao tác khác"
-              title="Thao tác khác"
-            >
-              <MoreHorizontal className="size-4" strokeWidth={1.5} />
-            </button>
-
-            {isMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-30"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMenuOpen(false);
-                  }}
-                  aria-hidden="true"
-                />
-                <div
-                  role="menu"
-                  aria-orientation="vertical"
-                  className="absolute right-0 top-full mt-1 w-44 rounded-xl border border-border bg-card p-1 shadow-lg z-40 text-xs font-medium divide-y divide-border/50 animate-in fade-in zoom-in-95 duration-100"
-                >
-                  <div className="py-0.5 space-y-0.5">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsMenuOpen(false);
-                        onClick?.(task);
-                      }}
-                      className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-muted/60 cursor-pointer transition-colors text-left"
-                    >
-                      <Eye className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                      <span>Xem chi tiết</span>
-                    </button>
-
-                    {onStatusChange && (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsMenuOpen(false);
-                          const nextStatus: TaskStatus =
-                            task.status === "COMPLETED" ? "IN_PROGRESS" : "COMPLETED";
-                          onStatusChange(task.id, nextStatus);
-                        }}
-                        className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-muted/60 cursor-pointer transition-colors text-left"
-                      >
-                        <Check className="size-3.5 text-emerald-700" strokeWidth={1.5} />
-                        <span>
-                          {task.status === "COMPLETED"
-                            ? "Đổi thành Đang làm"
-                            : "Đánh dấu Hoàn thành"}
-                        </span>
-                      </button>
-                    )}
-                  </div>
-
-                  {((canAssign && onAddSubTask) || (onUrge && task.status !== "COMPLETED")) && (
-                    <div className="py-0.5 space-y-0.5">
-                      {canAssign && onAddSubTask && (
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsMenuOpen(false);
-                            onAddSubTask(task.id);
-                          }}
-                          className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-muted/60 cursor-pointer transition-colors text-left"
-                        >
-                          <Plus className="size-3.5 text-primary" strokeWidth={1.5} />
-                          <span>Thêm việc con</span>
-                        </button>
-                      )}
-
-                      {onUrge && task.status !== "COMPLETED" && (
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsMenuOpen(false);
-                            onUrge(task.id, task.title, task.leadAssigneeName || "");
-                          }}
-                          className="flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-foreground hover:bg-muted/60 cursor-pointer transition-colors text-left"
-                        >
-                          <Bell className="size-3.5 text-amber-700" strokeWidth={1.5} />
-                          <span>Đôn đốc tiến độ</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onContextMenu?.(task, e);
+          }}
+          className="inline-flex size-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-900 cursor-pointer transition-colors opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none"
+          aria-label="Thao tác nhanh"
+          title="Thao tác nhanh (Chuột phải hoặc nhấp)"
+        >
+          <MoreHorizontal className="size-3.5" strokeWidth={1.5} />
+        </button>
       </td>
     </tr>
   );
-}, areTaskRowPropsEqual);
+});
