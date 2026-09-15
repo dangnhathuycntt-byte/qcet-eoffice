@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import * as m from "motion/react-m";
 import { AlertCircle, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
@@ -95,7 +96,8 @@ function LoginFormContent() {
     }
   }, [errorParam]);
 
-  if (shouldShowLoginSkeleton({ isLoading, isAuthenticated, user })) {
+  // Only show skeleton if already authenticated and redirecting
+  if (isAuthenticated && Boolean(user)) {
     return <LoginSkeleton />;
   }
 
@@ -112,21 +114,33 @@ function LoginFormContent() {
         aria-hidden="true"
         className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-10 xl:p-12 select-none overflow-hidden bg-slate-950 text-white"
       >
-        {/* Campus Photo Background with subtle entrance scale */}
-        <Image
-          src="/campus-qcet.jpg"
-          alt="Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
-          fill
-          priority
-          sizes="(min-width: 1024px) 50vw, 100vw"
-          className="object-cover object-[70%_center] motion-safe:animate-login-kenburns"
-        />
+        {/* Campus Photo Background with Framer Motion gentle zoom entrance */}
+        <m.div
+          initial={{ scale: 1.08, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-0 size-full"
+        >
+          <Image
+            src="/campus-qcet.jpg"
+            alt="Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
+            fill
+            priority
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            className="object-cover object-[70%_center]"
+          />
+        </m.div>
 
         {/* Sophisticated Dark Institutional Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-slate-950/60 z-1" />
 
         {/* Top: School Badge Lockup */}
-        <div className="relative z-10 flex items-center gap-3 motion-safe:animate-login-fade-down [animation-delay:150ms]">
+        <m.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 flex items-center gap-3"
+        >
           <div className="size-10 rounded-full bg-white/95 p-1 flex items-center justify-center shadow-xs">
             <Image
               src="/logo-qcet.png"
@@ -140,10 +154,15 @@ function LoginFormContent() {
             <p className="text-xs font-bold text-white tracking-tight">QCET E-Office</p>
             <p className="text-[11px] text-white/80 font-medium">Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn</p>
           </div>
-        </div>
+        </m.div>
 
         {/* Lower Area: Institutional Statement & Footer */}
-        <div className="relative z-10 space-y-6 pt-12 motion-safe:animate-login-fade-up [animation-delay:300ms]">
+        <m.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 space-y-6 pt-12"
+        >
           <div className="space-y-2 max-w-sm">
             <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-white font-heading leading-snug">
               Không gian làm việc số của nhà trường
@@ -156,14 +175,24 @@ function LoginFormContent() {
           <div className="text-[11px] text-white/60 font-medium border-t border-white/10 pt-4">
             © 2026 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
           </div>
-        </div>
+        </m.div>
       </div>
 
       {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (50% desktop, 100% mobile) */}
       <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-12">
-        <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-7">
+        <m.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-7"
+        >
           {/* Mobile Only: Compact School Logo & Branding Lockup */}
-          <div className="flex lg:hidden flex-col items-center space-y-2.5 motion-safe:animate-login-fade-down">
+          <m.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+            className="flex lg:hidden flex-col items-center space-y-2.5"
+          >
             <Image
               src="/logo-qcet.png"
               alt="Logo Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
@@ -180,20 +209,28 @@ function LoginFormContent() {
                 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
               </p>
             </div>
-          </div>
+          </m.div>
 
           {/* Login Heading */}
-          <div className="pt-1 motion-safe:animate-login-fade-up [animation-delay:180ms]">
+          <m.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="pt-1"
+          >
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
               Đăng nhập
             </h2>
-          </div>
+          </m.div>
 
           {/* OAuth Error / Warning Notice */}
           {oauthError && !dismissedOAuthError && (
-            <div
+            <m.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
               role="alert"
-              className="flex items-start gap-2.5 w-full rounded-lg border border-red-200 bg-red-50/90 p-3 text-xs text-red-900 text-left motion-safe:animate-login-fade-up"
+              className="flex items-start gap-2.5 w-full rounded-lg border border-red-200 bg-red-50/90 p-3 text-xs text-red-900 text-left"
             >
               <AlertCircle className="size-4 shrink-0 text-red-600 mt-0.5" strokeWidth={1.5} />
               <div className="flex-1 space-y-1">
@@ -208,21 +245,29 @@ function LoginFormContent() {
               >
                 <X className="size-3.5" strokeWidth={1.5} />
               </button>
-            </div>
+            </m.div>
           )}
 
           {errorMessage && (
-            <div
+            <m.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
               role="alert"
-              className="flex items-start gap-2.5 w-full rounded-lg border border-red-200 bg-red-50/90 p-3 text-xs text-red-900 text-left motion-safe:animate-login-fade-up"
+              className="flex items-start gap-2.5 w-full rounded-lg border border-red-200 bg-red-50/90 p-3 text-xs text-red-900 text-left"
             >
               <AlertCircle className="size-4 shrink-0 text-red-600 mt-0.5" strokeWidth={1.5} />
               <p className="flex-1 text-[11px] leading-relaxed">{errorMessage}</p>
-            </div>
+            </m.div>
           )}
 
           {/* Official Google Sign-In Button (Large size ~360px) */}
-          <div className="w-full flex justify-center pt-0.5 motion-safe:animate-login-fade-up [animation-delay:320ms]">
+          <m.div
+            initial={{ opacity: 0, scale: 0.98, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full flex justify-center pt-0.5"
+          >
             <GoogleLoginButton
               returnTo={targetUrl}
               onError={(msg) => setErrorMessage(msg)}
@@ -230,10 +275,15 @@ function LoginFormContent() {
                 window.location.href = url;
               }}
             />
-          </div>
+          </m.div>
 
           {/* Accessible Technical Support Link */}
-          <div className="pt-1 text-center text-xs text-muted-foreground motion-safe:animate-login-fade-up [animation-delay:460ms]">
+          <m.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.45, delay: 0.42 }}
+            className="pt-1 text-center text-xs text-muted-foreground"
+          >
             <p className="text-xs">
               Không đăng nhập được?{" "}
               <a
@@ -243,8 +293,8 @@ function LoginFormContent() {
                 Liên hệ hỗ trợ
               </a>
             </p>
-          </div>
-        </div>
+          </m.div>
+        </m.div>
       </div>
     </main>
   );

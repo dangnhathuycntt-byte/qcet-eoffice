@@ -266,7 +266,7 @@ describe("E2E Google Workspace OAuth Integration Flow", () => {
     const res = await googleCallbackGet(req);
 
     assert.strictEqual(res.status, 307);
-    assert.strictEqual(res.headers.get("location"), "http://localhost:3001/");
+    assert.strictEqual(res.headers.get("location"), "http://localhost:3001/tasks");
 
     // Verify DB provisioning
     assert.ok(createdUserPayload, "New user must be created in DB transaction");
@@ -369,7 +369,7 @@ describe("E2E Google Workspace OAuth Integration Flow", () => {
     const res = await googleCallbackGet(req);
 
     assert.strictEqual(res.status, 307);
-    assert.strictEqual(res.headers.get("location"), "http://localhost:3001/");
+    assert.strictEqual(res.headers.get("location"), "http://localhost:3001/tasks");
 
     // Verify account link and avatar update
     assert.ok(linkedAccountData, "OAuth account should be linked to existing user");
