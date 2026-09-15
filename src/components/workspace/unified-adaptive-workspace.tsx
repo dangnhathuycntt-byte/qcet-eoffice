@@ -718,17 +718,22 @@ export function UnifiedAdaptiveWorkspace({
     }
   }, [forcedScope, propScope, initialScope]);
 
+  const isManager = isManagerUser(user) || isExecutive;
+
   const handleScopeChange = React.useCallback(
     (newScope: WorkspaceScope) => {
       let target = newScope;
       if (target === "school" && !isExecutive) {
+        target = isManager ? "unit" : "my";
+      }
+      if (target === "unit" && !isExecutive && !isManager) {
         target = "my";
       }
       setActiveScope(target);
       onScopeChange?.(target);
-      workspaceQuery?.setScope(target, { replace: true });
+      workspaceQuery?.setScope(target, { shallow: true, replace: true });
     },
-    [isExecutive, onScopeChange, workspaceQuery]
+    [isExecutive, isManager, onScopeChange, workspaceQuery]
   );
 
   // View mode management (Table vs Kanban)

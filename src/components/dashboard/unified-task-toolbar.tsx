@@ -517,10 +517,19 @@ export function UnifiedTaskToolbar({
     }
   };
 
-  // 1. Authorized Scope Options (Only render authorized options, zero disabled buttons)
-  const unitLabel = isUnassigned
-    ? "Chưa chọn đơn vị"
-    : user?.department || user?.departmentCode || "Đơn vị";
+  // 1. Authorized Scope Options (Semantic data scopes: Toàn trường | Đơn vị | Cá nhân)
+  const canViewSchoolScope = Boolean(isExecutive);
+  const canViewUnitScope = Boolean(
+    isExecutive ||
+    isManager ||
+    (user && (
+      userRole === "MANAGER" ||
+      (user.role as string)?.toUpperCase() === "MANAGER" ||
+      (user.role as string)?.toUpperCase() === "TRUONG_PHONG" ||
+      (user.role as string)?.toUpperCase() === "TRUONG_KHOA" ||
+      (user.role as string)?.toUpperCase() === "TRUONG_DON_VI"
+    ))
+  );
 
   const scopeOptions: Array<{
     id: WorkspaceScope;
@@ -536,17 +545,15 @@ export function UnifiedTaskToolbar({
       label: "Toàn trường",
       shortLabel: "Trường",
       icon: School,
-      isAuthorized: isExecutive,
+      isAuthorized: canViewSchoolScope,
     },
     {
       id: "unit",
       legacyId: "UNIT_TASKS",
-      label: unitLabel,
-      shortLabel: isUnassigned
-        ? "Chưa chọn đ/vị"
-        : user?.departmentCode || (unitLabel.length > 18 ? "Đơn vị" : unitLabel),
-      icon: isUnassigned ? AlertTriangle : Building2,
-      isAuthorized: isManager || Boolean(user?.departmentCode) || isUnassigned,
+      label: "Đơn vị",
+      shortLabel: "Đơn vị",
+      icon: Building2,
+      isAuthorized: canViewUnitScope,
     },
     {
       id: "my",
@@ -892,74 +899,53 @@ export function UnifiedTaskToolbar({
         data-slot="unified-task-toolbar-row-1"
         className="flex items-center justify-between gap-2"
       >
-        {/* Left: Scope Switcher (Only Authorized Scopes) + Integrated Action Queue */}
-        <div className="flex items-center gap-0.5 shrink-0 flex-wrap">
-          <div
-            data-slot="adaptive-scope-header"
-            data-scope-switcher="true"
-            className="inline-flex items-center gap-0.5 shrink-0"
-            role="tablist"
-            aria-label="Phạm vi công việc"
-          >
-            {authorizedScopes.map((opt) => {
-              const Icon = opt.icon;
-              const isActive = normalizedScope === opt.id;
-              const count = effectiveScopeBadgeCounts?.[opt.id];
+        {/* Left: Scope Switcher (Only Authorized Scopes; hidden if <= 1) */}
+        <div className="flex items-center gap-0.5 shrink-0">
+          {authorizedScopes.length > 1 && (
+            <div
+              data-slot="adaptive-scope-header"
+              data-scope-switcher="true"
+              className="inline-flex items-center gap-0.5 shrink-0"
+              role="tablist"
+              aria-label="Phạm vi công việc"
+            >
+              {authorizedScopes.map((opt) => {
+                const Icon = opt.icon;
+                const isActive = normalizedScope === opt.id;
+                const count = effectiveScopeBadgeCounts?.[opt.id];
 
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  role="tab"
-                  data-scope={opt.id}
-                  aria-selected={isActive}
-                  onClick={() => handleScopeSelect(opt.id)}
-                  className={cn(
-                    "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors cursor-pointer select-none",
-                    isActive
-                      ? "bg-slate-100 text-slate-900 font-semibold"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                  )}
-                >
-                  <Icon className="size-3.5 shrink-0 text-slate-400" strokeWidth={1.5} />
-                  <span className="hidden sm:inline">{opt.label}</span>
-                  <span className="sm:hidden">{opt.shortLabel}</span>
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="tab"
+                    data-scope={opt.id}
+                    aria-selected={isActive}
+                    onClick={() => handleScopeSelect(opt.id)}
+                    className={cn(
+                      "inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors cursor-pointer select-none",
+                      isActive
+                        ? "bg-slate-100 text-slate-900 font-semibold"
+                        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                    )}
+                  >
+                    <Icon className="size-3.5 shrink-0 text-slate-400" strokeWidth={1.5} />
+                    <span>{opt.label}</span>
 
-                  {typeof count === "number" && count > 0 && (
-                    <span
-                      className={cn(
-                        "inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums",
-                        isActive ? "bg-slate-200/80 text-slate-700 font-semibold" : "text-slate-400"
-                      )}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Action Queue Trigger (Inline with Scope Switcher in Row 1) */}
-          {actionQueueTrigger ? (
-            actionQueueTrigger
-          ) : (
-            typeof actionQueueCount === "number" && actionQueueCount > 0 && (onOpenActionQueue || onActionQueueClick) && (
-              <button
-                type="button"
-                data-slot="action-queue-trigger"
-                onClick={onOpenActionQueue || onActionQueueClick}
-                className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer shrink-0 select-none"
-                aria-label="Mở hàng đợi xử lý công việc"
-                title="Mở hàng đợi xử lý công việc"
-              >
-                <Layers className="size-3.5 shrink-0 text-slate-400" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Cần xử lý</span>
-                <span className="inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums font-semibold bg-slate-200/80 text-slate-700 leading-none">
-                  {actionQueueCount}
-                </span>
-              </button>
-            )
+                    {typeof count === "number" && count > 0 && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center justify-center rounded px-1.5 py-0.2 text-[10px] font-mono tabular-nums",
+                          isActive ? "bg-slate-200/80 text-slate-700 font-semibold" : "text-slate-400"
+                        )}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
 
@@ -968,6 +954,7 @@ export function UnifiedTaskToolbar({
           <button
             type="button"
             onClick={() => handlePrimaryAction()}
+            title="Giao việc mới (N P)"
             className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-2xs transition-colors hover:bg-primary/90 cursor-pointer shrink-0"
           >
             <Plus className="size-3.5 shrink-0" strokeWidth={1.5} />
@@ -1059,28 +1046,30 @@ export function UnifiedTaskToolbar({
         </div>
       )}
       {/* ==================================================================== */}
-      {/* ROW 2: View Selector, Search, Quick Filters, Filter, Display         */}
+      {/* ROW 2: Saved Views, Search, Filter, Display (Linear IA)              */}
       {/* ==================================================================== */}
       <div
         data-slot="unified-task-toolbar-row-2"
-        className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/50"
+        className="flex items-center gap-2 pt-1 border-t border-border/50"
       >
         {/* Leftmost: Saved View Selector — primary work navigation trigger */}
         {showSavedViews && (
-          <SavedViewsSelector
-            user={user}
-            activeViewId={effectiveActiveViewId}
-            onSelectView={onSelectView}
-            currentCriteria={effectiveCriteria}
-            onSaveView={onSaveView}
-            onDeleteView={onDeleteView}
-            onRenameView={onRenameView}
-            defaultLabel={hasCustomFilters ? "Góc nhìn: Tùy chỉnh" : "Góc nhìn: Tất cả nhiệm vụ"}
-          />
+          <div className="shrink-0">
+            <SavedViewsSelector
+              user={user}
+              activeViewId={effectiveActiveViewId}
+              onSelectView={onSelectView}
+              currentCriteria={effectiveCriteria}
+              onSaveView={onSaveView}
+              onDeleteView={onDeleteView}
+              onRenameView={onRenameView}
+              defaultLabel={hasCustomFilters ? "Góc nhìn: Tùy chỉnh" : "Góc nhìn: Tất cả nhiệm vụ"}
+            />
+          </div>
         )}
 
-        {/* Center: Search Input */}
-        <div className="relative flex-1 min-w-[160px]">
+        {/* Center: Search Input (Responsive with desktop max-width 640-760px) */}
+        <div className="relative flex-1 max-w-[640px] md:max-w-[720px] lg:max-w-[760px] min-w-[160px]">
           <Search
             className="size-3.5 text-slate-400 pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
             strokeWidth={1.5}
@@ -1124,8 +1113,8 @@ export function UnifiedTaskToolbar({
           </div>
         </div>
 
-        {/* Right: Filter + Display controls */}
-        <div className="flex items-center gap-1 shrink-0 relative">
+        {/* Right: Filter + Display controls (Anchored to right edge) */}
+        <div className="ml-auto flex items-center gap-1 shrink-0 relative">
           {/* 1. Advanced Filter Popover Trigger */}
           <div className="relative" ref={popoverRef}>
             <button
