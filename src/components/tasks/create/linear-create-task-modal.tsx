@@ -628,7 +628,7 @@ export function LinearCreateTaskModal({
               className="text-slate-500"
               id="create-task-modal-title"
             >
-              Giao việc mới
+              Tạo việc mới
             </span>
           </div>
 
@@ -1206,7 +1206,7 @@ export function LinearCreateTaskModal({
                 Đang tạo...
               </>
             ) : (
-              "Giao việc"
+              "Tạo việc"
             )}
           </button>
         </footer>

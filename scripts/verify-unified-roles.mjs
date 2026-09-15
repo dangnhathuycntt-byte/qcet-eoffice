@@ -132,8 +132,8 @@ async function run() {
         const hasSavedViews = Boolean(document.querySelector('[data-slot="saved-views-nav"]'));
         const hasSearch = Boolean(document.querySelector('input[aria-label="Tìm nhiệm vụ"]'));
         const hasFilters = Boolean(document.querySelector('button[aria-label="Bộ lọc nâng cao"]'));
-        const hasCreateBtn = Boolean(document.querySelector('button[data-create-task="true"]') || Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Giao việc')));
-        return { scopes, hasTable, hasSavedViews, hasSearch, hasFilters, hasCreateBtn };
+        const createBtnText = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Tạo việc'))?.innerText.trim();
+        return { scopes, hasTable, hasSavedViews, hasSearch, hasFilters, createBtnText };
       })()`,
       returnByValue: true,
     });
@@ -172,8 +172,8 @@ async function run() {
         const hasSavedViews = Boolean(document.querySelector('[data-slot="saved-views-nav"]'));
         const hasSearch = Boolean(document.querySelector('input[aria-label="Tìm nhiệm vụ"]'));
         const hasFilters = Boolean(document.querySelector('button[aria-label="Bộ lọc nâng cao"]'));
-        const hasCreateBtn = Boolean(document.querySelector('button[data-create-task="true"]') || Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Giao việc')));
-        return { scopes, hasTable, hasSavedViews, hasSearch, hasFilters, hasCreateBtn };
+        const createBtnText = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Tạo việc'))?.innerText.trim();
+        return { scopes, hasTable, hasSavedViews, hasSearch, hasFilters, createBtnText };
       })()`,
       returnByValue: true,
     });
@@ -198,14 +198,16 @@ async function run() {
         const hasSavedViews = Boolean(document.querySelector('[data-slot="saved-views-nav"]'));
         const hasSearch = Boolean(document.querySelector('input[aria-label="Tìm nhiệm vụ"]'));
         const hasFilters = Boolean(document.querySelector('button[aria-label="Bộ lọc nâng cao"]'));
-        const hasCreateBtn = Boolean(document.querySelector('button[data-create-task="true"]') || Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Giao việc')));
-        return { scopes, hasTable, emptyState, hasSavedViews, hasSearch, hasFilters, hasCreateBtn };
+        const createBtnText = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Tạo việc'))?.innerText.trim();
+        const activeScope = document.querySelector('[data-slot="adaptive-scope-header"] button[aria-selected="true"]')?.innerText.trim().replace(/\s+/g, ' ');
+        return { scopes, activeScope, hasTable, emptyState, hasSavedViews, hasSearch, hasFilters, createBtnText };
       })()`,
       returnByValue: true,
     });
-    console.log("Staff Workspace:", JSON.stringify(staffWorkspace.result.value, null, 2));
+    console.log("Staff Workspace (Initial):", JSON.stringify(staffWorkspace.result.value, null, 2));
 
     // Click on unit scope for staff
+    console.log("-> Clicking on Unit scope button...");
     await send("Runtime.evaluate", {
       expression: `document.querySelector('[data-slot="adaptive-scope-header"] button[data-scope="unit"]')?.click()`,
     });
@@ -213,13 +215,30 @@ async function run() {
 
     const staffUnitWorkspace = await send("Runtime.evaluate", {
       expression: `(() => {
+        const activeScopeAfter = document.querySelector('[data-slot="adaptive-scope-header"] button[aria-selected="true"]')?.innerText.trim().replace(/\\s+/g, ' ');
+        const activeDataScope = document.querySelector('[data-active-scope]')?.getAttribute('data-active-scope');
         const hasTable = Boolean(document.querySelector('table'));
         const rows = Array.from(document.querySelectorAll('table tbody tr')).map(tr => tr.innerText.replace(/\\s+/g, ' '));
-        return { hasTable, rowsCount: rows.length, firstRow: rows[0] };
+        return { activeScopeAfter, activeDataScope, hasTable, rowsCount: rows.length };
       })()`,
       returnByValue: true,
     });
-    console.log("Staff After Switching to Unit Scope:", JSON.stringify(staffUnitWorkspace.result.value, null, 2));
+    // Click back to personal scope for staff
+    console.log("-> Clicking back to Personal (my) scope button...");
+    await send("Runtime.evaluate", {
+      expression: `document.querySelector('[data-slot="adaptive-scope-header"] button[data-scope="my"]')?.click()`,
+    });
+    await new Promise((r) => setTimeout(r, 1000));
+
+    const staffPersonalWorkspace = await send("Runtime.evaluate", {
+      expression: `(() => {
+        const activeScopeAfter = document.querySelector('[data-slot="adaptive-scope-header"] button[aria-selected="true"]')?.innerText.trim().replace(/\\s+/g, ' ');
+        const activeDataScope = document.querySelector('[data-active-scope]')?.getAttribute('data-active-scope');
+        return { activeScopeAfter, activeDataScope };
+      })()`,
+      returnByValue: true,
+    });
+    console.log("Staff Workspace (After Switching Back to My Scope):", JSON.stringify(staffPersonalWorkspace.result.value, null, 2));
 
     // TEST 5: Account with unassigned / no department (Only 1 scope => scope switcher hidden)
     console.log("\n=== TEST 5: Account with No Department (Single Scope => Hidden Switcher) ===");

@@ -726,16 +726,13 @@ export function UnifiedAdaptiveWorkspace({
     (newScope: WorkspaceScope) => {
       let target = newScope;
       if (target === "school" && !isExecutive) {
-        target = isManager ? "unit" : "my";
-      }
-      if (target === "unit" && !isExecutive && !isManager) {
-        target = "my";
+        target = "unit";
       }
       setActiveScope(target);
       onScopeChange?.(target);
       workspaceQuery?.setScope(target, { shallow: true, replace: true });
     },
-    [isExecutive, isManager, onScopeChange, workspaceQuery]
+    [isExecutive, onScopeChange, workspaceQuery]
   );
 
   // View mode management (Table vs Kanban)
@@ -1910,7 +1907,7 @@ export function UnifiedAdaptiveWorkspace({
           loading={effectiveIsRefreshing}
           onNewTaskClick={handleCreateTaskClick}
           canCreateTask={true}
-          createButtonLabel="Giao việc"
+          createButtonLabel="Tạo việc"
           activeTab={effectiveActiveTab}
           onTabChange={(tab) => handleFilterCanvasFromWorkbox(tab)}
           tabCounts={tabCounts}

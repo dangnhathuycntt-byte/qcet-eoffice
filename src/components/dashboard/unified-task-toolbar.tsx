@@ -724,7 +724,7 @@ export function UnifiedTaskToolbar({
 
   // Primary action callback
   const handlePrimaryAction = onNewTaskClick || onCreateTask || onAddTask;
-  const primaryActionLabel = (createButtonLabel || "Giao việc").replace(/^\+\s*/, "");
+  const primaryActionLabel = (createButtonLabel || "Tạo việc").replace(/^\+\s*/, "");
 
   // Scope badge counts fallback to tabCounts for scopes if badgeCounts is omitted
   const effectiveScopeBadgeCounts = badgeCounts || {
@@ -1003,7 +1003,7 @@ export function UnifiedTaskToolbar({
           <button
             type="button"
             onClick={() => handlePrimaryAction()}
-            title="Giao việc mới (N P)"
+            title="Tạo việc mới (N P)"
             className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-2xs transition-colors hover:bg-primary/90 cursor-pointer shrink-0"
           >
             <Plus className="size-3.5 shrink-0" strokeWidth={1.5} />
