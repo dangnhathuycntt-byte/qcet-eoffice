@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Building2, ArrowRight } from "lucide-react";
+import { Building2, ArrowRight, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface UnassignedDepartmentStateProps {
@@ -10,34 +10,36 @@ export interface UnassignedDepartmentStateProps {
 
 export function UnassignedDepartmentState({ onOpenProfile }: UnassignedDepartmentStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-dashed border-amber-300/80 bg-amber-50/40 my-6 shadow-xs animate-in fade-in-50 duration-200">
-      <div className="flex size-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-800 border border-amber-200/80 mb-4 shadow-xs">
+    <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-border/70 bg-card/80 backdrop-blur-xs my-6 max-w-xl mx-auto shadow-xs animate-in fade-in-50 duration-200">
+      <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 mb-4 shadow-2xs">
         <Building2 className="size-7" strokeWidth={1.5} />
       </div>
 
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100/80 text-amber-800 border border-amber-200 mb-2">
-        Hồ sơ chưa hoàn tất
-      </span>
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-muted/80 text-muted-foreground border border-border/60 mb-3">
+        <UserCheck className="size-3.5 text-primary" strokeWidth={1.5} />
+        <span>Chưa phân bổ đơn vị công tác</span>
+      </div>
 
-      <h3 className="text-base sm:text-lg font-bold text-foreground mb-1.5">
-        Tài khoản chưa liên kết Khoa / Phòng công tác
+      <h3 className="text-base sm:text-lg font-semibold text-foreground tracking-tight mb-2">
+        Tài khoản chưa liên kết Khoa / Phòng ban
       </h3>
 
       <p className="text-xs sm:text-sm text-muted-foreground max-w-md mb-6 leading-relaxed">
-        Bạn đang đăng nhập với tư cách Cán bộ / Giảng viên nhưng chưa được xếp vào Khoa hoặc Phòng ban cụ thể. Vui lòng cập nhật đơn vị để hệ thống đồng bộ và hiển thị công việc của đơn vị bạn.
+        Bạn đang xem không gian làm việc Đơn vị nhưng tài khoản của bạn chưa được liên kết với Khoa hoặc Phòng ban trực thuộc. Vui lòng cập nhật thông tin đơn vị để hệ thống hiển thị danh sách nhiệm vụ tương ứng.
       </p>
 
       {onOpenProfile && (
         <Button
           type="button"
           onClick={onOpenProfile}
-          className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-sm inline-flex items-center gap-2 cursor-pointer transition-all active:scale-98"
+          className="h-10 px-5 rounded-xl font-medium text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs cursor-pointer transition-all active:scale-98"
         >
           <Building2 className="size-4" strokeWidth={1.5} />
-          <span>Cập nhật Khoa / Phòng công tác ngay</span>
+          <span>Cập nhật đơn vị công tác</span>
           <ArrowRight className="size-3.5" strokeWidth={1.5} />
         </Button>
       )}
     </div>
   );
 }
+

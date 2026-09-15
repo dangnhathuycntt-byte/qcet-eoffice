@@ -25,15 +25,15 @@ export interface AdaptiveScopeHeaderProps {
 }
 
 const scopeActiveStyles: Record<WorkspaceScope, string> = {
-  school: "text-amber-700 bg-amber-50/80 border-amber-300 font-bold",
-  unit: "text-blue-700 bg-blue-50/80 border-blue-300 font-bold",
-  my: "text-emerald-700 bg-emerald-50/80 border-emerald-300 font-bold",
+  school: "text-foreground bg-card border-border/80 shadow-2xs font-semibold",
+  unit: "text-foreground bg-card border-border/80 shadow-2xs font-semibold",
+  my: "text-foreground bg-card border-border/80 shadow-2xs font-semibold",
 };
 
 const scopeBadgeActiveStyles: Record<WorkspaceScope, string> = {
-  school: "bg-amber-100 text-amber-800 border-amber-200",
-  unit: "bg-blue-100 text-blue-800 border-blue-200",
-  my: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  school: "bg-primary/10 text-primary border-primary/20",
+  unit: "bg-primary/10 text-primary border-primary/20",
+  my: "bg-primary/10 text-primary border-primary/20",
 };
 
 export function syncScopeToUrl(scope: WorkspaceScope) {
@@ -171,19 +171,12 @@ export function AdaptiveScopeHeader({
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer min-h-[44px] sm:min-h-[36px] touch-manipulation border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                     isActive
-                      ? isUnitUnassigned
-                        ? "text-amber-800 bg-amber-50/90 border-amber-300 font-bold"
-                        : scopeActiveStyles[s.id]
-                      : isUnitUnassigned
-                      ? "text-amber-700/90 border-amber-200/80 bg-amber-50/40 hover:bg-amber-50/70 hover:text-amber-800"
+                      ? scopeActiveStyles[s.id]
                       : "text-muted-foreground border-transparent hover:text-foreground hover:bg-card/50"
                   )}
                 >
                   <Icon
-                    className={cn(
-                      "size-3.5 shrink-0 select-none",
-                      isUnitUnassigned && "text-amber-600"
-                    )}
+                    className="size-3.5 shrink-0 select-none text-muted-foreground"
                     strokeWidth={1.5}
                     aria-hidden="true"
                   />
@@ -192,7 +185,7 @@ export function AdaptiveScopeHeader({
                   {isUnitUnassigned && (
                     <span
                       data-slot="unassigned-scope-badge"
-                      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 ml-0.5 shrink-0"
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground border border-border/60 ml-0.5 shrink-0"
                     >
                       Cần chọn
                     </span>
@@ -204,9 +197,7 @@ export function AdaptiveScopeHeader({
                       className={cn(
                         "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-mono tabular-nums font-semibold border ml-0.5",
                         isActive
-                          ? isUnitUnassigned
-                            ? "bg-amber-100 text-amber-800 border-amber-200"
-                            : scopeBadgeActiveStyles[s.id]
+                          ? scopeBadgeActiveStyles[s.id]
                           : "bg-muted text-muted-foreground border-border/60"
                       )}
                     >
