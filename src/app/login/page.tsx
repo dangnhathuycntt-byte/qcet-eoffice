@@ -89,6 +89,14 @@ function LoginFormContent() {
     }
   }, [errorParam]);
 
+  const handleError = React.useCallback((msg: string) => {
+    setErrorMessage(msg);
+  }, []);
+
+  const handleSuccess = React.useCallback((url: string) => {
+    window.location.href = url;
+  }, []);
+
   // Only show skeleton if already authenticated and redirecting
   if (isAuthenticated && Boolean(user)) {
     return <LoginSkeleton />;
@@ -253,10 +261,8 @@ function LoginFormContent() {
           <div className="w-full flex justify-center mt-6">
             <GoogleLoginButton
               returnTo={targetUrl}
-              onError={(msg) => setErrorMessage(msg)}
-              onSuccess={(url) => {
-                window.location.href = url;
-              }}
+              onError={handleError}
+              onSuccess={handleSuccess}
             />
           </div>
 

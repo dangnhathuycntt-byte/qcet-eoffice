@@ -84,44 +84,55 @@ export function GoogleLoginButton({
 
   const googleClientId = clientEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-  // Handle GIS Credential response (ID Token)
+  const onErrorRef = React.useRef(onError);
+  const onSuccessRef = React.useRef(onSuccess);
+  const returnToRef = React.useRef(returnTo);
+
+  React.useEffect(() => {
+    onErrorRef.current = onError;
+    onSuccessRef.current = onSuccess;
+    returnToRef.current = returnTo;
+  });
+
+  // Handle GIS Credential response (ID Token) with stable callback
   const handleCredentialResponse = React.useCallback(
     async (response: { credential: string }) => {
       if (!response.credential) return;
       setIsLoading(true);
 
       try {
+        const currentReturnTo = returnToRef.current;
         const res = await fetch("/api/auth/google/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             credential: response.credential,
-            returnTo,
+            returnTo: currentReturnTo,
           }),
         });
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) {
           setIsLoading(false);
-          onError?.(data.error || "Đăng nhập Google không thành công");
+          onErrorRef.current?.(data.error || "Đăng nhập Google không thành công");
           return;
         }
 
-        const target = data.returnTo || returnTo || "/tasks";
-        if (onSuccess) {
-          onSuccess(target);
+        const target = data.returnTo || currentReturnTo || "/tasks";
+        if (onSuccessRef.current) {
+          onSuccessRef.current(target);
         } else {
           window.location.href = target;
         }
       } catch {
         setIsLoading(false);
-        onError?.("Không thể kết nối đến máy chủ xác thực");
+        onErrorRef.current?.("Không thể kết nối đến máy chủ xác thực");
       }
     },
-    [returnTo, onError, onSuccess]
+    []
   );
 
-  // Initialize Google Identity Services / FedCM
+  // Initialize Google Identity Services / FedCM once on mount
   React.useEffect(() => {
     if (!googleClientId || typeof window === "undefined") return;
 
