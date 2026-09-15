@@ -41,13 +41,13 @@ colors:
   chart-crimson: "oklch(0.63 0.22 25)"
 typography:
   display:
-    fontFamily: "Plus Jakarta Sans, Be Vietnam Pro, system-ui, sans-serif"
+    fontFamily: "Be Vietnam Pro, system-ui, sans-serif"
     fontSize: "30px"
     fontWeight: 700
     lineHeight: 1.35
     letterSpacing: "-0.01em"
   heading:
-    fontFamily: "Plus Jakarta Sans, Be Vietnam Pro, system-ui, sans-serif"
+    fontFamily: "Be Vietnam Pro, system-ui, sans-serif"
     fontSize: "24px"
     fontWeight: 700
     lineHeight: 1.35
@@ -71,7 +71,7 @@ typography:
     lineHeight: 1.35
     letterSpacing: "0"
   mono:
-    fontFamily: "JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
     fontSize: "13px"
     fontWeight: 400
     lineHeight: 1.375
@@ -240,27 +240,27 @@ Semantics use the Tailwind 500/600/700 ladder because these states are *not* par
 
 Vietnamese is a diacritic-dense script: `ế ộ ữ ỡ ạ ả` stack marks above and below a single base glyph, and many Latin faces either clip those marks or collapse them into mush at 12–13px. **Be Vietnam Pro** was designed for exactly this problem — tall ascenders, generous vertical metrics, and a full `vietnamese` subset — so a task code like `NV-QCET-2026-0417` and a name like *Nguyễn Thị Hồng Vân* remain crisp in the same 13px row. It also carries the humanist, slightly formal register appropriate to a state institution: it is readable, not trendy.
 
-**Plus Jakarta Sans** handles headings: geometric, confident, institutional, and — critically — also ships a `vietnamese` subset. **JetBrains Mono** handles everything numeric or identifier-like: task codes, `tabular-nums` figures, document hashes, dates.
+**Be Vietnam Pro** is the singular web font for the entire system, handling both running body copy and display headings (via weights 400 through 800) with complete Vietnamese diacritic fidelity. Numeric figures, codes, dates, and diffs use the native system monospace font stack (`ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`), which requires zero external web font downloads.
 
-**The Diacritic-Integrity Rule.** Both body and heading fonts MUST load the `vietnamese` subset. A font that renders `Nguyễn` with a dropped tilde is a bug, not a fallback.
+**The Diacritic-Integrity Rule.** The typography system MUST load the full `vietnamese` subset of Be Vietnam Pro. A font that renders `Nguyễn` with a dropped tilde or broken diacritical marks is a bug, not a fallback.
 
 ### The Scale
 
 | Role | Font | Size | Weight | Line height | Tracking |
 |---|---|---|---|---|---|
-| Display (KPI value, page hero) | Plus Jakarta Sans | `30px` (`text-3xl`) | 700 | 1.35 | −0.01em |
-| Heading (h1–h6, card title) | Plus Jakarta Sans | `24px` / `16px` | 700 / 500 | 1.35 | −0.01em |
+| Display (KPI value, page hero) | Be Vietnam Pro | `30px` (`text-3xl`) | 700–800 | 1.35 | −0.01em |
+| Heading (h1–h6, card title) | Be Vietnam Pro | `24px` / `16px` | 700 / 600 | 1.35 | −0.01em |
 | Body | Be Vietnam Pro | `14px` (`text-sm`) | 400 | 1.5 | 0 |
 | Label (nav, filter, table header) | Be Vietnam Pro | `13px` | 500–600 | 1.35 | 0 |
 | Caption (helper, meta, badge) | Be Vietnam Pro | `12px` (`text-xs`) | 500–600 | 1.45 | 0 |
-| Mono (figures, codes, dates) | JetBrains Mono | `13px` | 400/600 | 1.375 | 0 |
+| Mono (figures, codes, dates) | System Monospace | `13px` | 400/600 | 1.375 | 0 |
 | Table compact | Be Vietnam Pro | `13px` (`0.8125rem`) | 400 | 1.125rem | 0 |
 
 Headings use `text-wrap: balance`; paragraph and cell text use `text-wrap: pretty` — Vietnamese sentences wrap differently than English, and orphans in a two-line decree title look careless.
 
 **The Tabular-Figure Rule.** Any number that is compared to another number — KPI values, counts, percentages, dates, task codes, pagination — MUST render in `font-mono tabular-nums`. Money, deadline, and progress figures align in a column or they are unreadable.
 
-**The Two-Font Rule.** Plus Jakarta Sans is for headings only; Be Vietnam Pro is for all running text. Never set a body paragraph in the heading font, and never set a heading in the mono font.
+**The Single-Web-Font Rule.** Be Vietnam Pro is the only web font loaded across the entire application, eliminating font-loading overhead and visual disharmony between headings and body text. Numeric values use system monospace.
 
 **Mobile input floor.** At `max-width: 639px`, all `input`, `select`, and `textarea` elements are forced to `16px !important`. This is not a style choice — iOS Safari auto-zooms any focused field below 16px, which throws a Vietnamese IME user out of position mid-word.
 

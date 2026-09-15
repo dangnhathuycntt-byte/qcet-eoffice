@@ -75,7 +75,7 @@ The only administrative platform built specifically for Vietnamese vocational co
 - **System name**: QCET E-Office (Hệ thống Quản lý Điều hành Điện tử).
 - **App title**: `"QCET E-Office - Trường CĐ Kỹ thuật Công nghệ Quy Nhơn"`
 - **Support contact**: `quantrimang@cdktcnqn.edu.vn`
-- **Typography** (as implemented in `src/app/layout.tsx`): Be Vietnam Pro (`font-sans`, body), Plus Jakarta Sans (`font-heading`, headings), JetBrains Mono (`font-mono`, codes/figures). Be Vietnam Pro preserves full Vietnamese tone diacritics (ể, ễ, ệ, ở, ỡ, ợ, ứ, ừ).
+- **Typography** (as implemented in `src/app/layout.tsx`): Single web font Be Vietnam Pro (`font-sans` & `font-heading` for body and headings), with system monospace stack for codes/figures (`font-mono`). Be Vietnam Pro preserves full Vietnamese tone diacritics (ể, ễ, ệ, ở, ỡ, ợ, ứ, ừ) with zero layout shifts and maximum loading performance.
 - **Color**: Administrative Navy (`#0284C7`, `sky-600`) as the singular primary accent. Strictly calibrated OKLCH Light-Only palette (see DESIGN.md). Saturation below 80%. No neon blues, purples, or glows.
 - **Icons**: Lucide React, `strokeWidth={1.5}` — no gray square enclosure boxes behind icons.
 - **No emojis** anywhere in the interface.

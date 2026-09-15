@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Be_Vietnam_Pro, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import { AuthProvider } from "@/lib/auth-context";
@@ -11,24 +11,8 @@ import { WebVitalsReporter } from "@/components/telemetry/web-vitals-reporter";
 const fontSans = Be_Vietnam_Pro({
   variable: "--font-sans",
   subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
   fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
-  display: "swap",
-});
-
-const fontHeading = Plus_Jakarta_Sans({
-  variable: "--font-heading",
-  subsets: ["latin", "vietnamese"],
-  weight: ["600", "700"],
-  fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
-  display: "swap",
-});
-
-const fontMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "600"],
-  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
   display: "swap",
 });
 
@@ -72,7 +56,7 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`light ${fontSans.variable} ${fontHeading.variable} ${fontMono.variable} h-full antialiased`}
+      className={`light ${fontSans.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
