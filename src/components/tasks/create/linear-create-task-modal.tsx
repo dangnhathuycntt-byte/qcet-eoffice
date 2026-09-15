@@ -529,7 +529,7 @@ export function LinearCreateTaskModal({
         },
         {
           personnel: personnelRefs,
-          departmentId: currentDept.id,
+          departmentId: currentDept.code || currentDept.id,
         }
       );
 
