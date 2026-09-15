@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
+import { verifySessionTokenEdge, SESSION_COOKIE_NAME } from '@/lib/jwt-edge';
 import { sanitizeRedirectUrl } from '@/lib/login-helpers';
 
 /**
@@ -13,12 +13,12 @@ import { sanitizeRedirectUrl } from '@/lib/login-helpers';
  * 4. Intercepts legacy query params (?zone=...) and redirects to canonical URLs.
  * 5. Strictly sanitizes returnTo to prevent Open Redirect attacks.
  */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // 1. Check user authentication via session cookie
+  // 1. Check user authentication via session cookie (Web Crypto, Edge compatible)
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const session = sessionCookie ? verifySessionToken(sessionCookie) : null;
+  const session = sessionCookie ? await verifySessionTokenEdge(sessionCookie) : null;
   const isAuthenticated = Boolean(session);
 
   // 2. Intercept legacy zone parameters (?zone=...)
@@ -61,7 +61,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  // 4. Handle /login route
+  // 5. Handle /login route
   if (pathname === '/login') {
     if (isAuthenticated) {
       // Authenticated users opening /login -> redirect to /tasks
@@ -73,7 +73,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 5. Handle Root '/' route
+  // 6. Handle Root '/' route
   if (pathname === '/') {
     const url = request.nextUrl.clone();
     if (isAuthenticated) {
@@ -86,7 +86,7 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // 6. Handle all other protected routes
+  // 7. Handle all other protected routes
   if (!isAuthenticated) {
     const originalPath = `${pathname}${request.nextUrl.search}`;
     const safeReturnTo = sanitizeRedirectUrl(originalPath);
