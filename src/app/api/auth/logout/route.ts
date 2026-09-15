@@ -1,7 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE_NAME, getSessionFromRequest } from "@/lib/jwt-session";
+import {
+  SESSION_COOKIE_NAME,
+  SECURE_SESSION_COOKIE_NAME,
+  LEGACY_SESSION_COOKIE_NAME,
+  getSessionFromRequest,
+} from "@/lib/jwt-session";
 import { revokeSession } from "@/server/auth/session-policy";
 import { extractTokenFromRequest } from "@/server/auth/current-session";
+
+const COOKIES_TO_CLEAR = [
+  SESSION_COOKIE_NAME,
+  SECURE_SESSION_COOKIE_NAME,
+  LEGACY_SESSION_COOKIE_NAME,
+  "next-auth.session-token",
+  "__Secure-next-auth.session-token",
+  "qcet_oauth_state",
+  "qcet_return_to",
+];
 
 export async function POST(req: NextRequest | Request): Promise<NextResponse> {
   try {
@@ -29,16 +44,18 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
     }
   );
 
-  response.cookies.set({
-    name: SESSION_COOKIE_NAME,
-    value: "",
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 0,
-    expires: new Date(0),
-    path: "/",
-  });
+  for (const cookieName of COOKIES_TO_CLEAR) {
+    response.cookies.set({
+      name: cookieName,
+      value: "",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 0,
+      expires: new Date(0),
+      path: "/",
+    });
+  }
 
   return response;
 }

@@ -2,7 +2,9 @@ import jwt from "jsonwebtoken";
 import { UserRole } from "@/types/auth";
 import { serverEnv } from "@/config/env.server";
 
-export const SESSION_COOKIE_NAME = "qcet_session";
+export const SESSION_COOKIE_NAME = "authjs.session-token";
+export const SECURE_SESSION_COOKIE_NAME = "__Secure-authjs.session-token";
+export const LEGACY_SESSION_COOKIE_NAME = "qcet_session";
 export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
 export const SESSION_COOKIE_MAX_AGE = SESSION_MAX_AGE_SECONDS;
 
@@ -12,9 +14,9 @@ export function getJwtSecret(): string {
     !process.env.JWT_SECRET &&
     !process.env.AUTH_SECRET
   ) {
-    throw new Error("JWT_SECRET environment variable is required in production");
+    throw new Error("AUTH_SECRET or JWT_SECRET environment variable is required in production");
   }
-  return serverEnv.AUTH_SECRET || "qcet_fallback_secret_key_2026";
+  return serverEnv.AUTH_SECRET || serverEnv.JWT_SECRET || "qcet_dev_fallback_secret_key_2026_super_safe_32_chars";
 }
 
 export interface SessionPayload {
@@ -24,6 +26,7 @@ export interface SessionPayload {
   role: UserRole | "BAN_GIAM_HIEU" | "TRUONG_PHONG" | "CHUYEN_VIEN" | string;
   departmentId?: string | null;
   title?: string | null;
+  isActive?: boolean;
 }
 
 export function signSessionToken(payload: SessionPayload): string {
@@ -59,10 +62,12 @@ export function getSessionFromRequest(request: {
 
   // 2. Cookie object (NextRequest / next/headers cookies store)
   if (request.cookies && typeof request.cookies.get === "function") {
-    const cookieVal = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-    if (cookieVal) {
-      const verified = verifySessionToken(cookieVal);
-      if (verified) return verified;
+    for (const cookieName of [SESSION_COOKIE_NAME, SECURE_SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_NAME]) {
+      const cookieVal = request.cookies.get(cookieName)?.value;
+      if (cookieVal) {
+        const verified = verifySessionToken(cookieVal);
+        if (verified) return verified;
+      }
     }
   }
 
@@ -70,10 +75,12 @@ export function getSessionFromRequest(request: {
   if (request.headers && typeof request.headers.get === "function") {
     const cookieHeader = request.headers.get("cookie");
     if (cookieHeader) {
-      const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE_NAME}=([^;]*)`));
-      if (match) {
-        const verified = verifySessionToken(decodeURIComponent(match[1]));
-        if (verified) return verified;
+      for (const cookieName of [SESSION_COOKIE_NAME, SECURE_SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_NAME]) {
+        const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${cookieName}=([^;]*)`));
+        if (match) {
+          const verified = verifySessionToken(decodeURIComponent(match[1]));
+          if (verified) return verified;
+        }
       }
     }
   }

@@ -110,7 +110,18 @@ export function resolveOAuthError(
         variant: "amber",
         email: email || undefined,
         actionText: "Thử lại bằng tài khoản trường",
-        actionHref: "/api/auth/google",
+        actionHref: "/api/auth/signin/google",
+      };
+
+    case "account_not_found":
+    case "AccessDenied":
+      return {
+        code: "account_not_found",
+        title: "Tài khoản chưa được cấp quyền",
+        message:
+          "Tài khoản Google này chưa được cấp phép truy cập hệ thống QCET E-Office. Vui lòng liên hệ Phòng Quản trị Mạng và CNTT (email: qtm@cdktcnqn.edu.vn) để đăng ký tài khoản.",
+        variant: "amber",
+        email: email || undefined,
       };
 
     case "account_disabled":

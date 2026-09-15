@@ -1,6 +1,11 @@
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
-import { getJwtSecret, SESSION_COOKIE_NAME } from '@/lib/jwt-session';
+import {
+  getJwtSecret,
+  SESSION_COOKIE_NAME,
+  SECURE_SESSION_COOKIE_NAME,
+  LEGACY_SESSION_COOKIE_NAME,
+} from '@/lib/jwt-session';
 import { AuthenticationError } from '@/server/api/errors';
 import { CurrentUser, loadCurrentUser } from './current-user';
 import {
@@ -26,6 +31,12 @@ export type RequestLike = {
   url?: string;
 };
 
+const VALID_COOKIE_NAMES = [
+  SESSION_COOKIE_NAME,
+  SECURE_SESSION_COOKIE_NAME,
+  LEGACY_SESSION_COOKIE_NAME,
+];
+
 /**
  * Extracts raw authentication token or session token from HTTP request.
  */
@@ -49,8 +60,10 @@ export function extractTokenFromRequest(request: RequestLike): string | null {
 
   // 2. Check NextRequest cookies map
   if (request.cookies && typeof request.cookies.get === 'function') {
-    const cookie = request.cookies.get(SESSION_COOKIE_NAME);
-    if (cookie?.value) return cookie.value;
+    for (const name of VALID_COOKIE_NAMES) {
+      const cookie = request.cookies.get(name);
+      if (cookie?.value) return cookie.value;
+    }
   }
 
   // 3. Fall back to parsing Cookie header
@@ -69,7 +82,7 @@ export function extractTokenFromRequest(request: RequestLike): string | null {
     const cookies = cookieHeader.split(';');
     for (const cookie of cookies) {
       const [name, ...rest] = cookie.trim().split('=');
-      if (name === SESSION_COOKIE_NAME) {
+      if (VALID_COOKIE_NAMES.includes(name)) {
         const val = rest.join('=').trim();
         if (val) return val;
       }

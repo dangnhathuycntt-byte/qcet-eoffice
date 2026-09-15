@@ -34,7 +34,7 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
   register: (data: RegisterPayload) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
   /**
-   * @deprecated Google login is handled via server OAuth at /api/auth/google.
+   * @deprecated Google login is handled via Auth.js at /api/auth/signin/google.
    */
   loginWithGoogle: (payload?: {
     email?: string;
@@ -629,15 +629,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * @deprecated Client-side Google session synthesis is deprecated and prohibited by Server Session Truth.
-   * Google login is handled via server OAuth flow at /api/auth/google.
+   * Google login is handled via Auth.js OAuth flow at /api/auth/signin/google.
    */
   const loginWithGoogle = useCallback(
     (_payload?: { email?: string; name?: string; avatar?: string }): AuthUser => {
       if (typeof window !== "undefined") {
-        window.location.href = "/api/auth/google";
+        window.location.href = "/api/auth/signin/google";
       }
       throw new Error(
-        "Google login is handled via server OAuth at /api/auth/google"
+        "Google login is handled via Auth.js OAuth at /api/auth/signin/google"
       );
     },
     []

@@ -1,25 +1,35 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifySessionTokenEdge, SESSION_COOKIE_NAME } from '@/lib/jwt-edge';
+import {
+  SESSION_COOKIE_NAME,
+  SECURE_SESSION_COOKIE_NAME,
+  LEGACY_SESSION_COOKIE_NAME,
+} from '@/lib/jwt-edge';
 import { sanitizeRedirectUrl } from '@/lib/login-helpers';
 
 /**
  * QCET E-Office Canonical Authentication & Routing Middleware
  *
- * Enforces server-side authentication boundaries:
+ * Edge-safe preliminary check based on auth.config.ts:
  * 1. Unauthenticated users accessing protected routes -> redirect to /login with returnTo.
  * 2. Authenticated users opening /login -> redirect to /tasks.
  * 3. Root '/' -> /tasks for authenticated users, /login for unauthenticated users.
  * 4. Intercepts legacy query params (?zone=...) and redirects to canonical URLs.
  * 5. Strictly sanitizes returnTo to prevent Open Redirect attacks.
+ * Note: Server Components, Server Actions, and API Routes strictly verify DB user active status.
  */
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // 1. Check user authentication via session cookie (Web Crypto, Edge compatible)
-  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const session = sessionCookie ? await verifySessionTokenEdge(sessionCookie) : null;
-  const isAuthenticated = Boolean(session);
+  // 1. Check preliminary authentication via session cookies
+  const token =
+    request.cookies.get(SESSION_COOKIE_NAME)?.value ||
+    request.cookies.get(SECURE_SESSION_COOKIE_NAME)?.value ||
+    request.cookies.get(LEGACY_SESSION_COOKIE_NAME)?.value ||
+    request.cookies.get('next-auth.session-token')?.value ||
+    request.cookies.get('__Secure-next-auth.session-token')?.value;
+
+  const isAuthenticated = Boolean(token && token.trim().length > 0);
 
   // 2. Intercept legacy zone parameters (?zone=...)
   const zone = searchParams.get('zone');

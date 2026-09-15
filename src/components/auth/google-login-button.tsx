@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 import { clientEnv } from "@/config/env.client";
 import { cn } from "@/lib/utils";
@@ -191,15 +192,17 @@ export function GoogleLoginButton({
     };
   }, [googleClientId, handleCredentialResponse]);
 
-  // Standard OAuth 2.0 fallback handler
-  const handleStartOAuth = () => {
+  // Standard OAuth 2.0 Auth.js handler
+  const handleStartOAuth = async () => {
     setIsLoading(true);
-    const params = new URLSearchParams();
-    if (returnTo && returnTo !== "/tasks" && returnTo !== "/") {
-      params.set("returnTo", returnTo);
+    try {
+      const currentReturnTo = returnToRef.current;
+      const target = currentReturnTo && currentReturnTo !== "/tasks" && currentReturnTo !== "/" ? currentReturnTo : "/tasks";
+      await signIn("google", { callbackUrl: target });
+    } catch {
+      setIsLoading(false);
+      onErrorRef.current?.("Không thể kết nối đến máy chủ xác thực");
     }
-    const qs = params.toString();
-    window.location.href = `/api/auth/google${qs ? `?${qs}` : ""}`;
   };
 
   return (

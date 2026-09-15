@@ -1,6 +1,11 @@
-import { SessionPayload, SESSION_COOKIE_NAME } from "./jwt-session";
+import {
+  SessionPayload,
+  SESSION_COOKIE_NAME,
+  SECURE_SESSION_COOKIE_NAME,
+  LEGACY_SESSION_COOKIE_NAME,
+} from "./jwt-session";
 
-export { SESSION_COOKIE_NAME };
+export { SESSION_COOKIE_NAME, SECURE_SESSION_COOKIE_NAME, LEGACY_SESSION_COOKIE_NAME };
 export type { SessionPayload };
 
 export function getEdgeJwtSecret(): string {
