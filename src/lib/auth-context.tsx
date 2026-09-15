@@ -471,7 +471,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const isLoggingOutRef = React.useRef(false);
+
   const logout = useCallback(async (): Promise<void> => {
+    if (isLoggingOutRef.current) return;
+    isLoggingOutRef.current = true;
+
     let userIdToPurge = user?.id;
     if (!userIdToPurge && typeof window !== "undefined") {
       try {
@@ -485,17 +490,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Clear localStorage FIRST — before the API call whose `Clear-Site-Data`
-    // response header can flush the browser HTTP cache and, on some WebKit
-    // builds, interrupt pending JS execution in the current navigation context.
-    // If the removal ran after the fetch, a `Clear-Site-Data: "cache"` response
-    // could prevent `localStorage.removeItem` from ever executing, leaving a
-    // stale cached user that tricks `/login` into an auto-redirect loop.
-    setAuthState({ status: "anonymous" });
-    setUser(null);
-    setIsAuthenticated(false);
-    setIsOfflineReadOnly(false);
-    setCanMutate(false);
+    // 1. Clear local storage immediately
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -504,12 +499,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // 2. Call server logout with keepalive: true and await response
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        keepalive: true,
+        headers: { "Cache-Control": "no-cache" },
+      });
     } catch (err) {
       console.warn("Logout request error:", err);
     }
 
+    // 3. Purge user offline data
     if (userIdToPurge) {
       try {
         await purgeUserOfflineData(userIdToPurge);
@@ -518,8 +520,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // 4. Reset client auth state
+    setAuthState({ status: "anonymous" });
+    setUser(null);
+    setIsAuthenticated(false);
+    setIsOfflineReadOnly(false);
+    setCanMutate(false);
+
+    // 5. Navigate cleanly to /login with hard replace
     if (typeof window !== "undefined") {
-      window.location.href = "/login";
+      window.location.replace("/login");
     }
   }, [user?.id]);
 
