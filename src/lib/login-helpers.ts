@@ -61,7 +61,7 @@ export function shouldShowLoginSkeleton({
  * protocol-relative URLs ('//'), backslashes ('/\'), URI schemes (http:, javascript:), and control characters.
  */
 export function sanitizeRedirectUrl(url: string | null | undefined): string {
-  if (!url) return "/";
+  if (!url) return "/tasks";
   const trimmed = url.trim();
   if (
     trimmed.startsWith("/") &&
@@ -70,9 +70,10 @@ export function sanitizeRedirectUrl(url: string | null | undefined): string {
     !trimmed.includes("://") &&
     !/[\r\n\t]/.test(trimmed)
   ) {
+    if (trimmed === "/") return "/tasks";
     return trimmed;
   }
-  return "/";
+  return "/tasks";
 }
 
 export type OAuthErrorVariant = "amber" | "red" | "neutral";
