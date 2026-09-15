@@ -155,26 +155,6 @@ export function TaskTableHeader({
                   col.align === "center" && "justify-center"
                 )}
               >
-                {col.id === "title" && showExpandAll && onToggleExpandAll && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleExpandAll();
-                    }}
-                    disabled={!hasTasks}
-                    className="inline-flex size-4 items-center justify-center rounded text-muted-foreground/70 hover:bg-slate-200/70 hover:text-foreground cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 transition-colors mr-1 shrink-0"
-                    title={isAllExpanded ? "Thu gọn tất cả việc con" : "Mở rộng tất cả việc con"}
-                    aria-label={isAllExpanded ? "Thu gọn tất cả việc con" : "Mở rộng tất cả việc con"}
-                  >
-                    {isAllExpanded ? (
-                      <ChevronDown className="size-3" strokeWidth={1.5} />
-                    ) : (
-                      <ChevronRight className="size-3" strokeWidth={1.5} />
-                    )}
-                  </button>
-                )}
-
                 {isSortable ? (
                   <button
                     type="button"

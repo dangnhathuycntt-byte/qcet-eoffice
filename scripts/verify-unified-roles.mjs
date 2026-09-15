@@ -139,6 +139,21 @@ async function run() {
     });
     console.log("BGH Workspace:", JSON.stringify(bghWorkspace.result.value, null, 2));
 
+    // Check table header for "Nhiệm vụ" column
+    const headerTitleInfo = await send("Runtime.evaluate", {
+      expression: `(() => {
+        const th = Array.from(document.querySelectorAll('thead th')).find(t => t.innerText.includes('Nhiệm vụ'));
+        const hasChevronInTitleTh = Boolean(th?.querySelector('svg.lucide-chevron-right, svg.lucide-chevron-down'));
+        return {
+          thText: th?.innerText.trim().replace(/\\s+/g, ' '),
+          hasChevronInTitleTh,
+          buttonsInThCount: th ? th.querySelectorAll('button').length : 0
+        };
+      })()`,
+      returnByValue: true,
+    });
+    console.log("Table Header 'Nhiệm vụ' Column Check:", JSON.stringify(headerTitleInfo.result.value, null, 2));
+
     // Screenshot BGH
     const shotBgh = await send("Page.captureScreenshot", { format: "png" });
     fs.writeFileSync("/tmp/ux-tasks-bgh.png", Buffer.from(shotBgh.data, "base64"));
