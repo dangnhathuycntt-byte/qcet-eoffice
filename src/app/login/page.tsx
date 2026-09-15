@@ -25,15 +25,8 @@ function LoginSkeleton() {
       {/* Left Branding Panel Skeleton (Desktop 50%) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-slate-900 p-10 xl:p-12 select-none"
+        className="hidden lg:flex lg:w-1/2 flex-col justify-end bg-slate-900 p-10 xl:p-12 select-none"
       >
-        <div className="flex items-center gap-3">
-          <div className="size-10 rounded-full bg-slate-800 animate-pulse" />
-          <div className="space-y-1">
-            <div className="h-3 w-28 bg-slate-800 rounded animate-pulse" />
-            <div className="h-2.5 w-44 bg-slate-800/60 rounded animate-pulse" />
-          </div>
-        </div>
         <div className="space-y-3">
           <div className="h-7 w-64 bg-slate-800 rounded animate-pulse" />
           <div className="h-4 w-48 bg-slate-800/60 rounded animate-pulse" />
@@ -43,13 +36,15 @@ function LoginSkeleton() {
 
       {/* Right Login Area Skeleton (50% on desktop, 100% on mobile) */}
       <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-12">
-        <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-7">
-          {/* Mobile-only branding skeleton */}
-          <div className="flex lg:hidden flex-col items-center space-y-2">
-            <div className="size-16 rounded-full bg-muted animate-pulse" />
-            <div className="h-5 w-40 bg-muted rounded-md animate-pulse" />
+        <div className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-6 sm:space-y-7">
+          <div className="flex flex-col items-center space-y-2.5">
+            <div className="size-16 sm:size-[72px] rounded-full bg-muted animate-pulse" />
+            <div className="space-y-1 flex flex-col items-center">
+              <div className="h-6 w-36 bg-muted rounded-md animate-pulse" />
+              <div className="h-3.5 w-60 bg-muted/80 rounded-md animate-pulse" />
+            </div>
           </div>
-          <div className="h-7 w-36 bg-muted rounded-md animate-pulse" />
+          <div className="h-7 w-32 bg-muted rounded-md animate-pulse" />
           <div className="h-12 w-[340px] sm:w-[360px] bg-muted rounded-md animate-pulse" />
           <div className="flex flex-col items-center pt-1">
             <div className="h-3.5 w-52 bg-muted rounded-md animate-pulse" />
@@ -109,10 +104,10 @@ function LoginFormContent() {
       aria-label="Trang đăng nhập QCET E-Office"
       className="flex min-h-screen w-full bg-background selection:bg-primary/15 selection:text-primary outline-none"
     >
-      {/* Desktop Left: Institutional Campus Photography & Brand Panel (50% desktop, hidden below 1024px / mobile) */}
+      {/* Desktop Left: Institutional Campus Photography & Brand Statement (50% desktop, hidden below 1024px / mobile) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-10 xl:p-12 select-none overflow-hidden bg-slate-950 text-white"
+        className="hidden lg:flex lg:w-1/2 relative flex-col justify-end p-10 xl:p-12 select-none overflow-hidden bg-slate-950 text-white"
       >
         {/* Campus Photo Background with Framer Motion gentle zoom entrance */}
         <m.div
@@ -134,34 +129,12 @@ function LoginFormContent() {
         {/* Sophisticated Dark Institutional Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/40 to-slate-950/60 z-1" />
 
-        {/* Top: School Badge Lockup */}
-        <m.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 flex items-center gap-3"
-        >
-          <div className="size-10 rounded-full bg-white/95 p-1 flex items-center justify-center shadow-xs">
-            <Image
-              src="/logo-qcet.png"
-              alt=""
-              width={36}
-              height={36}
-              className="size-8 object-contain"
-            />
-          </div>
-          <div className="space-y-0.5">
-            <p className="text-xs font-bold text-white tracking-tight">QCET E-Office</p>
-            <p className="text-[11px] text-white/80 font-medium">Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn</p>
-          </div>
-        </m.div>
-
         {/* Lower Area: Institutional Statement & Footer */}
         <m.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 space-y-6 pt-12"
+          transition={{ duration: 0.65, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 space-y-6"
         >
           <div className="space-y-2 max-w-sm">
             <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-white font-heading leading-snug">
@@ -183,26 +156,26 @@ function LoginFormContent() {
         <m.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-7"
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col items-center text-center max-w-[380px] sm:max-w-[420px] w-full space-y-6 sm:space-y-7"
         >
-          {/* Mobile Only: Compact School Logo & Branding Lockup */}
+          {/* Product Identity Lockup: Official School Logo, QCET E-Office, Full School Name */}
           <m.div
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
-            className="flex lg:hidden flex-col items-center space-y-2.5"
+            className="flex flex-col items-center space-y-2.5"
           >
             <Image
               src="/logo-qcet.png"
               alt="Logo Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
-              width={128}
-              height={128}
-              className="size-16 object-contain select-none"
+              width={144}
+              height={144}
+              className="size-16 sm:size-[72px] object-contain select-none"
               priority
             />
             <div className="space-y-0.5">
-              <h1 className="text-xl font-bold tracking-tight text-foreground font-heading">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
                 QCET E-Office
               </h1>
               <p className="text-xs text-muted-foreground font-medium">
@@ -213,12 +186,12 @@ function LoginFormContent() {
 
           {/* Login Heading */}
           <m.div
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="pt-1"
+            transition={{ duration: 0.45, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="pt-0.5"
           >
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-heading">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-heading">
               Đăng nhập
             </h2>
           </m.div>
@@ -265,7 +238,7 @@ function LoginFormContent() {
           <m.div
             initial={{ opacity: 0, scale: 0.98, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.5, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
             className="w-full flex justify-center pt-0.5"
           >
             <GoogleLoginButton
@@ -281,7 +254,7 @@ function LoginFormContent() {
           <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.45, delay: 0.42 }}
+            transition={{ duration: 0.45, delay: 0.38 }}
             className="pt-1 text-center text-xs text-muted-foreground"
           >
             <p className="text-xs">
