@@ -148,7 +148,7 @@ export function GoogleLoginButton({
             text: "continue_with",
             shape: "rectangular",
             logo_alignment: "left",
-            width: 320,
+            width: 340,
             locale: "vi",
           });
           if (isMounted) {
@@ -207,7 +207,7 @@ export function GoogleLoginButton({
           disabled={isLoading}
           onClick={handleStartOAuth}
           aria-label="Tiếp tục với Google (@cdktcnqn.edu.vn)"
-          className="flex h-12 w-[320px] max-w-full items-center justify-center gap-3 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 shadow-xs hover:bg-neutral-50 active:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-colors"
+          className="flex h-12 w-[340px] sm:w-[350px] max-w-full items-center justify-center gap-3 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 shadow-xs hover:bg-neutral-50 active:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-colors"
         >
           {isLoading ? (
             <>
