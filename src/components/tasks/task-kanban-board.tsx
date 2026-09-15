@@ -679,6 +679,19 @@ function KanbanCard({
                   setMenuOpen(false);
                   setStatusSubmenuOpen(false);
                   triggerRef.current?.focus();
+                } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const items = Array.from(
+                    menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') || []
+                  );
+                  if (items.length === 0) return;
+                  const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+                  const nextIndex =
+                    e.key === "ArrowDown"
+                      ? (currentIndex + 1) % items.length
+                      : (currentIndex - 1 + items.length) % items.length;
+                  items[nextIndex]?.focus();
                 }
               }}
               className="w-48 rounded-xl border border-border/80 bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100"
@@ -687,6 +700,7 @@ function KanbanCard({
               <button
                 type="button"
                 role="menuitem"
+                autoFocus
                 onClick={handleOpenDetail}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-foreground hover:bg-muted/60 transition-colors cursor-pointer min-h-[44px] sm:min-h-[36px] text-left"
               >
@@ -990,7 +1004,20 @@ export function TaskKanbanBoard({
 
       const targetItem = allFilteredItems.find((i) => i.id === taskId);
       const currentStatus = targetItem?.status ?? "NEW";
+      if (currentStatus === newStatus) return;
 
+      // 1. Immediately set pending & optimistic state in React state and ref
+      const inFlightState: KanbanTransitionState = {
+        ...latestState,
+        pendingTaskIds: { ...latestState.pendingTaskIds, [taskId]: true },
+        optimisticStatuses: { ...latestState.optimisticStatuses, [taskId]: newStatus },
+        taskErrors: { ...latestState.taskErrors, [taskId]: null },
+        lastAttemptedStatuses: { ...latestState.lastAttemptedStatuses },
+      };
+      transitionStateRef.current = inFlightState;
+      setTransitionState(inFlightState);
+
+      // 2. Perform transition
       const transitionResult = await executeKanbanStatusTransition(
         taskId,
         newStatus,
@@ -999,13 +1026,41 @@ export function TaskKanbanBoard({
         onStatusChange
       );
 
-      // Merge instead of overwrite to avoid losing concurrent pending states
-      setTransitionState((prev) => ({
-        pendingTaskIds: { ...prev.pendingTaskIds, ...transitionResult.state.pendingTaskIds },
-        optimisticStatuses: { ...prev.optimisticStatuses, ...transitionResult.state.optimisticStatuses },
-        taskErrors: { ...prev.taskErrors, ...transitionResult.state.taskErrors },
-        lastAttemptedStatuses: { ...prev.lastAttemptedStatuses, ...transitionResult.state.lastAttemptedStatuses },
-      }));
+      // 3. Update state with functional updater and proper key deletion
+      setTransitionState((prev) => {
+        const nextPending = { ...prev.pendingTaskIds };
+        delete nextPending[taskId];
+
+        const nextOptimistic = { ...prev.optimisticStatuses };
+        if (!transitionResult.ok) {
+          delete nextOptimistic[taskId];
+        } else {
+          nextOptimistic[taskId] = newStatus;
+        }
+
+        const nextErrors = { ...prev.taskErrors };
+        if (transitionResult.ok) {
+          delete nextErrors[taskId];
+        } else if (transitionResult.error) {
+          nextErrors[taskId] = transitionResult.error;
+        }
+
+        const nextLastAttempted = { ...prev.lastAttemptedStatuses };
+        if (transitionResult.ok) {
+          delete nextLastAttempted[taskId];
+        } else {
+          nextLastAttempted[taskId] = newStatus;
+        }
+
+        const next: KanbanTransitionState = {
+          pendingTaskIds: nextPending,
+          optimisticStatuses: nextOptimistic,
+          taskErrors: nextErrors,
+          lastAttemptedStatuses: nextLastAttempted,
+        };
+        transitionStateRef.current = next;
+        return next;
+      });
     },
     [allFilteredItems, onStatusChange]
   );

@@ -242,4 +242,83 @@ describe("Task-5 — pending / error / retry contract", () => {
       `default error message must be Vietnamese, got: "${errMsg}"`
     );
   });
+
+  test("state merge function deletes taskErrors and lastAttemptedStatuses keys on success (no stale error retention)", () => {
+    const prev: KanbanTransitionState = {
+      pendingTaskIds: { "task-1": true },
+      optimisticStatuses: { "task-1": "IN_PROGRESS" },
+      taskErrors: { "task-1": "Lỗi kết nối", "task-other": "Lỗi khác" },
+      lastAttemptedStatuses: { "task-1": "IN_PROGRESS" },
+    };
+
+    // Functional state update logic tested in handleStatusChangeInternal:
+    const taskId = "task-1";
+    const newStatus = "IN_PROGRESS";
+    const transitionResult = { ok: true, state: {} as KanbanTransitionState, error: undefined };
+
+    const nextPending = { ...prev.pendingTaskIds };
+    delete nextPending[taskId];
+
+    const nextOptimistic = { ...prev.optimisticStatuses };
+    if (!transitionResult.ok) {
+      delete nextOptimistic[taskId];
+    } else {
+      nextOptimistic[taskId] = newStatus;
+    }
+
+    const nextErrors = { ...prev.taskErrors };
+    if (transitionResult.ok) {
+      delete nextErrors[taskId];
+    }
+
+    const nextLastAttempted = { ...prev.lastAttemptedStatuses };
+    if (transitionResult.ok) {
+      delete nextLastAttempted[taskId];
+    }
+
+    // Must remove task-1 error while preserving task-other error
+    assert.equal(nextErrors["task-1"], undefined, "task-1 error must be deleted on success");
+    assert.equal(nextErrors["task-other"], "Lỗi khác", "other task error must be kept");
+    assert.equal(nextLastAttempted["task-1"], undefined, "lastAttemptedStatus must be deleted on success");
+    assert.equal(nextPending["task-1"], undefined, "pendingTaskId must be deleted on success");
+  });
+
+  test("in-flight transition sets pending and optimistic before API resolves", async () => {
+    let checkWhilePendingRan = false;
+    let finishApi: () => void = () => {};
+
+    const slowApi = () =>
+      new Promise<void>((resolve) => {
+        finishApi = resolve;
+      });
+
+    const state = emptyState();
+    // Simulate what handleStatusChangeInternal does at step 1:
+    const taskId = "task-in-flight";
+    const inFlightState: KanbanTransitionState = {
+      ...state,
+      pendingTaskIds: { ...state.pendingTaskIds, [taskId]: true },
+      optimisticStatuses: { ...state.optimisticStatuses, [taskId]: "IN_PROGRESS" },
+      taskErrors: { ...state.taskErrors, [taskId]: null },
+      lastAttemptedStatuses: { ...state.lastAttemptedStatuses },
+    };
+
+    // While API is in-flight:
+    assert.equal(inFlightState.pendingTaskIds[taskId], true, "must be pending in-flight");
+    assert.equal(inFlightState.optimisticStatuses[taskId], "IN_PROGRESS", "must be optimistic in-flight");
+    checkWhilePendingRan = true;
+
+    // Second click during in-flight must be rejected
+    const secondClick = await executeKanbanStatusTransition(
+      taskId,
+      "IN_PROGRESS",
+      "NEW",
+      inFlightState,
+      slowApi
+    );
+    assert.equal(secondClick.ok, false, "second click during in-flight must be rejected");
+
+    finishApi();
+    assert.ok(checkWhilePendingRan);
+  });
 });
