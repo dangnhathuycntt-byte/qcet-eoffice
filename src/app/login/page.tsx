@@ -10,7 +10,6 @@ import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import {
   resolveOAuthError,
   sanitizeRedirectUrl,
-  shouldShowLoginSkeleton,
 } from "@/lib/login-helpers";
 
 function LoginSkeleton() {
@@ -22,12 +21,12 @@ function LoginSkeleton() {
       aria-label="Đang tải trang đăng nhập"
       className="flex min-h-screen w-full bg-background outline-none"
     >
-      {/* Left Branding Panel Skeleton (~46% desktop) */}
+      {/* Left Branding Panel Skeleton (50% on lg 1024-1279px, 55% on xl >= 1280px) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[46%] xl:w-[45%] p-4 lg:p-5 xl:p-6 select-none"
+        className="hidden lg:flex lg:w-[50%] xl:w-[55%] p-5 xl:p-6 select-none"
       >
-        <div className="w-full h-full flex flex-col justify-end p-8 lg:p-10 xl:p-12 rounded-3xl bg-slate-900">
+        <div className="w-full h-full flex flex-col justify-end p-8 lg:p-10 xl:p-12 rounded-[24px] bg-slate-900">
           <div className="space-y-3">
             <div className="h-7 w-64 bg-slate-800 rounded animate-pulse" />
             <div className="h-4 w-48 bg-slate-800/60 rounded animate-pulse" />
@@ -36,9 +35,9 @@ function LoginSkeleton() {
         </div>
       </div>
 
-      {/* Right Login Area Skeleton (~54% on desktop, 100% on mobile) */}
-      <div className="w-full lg:w-[54%] xl:w-[55%] flex flex-col items-center justify-center p-6 sm:p-12">
-        <div className="flex flex-col items-center text-center max-w-[360px] w-full px-6 sm:px-0 -translate-y-6">
+      {/* Right Login Area Skeleton (50% on lg 1024-1279px, 45% on xl >= 1280px, 100% on mobile) */}
+      <div className="w-full lg:w-[50%] xl:w-[45%] flex flex-col items-center justify-center p-6 sm:p-12">
+        <div className="flex flex-col items-center text-center max-w-[400px] w-full px-6 sm:px-0">
           <div className="size-16 rounded-full bg-muted animate-pulse" />
           <div className="mt-3 space-y-1 flex flex-col items-center">
             <div className="h-4 w-28 bg-muted rounded-md animate-pulse" />
@@ -103,17 +102,17 @@ function LoginFormContent() {
       aria-label="Trang đăng nhập QCET E-Office"
       className="flex min-h-screen w-full bg-background selection:bg-primary/15 selection:text-primary outline-none"
     >
-      {/* Desktop Left: Institutional Campus Photography & Brand Statement (~46% desktop, hidden below 1024px / mobile) */}
+      {/* Desktop Left: Institutional Campus Photography Panel (50% on lg 1024-1279px, 55% on xl >= 1280px) */}
       <div
         aria-hidden="true"
-        className="hidden lg:flex lg:w-[46%] xl:w-[45%] p-4 lg:p-5 xl:p-6 select-none"
+        className="hidden lg:flex lg:w-[50%] xl:w-[55%] p-5 xl:p-6 select-none"
       >
-        <div className="relative w-full h-full flex flex-col justify-end p-8 lg:p-10 xl:p-12 overflow-hidden rounded-3xl bg-slate-950 text-white">
-          {/* Campus Photo Background with Framer Motion gentle zoom entrance - Closer focus on school architecture */}
+        <div className="relative w-full h-full flex flex-col justify-end p-8 lg:p-10 xl:p-12 overflow-hidden rounded-[24px] bg-slate-950 text-white shadow-sm">
+          {/* Campus Photo Background - Cropped to focus on central plaza and main academic buildings */}
           <m.div
-            initial={{ scale: 1.08, opacity: 0 }}
-            animate={{ scale: 1.03, opacity: 1 }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ scale: 1.05, opacity: 0 }}
+            animate={{ scale: 1.01, opacity: 1 }}
+            transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
             className="absolute inset-0 size-full"
           >
             <Image
@@ -121,50 +120,50 @@ function LoginFormContent() {
               alt="Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn"
               fill
               priority
-              sizes="(min-width: 1024px) 46vw, 100vw"
-              className="object-cover object-[75%_65%]"
+              sizes="(min-width: 1280px) 55vw, (min-width: 1024px) 50vw, 100vw"
+              className="object-cover object-[68%_56%]"
             />
           </m.div>
 
-          {/* Brighter, clearer institutional gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-slate-900/25 z-1" />
+          {/* Clean gradient overlay: transparent at top/middle, subtly darker only at lower text area */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/15 to-transparent z-1" />
 
           {/* Lower Area: Institutional Statement & Footer */}
           <m.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10 space-y-6"
+            transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 space-y-5"
           >
-            <div className="space-y-2 max-w-sm">
+            <div className="space-y-1.5 max-w-md">
               <h2 className="text-xl xl:text-2xl font-bold tracking-tight text-white font-heading leading-snug">
                 Không gian làm việc số của nhà trường
               </h2>
-              <p className="text-xs xl:text-sm text-white/85 font-medium">
+              <p className="text-xs xl:text-sm text-white/90 font-medium">
                 Nhiệm vụ · Văn bản · Lịch công tác
               </p>
             </div>
 
-            <div className="text-[11px] text-white/60 font-medium border-t border-white/10 pt-4">
+            <div className="text-[11px] text-white/65 font-medium border-t border-white/10 pt-3.5">
               © 2026 Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn
             </div>
           </m.div>
         </div>
       </div>
 
-      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (~54% desktop, 100% mobile) */}
-      <div className="w-full lg:w-[54%] xl:w-[55%] flex flex-col items-center justify-center p-6 sm:p-12">
+      {/* Desktop Right / Mobile Centered: Clean Google-only Login Area (50% on lg 1024-1279px, 45% on xl >= 1280px, 100% on mobile) */}
+      <div className="w-full lg:w-[50%] xl:w-[45%] flex flex-col items-center justify-center p-6 sm:p-10 lg:p-12">
         <m.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col items-center text-center max-w-[360px] w-full px-6 sm:px-0 -translate-y-6"
+          transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col items-center text-center max-w-[400px] w-full px-4 sm:px-0"
         >
-          {/* 1. Logo gốc 64px */}
+          {/* 1. Logo trường gốc 64px */}
           <m.div
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.45, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
           >
             <Image
               src="/logo-qcet.png"
@@ -178,9 +177,9 @@ function LoginFormContent() {
 
           {/* 2. Tên trường hai dòng (cách logo 12px) */}
           <m.div
-            initial={{ opacity: 0, y: 6 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="mt-3"
           >
             <p className="text-[13.5px] leading-snug text-muted-foreground font-medium">
@@ -188,23 +187,23 @@ function LoginFormContent() {
             </p>
           </m.div>
 
-          {/* 3. Tiêu đề “Đăng nhập QCET E-Office”, 28px semibold (cách tên trường 28px) */}
+          {/* 3. Tiêu đề “Đăng nhập QCET E-Office”, 28px semibold (cách tên trường 24px) */}
           <m.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-7"
+            transition={{ duration: 0.45, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-6"
           >
-            <h1 className="text-[28px] font-semibold tracking-tight text-foreground font-heading leading-tight">
+            <h1 className="text-[26px] xl:text-[28px] font-semibold tracking-tight text-foreground font-heading leading-tight">
               Đăng nhập QCET E-Office
             </h1>
           </m.div>
 
           {/* 4. Mô tả 14px: “Sử dụng tài khoản Google được cấp quyền.” (cách tiêu đề 8px) */}
           <m.div
-            initial={{ opacity: 0, y: 6 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.4, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="mt-2"
           >
             <p className="text-[14px] leading-relaxed text-muted-foreground">
@@ -217,7 +216,7 @@ function LoginFormContent() {
             <m.div
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.25 }}
               role="alert"
               className="mt-5 flex items-start gap-2.5 w-full rounded-lg border border-red-200 bg-red-50/90 p-3 text-xs text-red-900 text-left"
             >
@@ -241,7 +240,7 @@ function LoginFormContent() {
             <m.div
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.25 }}
               role="alert"
               className="mt-5 flex items-start gap-2.5 w-full rounded-lg border border-red-200 bg-red-50/90 p-3 text-xs text-red-900 text-left"
             >
@@ -250,7 +249,7 @@ function LoginFormContent() {
             </m.div>
           )}
 
-          {/* 5. Nút Google rộng 100% (cách mô tả 24px) */}
+          {/* 5. Nút Google rộng 100% max 360px trong form 400px (cách mô tả 24px) */}
           <div className="w-full flex justify-center mt-6">
             <GoogleLoginButton
               returnTo={targetUrl}
