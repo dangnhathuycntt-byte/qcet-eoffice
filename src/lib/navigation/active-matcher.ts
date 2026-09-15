@@ -54,24 +54,13 @@ export function isRouteActive(
   const zone = searchParams?.get("zone")?.toLowerCase();
   const view = searchParams?.get("view")?.toLowerCase();
 
-  // 1. Phân định Bàn làm việc ("/" or "/dashboard")
-  if (targetBase === "/" || targetBase === "/dashboard") {
-    if (pathname === "/dashboard") return true;
-    if (pathname === "/") {
-      if (zone && ["tasks", "calendar", "documents", "org"].includes(zone)) {
-        return false;
-      }
-      if (view && ["calendar", "month"].includes(view)) {
-        return false;
-      }
-      return true;
-    }
-    return false;
+  // 1. Quản lý nhiệm vụ (/tasks là workspace chính, "/" redirect về /tasks)
+  if (targetBase === "/tasks") {
+    if (pathname === "/tasks" || pathname === "/") return true;
   }
 
   // 2. Khi đang ở "/" kèm query zone hoặc view tương ứng
   if (pathname === "/") {
-    if (targetBase === "/tasks" && zone === "tasks") return true;
     if (targetBase === "/calendar" && (zone === "calendar" || view === "calendar" || view === "month")) return true;
     if (targetBase === "/documents" && zone === "documents") return true;
     if (targetBase === "/org" && zone === "org") return true;

@@ -19,31 +19,18 @@ export interface CanonicalRouteConfig {
 
 export const CANONICAL_ROUTES: readonly CanonicalRouteConfig[] = [
   {
-    id: "desk",
-    href: "/",
-    label: "Bàn làm việc",
-    shortLabel: "Tổng quan",
-    section: "work",
-    iconName: "LayoutDashboard",
-    zone: "dashboard",
-    aliases: ["/dashboard", "/workbench"],
-    mobilePlacement: "bottom-bar",
-    mobileOrder: 1,
-    order: 1,
-  },
-  {
     id: "tasks",
     href: "/tasks",
-    label: "Quản lý nhiệm vụ",
+    label: "Nhiệm vụ",
     shortLabel: "Nhiệm vụ",
     section: "work",
     iconName: "CheckSquare",
     zone: "tasks",
     badgeKey: "taskAttention",
-    aliases: ["/unit-tasks", "/?zone=tasks"],
+    aliases: ["/unit-tasks", "/?zone=tasks", "/dashboard", "/workbench"],
     mobilePlacement: "bottom-bar",
-    mobileOrder: 2,
-    order: 2,
+    mobileOrder: 1,
+    order: 1,
   },
   {
     id: "calendar",
@@ -155,7 +142,7 @@ function pickNavItem(
 }
 
 export const CANONICAL_NAV_ITEMS = {
-  WORKBENCH: pickNavItem("desk"),
+  WORKBENCH: pickNavItem("tasks"),
   TASKS: pickNavItem("tasks"),
   CALENDAR: pickNavItem("calendar"),
   NOTIFICATIONS: pickNavItem("notifications"),

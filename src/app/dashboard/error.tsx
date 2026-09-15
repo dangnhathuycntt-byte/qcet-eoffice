@@ -54,9 +54,9 @@ export default function DashboardError({
             asChild
             className="gap-1.5 text-xs font-medium cursor-pointer"
           >
-            <Link href="/">
+            <Link href="/tasks">
               <ArrowLeft className="size-3.5" strokeWidth={1.5} />
-              <span>Bàn làm việc</span>
+              <span>Nhiệm vụ</span>
             </Link>
           </Button>
         </div>

@@ -430,20 +430,6 @@ export function CommandSearchModal({ className }: CommandSearchModalProps = {}) 
         },
       },
       {
-        id: "nav-dashboard",
-        title: canonicalNavLabel("/", "Bàn làm việc"),
-        description: "Bảng điều hành số liệu, chỉ số KPI và tiến độ trọng tâm",
-        category: "navigation",
-        icon: LayoutDashboard,
-        shortcut: "D",
-        keywords: ["ban lam viec", "tong quan", "dashboard", "kpi", "tien do"],
-        action: (newTab) => {
-          handleClose();
-          if (newTab) window.open("/", "_blank");
-          else router.push("/");
-        },
-      },
-      {
         id: "nav-tasks",
         title: canonicalNavLabel("/tasks", "Nhiệm vụ"),
         description: "Xem và quản lý bảng nhiệm vụ, tiến độ phân công DACUM",

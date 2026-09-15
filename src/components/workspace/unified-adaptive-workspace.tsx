@@ -686,7 +686,9 @@ export function UnifiedAdaptiveWorkspace({
       role === "MANAGER" ||
       role === "TRUONG_PHONG" ||
       role === "TRUONG_DON_VI" ||
-      role === "TRUONG_KHOA"
+      role === "TRUONG_KHOA" ||
+      Boolean(user?.department) ||
+      Boolean(user?.departmentCode)
     ) {
       return "unit";
     }
@@ -2151,19 +2153,6 @@ export function UnifiedAdaptiveWorkspace({
           data-slot="task-workspace-canvas"
           className="w-full space-y-3 min-w-0"
         >
-          {/* Executive Dashboard: inline sections for BGH at school scope */}
-          {activeScope === "school" && isExecutive && viewMode === "table" && !initialLoading && !isLoading && !isInternalLoading && (
-            <ExecutiveDashboardSections
-              metrics={metrics}
-              actionQueue={actionQueue}
-              displayedTasks={displayedTasks}
-              onSelectTask={handleSelectTask}
-              onReview={onReview ? (task) => setReviewingTask(task) : undefined}
-              onViewAllApprovals={() => handleFilterCanvasFromWorkbox("approvals")}
-              onViewAllOverdue={() => handleFilterCanvasFromWorkbox("overdue")}
-            />
-          )}
-
           <div
             data-slot="full-width-task-canvas"
             className="w-full space-y-3 min-w-0"

@@ -543,15 +543,11 @@ export function UnifiedTaskToolbar({
   // 1. Authorized Scope Options (Semantic data scopes: Toàn trường | [Phòng/Khoa trực thuộc] | Cá nhân)
   const canViewSchoolScope = Boolean(isExecutive);
   const canViewUnitScope = Boolean(
-    isExecutive ||
-    isManager ||
-    (user && (
-      userRole === "MANAGER" ||
-      (user.role as string)?.toUpperCase() === "MANAGER" ||
-      (user.role as string)?.toUpperCase() === "TRUONG_PHONG" ||
-      (user.role as string)?.toUpperCase() === "TRUONG_KHOA" ||
-      (user.role as string)?.toUpperCase() === "TRUONG_DON_VI"
-    ))
+    !isUnassigned &&
+    (isExecutive ||
+      isManager ||
+      Boolean((user as any)?.departmentId) ||
+      (Boolean(user?.departmentCode) && user?.departmentCode !== "QCET" && user?.departmentCode !== "UNASSIGNED"))
   );
 
   const unitLabel = React.useMemo(() => {
@@ -559,8 +555,9 @@ export function UnifiedTaskToolbar({
     const dept = user?.department || (user as any)?.departmentName;
     if (dept) return dept;
     if (user?.departmentCode) return user.departmentCode;
+    if (isExecutive) return "Ban Giám hiệu";
     return "Đơn vị";
-  }, [isUnassigned, user?.department, (user as any)?.departmentName, user?.departmentCode]);
+  }, [isUnassigned, user?.department, (user as any)?.departmentName, user?.departmentCode, isExecutive]);
 
   const unitShortLabel = React.useMemo(() => {
     if (isUnassigned) return "Chưa chọn đ/v";
@@ -568,8 +565,9 @@ export function UnifiedTaskToolbar({
     if (dept) {
       return dept.length > 16 ? dept.slice(0, 14) + "..." : dept;
     }
+    if (isExecutive) return "Ban Giám hiệu";
     return "Đơn vị";
-  }, [isUnassigned, user?.department, (user as any)?.departmentName]);
+  }, [isUnassigned, user?.department, (user as any)?.departmentName, isExecutive]);
 
   const scopeOptions: Array<{
     id: WorkspaceScope;

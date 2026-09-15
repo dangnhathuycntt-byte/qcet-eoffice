@@ -266,7 +266,7 @@ export default function PortalPage() {
           <div className="lg:col-span-5 flex flex-col gap-6 justify-between">
             {/* Top Right Card: Quản lý Công việc */}
             <Link
-              href="/"
+              href="/tasks"
               aria-label="Mở bảng Quản Lý Công Việc 2 Cấp"
               className="relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-6 md:p-7 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
             >

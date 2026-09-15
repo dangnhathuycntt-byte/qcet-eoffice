@@ -142,14 +142,6 @@ export function MobileNav({ pathname: initialPathname }: { pathname?: string } =
 
   const tabs = [
     {
-      id: "overview",
-      // Tổng quan / Bàn làm việc (Executive Workbench)
-      label: "Bàn làm việc",
-      href: "/",
-      icon: LayoutDashboard,
-      active: isOverviewActive,
-    },
-    {
       id: "tasks",
       label: "Nhiệm vụ",
       href: "/tasks",

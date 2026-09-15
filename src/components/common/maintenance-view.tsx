@@ -7,6 +7,7 @@ import {
   Wrench,
   ArrowLeft,
   LayoutDashboard,
+  CheckSquare,
   FileText,
   Clock,
   ShieldAlert,
@@ -61,11 +62,11 @@ export function MaintenanceView({
       {/* Breadcrumb Navigation */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Link
-          href="/"
+          href="/tasks"
           className="hover:text-foreground transition-colors flex items-center gap-1"
         >
-          <LayoutDashboard className="size-3.5" />
-          <span>Trang chủ</span>
+          <CheckSquare className="size-3.5" />
+          <span>Nhiệm vụ</span>
         </Link>
         <span>/</span>
         <span className="text-foreground font-medium truncate">
@@ -175,9 +176,9 @@ export function MaintenanceView({
             asChild
             className="text-xs gap-1.5"
           >
-            <Link href="/">
-              <LayoutDashboard className="size-3.5" />
-              <span>Về Trang chủ</span>
+            <Link href="/tasks">
+              <CheckSquare className="size-3.5" />
+              <span>Về Không gian Nhiệm vụ</span>
             </Link>
           </Button>
 
