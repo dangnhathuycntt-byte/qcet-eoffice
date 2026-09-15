@@ -546,7 +546,7 @@ export function UnifiedTaskToolbar({
     }
   };
 
-  // 1. Authorized Scope Options (Semantic data scopes: Toàn trường | [Phòng/Khoa trực thuộc] | Cá nhân)
+  // 1. Authorized Scope Options (Semantic data scopes: Cá nhân → Đơn vị → Toàn trường)
   const canViewSchoolScope = Boolean(isExecutive);
   const canViewUnitScope = Boolean(
     !isUnassigned &&
@@ -555,25 +555,6 @@ export function UnifiedTaskToolbar({
       Boolean((user as any)?.departmentId) ||
       (Boolean(user?.departmentCode) && user?.departmentCode !== "QCET" && user?.departmentCode !== "UNASSIGNED"))
   );
-
-  const unitLabel = React.useMemo(() => {
-    if (isUnassigned) return "Chưa chọn đ/v";
-    const dept = user?.department || (user as any)?.departmentName;
-    if (dept) return dept;
-    if (user?.departmentCode) return user.departmentCode;
-    if (isExecutive) return "Ban Giám hiệu";
-    return "Đơn vị";
-  }, [isUnassigned, user?.department, (user as any)?.departmentName, user?.departmentCode, isExecutive]);
-
-  const unitShortLabel = React.useMemo(() => {
-    if (isUnassigned) return "Chưa chọn đ/v";
-    const dept = user?.department || (user as any)?.departmentName;
-    if (dept) {
-      return dept.length > 16 ? dept.slice(0, 14) + "..." : dept;
-    }
-    if (isExecutive) return "Ban Giám hiệu";
-    return "Đơn vị";
-  }, [isUnassigned, user?.department, (user as any)?.departmentName, isExecutive]);
 
   const scopeOptions: Array<{
     id: WorkspaceScope;
@@ -584,28 +565,28 @@ export function UnifiedTaskToolbar({
     isAuthorized: boolean;
   }> = [
     {
-      id: "school",
-      legacyId: "SCHOOL_TASKS",
-      label: "Toàn trường",
-      shortLabel: "Trường",
-      icon: School,
-      isAuthorized: canViewSchoolScope,
-    },
-    {
-      id: "unit",
-      legacyId: "UNIT_TASKS",
-      label: unitLabel,
-      shortLabel: unitShortLabel,
-      icon: Building2,
-      isAuthorized: canViewUnitScope,
-    },
-    {
       id: "my",
       legacyId: "MY_TASKS",
       label: "Cá nhân",
       shortLabel: "Cá nhân",
       icon: User,
       isAuthorized: true,
+    },
+    {
+      id: "unit",
+      legacyId: "UNIT_TASKS",
+      label: "Đơn vị",
+      shortLabel: "Đơn vị",
+      icon: Building2,
+      isAuthorized: canViewUnitScope,
+    },
+    {
+      id: "school",
+      legacyId: "SCHOOL_TASKS",
+      label: "Toàn trường",
+      shortLabel: "Trường",
+      icon: School,
+      isAuthorized: canViewSchoolScope,
     },
   ];
 
