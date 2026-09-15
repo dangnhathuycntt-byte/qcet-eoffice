@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   SidebarProvider,
@@ -172,8 +172,10 @@ function MobileAppInstallModalContainer() {
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebarLayout();
   const pathname = usePathname();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
+  const isRedirectingRef = React.useRef(false);
 
   React.useEffect(() => {
     const handleOpen = () => setIsMobileMenuOpen(true);
@@ -187,22 +189,23 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     (typeof window !== "undefined" &&
       (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal")));
 
-  // Khi mất session hoặc chưa đăng nhập trên các trang bảo vệ: lập tức văng ra /login
+  // Khi mất session hoặc chưa đăng nhập trên các trang bảo vệ: điều hướng an toàn về /login
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal")) {
       return;
     }
-    if (!isLoading && !isAuthenticated && !user && !isPublicRoute) {
+    if (!isLoading && !isAuthenticated && !user && !isPublicRoute && !isRedirectingRef.current) {
+      isRedirectingRef.current = true;
       const fullPath = `${window.location.pathname}${window.location.search}`;
       const safeReturnTo = sanitizeRedirectUrl(fullPath);
       const redirectUrl =
         safeReturnTo && safeReturnTo !== "/tasks" && safeReturnTo !== "/"
           ? `/login?returnTo=${encodeURIComponent(safeReturnTo)}`
           : "/login";
-      window.location.replace(redirectUrl);
+      router.replace(redirectUrl);
     }
-  }, [isLoading, isAuthenticated, user, isPublicRoute]);
+  }, [isLoading, isAuthenticated, user, isPublicRoute, router]);
 
   if (isPublicRoute) {
     return <>{children}</>;

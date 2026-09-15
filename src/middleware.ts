@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
+  verifySessionTokenEdge,
   SESSION_COOKIE_NAME,
   SECURE_SESSION_COOKIE_NAME,
   LEGACY_SESSION_COOKIE_NAME,
@@ -21,7 +22,7 @@ import { sanitizeRedirectUrl } from '@/lib/login-helpers';
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // 1. Check preliminary authentication via session cookies
+  // 1. Extract and cryptographically verify session token via Edge Web Crypto
   const token =
     request.cookies.get(SESSION_COOKIE_NAME)?.value ||
     request.cookies.get(SECURE_SESSION_COOKIE_NAME)?.value ||
@@ -29,7 +30,8 @@ export async function middleware(request: NextRequest) {
     request.cookies.get('next-auth.session-token')?.value ||
     request.cookies.get('__Secure-next-auth.session-token')?.value;
 
-  const isAuthenticated = Boolean(token && token.trim().length > 0);
+  const session = token ? await verifySessionTokenEdge(token) : null;
+  const isAuthenticated = Boolean(session && session.id && session.email);
 
   // 2. Intercept legacy zone parameters (?zone=...)
   const zone = searchParams.get('zone');

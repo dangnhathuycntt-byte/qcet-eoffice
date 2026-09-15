@@ -26,8 +26,10 @@ export async function POST(req: NextRequest | Request): Promise<NextResponse> {
     }
     const session = getSessionFromRequest(req as any);
     if (session?.id) {
-      const sessionId = (session as any).sessionId || `session_${session.id}`;
+      const sessionId = (session as any).sessionId || (session as any).jti || `session_${session.id}`;
       await revokeSession(sessionId);
+      await revokeSession(session.id);
+      await revokeSession(`session_${session.id}`);
     }
   } catch {
     // Gracefully continue on error

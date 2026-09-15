@@ -67,12 +67,14 @@ function LoginFormContent() {
     );
   }, [searchParams]);
 
-  // Auto-redirect if already authenticated
+  // Auto-redirect if already authenticated (guarded to prevent duplicate triggers)
+  const isRedirectingRef = React.useRef(false);
   React.useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
-      window.location.href = targetUrl;
+    if (!isLoading && isAuthenticated && user && !isRedirectingRef.current) {
+      isRedirectingRef.current = true;
+      router.replace(targetUrl);
     }
-  }, [isLoading, isAuthenticated, user, targetUrl]);
+  }, [isLoading, isAuthenticated, user, targetUrl, router]);
 
   // OAuth Error handling from URL query parameters
   const errorParam = searchParams.get("error");
