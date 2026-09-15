@@ -20,7 +20,7 @@ export interface TasksPageClientProps {
 
 export function TasksPageClient({ initialTasks, initialScope }: TasksPageClientProps) {
   const { user } = useAuth();
-  const { queryState, setScope } = useWorkspaceQuery();
+  const { queryState, setScope, setView } = useWorkspaceQuery();
 
   const isExec = user ? isUserExecutive(user as any) : false;
   const isHead = user ? isUserUnitHead(user as any) : false;
@@ -42,10 +42,16 @@ export function TasksPageClient({ initialTasks, initialScope }: TasksPageClientP
     setScope(target);
   };
 
+  const handleViewChange = (v: ViewMode) => {
+    setView(v, { shallow: true, replace: true });
+  };
+
   return (
     <TaskManagementWorkspace
       scope={authorizedScope}
       onScopeChange={onScopeChange}
+      viewMode={queryState.view === "kanban" ? "kanban" : "table"}
+      onViewModeChange={handleViewChange}
       initialTasks={initialTasks}
     />
   );

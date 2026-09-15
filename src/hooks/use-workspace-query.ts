@@ -33,6 +33,8 @@ export interface SetScopeOptions extends NavigationOptions {
 
 export interface ResetFiltersOptions extends NavigationOptions {
   preserveScope?: boolean;
+  preservePeriod?: boolean;
+  preserveView?: boolean;
 }
 
 export interface UseWorkspaceQueryReturn {
@@ -315,7 +317,7 @@ export function useWorkspaceQuery(
           ...queryState,
           view,
         },
-        navOptions
+        { shallow: true, replace: true, ...navOptions }
       );
     },
     [queryState, dispatchUpdate]
@@ -354,17 +356,21 @@ export function useWorkspaceQuery(
   const resetFilters = React.useCallback(
     (navOptions?: ResetFiltersOptions) => {
       const preserveScope = navOptions?.preserveScope ?? false;
+      const preservePeriod = navOptions?.preservePeriod ?? false;
+      const preserveView = navOptions?.preserveView ?? false;
 
       const resetState: Partial<WorkspaceFilterState> = {
         scope: preserveScope ? queryState.scope : (defaultScope ?? "school"),
         dept: preserveScope ? queryState.dept : undefined,
         unit: preserveScope ? queryState.unit : undefined,
         unitId: preserveScope ? queryState.unitId : undefined,
-        month: "ALL",
-        date: undefined,
+        month: preservePeriod ? queryState.month : "ALL",
+        date: preservePeriod ? queryState.date : undefined,
         status: "ALL",
         attention: undefined,
-        view: defaultView ?? (isCalendar ? "month" : "table"),
+        view: preserveView
+          ? (queryState.view || defaultView || (isCalendar ? "month" : "table"))
+          : (defaultView ?? (isCalendar ? "month" : "table")),
         q: undefined,
         query: undefined,
         taskId: undefined,

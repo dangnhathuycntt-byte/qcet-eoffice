@@ -16,7 +16,8 @@ function TasksZoneComponent() {
     isStaffExpanded &&
     (viewMode === "calendar" ||
       viewMode === "department" ||
-      viewMode === "executive");
+      viewMode === "executive" ||
+      viewMode === "kanban");
 
   return (
     <div className="space-y-6" data-slot="zone-tasks">

@@ -728,14 +728,34 @@ export function UnifiedAdaptiveWorkspace({
   );
 
   // View mode management (Table vs Kanban)
-  // Precedence: explicit URL ?view= > saved view layout > persisted preference > default "table"
+  // Precedence: explicit URL ?view= > persisted preference > default "table"
   const [internalViewMode, setInternalViewMode] = React.useState<ViewMode>(() => {
     if (controlledViewMode) return controlledViewMode;
+    if (typeof window !== "undefined") {
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        const urlView = sp.get("view");
+        if (urlView === "table" || urlView === "kanban") {
+          return urlView;
+        }
+      } catch {
+        // ignore
+      }
+    }
     if (
       workspaceQuery?.queryState.view &&
       (workspaceQuery.queryState.view === "table" || workspaceQuery.queryState.view === "kanban")
     ) {
-      return workspaceQuery.queryState.view;
+      if (typeof window !== "undefined") {
+        try {
+          const sp = new URLSearchParams(window.location.search);
+          if (sp.has("view")) {
+            return workspaceQuery.queryState.view;
+          }
+        } catch {
+          // ignore
+        }
+      }
     }
     if (typeof window !== "undefined") {
       try {
@@ -762,7 +782,7 @@ export function UnifiedAdaptiveWorkspace({
     (mode: ViewMode) => {
       setInternalViewMode(mode);
       onViewModeChange?.(mode);
-      workspaceQuery?.setView(mode, { replace: true });
+      workspaceQuery?.setView(mode, { replace: true, shallow: true });
       if (typeof window !== "undefined") {
         try {
           window.localStorage.setItem("qcet_task_view_mode", mode);
@@ -881,13 +901,18 @@ export function UnifiedAdaptiveWorkspace({
     if (queryState.month !== undefined) {
       setCurrentMonth(queryState.month);
     }
-    // View sync: only on first mount — after that, handleViewModeChange owns
-    // the state and writes back to URL. Continuous two-way sync causes Kanban
-    // to reset to "table" whenever any other queryState field changes.
-    if (!viewUrlSyncedRef.current) {
-      viewUrlSyncedRef.current = true;
-      if (queryState.view && (queryState.view === "table" || queryState.view === "kanban")) {
-        setInternalViewMode(queryState.view);
+    // View sync: only sync from URL if URL explicitly contains the view parameter
+    // (avoid resetting to "table" when URL has no view parameter or when queryState defaults)
+    if (queryState.view && (queryState.view === "table" || queryState.view === "kanban")) {
+      if (typeof window !== "undefined") {
+        try {
+          const sp = new URLSearchParams(window.location.search);
+          if (sp.has("view")) {
+            setInternalViewMode(queryState.view);
+          }
+        } catch {
+          // ignore
+        }
       }
     }
   }, [
@@ -1145,7 +1170,47 @@ export function UnifiedAdaptiveWorkspace({
       navOptions?: { replace?: boolean }
     ) => {
       setIsActionQueueOpen(false);
-      const shouldReplace = navOptions?.replace ?? false;
+
+      // Determine whether we are already in this filter state to avoid adding duplicate history entries
+      let isSameState = false;
+      if (
+        filterType === "approvals" ||
+        filterType === "waiting_approval" ||
+        filterType === "review"
+      ) {
+        isSameState =
+          currentStatus === "waiting_approval" &&
+          (currentWorkbox === "my_pending_approval" ||
+            workspaceQuery?.queryState.attention === "requires_my_approval");
+      } else if (
+        filterType === "submissions" ||
+        filterType === "pending_submission"
+      ) {
+        isSameState =
+          currentStatus === "pending_submission" &&
+          (currentWorkbox === "my_pending_submission" ||
+            workspaceQuery?.queryState.attention === "requires_my_action");
+      } else if (filterType === "overdue") {
+        isSameState =
+          Boolean(currentOverdue) &&
+          (currentStatus === "overdue" ||
+            workspaceQuery?.queryState.attention === "overdue");
+      } else if (filterType === "all" || filterType === "ALL") {
+        isSameState =
+          (!currentStatus || currentStatus === "ALL" || currentStatus === "all") &&
+          (!workspaceQuery?.queryState.attention ||
+            workspaceQuery?.queryState.attention === "ALL") &&
+          !currentOverdue;
+      } else if (filterType === "my") {
+        isSameState = activeScope === "my";
+      } else if (filterType === "today") {
+        isSameState = currentStatus === "today";
+      } else {
+        isSameState = currentStatus === filterType;
+      }
+
+      // Intentional drill-down creates a new history entry (push); selecting the same state replaces
+      const shouldReplace = navOptions?.replace ?? (isSameState ? true : false);
 
       if (
         filterType === "approvals" ||
@@ -1257,6 +1322,10 @@ export function UnifiedAdaptiveWorkspace({
       }
     },
     [
+      currentStatus,
+      currentWorkbox,
+      currentOverdue,
+      activeScope,
       onStatusFilterChange,
       onWorkboxChange,
       onOverdueFilterChange,
@@ -1299,7 +1368,8 @@ export function UnifiedAdaptiveWorkspace({
     setInternalWorkbox("ALL");
     setCurrentCategory("ALL");
     setCurrentPriority("ALL");
-    setCurrentMonth("ALL");
+    // Giữ nguyên currentMonth — kỳ công tác có điều khiển đổi kỳ riêng
+    // "Xóa bộ lọc" không âm thầm chuyển sang dữ liệu cả năm hoặc mở rộng scope
     if (onResetFilters) onResetFilters();
     if (onDepartmentChange) onDepartmentChange("ALL");
     if (onStatusFilterChange) onStatusFilterChange(undefined);
@@ -1307,7 +1377,7 @@ export function UnifiedAdaptiveWorkspace({
     if (onOverdueFilterChange) onOverdueFilterChange(false);
     if (onWorkboxChange) onWorkboxChange("ALL");
     if (onAction) onAction("RESET_FILTERS");
-    workspaceQuery?.resetFilters({ replace: true, preserveScope: true });
+    workspaceQuery?.resetFilters({ replace: true, preserveScope: true, preservePeriod: true, preserveView: true });
   }, [
     onResetFilters,
     onDepartmentChange,
@@ -1467,8 +1537,6 @@ export function UnifiedAdaptiveWorkspace({
   // Mount hydration only: URL-sync of viewId on select is deferred to the
   // query layer (use-workspace-query does not round-trip viewId).
   const viewIdHydratedRef = React.useRef(false);
-  // Guards one-time URL→state view sync (see effect below)
-  const viewUrlSyncedRef = React.useRef(false);
   React.useEffect(() => {
     if (viewIdHydratedRef.current) return;
     if (activeViewId) {
@@ -1733,7 +1801,7 @@ export function UnifiedAdaptiveWorkspace({
           canCreateTask={true}
           createButtonLabel="+ Giao việc"
           activeTab={effectiveActiveTab}
-          onTabChange={(tab) => handleFilterCanvasFromWorkbox(tab, { replace: true })}
+          onTabChange={(tab) => handleFilterCanvasFromWorkbox(tab)}
           tabCounts={tabCounts}
           selectedDepartment={currentDept || "ALL"}
           onDepartmentChange={(dept) => {
@@ -1896,6 +1964,7 @@ export function UnifiedAdaptiveWorkspace({
                       status: currentStatus !== "ALL" ? currentStatus : undefined,
                       department: currentDept !== "ALL" ? currentDept : undefined,
                       category: currentCategory !== "ALL" ? currentCategory : undefined,
+                      priority: currentPriority !== "ALL" ? currentPriority : undefined,
                       academicMonth: currentMonth,
                       onResetFilters: handleResetFilters,
                       onAddTask: () =>
@@ -2072,6 +2141,7 @@ export function UnifiedAdaptiveWorkspace({
                     status: currentStatus !== "ALL" ? currentStatus : undefined,
                     department: currentDept !== "ALL" ? currentDept : undefined,
                     category: currentCategory !== "ALL" ? currentCategory : undefined,
+                    priority: currentPriority !== "ALL" ? currentPriority : undefined,
                     academicMonth: currentMonth,
                     onResetFilters: handleResetFilters,
                     onAddTask: () =>
