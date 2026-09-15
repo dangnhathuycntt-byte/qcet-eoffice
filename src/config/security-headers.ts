@@ -48,11 +48,12 @@ export function buildContentSecurityPolicy(options: CSPOptions = {}): string {
     ...(options.extraScriptSrc || []),
   ];
 
-  // Style sources: 'self', inline styles (Tailwind, Next.js), Google Fonts
+  // Style sources: 'self', inline styles (Tailwind, Next.js), Google Fonts, Google Identity Services
   const styleSources = [
     "'self'",
     "'unsafe-inline'",
     "https://fonts.googleapis.com",
+    "https://accounts.google.com",
     ...(options.extraStyleSrc || []),
   ];
 
@@ -82,6 +83,12 @@ export function buildContentSecurityPolicy(options: CSPOptions = {}): string {
     ...(options.extraConnectSrc || []),
   ];
 
+  // Frame sources: 'self', Google Identity Services FedCM / OAuth iframes
+  const frameSources = [
+    "'self'",
+    "https://accounts.google.com",
+  ];
+
   const directives: string[] = [
     "default-src 'self'",
     "base-uri 'self'",
@@ -90,6 +97,7 @@ export function buildContentSecurityPolicy(options: CSPOptions = {}): string {
     "form-action 'self'",
     `script-src ${Array.from(new Set(scriptSources)).join(" ")}`,
     `style-src ${Array.from(new Set(styleSources)).join(" ")}`,
+    `frame-src ${Array.from(new Set(frameSources)).join(" ")}`,
     `img-src ${Array.from(new Set(imgSources)).join(" ")}`,
     `font-src ${Array.from(new Set(fontSources)).join(" ")}`,
     `connect-src ${Array.from(new Set(connectSources)).join(" ")}`,

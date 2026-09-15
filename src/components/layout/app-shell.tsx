@@ -181,13 +181,20 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("qcet:open-mobile-menu", handleOpen);
   }, []);
 
-  const isPublicRoute = pathname === "/login" || pathname === "/portal";
+  const isPublicRoute =
+    pathname === "/login" ||
+    pathname === "/portal" ||
+    (typeof window !== "undefined" &&
+      (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal")));
 
   // Khi mất session hoặc chưa đăng nhập trên các trang bảo vệ: lập tức văng ra /login
   React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal")) {
+      return;
+    }
     if (!isLoading && !isAuthenticated && !user && !isPublicRoute) {
-      const search = typeof window !== "undefined" ? window.location.search : "";
-      const fullPath = `${pathname}${search}`;
+      const fullPath = `${window.location.pathname}${window.location.search}`;
       const safeReturnTo = sanitizeRedirectUrl(fullPath);
       const redirectUrl =
         safeReturnTo && safeReturnTo !== "/tasks" && safeReturnTo !== "/"
@@ -195,7 +202,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           : "/login";
       window.location.replace(redirectUrl);
     }
-  }, [isLoading, isAuthenticated, user, isPublicRoute, pathname]);
+  }, [isLoading, isAuthenticated, user, isPublicRoute]);
 
   if (isPublicRoute) {
     return <>{children}</>;
