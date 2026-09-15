@@ -77,10 +77,9 @@ function LoginFormContent() {
   // Auto-redirect if already authenticated
   React.useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      router.refresh();
-      router.replace(targetUrl);
+      window.location.href = targetUrl;
     }
-  }, [isLoading, isAuthenticated, user, router, targetUrl]);
+  }, [isLoading, isAuthenticated, user, targetUrl]);
 
   // OAuth Error handling from URL query parameters
   const errorParam = searchParams.get("error");
@@ -229,8 +228,7 @@ function LoginFormContent() {
               returnTo={targetUrl}
               onError={(msg) => setErrorMessage(msg)}
               onSuccess={(url) => {
-                router.refresh();
-                router.replace(url);
+                window.location.href = url;
               }}
             />
           </div>
