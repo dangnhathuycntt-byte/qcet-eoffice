@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   AlertTriangle,
-  Box,
   Check,
   ChevronDown,
   ChevronRight,
@@ -412,7 +411,7 @@ export const TaskRow = React.memo(function TaskRow({
               </div>
             ) : (
               <>
-                {/* Default State: Chevron for parent tasks, Subtle Box Icon for leaf tasks */}
+                {/* Default State: Chevron for parent tasks, clean empty space for leaf tasks */}
                 {hasSubtasks ? (
                   <button
                     type="button"
@@ -432,14 +431,7 @@ export const TaskRow = React.memo(function TaskRow({
                       <ChevronRight className="size-3.5" strokeWidth={1.8} />
                     )}
                   </button>
-                ) : (
-                  <span
-                    className="size-4 flex items-center justify-center text-muted-foreground/35 group-hover/selector:opacity-0 group-hover:opacity-0 transition-opacity"
-                    aria-hidden="true"
-                  >
-                    <Box className="size-3.5" strokeWidth={1.5} />
-                  </span>
-                )}
+                ) : null}
 
                 {/* Hover State: Checkbox smoothly reveals with large hit target */}
                 <div
