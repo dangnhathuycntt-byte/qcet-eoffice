@@ -9,63 +9,32 @@ import {
 import { sanitizeRedirectUrl } from '@/lib/login-helpers';
 
 /**
- * QCET E-Office Canonical Authentication & Routing Middleware
+ * Next.js Edge Middleware for Coarse-Grained Authentication & Route Protection.
  *
- * Edge-safe preliminary check based on auth.config.ts:
+ * Requirements & Invariants:
  * 1. Unauthenticated users accessing protected routes -> redirect to /login with returnTo.
- * 2. Authenticated users opening /login -> redirect to /tasks.
+ * 2. Authenticated users opening /login -> redirect to /tasks only if verified.
  * 3. Root '/' -> /tasks for authenticated users, /login for unauthenticated users.
- * 4. Intercepts legacy query params (?zone=...) and redirects to canonical URLs.
- * 5. Strictly sanitizes returnTo to prevent Open Redirect attacks.
- * Note: Server Components, Server Actions, and API Routes strictly verify DB user active status.
+ * 4. API routes: Let through for Fine-Grained Server Auth Guards (request-context / 401 JSON).
+ * 5. Public assets, static chunks, and PWA manifest: Always accessible.
+ * 6. Never rely on unverified opaque token length alone to force /login -> /tasks redirects.
  */
 export async function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+  const { pathname } = request.nextUrl;
 
-  // 1. Extract session token cookie (Auth.js database session or JWT/JWE)
-  const token =
-    request.cookies.get(SESSION_COOKIE_NAME)?.value ||
-    request.cookies.get(SECURE_SESSION_COOKIE_NAME)?.value ||
-    request.cookies.get(LEGACY_SESSION_COOKIE_NAME)?.value ||
-    request.cookies.get('next-auth.session-token')?.value ||
-    request.cookies.get('__Secure-next-auth.session-token')?.value;
-
-  let isAuthenticated = false;
-  if (token && token.trim().length > 0) {
-    const parts = token.trim().split('.');
-    if (parts.length === 3 || parts.length === 5) {
-      const session = await verifySessionTokenEdge(token);
-      isAuthenticated = Boolean(session && session.id && session.email);
-    } else {
-      // Database session token (opaque string, e.g. cuid/uuid)
-      isAuthenticated = token.trim().length >= 10;
-    }
+  // 1. Skip middleware for static assets, next internal files, and public assets
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/static') ||
+    pathname.startsWith('/api') || // Let API routes handle fine-grained 401s
+    pathname.includes('.') || // Static files like favicon.ico, images, manifest.json
+    pathname === '/portal' ||
+    pathname.startsWith('/portal/')
+  ) {
+    return NextResponse.next();
   }
 
-  // 2. Intercept legacy zone parameters (?zone=...)
-  const zone = searchParams.get('zone');
-  if (zone) {
-    const url = request.nextUrl.clone();
-    url.searchParams.delete('zone');
-
-    let targetPath = '/tasks';
-    if (zone === 'documents') {
-      targetPath = '/documents';
-    } else if (zone === 'calendar') {
-      targetPath = '/calendar';
-    } else if (zone === 'org') {
-      targetPath = '/org';
-    } else if (zone === 'portal') {
-      targetPath = '/portal';
-    } else if (zone === 'tasks' || zone === 'dashboard') {
-      targetPath = '/tasks';
-    }
-
-    url.pathname = targetPath;
-    return NextResponse.redirect(url, 308);
-  }
-
-  // 3. Handle singular /task and /task/:id* routes -> /tasks
+  // 1b. Canonical singular to plural redirects (e.g. /task -> /tasks)
   if (pathname === '/task') {
     const url = request.nextUrl.clone();
     url.pathname = '/tasks';
@@ -73,44 +42,66 @@ export async function middleware(request: NextRequest) {
   }
   if (pathname.startsWith('/task/')) {
     const url = request.nextUrl.clone();
-    url.pathname = pathname.replace(/^\/task/, '/tasks');
+    url.pathname = pathname.replace(/^\/task\//, '/tasks/');
     return NextResponse.redirect(url, 308);
   }
 
-  // 4. Handle /dashboard legacy route -> /tasks
-  if (pathname === '/dashboard') {
+  // 2. Extract session token cookie (Auth.js database session or JWT/JWE)
+  const token =
+    request.cookies.get(SESSION_COOKIE_NAME)?.value ||
+    request.cookies.get(SECURE_SESSION_COOKIE_NAME)?.value ||
+    request.cookies.get(LEGACY_SESSION_COOKIE_NAME)?.value ||
+    request.cookies.get('next-auth.session-token')?.value ||
+    request.cookies.get('__Secure-next-auth.session-token')?.value;
+
+  const hasToken = Boolean(token && token.trim().length > 0);
+
+  // 3. Cryptographic JWT / JWE validation on Edge
+  let isVerifiedJwt = false;
+  if (hasToken) {
+    const trimmed = token!.trim();
+    const parts = trimmed.split('.');
+    if (parts.length === 3 || parts.length === 5) {
+      const session = await verifySessionTokenEdge(trimmed);
+      isVerifiedJwt = Boolean(session && session.id && session.email);
+    }
+  }
+
+  // 4. Handle Root '/' route
+  if (pathname === '/') {
     const url = request.nextUrl.clone();
-    url.pathname = '/tasks';
-    return NextResponse.redirect(url, 308);
+    if (isVerifiedJwt) {
+      url.pathname = '/tasks';
+      return NextResponse.redirect(url);
+    } else if (!hasToken) {
+      url.pathname = '/login';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
+    // If hasToken is true (opaque DB session), let request pass to app/page.tsx
+    // which verifies the DB session on the server.
+    return NextResponse.next();
   }
 
   // 5. Handle /login route
   if (pathname === '/login') {
-    if (isAuthenticated) {
-      // Authenticated users opening /login -> redirect to /tasks
+    if (isVerifiedJwt) {
+      // Only redirect to /tasks if the token is a verified, active JWT
       const url = request.nextUrl.clone();
       url.pathname = '/tasks';
       url.search = '';
       return NextResponse.redirect(url);
     }
+    // For unauthenticated users or opaque DB session tokens (which require DB verification):
+    // Let the request reach /login. The client-side AuthProvider checks /api/auth/me.
+    // If active session is confirmed by /api/auth/me, LoginPage redirects to returnTo / /tasks.
+    // If session is expired / invalid, LoginPage safely stays on /login.
     return NextResponse.next();
   }
 
-  // 6. Handle Root '/' route
-  if (pathname === '/') {
-    const url = request.nextUrl.clone();
-    if (isAuthenticated) {
-      url.pathname = '/tasks';
-      return NextResponse.redirect(url);
-    } else {
-      url.pathname = '/login';
-      url.search = '';
-      return NextResponse.redirect(url);
-    }
-  }
-
-  // 7. Handle all other protected routes
-  if (!isAuthenticated) {
+  // 6. Protected routes (e.g. /tasks, /documents, /calendar, /org, etc.)
+  if (!hasToken) {
+    // Completely unauthenticated request -> redirect to /login with returnTo
     const originalPath = `${pathname}${request.nextUrl.search}`;
     const safeReturnTo = sanitizeRedirectUrl(originalPath);
 
@@ -121,19 +112,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // If hasToken is true, let request through so Server Component / AppShell verifies DB session truth
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all request paths except:
-     * - api routes (/api/*)
+     * Match all request paths except for the ones starting with:
      * - _next/static (static files)
      * - _next/image (image optimization files)
-     * - favicon.ico, logo-qcet.png, manifest, service worker
-     * - static image and asset extensions
+     * - favicon.ico (favicon file)
+     * - public files
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|logo-qcet.png|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

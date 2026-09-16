@@ -19,10 +19,11 @@ import {
 import { getPublicRuntimeConfig, assertZeroSecrets } from "@/config/runtime";
 import { sendPushNotificationToUser } from "@/lib/push-service";
 import { GET as googleAuthRoute } from "@/app/api/auth/google/route";
-import { GET as googleCallbackRoute } from "@/app/api/auth/callback/google/route";
+import { GET as nextAuthRoute } from "@/app/api/auth/[...nextauth]/route";
 import { GET as exportExcelRoute } from "@/app/api/documents/export-excel/route";
 import { flushOfflineMutations } from "@/lib/offline-sync";
 import { signSessionToken, SESSION_COOKIE_NAME } from "@/lib/jwt-session";
+import { prisma } from "@/lib/prisma";
 
 describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
   const originalEnv = { ...process.env };
@@ -329,18 +330,11 @@ describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
       assert.ok(location?.includes("/login?error=oauth_not_configured"));
     });
 
-    it("auth/callback/google route redirects with error when externalGoogleLogin is killed", async () => {
+    it("auth Google signin route redirects with error when externalGoogleLogin is killed", async () => {
       setFeatureFlagOverride("externalGoogleLogin", false);
 
-      const req = new NextRequest(
-        "http://localhost:3000/api/auth/callback/google?code=mock_code&state=mock_state",
-        {
-          headers: {
-            cookie: "qcet_oauth_state=mock_state",
-          },
-        }
-      );
-      const res = await googleCallbackRoute(req);
+      const req = new NextRequest("http://localhost:3000/api/auth/google");
+      const res = await googleAuthRoute(req);
 
       assert.strictEqual(res.status, 307); // Redirect
       const location = res.headers.get("location");
@@ -350,26 +344,39 @@ describe("Feature Flags & Operational Kill Switches (Task 4)", () => {
     it("documents/export-excel route returns 503 when largeExcelExport is killed", async () => {
       setFeatureFlagOverride("largeExcelExport", false);
 
-      const sessionToken = signSessionToken({
+      const originalFindUnique = prisma.user.findUnique;
+      (prisma.user.findUnique as any) = async () => ({
         id: "test-admin-id",
         email: "admin@cdktcnqn.edu.vn",
         name: "Quản trị viên",
         role: "BAN_GIAM_HIEU",
+        isActive: true,
       });
 
-      const req = new NextRequest("http://localhost:3000/api/documents/export-excel?type=VAN_BAN_DEN&year=2026", {
-        headers: {
-          cookie: `${SESSION_COOKIE_NAME}=${sessionToken}`,
-        },
-      });
+      try {
+        const sessionToken = signSessionToken({
+          id: "test-admin-id",
+          email: "admin@cdktcnqn.edu.vn",
+          name: "Quản trị viên",
+          role: "BAN_GIAM_HIEU",
+        });
 
-      const res = await exportExcelRoute(req);
-      assert.strictEqual(res.status, 503);
+        const req = new NextRequest("http://localhost:3000/api/documents/export-excel?type=VAN_BAN_DEN&year=2026", {
+          headers: {
+            cookie: `${SESSION_COOKIE_NAME}=${sessionToken}`,
+          },
+        });
 
-      const body = await res.json();
-      assert.strictEqual(body.success, false);
-      assert.strictEqual(body.code, "FEATURE_DISABLED");
-      assert.ok(body.error.includes("vô hiệu hóa bởi cấu hình vận hành"));
+        const res = await exportExcelRoute(req);
+        assert.strictEqual(res.status, 503);
+
+        const body = await res.json();
+        assert.strictEqual(body.success, false);
+        assert.strictEqual(body.code, "FEATURE_DISABLED");
+        assert.ok(body.error.includes("vô hiệu hóa bởi cấu hình vận hành"));
+      } finally {
+        prisma.user.findUnique = originalFindUnique;
+      }
     });
 
     it("offline-sync aborts flush when offlineMutations is killed", async () => {

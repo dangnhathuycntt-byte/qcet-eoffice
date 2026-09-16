@@ -122,7 +122,7 @@ export async function resolveCurrentSession(request: RequestLike): Promise<Curre
         throw new AuthenticationError('Phiên làm việc đã hết hạn', 'SESSION_INVALID');
       }
       if (
-        dbSession.revokedAt != null ||
+        (dbSession as any).revokedAt != null ||
         isSessionRevoked(dbSession.id, dbSession.userId) ||
         isSessionRevoked(token, dbSession.userId)
       ) {
