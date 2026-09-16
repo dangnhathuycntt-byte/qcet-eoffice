@@ -9,36 +9,33 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  AlertTriangle,
   ChevronDown,
   ChevronRight,
   TrendingUp,
   Tag,
   Activity,
   History,
-  ShieldCheck,
   Check,
   Edit2,
   X,
   Layers,
-  Sparkles,
-  Info,
+  Plus,
   CalendarClock,
-  Hash,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
 import type { AuthUser } from "@/types/auth";
 import { cn } from "@/lib/utils";
 import { getRelativeDueTime } from "@/components/dashboard/task-detail-side-sheet";
-import { isTaskPastDue } from "@/components/tasks/table/utils/table-date-helpers";
 import {
   formatDisplayDate,
   formatDateTime,
   formatIsoDate,
-  toIctDateTimeParts,
 } from "@/lib/format/date";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
+import { STATUS_OPTIONS, PRIORITY_OPTIONS } from "./task-identity-block";
 
 export interface AuditLogItem {
   id: string;
@@ -55,75 +52,12 @@ export interface LinearPropertiesSidebarProps {
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   onDueDateChange?: (taskId: string, newDueDate: string) => Promise<void> | void;
   onStartDateChange?: (taskId: string, newStartDate: string) => Promise<void> | void;
+  onNavigateTab?: (tab: "overview" | "subtasks" | "activity") => void;
   auditEvents?: AuditLogItem[];
   isMobileAccordion?: boolean;
   canEdit?: boolean;
   className?: string;
 }
-
-const STATUS_OPTIONS: Array<{
-  value: TaskStatus;
-  label: string;
-  colorClass: string;
-  dotClass: string;
-}> = [
-  {
-    value: "NOT_STARTED",
-    label: "Chưa bắt đầu",
-    colorClass: "text-muted-foreground bg-muted border-border/70",
-    dotClass: "bg-muted-foreground/60",
-  },
-  {
-    value: "IN_PROGRESS",
-    label: "Đang thực hiện",
-    colorClass: "text-blue-700 bg-blue-50 border-blue-200",
-    dotClass: "bg-blue-600",
-  },
-  {
-    value: "WAITING_APPROVAL",
-    label: "Chờ duyệt",
-    colorClass: "text-amber-700 bg-amber-50 border-amber-200",
-    dotClass: "bg-amber-600",
-  },
-  {
-    value: "COMPLETED",
-    label: "Hoàn thành",
-    colorClass: "text-emerald-700 bg-emerald-50 border-emerald-200",
-    dotClass: "bg-emerald-600",
-  },
-];
-
-const PRIORITY_OPTIONS: Array<{
-  value: TaskPriority;
-  label: string;
-  colorClass: string;
-  dotClass: string;
-}> = [
-  {
-    value: "URGENT",
-    label: "Khẩn cấp",
-    colorClass: "text-rose-700 bg-rose-50 border-rose-200",
-    dotClass: "bg-rose-600",
-  },
-  {
-    value: "HIGH",
-    label: "Cao",
-    colorClass: "text-amber-700 bg-amber-50 border-amber-200",
-    dotClass: "bg-amber-600",
-  },
-  {
-    value: "NORMAL",
-    label: "Bình thường",
-    colorClass: "text-blue-700 bg-blue-50 border-blue-200",
-    dotClass: "bg-blue-600",
-  },
-  {
-    value: "LOW",
-    label: "Thấp",
-    colorClass: "text-muted-foreground bg-muted border-border/70",
-    dotClass: "bg-muted-foreground/60",
-  },
-];
 
 function getInitials(name?: string): string {
   if (!name || !name.trim()) return "?";
@@ -139,6 +73,7 @@ export function LinearPropertiesSidebar({
   onPriorityChange,
   onDueDateChange,
   onStartDateChange,
+  onNavigateTab,
   auditEvents = [],
   isMobileAccordion = false,
   canEdit = true,
@@ -229,13 +164,6 @@ export function LinearPropertiesSidebar({
         avatarUrl: c.avatarUrl,
       }));
     }
-    if (staffTask?.coAssignees && Array.isArray(staffTask.coAssignees)) {
-      return staffTask.coAssignees.map((c) => ({
-        id: c.id,
-        name: c.name,
-        avatarUrl: c.avatarUrl,
-      }));
-    }
     return [];
   }, [isSchool, schoolTask, staffTask]);
 
@@ -245,47 +173,9 @@ export function LinearPropertiesSidebar({
   const dueDateIso = task.dueDate ? formatIsoDate(task.dueDate, "") : "";
   const relativeDue = getRelativeDueTime(task.dueDate);
 
-  // Progress Percent
-  const progressVal =
-    typeof (task as any).progressPercent === "number"
-      ? (task as any).progressPercent
-      : isSchool
-      ? schoolTask?.progress ?? 0
-      : 0;
-
-  // Category / Label
-  const categoryLabel = isSchool
-    ? schoolTask?.categoryLabel || schoolTask?.category || "Công việc chung"
-    : (task as any).category || "Nhiệm vụ đơn vị";
-
-  // Scope / Tier Label
-  const tierScope = React.useMemo(() => {
-    if (isSchool) {
-      return {
-        label: "Toàn trường",
-        description: "Nhiệm vụ chỉ đạo cấp Trường",
-        badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
-      };
-    }
-    if (staffTask?.parentSchoolTaskId || staffTask?.parentTask) {
-      return {
-        label: "Đơn vị",
-        description: "Nhiệm vụ phân rã cấp Đơn vị",
-        badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      };
-    }
-    return {
-      label: "Cá nhân",
-      description: "Nhiệm vụ thực hiện cá nhân",
-      badgeClass: "bg-muted text-foreground border-border/70",
-    };
-  }, [isSchool, staffTask]);
-
-  // Task code
-  const taskCode =
-    task.code ||
-    (isSchool ? schoolTask?.taskCode : staffTask?.taskId) ||
-    task.id.slice(0, 8).toUpperCase();
+  // Subtasks completion
+  const subTasks: StaffTask[] = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
+  const completedSubTasks = subTasks.filter((s) => s.status === "COMPLETED").length;
 
   // Handlers
   const handleSelectStatus = async (newStatus: TaskStatus) => {
@@ -308,394 +198,308 @@ export function LinearPropertiesSidebar({
     }
   };
 
-  const handleStartDateChange = async (newDateIso: string) => {
-    if (onStartDateChange) {
-      await onStartDateChange(task.id, newDateIso);
-    }
-  };
-
   return (
-    <aside
+    <div
       data-slot="linear-properties-sidebar"
       className={cn(
-        "w-full space-y-6 text-xs text-foreground select-none",
+        "w-full space-y-6 text-xs text-foreground select-none p-4 sm:p-5",
         className
       )}
     >
-      {/* 1. Header label with subtle status */}
-      <div className="flex items-center justify-between pb-2 border-b border-border/60">
-        <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-          <Info className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-          Thuộc tính nhiệm vụ
-        </span>
-        <span className="font-mono text-[10px] text-muted-foreground font-semibold px-1.5 py-0.5 rounded bg-muted/60">
-          {taskCode}
-        </span>
-      </div>
-
-      {/* 2. Key Workflow Properties Group */}
-      <div className="space-y-3.5">
-        {/* Status Property */}
-        <div className="flex items-center justify-between gap-2 relative">
-          <span className="text-muted-foreground font-medium flex items-center gap-1.5 shrink-0">
-            <Clock className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-            Trạng thái
+      {/* 1. SECTION: PROPERTIES (Linear Style) */}
+      <div className="space-y-3">
+        {/* Section Header */}
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <span>Properties</span>
+            <ChevronDown className="size-3 text-muted-foreground" />
           </span>
-
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                if (canEdit) {
-                  setIsStatusMenuOpen(!isStatusMenuOpen);
-                  setIsPriorityMenuOpen(false);
-                }
-              }}
-              disabled={!canEdit}
-              aria-haspopup="menu"
-              aria-expanded={isStatusMenuOpen}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all shadow-2xs",
-                activeStatusOption.colorClass,
-                canEdit ? "cursor-pointer hover:opacity-90 active:scale-95" : "cursor-default"
-              )}
-            >
-              <span className={cn("size-2 rounded-full", activeStatusOption.dotClass)} />
-              <span>{activeStatusOption.label}</span>
-              {canEdit && <ChevronDown className="size-3 opacity-60 ml-0.5" strokeWidth={1.5} />}
-            </button>
-
-            {isStatusMenuOpen && canEdit && (
-              <div
-                role="menu"
-                className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => handleSelectStatus(opt.value)}
-                    className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
-                      normalizedStatus === opt.value
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "text-foreground hover:bg-muted font-medium"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={cn("size-2 rounded-full", opt.dotClass)} />
-                      <span>{opt.label}</span>
-                    </div>
-                    {normalizedStatus === opt.value && <Check className="size-3.5 text-primary" strokeWidth={1.5} />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            title="Thêm thuộc tính"
+          >
+            <Plus className="size-3.5" />
+          </button>
         </div>
 
-        {/* Priority Property */}
-        <div className="flex items-center justify-between gap-2 relative">
-          <span className="text-muted-foreground font-medium flex items-center gap-1.5 shrink-0">
-            <AlertCircle className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-            Độ ưu tiên
-          </span>
-
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                if (canEdit) {
-                  setIsPriorityMenuOpen(!isPriorityMenuOpen);
-                  setIsStatusMenuOpen(false);
-                }
-              }}
-              disabled={!canEdit}
-              aria-haspopup="menu"
-              aria-expanded={isPriorityMenuOpen}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all shadow-2xs",
-                activePriorityOption.colorClass,
-                canEdit ? "cursor-pointer hover:opacity-90 active:scale-95" : "cursor-default"
-              )}
-            >
-              <span className={cn("size-2 rounded-full", activePriorityOption.dotClass)} />
-              <span>{activePriorityOption.label}</span>
-              {canEdit && <ChevronDown className="size-3 opacity-60 ml-0.5" strokeWidth={1.5} />}
-            </button>
-
-            {isPriorityMenuOpen && canEdit && (
-              <div
-                role="menu"
-                className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
-              >
-                {PRIORITY_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => handleSelectPriority(opt.value)}
-                    className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
-                      normalizedPriority === opt.value
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "text-foreground hover:bg-muted font-medium"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={cn("size-2 rounded-full", opt.dotClass)} />
-                      <span>{opt.label}</span>
-                    </div>
-                    {normalizedPriority === opt.value && <Check className="size-3.5 text-primary" strokeWidth={1.5} />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Phân cách */}
-      <hr className="border-border/40" />
-
-      {/* 4. People & Governance Group */}
-      <div className="space-y-3.5">
-        {/* Lead Assignee Property */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground font-medium flex items-center gap-1.5 shrink-0">
-            <User className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-            Phụ trách chính
-          </span>
-
-          <div className="flex items-center gap-1.5 font-medium text-foreground max-w-[170px] truncate">
-            {leadAvatar ? (
-              <img
-                src={leadAvatar}
-                alt={leadName}
-                className="size-5 rounded-full object-cover ring-1 ring-border shrink-0"
-              />
-            ) : (
-              <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[10px] shrink-0">
-                {getInitials(leadName)}
-              </div>
-            )}
-            <span className="truncate" title={leadName}>
-              {leadName}
-            </span>
-          </div>
-        </div>
-
-        {/* Lead Department Property */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground font-medium flex items-center gap-1.5 shrink-0">
-            <Building2 className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-            Đơn vị chủ trì
-          </span>
-
-          <span className="font-medium text-foreground max-w-[170px] truncate text-right" title={departmentName}>
-            {departmentName}
-          </span>
-        </div>
-
-        {/* Collaborators Property */}
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-muted-foreground font-medium flex items-center gap-1.5 shrink-0 pt-0.5">
-            <Users className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-            Phối hợp
-          </span>
-
-          <div className="flex flex-wrap items-center justify-end gap-1 max-w-[170px]">
-            {collaborators.length > 0 ? (
-              collaborators.slice(0, 3).map((m) => (
-                <span
-                  key={m.id}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted text-[11px] font-medium text-foreground"
-                  title={m.name}
-                >
-                  {m.avatarUrl ? (
-                    <img
-                      src={m.avatarUrl}
-                      alt={m.name}
-                      className="size-3.5 rounded-full object-cover shrink-0"
-                    />
-                  ) : (
-                    <span className="size-3.5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-bold shrink-0">
-                      {getInitials(m.name)}
-                    </span>
-                  )}
-                  <span className="max-w-[70px] truncate">{m.name}</span>
-                </span>
-              ))
-            ) : (
-              <span className="text-muted-foreground/70 italic text-[11px]">Chưa có</span>
-            )}
-            {collaborators.length > 3 && (
-              <span className="text-[10px] text-muted-foreground font-mono">
-                +{collaborators.length - 3}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 5. Phân cách */}
-      <hr className="border-border/40" />
-
-      {/* 6. Schedule & Dates Group */}
-      <div className="space-y-3.5">
-        {/* Start Date */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground font-medium flex items-center gap-1.5 shrink-0">
-            <Calendar className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-            Ngày bắt đầu
-          </span>
-
-          {canEdit && onStartDateChange ? (
-            <div className="flex justify-end">
-              <VietnameseDatePicker
-                value={startDateIso}
-                onChange={handleStartDateChange}
-                placeholder="Chọn ngày bắt đầu"
-                variant="chip"
-                showPresets={true}
-                align="right"
-                className="max-w-[160px]"
-              />
-            </div>
-          ) : (
-            <span className="font-mono text-foreground tabular-nums">
-              {startDateIso ? formatDisplayDate(startDateIso) : "Chưa đặt"}
-            </span>
-          )}
-        </div>
-
-        {/* Due Date with VietnameseDatePicker */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground font-medium flex items-center gap-1.5 shrink-0">
-            <CalendarClock className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-            Hạn hoàn thành
-          </span>
-
-          {canEdit && onDueDateChange ? (
-            <div className="flex justify-end">
-              <VietnameseDatePicker
-                value={dueDateIso}
-                onChange={handleDueDateChange}
-                placeholder="Chọn hạn chót"
-                variant="chip"
-                showPresets={true}
-                align="right"
-                className="max-w-[160px]"
-              />
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5">
-              <span
+        {/* 2-Column Key-Value Table */}
+        <div className="space-y-2.5 text-xs">
+          {/* Status Row */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Status</span>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  if (canEdit) setIsStatusMenuOpen(!isStatusMenuOpen);
+                }}
+                disabled={!canEdit}
                 className={cn(
-                  "font-mono tabular-nums",
-                  relativeDue && relativeDue.text.includes("Quá hạn")
-                    ? "text-rose-700 font-semibold"
-                    : "text-foreground"
+                  "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors",
+                  canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default"
                 )}
               >
-                {dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt"}
-              </span>
-              {relativeDue && relativeDue.text.includes("Quá hạn") && (
-                <span className="text-[10px] px-1 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200 font-medium">
-                  Quá hạn
-                </span>
+                <span className={cn("size-2 rounded-full", activeStatusOption.dotClass)} />
+                <span className="text-foreground">{activeStatusOption.label}</span>
+              </button>
+
+              {isStatusMenuOpen && canEdit && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+                >
+                  {STATUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => handleSelectStatus(opt.value)}
+                      className={cn(
+                        "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
+                        normalizedStatus === opt.value
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-foreground hover:bg-muted font-medium"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={cn("size-2 rounded-full", opt.dotClass)} />
+                        <span>{opt.label}</span>
+                      </div>
+                      {normalizedStatus === opt.value && (
+                        <Check className="size-3.5 text-primary" strokeWidth={1.5} />
+                      )}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
+          </div>
+
+          {/* Priority Row */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Priority</span>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  if (canEdit) setIsPriorityMenuOpen(!isPriorityMenuOpen);
+                }}
+                disabled={!canEdit}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium transition-colors",
+                  canEdit ? "cursor-pointer hover:bg-muted/60" : "cursor-default"
+                )}
+              >
+                <AlertCircle className={cn("size-3.5", activePriorityOption.iconClass)} strokeWidth={1.5} />
+                <span className="text-foreground">{activePriorityOption.label}</span>
+              </button>
+
+              {isPriorityMenuOpen && canEdit && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg z-50 animate-in fade-in-0 zoom-in-95 duration-100"
+                >
+                  {PRIORITY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => handleSelectPriority(opt.value)}
+                      className={cn(
+                        "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors text-left cursor-pointer",
+                        normalizedPriority === opt.value
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-foreground hover:bg-muted font-medium"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className={cn("size-3.5", opt.iconClass)} strokeWidth={1.5} />
+                        <span>{opt.label}</span>
+                      </div>
+                      {normalizedPriority === opt.value && (
+                        <Check className="size-3.5 text-primary" strokeWidth={1.5} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Lead Row */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Lead</span>
+            <div className="flex items-center gap-1.5 font-medium text-foreground max-w-[170px] truncate">
+              {leadAvatar ? (
+                <img
+                  src={leadAvatar}
+                  alt={leadName}
+                  className="size-4 rounded-full object-cover ring-1 ring-border shrink-0"
+                />
+              ) : (
+                <div className="size-4 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[9px] shrink-0">
+                  {getInitials(leadName)}
+                </div>
+              )}
+              <span className="truncate text-foreground" title={leadName}>
+                {leadName}
+              </span>
+            </div>
+          </div>
+
+          {/* Members / Collaborators Row */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Members</span>
+            <div className="flex items-center gap-1">
+              {collaborators.length > 0 ? (
+                <div className="flex items-center -space-x-1">
+                  {collaborators.slice(0, 3).map((m) => (
+                    <span
+                      key={m.id}
+                      className="size-4 rounded-full bg-muted border border-background flex items-center justify-center text-[8px] font-bold text-foreground overflow-hidden"
+                      title={m.name}
+                    >
+                      {m.avatarUrl ? (
+                        <img src={m.avatarUrl} alt={m.name} className="size-full object-cover" />
+                      ) : (
+                        getInitials(m.name)
+                      )}
+                    </span>
+                  ))}
+                  {collaborators.length > 3 && (
+                    <span className="text-[10px] text-muted-foreground font-mono pl-1.5">
+                      +{collaborators.length - 3}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="text-muted-foreground/70 text-[11px]">Add members</span>
+              )}
+            </div>
+          </div>
+
+          {/* Dates Row */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Dates</span>
+            {canEdit && onDueDateChange ? (
+              <div className="flex justify-end">
+                <VietnameseDatePicker
+                  value={dueDateIso}
+                  onChange={handleDueDateChange}
+                  placeholder="Target date"
+                  variant="chip"
+                  showPresets={true}
+                  align="right"
+                  className="max-w-[150px]"
+                />
+              </div>
+            ) : (
+              <span className="font-mono text-foreground text-[11px] tabular-nums">
+                {dueDateIso ? formatDisplayDate(dueDateIso) : "Target date"}
+              </span>
+            )}
+          </div>
+
+          {/* Teams / Dept Row */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Teams</span>
+            <span className="font-medium text-foreground max-w-[160px] truncate text-right" title={departmentName}>
+              {departmentName}
+            </span>
+          </div>
+
+          {/* Labels Row */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground">Labels</span>
+            <span className="px-1.5 py-0.5 rounded bg-muted/60 text-foreground border border-border/50 text-[10px] font-medium truncate max-w-[150px]">
+              {isSchool ? "Chỉ đạo cấp Trường" : "Nhiệm vụ đơn vị"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. SECTION: MILESTONES / SUBTASKS (Linear Style) */}
+      <div className="space-y-2.5 pt-2 border-t border-border/40">
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <span>Milestones</span>
+            <ChevronDown className="size-3 text-muted-foreground" />
+          </span>
+          <button
+            type="button"
+            onClick={() => onNavigateTab && onNavigateTab("subtasks")}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            title="Thêm milestone"
+          >
+            <Plus className="size-3.5" />
+          </button>
+        </div>
+
+        {subTasks.length > 0 ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>Việc thành phần</span>
+              <span className="font-mono text-foreground font-semibold tabular-nums">
+                {completedSubTasks}/{subTasks.length}
+              </span>
+            </div>
+            <div className="h-1 w-full bg-muted/60 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-300"
+                style={{
+                  width: `${subTasks.length > 0 ? (completedSubTasks / subTasks.length) * 100 : 0}%`,
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground/80">
+            Thêm việc thành phần để phân rã nhiệm vụ và theo dõi tiến độ chi tiết.
+          </p>
+        )}
+      </div>
+
+      {/* 3. SECTION: ACTIVITY (Linear Style) */}
+      <div className="space-y-3 pt-2 border-t border-border/40">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <span>Activity</span>
+            <ChevronDown className="size-3 text-muted-foreground" />
+          </span>
+          {onNavigateTab && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab("activity")}
+              className="text-[11px] text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
+            >
+              See all
+            </button>
           )}
         </div>
 
-        {/* Progress % */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-              <TrendingUp className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-              Tiến độ hoàn thành
-            </span>
-            <span className="font-mono font-bold text-foreground tabular-nums">
-              {progressVal}%
-            </span>
-          </div>
-          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className={cn(
-                "h-full transition-all duration-300 ease-out",
-                progressVal === 100
-                  ? "bg-emerald-500"
-                  : progressVal > 50
-                  ? "bg-blue-600"
-                  : "bg-amber-500"
-              )}
-              style={{ width: `${Math.min(Math.max(progressVal, 0), 100)}%` }}
-            />
-          </div>
+        {/* Compact Chronological Activity List */}
+        <div className="space-y-2.5">
+          {auditEvents.slice(0, 4).map((evt) => (
+            <div key={evt.id} className="flex items-start gap-2 text-[11px] text-muted-foreground leading-tight">
+              <div className="size-1.5 rounded-full bg-muted-foreground/60 mt-1 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <span className="text-foreground font-medium">{evt.actorName || "Người dùng"}</span>{" "}
+                <span>{evt.description || evt.action}</span>
+                <span className="text-muted-foreground/60 ml-1.5 font-mono text-[10px]">
+                  {formatDisplayDate(evt.timestamp)}
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {auditEvents.length === 0 && (
+            <p className="text-[11px] text-muted-foreground/70 italic">
+              Chưa có hoạt động mới nào.
+            </p>
+          )}
         </div>
       </div>
-
-      {/* 7. Phân cách */}
-      <hr className="border-border/40" />
-
-      {/* 8. Classification & Scope */}
-      <div className="space-y-4">
-        {/* Tier / Scope */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground font-medium flex items-center gap-1.5 shrink-0">
-            <Layers className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-            Cấp độ
-          </span>
-
-          <span
-            className={cn(
-              "px-2 py-0.5 rounded text-[11px] font-semibold border",
-              tierScope.badgeClass
-            )}
-            title={tierScope.description}
-          >
-            {tierScope.label}
-          </span>
-        </div>
-
-        {/* Category / Domain */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground font-medium flex items-center gap-1.5 shrink-0">
-            <Tag className="size-3.5 text-muted-foreground/70" strokeWidth={1.5} />
-            Lĩnh vực
-          </span>
-
-          <span className="px-2 py-0.5 rounded bg-muted text-foreground border border-border/60 text-[11px] font-medium truncate max-w-[160px]">
-            {categoryLabel}
-          </span>
-        </div>
-      </div>
-
-      {/* 9. Phân cách */}
-      <hr className="border-border/40" />
-
-      {/* 10. Metadata & Timestamps */}
-      <div className="space-y-2.5 pt-1 text-[11px] text-muted-foreground">
-        <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1.5">
-            <History className="size-3 text-muted-foreground/70" strokeWidth={1.5} />
-            Ngày tạo:
-          </span>
-          <span className="font-mono text-foreground tabular-nums">
-            {task.createdAt ? formatDateTime(task.createdAt) : "—"}
-          </span>
-        </div>
-        {task.updatedAt && (
-          <div className="flex items-center justify-between">
-            <span>Cập nhật gần nhất:</span>
-            <span className="font-mono text-foreground tabular-nums">
-              {formatDateTime(task.updatedAt)}
-            </span>
-          </div>
-        )}
-      </div>
-    </aside>
+    </div>
   );
 }

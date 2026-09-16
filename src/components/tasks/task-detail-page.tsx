@@ -14,6 +14,10 @@ import {
   Building2,
   User,
   Calendar,
+  Edit2,
+  Check,
+  X,
+  Loader2,
 } from "lucide-react";
 import type { SchoolTask, StaffTask, TaskStatus, TaskPriority } from "@/types/dashboard";
 import { isSchoolTask } from "@/types/dashboard";
@@ -123,30 +127,33 @@ export function TaskDetailPage({
     }
   }, [task]);
 
-  const [isAddingResource, setIsAddingResource] = React.useState(false);
-  const [resourceTitle, setResourceTitle] = React.useState("");
-  const [resourceUrl, setResourceUrl] = React.useState("");
-  const [resourceNote, setResourceNote] = React.useState("");
-  const [isSavingResource, setIsSavingResource] = React.useState(false);
+  // Description inline edit state
+  const isSchool = isSchoolTask(task);
+  const schoolTask = isSchool ? (task as SchoolTask) : null;
+  const staffTask = !isSchool ? (task as StaffTask) : null;
+
+  const currentDescription = isSchool
+    ? schoolTask?.description || ""
+    : staffTask?.deliverableDescription || (task as any).description || "";
+
+  const [descriptionDraft, setDescriptionDraft] = React.useState(currentDescription);
+  const [isEditingDescription, setIsEditingDescription] = React.useState(false);
+  const [isSavingDescription, setIsSavingDescription] = React.useState(false);
+
+  React.useEffect(() => {
+    setDescriptionDraft(currentDescription);
+  }, [currentDescription]);
 
   // Subtask modal state
   const [isCreateSubTaskModalOpen, setIsCreateSubTaskModalOpen] = React.useState(false);
 
   // Computed fields
-  const isSchool = isSchoolTask(task);
-  const schoolTask = isSchool ? (task as SchoolTask) : null;
-  const staffTask = !isSchool ? (task as StaffTask) : null;
-
   const taskCode =
     task.code ||
     (isSchool ? schoolTask?.taskCode : staffTask?.taskId) ||
     task.id.slice(0, 8).toUpperCase();
 
   const subTasks: StaffTask[] = isSchool && Array.isArray(schoolTask?.subTasks) ? schoolTask.subTasks : [];
-
-  const taskDescription = isSchool
-    ? schoolTask?.description
-    : staffTask?.deliverableDescription || (task as any).description;
 
   const currentProgressPercent =
     typeof (task as any).progressPercent === "number"
@@ -185,6 +192,32 @@ export function TaskDetailPage({
       }
     } catch {
       // safe fallback
+    }
+  };
+
+  // Description save handler
+  const handleSaveDescription = async () => {
+    setIsSavingDescription(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: descriptionDraft.trim() }),
+      });
+
+      if (res.ok) {
+        setTask((prev) => {
+          if (isSchool && schoolTask) {
+            return { ...prev, description: descriptionDraft.trim() } as SchoolTask;
+          }
+          return { ...prev, deliverableDescription: descriptionDraft.trim(), description: descriptionDraft.trim() } as any;
+        });
+        setIsEditingDescription(false);
+      }
+    } catch {
+      // safe fallback
+    } finally {
+      setIsSavingDescription(false);
     }
   };
 
@@ -324,35 +357,33 @@ export function TaskDetailPage({
   };
 
   // Deliverables add handler
-  const handleAddResourceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resourceTitle.trim() && !resourceUrl.trim()) return;
+  const handleAddDeliverable = async (title: string, fileUrl?: string, notes?: string) => {
+    const newDeliverable = {
+      id: `res-${Date.now()}`,
+      title: title.trim() || "Tài liệu minh chứng",
+      fileUrl: fileUrl?.trim() || undefined,
+      notes: notes?.trim() || undefined,
+    };
 
-    setIsSavingResource(true);
+    await fetch(`/api/tasks/${task.id}/deliverables`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newDeliverable),
+    });
+
+    setDeliverables((prev) => [...prev, newDeliverable]);
+  };
+
+  // Deliverables delete handler
+  const handleDeleteDeliverable = async (deliverableId: string) => {
     try {
-      const newDeliverable = {
-        id: `res-${Date.now()}`,
-        title: resourceTitle.trim() || "Tài liệu minh chứng",
-        fileUrl: resourceUrl.trim() || undefined,
-        notes: resourceNote.trim() || undefined,
-      };
-
-      await fetch(`/api/tasks/${task.id}/deliverables`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newDeliverable),
+      await fetch(`/api/tasks/${task.id}/deliverables?deliverableId=${deliverableId}`, {
+        method: "DELETE",
       });
-
-      setDeliverables((prev) => [...prev, newDeliverable]);
-      setResourceTitle("");
-      setResourceUrl("");
-      setResourceNote("");
-      setIsAddingResource(false);
     } catch {
       // transient
-    } finally {
-      setIsSavingResource(false);
     }
+    setDeliverables((prev) => prev.filter((d) => d.id !== deliverableId));
   };
 
   return (
@@ -360,7 +391,7 @@ export function TaskDetailPage({
       data-slot="task-workspace"
       className="w-full min-h-screen flex flex-col bg-background text-foreground"
     >
-      {/* 1. Header Navigation Bar (48px height, compact, sticky top) */}
+      {/* 1. Header Navigation Bar (Linear Style) */}
       <TaskDetailHeaderNav
         taskCode={taskCode}
         taskTitle={task.title}
@@ -370,11 +401,11 @@ export function TaskDetailPage({
         onRefresh={() => router.refresh()}
       />
 
-      {/* 2. Sub-Tabs Bar (Overview, Subtasks, Activity) */}
+      {/* 2. Sub-Tabs Bar (Linear Style: Overview, Activity, Issues) */}
       <nav
         role="tablist"
         aria-label="Các phân mục chi tiết nhiệm vụ"
-        className="flex items-center gap-1 px-4 sm:px-6 border-b border-border/60 bg-muted/20 text-xs font-medium sticky top-12 z-20 backdrop-blur-xs"
+        className="flex items-center gap-1 px-4 sm:px-6 border-b border-border/40 bg-background/90 text-xs font-medium sticky top-12 z-20 backdrop-blur-md select-none"
       >
         <button
           role="tab"
@@ -384,37 +415,13 @@ export function TaskDetailPage({
           type="button"
           onClick={() => handleTabChange("overview")}
           className={cn(
-            "px-3.5 py-2.5 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden",
+            "px-3 py-2 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden",
             activeTab === "overview"
-              ? "border-primary text-primary font-bold bg-background shadow-2xs"
+              ? "border-primary text-foreground font-semibold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          <Layers className="size-3.5" strokeWidth={1.5} />
-          <span>Tổng quan</span>
-        </button>
-
-        <button
-          role="tab"
-          id="tab-subtasks"
-          aria-selected={activeTab === "subtasks"}
-          aria-controls="panel-subtasks"
-          type="button"
-          onClick={() => handleTabChange("subtasks")}
-          className={cn(
-            "px-3.5 py-2.5 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden",
-            activeTab === "subtasks"
-              ? "border-primary text-primary font-bold bg-background shadow-2xs"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <ListTodo className="size-3.5" strokeWidth={1.5} />
-          <span>Việc thành phần</span>
-          {subTasks.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono font-semibold tabular-nums text-foreground">
-              {subTasks.length}
-            </span>
-          )}
+          <span>Overview</span>
         </button>
 
         <button
@@ -425,23 +432,44 @@ export function TaskDetailPage({
           type="button"
           onClick={() => handleTabChange("activity")}
           className={cn(
-            "px-3.5 py-2.5 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-hidden",
+            "px-3 py-2 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden",
             activeTab === "activity"
-              ? "border-primary text-primary font-bold bg-background shadow-2xs"
+              ? "border-primary text-foreground font-semibold"
               : "border-transparent text-muted-foreground hover:text-foreground"
           )}
         >
-          <Clock className="size-3.5" strokeWidth={1.5} />
-          <span>Nhật ký hoạt động</span>
+          <span>Activity</span>
           {auditEvents.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono font-semibold tabular-nums text-foreground">
+            <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono font-medium tabular-nums text-muted-foreground">
               {auditEvents.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          role="tab"
+          id="tab-subtasks"
+          aria-selected={activeTab === "subtasks"}
+          aria-controls="panel-subtasks"
+          type="button"
+          onClick={() => handleTabChange("subtasks")}
+          className={cn(
+            "px-3 py-2 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 focus-visible:outline-hidden",
+            activeTab === "subtasks"
+              ? "border-primary text-foreground font-semibold"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <span>Issues</span>
+          {subTasks.length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-muted text-[10px] font-mono font-medium tabular-nums text-muted-foreground">
+              {subTasks.length}
             </span>
           )}
         </button>
       </nav>
 
-      {/* 3. Main 2-Column Full-Workspace Canvas */}
+      {/* 3. Main 2-Column Canvas Layout */}
       <div className="flex-1 flex flex-col md:flex-row min-w-0">
         {/* Left / Center Main Content Canvas */}
         <main
@@ -449,50 +477,111 @@ export function TaskDetailPage({
           id={`panel-${activeTab}`}
           aria-labelledby={`tab-${activeTab}`}
           className={cn(
-            "flex-1 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto min-w-0 thin-scrollbar",
-            showInspector ? "w-full" : "w-full max-w-5xl mx-auto"
+            "flex-1 p-6 sm:p-8 lg:p-10 space-y-8 overflow-y-auto min-w-0 thin-scrollbar",
+            showInspector ? "w-full max-w-4xl" : "w-full max-w-5xl mx-auto"
           )}
         >
           {/* TAB 1: OVERVIEW */}
           {activeTab === "overview" && (
             <>
-              {/* Task Identity Block (Code, Scope, Title with Inline Edit, Pinned Status/Progress/Due, Assignee/Dept) */}
+              {/* Task Identity Block (Icon, Title, Subtitle, Linear Properties Row, Resources Row) */}
               <TaskIdentityBlock
                 task={task}
                 canEdit={true}
+                deliverables={deliverables}
                 onStatusChange={handleStatusChange}
                 onPriorityChange={handlePriorityChange}
                 onTitleChange={handleTitleChange}
+                onAddDeliverable={handleAddDeliverable}
+                onDeleteDeliverable={handleDeleteDeliverable}
               />
 
-              {/* Task Progress Composer (Visual slider + quick presets + submit note) */}
+              {/* Task Progress Composer (Linear "Latest update" block) */}
               <TaskProgressComposer
                 taskId={task.id}
                 initialProgress={currentProgressPercent}
                 taskStatus={task.status}
+                leadName={isSchool ? schoolTask?.leadAssigneeName : staffTask?.assigneeName}
                 canEdit={true}
                 onProgressUpdated={handleProgressUpdated}
                 onStatusChange={handleStatusChange}
               />
 
-              {/* Task Description Section */}
-              <section className="space-y-2 rounded-xl border border-border/70 bg-card/60 p-4 shadow-2xs">
-                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                  <FileText className="size-4 text-primary shrink-0" strokeWidth={1.5} />
-                  <h2>Mô tả & Hướng dẫn thực hiện</h2>
+              {/* Description Section (Linear Minimalist Markdown / Text Style) */}
+              <section className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-semibold text-foreground tracking-tight">
+                    Description
+                  </h2>
+                  {!isEditingDescription && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingDescription(true)}
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                    >
+                      <Edit2 className="size-3" strokeWidth={1.5} />
+                      <span>Sửa mô tả</span>
+                    </button>
+                  )}
                 </div>
-                {taskDescription ? (
-                  <div className="text-xs leading-relaxed text-foreground whitespace-pre-wrap pt-1 font-sans">
-                    {taskDescription}
+
+                {isEditingDescription ? (
+                  <div className="space-y-2 pt-1 animate-in fade-in-0 duration-150">
+                    <textarea
+                      value={descriptionDraft}
+                      onChange={(e) => setDescriptionDraft(e.target.value)}
+                      rows={5}
+                      placeholder="Nhập mô tả hoặc hướng dẫn thực hiện nhiệm vụ..."
+                      className="w-full text-sm leading-relaxed text-foreground bg-background p-3 rounded-xl border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden font-sans resize-y"
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDescriptionDraft(currentDescription);
+                          setIsEditingDescription(false);
+                        }}
+                        disabled={isSavingDescription}
+                        className="px-3 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveDescription}
+                        disabled={isSavingDescription}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
+                      >
+                        {isSavingDescription ? (
+                          <>
+                            <Loader2 className="size-3 animate-spin" />
+                            <span>Đang lưu...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="size-3.5" strokeWidth={1.5} />
+                            <span>Lưu mô tả</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic pt-1">
-                    Chưa có hướng dẫn hoặc mô tả chi tiết cho nhiệm vụ này.
-                  </p>
+                  <div
+                    onClick={() => setIsEditingDescription(true)}
+                    className="text-sm leading-relaxed text-foreground/90 font-sans whitespace-pre-wrap rounded-lg hover:bg-muted/20 p-1 -m-1 transition-colors cursor-pointer"
+                    title="Nhấp để sửa mô tả"
+                  >
+                    {currentDescription || (
+                      <p className="text-muted-foreground/70 italic text-xs">
+                        Chưa có mô tả chi tiết. Nhấp để thêm mô tả...
+                      </p>
+                    )}
+                  </div>
                 )}
               </section>
 
-              {/* Subtasks Section */}
+              {/* Subtasks / Issues Section */}
               <TaskSubtasksSection
                 parentId={task.id}
                 subTasks={subTasks}
@@ -501,120 +590,10 @@ export function TaskDetailPage({
                 onAddSubTask={() => setIsCreateSubTaskModalOpen(true)}
                 onCreateSubTaskInline={handleCreateSubTaskInline}
               />
-
-              {/* Deliverables / Attachments Section */}
-              <section className="space-y-3 rounded-xl border border-border/70 bg-card/60 p-4 shadow-2xs">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <Paperclip className="size-4 text-primary shrink-0" strokeWidth={1.5} />
-                    <h2 className="text-xs font-semibold text-foreground">
-                      Tài liệu & Minh chứng ({deliverables.length})
-                    </h2>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingResource((prev) => !prev)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/80 bg-background hover:bg-muted/80 text-xs font-semibold text-foreground transition-colors cursor-pointer shadow-2xs"
-                  >
-                    <Plus className="size-3.5 text-primary" strokeWidth={1.5} />
-                    <span>Thêm tài liệu</span>
-                  </button>
-                </div>
-
-                {/* Add Resource Form */}
-                {isAddingResource && (
-                  <form
-                    onSubmit={handleAddResourceSubmit}
-                    className="p-3 rounded-xl border border-primary/40 bg-primary/5 space-y-2.5 animate-in fade-in-0 duration-150"
-                  >
-                    <div className="space-y-1">
-                      <input
-                        type="text"
-                        required
-                        autoFocus
-                        value={resourceTitle}
-                        onChange={(e) => setResourceTitle(e.target.value)}
-                        placeholder="Tên tài liệu / Tệp minh chứng đính kèm..."
-                        className="w-full text-xs font-medium text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <input
-                        type="url"
-                        value={resourceUrl}
-                        onChange={(e) => setResourceUrl(e.target.value)}
-                        placeholder="Liên kết URL (Google Drive, OneDrive, hoặc link tệp)..."
-                        className="w-full text-xs font-mono text-foreground bg-background px-2.5 py-1.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden"
-                      />
-                    </div>
-                    <div className="flex items-center justify-end gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingResource(false)}
-                        className="px-2.5 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                      >
-                        Hủy
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isSavingResource}
-                        className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
-                      >
-                        {isSavingResource ? "Đang lưu..." : "Lưu tài liệu"}
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {/* Deliverables List */}
-                {deliverables.length === 0 && !isAddingResource ? (
-                  <div className="p-3.5 rounded-xl border border-dashed border-border/80 bg-muted/20 text-center">
-                    <p className="text-xs text-muted-foreground">
-                      Chưa có tệp minh chứng hoặc tài liệu đính kèm nào.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-border/60 rounded-xl border border-border/70 bg-card overflow-hidden">
-                    {deliverables.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <FileText className="size-4 text-muted-foreground shrink-0" strokeWidth={1.5} />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-foreground truncate">
-                              {item.title}
-                            </p>
-                            {item.notes && (
-                              <p className="text-[11px] text-muted-foreground truncate">
-                                {item.notes}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {item.fileUrl && (
-                          <a
-                            href={item.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
-                          >
-                            <span>Mở tệp</span>
-                            <ExternalLink className="size-3" />
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
             </>
           )}
 
-          {/* TAB 2: SUBTASKS */}
+          {/* TAB 2: ISSUES / SUBTASKS */}
           {activeTab === "subtasks" && (
             <div className="space-y-4">
               <TaskSubtasksSection
@@ -630,10 +609,10 @@ export function TaskDetailPage({
 
           {/* TAB 3: ACTIVITY FEED */}
           {activeTab === "activity" && (
-            <section className="space-y-4 rounded-xl border border-border/70 bg-card/60 p-4 sm:p-6 shadow-2xs">
-              <div className="flex items-center justify-between pb-3 border-b border-border/60">
+            <section className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-border/40">
                 <div>
-                  <h2 className="text-xs font-semibold text-foreground">
+                  <h2 className="text-xs font-semibold text-foreground tracking-tight">
                     Nhật ký xử lý & Lịch sử hoạt động
                   </h2>
                   <p className="text-xs text-muted-foreground pt-0.5">
@@ -646,12 +625,12 @@ export function TaskDetailPage({
               </div>
 
               {auditEvents.length > 0 ? (
-                <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border">
+                <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border/60">
                   {auditEvents.map((evt) => (
                     <div key={evt.id} className="relative flex flex-col gap-0.5 text-xs">
-                      <span className="absolute -left-5 top-1 flex size-3 items-center justify-center rounded-full border border-background bg-primary" />
+                      <span className="absolute -left-5 top-1 flex size-2.5 items-center justify-center rounded-full border border-background bg-primary" />
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="font-semibold text-foreground">
+                        <span className="font-medium text-foreground">
                           {evt.description || evt.action}
                         </span>
                         <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
@@ -667,7 +646,7 @@ export function TaskDetailPage({
                   ))}
                 </div>
               ) : (
-                <div className="py-12 text-center text-xs text-muted-foreground rounded-xl border border-dashed border-border/80 bg-muted/20">
+                <div className="py-12 text-center text-xs text-muted-foreground rounded-xl border border-dashed border-border/60">
                   Chưa có lịch sử xử lý nào được ghi nhận cho nhiệm vụ này.
                 </div>
               )}
@@ -675,11 +654,11 @@ export function TaskDetailPage({
           )}
         </main>
 
-        {/* Right Column: Properties Inspector Sidebar */}
+        {/* Right Column: Properties Inspector Sidebar (Linear Style) */}
         {showInspector && (
           <aside
             aria-label="Cột thuộc tính nhiệm vụ"
-            className="w-full md:w-[300px] lg:w-[340px] xl:w-[360px] shrink-0 border-t md:border-t-0 md:border-l border-border/60 bg-muted/10 overflow-y-auto"
+            className="w-full md:w-[280px] lg:w-[320px] shrink-0 border-t md:border-t-0 md:border-l border-border/40 bg-background overflow-y-auto"
           >
             <LinearPropertiesSidebar
               task={task}
@@ -687,6 +666,7 @@ export function TaskDetailPage({
               onStatusChange={handleStatusChange}
               onPriorityChange={handlePriorityChange}
               onDueDateChange={handleDueDateChange}
+              onNavigateTab={(tab) => handleTabChange(tab)}
               auditEvents={auditEvents}
               isMobileAccordion={true}
             />
@@ -699,12 +679,13 @@ export function TaskDetailPage({
         <CreateTaskModal
           isOpen={isCreateSubTaskModalOpen}
           onClose={() => setIsCreateSubTaskModalOpen(false)}
-          initialParentTaskId={task.id}
-          initialLevel="DON_VI"
-          onSubmit={async () => {
+          onSubmitSuccess={() => {
             setIsCreateSubTaskModalOpen(false);
             router.refresh();
           }}
+          initialParentTaskId={task.id}
+          initialParentTaskTitle={task.title}
+          initialLevel="DON_VI"
         />
       )}
     </div>

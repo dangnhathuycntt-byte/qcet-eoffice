@@ -12,6 +12,8 @@ import {
   Sparkles,
   ChevronDown,
   User,
+  Smile,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TaskStatus } from "@/types/dashboard";
@@ -63,7 +65,6 @@ export function TaskProgressComposer({
     setFeedback(null);
 
     try {
-      // 1. Send update progress API call
       const res = await fetch(`/api/tasks/${taskId}/actions/update-progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,7 +75,6 @@ export function TaskProgressComposer({
       });
 
       if (!res.ok) {
-        // Fallback PATCH if endpoint differs
         await fetch(`/api/tasks/${taskId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -88,17 +88,16 @@ export function TaskProgressComposer({
         await onProgressUpdated(progress, note.trim() || undefined);
       }
 
-      // If progress reaches 100% and not yet marked completed, update status
       if (progress === 100 && taskStatus !== "COMPLETED" && onStatusChange) {
         await onStatusChange(taskId, "COMPLETED", note.trim() || "Hoàn thành 100% nhiệm vụ");
       }
 
-      setFeedback({ type: "success", message: "Đã cập nhật tiến độ thành công." });
+      setFeedback({ type: "success", message: "Đã cập nhật tiến độ." });
       setNote("");
       setIsEditing(false);
       setTimeout(() => setFeedback(null), 3000);
     } catch {
-      setFeedback({ type: "error", message: "Có lỗi xảy ra khi lưu tiến độ. Vui lòng thử lại." });
+      setFeedback({ type: "error", message: "Có lỗi xảy ra. Vui lòng thử lại." });
     } finally {
       setIsSubmitting(false);
     }
@@ -108,50 +107,56 @@ export function TaskProgressComposer({
     <div
       data-slot="task-progress-composer"
       className={cn(
-        "rounded-xl border border-border/70 bg-card/60 p-4 space-y-3 transition-all shadow-2xs",
+        "rounded-xl border border-border/50 bg-card/40 p-4 space-y-2.5 transition-all select-none",
         className
       )}
     >
-      {/* 1. Header Row (Linear style: "Tiến độ mới nhất" · Nút "Cập nhật tiến độ") */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h3 className="text-xs font-semibold text-foreground">
+      {/* 1. Header (Linear Project Overview style: "Latest update" · "[Update]") */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-foreground tracking-tight">
           Tiến độ mới nhất
-        </h3>
+        </span>
 
         {canEdit && !isEditing && (
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer"
+            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
           >
             <Edit2 className="size-3" strokeWidth={1.5} />
-            <span>Cập nhật tiến độ</span>
+            <span>Cập nhật</span>
           </button>
         )}
       </div>
 
-      {/* 2. Latest Update Card Summary (Linear Project Overview style) */}
+      {/* 2. Latest Update Body (Linear card style) */}
       {!isEditing ? (
         <div className="space-y-2">
+          {/* Status badge + Lead Author + Timestamp */}
           <div className="flex items-center gap-2 flex-wrap text-xs">
-            {/* Health / Progress Pill */}
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold",
+                "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium",
                 progress === 100
                   ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                   : progress > 0
-                  ? "bg-blue-50 text-blue-700 border border-blue-200"
-                  : "bg-muted text-muted-foreground border border-border/70"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-muted text-muted-foreground border border-border/60"
               )}
             >
               <span
                 className={cn(
                   "size-1.5 rounded-full",
-                  progress === 100 ? "bg-emerald-600" : progress > 0 ? "bg-blue-600" : "bg-muted-foreground"
+                  progress > 0 ? "bg-emerald-600" : "bg-muted-foreground"
                 )}
               />
-              <span>{progress === 100 ? "Hoàn thành" : `Tiến độ ${progress}%`}</span>
+              <span>
+                {progress === 100
+                  ? "Hoàn thành"
+                  : progress > 0
+                  ? `Đúng tiến độ (${progress}%)`
+                  : "Chưa cập nhật"}
+              </span>
             </span>
 
             {/* Author */}
@@ -166,15 +171,35 @@ export function TaskProgressComposer({
             <span className="text-muted-foreground text-[11px]">Hôm nay</span>
           </div>
 
-          {/* Note message */}
-          <p className="text-xs text-foreground leading-relaxed pl-0.5">
-            {latestNote || (progress === 100 ? "Nhiệm vụ đã hoàn thành to��n bộ nội dung." : "Đang triển khai thực hiện theo kế hoạch phân công.")}
+          {/* Update Note Content */}
+          <p className="text-xs text-foreground/90 leading-relaxed font-sans pl-0.5">
+            {latestNote ||
+              (progress === 100
+                ? "Nhiệm vụ đã hoàn thành toàn bộ nội dung theo yêu cầu."
+                : "Đang triển khai thực hiện theo kế hoạch phân công.")}
           </p>
+
+          {/* Reaction & Activity Footer */}
+          <div className="flex items-center gap-2 pt-1 text-muted-foreground/60">
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-muted/60 hover:text-foreground transition-colors cursor-pointer"
+              title="Thêm phản hồi"
+            >
+              <Smile className="size-3.5" strokeWidth={1.5} />
+            </button>
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-muted/60 hover:text-foreground transition-colors cursor-pointer"
+              title="Bình luận"
+            >
+              <MessageSquare className="size-3.5" strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
       ) : (
-        /* 3. Inline Update Form when user clicks Update */
+        /* 3. Inline Composer Form */
         <form onSubmit={handleSubmit} className="space-y-3 pt-1 animate-in fade-in-0 duration-150">
-          {/* Progress Slider & Number Input */}
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               <input
@@ -212,7 +237,7 @@ export function TaskProgressComposer({
                 type="button"
                 onClick={() => handleApplyPreset(progress + 10)}
                 disabled={isSubmitting || progress >= 100}
-                className="px-2 py-0.5 rounded-md border border-border/80 bg-background text-[11px] font-medium text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40"
+                className="px-2 py-0.5 rounded-md border border-border/70 bg-background text-[11px] font-medium text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40"
               >
                 +10%
               </button>
@@ -220,7 +245,7 @@ export function TaskProgressComposer({
                 type="button"
                 onClick={() => handleApplyPreset(progress + 25)}
                 disabled={isSubmitting || progress >= 100}
-                className="px-2 py-0.5 rounded-md border border-border/80 bg-background text-[11px] font-medium text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40"
+                className="px-2 py-0.5 rounded-md border border-border/70 bg-background text-[11px] font-medium text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40"
               >
                 +25%
               </button>
@@ -228,9 +253,9 @@ export function TaskProgressComposer({
                 type="button"
                 onClick={() => handleApplyPreset(50)}
                 disabled={isSubmitting}
-                className="px-2 py-0.5 rounded-md border border-border/80 bg-background text-[11px] font-medium text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40"
+                className="px-2 py-0.5 rounded-md border border-border/70 bg-background text-[11px] font-medium text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40"
               >
-                50% (Một nửa)
+                50%
               </button>
               <button
                 type="button"
@@ -238,70 +263,63 @@ export function TaskProgressComposer({
                 disabled={isSubmitting || progress === 100}
                 className="px-2 py-0.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-500/20 transition-colors cursor-pointer disabled:opacity-40"
               >
-                100% (Hoàn thành)
+                100% Hoàn thành
               </button>
             </div>
           </div>
 
-          {/* Note textarea */}
-          <div className="space-y-1">
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              disabled={!canEdit || isSubmitting}
-              placeholder="Ghi chú tóm tắt kết quả hoặc tình hình thực hiện mới nhất..."
-              rows={2}
-              className="w-full text-xs text-foreground placeholder:text-muted-foreground p-2.5 rounded-lg border border-border/80 bg-background focus:ring-2 focus:ring-primary/40 focus:outline-hidden resize-none transition-colors disabled:opacity-60"
-              aria-label="Ghi chú báo cáo tiến độ"
-            />
-          </div>
+          {/* Note Input */}
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            disabled={!canEdit || isSubmitting}
+            placeholder="Ghi chú nội dung tiến độ hoặc công việc đã hoàn thành..."
+            rows={2}
+            className="w-full text-xs font-sans text-foreground bg-background p-2.5 rounded-lg border border-border focus:ring-2 focus:ring-primary/40 focus:outline-hidden resize-none disabled:opacity-50"
+            aria-label="Ghi chú cập nhật tiến độ"
+          />
 
-          {/* Feedback message */}
-          {feedback && (
-            <div
-              role="status"
-              className={cn(
-                "text-xs p-2 rounded-lg font-medium flex items-center gap-1.5 animate-in fade-in duration-150",
-                feedback.type === "success"
-                  ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
-                  : "bg-rose-500/10 text-rose-700 border border-rose-500/20"
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <div>
+              {feedback && (
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    feedback.type === "success" ? "text-emerald-600" : "text-rose-600"
+                  )}
+                >
+                  {feedback.message}
+                </span>
               )}
-            >
-              {feedback.type === "success" ? (
-                <Check className="size-3.5 shrink-0" strokeWidth={1.5} />
-              ) : (
-                <span className="size-1.5 rounded-full bg-rose-600 shrink-0" />
-              )}
-              <span>{feedback.message}</span>
             </div>
-          )}
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setIsEditing(false)}
-              className="px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground rounded-md border border-border bg-background transition-colors cursor-pointer"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 active:scale-95 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="size-3.5 animate-spin" />
-                  <span>Đang lưu...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="size-3.5" strokeWidth={1.5} />
-                  <span>Lưu cập nhật</span>
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                disabled={isSubmitting}
+                className="px-3 py-1 rounded-md border border-border bg-background text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 shadow-2xs"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="size-3 animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="size-3.5" strokeWidth={1.5} />
+                    <span>Lưu tiến độ</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       )}
